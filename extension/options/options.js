@@ -206,7 +206,7 @@ grantButton.addEventListener("click", () => {
 
 recheckButton.addEventListener("click", () => { void loadSites(true); });
 
-void loadSites(false);
+void loadSites(false).then(() => { void showStep(); });
 
 // ── the two clocks ──────────────────────────────────────────────────────
 //
@@ -431,4 +431,122 @@ document.getElementById("tour").addEventListener("click", () => {
     });
   });
   showState();
+})();
+
+
+// ── the step Kriko opened this page for ─────────────────────────────────
+//
+// The service worker opens this page by itself, once, when a step only the
+// reader can take is missing (see `guideToOptions` in background.js). It
+// cannot pass an address to `openOptionsPage`, so it leaves the step's name
+// under one key and this page reads it, puts a ring on that section, brings
+// it into view and puts the keyboard on its control. The key is cleared once
+// read, so a later plain visit to this page highlights nothing.
+
+const FOCUS_KEY = "krikoOptionsFocus";
+
+function showStepNamed(step) {
+  for (const section of document.querySelectorAll("[data-step]")) {
+    if (section.dataset.step === step) section.dataset.focus = "1";
+    else delete section.dataset.focus;
+  }
+  const section = document.querySelector(`[data-step="${step}"]`);
+  if (!section) return;
+  try {
+    section.scrollIntoView({ block: "center", behavior: "auto" });
+  } catch (_) { /* a page that cannot scroll is already in view */ }
+  // The pending-sites button is the one thing to press; the address field is
+  // the one thing to fill. Either may be absent (nothing pending), and then
+  // the ring alone says where to look.
+  const target = step === "sites" && !grantButton.hidden ? grantButton
+    : step === "address" ? input : null;
+  if (target) target.focus({ preventScroll: true });
+}
+
+async function showStep() {
+  let step = "";
+  try {
+    const got = await new Promise((resolve) => {
+      chrome.storage.local.get([FOCUS_KEY], (bag) => resolve(bag || {}));
+    });
+    step = got[FOCUS_KEY] || "";
+    if (step) chrome.storage.local.remove(FOCUS_KEY, () => { void chrome.runtime.lastError; });
+  } catch (_) { /* no storage: the hash below still works */ }
+  step = step || location.hash.replace(/^#/, "");
+  if (step) showStepNamed(step);
+}
+
+// Opening the page again while it is already open does not reload it; the
+// worker's write is the only sign, so follow it.
+try {
+  chrome.storage?.onChanged?.addListener?.((changes, area) => {
+    if (area === "local" && changes[FOCUS_KEY] && changes[FOCUS_KEY].newValue) {
+      void loadSites(false).then(() => { void showStep(); });
+    }
+  });
+} catch (_) { /* a fresh load reads it anyway */ }
+
+
+// ── the panel's glass, kept beside the theme ────────────────────────────
+//
+// One key, `kriko.glass`, shared with the panel: "solid" turns the see-through
+// panel opaque and anything else leaves it as it is. The panel follows a
+// change while it is open, so this page needs nothing but the write.
+
+const GLASS_KEY = "kriko.glass";
+(function panelGlass() {
+  const box = document.getElementById("panel-solid");
+  if (!box) return;
+  try {
+    chrome.storage?.local?.get?.([GLASS_KEY], (bag) => {
+      box.checked = bag?.[GLASS_KEY] === "solid";
+    });
+  } catch (_) { /* unchecked, as the panel would be */ }
+  box.addEventListener("change", () => {
+    try {
+      chrome.storage?.local?.set?.({ [GLASS_KEY]: box.checked ? "solid" : "glass" },
+        () => { void chrome.runtime.lastError; });
+    } catch (_) { /* a browser without local storage keeps the choice for this tab only */ }
+  });
+})();
+
+
+// ── how much doubt to show ──────────────────────────────────────────────
+//
+// The setting belongs to the app (`info_sensitivity`), so this page reads and
+// writes it through the worker and keeps no copy: the app's Settings screen
+// and this one are the same value. With the app closed the choice cannot be
+// read or kept, and the page says so rather than showing a default as if it
+// were the reader's.
+
+(function evidenceSensitivity() {
+  const radios = [...document.querySelectorAll('input[name="sensitivity"]')];
+  const note = document.getElementById("sensitivity-status");
+  if (!radios.length || !note) return;
+  const say = (text, state) => {
+    note.textContent = text;
+    if (state) note.dataset.state = state; else delete note.dataset.state;
+  };
+  const show = (value) => {
+    for (const radio of radios) radio.checked = radio.value === value;
+  };
+  const closed = "Kriko is not running, so this cannot be read or changed. Start it, then reload this page.";
+  ask({ type: "INFO_SENSITIVITY" }).then((reply) => {
+    if (!reply.ok) {
+      for (const radio of radios) radio.disabled = true;
+      say(closed, "warn");
+      return;
+    }
+    show(reply.sensitivity || "all");
+  });
+  for (const radio of radios) {
+    radio.addEventListener("change", () => {
+      if (!radio.checked) return;
+      ask({ type: "SET_INFO_SENSITIVITY", payload: { sensitivity: radio.value } }).then((reply) => {
+        if (!reply.ok) { say(reply.error || closed, "error"); return; }
+        show(reply.sensitivity);
+        say("Saved.", "ok");
+      });
+    });
+  }
 })();

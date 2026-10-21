@@ -21,6 +21,14 @@
     .page h1 { font-size: 26px; margin: 0 0 8px; }
     .page .price { font-size: 22px; color: #b34700; font-weight: 600; }
     .page .photo { height: 340px; background: #c9c3b8; border-radius: 6px; margin: 20px 0; }
+    /* ?page=white | dark | busy: what the panel sits over. A panel that lets
+       the page show through has to be looked at over the worst of them. */
+    body[data-page="white"] { background: #fff; }
+    body[data-page="dark"] { background: #0a0c10; color: #e8e8e8; }
+    body[data-page="dark"] .page .photo { background: #1c2230; }
+    body[data-page="busy"] { background: repeating-linear-gradient(135deg, #f1d68a 0 22px, #28407d 22px 44px); }
+    body[data-page="busy"] .page { max-width: none; color: #111; }
+    body[data-page="busy"] .page .photo { background: repeating-linear-gradient(0deg, #fff 0 14px, #111 14px 28px); }
   </style>
 </head>
 <body>
@@ -32,17 +40,25 @@
   </div>
   <script>
     const params = new URLSearchParams(location.search);
+    if (params.get("page")) document.body.dataset.page = params.get("page");
     const lookupId = params.get("lookup");
     const state = params.get("state") || "risks";
     const runtimeListeners = [];
     const storageListeners = [];
     const CLAIMS = [
       { claim_id: "c1", pack_id: "org.kriko.cars", subject_id: "s1", title: "Timing chain tensioner wear", severity: "high", strength: "reported", domain: "engine",
-        body: "The tensioner on this engine family loosens with mileage; a rattle at cold start is the first sign.", sources: [{ url: "https://example.org/a", title: "Owner forum thread" }] },
+        body: "The tensioner on this engine family loosens with mileage; a rattle at cold start is the first sign.",
+        sources: [
+          { url: "https://example.org/a", domain: "example.org", tier: "community", stance: "supports", quote: "Mine rattles for two seconds on every cold start, the dealer said the tensioner had stretched." },
+          { url: "https://example.net/b", domain: "example.net", tier: "community", stance: "supports", quote: "Tensioner wear is the usual cause of start-up chain noise on this engine." },
+          { url: "https://example.com/c", domain: "example.com", tier: "community", stance: "supports", quote: "Replaced at 120,000 km." }] },
       { claim_id: "c2", pack_id: "org.kriko.cars", subject_id: "s1", title: "EGR valve clogging on short trips", severity: "medium", strength: "documented", domain: "emissions",
-        body: "Soot builds up in the EGR valve when the car rarely reaches temperature.", sources: [{ url: "https://example.org/b", title: "Service bulletin" }] },
+        body: "Soot builds up in the EGR valve when the car rarely reaches temperature.",
+        sources: [{ url: "https://example.org/bulletin", domain: "example.org", tier: "manufacturer", stance: "supports", quote: "Short journeys do not bring the valve to temperature, and soot accumulates until it sticks." },
+          { url: "https://example.net/egr", domain: "example.net", tier: "authoritative", stance: "supports", quote: "EGR sticking is documented on this family." }] },
       { claim_id: "c3", pack_id: "org.kriko.cars", subject_id: "s1", title: "Dual-mass flywheel judder", severity: "medium", strength: "reported", domain: "transmission",
-        body: "A shudder when pulling away in first gear; the flywheel is due around 180,000 km.", sources: [] },
+        body: "A shudder when pulling away in first gear; the flywheel is due around 180,000 km.",
+        sources: [{ url: "https://example.org/clutch", domain: "example.org", tier: "manufacturer", stance: "supports", quote: "The dual-mass flywheel is a wear item and is typically replaced with the clutch." }] },
       { claim_id: "c4", pack_id: "org.kriko.cars", subject_id: "s1", title: "Window regulator clips", severity: "low", strength: "reported", domain: "body",
         body: "Plastic clips in the door regulators break; a cheap fix.", sources: [] },
     ];
@@ -104,6 +120,40 @@
           },
         };
       }
+      // ?research=found: a quick look that kept two findings, each with the
+      // page it came from and the words it quotes.
+      if (params.get("research") === "found") {
+        return {
+          job_id: "preview-research", kind: "quick_look", state: "succeeded", done: true,
+          created_at: new Date(Date.now() - 52000).toISOString(),
+          finished_at: new Date().toISOString(),
+          message: "2 findings kept.",
+          result: {
+            assumed: "the 2020 model, petrol",
+            specs: [{ name: "Capacity", value: "1.6 L" }],
+            risks: [
+              { title: "Timing chain rattles at cold start", body: "The tensioner wears and the chain slaps the cover for the first seconds after a cold start.",
+                severity: "high", domain: "engine", strength: "reported", source_count: 2,
+                sources: [
+                  { url: "https://example.org/forum/thread-1", domain: "example.org", quote: "Mine rattles for two seconds every cold morning, dealer said the tensioner.", tier: "community" },
+                  { url: "https://example.net/review", domain: "example.net", quote: "Chain noise at start-up is the common complaint.", tier: "community" }] },
+              { title: "Infotainment reboots on long drives", body: "The head unit restarts without warning after about an hour.",
+                severity: "medium", domain: "electrics", strength: "reported", source_count: 1,
+                sources: [{ url: "https://example.org/forum/thread-9", domain: "example.org", quote: "It restarts after an hour or so, every time.", tier: "community" }] }],
+            coverage: { pages_read: 5, pages_unreadable: 1, pages_relevant: 3, pages_extracted: 3, publishers_read: 2, sources_cited: 3 },
+            evidence_pages: [{ url: "https://example.org/forum/thread-1", domain: "example.org", excerpt: "Owner thread" }],
+            agent: { label: "local", model: "Model not reported" },
+          },
+        };
+      }
+      // ?research=running&stage=page | search | read | check: where the run is,
+      // told only by the lines its log would hold at that point.
+      const at = params.get("stage") || "read";
+      const lines = [];
+      if (at !== "page") lines.push("search language: en; queries: gearbox judder; clutch problems");
+      if (at !== "page") lines.push("searching: gearbox judder known problems");
+      if (at === "read" || at === "check") lines.push("found 6 page(s); reading up to 6", "read: https://example.org/forum/thread-1", "read: https://example.org/review-2", "could not read: https://example.net/blocked", "read: https://example.org/review-3", "read: https://example.org/datasheet");
+      if (at === "check") lines.push("extracting source 2/4: https://example.org/review-2");
       return {
         job_id: "preview-research", kind: "quick_look", state: failed ? "failed" : "running", done: failed,
         created_at: new Date(Date.now() - 15000).toISOString(),
@@ -112,7 +162,7 @@
         error: failed ? "The local model is not ready. No local model server is running." : "",
         log: failed
           ? "search: adidas grand court base 2.0 known problems\nfail: LocalInferenceError: http://127.0.0.1:11434 answered HTTP 500: error starting llama-server\nfail: giving up after 1 attempt"
-          : "search: adidas grand court base 2.0 known problems\nread: example.org/forum/thread-1\nread: example.org/review-2",
+          : lines.join("\n"),
         result: { agent: { label: "local", model: "Model not reported" } },
       };
     }
@@ -163,6 +213,8 @@
           if (research && message.type === "JOB_STATUS" && message.payload.job_id === "preview-research") {
             return callback({ ok: true, job: previewJob() });
           }
+          // ?sensitivity=hide_thin | strict: what the app's setting would say.
+          if (message.type === "INFO_SENSITIVITY") return callback({ ok: true, sensitivity: params.get("sensitivity") || "all" });
           if (message.type === "LOOKUP_QUESTIONS") return callback({ ok: true, items: [] });
           if (message.type === "LOOKUP_ASK") return setTimeout(() => callback({ ok: true, job_id: "preview-question" }), 300);
           if (message.type === "JOB_STATUS") return callback({ ok: true, job: {
@@ -187,7 +239,11 @@
         // The durable bag, kept for as long as the tab is open. `?seen` marks the
         // panel tour as already shown, to look at the panel without it.
         local: (() => {
-          const bag = new URLSearchParams(location.search).has("seen") ? { "kriko.panelTour": "done" } : {};
+          const q = new URLSearchParams(location.search);
+          const bag = q.has("seen") ? { "kriko.panelTour": "done" } : {};
+          // ?glass=solid and ?theme=light | dark: the two stored choices.
+          if (q.get("glass")) bag["kriko.glass"] = q.get("glass");
+          if (q.get("theme")) bag["kriko.theme"] = q.get("theme");
           return {
             get(keys, done) { const out = {}; for (const k of [].concat(keys)) if (k in bag) out[k] = bag[k]; done && done(out); },
             set(items, done) { Object.assign(bag, items); done && done(); },
@@ -205,6 +261,7 @@
   <script src="../../hover_lite/icons.js"></script>
   <script src="../../hover_lite/claim_card.js"></script>
   <script src="../../hover_lite/buyer_card.js"></script>
+  <script src="../../hover_lite/run_progress.js"></script>
   <script src="../../hover_lite/hover_lite.js"></script>
   <script>
     for (const fn of runtimeListeners) fn({ type: "TOGGLE_HOVER_LITE" });
