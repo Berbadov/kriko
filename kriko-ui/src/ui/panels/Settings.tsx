@@ -4,6 +4,8 @@ import { useAbout, useKeys, usePrefsDoc, useSpent, type KeyRow } from '../../eng
 import { usePrefs, type Profile, type ThemePref } from '../../prefs'
 import { startTour } from '../../tour/Tour'
 import { Chip, Segmented, Select, Switch } from '../controls'
+import { ProxiesGroup } from './Proxies'
+import { SearchProvidersGroup } from './SearchProviders'
 
 const THEMES: { value: ThemePref; label: string }[] = [
   { value: 'system', label: 'System' },
@@ -120,18 +122,6 @@ export function SettingsPanel(_: { onOpen?: (lookupId: string) => void }) {
           </div>
           <div className="setting">
             <span>
-              Search service
-              <small>{doc.search_providers.some((p) => p.ready) ? 'Used for the web search.' : 'Add a key below.'}</small>
-            </span>
-            <Select
-              label="Search service"
-              value={doc.chosen.search_provider || ''}
-              options={[{ value: '', label: 'Automatic' }, ...doc.search_providers.map((p) => ({ value: p.id, label: p.ready ? p.label : `${p.label} (no key)` }))]}
-              onChange={(value) => void save({ search_provider: value })}
-            />
-          </div>
-          <div className="setting">
-            <span>
               Product classification
               <small>After deterministic checks, use your selected local, coding or API agent by default. Jev is an optional alternative that uses a separate TypeSafe key.</small>
             </span>
@@ -208,6 +198,10 @@ export function SettingsPanel(_: { onOpen?: (lookupId: string) => void }) {
           </div>
         </section>
       )}
+
+      <SearchProvidersGroup />
+
+      <ProxiesGroup />
 
       <KeysGroup />
 
