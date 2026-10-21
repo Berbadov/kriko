@@ -28,7 +28,12 @@ export interface PrefsDoc {
   unusable: { id: string; label: string; why: string }[]
   missing: { id: string; label: string; install_hint?: string }[]
   source_kinds: { id: string; label: string }[]
-  research: { sources: number; kinds: string[] }
+  research: {
+    sources: number
+    kinds: string[]
+    thoroughness: number
+    validation_sensitivity: number
+  }
   search_providers: { id: string; label: string; ready: boolean }[]
   classification_providers: { id: string; label: string; ready: boolean }[]
   market_regions: { id: string; label: string }[]
@@ -79,7 +84,12 @@ const DEMO_PREFS: PrefsDoc = {
     { id: 'video', label: 'Video' },
     { id: 'news', label: 'News' },
   ],
-  research: { sources: 0, kinds: ['forums', 'reviews'] },
+  research: {
+    sources: 0,
+    kinds: ['forums', 'reviews'],
+    thoroughness: 50,
+    validation_sensitivity: 50,
+  },
   search_providers: [
     { id: 'exa', label: 'Exa', ready: false },
     { id: 'tavily', label: 'Tavily', ready: true },
@@ -158,6 +168,8 @@ export function usePrefsDoc() {
         }
         if ('research_sources' in patch) now.research.sources = Number(patch.research_sources) || 0
         if ('research_source_kinds' in patch) now.research.kinds = patch.research_source_kinds.split(',').filter(Boolean)
+        if ('kriko_agent_thoroughness' in patch) now.research.thoroughness = Number(patch.kriko_agent_thoroughness) || 0
+        if ('kriko_agent_validation_sensitivity' in patch) now.research.validation_sensitivity = Number(patch.kriko_agent_validation_sensitivity) || 0
         return
       }
       try {

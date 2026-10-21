@@ -72,6 +72,13 @@ class Reply:
     tokens_out: int | None = None
     #: Billed tool calls (searches and page opens alike), from `usage`.
     tool_calls: int = 0
+    # Explicitly billed calls when a retrieval API charges only successful
+    # operations. None keeps the older Mistral rule based on reported usage.
+    billed_tool_calls: int | None = None
+    # Retrieval API operations attempted, including empty or failed reads.
+    retrieval_requests: int | None = None
+    #: Successful Search/Fetch responses reused from Kriko's local cache.
+    cache_hits: int = 0
     #: Why there is no answer, in words a reader can act on. `""` on success.
     error: str = ""
     #: False when a completion response omitted either token count.

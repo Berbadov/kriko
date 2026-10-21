@@ -85,6 +85,28 @@ PLAN_CHARS = 1500
 #: A query longer than this is a sentence, not a search.
 QUERY_WORDS = 15
 
+
+def _is_index_page(url: str) -> bool:
+    """A section front page, not a thread or a document.
+
+    Measured on a Ford Focus look: four of the five pages read were
+    `focusfanatics.com/forums/`, `focusst.org/`, a manuals index and a forum
+    root. They pass the relevance check because every thread title on them
+    names the product, and then the extractor can only find thread titles, so
+    the look spends four evidence passes on doors. Shallow and digit-free is
+    the shape of a door in every site; the rule is the address, not a list of
+    sites.
+    """
+    from urllib.parse import urlsplit
+
+    path = urlsplit(str(url or "")).path.strip("/")
+    if not path:
+        return True
+    segments = [part for part in path.split("/") if part]
+    if len(segments) > 1:
+        return False
+    return not any(char.isdigit() for char in segments[0]) and len(segments[0]) <= 30
+
 QUERY_SCHEMA = {"type": "array", "items": {"type": "string"}}
 QUICK_SCHEMA: dict = {"type": "object", "properties": {
     "assumed": {"type": "string"}, "category": {"type": "string"}, "pack": {"type": "string"},
@@ -172,6 +194,10 @@ class LocalAsker:
         self.runtime: dict = {}
         self.source_instructions = ""
         self.identity = ""
+        #: The stage the next completion belongs to. `local_pipeline` sets it
+        #: around each structured call, so one flat "answer" row does not stand
+        #: for the twenty calls a quick look makes (`_MeasuredSocket._invoke`).
+        self._stage_hint = ""
         self.telemetry: dict = {"queries": [], "stages": [], "repairs": 0}
 
     @property
@@ -205,10 +231,16 @@ class LocalAsker:
                   for key in ("tokens_in", "tokens_out", "tokens_used")}
         started = time.perf_counter()
         failed = False
+        failure = ""
+        # Said *before* the wait, not after it. A local model can spend two
+        # minutes in one completion, and a stage table that only learns about
+        # it when it ends shows a console that looks hung for exactly as long.
+        self._say(f"stage {stage} start")
         try:
             return call()
-        except Exception:
+        except Exception as error:
             failed = True
+            failure = f"{type(error).__name__}: {error}"[:200]
             raise
         finally:
             row = {"stage": stage, "ms": round(
@@ -218,7 +250,41 @@ class LocalAsker:
                 row[key] = (now - (value or 0) if getattr(socket, "last_usage_complete", True)
                             and isinstance(now, int)
                             and not isinstance(now, bool) else None)
+            if failure:
+                row["error"] = failure
             self.metrics.append(row)
+            self._say(self._stage_line(row))
+
+    def _stage_line(self, row: dict) -> str:
+        """One stage, as a line the log and the console both read.
+
+        The shape is a contract rather than prose: `app/tui/local.py` parses it
+        into the stage table, and the terminal and the JSON report of a bench
+        run are the same numbers because they are the same line. A prefix no
+        other log line uses ("stage "), a name with no spaces, then one of
+        `start`, `done`, `failed`.
+        """
+        head = f"stage {row['stage']}"
+        if row.get("failed"):
+            return (f"{head} failed {row['ms'] / 1000:.3f}s"
+                    + (f": {row['error']}" if row.get("error") else ""))
+        measured = [f"{key.removeprefix('tokens_')}={row[key]}"
+                    for key in ("tokens_in", "tokens_out")
+                    if row.get(key) is not None]
+        return f"{head} done {row['ms'] / 1000:.3f}s" + (
+            " " + " ".join(measured) if measured else "")
+
+    def _record(self, row: dict) -> dict:
+        """Keep one already-timed stage row, and say it."""
+        self.metrics.append(row)
+        self._say(self._stage_line(row))
+        return row
+
+    def _phase(self, stage: str, started: float, **fields) -> dict:
+        """Record a phase that has no socket of its own (search, page reads)."""
+        return self._record({"stage": stage,
+                             "ms": round((time.perf_counter() - started) * 1000, 3),
+                             "failed": False, **fields})
 
     def _say(self, line: str) -> None:
         self.telemetry["stages"].append({"elapsed_ms": int((time.monotonic() - getattr(self, "_started", time.monotonic())) * 1000), "message": line})
@@ -536,6 +602,11 @@ class LocalAsker:
         read_stop = threading.Event()
         timed_out_reads: set[str] = set()
         timed_out_lock = threading.Lock()
+        # Per-page scrape cost. The reads run in a pool, so the only honest
+        # place to time one is inside the worker that owns it — a whole-phase
+        # figure hides the one host that took twenty seconds and held the run.
+        fetch_facts: dict[str, dict] = {}
+        fetch_lock = threading.Lock()
 
         def worker_read_check(url: str = "") -> None:
             # The job thread owns cancellation checks; fetch workers only see
@@ -554,6 +625,9 @@ class LocalAsker:
                 raise FetchCancelled("page reading budget reached")
 
         def read_one(url: str) -> tuple[str, str]:
+            started = time.perf_counter()
+            text = ""
+            reason = ""
             try:
                 options: dict[str, object] = {}
                 if getattr(self._fetch, "supports_cancel_check", False):
@@ -568,13 +642,29 @@ class LocalAsker:
                     # Quick Look is a bounded evidence pass. The plain fetch
                     # gets its remaining budget; a 403 must not start two
                     # more remote requests (or a browser process) after it.
+                    # Measured with the ladder enabled anyway: three pages
+                    # read instead of one on a forum-heavy product, and 51 s
+                    # instead of 23, for the same zero kept claims — the extra
+                    # pages did not survive extraction either. Latency was the
+                    # only thing that changed, so the ladder stays off here.
                     options["allow_fallback"] = False
                 worker_read_check(url)
                 got = self._fetch(url, **options)
-            except Exception:  # noqa: BLE001 - fetch is a network boundary
+                text = str(getattr(got, "text", got) or "").strip()
+                return url, text[:24000] if len(text) >= MIN_PAGE_CHARS else ""
+            except Exception as error:  # noqa: BLE001 - fetch is a network boundary
+                # The reason is kept, not just the miss: "8 of 9 pages failed"
+                # is only actionable if the page says 403, a timeout or a bot
+                # wall, and the console shows it per page.
+                reason = f"{type(error).__name__}: {error}"[:180]
                 return url, ""
-            text = str(getattr(got, "text", got) or "").strip()
-            return url, text[:24000] if len(text) >= MIN_PAGE_CHARS else ""
+            finally:
+                with fetch_lock:
+                    fetch_facts[url] = {
+                        "ms": round((time.perf_counter() - started) * 1000, 3),
+                        "characters": len(text),
+                        "error": reason,
+                    }
 
         search_deadline = (gather_started + min(QUICK_SEARCH_DEADLINE,
                                                  QUICK_READ_DEADLINE)
@@ -827,7 +917,14 @@ class LocalAsker:
                     self.page_titles[url] = str(hits[rank].get("title") or "")[:240]
                     wanted.append(url)
         self.search_coverage["unique_hits"] = len(wanted)
+        # The search is done once every query has settled; page reads that
+        # started during it are timed separately, per page, below.
+        self._phase("search", gather_started, queries=len(queries), hits=len(wanted))
         def issue_priority(url: str) -> int:
+            if _is_index_page(url):
+                # A door is not a page: it would take an evidence pass and
+                # return thread titles.
+                return -1
             label = (url + " " + self.page_titles.get(url, "")).casefold()
             if re.search(r"\b(?:forums?|threads?|communities|community|discussion|discuss|"
                          r"boards?|subreddit)\b|/r/|/comments/|/t/", label):
@@ -984,6 +1081,25 @@ class LocalAsker:
             pool.shutdown(wait=False, cancel_futures=True)
         self.search_coverage["pages_selected"] = len(pages)
         self.search_coverage["publishers_read"] = len(read_domains)
+        kept = {url for url, _text in pages}
+        for url in wanted:
+            facts = fetch_facts.get(url)
+            if facts is None:
+                continue
+            missed = url not in kept
+            self._record({"stage": "fetch", "ms": facts["ms"],
+                          "failed": missed, "url": url,
+                          "characters": facts["characters"],
+                          **({"error": facts.get("error") or "no readable text"}
+                             if missed else {})})
+        # The page-level half of the decision dataset: what was attempted,
+        # what came back, and whether it was kept. It is the training and
+        # scoring material for any page-worthiness rule or model later.
+        self.search_coverage["page_outcomes"] = [
+            {"url": url, "ms": facts["ms"],
+             "characters": facts["characters"], "kept": url in kept,
+             "error": (facts.get("error") or "")[:120]}
+            for url, facts in list(fetch_facts.items())[:40]]
         self.relevant_sources = dict(self.sources)
         self._say(f"read {self.search_coverage['pages_read']} page(s) from "
                   f"{len(read_domains)} publisher buckets; selected {len(pages)} usable product pages")
@@ -1004,15 +1120,18 @@ class _MeasuredSocket:
         setattr(self.socket, name, value)
 
     def _invoke(self, call):
-        setter = getattr(self.socket, "set_cancel_check", None)
-        if not callable(setter):
-            return self.owner._measured(self.stage, self.socket, call)
-        previous = getattr(self.socket, "check_cancelled", None)
-        setter(self.owner._check if self.owner.check_cancelled is not None else None)
-        try:
-            return self.owner._measured(self.stage, self.socket, call)
-        finally:
-            setter(previous)
+        return self._invoke_for(self._stage(), call)
+
+    def _stage(self) -> str:
+        """The stage this call belongs to.
+
+        The socket does not know what it is being asked for; the caller does.
+        `local_pipeline.QuickLookPipeline` sets `owner._stage_hint` around each
+        structured call, so one quick look reports `identity`, `extract`,
+        `verify` and `render` separately instead of twenty rows called
+        "answer" — which is what the operator console had to show before.
+        """
+        return getattr(self.owner, "_stage_hint", "") or self.stage
 
     def json(self, prompt, schema):
         """The structured reply, or, from a plain socket that has no schema, the text."""
@@ -1029,7 +1148,8 @@ class _MeasuredSocket:
         return self._invoke(lambda: self.socket.stream(prompt, on_text))
 
     def __call__(self, prompt):
-        stage = "verify" if prompt.startswith("Check evidence for ") else self.stage
+        hint = getattr(self.owner, "_stage_hint", "")
+        stage = hint or ("verify" if prompt.startswith("Check evidence for ") else self.stage)
         return self._invoke_for(stage, lambda: self.socket(prompt))
 
     def _invoke_for(self, stage, call):

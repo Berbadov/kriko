@@ -113,6 +113,38 @@ def test_an_unreadable_evidence_reply_is_a_bounded_failure():
     assert model.stages().count("extract") == 1
 
 
+def test_a_quick_look_names_every_stage_it_spends_time_on():
+    """One quick look is ~20 structured calls on one completion socket.
+
+    They used to be recorded under the socket's own name ("answer"), which is
+    why the operator console could not say whether the minutes went to
+    extraction or to verification. Now each call carries the stage the
+    pipeline is in, and the log line the console parses back is written by the
+    same code that kept the row — so the two cannot disagree.
+    """
+    from app.tui import local
+
+    model = PipelineModel(findings=[{"title": "Pump failure",
+                                     "why": "An owner reported it.",
+                                     "needle": "pump failed"}])
+    asker = local_agent.LocalAsker(
+        model, model,
+        searcher([{"url": "https://a.test/1", "title": "owners"}]),
+        reader({"https://a.test/1":
+                "Widget MK2 owners report that the pump failed after a month."}),
+        model="small", search_provider="stub")
+    said: list[str] = []
+    asker.on_action = said.append
+    asker.ask_quick("Widget MK2")
+
+    stages = {row["stage"] for row in asker.metrics}
+    assert {"identity", "search", "fetch", "extract", "verify"} <= stages
+    events = local.stage_events("\n".join(said))
+    done = [event for event in events if event["state"] == "done"]
+    assert len(done) == len(asker.metrics), "a measured row without its line"
+    assert {event["stage"] for event in done} == stages
+
+
 def searcher(hits, started=None, gate=None):
     def search(query, limit):
         if started is not None:

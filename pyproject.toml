@@ -75,6 +75,7 @@ dev = ["pytest>=8.0.0", "pytest-xdist>=3.5", "ruff>=0.16", "mypy>=2.3"]
 # files above. A terminal command, so the frozen sidecar does not carry them.
 "app.agentbench" = ["*.json"]
 "app.compatbench" = ["*.json"]
+"app.searchbench" = ["*.json", "*.html"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

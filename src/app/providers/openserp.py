@@ -21,6 +21,7 @@ scheduler's to enforce, in one place.
 """
 
 import json
+import re
 import threading
 import time
 import urllib.error
@@ -67,12 +68,16 @@ def _response_body(response, deadline: float, check) -> bytes:
 
 #: The engines a local run asks together. Measured on this service, one engine
 #: at a time: Google answered 6 of 6 (9 hits, 5-6 s) while two others had
-#: their breakers open; DuckDuckGo times out on some queries; Bing answers
-#: empty about half the time (4 of 8, under stock and tuned pacing alike) and
-#: otherwise scrapes its own landing page into "results"; Ecosia was blocked
-#: on every query. Several engines at once, because a search answers with what
-#: any of them found.
-LOCAL_ENGINES = "google,duckduckgo,bing"
+#: their breakers open; DuckDuckGo times out on some queries; several engines at
+#: once, because a search answers with what any of them found.
+#:
+#: Bing is gone. It answered `"WH-1000XM4 headphones" owner reports forum` with
+#: WhatsApp and grammar pages, and on a look whose search it won that was nine
+#: unreadable pages and no findings. `carries_name` now refuses an answer that
+#: does not name the quoted product, which catches that class whatever engine
+#: produces it; Bing is removed anyway because a wrong answer that passes for a
+#: right one is not worth the risk, and two engines still answer together.
+LOCAL_ENGINES = "google,duckduckgo"
 
 #: `/mega/search` waits for its slowest engine, so one blocked engine costs
 #: every query the time it takes to fail (measured: Ecosia blocked, Baidu 36 s
@@ -95,6 +100,39 @@ def _engines_to_ask(requested: str) -> str:
                 if name not in _failed_at
                 or now - _failed_at[name] >= ENGINE_COOLDOWN_SECONDS]
     return ",".join(live or names)
+
+
+#: A quick-look query names the product inside double quotes
+#: (`"WH-1000XM4 headphones" owner reports forum`). Those words are the least
+#: an answer has to contain to be about the same thing.
+_QUOTED_NAME = re.compile(r'"([^"]{3,})"')
+_NAME_TERM = re.compile(r"[^\W_]{4,}")
+
+
+def carries_name(hits: list[dict], query: str) -> bool:
+    """Whether an engine's answer is about the product the query names.
+
+    The per-engine fast path returns the first engine that answers, which
+    rewards speed over correctness: measured, Bing answered a quoted Sony
+    model with WhatsApp and grammar pages while Google and DuckDuckGo returned
+    headphones, and Bing won the race. So an answer whose titles and addresses
+    share no word with the quoted name waits instead of being taken.
+
+    No engine is named here; the rule is about the answer. A query with no
+    quoted name is not judged, and a named answer is still preferred even when
+    it is the only one (`searcher` falls back to it), because a weak page is
+    what the reader already had before this rule existed.
+    """
+    phrase = _QUOTED_NAME.search(query or "")
+    if phrase is None:
+        return True
+    wanted = {term.casefold() for term in _NAME_TERM.findall(phrase.group(1))}
+    if not wanted:
+        return True
+    seen = " ".join(
+        f"{hit.get('title') or ''} {hit.get('url') or ''}"
+        for hit in hits if isinstance(hit, dict)).casefold()
+    return any(term in seen for term in wanted)
 
 
 def _note_failed_engines(payload: object) -> None:
@@ -288,6 +326,9 @@ def searcher(base_url: str = "", engine: str = "", *, language: str = "en",
             pending = set(jobs)
             failures: list[Exception] = []
             answered = False
+            # An answer that is not about the named product, kept only if no
+            # engine produces one that is (see `carries_name`).
+            fallback: list[dict] = []
             try:
                 while pending and time.monotonic() < deadline:
                     if check_cancelled is not None:
@@ -302,14 +343,16 @@ def searcher(base_url: str = "", engine: str = "", *, language: str = "en",
                             continue
                         answered = True
                         if hits:
-                            return hits
+                            if carries_name(hits, query):
+                                return hits
+                            fallback = fallback or hits
                 if check_cancelled is not None:
                     check_cancelled()
                 if not answered and failures and not pending:
                     raise LocalSearchError(str(failures[-1])) from failures[-1]
                 if pending and not answered:
                     raise LocalSearchError("search engines did not answer within the time budget")
-                return []
+                return fallback
             finally:
                 stop.set()
                 pool.shutdown(wait=False, cancel_futures=True)

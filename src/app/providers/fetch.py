@@ -19,9 +19,11 @@ document". An empty string is a legitimate answer here, not an error.
 """
 
 import html
+from html.parser import HTMLParser
 import logging
 import re
 import time
+from urllib.parse import urljoin, urlsplit
 import urllib.error
 import urllib.request
 from app import htmlscan
@@ -79,6 +81,52 @@ _BLANK = re.compile(r"\n{3,}")
 _EARLIEST = date(1995, 1, 1)
 
 
+class _ImageMeta(HTMLParser):
+    """Read the page's advertised preview image without executing markup."""
+
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.images: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs) -> None:
+        values = {str(key or "").casefold(): str(value or "").strip()
+                  for key, value in attrs}
+        if tag.casefold() == "meta":
+            key = (values.get("property") or values.get("name") or "").casefold()
+            if key in {"og:image", "og:image:url", "twitter:image", "twitter:image:src"}:
+                candidate = values.get("content", "")
+                if candidate:
+                    self.images.append(candidate)
+        elif tag.casefold() == "link" and "image_src" in values.get("rel", "").casefold().split():
+            candidate = values.get("href", "")
+            if candidate:
+                self.images.append(candidate)
+
+
+def image_url(markup: str, page_url: str) -> str:
+    """Return a bounded HTTP(S) Open Graph/Twitter image URL, if advertised."""
+    if not markup or len(markup) > MAX_BYTES:
+        return ""
+    parser = _ImageMeta()
+    try:
+        parser.feed(markup)
+    except (ValueError, AssertionError):
+        return ""
+    for candidate in parser.images:
+        if len(candidate) > 2000 or any(ord(ch) < 32 for ch in candidate):
+            continue
+        try:
+            resolved = urljoin(page_url, html.unescape(candidate)).strip()
+            parsed = urlsplit(resolved)
+        except ValueError:
+            continue
+        if (parsed.scheme.casefold() in {"http", "https"} and parsed.hostname
+                and parsed.username is None and parsed.password is None
+                and len(resolved) <= 2000):
+            return resolved
+    return ""
+
+
 def reader(timeout: float = TIMEOUT):
     """`fetch(url) -> Fetched(text, published_at)`, empty when unreadable.
 
@@ -121,7 +169,7 @@ def reader(timeout: float = TIMEOUT):
             text = to_text(raw)
             if challenged(text):
                 return Fetched("")
-        return Fetched(text, published_at(raw))
+        return Fetched(text, published_at(raw), image_url(raw, url))
 
     fetch.supports_cancel_check = True  # type: ignore[attr-defined]
     fetch.supports_timeout = True  # type: ignore[attr-defined]

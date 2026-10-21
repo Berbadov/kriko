@@ -2,7 +2,7 @@
 
 import pytest
 
-from app import chat, chatdata
+from app import chat, chatdata, exactfind
 
 
 @pytest.mark.parametrize("message", [
@@ -85,6 +85,20 @@ def test_budget_need_actually_reads_sources_before_answering():
 ])
 def test_a_product_named_without_a_verb_is_a_buying_request(message):
     assert chat.route_message(message) == "web"
+
+
+@pytest.mark.parametrize("message", [
+    "Which engine oil and filters should I use for a 2020 Renault Megane IV 1.5 Blue dCi?",
+    "2020 Renault Megane IV Sedan 1.5 Blue dCi için hangi motor yağını kullanmalıyım?",
+    "2020 Renault Megane IV 1.5 Blue dCi icin hangi motor yagini kullanmaliyim?",
+    "Hangi yağ 2020 Renault Megane 1.5 Blue dCi için uygundur?",
+    "Hangi yag 2020 Renault Megane 1.5 Blue dCi icin uygundur?",
+    "2020 Renault Megane IV 1.5 Blue dCi için yağ ve filtre önerir misin?",
+])
+def test_product_fitment_advice_routes_to_live_shopping_search(message):
+    assert not exactfind.is_purchase_request(message)
+    assert chat.route_message(message) == "web"
+    assert chat._buying_request(message)
 
 
 @pytest.mark.parametrize("message", [

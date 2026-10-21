@@ -117,6 +117,26 @@ PROVIDERS = (
         optional=True,
     ),
     Provider(
+        id="mercury",
+        label="Mercury",
+        env="MERCURY_API_KEY",
+        purpose="Runs the Mercury API model used by Kriko Agent and can be "
+        "selected as a completion model for the paid research plane. The key "
+        "stays on this machine and is sent only to Inception's API. Never "
+        "returned to the Settings screen.",
+        optional=True,
+    ),
+    Provider(
+        id="deepseek",
+        label="DeepSeek Search",
+        env="DEEPSEEK_API_KEY",
+        purpose="Runs DeepSeek Search and Fetch for Kriko Agent. It receives "
+        "search queries and URLs selected from search results, and returns "
+        "page text. The key stays on this machine and is sent only to "
+        "DeepSeek's API. Never returned to the Settings screen.",
+        optional=True,
+    ),
+    Provider(
         id="typesafe",
         label="TypeSafe (Jev)",
         env="TYPESAFE_API_KEY",
@@ -138,7 +158,7 @@ SEARCH_PROVIDERS = ("exa", "tavily")
 #: Same shape as SEARCH_PROVIDERS and for the same reason: once there are two,
 #: having one of them is enough, and requiring both would make adding a choice
 #: a way to break an installation that was working.
-COMPLETION_PROVIDERS = ("openai", "anthropic", "mistral")
+COMPLETION_PROVIDERS = ("openai", "anthropic", "mistral", "mercury")
 
 
 def env_path(home: Path | None = None) -> Path:

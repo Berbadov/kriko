@@ -27,7 +27,7 @@ import threading
 
 import pytest
 
-from app.tui import client, screen, term
+from app.tui import client, local, screen, term
 from app.tui.app import State, Tui
 
 
@@ -225,6 +225,12 @@ class FakeEngine:
         self._note("operations")
         return {"items": []}
 
+    def local_plane(self):
+        self._note("local_plane")
+        return {"ready": True, "model": "gemma4:e2b", "name": "Ollama",
+                "context_tokens": 4096, "search_label": "local search",
+                "runtime": {"device": "GPU"}, "reason": ""}
+
 
 def _tui() -> Tui:
     return Tui(FakeEngine())
@@ -238,6 +244,8 @@ def test_the_number_keys_switch_tabs():
     assert tui.state.tab == "jobs"
     tui.act("4")
     assert tui.state.tab == "ops"
+    tui.act("5")
+    assert tui.state.tab == "local"
 
 
 def test_the_ops_tab_shows_the_live_operations_feed():
@@ -267,6 +275,128 @@ def test_the_poller_asks_for_operations_on_the_ops_tab():
     tui.state.tab = "ops"
     tui.poll_once()
     assert ("operations",) in tui.engine.calls
+
+
+# ── the local model's own stage table ───────────────────────────────────
+
+_LOCAL_LOG = "\n".join([
+    "local plane: Ready: gemma4:e2b on Ollama",
+    "stage identity start",
+    "stage identity done 0.640s in=900 out=48",
+    "stage search start",
+    "stage search done 1.250s queries=3 hits=9",
+    "stage extract start",
+    "stage extract done 12.500s in=4000 out=300",
+    "stage verify start",
+])
+
+
+def _local_plane() -> dict:
+    return {"ready": True, "model": "gemma4:e2b", "name": "Ollama",
+            "context_tokens": 4096, "search_label": "the search service on this machine",
+            "runtime": {"device": "GPU"}, "line": "Ready"}
+
+
+def _local_job(done: bool = False, result: dict | None = None) -> dict:
+    return {"job_id": "look-1234", "kind": "quick_look", "state": "finished" if done else "running",
+            "params": {"product": "Aster One", "backend": "local"},
+            "log": _LOCAL_LOG, "progress": 0.5, "done": done, "result": result or {}}
+
+
+def test_a_stage_line_parses_back_into_its_cost():
+    """The table is derived from the log, so the log line is the contract.
+
+    A quick look makes one structured call per stage on one completion socket;
+    without this, every one of them was a row called "answer".
+    """
+    events = local.stage_events(_LOCAL_LOG)
+    done = {event["stage"]: event for event in events if event["state"] == "done"}
+    assert done["extract"]["tokens_in"] == 4000
+    assert done["extract"]["tokens_out"] == 300
+    assert done["extract"]["ms"] == 12500
+    assert local.running_stage(events) == "verify"
+
+
+def test_the_stage_table_folds_calls_and_keeps_throughput():
+    rows = [{"stage": "verify", "ms": 2000, "tokens_out": 100},
+            {"stage": "verify", "ms": 4000, "tokens_out": 50, "failed": True},
+            {"stage": "extract", "ms": 1000, "tokens_out": 30}]
+    folded = {row["stage"]: row for row in local.fold(rows)}
+    assert folded["verify"]["calls"] == 2
+    assert folded["verify"]["failed"] == 1
+    assert folded["verify"]["seconds"] == 6.0
+    assert folded["verify"]["tps"] == 25.0      # 150 tokens over 6 s
+    # Pipeline order, not first-seen order: a table that reorders itself
+    # between frames is unreadable while it is being watched.
+    assert [row["stage"] for row in local.fold(rows)] == ["extract", "verify"]
+
+
+def test_the_local_tab_shows_the_plane_and_the_stage_it_is_inside():
+    state = _state(tab="local")
+    state.data["local"] = _local_plane()
+    state.data["local_report"] = local.report(_local_job(), _local_plane())
+    text = _plain(screen.render(state, 100, 30))
+    assert "gemma4:e2b" in text and "Ollama" in text
+    assert "extract" in text and "verify" in text
+    assert "inside verify now" in text
+    # The throughput of a stage is the number that makes "slow" checkable.
+    assert "t/s" in text
+
+
+def test_a_finished_look_is_read_from_its_kept_measurement_not_the_log_tail():
+    """A log is pruned to its tail; the result is not. A long run's early
+    stages must still be countable after it finishes."""
+    result = {"measurement": {"stages": [
+        {"stage": "identity", "ms": 500, "tokens_in": 10, "tokens_out": 20},
+        {"stage": "extract", "ms": 9000, "tokens_in": 2000, "tokens_out": 400},
+    ]}, "coverage": {"pages_read": 3, "accepted_candidates": 2}}
+    report = local.report(_local_job(done=True, result=result), _local_plane())
+    assert [row["stage"] for row in report["stages"]] == ["identity", "extract"]
+    assert report["health"]["tokens_out"] == 420
+    assert report["health"]["accepted"] == 2
+    assert report["running"] == ""
+
+
+def test_a_quick_look_on_a_coding_agent_is_not_presented_as_the_local_model():
+    agent_job = {"kind": "quick_look", "log": "asking claude\nkept 2 findings"}
+    local_job = _local_job()
+    assert local.newest_local_job([agent_job]) is None
+    assert local.newest_local_job([agent_job, local_job]) is local_job
+
+
+def test_the_poller_probes_the_local_plane_only_on_its_tab():
+    tui = _tui()
+    tui.state.tab = "jobs"
+    tui.poll_once()
+    assert ("local_plane",) not in tui.engine.calls
+    tui.state.tab = "local"
+    tui.poll_once()
+    assert ("local_plane",) in tui.engine.calls
+    assert tui.state.data["local_report"]["plane"]["model"] == "gemma4:e2b"
+
+
+def test_a_stage_that_has_only_started_is_still_shown():
+    """The console exists for the long call, which by definition has no row
+    yet. An empty table beside "inside language now" reads as a broken tab."""
+    job = _local_job()
+    job["log"] = "stage language start"
+    report = local.report(job, _local_plane())
+    assert [row["stage"] for row in report["stages"]] == ["language"]
+    assert report["stages"][0]["running"] is True
+    state = _state(tab="local")
+    state.data["local"] = _local_plane()
+    state.data["local_report"] = report
+    text = _plain(screen.render(state, 100, 30))
+    assert "running now" in text
+
+
+def test_the_local_tab_follows_its_job_into_the_log():
+    tui = _tui()
+    tui.state.tab = "local"
+    tui.state.data["local_report"] = {"job": {"job_id": "look-1234"}}
+    tui.act("enter")
+    assert tui.state.following == "look-1234"
+    assert tui.state.tab == "jobs"
 
 
 def test_q_stops_the_loop():

@@ -375,7 +375,7 @@ def test_the_agents_row_lists_it_once_keyed_and_links_the_key_page_until(machine
         assert missing[0]["download_url"].startswith("https://console.mistral.ai/")
         machine.keyed = [apiagent.MISTRAL]
         rows, missing = prefs.api_agent_rows(conn)
-        assert {one["id"] for one in missing} == {"openai-api"}
+        assert {one["id"] for one in missing} == {"openai-api", "kriko-agent"}
         [row] = rows
         assert row["cost_basis"] == "per_token"
         assert "per token and per search" in row["needs_account"]
@@ -423,6 +423,37 @@ def test_the_panel_names_the_bill_before_a_picked_api_agent_spends(machine, tmp_
         budgets = {kind: params["budget_usd"] for kind, params in submitted}
         assert budgets == {"quick_look": 0.20}
         assert apiagent.DEFAULT_BUDGET_USD > 0.20
+    finally:
+        client.app.state.jobs.shutdown(wait=True)
+
+
+def test_kriko_agent_tuning_preferences_persist_and_reject_out_of_range(tmp_path):
+    from fastapi.testclient import TestClient
+
+    from app.web.app import create_app
+    from app.web.settings import Settings
+
+    client = TestClient(create_app(Settings(
+        store_path=tmp_path / "knowledge.sqlite",
+        app_state_path=tmp_path / "app.sqlite",
+        analysis_log_path=tmp_path / "analyses.jsonl")))
+    try:
+        initial = client.get("/api/prefs").json()
+        assert initial["research"]["thoroughness"] == 50
+        assert initial["research"]["validation_sensitivity"] == 50
+
+        saved = client.put("/api/prefs", json={
+            "kriko_agent_thoroughness": "85",
+            "kriko_agent_validation_sensitivity": "100",
+        })
+        assert saved.status_code == 200
+        assert saved.json()["research"]["thoroughness"] == 85
+        assert saved.json()["research"]["validation_sensitivity"] == 100
+
+        invalid = client.put("/api/prefs", json={
+            "kriko_agent_thoroughness": "101",
+        })
+        assert invalid.status_code == 422
     finally:
         client.app.state.jobs.shutdown(wait=True)
 

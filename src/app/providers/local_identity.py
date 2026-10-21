@@ -142,6 +142,9 @@ def identity_prompt(product_prompt: str, listing_text: str = "", search_language
 trim, year, size, revision, configuration, or identifier. Leave unsupported details empty and
 state them in unknowns. Aliases and variant must be explicit in supplied text. Evidence quotes
 must be verbatim.
+canonical_name is the product itself, as make and model are named in the text: "Ford Focus",
+"Makita DHP484", "Dyson V11". It is never a feature, gearbox, trim, year or configuration. Those
+belong to variant when the text states them: "2014", "Powershift automatic", "Torque Drive".
 Separate what is SOLD from what it belongs to. brand is the maker of the item, copied from the
 text. If the product is a part, accessory, consumable or refill for ANOTHER product, then item is
 the kind of part exactly as the text words it, fits is the other product it goes into (copy its

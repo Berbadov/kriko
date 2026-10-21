@@ -817,7 +817,7 @@ def test_a_research_run_on_the_local_plane_builds_the_plane_from_the_server(
     assert plane.name == "local"
     assert plane.model == "qwen3-4b"          # the server's, not the Run screen's
     # the whole shipped engine set, not its first (`openserp.LOCAL_ENGINES`)
-    assert plane.search_provider == "openserp:google,duckduckgo,bing"
+    assert plane.search_provider == "openserp:google,duckduckgo"
     assert plane._complete.base_url == ready.url
 
 

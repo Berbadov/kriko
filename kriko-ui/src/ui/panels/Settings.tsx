@@ -85,6 +85,18 @@ export function SettingsPanel(_: { onOpen?: (lookupId: string) => void }) {
               onChange={(value) => void save({ run_concurrency: value })}
             />
           </div>
+          <RangeSetting
+            label="Thoroughness"
+            value={doc.research.thoroughness}
+            note="More search calls and results. Applies to Kriko Agent."
+            onSave={(value) => void save({ kriko_agent_thoroughness: String(value) })}
+          />
+          <RangeSetting
+            label="Validation sensitivity"
+            value={doc.research.validation_sensitivity}
+            note="Higher values require longer, exact quotes. Applies to Kriko Agent."
+            onSave={(value) => void save({ kriko_agent_validation_sensitivity: String(value) })}
+          />
           <div className="setting">
             <span>
               Extra sources
@@ -269,6 +281,52 @@ export function SettingsPanel(_: { onOpen?: (lookupId: string) => void }) {
           </div>
         </section>
       )}
+    </div>
+  )
+}
+
+function RangeSetting({
+  label,
+  value,
+  note,
+  onSave,
+}: {
+  label: string
+  value: number
+  note: string
+  onSave: (value: number) => void
+}) {
+  const [draft, setDraft] = useState(value)
+  useEffect(() => setDraft(value), [value])
+  const commit = () => {
+    if (draft !== value) onSave(draft)
+  }
+
+  return (
+    <div className="setting stack tuning-setting">
+      <span>
+        {label}
+        <small>{note}</small>
+      </span>
+      <div className="tuning-range-row">
+        <small>Low</small>
+        <input
+          className="tuning-range"
+          type="range"
+          min={0}
+          max={100}
+          step={5}
+          value={draft}
+          aria-label={label}
+          aria-valuetext={`${draft}%`}
+          onChange={(event) => setDraft(event.currentTarget.valueAsNumber)}
+          onPointerUp={commit}
+          onKeyUp={commit}
+          onBlur={commit}
+        />
+        <small>{draft}%</small>
+        <small>High</small>
+      </div>
     </div>
   )
 }

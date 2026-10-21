@@ -10,6 +10,26 @@ from app.web import state, tasks
 from app.providers import network
 
 
+def test_search_result_page_image_flows_to_a_product_card():
+    from app import chat
+    from kriko.research import Fetched
+
+    def search(_query, _limit):
+        return [{"title": "USB-C Charger 45W", "url": "https://shop.example/charger"}]
+
+    def read(_url):
+        return Fetched("45W USB-C charger. Price 20 EUR.",
+                       image_url="https://cdn.example/charger.jpg")
+
+    out = chatdata.run("web_search", chatdata.Context(web_search=search, web_read=read),
+                       {"query": "Samsung S24FE charger", "buying": "yes"})
+    [row] = out["rows"]
+    [card] = chat.listing_cards([row])
+    assert card["label"] == "USB-C Charger 45W"
+    assert card["url"] == "https://shop.example/charger"
+    assert card["image_url"] == "https://cdn.example/charger.jpg"
+
+
 class Hooks:
     def check(self):
         pass

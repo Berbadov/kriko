@@ -65,7 +65,7 @@ export function ChatPanel(_: { onOpen?: (lookupId: string) => void }) {
           <span>
             Product-only answers
             <small>
-              A short list: the product, where to buy it with a link, and at most two warnings. No long answer.
+              Same product research and checks, with a brief result. Product cards show links and page images when available.
             </small>
           </span>
           <Switch

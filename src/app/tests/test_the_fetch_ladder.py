@@ -321,3 +321,11 @@ def test_a_custom_element_is_not_read_as_the_tag_it_starts_with(monkeypatch):
     text = fetch.to_text(markup)
     assert time.monotonic() - started < 1.5
     assert "kept words" in text
+
+
+def test_product_image_metadata_resolves_relative_urls_and_rejects_active_schemes():
+    markup = '<meta name="twitter:image" content="/images/charger.jpg">'
+    assert fetch.image_url(markup, "https://shop.example/products/charger") == (
+        "https://shop.example/images/charger.jpg")
+    assert fetch.image_url('<meta property="og:image" content="javascript:alert(1)">',
+                           "https://shop.example/product") == ""

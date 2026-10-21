@@ -1,0 +1,183 @@
+{
+  "clarifying": [
+    {
+      "id": "c1",
+      "request": "I need a replacement battery for my Makita drill, the 18 volt one.",
+      "missing_key": "tool or battery model number",
+      "why_it_matters": "18 V spans incompatible platforms and several capacities, and a pack that does not fit the tool or its charger returns prices, counterfeit warnings and compatibility notes for the wrong battery, stated with confidence.",
+      "expected_question": "What model number is printed on the drill or on the old battery, for example DHP484 or BL1850B?",
+      "guesses_to_avoid": [
+        "BL1850B 5.0Ah LXT",
+        "any 18 V Makita pack",
+        "a 40 V XGT pack"
+      ],
+      "category": "power tools"
+    },
+    {
+      "id": "c2",
+      "request": "My dishwasher door won't stay up any more, it's a Bosch.",
+      "missing_key": "series and model number (E-Nr)",
+      "why_it_matters": "Door springs and hinges are chassis specific, so a guessed series returns the wrong spring kit and a repair that will not hold, plus failure reports from a different wash platform.",
+      "expected_question": "What is the E-Nr on the sticker inside the door?",
+      "guesses_to_avoid": [
+        "Serie 4",
+        "Serie 6",
+        "SHPM88Z75N"
+      ],
+      "category": "home appliance"
+    },
+    {
+      "id": "c3",
+      "request": "I need front brake pads for my 2016 Honda Civic.",
+      "missing_key": "trim and engine",
+      "why_it_matters": "Pad shape and rotor size split by trim, so a guessed trim returns pads that physically do not fit and wear reports from a different brake system.",
+      "expected_question": "Which trim is it, for example LX with the 2.0, EX-T with the 1.5 turbo, or Si?",
+      "guesses_to_avoid": [
+        "LX 2.0",
+        "Si",
+        "Type R"
+      ],
+      "category": "vehicle parts"
+    },
+    {
+      "id": "c4",
+      "request": "My MacBook Pro charger died and I need a new one.",
+      "missing_key": "screen size and year",
+      "why_it_matters": "The connector and wattage changed with the generation, so a guessed year returns a charger that does not plug in, or an underpowered one that charges slowly and runs hot.",
+      "expected_question": "Which year and screen size is it, for example a 2017 13 inch or a 2021 14 inch?",
+      "guesses_to_avoid": [
+        "85 W MagSafe 2",
+        "96 W USB-C",
+        "60 W MagSafe"
+      ],
+      "category": "computers"
+    },
+    {
+      "id": "c5",
+      "request": "We moved countries and I need a replacement base for our Cybex Aton car seat.",
+      "missing_key": "region",
+      "why_it_matters": "The EU and US versions are homologated differently and their bases are not interchangeable, so a guessed region returns a base that will not latch the seat and safety statements about the other market's product.",
+      "expected_question": "Was the seat bought in Europe or in the United States?",
+      "guesses_to_avoid": [
+        "Aton 5 base",
+        "Aton M base",
+        "any Aton base fits"
+      ],
+      "category": "child safety"
+    }
+  ],
+  "research": [
+    {
+      "id": "r1",
+      "product": "DeWalt DWE7491RS 10 inch table saw",
+      "category": "power tools",
+      "why_this_one": "Forum heavy and sold beside near identical siblings (DWE7491, DWE7485), so the pipeline must keep the stand and fence variant apart from the smaller saw.",
+      "expected_issue_families": [
+        "fence alignment",
+        "riving knife",
+        "dust collection"
+      ],
+      "avoid": [
+        "DWE7485 fence complaints",
+        "generic claims that the saw is underpowered",
+        "marketing lines about site precision"
+      ],
+      "where_reports_live": [
+        "woodworking forums such as LumberJocks and Sawmill Creek",
+        "the DeWalt instruction manual and parts diagram",
+        "owner threads on r/woodworking"
+      ],
+      "search_language": "en"
+    },
+    {
+      "id": "r2",
+      "product": "Bosch Serie 6 SMS6ZCW00E dishwasher",
+      "category": "home appliance",
+      "why_this_one": "A European model whose useful reports are in German, from a recall and service bulletin heavy brand where the market suffix changes the part.",
+      "expected_issue_families": [
+        "E15 leak",
+        "drain pump",
+        "door hinge"
+      ],
+      "avoid": [
+        "US market Bosch dishwasher complaints",
+        "Serie 8 heat pump faults",
+        "marketing claims about silence"
+      ],
+      "where_reports_live": [
+        "German repair forums and Bosch service bulletins",
+        "the Bosch manual and its error code table",
+        "EU Safety Gate recall notices"
+      ],
+      "search_language": "de",
+      "note": "The exact market suffix of this Serie 6 code is uncertain; the platform is real, so verify the full E-Nr before trusting any fitment claim."
+    },
+    {
+      "id": "r3",
+      "product": "2014 Ford Focus with the Powershift automatic",
+      "category": "vehicle",
+      "why_this_one": "Recall and class action heavy, where the transmission variant rather than the model name decides the failure, so it stresses separating regulator records from model wide folklore.",
+      "expected_issue_families": [
+        "transmission judder",
+        "clutch seal",
+        "control module"
+      ],
+      "avoid": [
+        "manual gearbox Focus complaints",
+        "the Fiesta's separate Powershift suits",
+        "claims that every Focus stalls"
+      ],
+      "where_reports_live": [
+        "NHTSA complaint records and the Ford settlement documents",
+        "owner forums such as FocusFanatics",
+        "the owner manual's transmission section"
+      ],
+      "search_language": "en",
+      "note": "Trims and engines differ by market; the Powershift DPS6 transmission is the identity key, not the year alone."
+    },
+    {
+      "id": "r4",
+      "product": "Lenovo ThinkPad T480",
+      "category": "computers",
+      "why_this_one": "Multilingual sources (English, German, Chinese) and a firmware defect with an official advisory, so the pipeline has to prefer the vendor bulletin over forum repetition.",
+      "expected_issue_families": [
+        "Thunderbolt",
+        "battery drain",
+        "thermal throttling"
+      ],
+      "avoid": [
+        "T470 or T490 reports",
+        "a recall that Lenovo never issued",
+        "benchmark scores presented as defects"
+      ],
+      "where_reports_live": [
+        "Lenovo support advisories and BIOS changelogs",
+        "r/thinkpad and the Lenovo forums",
+        "Notebookcheck reviews and the Arch Wiki"
+      ],
+      "search_language": "en"
+    },
+    {
+      "id": "r5",
+      "product": "Sony WH-1000XM4 headphones",
+      "category": "consumer electronics",
+      "why_this_one": "A firmware caused battery drain that Sony acknowledged sits next to a physical hinge crack, so it stresses telling a documented defect from ordinary wear.",
+      "expected_issue_families": [
+        "battery drain",
+        "hinge crack",
+        "firmware update"
+      ],
+      "avoid": [
+        "WH-1000XM3 or XM5 reports",
+        "claims that noise cancelling is weak",
+        "rumours about a recalled batch"
+      ],
+      "where_reports_live": [
+        "Sony support notices and firmware release notes",
+        "r/SonyHeadphones and Head-Fi threads",
+        "teardown and repair posts"
+      ],
+      "search_language": "en"
+    }
+  ]
+}

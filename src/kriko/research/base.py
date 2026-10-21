@@ -177,6 +177,10 @@ class Fetched:
     """
     text: str
     published_at: str = ""
+    #: A public image advertised by the page (usually Open Graph). Empty when
+    #: the page publishes none. Readers that do not inspect markup keep the
+    #: original two-field contract through this default.
+    image_url: str = ""
 
 
 @dataclass(frozen=True)

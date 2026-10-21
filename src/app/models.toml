@@ -39,7 +39,17 @@
 "mistral-large-latest"  = { context = 262144, usd_in = 0.50, usd_out = 1.50, speed = "slow",     label = "Mistral Large" }
 "mistral-medium-latest" = { context = 262144, usd_in = 1.50, usd_out = 7.50, speed = "balanced", label = "Mistral Medium" }
 
+[mercury]
+# Mercury 2.5 rates used by the product-search benchmark, USD per million
+# tokens. The model catalogue is an estimate; actual account billing is the
+# provider's invoice.
+"mercury-2.5" = { context = 128000, usd_in = 0.20, usd_out = 0.75, speed = "fast", label = "Mercury 2.5" }
+
 # What a tool call costs on top of the tokens its results add. Not a model:
 # `load` skips this table, `tool_price` reads it.
 [tools.mistral]
 web_search = { usd_per_call = 0.03 }
+
+[tools.mercury]
+# DeepSeek charges the retrieval provider per successful search/fetch request.
+deepseek_search = { usd_per_call = 0.00075 }

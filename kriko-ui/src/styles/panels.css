@@ -85,6 +85,30 @@
   font-size: 12.5px;
 }
 
+.tuning-setting {
+  gap: 7px;
+}
+
+.tuning-range-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.tuning-range-row small:last-child {
+  margin-left: auto;
+}
+
+.tuning-range {
+  min-width: 70px;
+  flex: 1;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
 .plain-list {
   display: flex;
   flex-direction: column;

@@ -114,6 +114,16 @@ class Engine:
     def planes(self) -> dict:
         return self.get("/api/research-planes")
 
+    def local_plane(self) -> dict:
+        """What this machine would run a local look with, probed now.
+
+        `resolve` in `app/localplane.py` asks the model server and the search
+        service directly, so this is slower than reading a row — and it is the
+        only answer that cannot be stale. The console polls it only while the
+        local tab is the one on screen.
+        """
+        return self.get("/api/local-plane")
+
     def agenda(self, limit: int = 60) -> dict:
         return self.get(f"/api/agenda?limit={int(limit)}")
 

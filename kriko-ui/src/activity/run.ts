@@ -37,6 +37,12 @@ export interface Product {
   id: string
   name: string
   note: string
+  kind?: 'listing' | 'catalogue'
+  url?: string
+  imageUrl?: string
+  seller?: string
+  trust?: string
+  pageRead?: boolean
 }
 
 /** Which agent answered: the id picks its mark, the label is what the reader reads. */

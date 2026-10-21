@@ -244,6 +244,46 @@
   font-size: 12px;
 }
 
+.listing-product-card {
+  justify-content: flex-start;
+}
+
+.listing-image {
+  width: 88px;
+  height: 88px;
+  flex: 0 0 88px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  color: var(--ink-3);
+  background: var(--glass);
+  border: 1px solid var(--edge);
+  border-radius: 12px;
+}
+
+.listing-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #fff;
+}
+
+.listing-info {
+  display: grid;
+  flex: 1 1 180px;
+  min-width: 0;
+  gap: 3px;
+}
+
+.listing-info strong {
+  overflow-wrap: anywhere;
+}
+
+.listing-meta {
+  color: var(--ink-3);
+  font-size: 11px !important;
+}
+
 .card-actions {
   display: flex;
   flex-wrap: wrap;

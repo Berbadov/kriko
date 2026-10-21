@@ -841,28 +841,31 @@ def _fit_web_results(rows: list[dict]) -> tuple[list[dict], bool]:
     return result, truncated
 
 
-def _read_web_page(ctx: Context, url: str, *, on_start: Callable[[], None] | None = None) -> tuple[str, str]:
+def _read_web_page(ctx: Context, url: str, *, on_start: Callable[[], None] | None = None) -> tuple[str, str, str]:
     """Read one selected result; text remains untrusted evidence, not instructions."""
     checker = getattr(ctx.web_read, "check_cancelled", None)
     if callable(checker):
         checker()
     if ctx.web_read is None:
-        return "", "no page reader is configured"
+        return "", "no page reader is configured", ""
     if on_start is not None:
         on_start()
     try:
         fetched = ctx.web_read(url)
     except Exception as exc:  # noqa: BLE001 - one unreadable page need not drop its neighbours
-        return "", type(exc).__name__
+        return "", type(exc).__name__, ""
     if callable(checker):
         checker()
     if isinstance(fetched, dict):
         text = fetched.get("text", "")
         published_at = fetched.get("published_at", "")
+        image = fetched.get("image_url", "")
     else:
         text = getattr(fetched, "text", fetched)
         published_at = getattr(fetched, "published_at", "")
-    return str(text or "")[:200000], _clip(published_at, 40)
+        image = getattr(fetched, "image_url", "")
+    return (str(text or "")[:200000], _clip(published_at, 40),
+            _public_http_url(image))
 
 
 def relevant_excerpt(text: str, query: str, limit: int = WEB_PAGE_EXCERPT_CAP) -> str:
@@ -1008,16 +1011,16 @@ def _web_search(ctx: Context, query: str = "", buying: str = "") -> dict:
         except (AttributeError, TypeError):
             pass
 
-    def read_at(index: int) -> tuple[int, str, str]:
+    def read_at(index: int) -> tuple[int, str, str, str]:
         def mark_started() -> None:
             with started_lock:
                 if reader_cancelled.is_set():
                     raise RuntimeError("chat web page read cancelled")
                 started_reads.add(index)
 
-        text, published_at = _read_web_page(
+        text, published_at, image = _read_web_page(
             ctx, results[index]["url"], on_start=mark_started)
-        return index, text, published_at
+        return index, text, published_at, image
 
     executor = ThreadPoolExecutor(max_workers=WEB_PAGES_CAP,
                                   thread_name_prefix="kriko-chat-web")
@@ -1042,7 +1045,7 @@ def _web_search(ctx: Context, query: str = "", buying: str = "") -> dict:
             for future in done:
                 index = futures[future]
                 try:
-                    _, text, published_at = future.result()
+                    _, text, published_at, image = future.result()
                 except Exception as exc:  # noqa: BLE001 - record the page failure, not a traceback
                     results[index]["read_error"] = type(exc).__name__
                     continue
@@ -1051,6 +1054,8 @@ def _web_search(ctx: Context, query: str = "", buying: str = "") -> dict:
                     results[index]["page_read"] = True
                     if published_at:
                         results[index]["published_at"] = published_at
+                    if image:
+                        results[index]["image_url"] = image
                 else:
                     results[index]["read_error"] = "page returned no readable text"
             successes = sum(bool(row["page_read"]) for row in results)
