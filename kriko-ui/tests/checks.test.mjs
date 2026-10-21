@@ -6,13 +6,13 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
-let directory, checks, api, thinness, view, steps, meters, pix
+let directory, checks, api, thinness, view, steps, meters
 const memory = new Map()
 before(async () => {
   globalThis.window = { setTimeout, clearTimeout }
   globalThis.sessionStorage = { getItem: (key) => memory.get(key), setItem: (key, value) => memory.set(key, value), removeItem: (key) => memory.delete(key) }
   directory = await mkdtemp(join(tmpdir(), 'kriko-ui-tests-'))
-  for (const [source, target] of [['src/engine/api.ts','api.mjs'], ['src/engine/thinness.ts','thinness.mjs'], ['src/chat/view.ts','view.mjs'], ['src/compare/checks.ts','checks.mjs'], ['src/engine/steps.ts','steps.mjs'], ['src/engine/usagemeters.ts','usagemeters.mjs'], ['src/engine/pixicons.ts','pixicons.mjs']]) {
+  for (const [source, target] of [['src/engine/api.ts','api.mjs'], ['src/engine/thinness.ts','thinness.mjs'], ['src/chat/view.ts','view.mjs'], ['src/compare/checks.ts','checks.mjs'], ['src/engine/steps.ts','steps.mjs'], ['src/engine/usagemeters.ts','usagemeters.mjs']]) {
     const code = await readFile(source, 'utf8')
     const built = ts.transpileModule(code, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText
     await writeFile(join(directory, target), built.replaceAll('import.meta.env', '({})').replace("'../engine/api'", "'./api.mjs'").replace("'../engine/thinness'", "'./thinness.mjs'"))
@@ -23,7 +23,6 @@ before(async () => {
   view = await import(pathToFileURL(join(directory, 'view.mjs')))
   steps = await import(pathToFileURL(join(directory, 'steps.mjs')))
   meters = await import(pathToFileURL(join(directory, 'usagemeters.mjs')))
-  pix = await import(pathToFileURL(join(directory, 'pixicons.mjs')))
 })
 after(async () => { if (directory) await rm(directory, {recursive:true, force:true}) })
 
@@ -186,25 +185,4 @@ test('the pill says the tightest window left and what the last day cost, and not
   bare.resources.web_search.windows['24h'].calls = 0
   assert.deepEqual(meters.pillParts(bare), { fill: null, text: '' })
   assert.deepEqual(meters.pillParts(null), { fill: null, text: '' })
-})
-
-test('every pixel icon is a square grid of the two cell kinds and carries its signature square', () => {
-  assert.deepEqual([...pix.AGENT_NAMES].sort(), ['blocks', 'burst', 'chip', 'peak', 'pointer', 'prompt', 'spark'])
-  assert.deepEqual([...pix.NAV_NAMES].sort(), ['chat', 'compare', 'history', 'more', 'plus', 'queue'])
-  for (const name of pix.PIX_NAMES) {
-    const rows = pix.draw(name)
-    const side = pix.NAV_NAMES.includes(name) ? 12 : 9
-    assert.equal(rows.length, side, `${name} has ${side} rows`)
-    for (const row of rows) {
-      assert.equal(row.length, side, `${name} has ${side} cells in every row`)
-      assert.match(row, /^[ #o]+$/, `${name} uses only empty, lit and signature cells`)
-    }
-    const lit = rows.join('').replaceAll(' ', '')
-    assert.ok(lit.includes('o'), `${name} has a signature cell, as the logo has its square`)
-    assert.ok(lit.length >= 9, `${name} draws something`)
-  }
-  assert.deepEqual(pix.draw('no-such-agent'), pix.draw('spark'), 'an unknown name draws the fallback mark, never nothing')
-  assert.equal(pix.kindOf('chat'), 'nav')
-  assert.equal(pix.kindOf('burst'), 'agent')
-  assert.equal(pix.kindOf('no-such-agent'), 'agent')
 })

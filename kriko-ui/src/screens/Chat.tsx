@@ -9,7 +9,6 @@ import { useEngine, type Agent } from '../engine/Engine'
 import { useRecents } from '../engine/recents'
 import { usePrefs } from '../prefs'
 import { AgentMark } from '../ui/AgentMark'
-import type { PixState } from '../ui/PixIcon'
 import { copyText } from '../ui/clipboard'
 import { ChatRail } from '../ui/ChatRail'
 import { Composer } from '../ui/Composer'
@@ -153,11 +152,11 @@ export function ChatScreen({ onOpen }: { onOpen: (lookupId: string) => void }) {
 }
 
 /** Who wrote an answer, above it. */
-function AnswerHead({ agent, state = 'idle' }: { agent?: AgentRef; state?: PixState }) {
+function AnswerHead({ agent }: { agent?: AgentRef }) {
   if (!agent || (!agent.id && !agent.label)) return null
   return (
     <header className="answer-head">
-      <AgentMark id={agent.id} size={24} state={state} />
+      <AgentMark id={agent.id} size={24} />
       <span>{agent.label || agent.id}</span>
     </header>
   )
@@ -371,7 +370,7 @@ function Thread({
             // whole answer rose out of the blur again, once per poll.
             <article key={run.startedAt} className="answer rise">
               {run.rows.some((row) => row.id === 'activity-citation-warning' || row.id === 'activity-evidence-warning') && <p className="error-note" role="alert">Some claims or references could not be verified against the supplied evidence. Check the sources before relying on this answer.</p>}
-              <AnswerHead agent={run.agent} state={run.status === 'running' ? 'working' : run.status === 'failed' ? 'failed' : run.status === 'done' ? 'done' : 'idle'} />
+              <AnswerHead agent={run.agent} />
               {run.answer && <Markdown text={run.answer} live={!settled} />}
               {run.answer && settled && (
                 <AnswerActions
