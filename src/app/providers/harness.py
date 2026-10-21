@@ -2546,10 +2546,6 @@ def narrate(event: dict) -> str:
             return _short(str(item.get("text") or ""))
         return ""
     if kind in QUIET_EVENTS:
-        if kind == "rate_limit_event":
-            from app import limits
-
-            limits.observe("claude-code", event)
         return ""
     if kind == "system":
         if event.get("subtype") != "init":

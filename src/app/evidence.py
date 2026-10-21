@@ -40,8 +40,7 @@ filter, and `hidden_count` words the "3 thin findings hidden" line.
 What a claim row may carry, all optional
 ----------------------------------------
 
-`sources[]`: `url`, `domain`, `quote`, `stance`, `tier`, `trust`, `standing`
-(`trusted`, `neutral` or `low`, added by `annotate` from `trust`), and
+`sources[]`: `url`, `domain`, `quote`, `stance`, `tier`, `trust`, and
 `quote_match` (`"exact"`, `"partial"`, `"missing"`, or a ratio from 0 to 1,
 as `factcheck` or a pipeline can say it). `open_conditions`: the reasons of
 conditions that the listing did not state, which the engine served anyway. A
@@ -186,44 +185,9 @@ def assess(claim: Mapping) -> dict:
     return {"level": level_of(rows), "reasons": rows}
 
 
-def standing_of(source: Mapping) -> str | None:
-    """Where a source stands for the reader: `trusted`, `neutral` or `low`.
-
-    The same three words `tier_pages` gives a page Chat read, drawn from the
-    same two engine numbers (`exactfind.TRUSTED_AT` and `LOW_TRUST_BELOW`), so
-    a screen holds no list of sites and no threshold. `None` when nothing says
-    how far the source is trusted: the chip then draws no mark, never a guess.
-    """
-    number = _trust(source)
-    if number is None:
-        return None
-    from app import exactfind
-
-    return "trusted" if number >= exactfind.TRUSTED_AT else "low" if number < LOW_TRUST_BELOW else "neutral"
-
-
-def _stand(claim: Mapping) -> list | None:
-    rows = claim.get("sources")
-    if not isinstance(rows, list):
-        return None
-    out = []
-    for row in rows:
-        if isinstance(row, Mapping) and "standing" not in row and (standing := standing_of(row)):
-            row = {**row, "standing": standing}
-        out.append(row)
-    return out
-
-
 def annotate(claims: Iterable[Mapping]) -> list[dict]:
-    """The claim rows, each with its `evidence` object and each source's
-    `standing`. Nothing else changes."""
-    out = []
-    for claim in claims:
-        row = {**claim, "evidence": assess(claim)}
-        if (sources := _stand(claim)) is not None:
-            row["sources"] = sources
-        out.append(row)
-    return out
+    """The claim rows, each with its `evidence` object. Nothing else changes."""
+    return [{**claim, "evidence": assess(claim)} for claim in claims]
 
 
 def tier_pages(activity: Iterable[Mapping] | None, question: str = "") -> list[dict]:

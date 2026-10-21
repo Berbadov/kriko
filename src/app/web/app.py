@@ -70,7 +70,6 @@ from app.web.routers import (
     prefs as prefs_router,
     query,
     research,
-    usage_meters as usage_meters_router,
     search_providers,
     sites,
     subjects,
@@ -305,13 +304,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         title="Kriko", docs_url="/api/docs", redoc_url=None, lifespan=lifespan
     )
     app.state.settings = settings
-    # What a coding agent says about its own 5-hour and weekly windows is kept
-    # beside the rest of the app's state (`app/limits.py`, `app/usage.py`). Set
-    # here and not at startup, so an app that is built is an app that keeps it.
-    from app import limits as agent_limits, usage as usage_meters
-
-    _limits_path = settings.app_state_path
-    agent_limits.set_sink(lambda agent, rows: usage_meters.save_limits(_limits_path, agent, rows))
 
     # ── the log has to be somewhere this process can actually write ───────
     #
@@ -349,7 +341,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         prefs_router.router,
         query.router,
         research.router,
-        usage_meters_router.router,
         search_providers.router,
         subjects.router,
         analyze.router,
