@@ -145,7 +145,8 @@ def reader(timeout: float = 5.0, *, check_cancelled=None):
                         text = fetch.to_text(markup)
                         if fetch.challenged(text):
                             return Fetched("")
-                        return Fetched(text, fetch.published_at(markup))
+                        image = _public_url(fetch.image_url(markup, current))
+                        return Fetched(text, fetch.published_at(markup), image)
             except (urllib.error.URLError, TimeoutError, OSError,
                     LookupError, ValueError, socket.gaierror):
                 return Fetched("")

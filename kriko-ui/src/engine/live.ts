@@ -98,11 +98,25 @@ function hash(text: string): string {
 }
 
 function productsFrom(list: ApiProduct[] | undefined): Product[] {
-  return (list ?? []).map((p) => ({
-    id: p.subject_id,
-    name: p.label,
-    note: p.claims === 1 ? '1 risk' : `${p.claims} risks`,
-  }))
+  return (list ?? []).flatMap<Product>((p) => {
+    if (p.card_type === 'listing' && p.url) {
+      return [{
+        id: p.id || p.url,
+        name: p.label,
+        note: p.page_read ? 'Page read' : 'Trusted source',
+        kind: 'listing' as const,
+        url: p.url,
+        imageUrl: p.image_url || undefined,
+        seller: p.seller || undefined,
+        trust: p.trust || undefined,
+        pageRead: p.page_read === true,
+      }]
+    }
+    if (!p.subject_id) return []
+    const claims = p.claims ?? 0
+    return [{ id: p.subject_id, name: p.label,
+      note: claims === 1 ? '1 risk' : `${claims} risks`, kind: 'catalogue' as const }]
+  })
 }
 
 export function useLiveRun(): RunApi {

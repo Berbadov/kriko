@@ -161,7 +161,7 @@ def price(model: str, tokens_in: int, tokens_out: int,
 _PREFIXES = (("claude-", "anthropic"), ("mistral-", "mistral"), ("magistral-", "mistral"))
 
 #: The providers with a completion adapter (`app/providers/__init__.py`).
-ADAPTERS = ("openai", "anthropic", "mistral")
+ADAPTERS = ("openai", "anthropic", "mistral", "mercury")
 
 
 def provider_for(model: str, home: Path | None = None) -> str:

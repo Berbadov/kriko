@@ -126,6 +126,16 @@ def write_prefs(body: PrefsWrite, conn=Depends(get_app_state)) -> dict:
             )
     if prefs.MARKET_REGION in written and written[prefs.MARKET_REGION] not in prefs.REGIONS:
         raise HTTPException(422, detail="market_region must be a supported region code")
+    for key in prefs.KRIKO_AGENT_TUNING_KEYS:
+        if key not in written:
+            continue
+        try:
+            percent = int(written[key])
+        except ValueError as error:
+            raise HTTPException(422, detail=f"{key} must be an integer from 0 to 100") from error
+        if not 0 <= percent <= 100:
+            raise HTTPException(422, detail=f"{key} must be an integer from 0 to 100")
+        written[key] = str(percent)
     if prefs.LLM_BASE_URL in written and written[prefs.LLM_BASE_URL]:
         endpoint = written[prefs.LLM_BASE_URL].rstrip("/")
         parsed = urlsplit(endpoint)

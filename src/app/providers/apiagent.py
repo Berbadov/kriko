@@ -120,9 +120,33 @@ OPENAI_COMPATIBLE = ApiAgent(
     key_url="https://platform.openai.com/api-keys",
 )
 
+KRIKO_AGENT = ApiAgent(
+    id="kriko-agent",
+    label="Kriko Agent",
+    key="mercury",
+    default_model="mercury-2.5",
+    search_tool="deepseek_search",
+    host="api.inceptionlabs.ai + api.deepseek.com",
+    contract_note=(
+        "\n\n## Kriko Agent tools\n\n"
+        "Your tools are search and fetch. Search uses DeepSeek Search and "
+        "returns result URLs plus inline page text where available. Fetch reads "
+        "a URL returned by search. Both are read-only. Use the page text "
+        "returned by these tools as the only source for verbatim quotes.\n"
+    ),
+    model_hint=(
+        "Fixed stack: Mercury 2.5 for research and DeepSeek Search/Fetch for "
+        "retrieval. Both provider keys are required."
+    ),
+    install_hint=(
+        "Add both MERCURY_API_KEY and DEEPSEEK_API_KEY in Settings → Research."
+    ),
+    key_url="https://platform.inceptionlabs.ai/",
+)
+
 #: A closed roster, as `harness.KNOWN` is: each entry is an adapter somebody
 #: wrote, not data that grows with coverage.
-KNOWN: tuple[ApiAgent, ...] = (MISTRAL, OPENAI_COMPATIBLE)
+KNOWN: tuple[ApiAgent, ...] = (MISTRAL, OPENAI_COMPATIBLE, KRIKO_AGENT)
 BY_ID = {one.id: one for one in KNOWN}
 
 
@@ -135,7 +159,11 @@ def available(path: Path | None = None) -> list[ApiAgent]:
         present = {one["id"] for one in keys.status(path) if one["present"]}
     except Exception:  # noqa: BLE001 — see the docstring
         return []
-    return [one for one in KNOWN if one.key in present]
+    return [
+        one for one in KNOWN
+        if one.key in present
+        and (one.id != KRIKO_AGENT.id or "deepseek" in present)
+    ]
 
 
 def models_for(agent: ApiAgent, home: Path | None = None) -> list[str]:
@@ -326,18 +354,53 @@ class ApiAgentResearcher(harness.HarnessResearcher):
         #: The model that runs, not the agent's id. The CLI plane names the
         #: harness here because it cannot know the model; this plane can.
         self.model = model.strip() or agent.default_model
-        self.search_provider = agent.label
+        self.search_provider = ("DeepSeek Search"
+                                if agent.id == KRIKO_AGENT.id else agent.label)
+        self.thoroughness = 50
+        self.validation_sensitivity = 50
+        self._cache_path = None
         if converse is not None:
             self._converse = converse
         elif agent.key == "openai":
             self._converse = lambda prompt, **kw: openai_compatible_converse(
                 prompt, **kw, app_state_path=app_state_path)
+        elif agent.id == KRIKO_AGENT.id:
+            from app.providers import kriko_agent
+
+            self._converse = kriko_agent.converse
         else:
             self._converse = mistral.converse
         # Injected test/tool adapters keep their established complete-reply
         # shape. The built-in Mistral adapter has a verified SSE endpoint.
-        self._stream_converse = (mistral.converse_stream
-                                 if converse is None and agent.key == "mistral" else None)
+        if converse is None and agent.id == KRIKO_AGENT.id:
+            from app.providers import kriko_agent
+
+            if app_state_path is not None:
+                from app import prefs
+                from app.web import state
+
+                try:
+                    conn = state.connect(app_state_path)
+                    try:
+                        tuning = prefs.kriko_agent_tuning(conn)
+                    finally:
+                        conn.close()
+                    self.thoroughness = tuning["thoroughness"]
+                    self.validation_sensitivity = tuning["validation_sensitivity"]
+                    self._cache_path = str(
+                        Path(app_state_path).parent / "cache" / "kriko-agent.sqlite3"
+                    )
+                except Exception:  # noqa: BLE001 — defaults keep a run usable
+                    pass
+
+            self._stream_converse = lambda prompt, **kw: kriko_agent.converse(
+                prompt, max_tool_calls=self._calls_allowed(),
+                thoroughness=self.thoroughness,
+                validation_sensitivity=self.validation_sensitivity,
+                cache_path=self._cache_path, **kw)
+        else:
+            self._stream_converse = (mistral.converse_stream
+                                     if converse is None and agent.key == "mistral" else None)
         self._home = home
         #: What the provider billed, in dollars. `None` once any call could
         #: not be priced: an under-count reported as a total is the invented
@@ -350,6 +413,8 @@ class ApiAgentResearcher(harness.HarnessResearcher):
         self.tokens_out: int | None = None
         self.usage_complete = True
         self.tool_calls = 0
+        self.retrieval_requests = 0
+        self.cache_hits = 0
         #: url -> the text the search tool returned for it, across every call
         #: this researcher made. The grounding source.
         self.sources: dict[str, str] = {}
@@ -517,9 +582,17 @@ class ApiAgentResearcher(harness.HarnessResearcher):
             self._titles.setdefault(url, row["title"])
         self.searched += [one for one in reply.queries if one not in self.searched]
         cost = f"${self.spent:.2f}" if self.spent is not None else "cost unknown"
+        billed_calls = (reply.billed_tool_calls
+                        if isinstance(reply.billed_tool_calls, int)
+                        and not isinstance(reply.billed_tool_calls, bool)
+                        else max(reply.tool_calls, len(reply.queries)))
+        retrieval_requests = (reply.retrieval_requests
+                              if isinstance(reply.retrieval_requests, int)
+                              and not isinstance(reply.retrieval_requests, bool)
+                              else billed_calls)
         self._echo(f"{self.agent.label} answered in {time.monotonic() - started:.0f} s: "
-                   f"{max(reply.tool_calls, len(reply.queries))} search(es), "
-                   f"{len(reply.sources)} result(s), {cost}")
+                   f"{retrieval_requests} retrieval request(s), {billed_calls} billable, "
+                   f"{len(reply.sources)} result(s), {reply.cache_hits} cached, {cost}")
         self.transcript = (reply.text or reply.error)[-harness.TRANSCRIPT_TAIL:]
         if reply.error:
             raise RuntimeError(f"{self.agent.label}: {reply.error}")
@@ -530,6 +603,7 @@ class ApiAgentResearcher(harness.HarnessResearcher):
 
         if not getattr(reply, "usage_complete", True):
             self.usage_complete = False
+            self._unpriced = True
 
         for name in ("tokens_in", "tokens_out"):
             value = getattr(reply, name)
@@ -540,8 +614,17 @@ class ApiAgentResearcher(harness.HarnessResearcher):
         # Billed calls are at least the searches the reply shows. A `usage`
         # block that omits `connectors` would otherwise make four $0.03
         # searches free.
-        calls = max(reply.tool_calls, len(reply.queries))
+        calls = (reply.billed_tool_calls
+                 if isinstance(reply.billed_tool_calls, int)
+                 and not isinstance(reply.billed_tool_calls, bool)
+                 else max(reply.tool_calls, len(reply.queries)))
         self.tool_calls += calls
+        self.cache_hits += max(0, int(getattr(reply, "cache_hits", 0) or 0))
+        requests = (reply.retrieval_requests
+                    if isinstance(reply.retrieval_requests, int)
+                    and not isinstance(reply.retrieval_requests, bool)
+                    else calls)
+        self.retrieval_requests += requests
         tokens = (
             None if reply.tokens_in is None or reply.tokens_out is None
             # No usage block is "cannot count". Pricing it as zero tokens
@@ -581,7 +664,14 @@ class ApiAgentResearcher(harness.HarnessResearcher):
         for url, findings in self._by_url.items():
             source = self.sources.get(url, "")
             for finding in findings:
-                span = loose_span(source, finding.quote) if source else ""
+                if self.agent.id == KRIKO_AGENT.id:
+                    from app.providers.kriko_agent import validated_quote
+
+                    span = validated_quote(
+                        source, finding.quote, self.validation_sensitivity,
+                    ) if source else ""
+                else:
+                    span = loose_span(source, finding.quote) if source else ""
                 if not span:
                     self.dropped += 1
                     continue

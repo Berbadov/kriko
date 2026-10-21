@@ -173,10 +173,17 @@ export interface ApiFeedEvent {
 }
 
 export interface ApiProduct {
-  subject_id: string
+  subject_id?: string
   label: string
-  claims: number
+  claims?: number
   identity?: Record<string, unknown>
+  card_type?: 'listing'
+  id?: string
+  url?: string
+  image_url?: string
+  seller?: string
+  trust?: string
+  page_read?: boolean
 }
 
 export interface ApiQuestion {
