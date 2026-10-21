@@ -266,11 +266,21 @@ def _local_asker(settings, params: dict, progress: Progress):
     return researcher
 
 
+def _watch_calls(researcher, progress) -> None:
+    """The job's step log (#261): one wrapper on the researcher's entry points
+    records every call to an agent, whichever plane it is. Duck-typed, like the
+    rest of the wiring here, so a progress without `watch` is simply unwatched."""
+    watch = getattr(progress, "watch", None)
+    if callable(watch):
+        watch(researcher)
+
+
 def _wire_researcher_text(researcher, progress: Progress) -> None:
     """Connect streamed prose when both sides support the optional callback."""
     draft = getattr(progress, "draft", None)
     if hasattr(researcher, "on_text") and callable(draft):
         researcher.on_text = draft
+    _watch_calls(researcher, progress)
     if hasattr(researcher, "agent_ledger"):
         researcher.agent_ledger = getattr(progress, "ledger", None)
         researcher.agent_run_id = getattr(progress, "run_id", "")
@@ -2061,6 +2071,7 @@ def _classify_catalog(settings, params: dict, progress: Progress, product: str,
             _cap_agent(researcher, {"budget_usd": cap})
             researcher.on_action = progress.log
             researcher.check_cancelled = progress.check
+            _watch_calls(researcher, progress)
             reply = researcher.ask(prompt, allow_tools=False).strip()
         progress.check()
         return reply
@@ -4041,6 +4052,9 @@ class _QuietProgress:
 
     def log(self, line: str) -> None:
         self._progress.log(line)
+
+    def watch(self, researcher) -> bool:
+        return self._progress.watch(researcher)
 
     def check(self) -> None:
         self._progress.check()
