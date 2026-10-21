@@ -255,22 +255,22 @@ The palette keeps the brand blue and adds four companions for data: violet,
 teal, mint and sky. Cards carry a wash of the brand violet in their top-left
 corner and a lit top edge.
 
-## Icons
+## Agent marks
 
-The navigation and the agents are drawn on a 12 by 12 grid of square cells
-(`kriko-ui/src/engine/pixicons.ts`). The rules come from the logo: strokes two
-cells thick, corners cut one step at a time, 45 degree diagonals, and one small
-signature square in teal where the logo's scan line ends. They are drawn by
-rule and not typed out, so a stroke cannot come out one cell thick by accident.
-Empty cells are not drawn. Draw them from 24 px up; below that the cells fall
-under two pixels and blur.
+Each agent has a mark of its own on a 16 by 16 grid of small square cells
+(`kriko-ui/src/engine/pixicons.ts`), in its own colour and never a maker's logo.
+The rules come from the logo: strokes two cells thick, corners cut one step at a
+time, 45 degree diagonals, and one small signature square in teal where the
+logo's scan line ends. Lit cells draw the shape. Every empty cell stays as a faint
+dot, so the mark reads as a display without being a row of round LEDs. The marks
+are drawn by rule and not typed out, so a stroke cannot come out one cell thick by
+accident. Navigation and the rest of the interface keep line icons; only the
+agents are pixel marks.
 
-Status moves the cells the way the logo's scan line would. Working sends a row of
-light down the icon and shows the empty cells of that row for a moment. Done
-sends it once and the signature turns mint. Waiting blinks the signature. Paused
-holds in amber, failed breaks up in red, and idle is still. The agents keep their
-own colours and their own drawings, none of them a maker's logo. The other
-icons in the app are still line icons until each is redrawn on the grid.
+Status moves the cells. Working sends a wave of light across the mark, lighting
+the dots under it for a moment. Done sends it once and the signature turns mint.
+Waiting blinks the signature. Paused holds in amber, failed breaks up in red, and
+idle is still. The answer header's mark follows the turn.
 
 ## Compare
 
