@@ -85,6 +85,14 @@ const VERSION_HEADER = "X-Kriko-Extension";
 const MINIMUM_HEADER = "X-Kriko-Minimum-Extension";
 const COMPAT_KEY = "krikoCompat";
 
+// The three steps of the information-sensitivity setting, as the app names
+// them: show everything, hide thin evidence, show only what is solid.
+const INFO_SENSITIVITIES = ["all", "hide_thin", "strict"];
+function _sensitivityOf(settings) {
+  const value = settings && settings.info_sensitivity;
+  return INFO_SENSITIVITIES.includes(value) ? value : "all";
+}
+
 // Tiers whose word stands on its own. Anything else is corroboration: worth
 // showing, worth counting, not worth presenting as settled.
 const CONFIRMING_TIERS = new Set(["authoritative", "manufacturer"]);
@@ -741,13 +749,14 @@ const SITE_SYNC_PERIOD_MINUTES = 30;
 
 // The same files, in the same order, as `manifest.json`'s two static blocks.
 // A dynamic registration is one entry rather than two because order inside
-// the array is what matters: `icons.js`, `claim_card.js` and `buyer_card.js` define what
+// the array is what matters: `icons.js`, `claim_card.js`, `buyer_card.js` and `run_progress.js` define what
 // `hover_lite.js` calls.
 const SITE_SCRIPTS = [
   "content.js",
   "hover_lite/icons.js",
   "hover_lite/claim_card.js",
   "hover_lite/buyer_card.js",
+  "hover_lite/run_progress.js",
   "hover_lite/hover_lite.js",
 ];
 
@@ -865,6 +874,10 @@ async function syncSites({ fresh = false } = {}) {
       sites: (previous && previous.sites) || [],
       error: error.message,
       code: error.code || "",
+      // Whether the app answered at all: a sync that registered nothing
+      // because the app was closed and one that registered nothing because
+      // there was nothing to register look alike without it.
+      reached: false,
     };
     await _writeSiteStatus(record);
     await _syncAnySite();     // needs no app: the grant is the browser's
@@ -938,6 +951,7 @@ async function syncSites({ fresh = false } = {}) {
     sites,
     error: failures.length ? failures.join("; ") : "",
     code: "",
+    reached: true,
   };
   await _writeSiteStatus(record);
   await _reportActivation(sites);
@@ -1026,15 +1040,128 @@ async function _reportActivation(sites) {
 // The alarm is the one that matters: the app is started and stopped
 // independently of the browser, so the first sync after install almost always
 // fails, and something has to try again without the reader doing anything.
-extensionApi.runtime.onInstalled.addListener(() => {
-  void syncSites({ fresh: true });
+extensionApi.runtime.onInstalled.addListener((details) => {
+  void syncThenGuide((details && details.reason) || "install");
   void refreshConnectionIcon();
 });
 if (extensionApi.runtime.onStartup) {
   extensionApi.runtime.onStartup.addListener(() => {
-    void syncSites({ fresh: true });
+    void syncThenGuide("startup");
     void refreshConnectionIcon();
   });
+}
+
+// ── the options page, opened once, at the step that is missing (#260) ───
+//
+// The reader's words: "automatically open kriko option in settings". The two
+// things only that page can settle are the host permission for a site a pack
+// reads (Chrome takes it from a gesture inside the extension, so nothing here
+// can grant it) and the address of an app that has never answered. Until now
+// both waited to be found in the browser's extension manager.
+//
+// The rules that keep this from becoming a nag, each one a thing the reader
+// said they did not want:
+//   * once per step, ever: what was opened for is remembered, and a step is
+//     forgotten only when it is done (a granted site, an app that answered),
+//     so a reader who closes the page is not shown it again;
+//   * never on every browser start: a start that finds the same pending sites
+//     finds them already remembered;
+//   * at most once in a browser session, so two steps at once open one tab;
+//   * an update never opens it for what was already pending: the first run
+//     after an upgrade only learns what is pending, so a reader who said no
+//     last month is not asked again by a version bump.
+// The page learns which step to put in front of the reader from
+// `krikoOptionsFocus`, because `openOptionsPage` takes no address.
+
+const OPTIONS_MEMORY_KEY = "krikoOptionsMemory";
+const OPTIONS_FOCUS_KEY = "krikoOptionsFocus";
+const OPTIONS_SESSION_KEY = "krikoOptionsOpenedThisSession";
+const OPTIONS_OPENING_REASONS = new Set(["install", "startup", "alarm"]);
+
+// Pure. `record` is the site sync's status, `memory` what was remembered (or
+// null on a first run), `reason` what woke the worker. Answers which step, if
+// any, deserves the reader's attention now, and the memory to keep.
+function planOptionsOpen(record, memory, reason) {
+  const known = Boolean(memory && typeof memory === "object");
+  const kept = {
+    appSeen: known && Boolean(memory.appSeen),
+    address: known && Boolean(memory.address),
+    sites: known && Array.isArray(memory.sites) ? [...memory.sites] : [],
+  };
+  // The first run with no memory only learns, except an install: an empty
+  // memory is exactly what a fresh install has.
+  const learning = !known && reason !== "install";
+  const mayOpen = OPTIONS_OPENING_REASONS.has(reason) && !learning;
+
+  if (!record || !record.reached) {
+    if (learning) kept.address = true;
+    const step = mayOpen && !kept.appSeen && !kept.address ? "address" : null;
+    return { step, patterns: [], memory: step ? { ...kept, address: true } : kept };
+  }
+
+  const pending = (record.sites || [])
+    .filter((row) => row.state === "pending" && row.pattern)
+    .map((row) => row.pattern);
+  kept.appSeen = true;
+  // A step that is done is forgotten, so the next time it is missing it is a
+  // new step and may be shown once more.
+  kept.sites = kept.sites.filter((pattern) => pending.includes(pattern));
+  if (learning) return { step: null, patterns: [], memory: { ...kept, sites: pending } };
+  const fresh = pending.filter((pattern) => !kept.sites.includes(pattern));
+  if (mayOpen && fresh.length) {
+    return {
+      step: "sites", patterns: fresh,
+      memory: { ...kept, sites: [...kept.sites, ...fresh] },
+    };
+  }
+  return { step: null, patterns: [], memory: kept };
+}
+
+async function _sessionOptionsOpened() {
+  try {
+    const got = await extensionApi.storage.session.get(OPTIONS_SESSION_KEY);
+    return Boolean(got && got[OPTIONS_SESSION_KEY]);
+  } catch (_) {
+    return false;
+  }
+}
+
+async function guideToOptions(record, reason) {
+  if (!record || !extensionApi.runtime.openOptionsPage) return null;
+  let memory = null;
+  try {
+    const got = await extensionApi.storage.local.get(OPTIONS_MEMORY_KEY);
+    memory = (got && got[OPTIONS_MEMORY_KEY]) || null;
+  } catch (_) {
+    return null;     // no way to remember means no way to promise "once"
+  }
+  const plan = planOptionsOpen(record, memory, reason);
+  // The session cap: a step skipped for it is not marked as shown, so it
+  // still gets its one turn in a later session.
+  const capped = Boolean(plan.step) && await _sessionOptionsOpened();
+  const opening = capped ? null : plan.step;
+  const next = capped
+    ? planOptionsOpen(record, memory || {}, "permission").memory
+    : plan.memory;
+  try {
+    await extensionApi.storage.local.set({ [OPTIONS_MEMORY_KEY]: next });
+    if (opening) {
+      await extensionApi.storage.local.set({ [OPTIONS_FOCUS_KEY]: opening });
+      try {
+        await extensionApi.storage.session.set({ [OPTIONS_SESSION_KEY]: Date.now() });
+      } catch (_) { /* no session storage: the memory above still says once */ }
+      extensionApi.runtime.openOptionsPage();
+    }
+  } catch (_) {
+    return null;
+  }
+  return opening;
+}
+
+async function syncThenGuide(reason) {
+  const record = await syncSites({ fresh: true });
+  await guideToOptions(record, reason);
+  return record;
 }
 /* An alarm is Chrome's, and this block runs again on every worker start.
  *
@@ -1099,7 +1226,7 @@ if (extensionApi.alarms) {
     delayInMinutes: 2,
   });
   extensionApi.alarms.onAlarm.addListener((alarm) => {
-    if (alarm && alarm.name === SITE_SYNC_ALARM) void syncSites({ fresh: true });
+    if (alarm && alarm.name === SITE_SYNC_ALARM) void syncThenGuide("alarm");
     if (alarm && alarm.name === CONNECTION_ALARM) void refreshConnectionIcon();
     if (alarm && alarm.name === PRICE_ALARM) void checkBuyerAlerts();
   });
@@ -1133,8 +1260,10 @@ wireNotifications();
 // to take the injection with it — an extension still running on a site the
 // reader took back is the worst failure available here.
 if (extensionApi.permissions && extensionApi.permissions.onAdded) {
-  extensionApi.permissions.onAdded.addListener(() => { wireNotifications(); void syncSites(); });
-  extensionApi.permissions.onRemoved.addListener(() => { void syncSites(); });
+  // `permission` never opens the page: the reader is the one who just moved,
+  // and it only lets the memory forget a step that is now done.
+  extensionApi.permissions.onAdded.addListener(() => { wireNotifications(); void syncThenGuide("permission"); });
+  extensionApi.permissions.onRemoved.addListener(() => { void syncThenGuide("permission"); });
 }
 
 // ── the answer, in the shape the panel renders ──────────────────────────
@@ -2659,6 +2788,35 @@ extensionApi.runtime.onMessage.addListener((request, sender, sendResponse) => {
     readCompat()
       .then((record) => sendResponse({ ok: true, compat: record }))
       .catch((error) => sendResponse({ ok: false, error: error.message }));
+    return true; // async
+  }
+
+  /* How much doubt the reader wants to see (#263): the app's own setting,
+   * `info_sensitivity`, read and written through the one settings route the
+   * app's Settings screen uses, so the two can never disagree. The worker is
+   * the only caller, as for every other request: a content script has no
+   * permission to reach the app.
+   *
+   * A value this does not know is `all`, on the way in and on the way out:
+   * a setting that cannot be read must never hide evidence. */
+  if (request.type === "INFO_SENSITIVITY") {
+    _getApp("/api/settings")
+      .then((settings) => sendResponse({ ok: true, sensitivity: _sensitivityOf(settings) }))
+      .catch((error) => sendResponse({
+        ok: false, code: error.code, error: error.message, sensitivity: "all" }));
+    return true; // async
+  }
+
+  if (request.type === "SET_INFO_SENSITIVITY") {
+    const wanted = String(request.payload?.sensitivity || "");
+    if (!INFO_SENSITIVITIES.includes(wanted)) {
+      sendResponse({ ok: false, error: "That is not one of the three settings." });
+      return false;
+    }
+    _postApp("/api/settings", { values: { info_sensitivity: wanted } })
+      .then((settings) => sendResponse({ ok: true, sensitivity: _sensitivityOf(settings) }))
+      .catch((error) => sendResponse({
+        ok: false, code: error.code, error: error.message }));
     return true; // async
   }
 

@@ -19,6 +19,8 @@
   const { iconSvg, domainIconSvg } = window.__KrikoPanelIcons;
   const { renderClaimCard, updateClaimCard, markClaimCard, factClaimCard, renderRichText } =
     window.__KrikoPanelClaimCard;
+  const { filterByEvidence, normaliseSensitivity, hiddenWords } = window.__KrikoPanelClaimCard;
+  const { describeRun, coverageSummary } = window.__KrikoRunProgress;
 
   const HOST_TAG = "kriko-panel-host";
 
@@ -43,6 +45,10 @@
    * desktop app's own setting. Standard is the default. */
   const MOTION_KEY = "kriko.motion";
   const MOTION_PROFILES = ["calm", "standard", "vivid"];
+  /* How see-through the panel is, shared with the options page: "glass"
+   * (the default; the page shows through, blurred) or "solid" for a reader who
+   * finds that hard to read. Anything else is the default. */
+  const GLASS_KEY = "kriko.glass";
 
   /* The engine's verdict, as a word the panel shows. Three of the four are
    * worth a banner; `recognised` is the ordinary case and gets none. */
@@ -146,8 +152,9 @@
     // B148: the quick look's answer, kept while the deeper run goes on.
     // `{ assumed, risks, dropped }` or null.
     researchQuick: null,
-    // The followed job's share of its work, for the progress bar.
-    researchProgress: 0,
+    // What the followed run is doing, from its own log (`run_progress.js`):
+    // the stage it has reached and the pages it has read, never a percentage.
+    researchRun: null,
     // The saved quick look the "Add to a pack" button would file, or null.
     researchQuickJob: null,
     taskLogs: new Map(),
@@ -177,6 +184,14 @@
     /* The motion profile, `""` until storage has answered, in which case
      * Standard is what the stylesheet already holds. */
     motion: "",
+    /* "glass" or "solid"; `""` until storage has answered, which is glass. */
+    glass: "",
+    /* How much doubt the reader wants to see, from the app's own setting
+     * (`info_sensitivity`: all | hide_thin | strict). `all` until the app has
+     * answered, so an unreachable app never hides evidence. `revealThin` is
+     * this answer only: the reader pressed Show on what the setting hid. */
+    sensitivity: "all",
+    revealThin: false,
     /* A run that kept nothing has a card of its own. null means none; the
      * object is `{ title, note, coverage, evidence_pages, outcome }`. */
     researchEmpty: null,
@@ -378,6 +393,28 @@
     }
   }
 
+  /* ─── Glass or solid ───────────────────────────────────────────────────
+   *
+   * The stylesheet does the work, as with the motion profile: the host's
+   * `data-glass` selects an opaque set of the two tokens the panel's
+   * background reads. Absent, the panel is glass. */
+  function paintGlass() {
+    if (hostEl) hostEl.dataset.glass = state.glass === "solid" ? "solid" : "glass";
+  }
+
+  function readGlass() {
+    try {
+      chrome.storage?.local?.get?.([GLASS_KEY], (bag) => {
+        void chrome.runtime.lastError;
+        state.glass = bag?.[GLASS_KEY] === "solid" ? "solid" : "";
+        paintGlass();
+      });
+    } catch (_) {
+      // A storage that will not answer leaves the glass in place.
+      paintGlass();
+    }
+  }
+
   /* A ripple under the pointer, drawn once and removed by its own animation.
    * Appended to the panel so it is clipped by the panel's rounded corners and
    * never lands on the host page. Off entirely for reduced motion. */
@@ -576,12 +613,21 @@
     return alerts;
   }
 
+  /* The claims the reader's setting lets through, and the ones it holds back.
+   * The one place the setting is applied: everything drawn reads this, and
+   * nothing is removed from `state.result`, so the stored answer, its
+   * digest and Show-them never depend on what is on screen. */
+  function claimsView() {
+    return filterByEvidence(state.result && state.result.claims, state.sensitivity, state.revealThin);
+  }
+
   function counts() {
     if (!state.result || !Array.isArray(state.result.claims)) {
       return { high: 0, medium: 0, low: 0, total: 0 };
     }
-    const out = { high: 0, medium: 0, low: 0, total: state.result.claims.length };
-    for (const r of state.result.claims) {
+    const { shown } = claimsView();
+    const out = { high: 0, medium: 0, low: 0, total: shown.length };
+    for (const r of shown) {
       if (r.severity === "high") out.high += 1;
       else if (r.severity === "medium") out.medium += 1;
       else if (r.severity === "low") out.low += 1;
@@ -641,6 +687,7 @@
       } else {
         state.freshKeys = new Set();
         state.openIds = new Set();
+        state.revealThin = false;
         // A different saved answer gets its own card tree.
         if (claimsListEl) claimsListEl.replaceChildren();
       }
@@ -651,6 +698,8 @@
       state.result = entry.result;
       state.errorMsg = null;
       setPipeline("result");
+      // The setting may have moved in the app since the last answer.
+      requestSensitivity();
     } else if (entry.ok === false) {
       // extension-5/extension-8 (B145 audit): the stored-result path (a page
       // reloaded onto a cached entry, or the panel reopened) used to ignore
@@ -1115,7 +1164,7 @@
     state.researchDraftAnswers = {};
     // Retain the last successful cards while refreshing, including failure.
     state.researchStartedAt = Date.now();
-    state.researchProgress = 0;
+    state.researchRun = null;
     renderResearch();
     chrome.runtime.sendMessage({ type: "RESEARCH_PRODUCT", payload: {
       ...(subject_id ? { subject_id } : { q, allow_draft: true, url: location.href }),
@@ -1131,7 +1180,11 @@
       }
       state.researchJob = response.job;
       state.researchState = "queued";
-      state.researchMessage = response.job.kind === "quick_look" ? "Looking it up…" : "Queued";
+      // A quick look is a run with stages from its first moment; anything
+      // else says its own word until its log gives it some.
+      state.researchRun = describeRun(response.job);
+      state.researchMessage = response.job.kind === "quick_look"
+        ? `${state.researchRun.headline}\u2026` : "Queued";
       renderResearch();
       pollResearchJob(response.job.job_id);
     });
@@ -1210,7 +1263,7 @@
     state.researchState = "starting";
     state.researchMessage = "Running again with your answer...";
     state.researchStartedAt = Date.now();
-    state.researchProgress = 0;
+    state.researchRun = null;
     renderResearch();
     chrome.runtime.sendMessage({ type: "JOB_RETRY", payload: { job_id: job.job_id, answers } },
       (response) => {
@@ -1263,13 +1316,10 @@
    * the product instead of leaving for the app. */
   function coverageWords(coverage) {
     if (!coverage) return "";
-    return [
-      `${coverage.pages_read || 0} pages read`,
-      `${coverage.pages_relevant || 0} matched`,
-      `${coverage.pages_extracted || 0} evidence checks`,
-      `${coverage.publishers_read || 0} publishers`,
-      `${coverage.sources_cited || 0} cited`,
-    ].join(" · ");
+    // The run's own tally, as `run_progress.js` words it: pages read out of
+    // pages tried first, then what came of them.
+    const { pages, rest } = coverageSummary(coverage);
+    return [pages, ...rest].join(" \u00b7 ");
   }
 
   function noIssueCardMarkup(empty) {
@@ -1348,9 +1398,14 @@
           <button type="button" class="lite-more lite-context-toggle" aria-expanded="false">Add context</button>`}
         <p class="lite-research-status" role="status"></p>
         ${quickCoverage && !quickIsEmpty ? `<p class="lite-quick-coverage" role="status">${escapeHtml(
-          `${quickCoverage.pages_read || 0} pages read · ${quickCoverage.pages_relevant || 0} matched · ${quickCoverage.pages_extracted || 0} evidence checks · ${quickCoverage.publishers_read || 0} publishers · ${quickCoverage.sources_cited || 0} cited`
+          coverageWords(quickCoverage)
           + (rejectionSummary ? ` · reasons: ${rejectionSummary}` : ""))}</p>` : ""}
-        <div class="lite-progress" role="progressbar" aria-label="Research progress" hidden><div class="lite-progress-fill"></div></div>
+        <div class="lite-run" hidden>
+          <div class="lite-run-bar" role="progressbar" aria-label="Research progress" aria-valuemin="1" aria-valuemax="4">
+            <span class="lite-run-seg"></span><span class="lite-run-seg"></span><span class="lite-run-seg"></span><span class="lite-run-seg"></span>
+          </div>
+          <p class="lite-run-facts"></p>
+        </div>
         ${emptyCard ? noIssueCardMarkup(emptyCard) : ""}
         ${state.researchQuick && !quickIsEmpty ? `<div class="lite-quick">
           ${state.researchQuick.assumed ? `<p class="lite-quick-assumed">Taken as: ${renderRichText(state.researchQuick.assumed)}</p>` : ""}
@@ -1396,7 +1451,7 @@
       renderTaskLog(slot.querySelector(".lite-task-log-slot"), state.researchJob);
       slot.querySelector(".lite-research").dataset.state = state.researchState;
       slot.querySelector(".lite-research-status").textContent = state.researchMessage;
-      showProgress(slot.querySelector(".lite-progress"), state.researching ? state.researchProgress : null);
+      paintRun(slot);
       const name = slot.querySelector(".lite-research-name");
       if (name && name.value !== state.researchName) name.value = state.researchName;
       const context = slot.querySelector(".lite-research-context");
@@ -1432,7 +1487,7 @@
     renderTaskLog(slot.querySelector(".lite-task-log-slot"), state.researchJob);
     slot.querySelector(".lite-research").dataset.state = state.researchState;
     slot.querySelector(".lite-research-status").textContent = state.researchMessage;
-    showProgress(slot.querySelector(".lite-progress"), state.researching ? state.researchProgress : null);
+    paintRun(slot);
     const name = slot.querySelector(".lite-research-name");
     if (name) {
       name.value = state.researchName;
@@ -1506,22 +1561,8 @@
       const card = renderClaimCard(risk, { open: false, compact: state.compact });
       card.querySelector(".lite-rc-toggle")?.addEventListener("click", () =>
         updateClaimCard(card, { open: card.dataset.open !== "1" }));
-      // Where the line came from, in its own words: a quick look is not a
-      // stored claim, so the page and its quote are the only warrant it has.
-      const body = card.querySelector(".lite-rc-body");
-      for (const src of risk.sources || []) {
-        if (!src?.url || !body) continue;
-        const cite = document.createElement("blockquote");
-        cite.className = "lite-quick-src";
-        cite.textContent = `\u201c${src.quote}\u201d `;
-        const link = document.createElement("a");
-        link.href = src.url;
-        link.target = "_blank";
-        link.rel = "noopener noreferrer";
-        link.textContent = src.domain || src.url;
-        cite.appendChild(link);
-        body.appendChild(cite);
-      }
+      // The page and quote a quick look stands on are drawn by the card itself:
+      // a quick look is not a stored claim, so they are the only warrant it has.
       wrap.appendChild(card);
       quickCards.appendChild(wrap);
     });
@@ -1555,6 +1596,32 @@
       state.researchPlaneError = "";
       requestResearchPlane();
     });
+  }
+
+  /* The run in flight, as steps and counts (`run_progress.js`).
+   *
+   * Four segments, one per real stage, filled as the run's own log shows it
+   * got there; the sentence beneath says what is happening now and, once a
+   * page has been tried, how many were read out of how many. Nothing here is
+   * a share of anything: a bar that fills smoothly while an agent sits on one
+   * stage is the invention this replaces. */
+  function paintRun(slot) {
+    const box = slot?.querySelector(".lite-run");
+    if (!box) return;
+    const run = state.researching ? state.researchRun : null;
+    if (!run || !run.staged || run.finished) { box.hidden = true; return; }
+    box.hidden = false;
+    const bar = box.querySelector(".lite-run-bar");
+    bar.setAttribute("aria-valuenow", String(run.step));
+    bar.setAttribute("aria-valuetext", run.spoken);
+    const segs = bar.querySelectorAll(".lite-run-seg");
+    run.stages.forEach((stage, i) => {
+      if (!segs[i]) return;
+      segs[i].dataset.state = stage.state;
+      segs[i].title = stage.label;
+    });
+    box.querySelector(".lite-run-facts").textContent =
+      [`Step ${run.step} of ${run.total}`, run.detail, run.pages].filter(Boolean).join(" \u00b7 ");
   }
 
   // Progress shown in the gap card itself — the panel stays put, and the
@@ -1654,7 +1721,7 @@
     if (!jobId || state.researching) return;
     state.researching = "pack";
     state.researchStartedAt = Date.now();
-    state.researchProgress = 0;
+    state.researchRun = null;
     state.researchState = "queued";
     state.researchMessage = "Adding the quick look to a pack…";
     renderResearch();
@@ -1711,8 +1778,9 @@
       if (!done) {
         // The stage in words and how long it has run, never a percentage: an
         // agent job jumps from a tenth to done, so a number read as a stall.
-        state.researchMessage = `${job.message || job.state || "Researching"} · ${elapsedWords(state.researchStartedAt)}`;
-        state.researchProgress = job.progress || 0;
+        // The stage is the furthest one the run's own log has reached.
+        state.researchRun = describeRun(job);
+        state.researchMessage = `${state.researchRun.headline} \u00b7 ${elapsedWords(state.researchStartedAt)}`;
         renderResearch();
         setTimeout(() => pollResearchJob(jobId), 1000);
         return;
@@ -1722,6 +1790,7 @@
         return;
       }
       state.researching = null;
+      state.researchRun = null;
       state.cancelling = false;
       // The same card the quick look shows when it kept nothing: the run read
       // sources and kept no finding, and that absence is the finding.
@@ -1880,6 +1949,10 @@
         state.motion = MOTION_PROFILES.includes(saved) ? saved : "";
         paintMotion();
       }
+      if (GLASS_KEY in changes) {
+        state.glass = changes[GLASS_KEY].newValue === "solid" ? "solid" : "";
+        paintGlass();
+      }
       return;
     }
     if (area !== "session") return;
@@ -2005,6 +2078,8 @@
     paintTheme();
     readTheme();
     readMotion();
+    readGlass();
+    wireEvidenceTips();
     scheduleTour();
     panel.querySelector(".lite-find-product").addEventListener("click", () => {
       const product = (state.result?.subjects || []).find((one) => one.kind === "product");
@@ -3619,10 +3694,12 @@
       claimsHeadEl.innerHTML = "";
       return;
     }
-    const total = state.result.claims.length;
+    const view = claimsView();
+    const total = view.shown.length;
+    renderThinNote();
     // Nothing to expand, collapse or count: the row would be three zeroes and
     // two controls that do nothing.
-    if (!total) { claimsHeadEl.innerHTML = ""; return; }
+    if (!total) { claimsHeadEl.querySelector(".lite-claims-head")?.remove(); return; }
     const allOpen  = state.openIds.size === total && total > 0;
     const allClose = state.openIds.size === 0;
 
@@ -3630,7 +3707,7 @@
     // animation does not retrigger.
     let head = claimsHeadEl.querySelector(".lite-claims-head");
     if (!head) {
-      claimsHeadEl.innerHTML = `
+      claimsHeadEl.insertAdjacentHTML("afterbegin", `
         <div class="lite-claims-head">
           <div class="lite-claims-label">Risks · ${total}</div>
           <div class="lite-chip-group">
@@ -3642,7 +3719,7 @@
             </button>
           </div>
         </div>
-      `;
+      `);
       claimsHeadEl.querySelector(".lite-chip-expand").addEventListener("click", expandAll);
       claimsHeadEl.querySelector(".lite-chip-collapse").addEventListener("click", collapseAll);
       return;
@@ -3655,6 +3732,95 @@
     const collapseBtn = head.querySelector(".lite-chip-collapse");
     if (expandBtn)   expandBtn.dataset.on   = allOpen  ? "1" : "0";
     if (collapseBtn) collapseBtn.dataset.on = allClose ? "1" : "0";
+  }
+
+  /* ─── Why a card is marked thin ────────────────────────────────────────
+   *
+   * One tip for the whole panel, placed from the mark under the pointer or
+   * the keyboard. A tip inside each card would be clipped by the card, and the
+   * reason is the point of the mark. It reads the mark's own accessible label,
+   * so what a screen reader says and what a pointer shows cannot differ. */
+  function showEvidenceTip(mark) {
+    if (!panel || !mark) return;
+    let tip = panel.querySelector(".lite-ev-tip");
+    if (!tip) {
+      tip = document.createElement("div");
+      tip.className = "lite-ev-tip";
+      tip.setAttribute("aria-hidden", "true");
+      panel.appendChild(tip);
+    }
+    tip.textContent = mark.getAttribute("aria-label") || "";
+    tip.hidden = false;
+    const box = panel.getBoundingClientRect();
+    const at = mark.getBoundingClientRect();
+    const width = tip.offsetWidth;
+    const left = Math.max(8, Math.min(at.left - box.left, box.width - width - 8));
+    const below = at.bottom - box.top + 6;
+    const top = below + tip.offsetHeight > box.height - 8 ? at.top - box.top - tip.offsetHeight - 6 : below;
+    tip.style.left = `${left}px`;
+    tip.style.top = `${Math.max(8, top)}px`;
+  }
+  function hideEvidenceTip() {
+    const tip = panel?.querySelector(".lite-ev-tip");
+    if (tip) tip.hidden = true;
+  }
+  function wireEvidenceTips() {
+    const markOf = (event) => (event.target.closest ? event.target.closest(".lite-rc-ev") : null);
+    panel.addEventListener("mouseover", (event) => { const m = markOf(event); if (m) showEvidenceTip(m); });
+    panel.addEventListener("mouseout", (event) => { if (markOf(event)) hideEvidenceTip(); });
+    panel.addEventListener("focusin", (event) => { const m = markOf(event); if (m) showEvidenceTip(m); });
+    panel.addEventListener("focusout", (event) => { if (markOf(event)) hideEvidenceTip(); });
+    panel.addEventListener("keydown", (event) => { if (event.key === "Escape") hideEvidenceTip(); });
+  }
+
+  /* What the reader's setting is holding back, said plainly and undoable:
+   * "3 thin findings hidden" with a button to see them. Counted from the whole
+   * answer, so it stays after they are revealed ("3 thin findings shown"). */
+  function renderThinNote() {
+    const held = filterByEvidence(state.result && state.result.claims, state.sensitivity, false)
+      .hidden.length;
+    let note = claimsHeadEl.querySelector(".lite-thin-note");
+    if (!held) { note?.remove(); return; }
+    if (!note) {
+      note = document.createElement("div");
+      note.className = "lite-thin-note";
+      note.setAttribute("role", "status");
+      note.innerHTML = `<span class="lite-thin-text"></span>
+        <button type="button" class="lite-chip lite-thin-toggle" aria-pressed="false"></button>
+        <button type="button" class="lite-chip lite-thin-change">Change setting</button>`;
+      note.querySelector(".lite-thin-toggle").addEventListener("click", () => {
+        state.revealThin = !state.revealThin;
+        renderBody();
+        renderCounts();
+      });
+      note.querySelector(".lite-thin-change").addEventListener("click", () =>
+        chrome.runtime.sendMessage({ type: "OPEN_OPTIONS" }, () => { void chrome.runtime.lastError; }));
+      claimsHeadEl.appendChild(note);
+    }
+    note.querySelector(".lite-thin-text").textContent =
+      hiddenWords(held, state.sensitivity, state.revealThin);
+    const toggle = note.querySelector(".lite-thin-toggle");
+    toggle.textContent = state.revealThin ? "Hide again" : "Show them";
+    toggle.setAttribute("aria-pressed", state.revealThin ? "true" : "false");
+  }
+
+  /* The setting lives in the app (`info_sensitivity`), so the app's Settings
+   * and this panel can never disagree, and it only changes which cards are
+   * drawn: what is stored, ranked and digested is untouched. Asked again with
+   * each answer, so a change made in the app reaches an open panel. */
+  function requestSensitivity() {
+    try {
+      chrome.runtime.sendMessage({ type: "INFO_SENSITIVITY" }, (response) => {
+        if (chrome.runtime.lastError) return;
+        const next = normaliseSensitivity(response && response.ok ? response.sensitivity : "all");
+        if (next === state.sensitivity) return;
+        state.sensitivity = next;
+        state.revealThin = false;
+        if (state.mounted && state.pipeline === "result") { renderBody(); renderCounts(); }
+      });
+    } catch (_) {
+      // No worker to ask: everything stays shown, which is the safe default.
+    }
   }
 
   function renderClaimsList() {
@@ -3767,7 +3933,7 @@
     let groups;
     {
       const byDomain = {};
-      state.result.claims.forEach((claim, i) => {
+      claimsView().shown.forEach((claim, i) => {
         const d = (claim.domain || "other").toLowerCase().trim();
         if (!byDomain[d]) byDomain[d] = [];
         byDomain[d].push({ claim, idx: i });
@@ -3849,6 +4015,7 @@
             card.innerHTML = next.innerHTML;
             card.dataset.sev = next.dataset.sev;
             card.dataset.strength = next.dataset.strength;
+            card.dataset.evidence = next.dataset.evidence;
           } else {
             card = next;
             wrap.appendChild(card);
@@ -4066,7 +4233,7 @@
   function setAllOpen(open) {
     if (!state.result) return;
     state.openIds = open
-      ? new Set(state.result.claims.map(claimKeyOf))
+      ? new Set(claimsView().shown.map(claimKeyOf))
       : new Set();
     // Mutate cards in place so each one runs its own expand/collapse animation
     // — re-rendering the list would retrigger the entrance animation.
