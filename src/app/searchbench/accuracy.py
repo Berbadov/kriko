@@ -3,7 +3,7 @@
 import asyncio
 import json
 import re
-from urllib.parse import parse_qs, urlsplit
+from urllib.parse import parse_qs, parse_qsl, urlsplit
 
 from app.searchbench.metrics import ledger
 from app.searchbench.transport import TokenBudgetExceeded
@@ -61,6 +61,19 @@ def primary_citations(answer, sources, domains):
     return result
 
 
+def source_url_identity(value):
+    """Normalize a source URL for matching judge output to supplied evidence."""
+    try:
+        parts = urlsplit(value)
+        if not parts.scheme or not parts.hostname:
+            return None
+        host = parts.hostname.lower().removeprefix("www.")
+        query = tuple(sorted(parse_qsl(parts.query, keep_blank_values=True)))
+        return parts.scheme.lower(), host, parts.path.rstrip("/") or "/", query
+    except (TypeError, ValueError):
+        return None
+
+
 def grade_result(result, case, row):
     result = json.loads(json.dumps(result))
     normalizations = []
@@ -73,14 +86,30 @@ def grade_result(result, case, row):
     claims = result.get("claims")
     if not isinstance(claims, list) or not isinstance(result.get("scope_violations"), list):
         raise ValueError("Invalid claim audit")
-    known = {s["id"] for s in row.get("sources", [])}
+    supplied_sources = row.get("sources", [])
+    known = {s["id"] for s in supplied_sources}
+    source_urls = {source_url_identity(s["url"]): s["id"] for s in supplied_sources
+                   if source_url_identity(s.get("url")) is not None}
+    unknown_judge_source_ids = set()
     for claim in claims:
         if claim.get("correct") is not None and type(claim["correct"]) is not bool:
             raise ValueError("Invalid claim verdict")
         if claim.get("support") not in ("supported", "not_supported", "not_cited", "insufficient"):
             raise ValueError("Invalid support verdict")
-        if not isinstance(claim.get("source_ids"), list) or set(claim["source_ids"]) - known:
-            raise ValueError("Judge invented a source ID")
+        if not isinstance(claim.get("source_ids"), list):
+            raise ValueError("Invalid claim source IDs")
+        mapped_ids = []
+        for source_id in claim["source_ids"]:
+            if isinstance(source_id, str) and source_id in known:
+                mapped_ids.append(source_id)
+                continue
+            identity = source_url_identity(source_id)
+            if identity in source_urls:
+                mapped_ids.append(source_urls[identity])
+                normalizations.append("Mapped a judge source URL to its supplied evidence ID")
+            else:
+                unknown_judge_source_ids.add(str(source_id))
+        claim["source_ids"] = sorted(set(mapped_ids))
         if claim["support"] == "supported" and not claim["source_ids"]:
             claim["support"] = "not_cited"
             normalizations.append("Supported label without source IDs was downgraded to not_cited")
@@ -104,8 +133,9 @@ def grade_result(result, case, row):
     return {"status": "scored", "fact_recall": recall, "fact_f1": fact_f1, "fact_precision": fact_precision,
             "true_positives": true_positives, "false_negatives": false_negatives,
             "false_claims": false_claims, "claims_assessed": len(claims),
-            "citation_support_rate": grounding, "primary_citations": len(primaries),
-            "unknown_citations": invented_citations, "accepted": accepted, "detail": result, "normalizations": normalizations}
+            "citation_support_rate": grounding, "primary_citations": len(primaries), "critical_ok": critical_ok,
+            "unknown_citations": invented_citations, "unknown_judge_source_ids": sorted(unknown_judge_source_ids),
+            "accepted": accepted, "detail": result, "normalizations": normalizations}
 
 
 async def assess(wire, model, row, case, *, timeout=45):

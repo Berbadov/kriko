@@ -416,7 +416,7 @@ def recompute(folder):
         if len(row.get("audits", {})) != 2:
             row["accuracy"].update(complete=False, accepted=None)
     document["postprocessor_sha256"] = hashlib.sha256(Path(__file__).with_name("accuracy.py").read_bytes()).hexdigest()
-    document["postprocessor_notes"] = "Publisher-hosted communities excluded; translated GUID/locale copies deduplicated; supported-without-citation labels downgraded; factual thresholds unchanged. Original judge responses and all charges retained in audit_history."
+    document["postprocessor_notes"] = "Publisher-hosted communities excluded; translated GUID/locale copies deduplicated; judge source URLs matching supplied evidence are mapped to its local ID; unknown judge source IDs are excluded and unsupported labels downgraded; factual thresholds unchanged. Original judge responses and all charges retained in audit_history."
     save(document, folder)
     print(f"Recomputed deterministic gates; {changed} latest audit outcomes/statuses changed; no API calls")
 

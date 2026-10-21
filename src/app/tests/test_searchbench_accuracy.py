@@ -50,7 +50,7 @@ def test_correct_clarification_does_not_need_an_invented_citation():
     assert grade_result(judgement, case, row)["accepted"]
 
 
-def test_judge_cannot_omit_criteria_or_invent_supporting_source_ids():
+def test_judge_cannot_omit_criteria_and_unmatched_source_ids_are_downgraded():
     row = {"status": "ok", "answer": "Fact [S1]", "sources": [{"id": "S1", "url": "https://manufacturer.test"}]}
     judgement = fixture_judgement()
     judgement["criteria"] = judgement["criteria"][:1]
@@ -58,8 +58,21 @@ def test_judge_cannot_omit_criteria_or_invent_supporting_source_ids():
         grade_result(judgement, fixture_case(), row)
     judgement = fixture_judgement()
     judgement["claims"][0]["source_ids"] = ["S999"]
-    with pytest.raises(ValueError):
-        grade_result(judgement, fixture_case(), row)
+    result = grade_result(judgement, fixture_case(), row)
+    assert result["unknown_judge_source_ids"] == ["S999"]
+    assert result["detail"]["claims"][0]["support"] == "not_cited"
+    assert not result["accepted"]
+
+
+def test_judge_source_urls_are_mapped_to_matching_supplied_evidence():
+    judgement = fixture_judgement()
+    judgement["claims"][0]["source_ids"] = ["https://manufacturer.test/spec"]
+    row = {"status": "ok", "answer": "Correct fact [S1]",
+           "sources": [{"id": "S1", "url": "https://www.manufacturer.test/spec/"}]}
+    result = grade_result(judgement, fixture_case(), row)
+    assert result["detail"]["claims"][0]["source_ids"] == ["S1"]
+    assert result["citation_support_rate"] == 1
+    assert result["unknown_judge_source_ids"] == []
 
 
 def test_primary_sources_exclude_publisher_hosted_forums_and_duplicate_translations():
