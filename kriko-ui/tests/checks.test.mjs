@@ -6,13 +6,13 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
-let directory, checks, api, thinness, view, steps
+let directory, checks, api, thinness, view, steps, meters
 const memory = new Map()
 before(async () => {
   globalThis.window = { setTimeout, clearTimeout }
   globalThis.sessionStorage = { getItem: (key) => memory.get(key), setItem: (key, value) => memory.set(key, value), removeItem: (key) => memory.delete(key) }
   directory = await mkdtemp(join(tmpdir(), 'kriko-ui-tests-'))
-  for (const [source, target] of [['src/engine/api.ts','api.mjs'], ['src/engine/thinness.ts','thinness.mjs'], ['src/chat/view.ts','view.mjs'], ['src/compare/checks.ts','checks.mjs'], ['src/engine/steps.ts','steps.mjs']]) {
+  for (const [source, target] of [['src/engine/api.ts','api.mjs'], ['src/engine/thinness.ts','thinness.mjs'], ['src/chat/view.ts','view.mjs'], ['src/compare/checks.ts','checks.mjs'], ['src/engine/steps.ts','steps.mjs'], ['src/engine/usagemeters.ts','usagemeters.mjs']]) {
     const code = await readFile(source, 'utf8')
     const built = ts.transpileModule(code, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText
     await writeFile(join(directory, target), built.replaceAll('import.meta.env', '({})').replace("'../engine/api'", "'./api.mjs'").replace("'../engine/thinness'", "'./thinness.mjs'"))
@@ -22,6 +22,7 @@ before(async () => {
   thinness = await import(pathToFileURL(join(directory, 'thinness.mjs')))
   view = await import(pathToFileURL(join(directory, 'view.mjs')))
   steps = await import(pathToFileURL(join(directory, 'steps.mjs')))
+  meters = await import(pathToFileURL(join(directory, 'usagemeters.mjs')))
 })
 after(async () => { if (directory) await rm(directory, {recursive:true, force:true}) })
 
@@ -130,4 +131,58 @@ test('the agent stepper reads its step from the reported progress, in quarters',
   assert.deepEqual(steps.stepOf(0.3, 'done', 4), { at: 4, within: 1 }, 'a finished run is every step done')
   assert.equal(steps.stepOf(Number.NaN, 'researching', 4).at, 0, 'a progress the engine did not give is the first step')
   assert.equal(steps.stepOf(7, 'researching', 4).at, 3, 'progress past the end stays on the last step')
+})
+
+test('the usage card leaves out what was never used and what nobody reported', () => {
+  const quiet = meters.demoMeters(1000)
+  quiet.resources.local_model.used = false
+  assert.deepEqual(meters.usedResources(quiet), ['cli_agent', 'llm_api', 'web_search'])
+  assert.deepEqual(meters.usedResources(null), [])
+  assert.equal(meters.left(null), null, 'no figure from the agent is no figure')
+  assert.equal(meters.left(0.62), 0.38)
+  assert.equal(meters.left(1.4), 0, 'a window over its limit has nothing left')
+})
+
+test('a coding agent window is called what the agent called it, and is never worked out', () => {
+  assert.equal(meters.standingOf({ used: 0.3, status: 'allowed', resets_at: null, overage: null, seen_at: null }), 'ok')
+  assert.equal(meters.standingOf({ used: 0.85, status: null, resets_at: null, overage: null, seen_at: null }), 'warn')
+  assert.equal(meters.standingOf({ used: 0.97, status: null, resets_at: null, overage: null, seen_at: null }), 'out')
+  assert.equal(meters.standingOf({ used: null, status: 'rejected', resets_at: null, overage: null, seen_at: null }), 'out', 'its word counts where it gave no figure')
+  assert.equal(meters.standingOf({ used: null, status: 'allowed_warning', resets_at: null, overage: null, seen_at: null }), 'warn')
+})
+
+test('reset and report times are said in plain words', () => {
+  assert.equal(meters.resetsIn(1000 + 2 * 3600 + 10 * 60, 1000), '2 h 10 min')
+  assert.equal(meters.resetsIn(1000 + 45 * 60, 1000), '45 min')
+  assert.equal(meters.resetsIn(900, 1000), 'now')
+  assert.equal(meters.resetsIn(null, 1000), '')
+  assert.equal(meters.ago(1000 - 14 * 60, 1000), '14 min ago')
+  assert.equal(meters.ago(1000, 1000), 'just now')
+  assert.equal(meters.ago(null, 1000), '')
+})
+
+test('the windows read in the order a reader thinks of them: 5 hours, week, then the rest', () => {
+  const resource = { used: true, windows: {}, by_source: [], limits: { 'claude-code': {
+    seven_day_opus: { used: 0.1, status: null, resets_at: null, overage: null, seen_at: 5 },
+    seven_day: { used: 0.2, status: null, resets_at: null, overage: null, seen_at: 9 },
+    five_hour: { used: 0.3, status: null, resets_at: null, overage: null, seen_at: 7 },
+    odd_window: { used: null, status: 'allowed', resets_at: null, overage: null, seen_at: null },
+  } } }
+  const [agent] = meters.agentLimits(resource)
+  assert.deepEqual(agent.windows.map((w) => w.id), ['five_hour', 'seven_day', 'seven_day_opus', 'odd_window'])
+  assert.deepEqual(agent.windows.map((w) => w.label), ['5 hours', 'Week', 'Week, Opus', 'odd window'])
+  assert.equal(agent.newest, 9)
+  assert.deepEqual(meters.agentLimits(undefined), [])
+})
+
+test('the pill says the tightest window left and what the last day cost, and nothing it was not told', () => {
+  const full = meters.pillParts(meters.demoMeters(1000))
+  assert.equal(full.fill, 0.38, 'the tighter of 5 hours and the week')
+  assert.equal(full.text, '$0.21 · 37 searches')
+  const bare = meters.demoMeters(1000)
+  bare.resources.cli_agent.limits = {}
+  bare.resources.llm_api.windows['24h'].usd = null
+  bare.resources.web_search.windows['24h'].calls = 0
+  assert.deepEqual(meters.pillParts(bare), { fill: null, text: '' })
+  assert.deepEqual(meters.pillParts(null), { fill: null, text: '' })
 })

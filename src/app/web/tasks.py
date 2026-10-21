@@ -4458,6 +4458,9 @@ def chat_ask(settings, params: dict, progress: Progress) -> dict:
             pass  # preserve the original failure if even its checkpoint fails
         raise
     finally:
+        from app import usage
+
+        usage.turn_usage(settings.app_state_path, agent, meter)
         app_state.close()
     progress.partial({"thread_id": thread_id, "message_id": message_id,
                       "agent": dict(agent), "steps": result["steps"],

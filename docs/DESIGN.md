@@ -208,6 +208,29 @@ names, so a reader who learns it in one place reads it in the other. The app
 opens a floating card, on hover too. The extension panel is narrow and clips a
 floating card, so it opens the quote under the row, on press only.
 
+## Usage
+
+The top bar carries a usage pill. It says the two things worth a glance: how much
+of the tightest coding-agent window is left, as three rising bars and a percent,
+and what the last day cost. Pressing it opens a card that keeps every resource
+apart: the coding agent, the LLM API, the web search API and the local model.
+Each draws its own 5-hour, 24-hour, 7-day and 30-day sums.
+
+A coding agent under a subscription has no price per token. It has windows, and
+it says how far into each one the reader is. Claude Code prints that in the
+stream of every run it makes, and Kriko keeps the latest line with its time: a
+bar of what is left, the words "resets in 2 h 10 min", and "said so 14 min ago,
+in a run Kriko started". An agent that gave a status and no figure shows the
+status and no bar. Nothing is worked out from tokens, because a token count
+cannot say how much of a plan is left.
+
+A number nobody reported is not drawn. A resource never used is left out, a
+window with no priced call has no cost column, and a sum counts only the calls
+that were counted. There is no balance anywhere: no provider lets a key read
+one, and a number the app invented for it would be the most dangerous on the
+screen. The card says it counts only what Kriko itself sent. In demo mode it
+shows example numbers and says so.
+
 ## Progress
 
 An agent's run is a stepper: four numbered pixel tiles, Find, Search, Read and

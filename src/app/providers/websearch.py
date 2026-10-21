@@ -186,6 +186,9 @@ def record(app_state_path, provider: str, outcome: str, reason: str = "") -> Non
                 state.put_settings(conn, {HEALTH_KEY: health})
             finally:
                 conn.close()
+        from app import usage
+
+        usage.record(app_state_path, "web_search", source=provider, ok=(outcome == "ok"))
     except Exception:  # noqa: BLE001 - see the docstring
         return
 

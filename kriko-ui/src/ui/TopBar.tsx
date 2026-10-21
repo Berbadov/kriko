@@ -8,6 +8,7 @@ import { showDrawer } from './drawerEvents'
 import { Icon, type IconName } from './Icon'
 import { PixelGlyph } from './PixelGlyph'
 import { RailChats } from './RailChats'
+import { UsagePill } from './UsagePill'
 
 /** The logo files are white. They take the colour of the text instead. */
 const ink = (svg: string) => svg.replaceAll('#ffffff', 'currentColor')
@@ -117,6 +118,7 @@ export function TopBar({
       </nav>
 
       <div className="topbar-right">
+        <UsagePill />
         {items.length > 0 && (
           <button className="topbar-queue" onClick={() => onNavigate('queue')} aria-label={`Queue, ${done} of ${items.length} done`} title="Queue">
             <PixelGlyph size={16} active={busy} />
