@@ -66,7 +66,7 @@ from app import agentresources, operations, prefs
 from app.agentledger import Ledger, redact
 from app.version import app_version
 from kriko.store.db import connect
-from app.web import state
+from app.web import state, steps
 
 log = logging.getLogger(__name__)
 
@@ -317,6 +317,16 @@ class Progress:
 
     def log(self, line: str) -> None:
         state.update_job(self._conn, self.job_id, line=line)
+
+    def watch(self, researcher) -> bool:
+        """Log every call `researcher` makes to an agent as a step of this job (#261).
+
+        Called where a researcher is wired to its job (`tasks._wire_researcher_text`),
+        so every plane that reports here is recorded by the same wrapper: the
+        prompt and reply (redacted), sizes, tokens, cost, agent and model, and
+        a retry with its reason. Idempotent, and a no-op where there is no file.
+        """
+        return steps.watch_calls(researcher, steps.path_of(self._conn), self.job_id)
 
     def set(self, progress: float, message: str = "") -> None:
         if message:

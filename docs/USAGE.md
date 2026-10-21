@@ -92,6 +92,14 @@ Measured spend includes conversation work where usage is reported; unpriced call
 remain explicitly incomplete. Provider bills can include work the app could not
 measure, particularly an interrupted request.
 
+**More → Logs** shows every job's steps in order with their timing: the words
+searched, each page and whether it was read, every agent call (prompt and reply
+size, tokens, cost, which agent and model), each retry and why, each verdict and
+each failure. Filter by job, level, source or a word; open a row for the exact
+request and reply; **Export as text** saves a copy. Keys and the words you saved
+about yourself are taken out before anything is kept, and the log is stored in
+`app.sqlite`, so it survives a restart. A figure that was not counted says so.
+
 **More → Backup and restore** exports saved work, settings, catalog revisions and
 data-only drafts. Keys are excluded. Restoring a selected snapshot replaces current
 saved state after a restart, retains previous database files, and leaves provider

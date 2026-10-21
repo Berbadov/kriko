@@ -10,6 +10,7 @@ import { ChatPanel } from './panels/Chat'
 import { ForYouPanel } from './panels/ForYou'
 import { HistoryPanel } from './panels/History'
 import { LocalPanel } from './panels/Local'
+import { LogsPanel } from './panels/Logs'
 import { SettingsPanel } from './panels/Settings'
 import { SitesPanel } from './panels/Sites'
 import { SetupPanel } from './panels/Setup'
@@ -24,6 +25,7 @@ const PANELS: Record<string, ComponentType<{ onOpen: (lookupId: string) => void 
   agents: AgentsPanel,
   browse: CatalogsPanel,
   history: HistoryPanel,
+  logs: LogsPanel,
   local: LocalPanel,
   settings: SettingsPanel,
   sites: SitesPanel,
@@ -73,6 +75,7 @@ export function Drawer({ open, panel: asked, onClose, offset, onOpen }: { open: 
             ref={panel}
             className="drawer"
             data-wide={Boolean(Body)}
+            data-panel={inside ?? undefined}
             role="dialog"
             aria-label={item?.title ?? 'More'}
             tabIndex={-1}
