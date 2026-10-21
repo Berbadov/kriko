@@ -18,6 +18,7 @@ Everything runs on loopback sockets: a "site" that answers 403 to a direct read
 and a stand-in HTTP proxy that gets through (or does not, by mode).
 """
 
+import base64
 import json
 import socket
 import threading
@@ -238,6 +239,42 @@ def _switch_on(tmp_path, *addresses):
         conn.close()
     proxypool.remember_path(path)
     return proxypool.shared()
+
+
+@pytest.mark.parametrize("new_login", ["new-user:new-password", ""])
+def test_cached_pool_uses_the_current_proxy_login(world, tmp_path, monkeypatch, new_login):
+    monkeypatch.setattr(keys, "env_path", lambda home=None: tmp_path / "env")
+    path = tmp_path / "app.sqlite"
+    conn = state.connect(path)
+    try:
+        state.put_settings(conn, {proxypool.SETTING_ENABLED: "1",
+                                  proxypool.SETTING_POOL: world.proxy_a})
+    finally:
+        conn.close()
+    monkeypatch.setenv("KRIKO_PROXY_AUTH", "old-user:old-password")
+    proxypool.remember_path(path)
+    try:
+        first = proxypool.shared()
+        assert first is not None
+        assert "gearbox whines" in _read(world, first).text
+        assert world.proxy_hits[-1]["auth"] == "Basic " + base64.b64encode(
+            b"old-user:old-password").decode()
+
+        if new_login:
+            monkeypatch.setenv("KRIKO_PROXY_AUTH", new_login)
+        else:
+            monkeypatch.delenv("KRIKO_PROXY_AUTH")
+        # Force the settings refresh while keeping the app-state path and
+        # proxy addresses unchanged, as happens after the normal cache TTL.
+        monkeypatch.setattr(proxypool, "SETTINGS_TTL", -1)
+        refreshed = proxypool.shared()
+
+        assert refreshed is not None
+        assert "gearbox whines" in _read(world, refreshed).text
+        expected = "Basic " + base64.b64encode(new_login.encode()).decode() if new_login else ""
+        assert world.proxy_hits[-1]["auth"] == expected
+    finally:
+        proxypool.remember_path(None)
 
 
 def test_the_page_fetcher_uses_the_pool_the_same_way(world, tmp_path):

@@ -74,6 +74,21 @@ test("the engine's own verdict wins over the derived one, in either shape", () =
   assert.equal(evidenceOf({ ...claim([src("manufacturer"), src("manufacturer")]), thin: true }).level, "thin");
 });
 
+test("live API evidence is authoritative and its structured reasons stay readable", () => {
+  // /api/analyze and /api/query annotate live claim rows as `evidence`, not
+  // `thin`. Here the local fallback would call two trusted-looking sources
+  // solid, while the engine knows a condition is still open.
+  const live = claim([src("manufacturer"), src("manufacturer")], {
+    evidence: { level: "partial", reasons: [
+      { code: "unmet_condition", text: "This depends on a condition your product may not meet." },
+    ] },
+  });
+  assert.deepEqual(evidenceOf(live), { level: "partial", reasons: ["unmet_condition"] });
+  assert.equal(markOf(live).getAttribute("aria-label"),
+    "Partial evidence: it depends on a condition your product may not meet");
+  assert.deepEqual(plain(card.filterByEvidence([live], "strict").hidden), [live]);
+});
+
 test("a verdict this does not understand falls back to deriving, never to hiding", () => {
   const good = claim([src("manufacturer"), src("community")]);
   for (const odd of ["maybe", 7, {}, { level: "wobbly" }, [], null]) {

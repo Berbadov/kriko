@@ -378,3 +378,21 @@ def test_a_slow_call_is_visible_while_it_runs(client, settings):
     run_job(settings, handler)
     running = [one for one in seen["rows"] if one["source"] == "agent"]
     assert [one["state"] for one in running] == ["running"]
+
+
+def test_a_malformed_page_address_in_a_log_cannot_fail_the_job(client, settings):
+    def handler(settings_, params, progress):
+        progress.log("could not read: https://[invalid/page")
+        return {"answer": "the job still completed"}
+
+    job_id = run_job(settings, handler)
+    conn = state.connect(settings.app_state_path)
+    try:
+        job = state.get_job(conn, job_id)
+    finally:
+        conn.close()
+
+    assert job["state"] == state.SUCCEEDED
+    assert job["result"]["answer"] == "the job still completed"
+    logged = steps_of(client, job_id)["items"]
+    assert any("https://[invalid/page" in one["title"] for one in logged)

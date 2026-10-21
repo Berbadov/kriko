@@ -161,11 +161,23 @@
     if (!level && typeof value.thin === "boolean") level = value.thin ? "thin" : "solid";
     if (!level) return null;
     const raw = Array.isArray(value.reasons) ? value.reasons : (value.reason ? [value.reason] : []);
-    return { level, reasons: raw.map(String).filter(Boolean) };
+    return { level, reasons: raw.map((reason) => {
+      if (reason && typeof reason === "object") {
+        // Current API evidence carries both a stable code and reader-facing
+        // text. Keep the code when it has panel wording; otherwise use the
+        // server's text so a new engine reason remains understandable.
+        const code = String(reason.code || "").trim();
+        return REASON_WORD[code] ? code : String(reason.text || code).trim();
+      }
+      return String(reason || "").trim();
+    }).filter(Boolean) };
   }
 
   function evidenceOf(claim) {
-    const said = readEngineEvidence(claim && claim.thin);
+    // The engine's live contract is `evidence: { level, reasons }`. `thin`
+    // remains accepted for older cached payloads.
+    const said = readEngineEvidence(claim && claim.evidence)
+      || readEngineEvidence(claim && claim.thin);
     return said || deriveEvidence(claim);
   }
 
