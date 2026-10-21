@@ -8,7 +8,7 @@ engine's.
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
-from app import followup
+from app import evidence, followup, prefs
 from app.web import state, tasks
 from app.web.deps import get_app_state, get_jobs, get_store
 
@@ -197,6 +197,14 @@ def get_lookup(lookup_id: str, app_state=Depends(get_app_state)):
     row = state.get_lookup(app_state, lookup_id)
     if row is None:
         raise HTTPException(404, f"no such lookup: {lookup_id}")
+    # A check saved before claims carried an `evidence` object is read the same
+    # way as a new one: the object is derived from the claim row, never stored.
+    response = row.get("response")
+    if isinstance(response, dict) and isinstance(response.get("claims"), list):
+        response["claims"] = [
+            claim if not isinstance(claim, dict) or "evidence" in claim
+            else {**claim, "evidence": evidence.assess(claim)}
+            for claim in response["claims"]]
     return row
 
 
@@ -275,7 +283,10 @@ class SettingsPatch(BaseModel):
 
 @router.get("/settings")
 def read_settings(app_state=Depends(get_app_state)):
-    return state.all_settings(app_state)
+    # `info_sensitivity` is always present, so a client that reads settings
+    # (the browser extension) never has to know the default.
+    return {**state.all_settings(app_state),
+            prefs.INFO_SENSITIVITY: prefs.info_sensitivity(app_state)}
 
 
 @router.post("/settings")

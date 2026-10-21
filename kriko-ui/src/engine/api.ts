@@ -165,6 +165,8 @@ export interface ApiActivity {
   pages_read?: number
   attempted?: boolean
   text?: string
+  /** The kind of site behind a page that was read, as the engine classified it. */
+  trust?: { domain: string; tier: string; label: string; trust: number; standing?: 'trusted' | 'neutral' | 'low' | string }
 }
 
 export interface ApiFeedEvent {
@@ -187,7 +189,25 @@ export interface ApiQuestion {
   why?: string
 }
 
-export interface ApiTurn {
+/** What a turn spent and how full the model's window is. A field a plane did not report is null. */
+export interface ApiUsage {
+  spent_usd?: number | null
+  tokens?: number | null
+  tokens_in?: number | null
+  tokens_out?: number | null
+  usage?: { calls?: number; peak_in?: number | null }
+  context?: {
+    model?: string
+    window?: number | null
+    window_source?: string
+    used?: number | null
+    state?: 'measured' | 'not_reported' | 'pending' | string
+    fill?: number | null
+    history?: { messages?: number; sent?: number; trimmed?: boolean; dropped_replies?: number; omitted_requests?: number }
+  }
+}
+
+export interface ApiTurn extends ApiUsage {
   steps?: ApiStep[]
   activity?: ApiActivity[]
   sources?: string[]
@@ -219,4 +239,6 @@ export interface ApiMessage extends ApiTurn {
   text: string
   /** The agent that wrote the answer. Empty for a message from before it was kept. */
   agent?: { id?: string; label?: string; model?: string }
+  /** What the turn spent, read back from the job that answered it. */
+  spend?: ApiUsage
 }
