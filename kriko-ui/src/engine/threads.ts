@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Turn } from '../activity/run'
 import { del, get, patch, seg } from './api'
 import { useEngine } from './Engine'
+import { DEMO_PAGES, demoUsage } from '../mock/data'
 import { ago } from './history'
 
 /** The chats that the reader has had, newest first. Live, they are `/api/chat/threads`.
@@ -46,6 +47,8 @@ const demo: DemoThread[] = [
         prompt: 'Is the Delta kettle safe for daily use?',
         answer: 'Delta Unit 500 has **two sourced reports**: the lid hinge cracks, and the base runs warm. Neither is a safety risk on its own. Check the lid when it is new.',
         products: [{ id: 'delta', name: 'Delta Unit 500', note: '2 risks' }],
+        pages: DEMO_PAGES.slice(0, 3),
+        usage: demoUsage(1),
       },
     ],
   },

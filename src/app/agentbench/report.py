@@ -19,6 +19,7 @@ from itertools import combinations
 from pathlib import Path
 
 from app.agentbench.checks import FAIL, NA, PASS, SETTINGS_CHECKS
+from app.tuning import failures
 
 
 def _jaccard(one: list, other: list) -> float:
@@ -95,6 +96,10 @@ def summarize(bench: dict) -> dict:
             "tokens_unmeasured": sum(1 for one in tokens if one is None),
             "refused": sum(one["measure"]["refused"] for one in mine),
             "errors": sum(1 for one in mine if one["error"]),
+            # Why the unresolved trials failed, counted by class: the commonest
+            # class is the next mechanism to build, not the next prompt to tweak.
+            "failure_classes": failures.tally(mine),
+            "commonest_failure": failures.commonest(failures.tally(mine)),
             "checks": check_totals,
             "dimensions": {name: round(sum(values) / len(values), 3)
                            for name, values in dimensions.items()},
@@ -174,6 +179,19 @@ def render(summary: dict) -> str:
                 got = one["checks"].get(check)
                 cells.append("-" if not got else f"{got['pass']}/{got['pass'] + got['fail']}")
             lines.append(f"| {check} | " + " | ".join(cells) + " |")
+
+        counted = sorted({c for one in agents.values() for c in one.get("failure_classes", {})},
+                         key=list(failures.CLASSES).index)
+        if counted:
+            lines += ["", "## Why trials failed, by class", "",
+                      "| Class | " + " | ".join(agents) + " |", "|---|" + "---|" * len(agents)]
+            for name in counted:
+                lines.append(f"| {name}: {failures.CLASSES[name]} | " + " | ".join(
+                    str(one.get("failure_classes", {}).get(name, 0)) for one in agents.values()) + " |")
+            lines += ["", "A trial with two classes counts in both. The commonest class is the "
+                      "next mechanism to build: "
+                      + "; ".join(f"{name}: {one['commonest_failure']}" for name, one in agents.items()
+                                  if one.get("commonest_failure")) + ".", ""]
 
         why = [(name, task, result["why"]) for name, one in agents.items()
                for task, result in one["task_results"].items() if result["why"]]

@@ -1,0 +1,30 @@
+/* Use Kriko in another chat: the snippet is the content, so it gets room. */
+
+.mcp-snippet {
+  margin: 10px 0;
+  padding: 12px;
+  max-height: 340px;
+  overflow: auto;
+  background: var(--panel-2);
+  border: 1px solid var(--edge);
+  border-radius: 12px;
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.mcp-actions {
+  margin-top: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mcp-state[data-state='stale'],
+.mcp-state[data-state='unreadable'] {
+  color: var(--ink-2);
+}

@@ -1,3 +1,35 @@
+import type { SourcePage, Usage } from '../activity/run'
+
+/** Demo pages for the sources column. The words for a kind of site are the ones
+ *  the engine's classifier would return; the live app never reads this file. */
+export const DEMO_PAGES: SourcePage[] = [
+  { url: 'https://maker.example.test/alpha-unit-200/manual', host: 'maker.example.test', title: 'Alpha Unit 200 manual', read: 'read', cited: true, tier: 'domain is named after a brand in the question', standing: 'trusted' },
+  { url: 'https://forum.example.test/threads/alpha-200-runs-hot', host: 'forum.example.test', title: 'Alpha 200 runs hot after an hour', read: 'read', cited: true, tier: 'community discussion', standing: 'low' },
+  { url: 'https://shop.example.test/alpha-unit-200', host: 'shop.example.test', title: 'Alpha Unit 200', read: 'read', cited: false, tier: 'major retailer', standing: 'trusted' },
+  { url: 'https://blog.example.test/alpha-review', host: 'blog.example.test', title: '', read: 'failed', cited: false },
+]
+
+/** One turn's usage in a demo chat: the window is the demo model's, so the bar can be seen filling. */
+export function demoUsage(turn: number): Usage {
+  const window = 24000
+  const used = Math.min(window, 6000 * turn)
+  return {
+    tokensIn: 5200 * turn,
+    tokensOut: 410 * turn,
+    tokens: 5610 * turn,
+    usd: turn === 2 ? null : 0.004 * turn,
+    model: 'demo-model',
+    window,
+    windowSource: 'catalogue',
+    used,
+    state: 'measured',
+    fill: used / window,
+    trimmed: turn >= 5,
+    droppedReplies: turn >= 5 ? 2 : 0,
+    omittedRequests: 0,
+  }
+}
+
 export interface Recent {
   id: string
   name: string
@@ -44,6 +76,7 @@ export const DRAWER: Drawer[] = [
   { id: 'agents', icon: 'spark', title: 'Agents', note: 'Choose who answers' },
   { id: 'local', icon: 'cpu', title: 'Local model', note: 'Run on this computer' },
   { id: 'history', icon: 'clock', title: 'History', note: 'Past research' },
+  { id: 'logs', icon: 'clock', title: 'Logs', note: 'Every step of every job, with its timing' },
   { id: 'browse', icon: 'book', title: 'Catalogs', note: 'Browse what is known' },
   { id: 'sites', icon: 'globe', title: 'Sites', note: 'Pages Kriko can read' },
   { id: 'settings', icon: 'gear', title: 'Settings', note: 'Look, motion, keys' },

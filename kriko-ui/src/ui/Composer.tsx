@@ -1,10 +1,18 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
+import type { ChatMode } from '../activity/run'
 import { useEngine, type Agent } from '../engine/Engine'
 import { usePrefs } from '../prefs'
 import { AgentMark } from './AgentMark'
 import { Icon } from './Icon'
 import { PixelGlyph } from './PixelGlyph'
+
+/** What the chips offer, in the words on them. The engine acts on the name, never on the label. */
+const MODES: { id: ChatMode; label: string; hint: string }[] = [
+  { id: 'alternatives', label: 'Alternatives', hint: 'Other products that do the same job' },
+  { id: 'cheapest', label: 'Cheapest', hint: 'The lowest price for this exact product' },
+  { id: 'merchants', label: 'Merchants', hint: 'Which sellers of this product to trust' },
+]
 
 /** The box where the reader asks. Frosted glass, so the sky shows through. */
 export function Composer({
@@ -14,16 +22,19 @@ export function Composer({
   placeholder = 'Ask about a product',
   autoFocus = false,
   agents: pickAgent = true,
+  modes = false,
   draft = null,
   recall = [],
 }: {
-  onSubmit: (text: string, agent: Agent) => void
+  onSubmit: (text: string, agent: Agent, mode?: ChatMode) => void
   running: boolean
   onStop: () => void
   placeholder?: string
   autoFocus?: boolean
   /** Show the agent pick. Off where the engine chooses the agent itself. */
   agents?: boolean
+  /** Show the mode chips. Only Chat turns know what to do with one. */
+  modes?: boolean
   /** Words to put in the box, such as a question taken back to be changed. A new `at` puts them again. */
   draft?: { text: string; at: number } | null
   /** What was asked before, oldest first. The up arrow in an empty box walks back through it. */
@@ -36,6 +47,8 @@ export function Composer({
   // The reader's own choice wins. Then the agent set in Settings. Then the first.
   const agent = agents.find((a) => a.id === chosen) ?? agents.find((a) => a.id === preferred) ?? agents[0]
   const [menu, setMenu] = useState(false)
+  /** A chip pressed again lets go, so "no mode" is one press away. */
+  const [mode, setMode] = useState<ChatMode | ''>('')
   const field = useRef<HTMLTextAreaElement>(null)
   const file = useRef<HTMLInputElement>(null)
   const [attachmentProblem, setAttachmentProblem] = useState('')
@@ -74,8 +87,9 @@ export function Composer({
     if (!value || running) return
     if (value.length > 16000) { setAttachmentProblem('Keep the message and attached text together under 16,000 characters.'); return }
     setAttachmentProblem('')
-    onSubmit(value, agent)
+    onSubmit(value, agent, modes && mode ? mode : undefined)
     setText('')
+    setMode('')
     back.current = 0
   }
 
@@ -117,6 +131,26 @@ export function Composer({
 
   return (
     <div className="composer">
+      {modes && (
+        <div className="composer-modes" role="group" aria-label="What to do with the product">
+          {MODES.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              className="pill mode-chip"
+              aria-pressed={mode === item.id}
+              title={item.hint}
+              onClick={() => {
+                setMode(mode === item.id ? '' : item.id)
+                field.current?.focus()
+              }}
+              disabled={running}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+      )}
       <textarea
         ref={field}
         className="composer-field"

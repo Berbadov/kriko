@@ -4,10 +4,13 @@ import { useCompare, MAX_SLOTS, type Question } from '../compare'
 import { riskRows, specRows, riskKey, type Check, type Level, type Risk } from '../compare/checks'
 import { useEngine } from '../engine/Engine'
 import { useHistory } from '../engine/history'
+import { useSensitivity } from '../engine/sensitivity'
+import { hiddenLine, shown } from '../engine/thinness'
 import { usePrefs } from '../prefs'
 import { useQueue } from '../queue'
 import { Composer } from '../ui/Composer'
 import { Decide } from '../ui/Decide'
+import { EvidenceMark } from '../ui/EvidenceMark'
 import { PixelBar, Switch } from '../ui/controls'
 import { ExternalLink } from '../ui/ExternalLink'
 import { Icon } from '../ui/Icon'
@@ -29,6 +32,10 @@ export function CompareScreen() {
   const [only, setOnly] = useState(false)
   const [picker, setPicker] = useState(false)
   const [specsOpen, setSpecsOpen] = useState(false)
+  const { sensitivity } = useSensitivity()
+  /** Columns whose hidden findings the reader asked to see, at the step they asked at. */
+  const [reveal, setReveal] = useState<{ step: string; ids: string[] }>({ step: '', ids: [] })
+  const revealed = reveal.step === sensitivity ? reveal.ids : []
 
   const working = items.filter((i) => i.state !== 'done')
   const ready = slots.flatMap((id) => {
@@ -85,7 +92,10 @@ export function CompareScreen() {
                 {slots.map((id) => {
                   const found = checks[id]
                   if (found?.status === 'ready') {
+                    const open = revealed.includes(id)
+                    const hidden = found.check.risks.filter((r) => !shown(r.evidence?.level, sensitivity))
                     const list = found.check.risks
+                      .filter((r) => open || shown(r.evidence?.level, sensitivity))
                       .filter((r) => !only || differing.has(riskKey(r)))
                       .sort((a, b) => LEVEL_ORDER[a.level] - LEVEL_ORDER[b.level])
                     return (
@@ -94,7 +104,9 @@ export function CompareScreen() {
                           <p className="mx-none">
                             {found.check.risks.length === 0
                               ? 'The agents found no sourced problems. That is not proof there are none.'
-                              : 'Nothing here differs from the others.'}
+                              : hidden.length === found.check.risks.length
+                                ? 'Every finding here is hidden at this sensitivity.'
+                                : 'Nothing here differs from the others.'}
                           </p>
                         ) : (
                           <ul className="mx-risks">
@@ -102,6 +114,14 @@ export function CompareScreen() {
                               <RiskCard key={riskKey(risk)} risk={risk} also={(shared.get(riskKey(risk)) ?? 1) - 1} of={ready.length} />
                             ))}
                           </ul>
+                        )}
+                        {hidden.length > 0 && (
+                          <p className="ev-hidden" role="status">
+                            <span>{open ? 'Showing the hidden findings.' : `${hiddenLine(hidden.length, sensitivity)}.`}</span>
+                            <button className="btn ghost" onClick={() => setReveal({ step: sensitivity, ids: open ? revealed.filter((one) => one !== id) : [...revealed, id] })} aria-pressed={open}>
+                              {open ? 'Hide them again' : 'Show them'}
+                            </button>
+                          </p>
                         )}
                       </Column>
                     )
@@ -225,7 +245,10 @@ function RiskCard({ risk, also, of }: { risk: Risk; also: number; of: number }) 
   const [open, setOpen] = useState(false)
   const pages = risk.sources.length
   return (
-    <li className="mx-risk" data-open={open}>
+    <li className="mx-risk" data-open={open} data-thin={risk.evidence?.level === 'thin' || undefined}>
+      <span className="ev-corner">
+        <EvidenceMark evidence={risk.evidence} />
+      </span>
       <button className="mx-risk-main" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
         <span className="mx-risk-top">
           <span className="level" data-level={risk.level}>

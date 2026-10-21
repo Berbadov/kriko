@@ -82,7 +82,7 @@ python tools/bump.py X.Y.Z     # version, in all four places it lives
 
 `python tools/bump.py --show` checks three committed files (`pyproject.toml` and the app's `Cargo.toml` and `Cargo.lock`) plus installed-distribution metadata (what `/api/health` reports; a tree at 0.8.1 with a 0.8.0 editable install serves 0.8.0). It never commits or tags.
 
-The MCP server (`.mcp.json`) runs `.venv/bin/python -m app.sidecar --mcp` relative to the repo root, so it works in any checkout `setup.sh` touched.
+The MCP server (`.mcp.json`) runs `tools/kriko_mcp.py`, which finds an engine (`KRIKO_PYTHON`, this or the main checkout's `.venv`, the running interpreter, an installed app) rather than assuming one venv path; `python3 tools/kriko_mcp.py --print` says which it would start.
 
 ## Branches and commits
 

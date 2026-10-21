@@ -10,6 +10,7 @@ const { JSDOM } = require("jsdom");
 const PANEL_JS = path.join(__dirname, "..", "hover_lite", "hover_lite.js");
 const CARD_JS = path.join(__dirname, "..", "hover_lite", "claim_card.js");
 const BUYER_JS = path.join(__dirname, "..", "hover_lite", "buyer_card.js");
+const RUN_JS = path.join(__dirname, "..", "hover_lite", "run_progress.js");
 
 function loadPanel({
   url = "https://www.listing.example/ilan/vasita-otomobil-volkswagen-golf-123456/detay",
@@ -120,6 +121,7 @@ function loadPanel({
   // <div> would let the panel's wiring pass while shipping nothing clickable.
   vm.runInContext(fs.readFileSync(CARD_JS, "utf8"), sandbox, { filename: "claim_card.js" });
   vm.runInContext(fs.readFileSync(BUYER_JS, "utf8"), sandbox, { filename: "buyer_card.js" });
+  vm.runInContext(fs.readFileSync(RUN_JS, "utf8"), sandbox, { filename: "run_progress.js" });
   vm.runInContext(fs.readFileSync(PANEL_JS, "utf8"), sandbox, { filename: "hover_lite.js" });
 
   function openPanel() {

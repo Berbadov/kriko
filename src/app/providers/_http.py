@@ -38,6 +38,15 @@ RETRY_BACKOFF = 0.5
 RETRY_AFTER_CAP = 10.0
 
 
+class SearchFailed(RuntimeError):
+    """A search provider could not answer, and says why in the reader's terms.
+
+    Distinct from "found nothing": a fallback has to know which of the two it
+    is looking at. The message is built from a status and a host, never from
+    the request, so it is safe to log.
+    """
+
+
 class StreamCancelled(Exception):
     """A local reader stopped consuming a provider's SSE response."""
 

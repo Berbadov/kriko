@@ -15,6 +15,7 @@ from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
 
+from app.redaction import redact_json
 from app.searchbench.agent import research, evidence_metrics
 from app.searchbench.config import MODELS, SEARCHES, load_keys
 from app.searchbench.report import aggregate, write_report, write_csvs
@@ -34,12 +35,8 @@ def selection(value, choices):
 
 
 def redact(value):
-    text = json.dumps(value, ensure_ascii=False)
-    for name in {m.key_env for m in MODELS.values()} | {s[1] for s in SEARCHES.values()}:
-        secret = os.environ.get(name)
-        if secret:
-            text = text.replace(json.dumps(secret, ensure_ascii=False)[1:-1], "[REDACTED]")
-    return text
+    """The trace with this sweep's provider keys taken out (shared helper, `app.redaction`)."""
+    return redact_json(value, {m.key_env for m in MODELS.values()} | {s[1] for s in SEARCHES.values()})
 
 
 async def retrieval_run(wire, variant, case, timeout, results=5, page_chars=6000):
@@ -129,7 +126,15 @@ async def sweep(args):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description=__doc__)
+    arguments = sys.argv[1:] if argv is None else list(argv)
+    if arguments[:1] == ["tune"]:
+        # Engine tuning: the reader's own agent and search provider answer real
+        # cases and another agent grades them. Its own commands; it spends
+        # nothing without --yes (see app.tuning.cli).
+        from app.tuning.cli import main as tune
+
+        return tune(arguments[1:])
+    parser = argparse.ArgumentParser(description=__doc__ + " `tune` runs engine tuning.")
     parser.add_argument("--env-file", default=".env", help="load only the five named provider keys; existing environment wins")
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("list", help="key presence and configured candidates; no API calls")
