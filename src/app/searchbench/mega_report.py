@@ -323,16 +323,24 @@ def generate(folder):
     for profile in sorted({row["profile"] for row in rows}):
         group = sorted([row for row in rows if row["profile"] == profile], key=lambda row: (row["case"], row["repetition"]))
         stats = next(item for item in summary if item["profile"] == profile)
-        page += f"<details><summary>{esc(profile)} — {stats['accepted']}/{stats['n']} accepted; F1 {fmt(stats['fact_f1'], 3)}; mean {fmt(stats['mean_attempt_s'])}s</summary><div class='scroll'><table><thead><tr><th>Case</th><th>Job</th><th>Rep</th><th>Status</th><th>Accepted</th><th>F1</th><th>Seconds</th><th>Known $</th><th>Tokens</th><th>Answer and evidence</th></tr></thead><tbody>"
+        page += f"<details><summary>{esc(profile)} — {stats['accepted']}/{stats['n']} accepted; F1 {fmt(stats['fact_f1'], 3)}; mean {fmt(stats['mean_attempt_s'])}s</summary><div class='scroll'><table><thead><tr><th>Case</th><th>Prompt</th><th>Job</th><th>Rep</th><th>Status</th><th>Accepted</th><th>F1</th><th>Seconds</th><th>Known $</th><th>Tokens</th><th>Ground truth, answer and evidence</th></tr></thead><tbody>"
         for row in group:
             case = case_order[row["case"]]
             citations = " ".join(f"<a href='{esc(source['url'])}' rel='noopener'>{esc(source['id'])}: {esc(source.get('title') or source['url'])}</a>" for source in row.get("sources", [])) or "No sources returned"
             audit_notes = "<br>".join(f"<b>{esc(model)}</b>: {esc(audit.get('detail', {}).get('summary') or audit.get('error') or audit['status'])}" for model, audit in row.get("audits", {}).items()) or "Pending grading"
             f1s = "—" if row.get("accuracy", {}).get("fact_f1") is None else f"{row['accuracy']['fact_f1']:.3f}"
             answer = row.get("answer") or "No answer returned."
-            evidence = f"<details><summary>Open answer and evidence</summary><div class='answer'><pre>{esc(answer)}</pre><p>{citations}</p><p>{audit_notes}</p></div></details>"
+            question = f"<details><summary>Open prompt</summary><p>{esc(case['question'])}</p></details>"
+            ground_truth = case.get("ground_truth", {})
+            source_urls = {source["id"]: source["url"] for source in case.get("sources", [])}
+            mapped_facts = []
+            for criterion in case.get("criteria", []):
+                fact_links = " ".join(f"<a href='{esc(source_urls[source_id])}' rel='noopener'>{esc(source_id)}</a>" for source_id in ground_truth.get("fact_sources", {}).get(criterion["id"], []) if source_id in source_urls)
+                mapped_facts.append(f"<li><b>{esc(criterion['id'])}</b>: {esc(criterion['fact'])} — {fact_links or 'source not mapped'}</li>")
+            gold = f"<details><summary>Open gold answer and source-mapped facts</summary><p>{esc(ground_truth.get('expected_answer') or 'No gold answer recorded.')}</p><ul>{''.join(mapped_facts)}</ul></details>"
+            evidence = f"{gold}<details><summary>Open candidate answer and evidence</summary><div class='answer'><pre>{esc(answer)}</pre><p>{citations}</p><p>{audit_notes}</p></div></details>"
             page += "<tr>" + "".join(f"<td>{value}</td>" for value in (
-                esc(row["case"]), esc(f"{case['category']} · {case['complexity']}"), esc(row["repetition"]), esc(row["status"]),
+                esc(row["case"]), question, esc(f"{case['category']} · {case['complexity']}"), esc(row["repetition"]), esc(row["status"]),
                 esc(row.get("accuracy", {}).get("accepted")), esc(f1s), esc(fmt(row["total_s"])),
                 esc(("≥ " if not row.get("cost_complete") else "") + fmt(row.get("known_cost_usd"), 5)),
                 esc(("≥ " if not row.get("usage_complete") else "") + fmt(row.get("known_tokens", {}).get("total"), 0)), evidence)) + "</tr>"
