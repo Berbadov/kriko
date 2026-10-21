@@ -65,7 +65,63 @@ def test_the_packet_names_no_agent_even_for_a_follow_up_with_history():
     assert "codex" not in json.dumps(packet)
 
 
+def test_the_grader_gets_scrubbed_question_history_and_page_text_but_citations_still_validate(monkeypatch):
+    secret = "environment-secret-value-12345678"
+    monkeypatch.setenv("SERVICE_API_KEY", secret)
+    url = f"{fakes.URL}?api_key={secret}"
+    case = {**fakes.CASE, "question": f"Does this work? {secret} {url}",
+            "history": [{"role": "reader", "text": f"Earlier: {secret}"}]}
+    answer = fakes.good_answer(text=f"Stainless steel, 8 bar [{url}].", read_urls=[url])
+    pages = [{"url": url, "opens": True, "chars": 100,
+              "text": f"The stainless steel pump housing is rated for 8 bar. {secret}",
+              "in_answer": True, "read_by_answerer": True}]
+
+    class EchoingGrader:
+        ref = fakes.GRADER
+
+        def __init__(self):
+            self.prompt = ""
+
+        def ask(self, prompt):
+            self.prompt = prompt
+            packet = json.loads(prompt.split(grade.GRADER_SYSTEM, 1)[1])
+            safe_url = packet["evidence"][0]["url"]
+            return json.dumps(fakes.verdict(
+                facts=[{"id": "material", "status": "met", "url": safe_url,
+                        "quote": "stainless steel pump housing", "reason": "shown"},
+                       {"id": "rating", "status": "met", "url": safe_url,
+                        "quote": "rated for 8 bar", "reason": "shown"}],
+                claims=[{"text": "rated for 8 bar", "supported": "yes", "url": safe_url,
+                         "quote": "rated for 8 bar"}]))
+
+    agent = EchoingGrader()
+    got = grade.Grader(agent).grade(case, answer, pages, evidence.links_summary(pages))
+    assert secret not in agent.prompt
+    assert "api_key=[redacted]" in agent.prompt
+    assert got["accepted"] is True
+    assert got["claims"][0]["url"] == url
+
+
 # ── the grader's verdicts are checked, not trusted ──────────────────────────
+
+
+def test_a_redacted_url_shared_by_distinct_pages_cannot_verify_a_citation():
+    urls = [f"{fakes.URL}?api_key={value}" for value in ("first-secret", "second-secret")]
+    pages = [{"url": url, "opens": True, "chars": 100,
+              "text": "a stainless steel pump housing rated for 8 bar",
+              "in_answer": True, "read_by_answerer": True} for url in urls]
+    alias = f"{fakes.URL}?api_key=[redacted]"
+    reply = fakes.verdict(
+        facts=[{"id": name, "status": "met", "url": alias,
+                "quote": "rated for 8 bar"} for name in ("material", "rating")],
+        claims=[{"text": "rated for 8 bar", "supported": "yes", "url": alias,
+                 "quote": "rated for 8 bar"}])
+    agent = fakes.FakeGraderAgent(default=reply)
+    got = grade.Grader(agent).grade(fakes.CASE, fakes.good_answer(), pages,
+                                   evidence.links_summary(pages))
+    assert got["accepted"] is False
+    assert all(not fact["verified"] for fact in got["facts"])
+    assert got["claims"][0]["supported"] == "unverified"
 
 def test_a_sound_answer_is_accepted():
     graded, _ = _graded(fakes.CASE, fakes.good_answer(), fakes.verdict())
