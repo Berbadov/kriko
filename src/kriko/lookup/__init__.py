@@ -240,7 +240,9 @@ def lookup(conn, query: Query) -> LookupResult:
                 condition_reasons=[o.reason for o in outcomes
                                    if o.state != "met"],
                 via=via, pack_id=row["pack_id"]),
-            sources=sources))
+            sources=sources,
+            open_conditions=tuple(o.reason for o in outcomes
+                                  if o.state == "unknown" and o.matters)))
 
     # Sort by relevance, then severity, then title so the order is total and a
     # replay produces byte-identical output. Ties that resolve at random make

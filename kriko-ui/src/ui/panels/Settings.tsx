@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useAppUpdate } from '../../engine/appupdate'
+import { useSensitivity } from '../../engine/sensitivity'
 import { useAbout, useKeys, usePrefsDoc, useSpent, type KeyRow } from '../../engine/settings'
+import type { Sensitivity } from '../../engine/thinness'
 import { usePrefs, type Profile, type ThemePref } from '../../prefs'
 import { startTour } from '../../tour/Tour'
 import { Chip, Segmented, Select, Switch } from '../controls'
@@ -15,6 +17,11 @@ const PROFILES: { value: Profile; label: string }[] = [
   { value: 'calm', label: 'Calm' },
   { value: 'standard', label: 'Standard' },
   { value: 'vivid', label: 'Vivid' },
+]
+const SENSITIVITY: { value: Sensitivity; label: string }[] = [
+  { value: 'all', label: 'Show everything' },
+  { value: 'hide_thin', label: 'Hide thin' },
+  { value: 'strict', label: 'Strict' },
 ]
 const PARALLEL = [1, 2, 3, 4].map((n) => ({ value: String(n), label: String(n) }))
 const SOURCE_COUNTS = [0, 5, 10, 20, 50]
@@ -41,6 +48,8 @@ export function SettingsPanel(_: { onOpen?: (lookupId: string) => void }) {
   const spent = useSpent()
   const about = useAbout()
   const update = useAppUpdate()
+  const { sensitivity, choose } = useSensitivity()
+  const [sensitivityProblem, setSensitivityProblem] = useState('')
 
   return (
     <div className="panel-body">
@@ -66,6 +75,32 @@ export function SettingsPanel(_: { onOpen?: (lookupId: string) => void }) {
           <button className="btn" onClick={startTour}>
             Take the tour
           </button>
+        </div>
+      </section>
+
+      <section className="panel-group">
+        <h3>Information sensitivity</h3>
+        <div className="setting stack">
+          <span>
+            How much doubt to show
+            <small>
+              A finding is thin when one site alone says it, its best source is low in trust, its quote only partly matches
+              its page, or it depends on a detail your listing does not state. Each card says which. This changes what is
+              drawn, never what is stored.
+            </small>
+          </span>
+          <Segmented
+            label="Information sensitivity"
+            value={sensitivity}
+            options={SENSITIVITY}
+            onChange={(value) => void choose(value).then(setSensitivityProblem)}
+          />
+          <small className="panel-note">
+            {sensitivity === 'all' && 'Every finding is drawn, with its indicator.'}
+            {sensitivity === 'hide_thin' && 'Findings with two or more reasons for doubt are hidden, and counted so you can show them.'}
+            {sensitivity === 'strict' && 'Only findings with no reason for doubt are drawn. The rest are counted.'}
+          </small>
+          {sensitivityProblem && <p className="error-note">{sensitivityProblem}</p>}
         </div>
       </section>
 

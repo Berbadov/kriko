@@ -1,0 +1,512 @@
+/* The sources and products column beside the thread, the context bar over the
+   composer, and the evidence indicator on a finding. */
+
+/* ---- the chat is laid out in its own width, not the window's ---- */
+
+.chat {
+  container: chat / inline-size;
+  --rail-w-right: 320px;
+}
+
+.chat-main {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.chat[data-thread='true'] .chat-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--rail-w-right);
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.chat[data-thread='true'] .chat-col {
+  align-self: stretch;
+}
+
+/* ---- the column ---- */
+
+.chat-rail {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  margin: 18px 18px 20px 0;
+  background: var(--glass);
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--r-l);
+  box-shadow: var(--shadow-1);
+  backdrop-filter: blur(20px) saturate(1.4);
+  overflow: hidden;
+}
+
+.cr-head {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 2px 8px;
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--edge);
+}
+
+.cr-head h2 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+
+.cr-head .mono {
+  grid-column: 1;
+  font-size: 11.5px;
+}
+
+.cr-close {
+  display: none;
+  grid-row: 1;
+  grid-column: 2;
+}
+
+.chat-rail-scroll {
+  flex: 1;
+  min-height: 0;
+  padding: 6px 10px 14px;
+  overflow: auto;
+  overflow-anchor: auto;
+}
+
+.cr-empty {
+  margin: 14px 6px;
+  color: var(--ink-3);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.cr-group {
+  padding-top: 10px;
+}
+
+.cr-group + .cr-group {
+  margin-top: 6px;
+  border-top: 1px solid var(--edge);
+}
+
+.cr-group h3 {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 6px 6px;
+  color: var(--ink-3);
+  font-size: 12px;
+  font-weight: 540;
+}
+
+.cr-group h3 .mono {
+  flex: none;
+  padding: 0 6px;
+  background: var(--panel-2);
+  border-radius: 6px;
+  color: var(--ink-2);
+}
+
+.cr-prompt {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cr-group ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cr-working {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 8px 8px;
+  color: var(--ink-3);
+  font-size: 12.5px;
+}
+
+.cr-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border: 1px solid transparent;
+  border-radius: var(--r-m);
+  transition:
+    background-color calc(140ms * var(--tm)),
+    border-color calc(140ms * var(--tm));
+}
+
+.cr-item:hover {
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
+}
+
+.cr-item[data-lit] {
+  background: var(--accent-soft);
+  border-color: color-mix(in srgb, var(--accent-hi) 55%, transparent);
+}
+
+.cr-main {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  width: 100%;
+  padding: 9px 10px 4px;
+  background: none;
+  border: 0;
+  border-radius: var(--r-m);
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.cr-main strong {
+  font-size: 13.5px;
+  font-weight: 560;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.cr-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  font-size: 11.5px;
+}
+
+.cr-tier {
+  padding: 1px 8px;
+  border: 1px solid var(--edge-strong);
+  border-radius: 999px;
+  color: var(--ink-2);
+  font-size: 11.5px;
+}
+
+.cr-tier[data-standing='trusted'] {
+  border-color: color-mix(in srgb, var(--ok) 55%, transparent);
+  color: var(--ok);
+}
+
+.cr-tier[data-standing='low'] {
+  border-color: color-mix(in srgb, var(--warn) 60%, transparent);
+  color: var(--warn);
+}
+
+.cr-tier[data-standing='none'] {
+  border-style: dashed;
+  color: var(--ink-3);
+}
+
+.cr-item[data-read='failed'] .cr-read {
+  color: var(--warn);
+}
+
+.cr-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px 9px;
+}
+
+.cr-actions .btn {
+  height: 28px;
+  padding: 0 12px;
+  font-size: 12.5px;
+}
+
+.cr-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--accent-hi);
+  font-size: 12.5px;
+  text-underline-offset: 3px;
+}
+
+/* A card in the thread lights up with its entry in the column. */
+.product-card[data-lit],
+.run-event[data-lit] {
+  border-color: color-mix(in srgb, var(--accent-hi) 60%, transparent);
+  background: var(--accent-soft);
+}
+
+.run-event[data-focus-key] {
+  cursor: pointer;
+}
+
+/* The toggle exists only where the column is a drawer. */
+.cr-toggle {
+  display: none;
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  z-index: 6;
+  align-items: center;
+  gap: 7px;
+  height: 32px;
+  padding: 0 13px;
+  background: var(--glass);
+  border: 1px solid var(--glass-edge);
+  border-radius: 999px;
+  color: var(--ink);
+  font-size: 13px;
+  backdrop-filter: blur(16px);
+}
+
+@container chat (max-width: 1080px) {
+  .chat[data-thread='true'] .chat-main {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .cr-toggle {
+    display: inline-flex;
+  }
+
+  /* The drawer has its own close button, and sits where the toggle is. */
+  .cr-toggle[aria-expanded='true'] {
+    display: none;
+  }
+
+  .cr-close {
+    display: grid;
+  }
+
+  .chat-rail {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 7;
+    width: min(340px, 92cqw);
+    margin: 10px 10px 10px 0;
+    background: var(--panel);
+    box-shadow: var(--shadow-2);
+    visibility: hidden;
+    transform: translateX(calc(110% + 12px));
+    transition:
+      transform calc(260ms * var(--tm)) var(--ease-out),
+      visibility 0s linear calc(260ms * var(--tm));
+  }
+
+  .chat-rail[data-open='true'] {
+    visibility: visible;
+    transform: none;
+    transition-delay: 0s;
+  }
+}
+
+/* ---- the context bar ---- */
+
+.ctx {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  align-self: center;
+  gap: 3px 10px;
+  max-width: 100%;
+  margin: 0 8px 8px;
+  color: var(--ink-2);
+  font-size: 12px;
+}
+
+.ctx-label {
+  font-weight: 560;
+}
+
+.ctx-track {
+  flex: 0 0 150px;
+  height: 7px;
+  background: var(--panel-2);
+  border: 1px solid var(--edge-strong);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.ctx-track i {
+  display: block;
+  height: 100%;
+  background: var(--accent-hi);
+  border-radius: 999px;
+  transition:
+    width calc(320ms * var(--tm)) var(--ease-out),
+    background-color calc(200ms * var(--tm));
+}
+
+.ctx[data-tone='amber'] .ctx-track i {
+  background: var(--warn);
+}
+
+.ctx[data-tone='red'] .ctx-track i {
+  background: var(--risk);
+}
+
+.ctx[data-tone='amber'] .ctx-text {
+  color: var(--warn);
+}
+
+.ctx[data-tone='red'] .ctx-text {
+  color: var(--risk);
+}
+
+.ctx[data-state='not_reported'] .ctx-track,
+.ctx[data-state='pending'] .ctx-track {
+  border-style: dashed;
+  background: transparent;
+}
+
+.ctx-text,
+.ctx-spent {
+  font-size: 11.5px;
+}
+
+.ctx-trim {
+  flex-basis: 100%;
+  color: var(--warn);
+  font-size: 11.5px;
+}
+
+.act-usage {
+  align-self: center;
+  margin-left: auto;
+  color: var(--ink-3);
+  font-size: 11.5px;
+}
+
+/* ---- the evidence indicator ---- */
+
+.ev-mark {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+}
+
+.ev-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+  padding: 0 9px 0 7px;
+  background: transparent;
+  border: 1px solid var(--edge-strong);
+  border-radius: 999px;
+  color: var(--ink-2);
+  cursor: help;
+  font: inherit;
+  font-size: 11.5px;
+}
+
+.ev-dot:focus-visible {
+  outline: 2px solid var(--accent-hi);
+  outline-offset: 2px;
+}
+
+/* Three shapes, not three colours: solid is filled, partial is half, thin is a ring. */
+.ev-glyph {
+  box-sizing: border-box;
+  width: 9px;
+  height: 9px;
+  border: 1.5px solid var(--ok);
+  border-radius: 50%;
+  background: var(--ok);
+}
+
+.ev-mark[data-level='partial'] .ev-glyph {
+  border-color: var(--warn);
+  background: linear-gradient(90deg, var(--warn) 50%, transparent 50%);
+}
+
+.ev-mark[data-level='thin'] .ev-glyph {
+  border-color: var(--risk);
+  background: transparent;
+}
+
+.ev-mark[data-level='thin'] .ev-dot {
+  border-style: dashed;
+}
+
+.ev-tip {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 30;
+  width: max-content;
+  max-width: 270px;
+  padding: 8px 11px;
+  background: var(--panel-2);
+  border: 1px solid var(--edge-strong);
+  border-radius: var(--r-m);
+  box-shadow: var(--shadow-2);
+  color: var(--ink);
+  font-size: 12.5px;
+  line-height: 1.45;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity calc(120ms * var(--tm));
+}
+
+.ev-mark:hover .ev-tip,
+.ev-mark:focus-within .ev-tip {
+  opacity: 1;
+}
+
+.risk-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+}
+
+.risk-list li[data-thin] {
+  border-style: dashed;
+}
+
+.mx-risk {
+  position: relative;
+}
+
+.ev-corner {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  z-index: 2;
+}
+
+.ev-corner .ev-tip {
+  right: 0;
+  left: auto;
+}
+
+.mx-risk[data-thin] {
+  background: color-mix(in srgb, var(--risk) 4%, transparent);
+}
+
+.ev-hidden {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin: 10px 0 0;
+  padding: 10px 14px;
+  border: 1px dashed var(--edge-strong);
+  border-radius: var(--r-m);
+  color: var(--ink-2);
+  font-size: 13px;
+}
+
+.ev-hidden .btn {
+  height: 28px;
+  padding: 0 12px;
+  font-size: 12.5px;
+}

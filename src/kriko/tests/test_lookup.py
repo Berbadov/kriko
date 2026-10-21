@@ -249,6 +249,22 @@ def test_an_unstated_mileage_still_shows_the_claim_but_downranked(store):
     assert unscored["Chain tensioner fails"] < scored["Chain tensioner fails"]
 
 
+def test_a_claim_served_on_an_unstated_detail_says_so_countably(store):
+    """`why` holds the sentence; `open_conditions` keeps it countable, so an
+    interface can tell a claim resting on a detail nobody gave from a stated one."""
+    unstated = lookup(store, Query(kind="product",
+                                   identity={"brand": "acme", "model": "w100"}))
+    stated = lookup(store, Query(kind="product",
+                                 identity={"brand": "acme", "model": "w100"},
+                                 context={"usage_km": 200_000}))
+    chain = {c.title: c for c in unstated.claims}["Chain tensioner fails"]
+    assert [c.title for c in stated.claims].count("Chain tensioner fails") == 1
+    assert len(chain.open_conditions) == 1 and "usage_km" in chain.open_conditions[0]
+    assert {c.title: c for c in stated.claims}["Chain tensioner fails"].open_conditions == ()
+    # A claim with no condition asks nothing of the listing.
+    assert {c.title: c for c in unstated.claims}["Trim rattle"].open_conditions == ()
+
+
 def test_why_shown_explains_a_downrank(store):
     result = lookup(store, Query(kind="product",
                                  identity={"brand": "acme", "model": "w100"}))
