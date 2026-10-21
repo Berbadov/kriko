@@ -193,10 +193,12 @@ def annotate(claims: Iterable[Mapping]) -> list[dict]:
 def tier_pages(activity: Iterable[Mapping] | None, question: str = "") -> list[dict]:
     """A turn's activity rows, with the kind of site behind each page it read.
 
-    Adds `trust` (`exactfind.classify`: `domain`, `tier`, `label`, `trust`) to
-    each `read` row and changes nothing else. The right-hand column of Chat
-    draws a source's trust tier from this, so the tier is the engine's and the
-    screen holds no list of sites. A row with no address is left as it was.
+    Adds `trust` (`exactfind.classify`: `domain`, `tier`, `label`, `trust`, and
+    `standing`: `trusted`, `neutral` or `low`) to each `read` row and changes
+    nothing else. The right-hand column of Chat draws a source's trust tier
+    from this, so the tier and where it stands are the engine's and the screen
+    holds no list of sites and no threshold. A row with no address is left as
+    it was.
     """
     from app import exactfind
 
@@ -206,7 +208,11 @@ def tier_pages(activity: Iterable[Mapping] | None, question: str = "") -> list[d
         url = str(item.get("url") or "")
         if item.get("kind") == "read" and url and "trust" not in item:
             try:
-                item["trust"] = exactfind.classify(url, question)
+                found = exactfind.classify(url, question)
+                number = float(found["trust"])
+                standing = ("trusted" if exactfind.is_trusted(found)
+                            else "low" if number < LOW_TRUST_BELOW else "neutral")
+                item["trust"] = {**found, "standing": standing}
             except Exception:  # noqa: BLE001 - a missing registry never costs the turn
                 pass
         out.append(item)
