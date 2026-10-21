@@ -188,18 +188,18 @@ test('the pill says the tightest window left and what the last day cost, and not
   assert.deepEqual(meters.pillParts(null), { fill: null, text: '' })
 })
 
-test('every pixel icon is twelve by twelve, lit with the two cell kinds, and carries its signature square', () => {
-  assert.ok(pix.PIX_NAMES.length >= 13)
+test('every agent mark is sixteen by sixteen, lit with the two cell kinds, and carries its signature square', () => {
+  assert.deepEqual([...pix.PIX_NAMES].sort(), ['blocks', 'burst', 'chip', 'peak', 'pointer', 'prompt', 'spark'])
   for (const name of pix.PIX_NAMES) {
     const rows = pix.draw(name)
-    assert.equal(rows.length, 12, `${name} has twelve rows`)
+    assert.equal(rows.length, 16, `${name} has sixteen rows`)
     for (const row of rows) {
-      assert.equal(row.length, 12, `${name} has twelve cells in every row`)
+      assert.equal(row.length, 16, `${name} has sixteen cells in every row`)
       assert.match(row, /^[ #o]+$/, `${name} uses only empty, lit and signature cells`)
     }
     const lit = rows.join('').replaceAll(' ', '')
     assert.ok(lit.includes('o'), `${name} has a signature cell, as the logo has its square`)
-    assert.ok(lit.length >= 12, `${name} draws something`)
+    assert.ok(lit.length >= 16, `${name} draws something`)
   }
-  assert.deepEqual(pix.draw('no-such-icon'), pix.draw('spark'), 'an unknown name draws the fallback, never nothing')
+  assert.deepEqual(pix.draw('no-such-agent'), pix.draw('spark'), 'an unknown agent draws the fallback, never nothing')
 })
