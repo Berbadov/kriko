@@ -124,8 +124,8 @@ CREATE INDEX IF NOT EXISTS job_messages_job ON job_messages (job_id, msg_id);
 -- it survives a restart because it is a row, and it is pruned with its job.
 CREATE TABLE IF NOT EXISTS job_steps (
     step_id     INTEGER PRIMARY KEY AUTOINCREMENT,
-    job_id      TEXT NOT NULL,
-    at          TEXT NOT NULL,
+    job_id      TEXT NOT NULL DEFAULT '',
+    at          TEXT NOT NULL DEFAULT '',
     -- job | search | page | agent | verify | retry | note
     source      TEXT NOT NULL DEFAULT 'note',
     -- info | warn | error
@@ -145,6 +145,7 @@ CREATE TABLE IF NOT EXISTS job_steps (
     response    TEXT NOT NULL DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS job_steps_job ON job_steps (job_id, step_id);
+CREATE INDEX IF NOT EXISTS job_steps_parent ON job_steps (parent_id);
 
 CREATE TABLE IF NOT EXISTS claim_checks (
     lookup_id  TEXT NOT NULL,

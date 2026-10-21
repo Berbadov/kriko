@@ -24,6 +24,7 @@ No category knowledge, no network, and nothing here raises.
 import json
 import os
 import re
+import sys
 from collections.abc import Iterable, Mapping
 
 from app.agentledger import redact as redact_shapes
@@ -93,7 +94,10 @@ def redact_text(text, *, limit: int | None = None, private: Iterable[str] = (),
     clean = _replace(clean, sorted({str(one).strip() for one in private
                                     if len(str(one).strip()) >= 4},
                                    key=len, reverse=True), PRIVATE_MASK)
-    clean = redact_shapes(clean, limit=len(clean) + 1)
+    # `agentledger.redact` slices to its limit *after* substituting, and a
+    # substitution can be longer than what it replaced (`Bearer` becomes
+    # `[redacted]`), so a limit taken from the input cuts the tail off.
+    clean = redact_shapes(clean, limit=sys.maxsize)
     if limit is not None and len(clean) > limit:
         clean = clean[:limit] + f"… (+{len(clean) - limit} chars not kept)"
     return clean
