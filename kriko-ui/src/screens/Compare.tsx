@@ -10,6 +10,7 @@ import { usePrefs } from '../prefs'
 import { useQueue } from '../queue'
 import { Composer } from '../ui/Composer'
 import { Decide } from '../ui/Decide'
+import { ClaimSources } from '../ui/ClaimChip'
 import { EvidenceMark } from '../ui/EvidenceMark'
 import { PixelBar, Switch } from '../ui/controls'
 import { ExternalLink } from '../ui/ExternalLink'
@@ -240,7 +241,7 @@ function Column({ check, onRemove, children, transition }: { check: Check; onRem
   )
 }
 
-/** One problem the agents found, in words. It opens to the sources and their quotes. */
+/** One problem the agents found, in words. Its sources sit under it as chips; the quote opens from each. */
 function RiskCard({ risk, also, of }: { risk: Risk; also: number; of: number }) {
   const [open, setOpen] = useState(false)
   const pages = risk.sources.length
@@ -267,19 +268,10 @@ function RiskCard({ risk, also, of }: { risk: Risk; also: number; of: number }) 
         {risk.advice && <span>{risk.advice}</span>}
         <span className="mono muted mx-risk-meta">{pages === 1 ? '1 source' : `${pages} sources`}</span>
       </button>
-      {open && pages > 0 && (
-        <ul className="sources">
-          {risk.sources.map((s, i) => (
-            <li key={i} data-stance={s.stance.toLowerCase() === 'refutes' ? 'against' : 'for'}>
-              {s.url ? (
-                <ExternalLink href={s.url}>{s.host || s.url}</ExternalLink>
-              ) : (
-                <span>{s.host}</span>
-              )}
-              {s.quote && <q>{s.quote}</q>}
-            </li>
-          ))}
-        </ul>
+      {pages > 0 && (
+        <div className="mx-risk-sources">
+          <ClaimSources sources={risk.sources} />
+        </div>
       )}
     </li>
   )

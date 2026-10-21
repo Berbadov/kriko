@@ -106,3 +106,17 @@ test('the context bar warns from 70% and 90%, and a turn with no report says so 
   assert.equal(view.turnLine(usage), '900 tokens (split not reported) · cost not reported')
   assert.equal(view.formatTokens(18400), '18.4K')
 })
+
+test('a claim source keeps where the engine stands it, and one it could not place carries none', async () => {
+  globalThis.fetch = async () => reply({ label: 'Model C', created_at: '2026-10-19T12:00:00Z', response: {
+    claims: [{ title: 'Heat under load', body: 'Only at full load', sources: [
+      { url: 'https://maker.example/manual', domain: 'maker.example', quote: 'Allow ventilation', stance: 'supports', tier: 'manufacturer', standing: 'trusted' },
+      { url: 'https://forum.example/t/1', domain: 'forum.example', quote: 'Mine runs hot', stance: 'supports', tier: 'forum_ugc', standing: 'low' },
+      { url: 'https://odd.example/p', quote: 'Warm', standing: 'excellent' },
+    ] }],
+  } })
+  const [first, second, third] = (await checks.loadCheck('saved-standing')).risks[0].sources
+  assert.deepEqual([first.standing, first.tier], ['trusted', 'manufacturer'])
+  assert.equal(second.standing, 'low')
+  assert.equal(third.standing, undefined, 'a word the engine does not use is no mark')
+})

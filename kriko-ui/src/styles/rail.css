@@ -510,3 +510,150 @@
   padding: 0 12px;
   font-size: 12.5px;
 }
+
+/* ---- the claim chip: a source's standing, its site, and its quote on hover ----
+   Three shapes, as the evidence mark draws them: filled, half, ring. The
+   extension panel carries the same chip (extension/hover_lite/hover_lite.css). */
+
+.claim-sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 8px;
+}
+
+.claim-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 4px 9px 4px 7px;
+  background: var(--panel-2);
+  border: 1px solid var(--edge);
+  border-radius: 999px;
+  color: var(--ink-2);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  transition: border-color calc(150ms * var(--tm)), color calc(150ms * var(--tm));
+}
+
+.claim-chip[data-compact] {
+  padding: 5px;
+}
+
+.claim-chip:hover,
+.claim-chip[aria-expanded='true'] {
+  border-color: var(--edge-strong);
+  color: var(--ink);
+}
+
+.claim-chip:focus-visible,
+.claim-card :focus-visible {
+  outline: 2px solid var(--accent-hi);
+  outline-offset: 2px;
+}
+
+.claim-chip[data-stance='against'] {
+  border-style: dashed;
+}
+
+.claim-site {
+  overflow: hidden;
+  max-width: 18ch;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.claim-glyph {
+  box-sizing: border-box;
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid var(--ok);
+  border-radius: 50%;
+  background: var(--ok);
+}
+
+[data-standing='neutral'] > .claim-glyph {
+  border-color: var(--ink-2);
+  background: linear-gradient(90deg, var(--ink-2) 50%, transparent 50%);
+}
+
+[data-standing='low'] > .claim-glyph {
+  border-color: var(--warn);
+  background: transparent;
+}
+
+.claim-card {
+  position: fixed;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(340px, calc(100vw - 24px));
+  padding: 14px 14px 12px;
+  background: color-mix(in srgb, var(--panel) 95%, transparent);
+  backdrop-filter: blur(14px);
+  border: 1px solid var(--edge-strong);
+  border-radius: var(--r-m);
+  box-shadow: var(--shadow-2);
+  color: var(--ink);
+}
+
+.claim-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.claim-card-word {
+  margin-left: auto;
+  color: var(--ink-2);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.claim-card blockquote {
+  margin: 0;
+  padding-left: 11px;
+  border-left: 2px solid var(--edge-strong);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.claim-card-none,
+.claim-card-meta {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+.claim-card-acts {
+  display: flex;
+  gap: 8px;
+}
+
+.claim-card-acts a,
+.claim-card-acts button {
+  padding: 6px 10px;
+  background: var(--panel-2);
+  border: 1px solid var(--edge-strong);
+  border-radius: var(--r-s);
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.claim-card-acts a {
+  background: var(--accent);
+  border-color: transparent;
+  color: var(--accent-ink);
+}

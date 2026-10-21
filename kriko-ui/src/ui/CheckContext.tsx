@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { Check, Risk } from '../compare/checks'
-import { ExternalLink } from './ExternalLink'
+import { ClaimSources } from './ClaimChip'
 
 export function CheckContext({ check }: { check: Check }) {
   const [openedAt] = useState(() => Date.now())
@@ -21,10 +21,6 @@ export function RiskEvidence({ risk }: { risk: Risk }) {
     {risk.applicability && <p>Applies: {risk.applicability}</p>}
     {risk.disputed && <p>Sources disagree about this finding.</p>}
     {risk.advice && <p>{risk.advice}</p>}
-    {risk.sources.length > 0 && <details><summary>Evidence · {risk.sources.length} sources</summary><ul className="sources">{risk.sources.map((s, i) => <li key={i}>
-      <ExternalLink href={s.url || undefined}>{s.host || s.url}</ExternalLink>
-      {s.stance && s.stance !== 'supports' && <span> · {s.stance}</span>}
-      {s.quote && <blockquote>{s.quote}</blockquote>}
-    </li>)}</ul></details>}
+    <ClaimSources sources={risk.sources} />
   </>
 }
