@@ -1263,10 +1263,10 @@
   text-align: center;
 }
 
-/* ---- the agent mark ----
-   Sixteen by sixteen small square cells. Lit cells draw the shape, the signature
-   cell is the brand's teal, and every empty cell stays as a faint dot, so the mark
-   reads as a display without being a row of round LEDs. */
+/* ---- the pixel icons ----
+   Navigation icons are solid cells, twelve by twelve, with no empty cell drawn.
+   Agent marks are nine by nine dot displays: every empty cell stays as a faint dot.
+   Both carry one signature cell in the brand's teal. */
 
 .pix {
   --s: 24px;
@@ -1275,50 +1275,85 @@
   --off: color-mix(in srgb, var(--ink) 16%, transparent);
   display: inline-grid;
   flex: none;
-  grid-template-columns: repeat(var(--n, 16), 1fr);
-  gap: calc(var(--s) / 120);
+  grid-template-columns: repeat(var(--n, 12), 1fr);
+  gap: calc(var(--s) / 72);
   width: var(--s);
   height: var(--s);
   vertical-align: middle;
 }
 
 .pix i {
-  background: var(--off);
-  border-radius: 12%;
-  transform: scale(0.3);
-}
-
-.pix i[data-c] {
-  transform: none;
+  background: transparent;
+  border-radius: 8%;
 }
 
 .pix i[data-c='#'] {
-  background: linear-gradient(180deg, color-mix(in srgb, var(--tone) 78%, white), var(--tone));
-  box-shadow: 0 0 calc(var(--s) * 0.1) color-mix(in srgb, var(--tone) 40%, transparent);
+  background: var(--tone);
 }
 
 .pix i[data-c='o'] {
   background: var(--sig);
-  box-shadow: 0 0 calc(var(--s) * 0.12) color-mix(in srgb, var(--sig) 55%, transparent);
 }
 
-.pix[data-state='working'] i {
-  animation: pix-scan calc(1.8s * var(--tm)) steps(18, end) infinite;
-  animation-delay: calc((var(--x) + var(--y)) * 0.05s * var(--tm));
+.pix[data-kind='agent'] {
+  gap: calc(var(--s) / 40);
 }
 
-.pix[data-state='working'] i:not([data-c]),
-.pix[data-state='done'] i:not([data-c]) {
-  animation-name: pix-trace;
+.pix[data-kind='agent'] i {
+  background: var(--off);
+  border-radius: 14%;
+  transform: scale(0.34);
+}
+
+.pix[data-kind='agent'] i[data-c] {
+  transform: none;
+}
+
+.pix[data-kind='agent'] i[data-c='#'] {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--tone) 86%, white), var(--tone));
+  box-shadow:
+    0 0 calc(var(--s) * 0.12) color-mix(in srgb, var(--tone) 42%, transparent),
+    inset 0 1px 0 color-mix(in srgb, white 30%, transparent);
+}
+
+.pix[data-kind='agent'] i[data-c='o'] {
+  box-shadow: 0 0 calc(var(--s) * 0.14) color-mix(in srgb, var(--sig) 55%, transparent);
+}
+
+/* Navigation: a row of light travels down the icon. */
+.pix[data-kind='nav'][data-state='working'] i {
+  animation: pix-scan calc(1.7s * var(--tm)) steps(12, end) infinite;
+  animation-delay: calc(var(--y) * 0.142s * var(--tm));
+}
+
+.pix[data-kind='nav'][data-state='working'] i:not([data-c]),
+.pix[data-kind='nav'][data-state='done'] i:not([data-c]) {
+  animation-name: pix-trace-row;
+}
+
+.pix[data-kind='nav'][data-state='done'] i {
+  animation: pix-scan calc(0.9s * var(--tm)) steps(12, end) 1;
+  animation-delay: calc(var(--y) * 0.075s * var(--tm));
+}
+
+/* Agent marks: a diagonal wave crosses the display. */
+.pix[data-kind='agent'][data-state='working'] i {
+  animation: pix-scan calc(1.8s * var(--tm)) steps(9, end) infinite;
+  animation-delay: calc((var(--x) + var(--y)) * 0.095s * var(--tm));
+}
+
+.pix[data-kind='agent'][data-state='working'] i:not([data-c]),
+.pix[data-kind='agent'][data-state='done'] i:not([data-c]) {
+  animation-name: pix-trace-dot;
+}
+
+.pix[data-kind='agent'][data-state='done'] i {
+  animation: pix-scan calc(1.1s * var(--tm)) steps(9, end) 1;
+  animation-delay: calc((var(--x) + var(--y)) * 0.07s * var(--tm));
 }
 
 .pix[data-state='done'] {
   --sig: var(--mint);
-}
-
-.pix[data-state='done'] i {
-  animation: pix-scan calc(1s * var(--tm)) steps(18, end) 1;
-  animation-delay: calc((var(--x) + var(--y)) * 0.03s * var(--tm));
 }
 
 .pix[data-state='waiting'] i[data-c='o'] {
@@ -1355,12 +1390,24 @@
   }
 }
 
-/* The empty cells under the wave, lit and grown for a moment. */
-@keyframes pix-trace {
+/* The empty cells of the row the scan is on, shown for a moment. */
+@keyframes pix-trace-row {
+  0%,
+  16%,
+  100% {
+    background-color: transparent;
+  }
+  6% {
+    background-color: color-mix(in srgb, var(--tone) 30%, transparent);
+  }
+}
+
+/* The dots under the wave, lit and grown for a moment. */
+@keyframes pix-trace-dot {
   0%,
   22%,
   100% {
-    transform: scale(0.3);
+    transform: scale(0.34);
   }
   8% {
     background-color: color-mix(in srgb, var(--tone) 70%, var(--off));
