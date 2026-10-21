@@ -23,7 +23,8 @@ from app.searchbench.agent import research
 from app.searchbench.config import MODELS, PRICE_BASIS, PRICE_DATE, PRICE_SOURCES, SEARCHES, load_keys
 from app.searchbench.federated import FederatedRetrieval
 from app.searchbench.retrieval import Retrieval
-from app.searchbench.transport import Wire
+from app.searchbench.metrics import normalized_usage
+from app.searchbench.transport import TokenBudget, Wire
 
 
 PROFILES = {
@@ -52,6 +53,61 @@ def save(document, folder):
             if attempt == 5:
                 raise
             time.sleep(.1 * (attempt + 1))
+
+
+def snapshot_sources(folder):
+    sources = sorted(Path(__file__).parent.glob("*.py"))
+    digest = hashlib.sha256()
+    with zipfile.ZipFile(folder / "source.zip", "w", compression=zipfile.ZIP_DEFLATED) as snapshot:
+        for source in sources:
+            digest.update(source.name.encode())
+            digest.update(source.read_bytes())
+            snapshot.write(source, "app/searchbench/" + source.name)
+        for source in sorted(Path(__file__).parent.glob("*.json")):
+            snapshot.write(source, "app/searchbench/" + source.name)
+    return digest.hexdigest()
+
+
+def _meter_seed(document, folder=None, *, interrupted_resumes=0):
+    """Reported usage plus conservative ceilings for historical unmetered calls."""
+    reported = estimated = 0
+    max_prompt_bytes = 128_000
+
+    def charge_events(events, messages=None, *, fallback_max=2600):
+        nonlocal reported, estimated, max_prompt_bytes
+        for event in events or []:
+            if event.get("kind") != "model":
+                continue
+            usage = normalized_usage(event.get("usage") or {})
+            if usage["total"] is not None:
+                reported += usage["total"]
+            else:
+                size = (len(json.dumps(messages, ensure_ascii=False, separators=(",", ":")).encode("utf-8"))
+                        if messages is not None else max_prompt_bytes)
+                max_prompt_bytes = max(max_prompt_bytes, size)
+                estimated += size + int(event.get("parameters", {}).get("max_tokens", fallback_max)) + 8192
+
+    for row in document.get("runs", []):
+        max_prompt_bytes = max(max_prompt_bytes,
+                               len(json.dumps(row.get("messages", []), ensure_ascii=False, separators=(",", ":")).encode("utf-8")))
+        charge_events(row.get("events"), row.get("messages", []), fallback_max=2200)
+        history = row.get("audit_history", [])
+        audits = [entry.get("audit", {}) for entry in history] if history else list(row.get("audits", {}).values())
+        for audit in audits:
+            charge_events(audit.get("meter", {}).get("events"), fallback_max=2600)
+    calibration_path = Path(folder) / "calibration.json" if folder else None
+    if calibration_path and calibration_path.exists():
+        try:
+            calibration = json.loads(calibration_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            calibration = {}
+        for entry in calibration.get("audits", []):
+            charge_events(entry.get("audit", {}).get("meter", {}).get("events"), fallback_max=2600)
+
+    # Earlier runs were stopped between durable row checkpoints. Reserve one
+    # largest plausible model request for every recorded restart.
+    estimated += int(interrupted_resumes) * (max_prompt_bytes + 2200 + 8192)
+    return reported + estimated, reported, estimated
 
 
 def load_product_corpus(path):
@@ -168,32 +224,34 @@ async def run_experiment(args):
         document.setdefault("resume_history", []).append({"at": datetime.now(timezone.utc).isoformat(),
                                                              "code_sha256": hashlib.sha256(b"".join(source.read_bytes() for source in sorted(Path(__file__).parent.glob("*.py")))).hexdigest(),
                                                              "checkpoint": chosen_path.name})
+        document["source_sha256"] = snapshot_sources(folder)
+        document.setdefault("config", {})["token_cap"] = args.token_cap
         save(document, folder)
         print(f"RESUMED {folder}; recovered {len(document.get('retrieval_runs', []))} retrieval rows and {len(document.get('runs', []))} research rows", flush=True)
     else:
         folder = Path(args.out) / datetime.now(timezone.utc).strftime("mega-%Y%m%d-%H%M%S")
         folder.mkdir(parents=True, exist_ok=False)
-        sources = sorted(Path(__file__).parent.glob("*.py"))
-        digest = hashlib.sha256()
-        with zipfile.ZipFile(folder / "source.zip", "x", compression=zipfile.ZIP_DEFLATED) as snapshot:
-            for source in sources:
-                digest.update(source.name.encode())
-                digest.update(source.read_bytes())
-                snapshot.write(source, "app/searchbench/" + source.name)
-            for source in sorted(Path(__file__).parent.glob("*.json")):
-                snapshot.write(source, "app/searchbench/" + source.name)
+        source_hash = snapshot_sources(folder)
         document = {"schema_version": 2, "created_at": datetime.now(timezone.utc).isoformat(),
                     "config": vars(args), "dataset": dataset, "cases": cases, "profiles": {p: PROFILES[p] for p in profiles},
                     "models": {n: asdict(m) for n, m in MODELS.items()}, "price_date": PRICE_DATE, "price_basis": PRICE_BASIS,
                     "retrieval_query_policy": "Search-only trials use identical, deterministic, stopword-compacted queries capped at 128 characters across providers. Agent queries pass through unchanged unless DeepSeek's 128-character limit requires the same compaction; transformations are logged per attempt.",
                     "tavily_comparison_usd_per_credit": args.tavily_credit_usd,
-                    "source_sha256": digest.hexdigest(), "case_sha256": case_sha256,
+                    "source_sha256": source_hash, "case_sha256": case_sha256,
                     "python": sys.version, "platform": platform.platform(), "retrieval_runs": [], "runs": [], "phase": "retrieval"}
         save(document, folder)
+    initial_used, initial_reported, initial_estimated = _meter_seed(
+        document, folder, interrupted_resumes=len(document.get("resume_history", [])))
+    token_budget = TokenBudget.open(args.token_cap, folder / "token-budget.json",
+                                    initial_used=initial_used, initial_reported=initial_reported,
+                                    initial_estimated=initial_estimated)
+    document["config"]["token_cap"] = args.token_cap
+    document["token_budget"] = token_budget.snapshot()
+    save(document, folder)
     print(f"RESULTS {folder}", flush=True)
     locks, next_at = {}, {}
     def wire_for(client):
-        wire = Wire(client, tavily_credit_usd=args.tavily_credit_usd)
+        wire = Wire(client, tavily_credit_usd=args.tavily_credit_usd, token_budget=token_budget)
         wire.locks, wire.next_at = locks, next_at
         return wire
     async with httpx.AsyncClient(http2=True, timeout=httpx.Timeout(25, connect=5),
@@ -223,16 +281,20 @@ async def run_experiment(args):
             if (job[0], job[1]["id"], job[2]) not in existing:
                 queue.put_nowait((index, job))
         async def worker():
-            while not queue.empty():
+            while not queue.empty() and not token_budget.exhausted:
                 index, (name, case, repetition) = queue.get_nowait()
                 row = await run_profile(wire_for(client), name, case, args.results, args.page_chars)
                 row.update(repetition=repetition, trial_index=index)
                 document["runs"].append(row)
+                document["token_budget"] = token_budget.snapshot()
                 save(document, folder)
                 print(f"research {len(document['runs'])}/{len(jobs)} {name} {case['id']} {row['status']} {row['total_s']:.2f}s", flush=True)
+                if token_budget.exhausted:
+                    break
         await asyncio.gather(*(worker() for _ in range(args.workers)))
     document["runs"].sort(key=lambda row: row["trial_index"])
-    document["phase"] = "research_complete"
+    document["token_budget"] = token_budget.snapshot()
+    document["phase"] = "budget_exhausted" if token_budget.exhausted else "research_complete"
     save(document, folder)
     return folder
 
@@ -240,8 +302,13 @@ async def run_experiment(args):
 async def judge_experiment(args):
     folder = Path(args.folder)
     document = json.loads((folder / "results.json").read_text(encoding="utf-8"))
-    if document.get("phase") not in ("research_complete", "judging", "judged"):
+    if document.get("phase") not in ("research_complete", "budget_exhausted", "judging", "judged"):
         raise ValueError("Finish research before grading this folder")
+    initial_used, initial_reported, initial_estimated = _meter_seed(document, folder)
+    token_budget = TokenBudget.open(args.token_cap, folder / "token-budget.json",
+                                    initial_used=initial_used, initial_reported=initial_reported,
+                                    initial_estimated=initial_estimated)
+    document["token_budget"] = token_budget.snapshot()
     case_map = {case["id"]: case for case in document["cases"]}
     document["grading_code_sha256"] = hashlib.sha256(Path(__file__).with_name("accuracy.py").read_bytes()).hexdigest()
     document["grading_metric"] = "Rubric fact F1 per judge: criterion credits are true positives, uncredited required criteria are false negatives, and judge-confirmed false answer claims among up to 12 audited material claims are false positives. Citation support and scope remain separate acceptance gates."
@@ -258,9 +325,9 @@ async def judge_experiment(args):
     async with httpx.AsyncClient(http2=True, timeout=httpx.Timeout(30, connect=5)) as client:
         async def worker():
             nonlocal completed
-            while not queue.empty():
+            while not queue.empty() and not token_budget.exhausted:
                 row, model = queue.get_nowait()
-                audit = await assess(Wire(client), MODELS[model], row, case_map[row["case"]], timeout=args.timeout)
+                audit = await assess(Wire(client, token_budget=token_budget), MODELS[model], row, case_map[row["case"]], timeout=args.timeout)
                 row.setdefault("audit_history", []).append({"model": model, "audit": audit})
                 row.setdefault("audits", {})[model] = audit
                 row["accuracy"] = consensus(list(row["audits"].values()))
@@ -269,17 +336,25 @@ async def judge_experiment(args):
                     row["accuracy"]["complete"] = False
                     row["accuracy"]["accepted"] = None
                 completed += 1
+                document["token_budget"] = token_budget.snapshot()
                 save(document, folder)
                 print(f"judge {completed}/{total} {row['profile']} {row['case']} {model} {audit['status']} pass={audit.get('accepted')}", flush=True)
+                if token_budget.exhausted:
+                    break
         await asyncio.gather(*(worker() for _ in range(args.workers)))
-    document["phase"] = "judged"
+    document["token_budget"] = token_budget.snapshot()
+    document["phase"] = "budget_exhausted" if token_budget.exhausted else "judged"
     save(document, folder)
     return folder
 
 
-async def calibrate(folder, workers=4):
+async def calibrate(folder, workers=4, token_cap=100_000_000):
     """Six known-answer controls, separate from product research measurements."""
     document = json.loads((folder / "results.json").read_text(encoding="utf-8"))
+    initial_used, initial_reported, initial_estimated = _meter_seed(document, folder)
+    token_budget = TokenBudget.open(token_cap, folder / "token-budget.json",
+                                    initial_used=initial_used, initial_reported=initial_reported,
+                                    initial_estimated=initial_estimated)
     cases = {case["id"]: case for case in document["cases"]}
     controls = json.loads(Path(__file__).with_name("calibration.json").read_text(encoding="utf-8"))
     pairs = []
@@ -291,19 +366,24 @@ async def calibrate(folder, workers=4):
             row = {"status": "ok", "answer": answer, "sources": [{"id": "S1", "url": case["references"][0], "text": facts,
                     "snippet": "Curated paraphrase of independently checked primary-reference facts; controlled calibration, not retrieved evidence."}]}
             pairs.append((case, row, expected))
-    output = {"kind": "controlled_evaluator_calibration", "note": "Three correct and three deliberately wrong answers, using curated primary-fact summaries. Tests simple judge discrimination, not open-web research accuracy.", "audits": []}
+    output = {"kind": "controlled_evaluator_calibration", "note": "Three correct and three deliberately wrong answers, using curated primary-fact summaries. Tests simple judge discrimination, not open-web research accuracy.", "audits": [], "token_budget": token_budget.snapshot()}
     queue = asyncio.Queue()
     for case, row, expected in pairs:
         for model in ("mercury-3", "mistral-large-4"):
             queue.put_nowait((case, row, expected, model))
     async with httpx.AsyncClient(http2=True, timeout=30) as client:
         async def worker():
-            while not queue.empty():
+            while not queue.empty() and not token_budget.exhausted:
                 case, row, expected, model = queue.get_nowait()
-                audit = await assess(Wire(client), MODELS[model], row, case)
+                audit = await assess(Wire(client, token_budget=token_budget), MODELS[model], row, case)
                 output["audits"].append({"case": case["id"], "expected": expected, "judge": model, "audit": audit})
+                output["token_budget"] = token_budget.snapshot()
+                document["token_budget"] = token_budget.snapshot()
+                save(document, folder)
                 (folder / "calibration.json").write_text(redact(output), encoding="utf-8")
                 print(f"calibration {len(output['audits'])}/12 {case['id']} {model} expected={expected} observed={audit.get('accepted')}", flush=True)
+                if token_budget.exhausted:
+                    break
         await asyncio.gather(*(worker() for _ in range(workers)))
 
 
@@ -311,7 +391,7 @@ def recompute(folder):
     """Reapply deterministic gates to saved judge outputs; no inference calls."""
     path = folder / "results.json"
     document = json.loads(path.read_text(encoding="utf-8"))
-    if document.get("phase") not in ("research_complete", "judged"):
+    if document.get("phase") not in ("research_complete", "budget_exhausted", "judged"):
         raise ValueError("Wait for inference to finish before recomputing")
     cases = {case["id"]: case for case in document["cases"]}
     changed = 0
@@ -356,11 +436,14 @@ def main():
     run.add_argument("--seed", type=int, default=73021)
     run.add_argument("--out", default=".local-evaluation/searchbench")
     run.add_argument("--skip-retrieval", action="store_true")
+    run.add_argument("--token-cap", type=int, default=100_000_000,
+                     help="hard aggregate inference-token ceiling across research, calibration and grading")
     run.add_argument("--resume", help="resume an interrupted experiment folder without repeating completed trials")
     judge = sub.add_parser("judge")
     judge.add_argument("folder")
     judge.add_argument("--workers", type=int, default=2)
     judge.add_argument("--timeout", type=float, default=45, help="offline grading budget, independent of research deadlines")
+    judge.add_argument("--token-cap", type=int, default=100_000_000, help="hard aggregate inference-token ceiling")
     report = sub.add_parser("report")
     report.add_argument("folder")
     regrade = sub.add_parser("recompute")
@@ -368,12 +451,15 @@ def main():
     calibration = sub.add_parser("calibrate")
     calibration.add_argument("folder")
     calibration.add_argument("--workers", type=int, default=4)
+    calibration.add_argument("--token-cap", type=int, default=100_000_000, help="hard aggregate inference-token ceiling")
     combined = sub.add_parser("combined")
     combined.add_argument("folders", nargs="+")
     args = parser.parse_args()
     load_keys(Path(".env"))
     if getattr(args, "workers", 1) < 1:
         parser.error("workers must be positive")
+    if getattr(args, "token_cap", 1) < 1:
+        parser.error("token cap must be positive")
     if args.command == "run":
         if min(args.reps, args.retrieval_reps, args.results, args.page_chars) < 1:
             parser.error("budgets must be positive")
@@ -383,7 +469,7 @@ def main():
     elif args.command == "recompute":
         recompute(Path(args.folder))
     elif args.command == "calibrate":
-        asyncio.run(calibrate(Path(args.folder), args.workers))
+        asyncio.run(calibrate(Path(args.folder), args.workers, args.token_cap))
     elif args.command == "combined":
         from app.searchbench.mega_report import generate_master
         generate_master([Path(folder) for folder in args.folders])

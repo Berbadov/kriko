@@ -8,6 +8,7 @@ from urllib.parse import urlsplit
 
 from app.searchbench.retrieval import Retrieval
 from app.searchbench.metrics import ledger
+from app.searchbench.transport import TokenBudgetExceeded
 
 
 SYSTEM = """You are a web research agent. Research the user's question using the tools.
@@ -116,6 +117,8 @@ async def research(wire, model, variant, case, *, strategy="parallel", rounds=4,
                 row["status"] = "budget_exhausted"
     except TimeoutError:
         row["status"] = "timeout"
+    except TokenBudgetExceeded:
+        row["status"] = "token_budget_exhausted"
     except Exception as error:
         row["error"] = type(error).__name__
     row.update(total_s=wire.now(), first_result_s=retrieval.first_result_s, cache_hits=retrieval.cache_hits,

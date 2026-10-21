@@ -134,6 +134,7 @@ def generate(folder):
     audits = [entry["audit"] for r in rows for entry in r.get("audit_history", [])]
     grading_cost = sum(a.get("meter", {}).get("known_cost_usd", 0) for a in audits)
     grading_tokens = sum(a.get("meter", {}).get("known_tokens", {}).get("total", 0) for a in audits)
+    token_budget = document.get("token_budget", {})
     dataset = document.get("dataset") or {}
     categories = ", ".join(dataset.get("categories", [])) or "shoes, computers and cars"
     cohort = (f"Dataset {dataset.get('name', 'product benchmark')} v{dataset.get('version', '?')} ({dataset.get('split', 'unspecified')}), checked {dataset.get('checked_on', 'date not recorded')}. "
@@ -216,6 +217,7 @@ def generate(folder):
     lines += ["", "## Metering and evaluation limits", "",
               f"Known research spend: **${sum(r['known_cost_usd'] for r in rows):.5f}**. Known retrieval-screen spend: **${sum(r['known_cost_usd'] for r in document['retrieval_runs']):.5f}**. Known grading spend (separate): **${grading_cost:.5f}**. Totals can be lower bounds when requests time out.",
               f"Known grading tokens (not charged to candidate runtimes): **{grading_tokens:,}**. All grading attempts, including retries and failures, are retained in audit_history and separate grading CSVs.",
+              (f"Aggregate inference-token ceiling: **{token_budget.get('used', 0):,} / {token_budget.get('cap', 0):,}** used; **{token_budget.get('remaining', 0):,}** available; {token_budget.get('reported', 0):,} provider-reported and {token_budget.get('estimated', 0):,} conservatively estimated. Budget stop: **{'yes' if token_budget.get('exhausted') else 'no'}**. Requests reserve a conservative input-byte ceiling plus their output allowance before being sent; unmetered calls are charged at that reservation." if token_budget else "No aggregate token budget was recorded for this run."),
               f"Tavily comparison rate: ${document['tavily_comparison_usd_per_credit']:g}/credit (published pay-as-you-go), not the account's actual plan invoice. Exa uses reported costDollars; DeepSeek uses its per-successful-request rate; model prices are frozen in results.json.",
               "Input includes cached input; output includes reasoning. Never add these subsets twice. All per-call raw usage, credits, statuses and timing remain in the JSON and request CSV.",
               "Evaluators: Mistral Large 4 and Mercury 3, blinded to candidate identity and timing/cost. They see only the frozen fact rubric and evidence actually passed to the researcher. Short/truncated evidence can make citation support indeterminate. Judgement errors and disagreements remain visible; these are model-assisted accuracy estimates, not a human-adjudicated benchmark.",
@@ -268,7 +270,7 @@ def generate(folder):
                      **{"tokens_" + k: row["tokens"][k] for k in TOKEN_FIELDS}, **row.get("accuracy", {}), "answer": row["answer"]})
         for index, event in enumerate(row["events"]):
             request = event.get("request") or {}
-            requests.append({**shared, "request_index": index, **{k: event.get(k) for k in ("kind", "provider", "model", "status", "duration_s", "cost_usd", "credits", "http_version")},
+            requests.append({**shared, "request_index": index, **{k: event.get(k) for k in ("kind", "provider", "model", "status", "duration_s", "cost_usd", "credits", "http_version", "budget_reserved_tokens", "budget_charge_tokens", "budget_charge_basis", "budget_requested_tokens", "budget_remaining_tokens")},
                              "query": request.get("query"), "request_target": request.get("url") or request.get("urls") or request.get("ids"),
                              **{"tokens_" + k: event.get("tokens", {}).get(k) for k in TOKEN_FIELDS}})
     csv_file(folder / "trials.csv", flat)
@@ -284,6 +286,7 @@ def generate(folder):
                             **{"known_tokens_" + k: meter.get("known_tokens", {}).get(k, 0) for k in TOKEN_FIELDS}})
             for event in meter.get("events", []):
                 grading_requests.append({**shared, **{k: event.get(k) for k in ("provider", "model", "status", "duration_s", "cost_usd")},
+                                         **{k: event.get(k) for k in ("budget_reserved_tokens", "budget_charge_tokens", "budget_charge_basis", "budget_requested_tokens", "budget_remaining_tokens")},
                                          **{"tokens_" + k: event.get("tokens", {}).get(k) for k in TOKEN_FIELDS}})
     csv_file(folder / "grading.csv", grading)
     csv_file(folder / "grading-requests.csv", grading_requests)
@@ -311,6 +314,8 @@ def generate(folder):
 
     page = "<!doctype html><meta charset='utf-8'><title>Product search analysis</title><style>body{font:16px system-ui;max-width:1450px;margin:32px auto;padding:0 22px;color:#182235}h1{font-size:30px}h2{font-size:21px;margin-top:28px}.scroll{overflow-x:auto}table{border-collapse:collapse;width:100%;min-width:900px}td,th{text-align:left;padding:8px;border-bottom:1px solid #ddd;vertical-align:top}th{background:#f3f6fb}img{width:100%;height:auto}a{color:#1659bf}details{margin:8px 0;border:1px solid #d7deea;border-radius:6px;padding:8px}summary{cursor:pointer;font-weight:600}pre{white-space:pre-wrap;overflow-wrap:anywhere}.answer{max-height:380px;overflow:auto}.nav a{margin-right:14px}</style><h1>Product research: accuracy × speed × cost</h1>"
     page += f"<p>{len(rows)} attempts across {len(cases)} original product prompts; {graded} fully graded; {accepted} accepted by both evaluators. Two repetitions per question. Model-assisted screening results.</p>"
+    if token_budget:
+        page += f"<p>Token cap: {token_budget.get('used', 0):,} / {token_budget.get('cap', 0):,} used · {token_budget.get('remaining', 0):,} remaining · {token_budget.get('reported', 0):,} provider-reported · {token_budget.get('estimated', 0):,} conservative estimate · stop {'reached' if token_budget.get('exhausted') else 'not reached'}.</p>"
     page += "<p><a href='analysis.md'>Full analysis</a> · <a href='trials.csv'>Trials</a> · <a href='requests.csv'>Request log</a> · <a href='grading.csv'>Grading log</a> · <a href='retrieval.csv'>Search log</a> · <a href='workloads.csv'>Workload breakdown</a></p>"
     page += "<p class='nav'>Rankings: <a href='#ranking-accepted'>Accepted high→low</a> · <a href='#ranking-f1'>Fact F1 high→low</a> · <a href='#ranking-speed'>Speed low→high</a> · <a href='#ranking-cost'>Cost low→high</a></p>"
     page += ranking_table("ranking-accepted", "Accepted answers · high to low", "accepted", reverse=True, display="accepted")

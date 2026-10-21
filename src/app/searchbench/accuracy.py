@@ -6,6 +6,7 @@ import re
 from urllib.parse import parse_qs, urlsplit
 
 from app.searchbench.metrics import ledger
+from app.searchbench.transport import TokenBudgetExceeded
 
 
 JUDGE_SYSTEM = """Evaluate a product-research answer against the supplied, independently
@@ -127,6 +128,8 @@ async def assess(wire, model, row, case, *, timeout=45):
         if content.startswith("```"):
             content = content.split("\n", 1)[-1].rsplit("```", 1)[0]
         audit = grade_result(json.loads(content), case, row)
+    except TokenBudgetExceeded:
+        audit = {"status": "token_budget_exhausted", "accepted": None, "fact_recall": None}
     except Exception as error:
         audit = {"status": "judge_error", "error": type(error).__name__, "accepted": None, "fact_recall": None}
     audit["meter"] = ledger({"events": wire.events})
