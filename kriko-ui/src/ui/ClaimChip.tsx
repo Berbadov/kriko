@@ -110,6 +110,7 @@ export function ClaimChip({ source, compact = false }: { source: Evidence; compa
             ref={card}
             id={id}
             className="claim-card"
+            data-standing={source.standing}
             role="dialog"
             aria-label={`Evidence from ${site}`}
             style={{ left: at?.left ?? 0, top: at?.top ?? 0, visibility: at ? 'visible' : 'hidden' }}
