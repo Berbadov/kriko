@@ -129,7 +129,15 @@ async def sweep(args):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description=__doc__)
+    arguments = sys.argv[1:] if argv is None else list(argv)
+    if arguments[:1] == ["tune"]:
+        # Engine tuning: the reader's own agent and search provider answer real
+        # cases and another agent grades them. Its own commands; it spends
+        # nothing without --yes (see app.tuning.cli).
+        from app.tuning.cli import main as tune
+
+        return tune(arguments[1:])
+    parser = argparse.ArgumentParser(description=__doc__ + " `tune` runs engine tuning.")
     parser.add_argument("--env-file", default=".env", help="load only the five named provider keys; existing environment wins")
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("list", help="key presence and configured candidates; no API calls")
