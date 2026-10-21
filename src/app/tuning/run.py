@@ -23,8 +23,10 @@ from app.searchbench.metrics import wilson
 from app.tuning import cases as cases_mod
 from app.tuning import evidence, failures, grade
 from app.tuning.scrub import scrub, scrub_obj
+from app.winprocess import hidden_startup
 
 SCHEMA = 1
+CREATE_NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 
 
 def engine_info(repo: Path | None = None) -> dict:
@@ -40,10 +42,12 @@ def engine_info(repo: Path | None = None) -> dict:
     try:
         info["git_sha"] = subprocess.run(
             ["git", "rev-parse", "HEAD"], cwd=root, capture_output=True, text=True,
-            timeout=5, check=True).stdout.strip()
+            timeout=5, check=True, startupinfo=hidden_startup(),
+            creationflags=CREATE_NO_WINDOW).stdout.strip()
         info["dirty"] = bool(subprocess.run(
             ["git", "status", "--porcelain", "--untracked-files=no"], cwd=root,
-            capture_output=True, text=True, timeout=5, check=True).stdout.strip())
+            capture_output=True, text=True, timeout=5, check=True,
+            startupinfo=hidden_startup(), creationflags=CREATE_NO_WINDOW).stdout.strip())
     except Exception:  # noqa: BLE001 - no git is not an error, only less provenance
         pass
     return info
