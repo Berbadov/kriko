@@ -26,7 +26,7 @@ YELLOW = "33"
 BLUE = "34"
 
 #: The tabs, in the order the number keys select them.
-TABS = ("planes", "agenda", "jobs", "ops")
+TABS = ("planes", "agenda", "jobs", "ops", "local")
 
 #: State names the engine's job rows use, and how each should read.
 JOB_COLOURS = {
@@ -138,6 +138,8 @@ def rows_for(tab: str, data: dict) -> list[dict]:
         return list((data.get("jobs") or {}).get("items", []))
     if tab == "ops":
         return list((data.get("ops") or {}).get("items", []))
+    if tab == "local":
+        return list((data.get("local_report") or {}).get("stages", []))
     return []
 
 
@@ -183,8 +185,23 @@ def _line_ops(row: dict, width: int) -> str:
     return style(text, OP_COLOURS.get(state, "")) if state in OP_COLOURS else text
 
 
+def _line_local(row: dict, width: int) -> str:
+    """One stage: how many calls, how many failed, and what it cost.
+
+    Tokens in and out are the model's own bill; `t/s` is out over the stage's
+    milliseconds, which is the number that turns "slow" into a figure someone
+    can compare after a change.
+    """
+    name = f"{'▸' if row.get('running') else ' '}{row.get('stage', '')}"
+    speed = f"{row['tps']:>5.1f}t/s" if row.get("tps") else " " * 9
+    text = (f"{name:<10} {row.get('calls', 0):>3}× {row.get('failed', 0):>2}f "
+            f"{row.get('seconds', 0):>6.1f}s {row.get('tokens_in', 0):>6} "
+            f"{row.get('tokens_out', 0):>6} {speed}")
+    return pad(text, width)
+
+
 LINES = {"planes": _line_planes, "agenda": _line_agenda, "jobs": _line_jobs,
-         "ops": _line_ops}
+         "ops": _line_ops, "local": _line_local}
 
 
 def detail_for(tab: str, row: dict | None, data: dict) -> list[str]:
@@ -217,7 +234,65 @@ def detail_for(tab: str, row: dict | None, data: dict) -> list[str]:
         elif row.get("response_json"):
             lines.append(row["response_json"])
         return lines
+    if tab == "local":
+        if row.get("running") and not row.get("calls"):
+            return ["running now — nothing timed in this stage yet"]
+        cost = (f"calls {row.get('calls', 0)} · failed {row.get('failed', 0)} · "
+                f"{row.get('seconds', 0):.1f}s · {row.get('tokens_in', 0)} in / "
+                f"{row.get('tokens_out', 0)} out"
+                + (f" · {row['tps']} tok/s" if row.get("tps") else ""))
+        lines = [cost, f"longest call {row.get('longest', 0) / 1000:.1f}s"]
+        lines += [f"error: {one}" for one in row.get("errors") or []]
+        return lines
     return []
+
+
+def local_band(data: dict, width: int) -> list[str]:
+    """What this machine is running and how the last local look is going.
+
+    Two lines, then a rule. The first is the plane the run resolved — model,
+    runtime, device, context, search — because "the local agent is broken" is
+    almost always one of those five, and none of them was on a screen before.
+    """
+    plane = data.get("local") or {}
+    report = data.get("local_report") or {}
+    job = report.get("job") or {}
+    health = report.get("health") or {}
+    runtime = plane.get("runtime") or {}
+    parts = ["ready" if plane.get("ready") else "NOT READY"]
+    for key in ("model", "name"):
+        if plane.get(key):
+            parts.append(str(plane[key]))
+    if runtime.get("device"):
+        parts.append(str(runtime["device"]))
+    if plane.get("context_tokens"):
+        parts.append(f"ctx {plane['context_tokens']}")
+    if plane.get("search_label"):
+        parts.append(str(plane["search_label"]))
+    first = "local  " + " · ".join(parts)
+    if job:
+        second = (f"job {str(job.get('job_id', ''))[:8]} {job.get('state', '')} "
+                  f"{int((job.get('progress') or 0) * 100)}% · "
+                  f"{health.get('calls', 0)} calls")
+        if health.get("tps"):
+            second += f" · {health['tps']:.1f} tok/s"
+        if health.get("failed"):
+            second += f" · {health['failed']} failed"
+        if report.get("running"):
+            second += f" · inside {report['running']} now"
+        else:
+            # Summed stage time, not elapsed: page reads run beside the search,
+            # so the sum can exceed the wall clock, and saying "of" would claim
+            # a budget the numbers do not share.
+            second += f" · sum {health.get('stage_ms', 0) / 1000:.1f}s"
+            if report.get("wall_seconds"):
+                second += f" · wall {report['wall_seconds']:.0f}s"
+    elif not plane.get("ready") and plane.get("reason"):
+        second = str(plane["reason"])
+    else:
+        second = ("no local quick look yet — run one from a product page, or "
+                  "`python tools/measure_local.py`")
+    return [pad("  " + first, width), pad("  " + second, width), rule(width)]
 
 
 def wrap(text: str, width: int) -> list[str]:
@@ -269,6 +344,7 @@ def footer(state, width: int) -> list[str]:
         "agenda": "enter research · r refresh · s shell · q quit",
         "jobs": "enter follow · c cancel · R retry · r refresh · s shell · q quit",
         "ops": "r refresh · s shell · q quit",
+        "local": "enter the job's log · r refresh · s shell · q quit",
     }[state.tab]
     message = state.error or state.status
     colour = RED if state.error else DIM
@@ -278,6 +354,8 @@ def footer(state, width: int) -> list[str]:
 def render(state, width: int, height: int) -> list[str]:
     """The whole frame. Never longer than `height`, never wider than `width`."""
     top = header(state, width)
+    if state.tab == "local":
+        top += local_band(state.data, width)
     bottom = footer(state, width)
     rows = rows_for(state.tab, state.data)
     selected = state.cursor.get(state.tab, 0)
@@ -330,4 +408,6 @@ def _empty(state) -> str:
         "jobs": "no jobs yet — start one from the agenda tab",
         "ops": "no operations recorded yet — nothing has touched the "
                "knowledge through any door",
+        "local": "no local quick look yet — start one from a product page, "
+                 "or measure the pipeline with tools/measure_local.py",
     }[state.tab]

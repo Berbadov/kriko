@@ -195,6 +195,37 @@ def research_options(conn, *, sources: int = 0, kinds: list[str] | None = None) 
     return {
         "sources": max(0, min(count, MAX_RESEARCH_SOURCES)),
         "kinds": [one for one in SOURCE_KINDS if one in set(wanted)],
+        "thoroughness": _setting_percent(
+            stored.get(KRIKO_AGENT_THOROUGHNESS),
+            KRIKO_AGENT_DEFAULT_THOROUGHNESS,
+        ),
+        "validation_sensitivity": _setting_percent(
+            stored.get(KRIKO_AGENT_VALIDATION_SENSITIVITY),
+            KRIKO_AGENT_DEFAULT_VALIDATION_SENSITIVITY,
+        ),
+    }
+
+
+def _setting_percent(value: object, default: int) -> int:
+    try:
+        parsed = int(str(value).strip())
+    except (TypeError, ValueError):
+        return default
+    return max(0, min(100, parsed))
+
+
+def kriko_agent_tuning(conn) -> dict[str, int]:
+    """Return validated, defaulted settings for the fixed Kriko Agent."""
+    stored = read(conn)
+    return {
+        "thoroughness": _setting_percent(
+            stored.get(KRIKO_AGENT_THOROUGHNESS),
+            KRIKO_AGENT_DEFAULT_THOROUGHNESS,
+        ),
+        "validation_sensitivity": _setting_percent(
+            stored.get(KRIKO_AGENT_VALIDATION_SENSITIVITY),
+            KRIKO_AGENT_DEFAULT_VALIDATION_SENSITIVITY,
+        ),
     }
 
 
@@ -206,6 +237,15 @@ RUN_CONCURRENCY = "run_concurrency"
 #: list of products and their links, then at most a couple of warnings. Stored
 #: as "1"/"0" because every preference is a string on the way in and out.
 CHAT_PRODUCT_ONLY = "chat_product_only"
+#: The two dials for the fixed Mercury + DeepSeek research agent.
+KRIKO_AGENT_THOROUGHNESS = "kriko_agent_thoroughness"
+KRIKO_AGENT_VALIDATION_SENSITIVITY = "kriko_agent_validation_sensitivity"
+KRIKO_AGENT_TUNING_KEYS = (
+    KRIKO_AGENT_THOROUGHNESS,
+    KRIKO_AGENT_VALIDATION_SENSITIVITY,
+)
+KRIKO_AGENT_DEFAULT_THOROUGHNESS = 50
+KRIKO_AGENT_DEFAULT_VALIDATION_SENSITIVITY = 50
 #: The ceiling Settings offers. Each run is a CLI process or a model's
 #: attention plus its own fetches; past four the machine, the provider's rate
 #: limit and the reader's bill all say no before this number would.
@@ -233,7 +273,8 @@ def run_concurrency(conn) -> int:
 KEYS = (HARNESS, MODEL, SEARCH, AGENT_ORDER, *ROLE_KEYS,
         *HARNESS_MODEL_KEYS, *HARNESS_EFFORT_KEYS, *LOCAL_KEYS, MARKET_REGION,
         LLM_BASE_URL, *RESEARCH_KEYS,
-        RUN_CONCURRENCY, CHAT_PRODUCT_ONLY, AGENT_TRANSPORT, CODEX_TRANSPORT,
+        RUN_CONCURRENCY, CHAT_PRODUCT_ONLY, *KRIKO_AGENT_TUNING_KEYS,
+        AGENT_TRANSPORT, CODEX_TRANSPORT,
         CLASSIFICATION_PROVIDER)
 
 
@@ -391,15 +432,20 @@ def api_agent_rows(conn) -> tuple[list[dict], list[dict]]:
         if one.key == "openai":
             return (f"your {keys.BY_ID[one.key].label} key per token; web search uses the "
                     "selected Exa or Tavily service")
+        if one.id == apiagent.KRIKO_AGENT.id:
+            return ("your Mercury key per token and DeepSeek Search key per "
+                    "successful search or fetch")
         return f"your {keys.BY_ID[one.key].label} key, per token and per search"
 
     rows = [
         {
             "id": one.id, "label": one.label, "path": one.host, "command": "",
             "needs_account": bills(one), "cost_basis": "per_token",
-            "llm": for_harness(conn, one.id),
+            "llm": (one.default_model if one.id == apiagent.KRIKO_AGENT.id
+                    else for_harness(conn, one.id)),
             "llms": apiagent.models_for(one, KRIKO_HOME), "llms_note": "",
-            "llm_hint": one.model_hint, "llm_selectable": True,
+            "llm_hint": one.model_hint,
+            "llm_selectable": one.id != apiagent.KRIKO_AGENT.id,
             "model_freeform": one.key == "openai",
             "effort": "", "efforts": [], "effort_hint": "",
         }

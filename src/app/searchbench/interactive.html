@@ -1,0 +1,208 @@
+<div id="product-benchmark-explorer">
+  <style>
+    #product-benchmark-explorer { position: relative; color: var(--foreground); }
+    #product-benchmark-explorer .bench-chart { width: 100%; display: block; }
+    #product-benchmark-explorer .bench-chart text { fill: var(--foreground); font-size: 12px; }
+    #product-benchmark-explorer .bench-chart .domain, #product-benchmark-explorer .bench-chart .tick line { stroke: var(--border); }
+    #product-benchmark-explorer .bench-table { min-width: 600px; }
+    #product-benchmark-explorer .bench-answer { white-space: pre-wrap; overflow-wrap: anywhere; margin: 12px 0; }
+    #product-benchmark-explorer .bench-detail { margin-top: 20px; }
+    #product-benchmark-explorer .bench-sources { overflow-wrap: anywhere; }
+    #product-benchmark-explorer .bench-tooltip { position: absolute; pointer-events: none; background: var(--popover); color: var(--popover-foreground); padding: 10px; border: 1px solid var(--border); max-width: 300px; z-index: 2; white-space: pre-line; }
+    #product-benchmark-explorer .bench-selected td { background: var(--accent); color: var(--accent-foreground); }
+    #product-benchmark-explorer .bench-note { margin: 10px 0; }
+  </style>
+  <h2>Product research · accuracy × speed</h2>
+  <div class="viz-controls">
+    <label class="form-label">Experiment<select class="form-select" data-control="block"></select></label>
+    <label class="form-label">Product<select class="form-select" data-control="category"><option value="all">All products</option><option value="shoe">Shoes</option><option value="computer">Computers</option><option value="car">Cars</option></select></label>
+    <label class="form-label">Job<select class="form-select" data-control="job"><option value="all">All jobs</option><option value="easy">Easy</option><option value="heavy">Heavy</option><option value="identity">Missing identity</option></select></label>
+  </div>
+  <svg class="bench-chart" role="img" aria-label="Accepted answers versus mean end-to-end time; bubble area shows estimated cost per attempt"></svg>
+  <div class="text-small text-muted bench-note">Bubble area = cost/attempt · 2 model judges · estimated USD · ≥ = incomplete metering · blocks kept separate</div>
+  <div class="table-responsive">
+    <table class="table table-sm bench-table tabular-nums">
+      <thead><tr><th>Stack / outputs</th><th class="text-end">Accepted</th><th class="text-end">Mean s</th><th class="text-end">$/attempt</th><th class="text-end">$/accepted</th><th class="text-end">Tokens/attempt</th></tr></thead>
+      <tbody data-role="profiles"></tbody>
+    </table>
+  </div>
+  <div class="bench-detail">
+    <h3 data-role="output-heading">Actual output</h3>
+    <label class="form-label">Prompt<select class="form-select" data-control="trial"></select></label>
+    <p data-role="question"></p>
+    <div class="text-small tabular-nums" data-role="trial-metrics" aria-live="polite"></div>
+    <details><summary>Read original answer</summary><div class="bench-answer" data-role="answer"></div></details>
+    <details><summary>Sources + grading</summary><div class="bench-sources" data-role="sources"></div><div data-role="audits"></div></details>
+  </div>
+  <div class="tooltip bench-tooltip" role="tooltip" hidden></div>
+  <script type="application/json" data-role="data">__BENCHMARK_DATA__</script>
+  <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+  <script>
+  (() => {
+    const root = document.getElementById('product-benchmark-explorer');
+    const data = JSON.parse(root.querySelector('[data-role="data"]').textContent);
+    const $ = selector => root.querySelector(selector);
+    const control = name => $(`[data-control="${name}"]`);
+    const labels = data.labels;
+    let state = {block: data.blocks.at(-1).id, category: 'all', job: 'all', profile: 'm25-federated-verify-m3', trial: null};
+    let groups = [], filtered = [], positions = [], rendered = false;
+    const saved = window.openai?.widgetState;
+    const mean = values => values.reduce((a,b) => a+b,0)/values.length;
+    const money = n => '$'+n.toFixed(5);
+    const lower = complete => complete ? '' : '≥ ';
+    const count = n => Math.round(n).toLocaleString();
+    const verdict = v => v === true ? 'Accepted' : v === false ? 'Rejected' : 'Unscored';
+    const esc = s => String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    function restore(value) {
+      const s = value?.modelContent;
+      if (!s || !data.blocks.some(b=>b.id===s.block)) return;
+      state = {...state, ...Object.fromEntries(Object.entries(s).filter(([k])=>['block','category','job','profile','trial'].includes(k)))};
+      if (!['all','shoe','computer','car'].includes(state.category)) state.category='all';
+      if (!['all','easy','heavy','identity'].includes(state.job)) state.job='all';
+    }
+    function remember() {
+      window.openai?.setWidgetState?.({modelContent: {...state}, privateContent: null}).catch(()=>{});
+    }
+    function bootstrap(rows) {
+      const clusters = Array.from(d3.group(rows, r=>r.case).values());
+      if (clusters.length < 2 || rows.some(r=>r.accepted===null)) return null;
+      let seed = 73;
+      const random = () => {seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
+      const values = [];
+      for(let i=0;i<2000;i++) {
+        let pass=0,n=0;
+        for(let j=0;j<clusters.length;j++) {
+          for(const r of clusters[Math.floor(random()*clusters.length)]) {pass+=r.accepted===true;n++;}
+        }
+        values.push(pass/n);
+      }
+      values.sort((a,b)=>a-b);
+      return [d3.quantileSorted(values,.025),d3.quantileSorted(values,.975)];
+    }
+    function summarize(rows) {
+      return Array.from(d3.group(rows,r=>r.profile),([profile,rs])=>({
+        profile, rows:rs, n:rs.length, pass:rs.filter(r=>r.accepted===true).length,
+        graded:rs.filter(r=>r.accepted!==null).length, seconds:mean(rs.map(r=>r.seconds)),
+        cost:mean(rs.map(r=>r.cost)), costComplete:rs.every(r=>r.costComplete),
+        tokens:mean(rs.map(r=>r.tokens.total)), tokensComplete:rs.every(r=>r.tokensComplete),
+        ci:bootstrap(rs)
+      })).sort((a,b)=>b.pass/b.n-a.pass/a.n || a.seconds-b.seconds).map((g,i)=>({...g, index:i+1, rate:g.pass/g.n}));
+    }
+    function tooltip(g, event) {
+      const node = $('.bench-tooltip');
+      const ci = g.ci ? `\n95% question bootstrap: ${(100*g.ci[0]).toFixed(0)}–${(100*g.ci[1]).toFixed(0)}%` : '\n95% interval: insufficient questions';
+      node.textContent = `${labels[g.profile] || g.profile}\n${g.pass}/${g.n} accepted · ${g.seconds.toFixed(2)}s mean\n${lower(g.costComplete)}${money(g.cost)}/attempt · ${lower(g.tokensComplete)}${count(g.tokens)} tokens${ci}`;
+      node.hidden = false;
+      const bounds=root.getBoundingClientRect();
+      const x=event.clientX-bounds.left, y=event.clientY-bounds.top;
+      node.style.left=Math.max(0,Math.min(x+12,root.clientWidth-node.offsetWidth-4))+'px';
+      node.style.top=Math.max(0,y-node.offsetHeight-12)+'px';
+    }
+    function draw() {
+      const svg=d3.select($('.bench-chart'));
+      const width=root.clientWidth;
+      if (!width || !groups.length) return;
+      const height=width<440?290:330;
+      const margin={left:66,right:20,top:24,bottom:54};
+      svg.attr('viewBox',`0 0 ${width} ${height}`).attr('height',height);
+      const plotW=width-margin.left-margin.right, plotH=height-margin.top-margin.bottom;
+      const [x0,x1]=d3.extent(groups,g=>g.seconds);
+      const xpad=Math.max((x1-x0)*.12,x1*.08,.2);
+      const x=d3.scaleLinear().domain([Math.max(0,x0-xpad),x1+xpad]).range([margin.left+22,width-margin.right-22]).nice();
+      const [y0,y1]=d3.extent([...groups.map(g=>g.rate),0,1]);
+      const y=d3.scaleLinear().domain([y0,y1]).range([height-margin.bottom-22,margin.top+22]);
+      const radius=d3.scaleSqrt().domain([0,d3.max(groups,g=>g.cost)||1]).range([0,19]);
+      svg.selectAll('rect[data-chart-frame]').data([0]).join('rect').attr('data-chart-frame','').attr('x',margin.left).attr('y',margin.top).attr('width',plotW).attr('height',plotH).attr('fill','none').attr('stroke','var(--border)');
+      svg.selectAll('.x-axis').data([0]).join('g').attr('class','x-axis').attr('transform',`translate(0,${height-margin.bottom})`).call(d3.axisBottom(x).ticks(width<440?3:6).tickFormat(v=>v.toFixed(1)));
+      svg.selectAll('.y-axis').data([0]).join('g').attr('class','y-axis').attr('transform',`translate(${margin.left},0)`).call(d3.axisLeft(y).ticks(4).tickFormat(d3.format('.0%')));
+      svg.selectAll('[data-axis="x"]').data([0]).join('text').attr('class','axis-title').attr('data-axis','x').attr('x',margin.left+plotW/2).attr('y',height-9).attr('text-anchor','middle').text('Mean end-to-end time (seconds)');
+      svg.selectAll('[data-axis="y"]').data([0]).join('text').attr('class','axis-title').attr('data-axis','y').attr('transform',`translate(16,${margin.top+plotH/2}) rotate(-90)`).attr('text-anchor','middle').text('Accepted answers (%)');
+      const points=svg.selectAll('.bench-point').data(groups,g=>g.profile).join('circle').attr('class','bench-point').attr('fill',g=>g.profile===state.profile?'var(--viz-series-1)':'var(--muted-foreground)').attr('fill-opacity',g=>g.profile===state.profile?1:.55);
+      const motion=rendered && !matchMedia('(prefers-reduced-motion: reduce)').matches;
+      (motion?points.transition().duration(240):points).attr('cx',g=>x(g.seconds)).attr('cy',g=>y(g.rate)).attr('r',g=>Math.max(2,radius(g.cost)));
+      const annotations=svg.selectAll('.point-label').data(groups,g=>g.profile).join('text').attr('class','point-label').attr('x',g=>Math.min(width-margin.right-4,x(g.seconds)+radius(g.cost)+5)).attr('y',(g,i)=>y(g.rate)+(i%2?17:-12)).attr('text-anchor','start').text(g=>`${g.index} · ${g.pass}/${g.n}`);
+      const acceptedBounds=[];
+      annotations.each(function(g) {
+        const node=this,b=node.getBBox();
+        if (b.x+b.width>width-margin.right-2) {node.setAttribute('text-anchor','end');node.setAttribute('x',String(x(g.seconds)-radius(g.cost)-5));}
+        const box=node.getBBox();
+        const collides=acceptedBounds.some(a=>box.x<a.x+a.width+4&&box.x+box.width+4>a.x&&box.y<a.y+a.height+4&&box.y+box.height+4>a.y);
+        if(collides || box.y<margin.top || box.y+box.height>height-margin.bottom) node.textContent='';
+        else acceptedBounds.push(box);
+      });
+      positions=groups.map(g=>({g,x:x(g.seconds),y:y(g.rate)}));
+      svg.selectAll('rect[data-chart-hit]').data([0]).join('rect').attr('data-chart-hit','').attr('x',margin.left).attr('y',margin.top).attr('width',plotW).attr('height',plotH).attr('fill','transparent').attr('class','cursor-interaction')
+        .on('pointermove',event=>{
+          if(event.pointerType==='touch')return;
+          const [px,py]=d3.pointer(event,svg.node());
+          const nearest=d3.least(positions,p=>Math.hypot(px-p.x,py-p.y));
+          if(nearest)tooltip(nearest.g,event);
+        }).on('pointerleave',()=>{$('.bench-tooltip').hidden=true;})
+        .on('click',event=>{
+          const [px,py]=d3.pointer(event,svg.node());
+          const nearest=d3.least(positions,p=>Math.hypot(px-p.x,py-p.y));
+          if(nearest){selectProfile(nearest.g.profile);tooltip(nearest.g,event);}
+        });
+      svg.selectAll('title').data([0]).join('title').text(`${groups.length} stacks; ${filtered.length} attempts in the selected experiment and workload`);
+      rendered=true;
+    }
+    function selectProfile(profile) {
+      state.profile=profile;
+      draw();table();trials();remember();
+    }
+    function table() {
+      $('[data-role="profiles"]').innerHTML=groups.map(g=>`<tr class="${g.profile===state.profile?'bench-selected':''}"><td><button type="button" class="btn btn-ghost" data-profile="${esc(g.profile)}" aria-pressed="${g.profile===state.profile}">${g.index}. ${esc(labels[g.profile]||g.profile)}</button></td><td class="text-end">${g.pass}/${g.n}${g.graded<g.n?' + pending':''}</td><td class="text-end">${g.seconds.toFixed(2)}</td><td class="text-end">${lower(g.costComplete)}${g.cost.toFixed(5)}</td><td class="text-end">${g.pass?lower(g.costComplete)+(g.cost*g.n/g.pass).toFixed(5):'—'}</td><td class="text-end">${lower(g.tokensComplete)}${count(g.tokens)}</td></tr>`).join('');
+      root.querySelectorAll('[data-profile]').forEach(button=>button.addEventListener('click',()=>selectProfile(button.dataset.profile)));
+    }
+    function trials() {
+      const g=groups.find(g=>g.profile===state.profile);
+      const rows=g?.rows||[];
+      const previous=filtered.find(r=>r.id===state.trial);
+      const selected=rows.find(r=>r.id===state.trial)||rows.find(r=>r.case===previous?.case)||rows.find(r=>r.job==='heavy')||rows[0];
+      state.trial=selected?.id;
+      control('trial').innerHTML=rows.map(r=>`<option value="${r.id}">${esc(r.category+' · '+r.job+' · '+r.case)} — ${verdict(r.accepted)}</option>`).join('');
+      control('trial').value=state.trial||'';
+      $('[data-role="output-heading"]').textContent='Actual output · '+(labels[state.profile]||state.profile);
+      output();
+    }
+    function output() {
+      const row=filtered.find(r=>r.id===state.trial);
+      if(!row)return;
+      $('[data-role="question"]').textContent=row.question;
+      const tokens=row.reportedTokens;
+      const optional=n=>n===null||n===undefined?'unreported':count(n);
+      $('[data-role="trial-metrics"]').textContent=`${verdict(row.accepted)} · ${row.status} · ${row.seconds.toFixed(2)}s · ${lower(row.costComplete)}${money(row.cost)} · ${lower(row.tokensComplete)}${count(row.tokens.total)} tokens | input ${optional(tokens.input)} · cached ${optional(tokens.cached_input)} · output ${optional(tokens.output)} · reasoning ${optional(tokens.reasoning)} | ${row.searches} searches · ${row.fetches} reads`;
+      $('[data-role="answer"]').textContent=row.answer || 'No final answer returned.';
+      const sourceNode=$('[data-role="sources"]');
+      sourceNode.replaceChildren();
+      for(const s of row.sources) {
+        const p=document.createElement('p'), a=document.createElement('a');
+        try {if(!['https:','http:'].includes(new URL(s.url).protocol))continue;}catch{continue;}
+        a.href=s.url;a.target='_blank';a.rel='noopener noreferrer';a.textContent=`[${s.id}] ${s.url}`;p.append(a);sourceNode.append(p);
+      }
+      if(!row.sources.length)sourceNode.textContent='No cited sources.';
+      $('[data-role="audits"]').innerHTML=row.audits.map(a=>`<p><strong>${esc(a.judge)} · ${verdict(a.accepted)}</strong><br>${esc(a.summary)}</p>${a.gaps.map(c=>`<p class="text-small">${esc(c.id)} · ${c.credit}/1 — ${esc(c.reason)}</p>`).join('')}`).join('');
+    }
+    function update() {
+      const block=data.blocks.find(b=>b.id===state.block)||data.blocks.at(-1);
+      filtered=block.rows.filter(r=>(state.category==='all'||r.category===state.category)&&(state.job==='all'||r.job===state.job));
+      groups=summarize(filtered);
+      if(!groups.some(g=>g.profile===state.profile))state.profile=groups[0]?.profile;
+      ['block','category','job'].forEach(k=>{control(k).value=state[k];});
+      $('.bench-tooltip').hidden=true;
+      draw();table();trials();
+    }
+    if(typeof d3==='undefined') {
+      $('[data-role="question"]').textContent='Chart library could not load. Open the saved CSVs for the original results.';
+      return;
+    }
+    control('block').innerHTML=data.blocks.map(b=>`<option value="${b.id}">${b.label}</option>`).join('');
+    restore(saved);
+    ['block','category','job'].forEach(k=>control(k).addEventListener('change',()=>{state[k]=control(k).value;update();remember();}));
+    control('trial').addEventListener('change',()=>{state.trial=control('trial').value;output();remember();});
+    window.addEventListener('openai:set_globals',event=>{const value=event.detail?.globals?.widgetState;if(value){restore(value);update();}});
+    new ResizeObserver(()=>draw()).observe(root);
+    update();
+  })();
+  </script>
+</div>

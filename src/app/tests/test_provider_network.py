@@ -4,7 +4,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import pytest
 
-from app.providers import network
+from app.providers import network, openserp
 
 
 @pytest.fixture(autouse=True)
@@ -261,3 +261,69 @@ def test_any_mode_polls_cancellation_on_the_owner_thread_and_stops_workers(monke
     with pytest.raises(RuntimeError, match="reader cancelled"):
         search("a product")
     assert exited.wait(1)
+
+
+def _race(monkeypatch, replies, delays):
+    """One urlopen that answers each engine on its own clock."""
+    import json
+    import time
+    from app.providers import openserp
+
+    seen = []
+
+    class Response:
+        def __init__(self, payload):
+            self.payload = payload
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            pass
+
+        def read(self):
+            return json.dumps(self.payload).encode()
+
+    def urlopen(request, **_kwargs):
+        name = "google" if "/google/" in request.full_url else "bing"
+        seen.append(name)
+        time.sleep(delays.get(name, 0.0))
+        return Response(replies[name])
+
+    monkeypatch.setattr(openserp.network, "urlopen", urlopen)
+    return seen
+
+
+def test_an_engine_that_answers_a_different_product_does_not_win_the_race(monkeypatch):
+    """Measured: Bing answered `"WH-1000XM4 headphones" owner reports forum`
+    with WhatsApp and grammar pages, faster than the two engines that returned
+    headphones, and the fast path took the first answer."""
+    seen = _race(
+        monkeypatch,
+        {"bing": {"results": [{"url": "https://www.whatsapp.com/",
+                               "title": "WhatsApp Web"}]},
+         "google": {"results": [{"url": "https://head-fi.test/sony",
+                                 "title": "Sony WH-1000XM4 discussion"}]}},
+        {"bing": 0.0, "google": 0.15},
+    )
+    search = openserp.searcher(engine="google,bing", mode="any", timeout=5.0)
+
+    hits = search('"WH-1000XM4 headphones" owner reports forum', 5)
+
+    assert hits[0]["url"] == "https://head-fi.test/sony"
+    assert seen.count("bing") == 1
+
+
+def test_a_named_answer_is_still_used_when_no_engine_returns_the_name(monkeypatch):
+    """The rule prefers, it does not censor: one engine answering with a weak
+    page is what the reader already had before the rule existed."""
+    _race(
+        monkeypatch,
+        {"bing": {"results": [{"url": "https://example.test/thread",
+                               "title": "A long thread"}]},
+         "google": {"results": []}},
+        {},
+    )
+    search = openserp.searcher(engine="google,bing", mode="any", timeout=5.0)
+
+    assert search('"Some Model 900" problems', 5)[0]["url"] == "https://example.test/thread"

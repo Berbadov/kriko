@@ -164,6 +164,32 @@ def test_options_are_bounded_and_deduplicated():
     assert found["id"] == "variant"
 
 
+def test_shipping_or_store_pickup_is_not_a_product_clarification():
+    reply = _ask("Kargo ile mi yoksa mağazadan mı almayı düşünüyorsunuz?",
+                 "Kargo ile alıyorum", "Mağazadan alıyorum", key="purchase_method",
+                 why="teslimat tercihi")
+    assert chat.parse_clarify(reply) is None
+
+
+def test_personal_style_preference_is_not_a_product_clarification():
+    reply = _ask("Which color do you prefer?", "Black", "White", key="color")
+    assert chat.parse_clarify(reply) is None
+
+
+def test_shipping_question_is_dropped_and_the_product_answer_continues(ctx, monkeypatch):
+    _stub(monkeypatch, "web_search", {"rows": WEB_ROWS,
+                                      "truncated": False, "note": ""})
+    asked = Script(_ask("Kargo ile mi yoksa mağazadan mı almayı düşünüyorsunuz?",
+                        "Kargo ile alıyorum", "Mağazadan alıyorum",
+                        key="purchase_method"))
+    answering = Script("Bu telefona uygun sağlam bir adaptör seçin.")
+    out = chat.run_turn("Samsung S24FE şarj adaptörü ve kablosu, sağlam.",
+                        ask=answering, clarify=asked, ctx=ctx)
+    assert len(asked.prompts) == 1
+    assert out.get("questions", []) == []
+    assert out["answer"].startswith("Bu telefona uygun")
+
+
 # ── the links a buying answer owes, whichever agent wrote it ────────────
 
 def test_a_buying_answer_the_model_left_unlinked_gets_the_pages_it_read(ctx, monkeypatch):
@@ -182,15 +208,37 @@ def test_an_information_answer_is_not_given_a_shop_list(ctx, monkeypatch):
     assert "shop.example" not in out["answer"]
 
 
-def test_product_only_mode_asks_for_a_list_not_an_essay(ctx, monkeypatch):
-    _stub(monkeypatch, "web_search", {"rows": WEB_ROWS, "truncated": False, "note": ""})
-    answering = Script("[Winter tyre](https://shop.example/winter-tyre) — 100 EUR")
+def test_product_only_mode_keeps_full_research_and_returns_listing_cards(ctx, monkeypatch):
+    rows = [{**WEB_ROWS[0], "image_url": "https://cdn.example/tyre.jpg",
+             "seller_signals": {"seller_name": "Winter Shop"}}]
+    _stub(monkeypatch, "web_search", {"rows": rows, "truncated": False, "note": ""})
+    answering = Script("Michelin Alpin 6 is the best-supported fit for your Golf.")
     out = chat.run_turn("I need winter tires for my Golf 5", ask=answering, ctx=ctx,
                         product_only=True)
     brief = answering.prompts[-1]
-    assert "PRODUCT-ONLY ANSWER" in brief
-    assert "One line per product" in brief
-    assert "shop.example" in out["answer"]
+    assert "PRODUCT-ONLY PRESENTATION" in brief
+    assert "complete research" in brief
+    assert "fitment/compatibility checks" in brief
+    assert out["answer"] == "Michelin Alpin 6 is the best-supported fit for your Golf."
+    assert out["products"] == [{
+        "card_type": "listing",
+        "id": "https://shop.example/winter-tyre",
+        "label": "Winter tyre",
+        "url": "https://shop.example/winter-tyre",
+        "image_url": "https://cdn.example/tyre.jpg",
+        "seller": "Winter Shop",
+        "trust": "a tyre shop",
+        "page_read": True,
+    }]
+
+
+def test_listing_cards_require_read_or_trusted_source():
+    rows = [
+        {"url": "https://unknown.example/item", "title": "Unknown item"},
+        {"url": "https://shop.example/item", "title": "Shop item",
+         "source_trust": {"label": "retailer", "trust": 1}},
+    ]
+    assert [one["url"] for one in chat.listing_cards(rows)] == ["https://shop.example/item"]
 
 
 # ── what the thread keeps ───────────────────────────────────────────────

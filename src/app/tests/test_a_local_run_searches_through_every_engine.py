@@ -29,9 +29,9 @@ def test_a_research_run_searches_through_every_engine(monkeypatch):
     monkeypatch.setattr(tasks, "_local_plan", lambda params, **kw: plan())
     plane = tasks._researcher({"backend": "local"})
     assert asked == [openserp.LOCAL_ENGINES]
-    assert set(asked[0].split(",")) == {"google", "duckduckgo", "bing"}
+    assert set(asked[0].split(",")) == {"google", "duckduckgo"}
     assert plane._scheduler is not None
-    assert set(plane._scheduler._sources) == {"google", "duckduckgo", "bing"}
+    assert set(plane._scheduler._sources) == {"google", "duckduckgo"}
 
 
 def test_a_named_engine_list_is_honoured_whole(monkeypatch):
@@ -47,3 +47,9 @@ def test_a_named_engine_list_is_honoured_whole(monkeypatch):
 
 def test_no_engine_that_blocks_every_query_is_asked_by_default():
     assert "ecosia" not in openserp.LOCAL_ENGINES
+
+
+def test_an_engine_that_answered_a_different_product_is_not_asked():
+    """Bing answered a quoted Sony model with WhatsApp, and won the race by
+    being fast. It is not in the shipped set; `carries_name` guards the rest."""
+    assert "bing" not in openserp.LOCAL_ENGINES

@@ -55,6 +55,16 @@ def completer_for(model: str, *, max_tokens: int | None = None,
         from app.providers import mistral
 
         return mistral.completer(model=model, **options)
+    if provider == "mercury":
+        from app import keys
+        from app.providers import kriko_agent
+
+        return llm.completer(
+            api_key=keys.require("mercury"),
+            base_url=kriko_agent.MERCURY_BASE_URL,
+            model=model,
+            **options,
+        )
     if provider == "anthropic":
         # The prefix check is a fallback for a model released after the
         # reader's catalogue was written: `claude-` is Anthropic's own
@@ -443,7 +453,11 @@ def _api_agent(agent, *, timeout: float, model: str, app_state_path):
     from app.providers import apiagent, mistral
     from app.web.settings import KRIKO_HOME
 
-    if not model.strip() and app_state_path is not None:
+    if agent.id == apiagent.KRIKO_AGENT.id:
+        # Kriko Agent is the evaluated, fixed Mercury 2.5 + DeepSeek Search
+        # stack; a per-harness model preference must not silently change it.
+        model = agent.default_model
+    elif not model.strip() and app_state_path is not None:
         from app import prefs
         from app.web import state
 

@@ -1,0 +1,5 @@
+[
+  {"case":"shoe-easy-eva","expected":false,"answer":"The Arizona Essentials EVA footbed is cork-latex, the upper is leather, and the product is not waterproof [S1]."},
+  {"case":"computer-easy-m2","expected":false,"answer":"The MacBook Air M2 2022 natively supports two external 6K monitors at 60 Hz and has four Thunderbolt/USB4 ports [S1]."},
+  {"case":"car-easy-recall","expected":false,"answer":"24V444 / 24S37 affects 2021 F-150 vehicles with the ten-speed 10R80. The defect is engine oil consumption, not downshifting [S1]."}
+]

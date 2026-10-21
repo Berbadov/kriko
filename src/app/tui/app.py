@@ -26,7 +26,7 @@ that says it happened.
 import threading
 from dataclasses import dataclass, field
 
-from app.tui import screen, term
+from app.tui import local, screen, term
 from app.tui.client import Engine, EngineError
 
 #: How often the poller re-reads the engine. A job's log is the fastest-moving
@@ -77,6 +77,7 @@ class Tui:
             "agenda": self.engine.agenda,
             "jobs": self.engine.jobs,
             "ops": self.engine.operations,
+            "local": self.engine.local_plane,
         }
         # The current tab always, the others only when they are cheap to miss —
         # `/api/agenda` does real work, and re-running it every second while
@@ -93,6 +94,10 @@ class Tui:
             except EngineError as error:
                 failures.append(f"{name}: {error}")
         state.error = "  ".join(failures)
+        if state.tab == "local":
+            state.data["local_report"] = local.report(
+                local.newest_local_job((state.data.get("jobs") or {}).get("items") or []),
+                state.data.get("local") or {})
         if state.following:
             try:
                 row = self.engine.job(state.following)
@@ -133,7 +138,7 @@ class Tui:
         if key in ("q", "ctrl-c"):
             state.running = False
             return
-        if key in ("1", "2", "3", "4"):
+        if key in ("1", "2", "3", "4", "5") and int(key) <= len(screen.TABS):
             state.tab = screen.TABS[int(key) - 1]
             self.refresh_now.set()
             return
@@ -164,6 +169,19 @@ class Tui:
             return self._agenda_key(key)
         if state.tab == "jobs":
             return self._jobs_key(key)
+        if state.tab == "local":
+            return self._local_key(key)
+
+    def _local_key(self, key: str) -> None:
+        state = self.state
+        if key != "enter":
+            return
+        job = (state.data.get("local_report") or {}).get("job") or {}
+        if not job.get("job_id"):
+            state.error = "no local quick look yet — start one from a product page"
+            return
+        self._follow(job["job_id"])
+        state.status = f"following {job['job_id'][:8]}"
 
     def _agenda_key(self, key: str) -> None:
         state = self.state

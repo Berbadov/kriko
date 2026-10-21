@@ -111,6 +111,25 @@ class PipelineModel:
         return {}
 
 
+class StrictPipelineModel(PipelineModel):
+    """Says unsupported unless the claim's body is copied from its evidence.
+
+    What a small model does when a summary rewords the source: it refuses the
+    summary, then accepts the same fault quoted.
+    """
+
+    def _answer(self, stage: str, prompt: str):
+        if stage == "verify":
+            payload = json.loads(prompt[prompt.index('{"product"'):])
+            body = " ".join(str(payload["claim"]["body"]).split())
+            evidence = " ".join(" ".join(str(one).split())
+                                for one in payload["evidence"])
+            return {"evidence_kind": "problem",
+                    "support": "supported" if body and body in evidence else "unsupported",
+                    "identity": "match"}
+        return super()._answer(stage, prompt)
+
+
 class FourKPipelineModel(PipelineModel):
     def prompt_bytes_allowed(self, *, reply_tokens=None):
         reserved = reply_tokens if reply_tokens is not None else self.max_tokens
@@ -243,6 +262,126 @@ def test_local_coverage_reports_when_structured_output_was_downgraded():
 
     assert asker.coverage["structured_output"] == {
         "mode": "unconstrained", "reason": "response_format_refused"}
+
+
+def test_a_summary_the_source_does_not_support_is_restated_in_its_own_words():
+    """Refusing a supported fault because its *summary* overreached loses the
+    finding. Quoting the source keeps it, and says nothing the page does not."""
+    url = "https://example.org/report"
+    page = "Widget owners report the pump failed after a month of use."
+    model = StrictPipelineModel(findings=[{
+        "title": "Pump failure",
+        "why": "Owners say the pump is badly designed.",
+        "needle": "pump failed"}])
+    asker = local_agent.LocalAsker(lambda _: '["Widget failures"]', model,
+        lambda *_: [{"url": url}], lambda _: page,
+        model="test", search_provider="stub", given_sources={url: page})
+
+    reply = asker.ask(quicklook.brief("Widget", compact=True))
+    cards = quicklook.parse(reply, asker.sources)
+
+    assert cards["risks"], "a documented fault was dropped together with its wording"
+    assert "pump failed" in cards["risks"][0]["body"].casefold()
+
+
+def test_two_claims_from_one_page_that_name_the_same_fault_become_one():
+    """Measured: three Teams-audio claims from one Sony support page arrived
+    as three cards, and each pair shared the fault's own words."""
+    from app.providers.local_pipeline import _merge_repeats
+
+    def source(quote):
+        return {"url": "https://sony.test/teams", "quote": quote}
+
+    one = {"kind": "risk", "title": "No sound in Teams calls", "body": "",
+           "sources": [source("a")]}
+    two = {"kind": "risk", "title": "Teams calls have no sound", "body": "",
+           "sources": [source("b")]}
+    other = {"kind": "risk", "title": "Cracking hinge", "body": "",
+             "sources": [source("c")]}
+
+    merged = _merge_repeats([one, two, other])
+
+    assert len(merged) == 2
+    assert len(merged[0]["sources"]) == 2
+    assert merged[1]["title"] == "Cracking hinge"
+
+
+def test_select_risks_ranks_by_consequence_and_drops_a_repeat():
+    """The cap is six, but which six is a decision. Two wordings of one fault
+    must not both fill it, and a serious fault must not lose to a cosmetic one
+    that happened to arrive first."""
+    from app.providers.local_pipeline import select_risks
+
+    high = {"title": "Brake failure", "severity": "high", "sources": []}
+    low = {"title": "Paint wear", "severity": "low", "sources": []}
+    repeat = {"title": "Brake failures reported", "severity": "high", "sources": []}
+
+    chosen = select_risks([low, repeat, high], 6)
+
+    assert [one["title"] for one in chosen] == ["Brake failure", "Paint wear"]
+
+
+def test_a_look_keeps_the_decisions_it_made():
+    """The dataset the tuning loop reads: each claim with the verdict that
+    decided it, each page with what came back and whether it was kept."""
+    url = "https://example.org/report"
+    page = ("Widget owners report the pump failed after a month of use, and the "
+            "replacement pump has lasted two years so far.")
+    model = PipelineModel(findings=[{"title": "Pump failure",
+                                     "why": "An owner reported it.",
+                                     "needle": "pump failed"}])
+    asker = local_agent.LocalAsker(lambda _: '["Widget failures"]', model,
+        lambda *_: [{"url": url}], lambda _: page,
+        model="test", search_provider="stub")
+
+    asker.ask(quicklook.brief("Widget", compact=True))
+
+    decisions = asker.coverage["claim_decisions"]
+    assert decisions and {"url", "title", "accepted", "verdict"} <= set(decisions[0])
+    assert decisions[0]["accepted"] is True
+    outcomes = asker.coverage["page_outcomes"]
+    assert outcomes and outcomes[0]["kept"] is True
+    assert outcomes[0]["characters"] > 0
+
+
+def test_a_symptom_heading_on_a_troubleshooting_page_grounds_nothing():
+    """Measured: "Battery Issues" was kept from two SEO troubleshooting pages,
+    quoted at heading level, with no owner, incident or model-specific fault."""
+    url = "https://example.org/dyson-v11-troubleshooting"
+    page = ("Battery Not Charging\nShort Battery Life\nBattery problems\n"
+            "This Dyson V11 troubleshooting guide lists the usual symptoms.")
+    model = PipelineModel(findings=[{"title": "Battery Issues",
+                                     "why": "Battery problems can disrupt cleaning.",
+                                     "needle": "Battery Not Charging"}])
+    asker = local_agent.LocalAsker(lambda _: '["Dyson V11 battery failures"]', model,
+        lambda *_: [{"url": url}], lambda _: page,
+        model="test", search_provider="stub")
+
+    reply = asker.ask(quicklook.brief("Dyson V11", compact=True))
+    cards = quicklook.parse(reply, asker.sources)
+
+    assert cards["risks"] == []
+    assert asker.coverage["rejection_reasons"].get(
+        "symptom heading on a troubleshooting page") == 1
+
+
+def test_a_reported_sentence_on_the_same_page_still_grounds_a_finding():
+    url = "https://example.org/dyson-v11-troubleshooting"
+    page = ("Battery Not Charging\n"
+            "My Dyson V11 cuts out after two minutes of use, and a new battery did not fix it.\n"
+            "This Dyson V11 troubleshooting guide lists the usual symptoms.")
+    model = PipelineModel(findings=[{"title": "Cuts out after two minutes",
+                                     "why": "An owner reports it.",
+                                     "needle": "cuts out after two minutes"}])
+    asker = local_agent.LocalAsker(lambda _: '["Dyson V11 battery failures"]', model,
+        lambda *_: [{"url": url}], lambda _: page,
+        model="test", search_provider="stub")
+
+    reply = asker.ask(quicklook.brief("Dyson V11", compact=True))
+    cards = quicklook.parse(reply, asker.sources)
+
+    assert len(cards["risks"]) == 1
+    assert "cuts out" in cards["risks"][0]["sources"][0]["quote"].casefold()
 
 
 def test_supported_page_evidence_survives_while_injected_claim_is_excluded():
