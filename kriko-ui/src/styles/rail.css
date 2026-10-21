@@ -763,3 +763,258 @@
     var(--panel);
   box-shadow: inset 0 1px 0 color-mix(in srgb, var(--ink) 7%, transparent);
 }
+
+/* ---- the usage pill and its card ---- */
+
+.topbar-usage {
+  position: relative;
+}
+
+.usage-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  height: 34px;
+  padding: 0 13px 0 11px;
+  background: var(--inset);
+  border: 1px solid var(--edge);
+  border-radius: 999px;
+  color: var(--ink-2);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.usage-pill:hover,
+.usage-pill[aria-expanded='true'] {
+  border-color: var(--edge-strong);
+  color: var(--ink);
+}
+
+.usage-pill-text {
+  color: var(--ink-3);
+}
+
+.usage-gauge {
+  display: inline-flex;
+  flex: none;
+  align-items: flex-end;
+  gap: 2px;
+  height: 12px;
+  --tone: var(--mint);
+}
+
+.usage-gauge[data-tone='warn'] {
+  --tone: var(--warn);
+}
+
+.usage-gauge[data-tone='out'] {
+  --tone: var(--risk);
+}
+
+.usage-gauge i {
+  width: 3px;
+  background: color-mix(in srgb, var(--tone) 26%, transparent);
+  border-radius: 1.5px;
+}
+
+.usage-gauge i:nth-child(1) {
+  height: 5px;
+}
+
+.usage-gauge i:nth-child(2) {
+  height: 8px;
+}
+
+.usage-gauge i:nth-child(3) {
+  height: 12px;
+}
+
+.usage-gauge[data-lit='3'] i,
+.usage-gauge[data-lit='2'] i:nth-child(-n + 2),
+.usage-gauge[data-lit='1'] i:first-child {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--tone) 78%, white), var(--tone));
+}
+
+.usage-card {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: min(420px, calc(100vw - 24px));
+  max-height: min(78vh, 680px);
+  padding: 16px;
+  overflow: auto;
+  background:
+    radial-gradient(120% 120px at 100% 0%, color-mix(in srgb, var(--violet) 12%, transparent), transparent 70%),
+    color-mix(in srgb, var(--panel) 97%, transparent);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--edge-strong);
+  border-radius: var(--r-l);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--ink) 8%, transparent), var(--shadow-2);
+  color: var(--ink);
+  animation: claim-card-in calc(180ms * var(--tm)) var(--ease-out) both;
+}
+
+.usage-demo {
+  margin: 0;
+  padding: 6px 10px;
+  background: color-mix(in srgb, var(--warn) 14%, transparent);
+  border-radius: var(--r-s);
+  color: var(--warn);
+  font-size: 12px;
+}
+
+.usage-block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid var(--edge);
+}
+
+.usage-block:first-of-type {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.usage-block header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.usage-block header strong {
+  display: block;
+  font-size: 13.5px;
+}
+
+.usage-block header small {
+  display: block;
+  color: var(--ink-3);
+  font-size: 11.5px;
+}
+
+.usage-icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  background: var(--inset);
+  border: 1px solid var(--edge);
+  border-radius: 9px;
+  color: var(--ink-2);
+}
+
+.usage-limits {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.usage-limit {
+  display: grid;
+  grid-template-columns: 72px 1fr auto;
+  align-items: center;
+  gap: 4px 10px;
+  font-size: 12.5px;
+}
+
+.usage-limit-name {
+  color: var(--ink-2);
+}
+
+.usage-limit-left {
+  min-width: 70px;
+  text-align: right;
+}
+
+.usage-limit[data-standing='warn'] .usage-limit-left {
+  color: var(--warn);
+}
+
+.usage-limit[data-standing='out'] .usage-limit-left {
+  color: var(--risk);
+}
+
+.usage-limit-reset {
+  grid-column: 2 / 4;
+  color: var(--ink-3);
+  font-size: 11px;
+}
+
+.usage-limit-reset:empty {
+  display: none;
+}
+
+.usage-flag {
+  grid-column: 2 / 4;
+  color: var(--warn);
+  font-size: 11px;
+}
+
+.usage-asof {
+  color: var(--ink-3);
+  font-size: 11px;
+}
+
+.usage-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.usage-table th,
+.usage-table td {
+  padding: 5px 0;
+  text-align: right;
+  font-weight: 400;
+}
+
+.usage-table th:first-child {
+  text-align: left;
+  color: var(--ink-2);
+}
+
+.usage-table thead th {
+  color: var(--ink-3);
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.usage-table tbody tr + tr > * {
+  border-top: 1px solid var(--edge);
+}
+
+.usage-sources {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  color: var(--ink-3);
+  font-size: 11.5px;
+  list-style: none;
+}
+
+.usage-sources li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.usage-note {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 11px;
+}
+
+@media (max-width: 1320px) {
+  .usage-pill-text {
+    display: none;
+  }
+}

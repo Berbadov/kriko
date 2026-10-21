@@ -252,6 +252,7 @@
   border-radius: 999px;
   color: var(--ink-2);
   font-size: 12px;
+  white-space: nowrap;
 }
 
 .topbar-queue:hover {
@@ -737,6 +738,14 @@
 
 .pbar[data-done] .pbar-fill {
   background: var(--bar-done);
+}
+
+.pbar[data-tone='warn'] .pbar-fill {
+  background: linear-gradient(90deg, var(--warn), var(--warm));
+}
+
+.pbar[data-tone='out'] .pbar-fill {
+  background: linear-gradient(90deg, var(--warm), var(--risk));
 }
 
 .pbar[data-active] .pbar-fill {
