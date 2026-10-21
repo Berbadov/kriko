@@ -59,10 +59,18 @@ class Sequence(Complete):
 
 
 class FirstPageBroken(PipelineModel):
-    """The first evidence pass answers with no JSON; every later one is sound."""
+    """The first evidence passes answer with no JSON; every later one is sound.
+
+    `broken` is how many: one is a slip the re-ask recovers, two is a page
+    that stays unreadable after its one re-ask.
+    """
+
+    def __init__(self, *args, broken_passes=2, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.broken_passes = broken_passes
 
     def json(self, prompt, schema):
-        if schema == EXTRACT_SCHEMA and "extract" not in self.stages():
+        if schema == EXTRACT_SCHEMA and self.stages().count("extract") < self.broken_passes:
             self.calls.append(("extract", prompt, self.max_tokens))
             return "I found a pump failure but did not write JSON."
         return super().json(prompt, schema)
@@ -84,6 +92,21 @@ def test_a_malformed_page_is_said_and_the_other_page_still_grounds_its_card():
     # The malformed page is named as the error, and the check ran on the card.
     assert [row["stage"] for row in asker.coverage["errors"]] == ["https://a.test/1"]
     assert "verify" in model.stages()
+
+
+def test_a_page_whose_reply_slipped_once_is_recovered_by_the_reask_and_is_no_error():
+    good = "https://a.test/2"
+    model = FirstPageBroken(findings=[{"title": "Pump failure", "why": "An owner reported it.",
+                                       "needle": "the pump failed"}], broken_passes=1)
+    asker = local_agent.LocalAsker(model, model,
+        searcher([{"url": "https://a.test/1"}, {"url": good}]),
+        reader({"https://a.test/1": "Widget MK2 forum: the first thread is about tyres.",
+                good: "Widget MK2 owners report that the pump failed after a month."}),
+        model="small", search_provider="stub")
+    answer = json.loads(asker.ask_quick("Widget MK2"))
+    assert [one["title"] for one in answer["risks"]] == ["Pump failure"]
+    assert asker.coverage["errors"] == []
+    assert asker.coverage["json_repair"]["recovered"] == 1
 
 
 def test_a_page_returned_by_two_queries_is_read_once():
@@ -109,8 +132,8 @@ def test_an_unreadable_evidence_reply_is_a_bounded_failure():
         model="small", search_provider="stub")
     with pytest.raises(LocalInferenceError, match="No evidence pass completed"):
         asker.ask_quick("Widget MK2")
-    # One attempt for the one page, and no repair round after it.
-    assert model.stages().count("extract") == 1
+    # One attempt for the one page and one re-ask after it, never a loop.
+    assert model.stages().count("extract") == 2
 
 
 def searcher(hits, started=None, gate=None):
