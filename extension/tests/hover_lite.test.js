@@ -1077,8 +1077,8 @@ test("an unknown product gets one button: quick cards now, then the deeper run (
   assert.equal(slot.querySelector(".lite-quick-assumed strong").textContent, "1.6");
   assert.equal(slot.querySelector(".lite-quick-specs strong").textContent, "250 Nm");
   assert.doesNotMatch(slot.textContent, /\*\*/);
-  assert.match(slot.querySelector(".lite-quick-src").textContent, /it judders/);
-  assert.equal(slot.querySelector(".lite-quick-src a").getAttribute("href"), "https://example.org/a");
+  assert.match(slot.querySelector(".lite-rc-src blockquote").textContent, /it judders/);
+  assert.equal(slot.querySelector(".lite-rc-src a").getAttribute("href"), "https://example.org/a");
   // The panel moved on to the deep run rather than stopping at "done".
   assert.ok(p.sent.some((m) => m.type === "JOB_STATUS" && m.payload.job_id === "d1"));
   assert.match(slot.querySelector(".lite-research-status").textContent, /reading/);
