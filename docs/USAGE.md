@@ -92,10 +92,31 @@ Measured spend includes conversation work where usage is reported; unpriced call
 remain explicitly incomplete. Provider bills can include work the app could not
 measure, particularly an interrupted request.
 
+**More → Logs** shows every job's steps in order with their timing: the words
+searched, each page and whether it was read, every agent call (prompt and reply
+size, tokens, cost, which agent and model), each retry and why, each verdict and
+each failure. Filter by job, level, source or a word; open a row for the exact
+request and reply; **Export as text** saves a copy. Keys and the words you saved
+about yourself are taken out before anything is kept, and the log is stored in
+`app.sqlite`, so it survives a restart. A figure that was not counted says so.
+
 **More → Backup and restore** exports saved work, settings, catalog revisions and
 data-only drafts. Keys are excluded. Restoring a selected snapshot replaces current
 saved state after a restart, retains previous database files, and leaves provider
 key files unchanged. Stop active work before making or restoring a snapshot.
+
+**Settings → Use Kriko in another chat** adds Kriko to a chat app or an editor's chat
+(any MCP client, a desktop chat app, an IDE chat, a client that needs a URL). It shows
+the exact config for the client you pick, to copy, and writes it into the client's own
+config file where that file is known; a file it cannot read is left alone. In that chat,
+`lookup`, `get_subject` and `list_subjects` read your installed catalogues for free and
+return each claim's page and quote. `chat_turn` runs the Chat buying turn with a mode
+(`alternatives`, `cheapest`, `merchants`) and returns the answer with the pages it read
+and the quotes checked against them; it uses your agent and writes nothing. For a
+client that takes only a URL, `kriko-sidecar --mcp --mcp-http` serves the same tools at
+`http://127.0.0.1:8788/mcp`, on this computer only. From a source checkout `.mcp.json`
+runs `tools/kriko_mcp.py`, which finds the engine (`KRIKO_PYTHON`, a venv, an installed
+app) instead of assuming one.
 
 A failed engine connection shows Reconnect. Demo mode is an explicit choice and
 always displays a banner. Mobile is a separate labeled prototype with simulated

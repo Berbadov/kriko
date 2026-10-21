@@ -31,7 +31,7 @@ import secrets
 import sqlite3
 from datetime import UTC, datetime, timedelta
 
-from app.web import state
+from app.web import state, steps
 
 KEY = "buyer_profile"
 
@@ -159,6 +159,9 @@ def save(conn: sqlite3.Connection, raw: dict, *, at: str | None = None) -> dict:
     """Keep the profile. `at` is for one that arrived from another device with its own edit time."""
     profile = clean(raw)
     state.put_settings(conn, {KEY: profile, EDITED: at or _now().isoformat()})
+    # The job log masks the reader's saved words (`steps.private_strings`), and
+    # keeps what it read for a few seconds; a profile just changed is read again.
+    steps.forget_private()
     return profile
 
 

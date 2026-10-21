@@ -270,9 +270,35 @@ def list_subjects(pack_id: str = "", kind: str = "", limit: int = 50) -> list[di
         ]
 
 
+def _sources_of(conn, claim_id: str, pack_id: str) -> list[dict]:
+    """The pages behind one claim, each with the quote taken from it.
+
+    The read tools return what the evidence chain holds rather than a bare
+    title, so a chat client that shows a claim can show where it came from. The
+    quote is the verbatim one `findings.py` checked against the page when it
+    was filed; `stance` says whether the page supports or refutes the claim.
+    """
+    return [
+        {"url": r["url"], "domain": r["domain"], "quote": r["quote"],
+         "stance": r["stance"], "retrieved_at": r["retrieved_at"]}
+        for r in conn.execute(
+            "SELECT COALESCE(s.url, '') AS url, COALESCE(s.domain, '') AS domain,"
+            "       e.quote, e.stance, COALESCE(s.retrieved_at, '') AS retrieved_at"
+            "  FROM evidence e LEFT JOIN sources s"
+            "    ON s.source_id = e.source_id AND s.pack_id = e.pack_id"
+            " WHERE e.claim_id = ? AND e.pack_id = ?",
+            (claim_id, pack_id),
+        )
+    ]
+
+
 @tool()
 def get_subject(subject_id: str) -> dict:
-    """One subject: its attributes, its relations, and its claims."""
+    """One subject: its attributes, its relations, and its claims with sources.
+
+    Each claim carries `sources`: the page, the verbatim quote and whether it
+    supports or refutes the claim.
+    """
     with _store() as conn:
         row = conn.execute(
             "SELECT * FROM subjects WHERE subject_id = ?", (subject_id,)
@@ -300,9 +326,9 @@ def get_subject(subject_id: str) -> dict:
                 )
             ],
             "claims": [
-                dict(r)
+                {**dict(r), "sources": _sources_of(conn, r["claim_id"], r["pack_id"])}
                 for r in conn.execute(
-                    "SELECT c.claim_id, c.kind, c.domain, c.severity, t.title"
+                    "SELECT c.claim_id, c.pack_id, c.kind, c.domain, c.severity, t.title"
                     " FROM claims c LEFT JOIN claim_text t"
                     "   ON t.claim_id = c.claim_id AND t.pack_id = c.pack_id"
                     "  AND t.lang = 'en'"
@@ -321,7 +347,12 @@ def lookup(
     lang: str = "en",
     limit: int = 8,
 ) -> dict:
-    """Ask the installed packs about a product, exactly as the CLI does."""
+    """Ask the installed packs about a product, exactly as the CLI does.
+
+    Free and local: it reads the installed catalogues and spends no agent. Each
+    claim carries `sources`, the pages it stands on with the quote taken from
+    each, so an answer built on it can name where it came from.
+    """
     from kriko.lookup import lookup as run_lookup
     from kriko.lookup.query import Query
 
@@ -350,10 +381,47 @@ def lookup(
                     "disputed": c.disputed,
                     "pack_id": c.pack_id,
                     "why": list(c.why),
+                    "claim_id": c.claim_id,
+                    "subject_id": c.subject_id,
+                    "body": c.body,
+                    "advice": c.advice,
+                    "sources": [
+                        {"url": s.url, "domain": s.domain, "quote": s.quote,
+                         "stance": s.stance, "tier": s.tier}
+                        for s in c.sources
+                    ],
                 }
                 for c in result.claims
             ],
         }
+
+
+@tool()
+def chat_turn(message: str, mode: str = "") -> dict:
+    """Ask Kriko's Chat about a product and get its answer with its sources.
+
+    This is the buying turn the Chat screen runs, for a client that is not the
+    Kriko window. `mode` is what to do with the product: `alternatives` (what
+    else fits), `cheapest` (the lowest price that is the right product) or
+    `merchants` (who sells it, and where). Empty lets the words of `message`
+    pick a mode, or none.
+
+    It searches the web and reads pages through the Kriko agent the reader
+    chose in Settings, so it **spends that agent** and can take a minute or two;
+    the other read tools here (`lookup`, `get_subject`, `list_subjects`) are
+    free and instant. Nothing is written: a chat answer is not a claim.
+
+    Returns `answer`, `sources` (the pages read, each with the quotes that were
+    checked against it), `quotes` (`{url, quote}` for each), `used_catalogue`,
+    and `verification`. A quote appears only if it was found in its page; when
+    none could be, `verification.claim_support` says so and the answer is the
+    agent's, not a checked one. `questions` holds one question when Kriko needs a
+    detail first: answer it and call again with the detail in `message`.
+    """
+    from app import mcpchat
+
+    return mcpchat.run(message, mode=mode, store_path=_store_path(),
+                       app_state_path=_app_state_path())
 
 
 @tool()

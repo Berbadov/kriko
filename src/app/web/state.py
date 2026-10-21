@@ -20,6 +20,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from app import factcheck
+from app.web import steps
 from kriko.store.db import schema_stamp
 
 SCHEMA = """
@@ -107,6 +108,44 @@ CREATE TABLE IF NOT EXISTS job_messages (
     taken_at   TEXT NOT NULL DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS job_messages_job ON job_messages (job_id, msg_id);
+
+-- What a job did, one row per step and in order (#261).
+--
+-- `jobs.log` is prose, capped to a tail, and a reader cannot filter or time
+-- it. This is the same log as rows: every line a handler writes through
+-- `Progress.log` becomes a row by the one hook in `update_job` (classified by
+-- shape in `steps.py`, nothing listed per handler), and every call to an agent
+-- becomes a row by the one wrapper `Progress.watch` puts on a researcher, with
+-- its prompt and reply (redacted before they are kept), its sizes, tokens,
+-- cost, agent and model. `parent_id` nests a call inside the call that made it,
+-- which is how a retry shows under what it retried.
+--
+-- Interface state, like `jobs`: it never touches a pack or a `content_digest`,
+-- it survives a restart because it is a row, and it is pruned with its job.
+CREATE TABLE IF NOT EXISTS job_steps (
+    step_id     INTEGER PRIMARY KEY AUTOINCREMENT,
+    job_id      TEXT NOT NULL DEFAULT '',
+    at          TEXT NOT NULL DEFAULT '',
+    -- job | search | page | agent | verify | retry | note
+    source      TEXT NOT NULL DEFAULT 'note',
+    -- info | warn | error
+    level       TEXT NOT NULL DEFAULT 'info',
+    title       TEXT NOT NULL DEFAULT '',
+    -- running | done | failed. A call that is still going is a row that says so.
+    state       TEXT NOT NULL DEFAULT 'done',
+    -- How long the step itself took, when somebody measured it. NULL is not 0.
+    ms          INTEGER,
+    parent_id   INTEGER,
+    -- What was counted for this step, NULL where nobody counted: never 0.
+    tokens      INTEGER,
+    usd         REAL,
+    detail_json TEXT NOT NULL DEFAULT '{}',
+    -- The exact text sent and received, after redaction.
+    request     TEXT NOT NULL DEFAULT '',
+    response    TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS job_steps_job ON job_steps (job_id, step_id);
+CREATE INDEX IF NOT EXISTS job_steps_parent ON job_steps (parent_id);
 
 CREATE TABLE IF NOT EXISTS claim_checks (
     lookup_id  TEXT NOT NULL,
@@ -2731,6 +2770,8 @@ def start_job(conn: sqlite3.Connection, job_id: str) -> bool:
         " WHERE job_id = ? AND state = ? AND cancel_requested = 0",
         (RUNNING, _now(), job_id, QUEUED),
     )
+    if cursor.rowcount:
+        steps.record(conn, job_id, source="job", title="started")
     conn.commit()
     return bool(cursor.rowcount)
 
@@ -2770,6 +2811,11 @@ def update_job(
         return
     args.append(job_id)
     conn.execute(f"UPDATE jobs SET {', '.join(sets)} WHERE job_id = ?", args)
+    if line is not None:
+        # The one hook for the structured log (#261): every line any handler
+        # writes is also a classified, timed row, so a new step needs no
+        # registration anywhere. Never raises (`steps.record`).
+        steps.record_line(conn, job_id, line)
     conn.commit()
 
 
@@ -2782,7 +2828,7 @@ def finish_job(
     message: str = "",
 ) -> None:
     with conn:
-        conn.execute(
+        ended = conn.execute(
             "UPDATE jobs SET state = ?, finished_at = ?, progress = ?,"
             "       message = COALESCE(NULLIF(?, ''), message), result_json = ?"
             " WHERE job_id = ? AND state IN (?, ?, ?)",
@@ -2795,6 +2841,13 @@ def finish_job(
                 job_id, QUEUED, RUNNING, CANCELLING,
             ),
         )
+        if ended.rowcount:
+            steps.close_running(conn, job_id, "the job ended before this call answered")
+            steps.record(
+                conn, job_id, source="job",
+                level={FAILED: "error", CANCELLED: "warn", INTERRUPTED: "warn"}.get(state, "info"),
+                title=f"{state}" + (f": {message}" if message else ""),
+                detail={"state": state})
         if state == SUCCEEDED:
             conn.execute(
                 "UPDATE jobs SET state = ?, message = ?, result_json = ?"
@@ -2822,6 +2875,7 @@ def finish_job(
             " ORDER BY COALESCE(finished_at, created_at, '') DESC, rowid DESC LIMIT ?)",
             (QUEUED, RUNNING, CANCELLING, QUEUED, RUNNING, CANCELLING, JOBS_KEPT),
         )
+        steps.prune_orphans(conn)
 
 
 def request_cancel(conn: sqlite3.Connection, job_id: str) -> str | None:
@@ -3056,6 +3110,12 @@ def interrupt_running(conn: sqlite3.Connection) -> int:
     # `CANCELLING` belongs in here with the other two. Left out, a job whose
     # process died mid-teardown is the one row that spins forever after a
     # restart — exactly what this function exists to prevent.
+    steps.close_running(conn)
+    for row in conn.execute("SELECT job_id FROM jobs WHERE state IN (?, ?, ?)",
+                            (RUNNING, QUEUED, CANCELLING)).fetchall():
+        steps.record(conn, row[0], source="job", level="warn",
+                     title="interrupted: the server stopped while this was running",
+                     detail={"state": INTERRUPTED})
     cursor = conn.execute(
         "UPDATE jobs SET state = ?, finished_at = ?, message = ?"
         " WHERE state IN (?, ?, ?)",

@@ -221,6 +221,29 @@ def targeted_query(query: str, region: str = "global", sites: int = 4) -> str:
     return f"{query[:240]} ({scope})" if scope else query
 
 
+#: The words a mode adds to the search, per region. Function words of one
+#: language, not a product vocabulary: a new category needs no entry here.
+_MODE_WORDS = {
+    "alternatives": {"global": "alternatives", "tr": "alternatif muadil"},
+    "cheapest": {"global": "price", "tr": "fiyat"},
+    "merchants": {"global": "seller reviews", "tr": "satici yorumlari"},
+}
+
+
+def mode_query(query: str, mode: str, region: str = "global") -> str:
+    """The query again, shaped for a Chat mode, or empty when the mode adds nothing.
+
+    A second search beside the first, never instead of it: the first finds the
+    product, this one finds what the mode is about (other products, prices,
+    the people selling it). Pages are ranked and read as for any buying turn.
+    """
+    words = _MODE_WORDS.get(mode)
+    if not words:
+        return ""
+    extra = words.get(region) or words["global"]
+    return f"{query[:240]} {extra}"
+
+
 # ── did the reader ask to buy ────────────────────────────────────────────
 
 _BUY = re.compile(

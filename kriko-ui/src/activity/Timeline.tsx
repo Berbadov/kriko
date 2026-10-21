@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
+import { useFocus } from '../chat/focus'
+import { pageKey } from '../chat/view'
 import { usePrefs } from '../prefs'
 import { Icon } from '../ui/Icon'
 import { PixelGlyph } from '../ui/PixelGlyph'
@@ -125,13 +127,21 @@ function safeHttpUrl(value?: string) {
 
 function Event({ row }: { row: Extract<Row, { kind: 'event' }> }) {
   const source = safeHttpUrl(row.sourceUrl)
+  const focus = useFocus()
+  const key = source ? pageKey(source) : undefined
   const counts = [
     row.counts?.searchResults === undefined ? '' : `${row.counts.searchResults} search results`,
     row.counts?.pagesAttempted === undefined ? '' : `${row.counts.pagesAttempted} pages attempted`,
     row.counts?.pagesRead === undefined ? '' : `${row.counts.pagesRead} pages read`,
   ].filter(Boolean)
   return (
-    <div className="run-event" data-level={row.level ?? 'info'}>
+    <div
+      className="run-event"
+      data-level={row.level ?? 'info'}
+      data-focus-key={key}
+      data-lit={(key && focus.key === key) || undefined}
+      onClick={key ? (event) => !(event.target as HTMLElement).closest('a') && focus.select(key, 'thread') : undefined}
+    >
       {row.stage && <span className="run-event-stage">{row.stage}</span>}
       <span>{row.text}</span>
       {source && <a className="run-event-url" href={source} target="_blank" rel="noreferrer">{row.sourceUrl}</a>}

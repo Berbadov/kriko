@@ -87,7 +87,9 @@ class PipelineModel:
         if stage == "plan":
             return {"queries": self.queries}
         if stage == "extract":
-            sentences = json.loads(prompt.split("SOURCE SENTENCES:\n", 1)[1])
+            # The sentences are the first JSON value after the marker; a re-ask
+            # appends the bad reply after them, which is not part of the data.
+            sentences, _ = json.JSONDecoder().raw_decode(prompt.split("SOURCE SENTENCES:\n", 1)[1])
             risks = []
             for finding in self.findings:
                 ids = [key for key, text in sentences.items()
