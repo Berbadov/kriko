@@ -262,6 +262,9 @@ A need from the wrong layer means moving the module (drivers to
 | `docs/STYLE.md` | how these documents are written | current |
 | `docs/INSTALL_WINDOWS.md` | Windows install including the extension permission | current |
 | `docs/PACK_CONTRACT.md` | what a catalog contains, must and may | current |
+| `docs/KRIKO_AGENT.md` | the built-in research stack: its bounds, its search dial, what a buying answer owes | current |
+| `docs/security/shared-access.md` | the password-and-code protocol, the trial, and what neither protects | current |
+| `docs/design/kriko-agent-first.md` | the app arranged around the Kriko Agent: what exists, what changes | a proposal, dated 2026-10-23 |
 | `docs/AGENT_OPERATIONS.md` | operation vocabulary, the harness protocol, open questions | a note, dated 2026-09-14 |
 | `kriko-ui/README.md` | the desktop app: engine supervision, screens, installer | current, hand-built |
 
