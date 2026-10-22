@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { CAP_ORDER, CAP_WORDS, usedToday, useCaps, type CapResource } from '../../engine/caps'
 import { useAppUpdate } from '../../engine/appupdate'
 import { useSensitivity } from '../../engine/sensitivity'
-import { useAbout, useKeys, usePrefsDoc, useSpent, type KeyRow } from '../../engine/settings'
+import { useAbout, useKeys, usePrefsDoc, useSharedAccess, useSpent, type KeyRow } from '../../engine/settings'
 import type { Sensitivity } from '../../engine/thinness'
 import { useUsage } from '../../engine/usage'
 import { usePrefs, type Profile, type ThemePref } from '../../prefs'
@@ -280,6 +280,8 @@ export function SettingsPanel(_: { onOpen?: (lookupId: string) => void }) {
 
       <KeysGroup />
 
+      <SharedAccessGroup />
+
       <McpClientsGroup />
 
       <section className="panel-group">
@@ -491,6 +493,115 @@ function KeysGroup() {
           <KeyItem key={row.id} row={row} result={tested[row.id] ?? ''} onSave={(value) => set(row.id, value)} onRemove={() => void remove(row.id)} onTest={() => void test(row.id)} />
         ))}
       </ul>
+    </section>
+  )
+}
+
+/** Use someone else's keys for Kriko Agent, or hand a friend a password for yours. */
+function SharedAccessGroup() {
+  const { doc, problem, code, unlock, forget, make } = useSharedAccess()
+  const [pasted, setPasted] = useState('')
+  const [password, setPassword] = useState('')
+  const [label, setLabel] = useState('')
+  const [madeWith, setMadeWith] = useState('')
+  if (!doc) return null
+  const trial = doc.trial
+  const granted = doc.grant.present
+
+  return (
+    <section className="panel-group" data-tour="shared-access">
+      <h3>Shared access</h3>
+      <p className="panel-note">
+        Kriko Agent on someone else&apos;s Mercury and DeepSeek keys. Paste the access code and the
+        password that came with it. The password works in this app only: the code is sealed to the
+        build that made it, the keys are never written in the clear, and this app never sends one back.
+      </p>
+      {problem && <p className="error-note">{problem}</p>}
+      {!doc.bound && (
+        <p className="panel-note">
+          This build carries no share pepper, so a code sealed elsewhere will not open here — and one
+          made here would open anywhere. A build for handing out codes needs one:
+          <code>python tools/make_share_pepper.py</code>.
+        </p>
+      )}
+
+      {granted ? (
+        <div className="setting">
+          <span>
+            {doc.grant.label ? `${doc.grant.label}'s keys` : 'Shared keys'}
+            <small>
+              Mercury and DeepSeek, from an access code, kept sealed on this computer
+              {doc.device === 'dpapi' ? ' and bound to this Windows account' : ''}.
+            </small>
+          </span>
+          <button className="btn ghost" onClick={() => void forget()}>
+            Forget them
+          </button>
+        </div>
+      ) : (
+        <>
+          <div className="setting stack">
+            <span>
+              Access code
+              <small>The whole line, from whoever is sharing their keys.</small>
+            </span>
+            <textarea className="key-field" rows={3} value={pasted} spellCheck={false} placeholder="Paste the code" onChange={(event) => setPasted(event.target.value)} />
+          </div>
+          <div className="setting stack">
+            <span>
+              Password
+              <small>Sent separately from the code. It is not stored.</small>
+            </span>
+            <input className="key-field" type="password" autoComplete="off" value={password} onChange={(event) => setPassword(event.target.value)} />
+          </div>
+          <div className="setting stack">
+            <span>
+              Whose keys
+              <small>Optional: a name, so you know what is in use.</small>
+            </span>
+            <input className="key-field" type="text" value={label} onChange={(event) => setLabel(event.target.value)} />
+          </div>
+          <button className="btn" disabled={!pasted.trim() || !password} onClick={() => void unlock(pasted, password, label)}>
+            Use these keys
+          </button>
+        </>
+      )}
+
+      <p className="panel-note">
+        {trial.available
+          ? `Free trial on this computer: ${trial.left} of ${trial.limit} Kriko Agent questions left.`
+          : trial.used
+            ? `The free trial on this computer is used up (${trial.used} of ${trial.limit} questions).`
+            : 'No free trial is included in this build.'}
+      </p>
+
+      <details className="panel-details">
+        <summary>Sharing your own keys with a friend</summary>
+        <p className="panel-note">
+          Make a code here, then send the code and the password to your friend in two separate
+          messages. Anyone with both can use your keys in their Kriko; nothing else can, and a code
+          made by a different build will not open in the build they have.
+        </p>
+        <div className="setting stack">
+          <span>
+            Password for them
+            <small>At least 8 characters. It is not stored here or anywhere.</small>
+          </span>
+          <input className="key-field" type="text" autoComplete="off" value={madeWith} onChange={(event) => setMadeWith(event.target.value)} />
+        </div>
+        <button className="btn" disabled={madeWith.length < 8} onClick={() => void make(madeWith)}>
+          Make an access code
+        </button>
+        {code && (
+          <div className="setting stack">
+            <span>
+              The code
+              <small>Shown here only. Send it without the password.</small>
+            </span>
+            <textarea className="key-field" rows={4} readOnly value={code} onFocus={(event) => event.currentTarget.select()} />
+          </div>
+        )}
+      </details>
     </section>
   )
 }

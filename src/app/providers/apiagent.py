@@ -133,7 +133,15 @@ KRIKO_AGENT = ApiAgent(
         "Your tools are search and fetch. Search uses DeepSeek Search and "
         "returns result URLs plus inline page text where available. Fetch reads "
         "a URL returned by search. Both are read-only. Use the page text "
-        "returned by these tools as the only source for verbatim quotes.\n"
+        "returned by these tools as the only source for verbatim quotes.\n\n"
+        "## Before you name a product\n\n"
+        "Do the work in this order, and do not skip a step because the answer "
+        "looks obvious: (a) settle exactly what the product is; (b) name the "
+        "parts or consumables that matter for the question and the code each "
+        "carries, from the pages; (c) research what owners, repairers and "
+        "records report failing on each candidate, and what the pages say about "
+        "fitment; (d) only then compare candidates and name a seller. Say which "
+        "parts you could not identify.\n"
     ),
     model_hint=(
         "Experimental preview: Mercury 2.5 for research and DeepSeek Search/Fetch "
@@ -520,13 +528,30 @@ class ApiAgentResearcher(harness.HarnessResearcher):
                 # Progress callback uses its SQLite connection on its owner.
                 self._append_live_text(text)
 
+        #: What the provider is doing while it does it. A research turn that
+        #: spends a minute on retrieval said nothing between "asking" and
+        #: "answered", which reads as a stuck job; the provider's own thread
+        #: writes here and the job thread says it.
+        steps_to_say: deque[str] = deque()
+
+        def queue_step(text: str) -> None:
+            steps_to_say.append(str(text))
+
+        def publish_steps() -> None:
+            while steps_to_say:
+                self._echo(steps_to_say.popleft())
+
         def call():
             try:
                 if self._stream_converse is not None:
+                    # Only the built-in research stack narrates its retrieval;
+                    # the other adapters' signatures do not take a step hook.
+                    narrates = ({"on_step": queue_step}
+                                if self.agent.id == KRIKO_AGENT.id else {})
                     box["reply"] = self._stream_converse(
                         prompt, model=self.model, timeout=self.timeout,
                         on_text=queue_delta, cancel_event=stop_deltas,
-                        search=search,
+                        search=search, **narrates,
                     )
                 else:
                     if search:
@@ -553,12 +578,14 @@ class ApiAgentResearcher(harness.HarnessResearcher):
             while worker.is_alive():
                 worker.join(0.05)
                 publish_deltas()
+                publish_steps()
                 now = time.monotonic()
                 if (worker.is_alive() and self.check_cancelled is not None
                         and now - last_cancel_check >= self._cancel_tick):
                     self.check_cancelled()
                     last_cancel_check = now
             publish_deltas()
+            publish_steps()
         finally:
             stop_deltas.set()
             publish_deltas()

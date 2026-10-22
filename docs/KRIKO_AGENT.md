@@ -48,3 +48,98 @@ the total unknown instead of reporting a partial amount as the full cost.
 The APIs and their current request/billing rules are documented by
 [Inception](https://docs.inceptionlabs.ai/) and the
 [DeepSeek Search and Fetch guide](https://api-docs.deepseek.com/guides/search/).
+
+## The protocol of one turn: what bounds it, and what it says
+
+The reader's words: *"the kriko agent; it gets stuck on web search"*. A turn
+used to have one bound — the model request — and none on retrieval, so a search
+socket that dribbled held the job, and the reader's screen, for as long as the
+socket did. Every bound now has a name, and hitting one ends the turn with a
+sentence rather than silence.
+
+| Bound | Value | What happens at it |
+|---|---|---|
+| Turn deadline | 120 s (`TIMEOUT_SECONDS`) | The next retrieval is refused; the turn ends with the deadline as its reason |
+| Mercury request | `min(45 s, time left)` | The stream is cut; the reply carries the error |
+| One DeepSeek call | `min(10 s, (time left − 1.5) / 3)` | That search or fetch reports "did not answer in time" and the turn continues with what it has |
+| Tool rounds | 4 (`MAX_TOOL_ROUNDS`) | "Mercury exceeded the web research round limit" |
+| Tool calls | 8, and thoroughness (3/5/8) | "Mercury requested web access after its tool budget ended" |
+| Waiting on a tool | `time left + 1 s`, then the future is cancelled | "The search service did not answer in time" |
+| Retrieval pool | 4 at once, 0.21 s pacing per lane | Queued, not dropped |
+
+The pool is **not joined** on the way out (`_UnjoinedPool`): a worker abandoned
+past the deadline is left to end on its own, which the retrieval timeouts make it
+do. Joining it is what turned one slow socket into a stuck job.
+
+**A turn says what it is doing.** `converse` reports one line per retrieval
+through `on_step` — `searching: <query>`, `search (cached): <query>`,
+`3 result(s): <query>`, `search failed: <query> (…)`, `free trial: 7 question(s)
+left` — and `apiagent` publishes them on the job thread, so they appear in the
+run's log as they happen instead of one frozen "searching the web" for a minute.
+
+## Which web search: the agent's own, or Kriko's
+
+Settings → Agents gives every coding agent a third dial beside its model and its
+effort: **Web search**.
+
+| Choice | What happens | What it costs |
+|---|---|---|
+| The agent's own web search (**default**) | Kriko reads nothing; the CLI searches and opens pages with its own tools, and is told that no pages were prepared for it | Quotes are not checked against pages Kriko fetched, because it has none |
+| Kriko's web search (experimental) | Kriko searches, reads the pages, and puts the text in the brief; every quote is checked against a page Kriko itself read | Kriko's search stack, which is the newer and less reliable of the two |
+
+The default is the agent's own, for the reason the reader gave: Kriko's is the
+experimental one. A stored choice is read where the model and the effort are
+read (`providers.harness_researcher` → `prefs.search_for_harness`), so a call
+site cannot forget it.
+
+One exception is not the reader's to make: a CLI whose protocol has no web tools
+(`TOOLLESS_PROTOCOLS`: codex, mistral-vibe) cannot search for itself unless the
+transport is forced to a process with tools (`exec`). Left in `auto` it would
+start a persistent, toolless session — the run that once tried WebSearch,
+ToolSearch and `curl` a dozen times, was refused each time, and shipped a
+catalogue with no claims. Kriko reads for it instead, and the run's note says
+that the dial asked otherwise.
+
+## Which kinds of source it goes to, and how that is visible
+
+The reader's words: *"make sure that source selection type is determined by the
+agent => from forums or magazine sites or news sites or official records etc.
+all must be observable"*.
+
+The `search` tool takes a third argument beside the query and the count: `kind`,
+one of the app's closed vocabulary (`prefs.SOURCE_KINDS` — forums, reviews,
+recalls, manufacturer, video, news). The system prompt tells the agent to decide
+where to look before it searches, to put that kind's own word in the query
+because a search that does not ask for a thread does not return one, and to go
+to more than one kind for a consequential question. A kind the app does not know
+is dropped rather than guessed at, and the line then says no kind.
+
+Every search writes the same job-log line the in-house search writes
+(`local_search_plan.searched_line`), so one run's source selection reads the
+same whichever stack answered it:
+
+    searching kind forums: widget pump seal failure
+    searched kind forums: widget pump seal failure -> search returned 3 result(s) at forum.example, mag.example
+    search failed for kind recalls: widget pump recall: DeepSeek Search returned nothing
+
+A line beginning `searched` is classified as a search step (`app/web/steps.py`),
+so a run's kinds can be filtered and read rather than guessed at. The in-house
+search chooses its kinds the same way and logs the same shapes; see
+`local_search_plan.choose_kinds` for how a question becomes a set of kinds.
+
+## Buying questions: identify, research, then name a product
+
+The reader's words: *"some agents are avoiding doing detailed work, identifying
+parts doing research before showing some products"*. The buying brief
+(`chat.BUYING_RULES`) now opens with an ordered pre-step rather than a
+presentation rule: settle what the product is; name the parts or consumables
+that matter and the code each carries, from the pages; find what owners,
+repairers and records report failing on each candidate, and what the pages say
+about fitment; only then compare candidates and name a seller. A list of
+products without those steps is called an incomplete answer in as many words,
+and the agent is told to say which parts it could not identify.
+
+The same four steps are in `PRODUCT_ONLY_RULES`, in the Kriko Agent system
+prompt (`kriko_agent.SYSTEM`) and in the API agents' contract note
+(`apiagent.KRIKO_AGENT.contract_note`), so every plane is told once, at the door
+it arrives through.

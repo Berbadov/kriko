@@ -142,6 +142,12 @@ def write_prefs(body: PrefsWrite, conn=Depends(get_app_state)) -> dict:
     for key in (prefs.AGENT_TRANSPORT, prefs.CODEX_TRANSPORT):
         if key in written and written[key] not in {"", "auto", "exec", "persistent"}:
             raise HTTPException(422, detail=f"{key} must be auto, exec, or persistent")
+    for key in prefs.HARNESS_SEARCH_KEYS:
+        if key in written and written[key] not in {"", *prefs.HARNESS_SEARCH_CHOICES}:
+            raise HTTPException(
+                422,
+                detail=f"{key} must be one of: " + ", ".join(prefs.HARNESS_SEARCH_CHOICES),
+            )
     if (prefs.CLASSIFICATION_PROVIDER in written
             and written[prefs.CLASSIFICATION_PROVIDER] not in {"", "agent", "typesafe"}):
         raise HTTPException(422, detail="classification_provider must be agent or typesafe")

@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { AGENTS_CHANGED_EVENT, get, inShell, type ApiHarness } from './api'
+import { AGENTS_CHANGED_EVENT, get, inShell, put, type ApiHarness } from './api'
 
 /** Whether a real engine answers. Without one the interface plays demo data,
  *  so design work never waits on the engine. `?demo` in the address forces it. */
@@ -47,6 +47,8 @@ interface Engine {
   preferred: string
   /** The reader changed the default agent. */
   setPreferred: (id: string) => void
+  /** The reader picked an agent for this question: it is kept as the default. */
+  chooseAgent: (id: string) => void
   retry: () => void
 }
 
@@ -111,7 +113,10 @@ export function EngineProvider({ children }: { children: ReactNode }) {
           if (!live) return
           setAgents(agentRoster(availability.harnesses))
           setAgentAvailable((availability.harnesses?.length ?? 0) > 0)
-          setPreferred(availability.chosen?.preferred_harness ?? '')
+          // Only when the engine actually named one: a reply that omits it is
+          // not the reader going back to "Default agent".
+          const picked = availability.chosen?.preferred_harness
+          if (typeof picked === 'string') setPreferred(picked)
         })
         .catch(() => undefined)
     }
@@ -126,6 +131,18 @@ export function EngineProvider({ children }: { children: ReactNode }) {
     // In the packaged window the shell owns the engine, so it starts it again.
     const again = inShell() ? import('@tauri-apps/api/core').then(({ invoke }) => invoke('engine_restart')) : Promise.resolve()
     void again.catch(() => undefined).then(() => setAttempt((n) => n + 1))
+  }, [])
+
+  /**
+   * The reader picked an agent for this question. It becomes the stored default
+   * as well, so the next question starts on it: the composer's own state does
+   * not survive leaving the page, and a pick that lasts one message is the
+   * "I have to click the agent on every prompt" this replaced.
+   */
+  const chooseAgent = useCallback((id: string) => {
+    setPreferred(id)
+    if (forced()) return
+    void put('/api/prefs', { preferred_harness: id }).catch(() => undefined)
   }, [])
 
   // And keep listening afterwards. Mode was resolved once, at startup, so an
@@ -151,7 +168,7 @@ export function EngineProvider({ children }: { children: ReactNode }) {
     }
   }, [mode])
 
-  const value = useMemo(() => ({ mode, problem, agents, agentAvailable, preferred, setPreferred, retry }), [mode, problem, agents, agentAvailable, preferred, retry])
+  const value = useMemo(() => ({ mode, problem, agents, agentAvailable, preferred, setPreferred, chooseAgent, retry }), [mode, problem, agents, agentAvailable, preferred, chooseAgent, retry])
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }
 

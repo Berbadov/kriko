@@ -41,6 +41,7 @@ function Shell() {
   // A move to a later place enters from the right. A move to an earlier place enters from the left.
   const go = useCallback((next: Screen) => {
     setDrawer(false)
+    setDrawerPanel(null)
     setNav((current) => ({
       screen: next,
       direction: ORDER.indexOf(next) >= ORDER.indexOf(current.screen) ? 1 : -1,
@@ -50,6 +51,7 @@ function Shell() {
 
   const openProduct = useCallback((lookupId: string) => {
     setDrawer(false)
+    setDrawerPanel(null)
     setNav((current) => ({ screen: 'chat', direction: current.screen === 'chat' ? 1 : -1, product: lookupId }))
   }, [])
 
@@ -64,7 +66,19 @@ function Shell() {
   )
   useHandoff(land)
 
-  const closeDrawer = useCallback(() => setDrawer(false), [])
+  // Closing puts the drawer back at its list of panels, so the next opening
+  // starts there and not on whatever page was last read. `Drawer.tsx` says it
+  // did this; it did not, because the panel it is handed outlived the closing.
+  const closeDrawer = useCallback(() => {
+    setDrawer(false)
+    setDrawerPanel(null)
+  }, [])
+
+  /** The More button opens the list, never the page that was open last time. */
+  const openDrawerList = useCallback(() => {
+    setDrawerPanel(null)
+    setDrawer(true)
+  }, [])
 
   /**
    * The shortcuts a desktop window is expected to have.
@@ -112,7 +126,7 @@ function Shell() {
   return (
     <MotionConfig reducedMotion={m.on ? 'never' : 'always'}>
       <div className="app">
-        <TopBar screen={screen} onNavigate={go} onMore={() => setDrawer(true)} onNewChat={startChat} onOpenChat={showChat} queueCount={active} attention={attention} />
+        <TopBar screen={screen} onNavigate={go} onMore={openDrawerList} onNewChat={startChat} onOpenChat={showChat} queueCount={active} attention={attention} />
         {engine.mode === 'live' && !engine.agentAvailable && (
           <aside className="engine-notice" role="status">
             <span>No research agent is ready. Set one up before asking Kriko to research a product.</span>

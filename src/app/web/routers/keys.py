@@ -85,6 +85,78 @@ def write(request: Request, body: KeyWrite) -> dict:
     return {"saved": written, **read(request)}
 
 
+# ── shared access: somebody else's keys, inside this app ────────────────
+#
+# Everything below is declared before `DELETE /{provider_id}` on purpose:
+# FastAPI matches routes in declaration order, so `DELETE /api/keys/shared`
+# would otherwise be read as "forget the provider named shared" and answer 404.
+
+
+class ShareUnlock(BaseModel):
+    #: The whole line the owner sent. Long by nature: a sealed key pair.
+    code: str = Field(max_length=8000)
+    password: str = Field(default="", max_length=400)
+    label: str = Field(default="", max_length=80)
+
+
+class ShareMake(BaseModel):
+    #: The password the friends will be given. It never leaves this call.
+    password: str = Field(max_length=400)
+
+
+@router.get("/shared/status")
+def shared_status(request: Request) -> dict:
+    """What the reader may know about a shared access: never a key, never a password."""
+    from app import sharekeys
+
+    return sharekeys.status(_path(request).parent)
+
+
+@router.post("/shared/unlock")
+def shared_unlock(request: Request, body: ShareUnlock) -> dict:
+    """Open an access code with its password and keep it sealed here."""
+    from app import sharekeys
+
+    try:
+        opened = sharekeys.unlock(body.code, body.password, label=body.label,
+                                  where=_path(request).parent)
+    except sharekeys.ShareError as error:
+        raise HTTPException(422, str(error)) from error
+    return {**opened, "status": sharekeys.status(_path(request).parent)}
+
+
+@router.delete("/shared")
+def shared_forget(request: Request) -> dict:
+    from app import sharekeys
+
+    sharekeys.forget(_path(request).parent)
+    return sharekeys.status(_path(request).parent)
+
+
+@router.post("/shared/make")
+def shared_make(request: Request, body: ShareMake) -> dict:
+    """The owner's side: seal the keys saved here under a password, and hand back a code.
+
+    The code carries the keys; the password is what makes it worth nothing to
+    whoever reads the message it travelled in. Both are returned to the screen
+    that asked, and neither is stored anywhere.
+    """
+    from app import sharekeys
+
+    values: dict[str, str] = {}
+    try:
+        for name in sharekeys.SHARED_PROVIDERS:
+            values[name] = keys.require(name)
+    except Exception as error:  # noqa: BLE001 — a missing key is the reader's next step
+        raise HTTPException(422, str(error)) from error
+    try:
+        code = sharekeys.make_access(body.password, values)
+    except sharekeys.ShareError as error:
+        raise HTTPException(422, str(error)) from error
+    return {"code": code, "providers": sorted(values),
+            "bound": sharekeys.bound(), "status": sharekeys.status(_path(request).parent)}
+
+
 @router.delete("/{provider_id}")
 def forget(request: Request, provider_id: str) -> dict:
     if provider_id.strip().lower() not in keys.BY_ID:
