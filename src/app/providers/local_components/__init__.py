@@ -232,11 +232,25 @@ class LocalAsker:
                                queries=QUERIES, say=self._say,
                                check=self._check))
         self._say("searching: " + "; ".join(queries))
+        # The agent's decision, said before it is spent: which kinds of source
+        # this question goes to, from its own words (`local_search_plan`).
+        from app.providers import local_search_plan
+
+        kinds = local_search_plan.choose_kinds(
+            prompt, limit=QUERIES, default=local_search_plan.DEFAULT_KINDS)
+        decided = local_search_plan.kinds_line(kinds)
+        if decided:
+            self._say(decided)
+        queries, labels = local_search_plan.plan_queries(
+            queries, kinds, language=getattr(self, "search_language", "en"),
+            limit=QUERIES)
+        self._say("searching: " + "; ".join(queries))
+        labels = [local_search_plan.kind_of(query) or "" for query in queries]
         seen: set[str] = set()
         searched: set[str] = set()
         pages, _ = self._measured("search", None, lambda: search.gather(
             self._search, self._fetch, queries, seen=seen, searched=searched,
-            limit=MAX_PAGES, hits_per_query=HITS_PER_QUERY,
+            limit=MAX_PAGES, hits_per_query=HITS_PER_QUERY, kinds=labels,
             say=self._say, check=self._check, parallel=self.parallel_search))
         if len(pages) < MORE_BELOW:
             more = self._measured("refine", self._plan, lambda: plan.refine(
@@ -249,6 +263,7 @@ class LocalAsker:
                     self._search, self._fetch, more, seen=seen,
                     searched=searched, limit=MAX_PAGES,
                     hits_per_query=HITS_PER_QUERY,
+                    kinds=[local_search_plan.kind_of(query) or "" for query in more],
                     say=self._say, check=self._check, parallel=self.parallel_search))
                 pages = pages + round_two
         if not pages:

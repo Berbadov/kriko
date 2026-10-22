@@ -93,4 +93,7 @@ def searcher(base_url: str = "", *, language: str = "en", timeout: float = TIMEO
         return hits
 
     search.stats = stats  # type: ignore[attr-defined]
+    search.supports_timeout = True  # type: ignore[attr-defined]
+    #: What this searcher waits on its own, as the ceiling a chain above it uses.
+    search.default_timeout = float(default_timeout)  # type: ignore[attr-defined]
     return search
