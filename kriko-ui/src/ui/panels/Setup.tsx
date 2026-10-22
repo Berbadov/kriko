@@ -3,8 +3,12 @@ import { get, post } from '../../engine/api'
 import { followJob } from '../../engine/jobs'
 import { useEngine } from '../../engine/Engine'
 import { showDrawer } from '../drawerEvents'
+import { ExternalLink } from '../ExternalLink'
 
 type Extension = { connected: boolean; staged: boolean; path: string; ever_connected: boolean }
+
+/** The published listing. A reader installs from here; a checkout still has the folder. */
+const STORE = 'https://chromewebstore.google.com/detail/kriko/bdifnaggafjokndlpjgmlfappcoehdjb'
 
 export function SetupPanel() {
   const { mode } = useEngine()
@@ -57,10 +61,15 @@ export function SetupPanel() {
       <button className="btn" onClick={() => showDrawer('browse')}>Get catalogs</button>
     </section>
     <section className="panel-group"><h3>3. Connect your browser</h3>
-      <p>{extension?.connected ? 'The extension is connected.' : extension?.ever_connected ? 'Connected before; open a product page to check the connection again.' : 'No browser connection has been seen yet.'}</p>
-      <button className="btn" onClick={() => void stage()} disabled={working || mode !== 'live'}>Prepare browser extension</button>{' '}
+      <p>{extension?.connected ? 'The extension is connected.' : extension?.ever_connected ? 'Connected before; open a product page to check the connection again.' : 'Add Kriko to Chrome, then open any product page. The connection shows up here.'}</p>
+      <ExternalLink className="btn primary" href={STORE}>Add Kriko to Chrome</ExternalLink>{' '}
       <button className="btn" onClick={() => void reload()}>Check browser connection</button>
-      {extension?.staged && <><p>Open your browser's Extensions page, enable Developer mode, choose Load unpacked, and select this folder:</p><p className="panel-path">{extension.path}</p><button className="btn" onClick={() => void post('/api/extension/reveal', {}).catch((error: unknown) => setStatus(error instanceof Error ? error.message : 'Could not open the folder.'))}>Open extension folder</button></>}
+      <details className="setup-dev">
+        <summary>Installing from a checkout instead</summary>
+        <p className="panel-note">For a development build. Open your browser's Extensions page, enable Developer mode, choose Load unpacked, and select this folder.</p>
+        <button className="btn" onClick={() => void stage()} disabled={working || mode !== 'live'}>Prepare extension folder</button>
+        {extension?.staged && <><p className="panel-path">{extension.path}</p><button className="btn" onClick={() => void post('/api/extension/reveal', {}).catch((error: unknown) => setStatus(error instanceof Error ? error.message : 'Could not open the folder.'))}>Open extension folder</button></>}
+      </details>
     </section>
     <section className="panel-group"><h3>4. Complete your first check</h3><p>In Chat, name a product and ask for known problems with sources. Open a source, ask a follow-up, then add the product to Compare. A connection test alone does not verify source access.</p><button className="btn" onClick={() => showDrawer(null)}>Start a sourced check</button></section>
     {status && <p role="status">{status}</p>}
