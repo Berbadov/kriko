@@ -178,17 +178,19 @@ def features(claim: Claim, sentence: str, sentence_stems: set[str],
 def rule(f: dict[str, float], claim_size: int) -> bool:
     """Tier 1: the three-stem rule, weighted and guarded.
 
-    Three shared stems still; half the claim's *weight* instead of half its
-    count; at least one shared word that is rare in English (the guardrail the
-    old `rare` argument promised and never applied); no contrast phrase. Two
-    joined sentences must cover more, since a longer text covers more by
-    chance.
+    Three shared stems still; half the claim's weight rather than half its
+    count; no contrast phrase; a joined pair must cover more, since a longer
+    text covers more by chance.
+
+    Rarity is a feature, not a gate. Requiring one shared word rarer than
+    "battery" rejected genuine reports — trigger, vacuum, release all sit just
+    below that line — and made the verdict depend on whether an optional
+    frequency package was installed. The model can weigh it; the rule does not.
     """
     if claim_size < 3:
         return False
     need = 0.6 if f["window"] else 0.5
     return (f["shared"] >= 3 and f["containment"] >= need
-            and (f["rare_shared"] >= 1 or not WORD_WEIGHTS)
             and not f["contrast"])
 
 
@@ -378,7 +380,13 @@ from app.providers.local_identity import fold  # noqa: E402
 from app.providers.local_pipeline import _FILLER, menu_page, publisher  # noqa: E402
 
 MIN_SENTENCE = 40
+MIN_PAGE_CHARS = 200
 SNIPPET = 220
+
+# Units of time and amount, not a product or a fault: a duration is part of a
+# claim, but it is not what a page about the fault says.
+QUANTITY = frozenset("""second seconds minute minutes hour hours day days week
+weeks month months year years time times""".split())
 STEM_LENGTH = 6
 LETTERS = re.compile(r"[^\W\d_]{4,}")
 
@@ -426,12 +434,15 @@ def keywords_of(claim: str, product: str, limit: int = 3) -> list[str]:
     A whole sentence is a bad query: the engine matches its topic and answers
     with guides, other models and retailers. Three or four content words plus
     the quoted product is short enough that every word can be required. Longest
-    first, because without a frequency table length is the only rarity clue.
+    first, because without a frequency table length is the only rarity clue,
+    and units of time are skipped so "20 to 30 seconds" does not spend a slot
+    on "seconds" in place of "screen".
     """
     product_stems = stems(product)
     words: list[str] = []
     for word in TOKEN.findall(claim.casefold()):
-        if len(word) < 4 or word in _FILLER or word[:STEM_LENGTH] in product_stems:
+        if (len(word) < 4 or word in _FILLER or word in QUANTITY
+                or word[:STEM_LENGTH] in product_stems):
             continue
         if word not in words:
             words.append(word)
@@ -654,9 +665,20 @@ def run_seed(seed: dict, search, reader, pages: int, scorer: Scorer,
     with ThreadPoolExecutor(max_workers=min(5, max(1, len(hits)))) as pool:
         texts = list(pool.map(lambda hit: read_page(reader, hit["url"]), hits))
     record["fetch_seconds"] = round(time.perf_counter() - fetch_started, 2)
-    pages_read = [(hit["url"], str(hit.get("title") or ""), text)
-                  for hit, text in zip(hits, texts) if text]
+    pages_read = []
+    snippets = 0
+    for hit, text in zip(hits, texts):
+        if len(text) < MIN_PAGE_CHARS:
+            # A page behind a bot wall or a script shell reads as a title. The
+            # search service already sent a sentence of it; use that rather
+            # than count the page as unreadable.
+            snippet = str(hit.get("snippet") or "").strip()
+            if len(snippet) >= MIN_SENTENCE:
+                text, snippets = snippet, snippets + 1
+        if text:
+            pages_read.append((hit["url"], str(hit.get("title") or ""), text))
     record["pages"] = len(pages_read)
+    record["snippets"] = snippets
 
     judge_started = time.perf_counter()
     seen: set[str] = set()
@@ -969,6 +991,8 @@ def main() -> int:
                         help="send the whole claim sentence, the way the bench used to")
     parser.add_argument("--engines", default="",
                         help="engine list for the search service; default is the app's")
+    parser.add_argument("--searxng", default="",
+                        help="base URL of a SearXNG instance; default is OpenSERP")
     parser.add_argument("--pause", type=float, default=0.0,
                         help="seconds to wait after each run, for a rate-limited service")
     parser.add_argument("--offline", action="store_true",
@@ -986,10 +1010,13 @@ def main() -> int:
     scorer, embedder = scorer_for(args)
     window = args.window
     weights = "wordfreq" if WORD_WEIGHTS else "uniform (wordfreq absent: no rarity guard)"
+    source = f"searxng {args.searxng}" if args.searxng else (
+        args.engines or "openserp")
     print(f"scorer: {scorer.note}; weights: {weights}; "
           f"embeddings: {'on' if embedder and embedder.available else 'off'}; "
           f"window: {'on' if window else 'off'}; "
-          f"query: {'sentence' if args.plain_query else 'keywords'}\n")
+          f"query: {'sentence' if args.plain_query else 'keywords'}; "
+          f"search: {source}\n")
 
     if args.fetch_known:
         known = known_urls()
@@ -1054,9 +1081,14 @@ def main() -> int:
         record: dict = {}
         while attempts < 2:
             attempts += 1
-            own_search = openserp.searcher(
-                "", engine=args.engines or openserp.LOCAL_ENGINES,
-                language="en", timeout=args.timeout)
+            if args.searxng:
+                from app.providers import searxng
+                own_search = searxng.searcher(args.searxng, language="en",
+                                              timeout=args.timeout)
+            else:
+                own_search = openserp.searcher(
+                    "", engine=args.engines or openserp.LOCAL_ENGINES,
+                    language="en", timeout=args.timeout)
             record = run_seed(seed, own_search, fetch.reader(timeout=8.0),
                               depth, scorer, embedder, window, args.plain_query)
             if not record.get("error"):
