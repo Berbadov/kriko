@@ -68,7 +68,7 @@ def diversify(hit_lists, limit: int, *, seen: set, per_host: int = PER_HOST) -> 
 
 def gather(search, fetch, queries, *, seen: set, searched: set,
            limit: int, hits_per_query: int, say=None, check=None,
-           parallel: bool = False):
+           parallel: bool = False, kinds=None):
     """One round: pages found by these queries and not read before.
 
     ``seen`` grows with every url this run has read (or failed to read — a
@@ -77,12 +77,20 @@ def gather(search, fetch, queries, *, seen: set, searched: set,
     queries the first never asked. Returns ``(pages, wanted)`` where
     ``wanted`` is the urls this round tried, for the log line.
 
+    ``kinds`` is the agent's choice, one per query; a query it did not name is
+    labelled with the kind its own words ask for. Every search then says in the
+    job log which kind it targeted, the words it used, and what came back.
+
     The urls come from `diversify`, with `SPARES` beyond ``limit``: a page that
     will not load is replaced by the next candidate instead of leaving the
     run with fewer sources than it asked for.
     """
+    from app.providers import local_search_plan as plan
+
     wanted: list[str] = []
     pending = []
+    labels: list[str] = []
+    given = list(kinds or [])
     if hasattr(search, "check_cancelled"):
         search.check_cancelled = check
     for query in queries:
@@ -93,6 +101,8 @@ def gather(search, fetch, queries, *, seen: set, searched: set,
         if check is not None:
             check()
         pending.append(query)
+        chosen = str(given[len(pending) - 1]) if len(pending) <= len(given) else ""
+        labels.append(chosen if chosen in plan.SOURCE_KINDS else plan.kind_of(query))
 
     def hits_for(query):
         try:
@@ -109,11 +119,19 @@ def gather(search, fetch, queries, *, seen: set, searched: set,
             if check is not None:
                 check()
             results.append(hits_for(query))
-    for _, failure in results:
+    # Said from this thread only: a log write is the job's, and a worker pool
+    # must not reach the database behind it.
+    for query, kind, (hits, failure) in zip(pending, labels, results):
         if check is not None:
             check()
-        if failure and say is not None:
+        if say is None:
+            continue
+        if failure:
             say(failure)
+        else:
+            say(plan.searched_line(
+                kind, query, hits,
+                "" if hits else "the search service answered with no results"))
     wanted = diversify([hits for hits, _ in results], limit + SPARES, seen=seen)
     if not wanted:
         return [], []

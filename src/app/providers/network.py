@@ -30,6 +30,11 @@ _DEFAULT_URLOPEN = urllib.request.urlopen
 #: `urllib.request.urlopen` reuses a module-level one for exactly this reason.
 _LOOPBACK_OPENER: urllib.request.OpenerDirector | None = None
 
+#: Seconds a request waits for its network permit when the caller gave no
+#: deadline of its own. Long enough for a queue of ordinary reads to drain,
+#: short enough that a stuck permit is a reported failure rather than a hang.
+PERMIT_WAIT = 30.0
+
 
 def _no_proxy_opener() -> urllib.request.OpenerDirector:
     """The loopback opener, built on first use and reused after that."""
@@ -180,7 +185,8 @@ class _PermitResponse:
 
 def urlopen(url: Any, data: Any = None, timeout: float | None = None,
             *, check=None, opener=None, kind: str = "outbound",
-            pace_interval: float = 0.0, guard_redirects: bool = False):
+            pace_interval: float = 0.0, guard_redirects: bool = False,
+            permit_wait: float | None = None):
     """Open a URL under a global+per-host quota.
 
     Loopback requests use an opener with proxy handling disabled, so hostile
@@ -189,14 +195,26 @@ def urlopen(url: Any, data: Any = None, timeout: float | None = None,
     configuration. `opener` supports deterministic tests and callers that
     already provide an explicit transport. `guard_redirects` makes a redirect to a
     host `egress` refuses an error instead of a hop (the fetch ladder sets it).
+
+    **The wait for a permit is bounded too.** It used to be a permit with no
+    timeout, which waits in a loop until one is free: a leaked permit, or a
+    burst against one host, left every later request for that host waiting with
+    nothing said — never answered and never failed. The wait is
+    `permit_wait` (or `PERMIT_WAIT`), never longer than the request's own
+    `timeout`, and giving up raises `agentresources.PermitTimeout` saying what
+    it waited for and how busy the host was.
     """
     request = url if isinstance(url, urllib.request.Request) else None
     address = request.full_url if request is not None else str(url)
     host = (urlsplit(address).hostname or "").lower()
     if pace_interval > 0:
         pace(f"openserp:{host}", pace_interval, check=check)
-    permits = [slot(kind, host, check=check)] if kind not in {"outbound", "network"} else []
-    permits.append(slot("outbound", host, check=check))
+    wait = PERMIT_WAIT if permit_wait is None else max(0.0, float(permit_wait))
+    if timeout is not None:
+        wait = min(wait, max(0.0, float(timeout)))
+    permits = ([slot(kind, host, check=check, timeout=wait)]
+               if kind not in {"outbound", "network"} else [])
+    permits.append(slot("outbound", host, check=check, timeout=wait))
     acquired = []
     try:
         for permit in permits:

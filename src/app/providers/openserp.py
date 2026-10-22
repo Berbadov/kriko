@@ -489,6 +489,10 @@ def searcher(base_url: str = "", engine: str = "", *, language: str = "en",
     search.stats = stats  # type: ignore[attr-defined]
     search.check_cancelled = None  # type: ignore[attr-defined]
     search.supports_timeout = True  # type: ignore[attr-defined]
+    #: The longest this searcher would wait on its own. A chain above it uses
+    #: this as the ceiling for one query, so its own deadline never hands this
+    #: adapter a longer leash than it was built with.
+    search.default_timeout = float(search_timeout)  # type: ignore[attr-defined]
     search.supports_pacing = True  # type: ignore[attr-defined]
     search.supports_fast_options = True  # type: ignore[attr-defined]
     return search

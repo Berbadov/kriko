@@ -14,7 +14,7 @@ file plus one row in `keys.PROVIDERS` rather than a change anywhere else.
 from urllib.parse import urlsplit
 
 from app.keys import require
-from app.providers._http import post_json
+from app.providers._http import TIMEOUT, post_json
 
 #: Overridable through `TAVILY_BASE_URL`, like Exa's, for anyone proxying it.
 DEFAULT_BASE_URL = "https://api.tavily.com"
@@ -25,7 +25,7 @@ def searcher(api_key: str = "", base_url: str = ""):
     key = api_key or require("tavily")
     endpoint = (base_url or _base_url()).rstrip("/") + "/search"
 
-    def search(query: str, limit: int = 5) -> list[dict]:
+    def search(query: str, limit: int = 5, *, timeout: float | None = None) -> list[dict]:
         payload = {
             "api_key": key,
             "query": query,
@@ -37,7 +37,8 @@ def searcher(api_key: str = "", base_url: str = ""):
             "search_depth": "basic",
             "include_answer": False,
         }
-        body = post_json(endpoint, payload, {"content-type": "application/json"})
+        body = post_json(endpoint, payload, {"content-type": "application/json"},
+                         timeout=TIMEOUT if timeout is None else max(0.0, float(timeout)))
         results = body.get("results")
         if not isinstance(results, list):
             return []
@@ -57,6 +58,8 @@ def searcher(api_key: str = "", base_url: str = ""):
             )
         return out
 
+    search.supports_timeout = True  # type: ignore[attr-defined]
+    search.default_timeout = TIMEOUT  # type: ignore[attr-defined]
     return search
 
 

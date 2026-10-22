@@ -6,6 +6,7 @@ what gets logged. Written once here so a provider is only its endpoint and its
 response shape.
 """
 
+import inspect
 import json
 import logging
 import threading
@@ -37,6 +38,15 @@ RETRY_ATTEMPTS = 3
 RETRY_BACKOFF = 0.5
 RETRY_AFTER_CAP = 10.0
 
+#: The most of one buffered reply that is kept. A search answer or a completion
+#: is kilobytes; a body still arriving past this is not the answer, and reading
+#: it would only spend the reader's memory on it.
+MAX_BODY = 32_000_000
+
+#: How much is asked for per read. One socket buffer at a time, so the body
+#: deadline below is checked often enough to mean something.
+CHUNK = 65536
+
 
 class SearchFailed(RuntimeError):
     """A search provider could not answer, and says why in the reader's terms.
@@ -49,6 +59,68 @@ class SearchFailed(RuntimeError):
 
 class StreamCancelled(Exception):
     """A local reader stopped consuming a provider's SSE response."""
+
+
+def _sized_reader(response):
+    """The response's `size -> bytes` reader, or ``None`` when it reads whole.
+
+    `read1` is what urllib's own response has and what returns as soon as
+    anything arrived, which is what lets `_read_body` check its deadline
+    between chunks. A `read` that takes a size is the same thing one buffer at
+    a time; a `read` that takes none (the stubs in these tests, and any
+    whole-body reader) is called once, exactly as it always was.
+    """
+    read1 = getattr(response, "read1", None)
+    if callable(read1):
+        return read1
+    read = getattr(response, "read", None)
+    if not callable(read):
+        return None
+    try:
+        parameters = inspect.signature(read).parameters
+    except (TypeError, ValueError):
+        return read
+    return read if parameters else None
+
+
+def _read_body(response, timeout: float) -> tuple[bytes, str]:
+    """`(body, why)`: the whole body within `timeout` seconds in all.
+
+    `urlopen`'s timeout bounds each wait on the socket, not the answer: a
+    service that accepts the connection and then drips a byte every few seconds
+    never trips it (measured for `fetch._body`: 48 s on an 8 s budget), so a
+    provider could hold a turn open indefinitely. The budget here is for the
+    whole body; what arrived when it ran out is kept, and a body that never
+    finished is reported as the timeout it is rather than as "answered
+    something that is not JSON".
+    """
+    deadline = time.monotonic() + timeout
+    read = _sized_reader(response)
+    if read is None:
+        return _whole_body(response, deadline, timeout)
+    chunks: list[bytes] = []
+    size = 0
+    while size < MAX_BODY:
+        if time.monotonic() >= deadline:
+            return b"".join(chunks), f"did not finish answering within {timeout:g}s"
+        try:
+            chunk = read(min(CHUNK, MAX_BODY - size))
+        except TypeError:
+            # A reader that takes no size after all (see `_sized_reader`).
+            return _whole_body(response, deadline, timeout)
+        if not chunk:
+            return b"".join(chunks), ""
+        chunks.append(chunk)
+        size += len(chunk)
+    return b"".join(chunks), "the answer was larger than this reader keeps"
+
+
+def _whole_body(response, deadline: float, timeout: float) -> tuple[bytes, str]:
+    """One unsized read: what the helper did before there was a deadline."""
+    body = bytes(response.read() or b"")
+    if not body and time.monotonic() >= deadline:
+        return b"", f"did not finish answering within {timeout:g}s"
+    return body, ""
 
 
 def post_json(url: str, payload: dict, headers: dict, timeout: float = TIMEOUT) -> dict:
@@ -116,7 +188,11 @@ def _post_once(url: str, payload: dict, headers: dict,
     )
     try:
         with network.urlopen(request, timeout=timeout) as response:
-            return json.loads(response.read().decode("utf-8", "replace")) or {}, "", None
+            body, why = _read_body(response, timeout)
+            if why:
+                log.warning("%s: %s", _host(url), why)
+                return {}, f"{_host(url)} {why}", None
+            return json.loads(body.decode("utf-8", "replace")) or {}, "", None
     except urllib.error.HTTPError as error:
         # The status is diagnostic and safe; the body may quote the request.
         log.warning("%s answered HTTP %s", _host(url), error.code)
@@ -172,6 +248,13 @@ def post_sse_or_why(url: str, payload: dict, headers: dict, timeout: float,
     count = 0
     data_lines: list[str] = []
     callback_error: BaseException | None = None
+    #: The whole stream's budget, and whether it ran out. A stream has no
+    #: "body" to read against a deadline, so the deadline is enforced by the
+    #: watcher below closing the response: that is what unblocks a `readline`
+    #: sitting on a socket, and a provider dripping bytes without ever ending
+    #: a line keeps such a socket alive forever.
+    stream_ends = time.monotonic() + timeout
+    expired = threading.Event()
 
     def deliver() -> None:
         nonlocal count, callback_error
@@ -192,23 +275,33 @@ def post_sse_or_why(url: str, payload: dict, headers: dict, timeout: float,
                 raise
             count += 1
 
+    def budget_reason() -> str:
+        log.warning("%s streamed past its %.0fs budget", _host(url), timeout)
+        return f"{_host(url)} streamed past its {timeout:g}s budget"
+
     try:
         with network.urlopen(request, timeout=timeout) as response:
             watcher_done = threading.Event()
             watcher = None
-            if cancel_event is not None:
-                def close_on_cancel() -> None:
-                    while not watcher_done.wait(0.025):
-                        if cancel_event.is_set():
-                            response.close()
-                            return
 
-                watcher = threading.Thread(
-                    target=close_on_cancel, name="kriko-sse-cancel", daemon=True,
-                )
-                watcher.start()
+            def watch() -> None:
+                while not watcher_done.wait(0.025):
+                    if cancel_event is not None and cancel_event.is_set():
+                        response.close()
+                        return
+                    if time.monotonic() >= stream_ends:
+                        expired.set()
+                        response.close()
+                        return
+
+            watcher = threading.Thread(
+                target=watch, name="kriko-sse-cancel", daemon=True,
+            )
+            watcher.start()
             try:
                 for raw_line in response:
+                    if expired.is_set():
+                        return count, budget_reason()
                     if cancel_event is not None and cancel_event.is_set():
                         raise StreamCancelled("provider stream canceled")
                     line = raw_line.decode("utf-8", "replace").rstrip("\r\n")
@@ -218,6 +311,8 @@ def post_sse_or_why(url: str, payload: dict, headers: dict, timeout: float,
                         data_lines.append(line[5:].lstrip())
                     # `event:`, `id:`, comments and retry hints do not carry
                     # the provider payload and can be ignored.
+                if expired.is_set():
+                    return count, budget_reason()
                 if cancel_event is not None and cancel_event.is_set():
                     raise StreamCancelled("provider stream canceled")
                 deliver()
@@ -229,11 +324,15 @@ def post_sse_or_why(url: str, payload: dict, headers: dict, timeout: float,
     except urllib.error.HTTPError as error:
         if callback_error is not None:
             raise callback_error
+        if expired.is_set():
+            return count, budget_reason()
         log.warning("%s answered HTTP %s", _host(url), error.code)
         return count, f"{_host(url)} answered HTTP {error.code}{_MEANING.get(error.code, '')}"
     except (urllib.error.URLError, TimeoutError, OSError) as error:
         if callback_error is not None:
             raise callback_error
+        if expired.is_set():
+            return count, budget_reason()
         if cancel_event is not None and cancel_event.is_set():
             raise StreamCancelled("provider stream canceled") from error
         log.warning("%s unreachable: %s", _host(url), type(error).__name__)
@@ -241,6 +340,8 @@ def post_sse_or_why(url: str, payload: dict, headers: dict, timeout: float,
     except (json.JSONDecodeError, ValueError):
         if callback_error is not None:
             raise callback_error
+        if expired.is_set():
+            return count, budget_reason()
         if cancel_event is not None and cancel_event.is_set():
             raise StreamCancelled("provider stream canceled")
         log.warning("%s answered something that is not an event stream", _host(url))

@@ -18,6 +18,16 @@ from collections.abc import Callable, Iterator
 _PROFILES = {"quiet": 1, "balanced": 2, "fast": 4}
 
 
+class PermitTimeout(TimeoutError):
+    """No permit was free within the time the caller could wait for one.
+
+    Distinct from a bare `TimeoutError` so a caller can tell "the network did
+    not answer" from "this host was already as busy as it is allowed to be",
+    and so the reason it carries — the kind, the host and how many permits
+    were in use — reaches the reader instead of an empty wait.
+    """
+
+
 def _bounded_env(name: str, default: int, low: int, high: int) -> int:
     try:
         value = int(os.environ.get(name, default))
@@ -128,7 +138,10 @@ class _Limiter:
                     if timeout is not None:
                         left = timeout - (time.monotonic() - began)
                         if left <= 0:
-                            raise TimeoutError(f"timed out waiting for {kind} permit")
+                            raise PermitTimeout(
+                                f"waited {timeout:.1f}s for a {kind} permit for "
+                                f"{key or 'any host'}: {self.used.get(group, 0)} of "
+                                f"{total} are in use")
                         self.condition.wait(min(left, 0.05))
                     else:
                         self.condition.wait(0.05)

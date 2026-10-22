@@ -219,6 +219,13 @@ def health(conn) -> dict[str, dict]:
 
 # ── the chain ────────────────────────────────────────────────────────────
 
+#: Seconds one search may take in all, across every provider it tries. A
+#: caller that passes no deadline — `chatdata` asks for a search with none —
+#: must not be able to hang a turn on a provider that accepted the connection
+#: and then went quiet, and the per-recv socket timeout does not bound that.
+BUDGET = 25.0
+
+
 class Chain:
     """`search(query, limit)` over an ordered list of providers.
 
@@ -227,17 +234,30 @@ class Chain:
     The first member is built at once, so a misconfiguration surfaces where
     the turn is set up (as before), while the ones behind it are built only on
     the day the first one fails.
+
+    **Every call is bounded.** The whole call gets `timeout` seconds (or
+    `BUDGET`); each provider is given what is left of it, and a provider that
+    cannot take a deadline at all is run beside the chain and abandoned when
+    the budget runs out, exactly as the local plane abandons a slow search
+    worker. What each provider said is kept in `attempts`, which is what the
+    log line and `local_search_plan.attempts_said` read.
     """
 
     def __init__(self, members: list[tuple[str, Callable[[], Callable[..., list]]]], *,
                  log: Callable[[str], Any] | None = None,
-                 app_state_path=None) -> None:
+                 app_state_path=None, language: str = "en") -> None:
         self.members = members
         self._log = log
         self._app_state_path = app_state_path
         self._built: dict[int, Callable[..., list]] = {}
         self._check: Callable[[], Any] | None = None
-        self.supports_timeout = False
+        self.language = language
+        #: What each provider said on the last call: `{provider, label,
+        #: outcome, reason, results}`. Read, never written, by the job log.
+        self.attempts: list[dict] = []
+        # The chain bounds itself, whatever the caller passed, so a plane that
+        # asks it for a deadline gets one honoured down to each provider.
+        self.supports_timeout = True
         if members:
             self._searcher(0)
 
@@ -276,7 +296,84 @@ class Chain:
             except Exception:  # noqa: BLE001 - a log line never fails a search
                 pass
 
-    def __call__(self, query: str, limit: int = 5, **options) -> list[dict]:
+    def _budget_for(self, searcher, left: float) -> float | None:
+        """What this provider may take: the smaller of `left` and its own default.
+
+        A provider that declares `default_timeout` keeps it — the chain's
+        budget is a ceiling, never a longer leash than the provider chose for
+        itself — and one that takes no deadline gets `None`, which means "run
+        it beside the chain and abandon it when the budget runs out".
+        """
+        own = getattr(searcher, "default_timeout", None)
+        if not getattr(searcher, "supports_timeout", False):
+            return None
+        if isinstance(own, (int, float)) and not isinstance(own, bool):
+            return min(left, float(own))
+        return left
+
+    def _beside(self, call: Callable[[], list], left: float) -> tuple[list | None, str]:
+        """Run `call` beside the chain: its answer, or why it ran out of time."""
+        box: list[Any] = []
+
+        def run() -> None:
+            try:
+                box.append(call())
+            except BaseException as error:  # noqa: BLE001 - reported to the caller
+                box.append(error)
+
+        worker = threading.Thread(target=run, name="kriko-search-provider", daemon=True)
+        worker.start()
+        worker.join(max(0.0, left))
+        if worker.is_alive():
+            return None, f"did not answer within {left:.1f}s"
+        if not box:
+            return None, "answered nothing"
+        if isinstance(box[0], BaseException):
+            raise box[0]
+        return box[0], ""
+
+    def _call_member(self, searcher, query: str, limit: int, options: dict,
+                     left: float) -> list[dict]:
+        """Ask one provider, inside what is left of its share of the budget.
+
+        A provider that takes a deadline gets one and answers in place. One
+        that does not — an adapter built before this — runs beside the chain
+        and is abandoned when the share is spent, exactly as the local plane
+        abandons a search worker that outlived its budget.
+        """
+        allowed = self._budget_for(searcher, left)
+        if allowed is not None:
+            return searcher(query, limit, timeout=allowed, **options)
+
+        def run() -> list[dict]:
+            if getattr(searcher, "supports_timeout", False):
+                return searcher(query, limit, timeout=left, **options)
+            return searcher(query, limit, **options)
+
+        beside, why = self._beside(run, left)
+        if why:
+            raise LocalSearchError(why)
+        return beside or []
+    def __call__(self, query: str, limit: int = 5, timeout: float | None = None,
+                 kind: str = "", **options) -> list[dict]:
+        """One search: the providers in order, inside one deadline.
+
+        `kind` is the kind of source to go to, and it is the *agent's* decision:
+        when the caller names none, the query's own words decide
+        (`local_search_plan.choose_kinds`), the query is asked with that kind's
+        marker word, and the line written to the job log says which kind was
+        targeted, which words were used and what came back.
+        """
+        from app.providers import local_search_plan as plan
+
+        budget = BUDGET if timeout is None else max(0.0, float(timeout))
+        deadline = time.monotonic() + budget
+        chosen = kind if kind in plan.SOURCE_KINDS else ""
+        if not chosen:
+            asked = plan.choose_kinds(query, limit=1)
+            chosen = asked[0] if asked else ""
+        effective = plan.marked_query(query, chosen, self.language) if chosen else query
+        self.attempts = []
         failures: list[tuple[str, str, BaseException]] = []
         answered_empty = False
         for index, (provider, _build) in enumerate(self.members):
@@ -285,28 +382,57 @@ class Chain:
             name = label(provider)
             later = [label(one) for one, _ in self.members[index + 1:]]
             then = f"; falling back to {later[0]}" if later else ""
+            left = deadline - time.monotonic()
+            if left <= 0:
+                why = f"the search ran out of its {budget:.0f}s budget"
+                self.attempts.append({"provider": provider, "label": name,
+                                      "outcome": "timeout", "reason": why, "results": 0})
+                failures.append((name, why, LocalSearchError(why)))
+                self._say(f"web search: {name} was not asked ({why})")
+                continue
+            # The budget is shared with the providers still to try, so one
+            # provider that goes quiet cannot spend the turn that the ones
+            # behind it were going to answer in.
+            share = left / max(1, len(self.members) - index)
             try:
-                found = self._searcher(index)(query, limit, **options)
+                found = self._call_member(self._searcher(index), effective, limit,
+                                          options, share)
             except Exception as error:  # noqa: BLE001 - classified just below
                 if is_cancel(error):
                     raise
                 why = scrub(error) or type(error).__name__
                 record(self._app_state_path, provider, "error", why)
+                self.attempts.append({"provider": provider, "label": name,
+                                      "outcome": "error", "reason": why, "results": 0})
                 failures.append((name, why, error))
                 self._say(f"web search: {name} failed ({why}){then}")
                 continue
             if found:
                 record(self._app_state_path, provider, "ok")
+                self.attempts.append({"provider": provider, "label": name,
+                                      "outcome": "ok", "reason": "", "results": len(found)})
                 if index:
                     self._say(f"web search: {name} answered ({len(found)} results)")
+                self._say(plan.searched_line(chosen, effective, found))
                 return found
             record(self._app_state_path, provider, "empty")
             answered_empty = True
+            self.attempts.append({"provider": provider, "label": name,
+                                  "outcome": "empty", "reason": "returned nothing",
+                                  "results": 0})
             self._say(f"web search: {name} returned nothing{then}")
+        self._say(plan.searched_line(chosen, effective, (),
+                                     plan.attempts_said(self.attempts) or "no provider answered"))
         if not failures:
             return []
         if len(failures) == 1 and len(self.members) == 1:
-            raise failures[0][2]  # one provider, as before: its own error
+            sole = failures[0][2]
+            if isinstance(sole, LocalSearchError):
+                raise sole  # one provider, as before: its own error
+            # A transport failure (a permit that never came free, a socket that
+            # died) is the planes' own vocabulary, so the reason reaches the
+            # run instead of stopping it with a type it does not handle.
+            raise LocalSearchError(failures[0][1]) from sole
         if answered_empty:
             return []  # something answered, with nothing: not an outage
         raise LocalSearchError("; ".join(f"{name}: {why}" for name, why, _ in failures))
@@ -348,14 +474,17 @@ def build(chosen: dict, app_state_path, *, log=None, check=None,
     something specific and are told it is not there. Providers behind it that
     cannot be asked are left out (`order`).
     """
+    from app import prefs
+
     plan = order(chosen)
+    language = str(chosen.get(prefs.LOCAL_SEARCH_LANGUAGE) or "en")
     members: list[tuple[str, Callable[[], Callable[..., list]]]] = []
     for provider in plan["effective"]:
         if provider == OPENSERP:
             members.append((provider, lambda: openserp_factory(chosen)))
         else:
             members.append((provider, _hosted_factory(provider, app_state_path)))
-    chain = Chain(members, log=log, app_state_path=app_state_path)
+    chain = Chain(members, log=log, app_state_path=app_state_path, language=language)
     if check is not None:
         chain.check_cancelled = check
     return chain

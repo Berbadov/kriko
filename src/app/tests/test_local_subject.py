@@ -188,10 +188,11 @@ class Agent:
     def _say(self, line):
         self.said.append(line)
 
-    def _read(self, queries, *, identity=None, prefer_issues=False, quick=False):
+    def _read(self, queries, *, identity=None, prefer_issues=False, quick=False,
+              kinds=None):
         self.searched = queries
         self.read_options = {"identity": identity, "prefer_issues": prefer_issues,
-                             "quick": quick}
+                             "quick": quick, "kinds": kinds}
         self.search_coverage = dict(self.read_coverage)
         return []
 

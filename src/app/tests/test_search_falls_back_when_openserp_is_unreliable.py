@@ -151,7 +151,9 @@ def test_a_working_serp_never_spends_a_deepseek_query(tmp_path, monkeypatch, dee
     hits = _build(tmp_path, log)("a fine query", 5)
     assert [hit["title"] for hit in hits] == ["from openserp"]
     assert deepseek.calls == []
-    assert log.lines == []
+    # One line, and it is the search itself: which kind (none was asked for
+    # here), which words, and that the answer came from one site.
+    assert log.lines == ["searched: a fine query -> search returned 1 result(s) at serp.example"]
 
 
 def test_without_a_deepseek_key_the_failure_is_the_same_as_before(tmp_path, monkeypatch, deepseek):
