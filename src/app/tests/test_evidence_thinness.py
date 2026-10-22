@@ -125,6 +125,23 @@ def test_annotate_adds_the_object_and_changes_nothing_else():
     assert "evidence" not in rows[0], "the input row is not mutated"
 
 
+def test_each_source_is_served_with_where_it_stands():
+    rows = [{"claim_id": "c1", "sources": [
+        source("maker.example.com", trust=1.0),
+        source("blog.example.com", tier="seo_blog", trust=0.3),
+        source("shop.example.com", tier="unknown", trust=0.55),
+        {"domain": "x.example.com", "quote": "q", "stance": "supports"},
+    ]}]
+    out = evidence.annotate(rows)[0]["sources"]
+    assert [s.get("standing") for s in out] == ["trusted", "low", "neutral", None], "no number or tier, no mark"
+    assert "standing" not in rows[0]["sources"][0], "the input row is not mutated"
+
+
+def test_a_claim_with_no_sources_list_is_left_as_it_was():
+    out = evidence.annotate([{"claim_id": "c1", "title": "T"}])[0]
+    assert "sources" not in out
+
+
 # ── what the setting does ────────────────────────────────────────────────
 
 
