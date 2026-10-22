@@ -638,6 +638,13 @@ class ClaudeWire(Wire):
         worker.state["dirty"] = False
 
     def keep(self, message: Mapping[str, Any]) -> bool:
+        if message.get("type") == "rate_limit_event":
+            # Dropped from the run, kept for the usage meter: it is the only
+            # place the agent says how far into its 5-hour and weekly windows
+            # the reader is (`app/limits.py`).
+            from app import limits
+
+            limits.observe("claude-code", message)
         return message.get("type") not in _CLAUDE_NOISE
 
     def server_request(self, worker: _Worker, message: Mapping[str, Any]) -> Mapping[str, Any] | None:
