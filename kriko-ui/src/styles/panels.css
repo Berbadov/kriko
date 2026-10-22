@@ -390,6 +390,45 @@
   outline-offset: 1px;
 }
 
+/* ---- shared access ---- */
+
+/* A code is a long line and a password is short, so these two are fields rather
+   than one row: the shape of what is pasted is part of telling the reader which
+   box it goes in. */
+.key-field {
+  width: 100%;
+  padding: 9px 12px;
+  background: var(--panel-2);
+  border: 1px solid var(--edge-strong);
+  border-radius: 12px;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 13.5px;
+  resize: vertical;
+}
+
+.key-field:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.panel-details {
+  border-top: 1px solid var(--edge);
+  padding-top: 10px;
+  margin-top: 4px;
+}
+
+.panel-details > summary {
+  cursor: pointer;
+  color: var(--ink-2);
+  font-weight: 560;
+}
+
+.panel-details[open] > summary {
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+
 /* ---- spend ---- */
 
 .tiles {

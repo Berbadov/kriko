@@ -2708,7 +2708,8 @@ class HarnessResearcher(AgentResearcher):
     cost_basis = "subscription"
 
     def __init__(self, harness: Harness, *, timeout: float = TIMEOUT_SECONDS,
-                 model: str = "", effort: str = "", app_state_path=None):
+                 model: str = "", effort: str = "", search: str = "",
+                 app_state_path=None):
         self.requested_model = model
         #: How hard to think, this run. Beside the model rather than folded
         #: into it: the two are chosen independently, and a survey run is the
@@ -2765,6 +2766,20 @@ class HarnessResearcher(AgentResearcher):
         #: text, so a quote can only be required to exist (`quicklook.parse`).
         #: `{}` would read as "every page was checked" and drop every claim.
         self.sources: dict[str, str] | None = None
+        #: Which web search this run uses: the agent's own tools, or Kriko's
+        #: host-side search handed to it in the brief. Stamped by
+        #: `harness_researcher` from the reader's dial on the Agents tab
+        #: (`prefs.search_for_harness`). A resolved value, not the stored one:
+        #: empty already means the agent's own, so a caller that says nothing —
+        #: a test, a benchmark — gets the reader's default rather than the
+        #: retired one.
+        from app import prefs
+
+        self.search_source = (
+            search.strip().casefold()
+            if search.strip().casefold() in prefs.HARNESS_SEARCH_CHOICES
+            else prefs.DEFAULT_HARNESS_SEARCH
+        )
         self.relevant_sources: dict[str, str] = {}
         self.page_titles: dict[str, str] = {}
         self.telemetry: dict = {}
@@ -2852,6 +2867,58 @@ class HarnessResearcher(AgentResearcher):
 
     # ── gather ───────────────────────────────────────────────────────────────
 
+    def _own_search(self) -> bool:
+        """Whether this run leaves the searching to the agent's own tools.
+
+        `search_source` is the reader's dial on the Agents tab, resolved in
+        `harness_researcher` and defaulted at construction: a caller that names
+        no choice — a test, a benchmark — gets the reader's default (the agent's
+        own) rather than the retired one.
+
+        One exception, and it is not the reader's to make: a CLI whose protocol
+        has no web tools (`TOOLLESS_PROTOCOLS`) cannot search for itself unless
+        the reader has forced a process with tools (`exec`). Left in `auto` it
+        would start a persistent, toolless session — the very run that tried
+        WebSearch, ToolSearch and curl a dozen times, was refused each time and
+        shipped a catalog with no claims. Kriko reads for it instead, and the
+        run says so when the dial asked otherwise.
+        """
+        from app import prefs
+
+        if self.search_source == prefs.SEARCH_KRIKO:
+            return False
+        if (self.harness.protocol in TOOLLESS_PROTOCOLS
+                and self.transport_mode != "exec"):
+            if self.search_source == prefs.SEARCH_OWN:
+                self.note = (
+                    f"{self.harness.label} has no web tools of its own in this mode, "
+                    "so Kriko read the pages for it despite the search set to its own."
+                )
+            return False
+        return True
+
+    def _grounds_here(self) -> bool:
+        """Whether `gather` checks quotes against pages Kriko itself read.
+
+        Only for the CLI it read them for, and only when it actually has them.
+        An API agent checks its own quotes against the provider's search text
+        and counts what it drops (`apiagent.ApiAgentResearcher.gather`); doing it
+        here as well dropped the same findings a second time, without the count
+        and without the note that tells the reader why they went. And a CLI that
+        searched for itself has no page text of Kriko's to check against.
+        """
+        return (self.harness.id in HOST_READ_HARNESSES
+                and not self._own_search()
+                and self.sources is not None)
+
+    def _own_search_note(self) -> str:
+        """What an agent that searches for itself is told, in the same words
+        whether the reader chose it or the search service forced it."""
+        return ("\n\nNo pages were read for you. Search the web with your own tools, "
+                f"open at most {max(1, self.max_documents or 3)} pages, then answer: "
+                "do not keep searching. Cite only URLs you actually opened and copy "
+                "every quote verbatim from the page it came from.\n")
+
     def gather(self, task: ResearchTask) -> list[Document]:
         # The scale reaches the agent as a sentence and the CLI as a flag,
         # and it has to be both. Truncating the reply afterwards — which is
@@ -2867,7 +2934,7 @@ class HarnessResearcher(AgentResearcher):
         # drops it.
         self.budget_usd = max(0.0, float(task.budget_usd or 0.0))
         prompt = self.brief(task) + "\n" + self._contract()
-        if self.harness.id in HOST_READ_HARNESSES:
+        if self.harness.id in HOST_READ_HARNESSES and not self._own_search():
             # `task.queries` are the pack's templates (`{make} {model} ...`);
             # the rendered ones are what a search engine can be asked. Searching
             # the template text returned pages about image generation.
@@ -2878,7 +2945,10 @@ class HarnessResearcher(AgentResearcher):
                 max_pages=max(1, min(8, task.max_documents or 3)),
             )
         else:
-            reply = self._run(prompt)
+            # The agent's own search: either the reader chose it, or this CLI
+            # was never in the set Kriko reads for. It must be told that no
+            # pages were prepared for it, or it waits for pages that never come.
+            reply = self._run(prompt + self._own_search_note())
         payload = _payload(reply)
         reported = payload.get("queries")
         self.queries_run = [
@@ -2901,7 +2971,7 @@ class HarnessResearcher(AgentResearcher):
             quote = str(item.get("quote") or "").strip()
             if not url or not quote:
                 continue
-            if self.harness.id in HOST_READ_HARNESSES:
+            if self._grounds_here():
                 from kriko.extract.grounding import loose_span
 
                 page_text = (self.sources or {}).get(url, "")
@@ -3058,25 +3128,46 @@ class HarnessResearcher(AgentResearcher):
             blocks.append(f"\n### {title or url}\nSOURCE URL: {url}\n\n{text}\n")
         return "".join(blocks)
 
+    def _planned_queries(self, subject: str, language: str) -> list[str]:
+        """The host searches for one subject, in the kinds this question needs.
+
+        The reader's Agents-tab kinds are the fallback, not the decision: the
+        kinds are chosen for *this* question (`choose_kinds` reads the question's
+        own words against a closed vocabulary of what asking for a kind of
+        evidence sounds like), each query is given that kind's own word so an
+        engine returns that kind of page (`plan_queries`), and the decision and
+        every query go to the run's log — the same lines the in-house search
+        writes, so a run's source selection reads the same whichever stack
+        answered it.
+        """
+        from app.providers import local_search_plan
+
+        stored = tuple(getattr(self, "source_kinds", ()) or ())
+        kinds = local_search_plan.choose_kinds(subject, default=stored)
+        angles = local_search_plan.quick_angles(kinds, language)
+        queries = [f'"{subject}" {angle}' for angle in angles]
+        queries, labels = local_search_plan.plan_queries(
+            queries, kinds, subject=subject, language=language)
+        said = local_search_plan.kinds_line(kinds)
+        if said:
+            self._echo(said)
+        for query, kind in zip(queries, labels):
+            self._echo(f"searching kind {kind}: {query}" if kind else f"searching: {query}")
+        return queries
+
     def ask_quick(self, product: str, *, principle: str = "", page=None,
                   packs: str = "", attributes: str = "") -> str:
         from app import quicklook
 
-        from app.providers import local_search_plan
-
         source_note = getattr(self, "source_instructions", "")
         language = str(getattr(self, "output_language", "") or "auto")
-        if self.harness.id not in HOST_READ_HARNESSES:
+        if self.harness.id not in HOST_READ_HARNESSES or self._own_search():
             return self.ask(quicklook.brief(
                 product, principle, page, packs, attributes,
                 max_sources=max(1, self.max_documents or 5), language=language,
-            ) + source_note)
+            ) + source_note + self._own_search_note())
         _url, search_language = self._search_settings()
-        # The reader's picked kinds of source decide what is searched for, and
-        # their search language decides in which words; not a fixed trio.
-        queries = [
-            f'"{product}" {angle}' for angle in local_search_plan.quick_angles(
-                getattr(self, "source_kinds", ()), search_language)]
+        queries = self._planned_queries(product, search_language)
         return self._ask_with_pages(
             queries,
             quicklook.brief(product, principle, page, packs, attributes,
@@ -3098,14 +3189,11 @@ class HarnessResearcher(AgentResearcher):
         can be read, `_ask_with_pages` raises `NoHarness` before the agent is
         asked anything. Any other agent is asked as before.
         """
-        if self.harness.id not in HOST_READ_HARNESSES:
-            return self.ask(prompt)
-        from app.providers import local_search_plan
-
+        if self.harness.id not in HOST_READ_HARNESSES or self._own_search():
+            return self.ask(prompt + self._own_search_note())
         source_note = getattr(self, "source_instructions", "")
         _url, search_language = self._search_settings()
-        queries = [f'"{product}" {angle}' for angle in local_search_plan.quick_angles(
-            getattr(self, "source_kinds", ()), search_language)]
+        queries = self._planned_queries(product, search_language)
         return self._ask_with_pages(
             queries, prompt + source_note, product=product, page=page,
             prefer_issues=True, pages_note=AUTHOR_PAGES_NOTE,
@@ -3113,8 +3201,8 @@ class HarnessResearcher(AgentResearcher):
 
     def ask_followup(self, prompt: str, *, product: str = "", question: str = "") -> str:
         """Answer a web follow-up from host-read pages in one CLI session."""
-        if self.harness.id not in HOST_READ_HARNESSES:
-            return self.ask(prompt)
+        if self.harness.id not in HOST_READ_HARNESSES or self._own_search():
+            return self.ask(prompt + self._own_search_note())
         product = product.strip()
         question = question.strip()
         if not product:
@@ -3237,10 +3325,7 @@ class HarnessResearcher(AgentResearcher):
             if self.check_cancelled is not None:
                 self.check_cancelled()
             full_prompt = prompt + (
-                "\n\nNo pages were read for you. Search the web with your own tools, "
-                f"open at most {max(1, self.max_documents or 3)} pages, then answer: "
-                "do not keep searching. Cite only URLs you actually opened and copy "
-                "every quote verbatim from the page it came from.\n" if own_search
+                self._own_search_note() if own_search
                 else pages_note + self._page_context(sources, self.page_titles))
             if source_line and not own_search:
                 full_prompt += (

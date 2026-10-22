@@ -51,7 +51,16 @@ def _reply() -> str:
 
 @pytest.fixture
 def host_read(monkeypatch):
-    """The host's search and page read, with no socket and no service."""
+    """The host's search and page read, with no socket and no service.
+
+    And the dial: this file is about the plane that is *handed* the pages, which
+    is Kriko's search (`prefs.SEARCH_KRIKO`). The reader's default is the
+    agent's own search, where Kriko reads nothing — tested in
+    `test_every_agent_is_handed_its_pages.py`.
+    """
+    from app import prefs
+
+    monkeypatch.setattr(prefs, "DEFAULT_HARNESS_SEARCH", prefs.SEARCH_KRIKO)
     monkeypatch.setattr(
         "app.providers.openserp.searcher",
         lambda _url, **_kwargs: lambda query, limit: [{"url": URL, "title": "Report"}])

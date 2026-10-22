@@ -80,6 +80,39 @@ def harness_effort_key(harness_id: str) -> str:
     return f"harness_effort_{harness_id}".replace("-", "_")
 
 
+def harness_search_key(harness_id: str) -> str:
+    """Where this harness's web search is stored. A third dial beside them.
+
+    The reader's words: "setting for agents that use their own dedicated web
+    search as well as kriko's. use agents own web search as default since
+    kriko's is still experimental."
+    """
+    return f"harness_search_{harness_id}".replace("-", "_")
+
+
+#: Which web search a coding agent uses.
+#:
+#: `own` is the agent's own tools: it searches and reads as it was built to,
+#: and Kriko puts nothing in its brief but the question. `kriko` is the
+#: host-side search — Kriko searches, reads the pages, hands over the text, and
+#: can then check every quote an answer makes against a page it fetched itself.
+#: The agent's own is the default because it is the one that is not
+#: experimental, and because a coding agent that reaches the live web is doing
+#: what the reader installed it for.
+SEARCH_OWN = "own"
+SEARCH_KRIKO = "kriko"
+HARNESS_SEARCH_CHOICES = (SEARCH_OWN, SEARCH_KRIKO)
+DEFAULT_HARNESS_SEARCH = SEARCH_OWN
+
+#: What the search dial offers, in the words on it. The value is what is
+#: stored; the label is what the reader reads. `kriko` says it is experimental
+#: because it is: the host-side search is the newer of the two.
+HARNESS_SEARCH_LABELS = {
+    SEARCH_OWN: "The agent's own web search",
+    SEARCH_KRIKO: "Kriko's web search (experimental)",
+}
+
+
 #: One key per harness that can take a model, and one for its effort.
 #:
 #: **Derived from the roster, not listed here.** The hand-written tuple this
@@ -105,6 +138,7 @@ def _harness_ids() -> tuple[str, ...]:
 
 HARNESS_MODEL_KEYS = tuple(harness_model_key(one) for one in _harness_ids())
 HARNESS_EFFORT_KEYS = tuple(harness_effort_key(one) for one in _harness_ids())
+HARNESS_SEARCH_KEYS = tuple(harness_search_key(one) for one in _harness_ids())
 
 #: The local machine plane (B171). Address of the model server, the model it
 #: should use, the search service's address, and how long one completion may
@@ -287,7 +321,8 @@ def run_concurrency(conn) -> int:
 
 
 KEYS = (HARNESS, MODEL, SEARCH, SEARCH_FALLBACK, AGENT_ORDER, *ROLE_KEYS,
-        *HARNESS_MODEL_KEYS, *HARNESS_EFFORT_KEYS, *LOCAL_KEYS, MARKET_REGION,
+        *HARNESS_MODEL_KEYS, *HARNESS_EFFORT_KEYS, *HARNESS_SEARCH_KEYS,
+        *LOCAL_KEYS, MARKET_REGION,
         LLM_BASE_URL, *RESEARCH_KEYS,
         RUN_CONCURRENCY, CHAT_PRODUCT_ONLY, *KRIKO_AGENT_TUNING_KEYS,
         INFO_SENSITIVITY, AGENT_TRANSPORT, CODEX_TRANSPORT,
@@ -379,6 +414,20 @@ def effort_for_harness(conn, harness_id: str, override: str = "") -> str:
     """
     stored = read(conn)
     return override.strip() or stored.get(harness_effort_key(harness_id), "") or ""
+
+
+def search_for_harness(conn, harness_id: str, override: str = "") -> str:
+    """Which web search this harness uses: `own` or `kriko`.
+
+    Unlike the model and the effort there is no "the CLI's own default" to fall
+    back to — a choice is always made, and the default is the agent's own
+    search. An unreadable value is the default rather than an error: a setting
+    that stops a run from starting would be worse than the one it replaces.
+    """
+    wanted = override.strip().casefold()
+    if wanted not in HARNESS_SEARCH_CHOICES:
+        wanted = str(read(conn).get(harness_search_key(harness_id)) or "").strip().casefold()
+    return wanted if wanted in HARNESS_SEARCH_CHOICES else DEFAULT_HARNESS_SEARCH
 
 
 def effective(conn, *, model: str = "", search: str = "", harness: str = "") -> dict:
@@ -578,6 +627,14 @@ def choices(conn, app_state_path=None, *, fresh: bool = False) -> dict:
             "efforts_pending": harness.efforts_pending(one),
             "efforts_note": harness.efforts_note(one, efforts.get(one.id, [])),
             "effort_hint": one.effort_hint,
+            # The third dial: which web search this agent uses. Always offered,
+            # because every one of these CLIs can search and Kriko can search
+            # for it; which one is *better* is the reader's to decide.
+            "search": search_for_harness(conn, one.id),
+            "search_choices": [
+                {"id": choice, "label": HARNESS_SEARCH_LABELS[choice]}
+                for choice in HARNESS_SEARCH_CHOICES
+            ],
         }
         for one in found
     ]

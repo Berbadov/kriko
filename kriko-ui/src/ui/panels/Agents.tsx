@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { effortKey, modelKey, usePrefsDoc, type AgentRow } from '../../engine/settings'
+import { effortKey, modelKey, searchKey, usePrefsDoc, type AgentRow } from '../../engine/settings'
 import { usePrefs } from '../../prefs'
 import { Icon } from '../Icon'
 import { Select } from '../controls'
@@ -91,7 +91,7 @@ function AgentItem({
   const withCurrent = (list: string[], current: string) => (current && !list.includes(current) ? [current, ...list] : list)
   const models = withCurrent(agent.llms, agent.llm)
   const efforts = withCurrent(agent.efforts, agent.effort)
-  const summary = [agent.llm || 'Own default', agent.effort].filter(Boolean).join(' · ')
+  const summary = [agent.llm || 'Own default', agent.effort, agent.search === 'kriko' ? "Kriko's search" : ''].filter(Boolean).join(' · ')
 
   return (
     <li className="agent" data-open={open} data-default={isDefault}>
@@ -138,6 +138,24 @@ function AgentItem({
                   value={agent.effort}
                   options={[{ value: '', label: 'Own default' }, ...efforts.map((id) => ({ value: id, label: id }))]}
                   onChange={(value) => onChange({ [effortKey(agent)]: value })}
+                />
+              </div>
+            )}
+            {agent.search_choices && agent.search_choices.length > 0 && (
+              <div className="setting">
+                <span>
+                  Web search
+                  <small>
+                    {agent.search === 'kriko'
+                      ? 'Kriko searches and reads the pages, so every quote is checked against a page Kriko fetched.'
+                      : 'The agent searches and opens pages with its own tools.'}
+                  </small>
+                </span>
+                <Select
+                  label={`${agent.label} web search`}
+                  value={agent.search || 'own'}
+                  options={agent.search_choices.map((one) => ({ value: one.id, label: one.label }))}
+                  onChange={(value) => onChange({ [searchKey(agent)]: value })}
                 />
               </div>
             )}

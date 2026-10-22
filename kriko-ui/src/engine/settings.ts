@@ -19,6 +19,9 @@ export interface AgentRow {
   model_freeform?: boolean
   effort: string
   efforts: string[]
+  /** Which web search this agent uses: 'own' or 'kriko'. */
+  search?: string
+  search_choices?: { id: string; label: string }[]
 }
 
 export interface PrefsDoc {
@@ -65,13 +68,20 @@ export interface Spent {
 /** The key the engine stores a choice under, as `app/prefs.py` writes it. */
 export const modelKey = (agent: AgentRow) => (agent.local ? 'local_model' : `harness_model_${agent.id}`.replace(/-/g, '_'))
 export const effortKey = (agent: AgentRow) => `harness_effort_${agent.id}`.replace(/-/g, '_')
+/** The third dial: whose web search this agent uses (`prefs.HARNESS_SEARCH_KEYS`). */
+export const searchKey = (agent: AgentRow) => `harness_search_${agent.id}`.replace(/-/g, '_')
+
+const DEMO_SEARCHES = [
+  { id: 'own', label: "The agent's own web search" },
+  { id: 'kriko', label: "Kriko's web search (experimental)" },
+]
 
 const DEMO_PREFS: PrefsDoc = {
   chosen: { preferred_harness: 'coding', run_concurrency: '2', research_sources: '0', research_source_kinds: 'forums,reviews', search_provider: '', chat_product_only: '0' },
   effective: { ready: true, reason: '', harness: 'coding', harness_ready: true, harness_note: '' },
   harnesses: [
-    { id: 'coding', label: 'Coding agent', path: 'demo', llm: 'sonnet', llms: ['haiku', 'sonnet', 'opus'], effort: 'low', efforts: ['low', 'medium', 'high'] },
-    { id: 'reader', label: 'Reading agent', path: 'demo', llm: '', llms: ['small', 'large'], effort: '', efforts: [] },
+    { id: 'coding', label: 'Coding agent', path: 'demo', llm: 'sonnet', llms: ['haiku', 'sonnet', 'opus'], effort: 'low', efforts: ['low', 'medium', 'high'], search: 'own', search_choices: DEMO_SEARCHES },
+    { id: 'reader', label: 'Reading agent', path: 'demo', llm: '', llms: ['small', 'large'], effort: '', efforts: [], search: 'own', search_choices: DEMO_SEARCHES },
     { id: 'local', label: 'Local model', path: 'http://127.0.0.1:11434', local: true, llm: 'gemma4:e2b', llms: ['gemma4:e2b', 'qwen3.5:4b'], effort: '', efforts: [] },
   ],
   unusable: [],
@@ -270,6 +280,103 @@ export function useKeys() {
 
   return { doc, problem, tested, set, remove, test }
 }
+
+/** Someone else's keys, in this app only (`src/app/sharekeys.py`). */
+export interface SharedStatus {
+  /** Whether this build carries a pepper — without one a code is not app-bound. */
+  bound: boolean
+  /** How the opened grant is kept here: 'dpapi' on Windows, else 'file'. */
+  device: string
+  grant: { present: boolean; label: string; providers: string[]; state: string }
+  trial: { limit: number; used: number; left: number; available: boolean }
+  providers: string[]
+}
+
+const DEMO_SHARED: SharedStatus = {
+  bound: true,
+  device: 'demo',
+  grant: { present: false, label: '', providers: [], state: '' },
+  trial: { limit: 10, used: 3, left: 7, available: true },
+  providers: ['mercury', 'deepseek'],
+}
+
+export function useSharedAccess() {
+  const { mode } = useEngine()
+  const [doc, setDoc] = useState<SharedStatus | null>(null)
+  const [problem, setProblem] = useState('')
+  /** The code the owner just made, shown once and kept nowhere. */
+  const [code, setCode] = useState('')
+
+  const read = useCallback(async () => {
+    if (mode === 'checking') return
+    if (mode !== 'live') {
+      setDoc(structuredClone(DEMO_SHARED))
+      return
+    }
+    try {
+      setDoc(await get<SharedStatus>('/api/keys/shared/status'))
+    } catch (error) {
+      setProblem(error instanceof Error ? error.message : 'Could not read the shared access.')
+    }
+  }, [mode])
+
+  useEffect(() => {
+    void read()
+  }, [read])
+
+  const unlock = useCallback(
+    async (accessCode: string, password: string, label: string) => {
+      setProblem('')
+      if (mode !== 'live') {
+        setDoc({ ...structuredClone(DEMO_SHARED), grant: { present: true, label, providers: ['mercury', 'deepseek'], state: 'shared' } })
+        return
+      }
+      try {
+        await post('/api/keys/shared/unlock', { code: accessCode, password, label })
+        await read()
+        notifyAgentsChanged()
+      } catch (error) {
+        setProblem(error instanceof Error ? error.message : 'That code did not open.')
+      }
+    },
+    [mode, read],
+  )
+
+  const forget = useCallback(async () => {
+    setProblem('')
+    if (mode !== 'live') {
+      setDoc(structuredClone(DEMO_SHARED))
+      return
+    }
+    try {
+      setDoc(await del<SharedStatus>('/api/keys/shared'))
+      notifyAgentsChanged()
+    } catch (error) {
+      setProblem(error instanceof Error ? error.message : 'Could not forget it.')
+    }
+  }, [mode])
+
+  const make = useCallback(
+    async (password: string) => {
+      setProblem('')
+      setCode('')
+      if (mode !== 'live') {
+        setCode('demo-code-not-a-real-one')
+        return
+      }
+      try {
+        const made = await post<{ code: string }>('/api/keys/shared/make', { password })
+        setCode(made.code)
+      } catch (error) {
+        setProblem(error instanceof Error ? error.message : 'Could not make a code.')
+      }
+    },
+    [mode],
+  )
+
+  return { doc, problem, code, unlock, forget, make }
+}
+
 
 export function useSpent() {
   const { mode } = useEngine()

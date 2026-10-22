@@ -127,6 +127,10 @@ export function TopBar({
             </span>
           </button>
         )}
+        <button className="topbar-tab topbar-settings" data-tour="settings" onClick={() => showDrawer('settings')} aria-label="Settings" title="Settings: agents, keys, search, look">
+          <Icon name="gear" size={21} />
+          <span className="topbar-label">Settings</span>
+        </button>
         <button className="icon-btn" data-tour="more" onClick={onMore} aria-label="More" title="More">
           <Icon name="more" size={19} />
           {attention > 0 && (

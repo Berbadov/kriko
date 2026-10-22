@@ -353,6 +353,15 @@ def chat_brief(message: str, history: Sequence[dict]) -> str:
 #: `exactfind` from the pages, so the model weighs evidence it did not invent.
 BUYING_RULES = [
     "THE READER WANTS SOMETHING TO BUY. Find the exact product and a seller they can trust.",
+    "BEFORE YOU NAME ANY PRODUCT, do the identification and the research, in this order:",
+    "(a) the product: confirm what the reader's item is — model, variant, year, market — and what",
+    "a part has to fit; (b) its parts: name each part or consumable that matters for this question",
+    "and the code that identifies it, taken from the pages (filter, belt, pad, blade, battery,",
+    "fitting, oil grade, adapter, lamp); (c) what goes wrong: for every candidate, look for what",
+    "owners, repairers and records report failing on it, and what the pages say about fitment;",
+    "(d) only then compare candidates and name a seller. A list of products without (a) to (c) is",
+    "an incomplete answer even when the products themselves look right. Say which parts you",
+    "identified and which you could not, rather than passing over them in silence.",
     "1. Exact product. Name each item by brand, model or part number, size or capacity,",
     "and the approval or fitment it must meet. Call an item exact only when a fetched page",
     "prints its code AND states that it fits what the reader named (model, engine, year,",
@@ -396,7 +405,9 @@ BUYING_RULES = [
 PRODUCT_ONLY_RULES = [
     "THE READER CHOSE PRODUCT-ONLY PRESENTATION. Do the same complete research,",
     "candidate comparison, fitment/compatibility checks, and seller validation as",
-    "a detailed buying answer. Do not skip search, page reads, or evidence checks.",
+    "a detailed buying answer — including identifying the parts that matter and what",
+    "is reported to fail on each candidate, before you choose one. Do not skip search,",
+    "page reads, or evidence checks.",
     "Kriko renders the exact pages it found as product cards after your text, with",
     "their page images when available and a direct link. These cards are the links:",
     "do not repeat the product list or markdown URLs, and never invent a link. Return only:",
@@ -1453,6 +1464,16 @@ def run_turn(message: str, *, ask: Ask, ctx: chatdata.Context,
         if answer and answer != last_streamed_answer and (
             not last_streamed_answer or now - last_streamed_at >= 0.25
         ):
+            # A second call in the same turn — a repair after an offer, the
+            # citation revision, or the evidence review — streams its own answer
+            # from the beginning. Publishing that restart replaced everything
+            # the reader had with the first words of a near-identical draft, so
+            # the whole reply vanished and animated in again word by word. What
+            # is already on screen stays until the new draft has said at least
+            # as much.
+            if (last_streamed_answer and not answer.startswith(last_streamed_answer)
+                    and len(answer) < len(last_streamed_answer)):
+                return
             last_streamed_answer = answer
             last_streamed_at = now
             hooks.partial(snapshot(answer))

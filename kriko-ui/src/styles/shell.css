@@ -877,11 +877,27 @@
 .drawer-icon {
   display: grid;
   place-items: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 11px;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
   background: var(--panel-2);
   color: var(--ink);
+}
+
+/* The `size` prop on `Icon` loses to `.icon`'s width, so a row that should be
+   easier to see says it here. The gear is the densest path in the set and was
+   the one the reader could not find. */
+.drawer-item .icon {
+  width: 21px;
+  height: 21px;
+  stroke-width: 1.75;
+}
+
+/* Settings is one press away, at a size that can be seen. */
+.topbar-settings .icon {
+  width: 21px;
+  height: 21px;
+  stroke-width: 1.75;
 }
 
 .setting {

@@ -13,10 +13,11 @@ import copy
 import json
 import threading
 import time
+from typing import Literal
 from urllib.parse import urlsplit, urlunsplit
 
 from app import keys
-from app.providers import mistral
+from app.providers import local_search_plan, mistral
 from app.providers._http import StreamCancelled, post_json_or_why, post_sse_or_why
 from app.providers.kriko_agent_cache import (
     FETCH_TTL_SECONDS,
@@ -47,13 +48,31 @@ TOOLS = [
             "description": (
                 "Search the web. Returns source URLs, snippets, and page text "
                 "when DeepSeek can provide it. Search focused queries; batch "
-                "independent queries in one turn."
+                "independent queries in one turn. Name the kind of source you "
+                "are going to first, and put that kind's own word in the query "
+                "(a forum thread is reached with 'forum', a recall notice with "
+                "'recall', a maker's figures with 'manual')."
             ),
             "parameters": {
                 "type": "object",
                 "properties": {
                     "query": {"type": "string", "minLength": 1, "maxLength": 128},
                     "count": {"type": "integer", "minimum": 1, "maximum": MAX_RESULTS},
+                    # The agent's own choice of where to look, in the app's one
+                    # closed vocabulary (`prefs.SOURCE_KINDS`). It is not a
+                    # filter: it is what makes the decision visible in the run's
+                    # log, beside the same line the in-house search writes.
+                    "kind": {
+                        "type": "string",
+                        "enum": list(local_search_plan.KIND_ORDER),
+                        "description": (
+                            "The kind of source this search is for: owner forums "
+                            "and discussion threads, professional reviews and "
+                            "long-term tests, recalls and official notices, the "
+                            "manufacturer's own documentation, video reviews and "
+                            "teardowns, or news reports."
+                        ),
+                    },
                 },
                 "required": ["query"],
                 "additionalProperties": False,
@@ -85,7 +104,21 @@ sources and check product identity, model, variant, year, and market. Do not
 guess when identity or evidence is missing. Use only sources actually returned
 by the tools, and quote exact supplied source text. Follow the user's research
 brief and its required output format. Keep queries focused and avoid repeating
-the same search. There are bounded tool rounds and request budgets."""
+the same search. There are bounded tool rounds and request budgets.
+
+When the question is about buying, work in this order: settle what the product
+is; name the parts or consumables that matter and the code each carries, from
+the pages; research what owners and records report failing on each candidate
+and what the pages say about fitment; only then compare candidates or name a
+seller. Say which parts you could not identify rather than skipping them.
+
+Decide where to look before you search, and say so: every search names the kind
+of source it is for — owner forums and discussion threads, professional reviews
+and long-term tests, recalls and official notices, the manufacturer's own
+documentation, video reviews and teardowns, or news reports — and the query
+carries that kind's own word, because a search that does not ask for a forum
+thread does not return one. Go to more than one kind for a consequential
+question, and when a kind has nothing, say that rather than filling the gap."""
 
 _pace_lock = threading.Lock()
 _next_at: dict[str, float] = {}
@@ -191,6 +224,9 @@ def _bound_tool_calls(message: dict) -> dict:
             count = args.get("count")
             if isinstance(count, int) and not isinstance(count, bool):
                 safe["count"] = count
+            kind = str(args.get("kind") or "").strip().casefold()
+            if kind in local_search_plan.SOURCE_KINDS:
+                safe["kind"] = kind
         elif name == "fetch":
             safe = {"url": str(args.get("url") or "")[:2048]}
         else:
@@ -398,19 +434,62 @@ def _completion(*, model: str, timeout: float, api_key: str,
     return {"message": message, "usage": usage}, ""
 
 
+class _UnjoinedPool:
+    """A retrieval pool that is not joined on the way out.
+
+    `ThreadPoolExecutor`'s own context manager calls `shutdown(wait=True)`, so
+    one retrieval that never returns held the whole turn — and with it the job
+    and the reader's screen — open for as long as the socket did. The turn has
+    its own deadline (see `converse`); a worker abandoned past it is left to end
+    on its own, which the retrieval timeouts make it do.
+    """
+
+    def __init__(self, **kwargs):
+        self.pool = concurrent.futures.ThreadPoolExecutor(**kwargs)
+
+    def __enter__(self) -> concurrent.futures.ThreadPoolExecutor:
+        return self.pool
+
+    def __exit__(self, *_exc) -> Literal[False]:
+        self.pool.shutdown(wait=False, cancel_futures=True)
+        return False
+
+
 def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECONDS,
              search: bool = True, cancel_event=None, on_text=None,
              max_tool_calls: int = MAX_TOOL_CALLS, thoroughness: int = 50,
              validation_sensitivity: int = 50,
-             cache_path: str | None = None) -> mistral.Reply:
-    """Run one grounded Mercury turn, executing DeepSeek calls through APIs."""
+             cache_path: str | None = None, on_step=None) -> mistral.Reply:
+    """Run one grounded Mercury turn, executing DeepSeek calls through APIs.
+
+    `on_step` is called with one short line per retrieval, as it happens, so a
+    turn whose search is slow says so instead of holding one frozen step. It is
+    called from this thread: the caller publishes it (see
+    `apiagent.ApiAgentResearcher._run`), because the job's progress connection
+    belongs to the job thread.
+    """
     reply = mistral.Reply()
+
+    def step(text: str) -> None:
+        if on_step is None:
+            return
+        try:
+            on_step(text)
+        except Exception:  # noqa: BLE001 — a progress line cannot lose a run
+            pass
     try:
         mercury_key = keys.require("mercury")
         deepseek_key = keys.require("deepseek") if search else ""
     except Exception as error:
         reply.error = str(error)
         return reply
+    if keys.origin("mercury") == "trial":
+        # Somebody else's keys and a stranger at the door: one question, counted
+        # before the model is asked, because the owner pays for the attempt
+        # whether or not the answer turns out to be useful.
+        from app import sharekeys
+
+        step(f"free trial: {sharekeys.charge()} question(s) left on this computer")
 
     messages = [
         {"role": "system", "content": SYSTEM},
@@ -449,6 +528,8 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
         budget_calls = MAX_TOOL_CALLS
     calls_left = max(0, min(MAX_TOOL_CALLS, requested_calls, budget_calls))
     deadline = time.monotonic() + max(1.0, timeout)
+    step(f"Kriko Agent: research budget {calls_left} retrieval(s), "
+         f"{max(1.0, timeout):.0f} s")
     retrieval_cache = RetrievalCache(cache_path)
     tool_records: list[tuple[int, str, dict]] = []
 
@@ -503,11 +584,17 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
             if query not in reply.queries:
                 reply.queries.append(query)
 
-    def run_search(query: str, count: int = MAX_RESULTS) -> dict:
+    def run_search(query: str, count: int = MAX_RESULTS, kind: str = "") -> dict:
         nonlocal attempted, billable, cache_hits
         query = str(query or "").strip()
         if not query or len(query) > 128:
             return {"error": "Search query must contain 1 to 128 characters"}
+        # The agent's own choice of kind, kept only when it is one the app
+        # knows. An unrecognised word is dropped rather than guessed at, and the
+        # log line then says no kind — the same rule the in-house search keeps.
+        kind = str(kind or "").strip().casefold()
+        if kind not in local_search_plan.SOURCE_KINDS:
+            kind = ""
         try:
             if isinstance(count, bool):
                 raise ValueError
@@ -526,6 +613,7 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
                 record_query(query)
                 with meter_lock:
                     cache_hits += 1
+                step(f"search (cached): {query}")
                 for item in cached_result["results"]:
                     if isinstance(item, dict):
                         merge_source(str(item.get("url") or ""),
@@ -535,6 +623,7 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
             _pace("search")
             with meter_lock:
                 attempted += 1
+            step(f"searching kind {kind}: {query}" if kind else f"searching: {query}")
             payload = {
                 "query": query,
                 "count": count,
@@ -548,9 +637,13 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
             )
             record_query(query)
             if why:
+                step(f"search failed for kind {kind}: {query}: {why}" if kind
+                     else f"search failed: {query} ({why})")
                 return {"error": why, "results": []}
             rows = data.get("results") if isinstance(data, dict) else None
             if not isinstance(rows, list):
+                step(f"search failed for kind {kind}: {query}: invalid response" if kind
+                     else f"search failed: {query} (invalid response)")
                 return {"error": "DeepSeek Search returned an invalid response", "results": []}
             out = []
             for item in rows[:MAX_RESULTS]:
@@ -577,6 +670,11 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
             if out:
                 with meter_lock:
                     billable += 1
+            # The same line the in-house search writes, so a run's source
+            # selection reads the same whichever stack answered it: kind, words,
+            # and the sites that came back (or that nothing did).
+            step(local_search_plan.searched_line(kind, query, out,
+                                                 "DeepSeek Search returned nothing"))
             response = {"results": out}
             if out:
                 remember("search", cache_key, response, SEARCH_TTL_SECONDS)
@@ -647,7 +745,7 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
             return {"error": type(error).__name__}
 
     try:
-        with concurrent.futures.ThreadPoolExecutor(
+        with _UnjoinedPool(
                 max_workers=MAX_PARALLEL_RETRIEVALS,
                 thread_name_prefix="kriko-deepseek") as current_pool:
             for round_number in range(MAX_TOOL_ROUNDS + 1):
@@ -710,18 +808,32 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
                         query_value = str(args.get("query") or "")
                         count_value = args.get("count", 3)
                         count = count_value if isinstance(count_value, int) and not isinstance(count_value, bool) else 3
-                        future = current_pool.submit(run_search, query_value, count)
+                        future = current_pool.submit(run_search, query_value, count,
+                                                     str(args.get("kind") or ""))
                     elif name == "fetch":
                         future = current_pool.submit(fetch, str(args.get("url") or ""))
                     else:
                         future = current_pool.submit(lambda: {"error": "Unsupported tool"})
                     futures.append((call_id, future))
                 for call_id, future in futures:
-                    try:
-                        tool_result = ({"error": "Tool budget exhausted"}
-                                       if future is None else future.result())
-                    except Exception as error:
-                        tool_result = {"error": type(error).__name__}
+                    if future is None:
+                        tool_result = {"error": "Tool budget exhausted"}
+                    else:
+                        try:
+                            # Bounded by the turn's own deadline: a retrieval
+                            # that never answers must end the turn with a
+                            # reason, not hold it open.
+                            left = deadline - time.monotonic()
+                            if left <= 0:
+                                raise concurrent.futures.TimeoutError
+                            tool_result = future.result(timeout=left + 1.0)
+                        except concurrent.futures.TimeoutError:
+                            future.cancel()
+                            step("search stopped: past the research deadline")
+                            tool_result = {
+                                "error": "The search service did not answer in time"}
+                        except Exception as error:
+                            tool_result = {"error": type(error).__name__}
                     tool_message = {
                         "role": "tool", "tool_call_id": call_id,
                         "content": "",
