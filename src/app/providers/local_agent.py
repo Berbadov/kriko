@@ -199,6 +199,8 @@ class LocalAsker:
         #: for the twenty calls a quick look makes (`_MeasuredSocket._invoke`).
         self._stage_hint = ""
         self.telemetry: dict = {"queries": [], "stages": [], "repairs": 0}
+        #: What the quote repair did on the last controlled-corpus answer.
+        self.quote_repair: dict = {}
 
     @property
     def tokens_used(self) -> int | None:
@@ -320,7 +322,9 @@ class LocalAsker:
                 self.sources = delegated.sources
                 self.metrics = delegated.metrics
                 self.verification = delegated.verification
-                self.telemetry.update(stages=delegated.metrics, verification=delegated.verification)
+                self.quote_repair = delegated.quote_repair
+                self.telemetry.update(stages=delegated.metrics, verification=delegated.verification,
+                                      quote_repair=delegated.quote_repair)
         self.metrics = []
         self._started = time.monotonic()
         self._check()

@@ -79,6 +79,17 @@ def test_active_chat_turn_is_reconnectable_and_prevents_thread_deletion(http, pa
     assert http.delete(f"/api/chat/threads/{thread['thread_id']}").status_code == 200
 
 
+def test_a_pressed_mode_chip_travels_with_the_message(http):
+    tid = http.post("/api/chat/threads", json={}).json()["thread_id"]
+    posted = http.post(f"/api/chat/threads/{tid}/messages",
+                       json={"text": "Bosch S4 battery", "mode": "cheapest"})
+    assert posted.status_code == 200
+    assert http.submitted[0][1]["mode"] == "cheapest"
+    refused = http.post(f"/api/chat/threads/{tid}/messages",
+                        json={"text": "Bosch S4 battery", "mode": "free"})
+    assert refused.status_code == 422
+
+
 def test_posting_a_message_stores_it_and_starts_a_chat_turn(http):
     thread = http.post("/api/chat/threads", json={}).json()
     tid = thread["thread_id"]
@@ -92,7 +103,7 @@ def test_posting_a_message_stores_it_and_starts_a_chat_turn(http):
     assert kind == "chat_ask"
     assert params == {"thread_id": tid, "message_id": body["message_id"],
                       "text": "I need a widget with blue paint", "harness": "h1",
-                      "backend": "harness"}
+                      "backend": "harness", "mode": ""}
     messages = http.get(f"/api/chat/threads/{tid}/messages").json()["items"]
     assert [(m["role"], m["text"]) for m in messages] == [
         ("reader", "I need a widget with blue paint")]

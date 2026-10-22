@@ -2,11 +2,8 @@
   "mcpServers": {
     "kriko": {
       "type": "stdio",
-      "command": ".venv/bin/python",
-      "args": ["-m", "app.sidecar", "--mcp"],
-      "env": {
-        "PYTHONPATH": "src"
-      }
+      "command": "python3",
+      "args": ["tools/kriko_mcp.py"]
     }
   }
 }

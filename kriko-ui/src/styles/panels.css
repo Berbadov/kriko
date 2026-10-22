@@ -1034,3 +1034,52 @@
   padding-top: 8px;
   border-top: 1px solid var(--edge);
 }
+
+/* ---- a daily ceiling ---- */
+
+.cap-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink-3);
+}
+
+.cap-field input {
+  width: 92px;
+  padding: 7px 10px;
+  background: var(--panel-2);
+  border: 1px solid var(--edge-strong);
+  border-radius: 10px;
+  color: var(--ink);
+  font: inherit;
+  text-align: right;
+}
+
+.cap-field input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.cap-unit {
+  min-width: 42px;
+  font-size: 12px;
+}
+
+/* A checkout installs the folder; everyone else uses the store listing. */
+.setup-dev {
+  margin-top: 12px;
+  color: var(--ink-3);
+  font-size: 13px;
+}
+
+.setup-dev summary {
+  cursor: pointer;
+}
+
+.setup-dev .panel-note {
+  margin: 8px 0;
+}
+
+.setup-dev .btn {
+  margin-top: 4px;
+}

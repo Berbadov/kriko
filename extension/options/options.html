@@ -29,7 +29,7 @@
         reading.
       </p>
 
-      <form id="form" novalidate>
+      <form id="form" data-step="address" novalidate>
         <label for="base">The app's address and port</label>
         <input
           id="base"
@@ -56,7 +56,7 @@
 
       <p id="status" class="status" role="status" aria-live="polite"></p>
 
-      <section class="sites">
+      <section class="sites" id="sites-section" data-step="sites">
         <h2>Sites Kriko reads</h2>
         <p class="hint">
           The packs decide what to read; this page asks permission.
@@ -67,6 +67,27 @@
           <button type="button" id="recheck" class="quiet">Check again</button>
         </div>
         <p id="sites-status" class="status" role="status" aria-live="polite"></p>
+      </section>
+
+      <section class="appearance">
+        <h2>The panel</h2>
+        <p class="hint">By default the panel lets the page show through, blurred. Turn this on if that is hard to read.</p>
+        <label class="check"><input type="checkbox" id="panel-solid" />
+          Make the panel opaque.</label>
+      </section>
+
+      <section class="evidence">
+        <h2>How much doubt to show</h2>
+        <p class="hint">Every finding carries a mark for how much it stands on. This decides which ones are drawn; nothing is deleted, and hidden ones are counted with a way to show them. The app's Settings has the same choice.</p>
+        <div class="choices" role="radiogroup" aria-label="How much doubt to show">
+          <label class="check"><input type="radio" name="sensitivity" value="all" checked />
+            <span>Show everything</span></label>
+          <label class="check"><input type="radio" name="sensitivity" value="hide_thin" />
+            <span>Hide thin evidence</span></label>
+          <label class="check"><input type="radio" name="sensitivity" value="strict" />
+            <span>Strict: only solid evidence</span></label>
+        </div>
+        <p id="sensitivity-status" class="status" role="status" aria-live="polite"></p>
       </section>
 
       <section class="buying">

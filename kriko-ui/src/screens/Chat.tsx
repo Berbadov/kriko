@@ -1,14 +1,18 @@
 import { useEffect, useRef, useState, type CSSProperties, type UIEvent } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { StepPill, Timeline } from '../activity/Timeline'
-import type { AgentRef, Question, Run, Turn } from '../activity/run'
+import { FocusProvider } from '../chat/focus'
+import { groupsOf, threadUsage, turnLine } from '../chat/view'
+import type { AgentRef, Question, Run, Turn, Usage } from '../activity/run'
 import { useChat } from '../chat'
 import { useEngine, type Agent } from '../engine/Engine'
 import { useRecents } from '../engine/recents'
 import { usePrefs } from '../prefs'
-import { AgentMark } from '../ui/AgentMark'
+import { AgentMark, type AgentState } from '../ui/AgentMark'
 import { copyText } from '../ui/clipboard'
+import { ChatRail } from '../ui/ChatRail'
 import { Composer } from '../ui/Composer'
+import { ContextBar } from '../ui/ContextBar'
 import { Icon } from '../ui/Icon'
 import { DitherSky } from '../ui/DitherSky'
 import { ProductCard } from '../ui/ProductCard'
@@ -28,6 +32,15 @@ export function ChatScreen({ onOpen }: { onOpen: (lookupId: string) => void }) {
   const asking = run.status !== 'idle' ? run.questions?.[0] : undefined
   /** A question taken back into the box to be changed. `at` makes the same words count twice. */
   const [draft, setDraft] = useState<{ text: string; at: number } | null>(null)
+  /** In a narrow window the sources column is a drawer; whether it is drawn. */
+  const [railOpen, setRailOpen] = useState(false)
+  // The column and the bars read what the turns already carry: nothing is kept twice.
+  const groups = groupsOf(
+    turns,
+    run.status !== 'idle' ? { id: String(run.startedAt), prompt: run.prompt, products: run.products, pages: run.pages, running } : undefined,
+  )
+  const usage = threadUsage([...turns, ...(run.status !== 'idle' ? [run] : [])])
+  const touched = groups.reduce((total, group) => total + group.products.length + group.pages.length, 0)
   /** What was asked in this chat, oldest first, for the up arrow. */
   const asked = [...turns.map((turn) => turn.prompt), ...(run.prompt ? [run.prompt] : [])]
   const agentOf = (ref?: AgentRef): Agent =>
@@ -35,11 +48,13 @@ export function ChatScreen({ onOpen }: { onOpen: (lookupId: string) => void }) {
   const focusComposer = () => document.querySelector<HTMLTextAreaElement>('.composer-field')?.focus()
 
   return (
+    <FocusProvider reduceMotion={!m.on}>
     <section className="chat" data-thread={thread}>
       <motion.div className="sky" initial={false} animate={{ opacity: thread ? 0 : 1, y: thread ? -m.d(30) : 0 }} transition={m.tx.page} aria-hidden="true">
         <DitherSky />
       </motion.div>
 
+      <div className="chat-main">
       <div className="chat-col">
         <AnimatePresence mode="popLayout" initial={false}>
           {!thread && (
@@ -52,10 +67,6 @@ export function ChatScreen({ onOpen }: { onOpen: (lookupId: string) => void }) {
               transition={m.tx.page}
             >
               <h1>What do you want to check?</h1>
-              <div className="hello-actions">
-                <button className="btn" onClick={() => showDrawer('setup')}>Set up and verify Kriko</button>
-                <button className="btn ghost" onClick={() => showDrawer('chat')}>Chat settings</button>
-              </div>
             </motion.header>
           )}
           {thread && (
@@ -82,8 +93,10 @@ export function ChatScreen({ onOpen }: { onOpen: (lookupId: string) => void }) {
 
         <motion.div layout="position" className="dock" data-tour="composer" transition={m.tx.spring}>
           <StepPill run={run} />
+          <ContextBar usage={usage} />
           <Composer
-            onSubmit={(text, a) => start(text, a)}
+            onSubmit={(text, a, mode) => start(text, a, mode)}
+            modes
             running={running}
             onStop={stop}
             autoFocus
@@ -114,23 +127,33 @@ export function ChatScreen({ onOpen }: { onOpen: (lookupId: string) => void }) {
           )}
         </AnimatePresence>
       </div>
+      {thread && <ChatRail groups={groups} onOpen={onOpen} open={railOpen} onClose={() => setRailOpen(false)} />}
+      </div>
+      {thread && (
+        <button className="cr-toggle" onClick={() => setRailOpen((value) => !value)} aria-expanded={railOpen} aria-controls="chat-rail">
+          <Icon name="queue" size={15} />
+          <span>Sources</span>
+          <span className="mono">{touched}</span>
+        </button>
+      )}
     </section>
+    </FocusProvider>
   )
 }
 
 /** Who wrote an answer, above it. */
-function AnswerHead({ agent }: { agent?: AgentRef }) {
+function AnswerHead({ agent, state = 'idle' }: { agent?: AgentRef; state?: AgentState }) {
   if (!agent || (!agent.id && !agent.label)) return null
   return (
     <header className="answer-head">
-      <AgentMark id={agent.id} size={24} />
+      <AgentMark id={agent.id} size={28} state={state} />
       <span>{agent.label || agent.id}</span>
     </header>
   )
 }
 
 /** What a reader does with an answer: take its words, or ask again. */
-function AnswerActions({ text, onRetry }: { text: string; onRetry?: () => void }) {
+function AnswerActions({ text, onRetry, usage }: { text: string; onRetry?: () => void; usage?: Usage }) {
   const [copied, setCopied] = useState(false)
   const timer = useRef(0)
   useEffect(() => () => window.clearTimeout(timer.current), [])
@@ -151,6 +174,11 @@ function AnswerActions({ text, onRetry }: { text: string; onRetry?: () => void }
           <Icon name="retry" size={15} />
           <span>Retry</span>
         </button>
+      )}
+      {usage && (
+        <span className="act-usage mono" title={usage.used !== null ? `Largest prompt this turn: ${usage.used.toLocaleString('en-GB')} tokens` : 'This agent did not say how large its prompts were'}>
+          {turnLine(usage)}
+        </span>
       )}
     </div>
   )
@@ -298,7 +326,7 @@ function Thread({
                 {turn.rows?.some((row) => row.id === 'activity-citation-warning' || row.id === 'activity-evidence-warning') && <p className="error-note" role="alert">Some claims or references could not be verified against the supplied evidence. Check the sources before relying on this answer.</p>}
                 <AnswerHead agent={turn.agent} />
                 <Markdown text={turn.answer} live={false} />
-                <AnswerActions text={turn.answer} onRetry={newest === turn ? () => onRetry(turn) : undefined} />
+                <AnswerActions text={turn.answer} onRetry={newest === turn ? () => onRetry(turn) : undefined} usage={turn.usage} />
               </article>
             )}
             {turn.error && (
@@ -332,11 +360,12 @@ function Thread({
             // whole answer rose out of the blur again, once per poll.
             <article key={run.startedAt} className="answer rise">
               {run.rows.some((row) => row.id === 'activity-citation-warning' || row.id === 'activity-evidence-warning') && <p className="error-note" role="alert">Some claims or references could not be verified against the supplied evidence. Check the sources before relying on this answer.</p>}
-              <AnswerHead agent={run.agent} />
+              <AnswerHead agent={run.agent} state={run.status === 'running' ? 'working' : run.status === 'failed' ? 'failed' : run.status === 'done' ? 'done' : 'idle'} />
               {run.answer && <Markdown text={run.answer} live={!settled} />}
               {run.answer && settled && (
                 <AnswerActions
                   text={run.answer}
+                  usage={run.usage}
                   onRetry={() => onRetry({ id: String(run.startedAt), prompt: run.prompt, answer: run.answer, products: run.products, agent: run.agent })}
                 />
               )}

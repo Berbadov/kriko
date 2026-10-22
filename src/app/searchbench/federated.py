@@ -55,7 +55,9 @@ class FederatedRetrieval:
                     selected.append(source)
         # All retained IDs have been given to the model, so the audit never sees
         # evidence that was withheld from that model.
-        return selected
+        # A duplicate at a later rank can add richer content. Return the final
+        # merged record so the researcher and later auditor see identical text.
+        return [dict(self.sources[source["url"]]) for source in selected]
 
     async def fetch(self, url):
         url = canonical(url)

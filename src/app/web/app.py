@@ -28,7 +28,7 @@ from starlette.concurrency import run_in_threadpool
 
 from app import agentconfig, agentskill, extension as ext, logs, packautoupdate
 from app import modelcatalogue
-from app.providers import local_inference
+from app.providers import local_inference, proxypool
 from app.web.settings import KRIKO_HOME
 from app.web import origins, pipeline
 from app.web.jobs import JobRunner
@@ -56,16 +56,22 @@ from app.web.routers import (
     keys,
     live,
     local_models,
+    logs as logs_router,
+    local_runtimes,
     machine,
     marks,
+    mcp_clients,
     operations,
     packs,
     prices,
     products,
+    proxies,
     queue,
     prefs as prefs_router,
     query,
     research,
+    usage_meters as usage_meters_router,
+    search_providers,
     sites,
     subjects,
     terminal,
@@ -142,6 +148,9 @@ async def lifespan(app: FastAPI):
     # own, so an app update reaches the browser without the reader's hands.
     app.state.extension_staged_digest = ""
     app.state.firefox_staged_digest = ""
+    # Where the page readers look up the proxy pool, if the reader turned one
+    # on. Unset, they read directly, as before.
+    proxypool.remember_path(app.state.settings.app_state_path)
     try:
         target = ext.target_for(app.state.settings.store_path)
         if ext.refresh(ext.source_dir(), target):
@@ -296,6 +305,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         title="Kriko", docs_url="/api/docs", redoc_url=None, lifespan=lifespan
     )
     app.state.settings = settings
+    # What a coding agent says about its own 5-hour and weekly windows is kept
+    # beside the rest of the app's state (`app/limits.py`, `app/usage.py`). Set
+    # here and not at startup, so an app that is built is an app that keeps it.
+    from app import limits as agent_limits, usage as usage_meters
+
+    _limits_path = settings.app_state_path
+    agent_limits.set_sink(lambda agent, rows: usage_meters.save_limits(_limits_path, agent, rows))
 
     # ── the log has to be somewhere this process can actually write ───────
     #
@@ -333,6 +349,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         prefs_router.router,
         query.router,
         research.router,
+        usage_meters_router.router,
+        search_providers.router,
         subjects.router,
         analyze.router,
         appupdate.router,
@@ -347,7 +365,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         jobs.router,
         keys.router,
         live.router,
+        logs_router.router,
         local_models.router,
+        local_runtimes.router,
         machine.router,
         bench.router,
         buyer.router,
@@ -358,8 +378,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         queue.router,
         products.router,
         marks.router,
+        mcp_clients.router,
         operations.router,
         prices.router,
+        proxies.router,
         sites.router,
         terminal.router,
     ):

@@ -912,7 +912,31 @@ def _widen_for_buying(search, query: str, hits: list, cap: int) -> list:
     return [*first, *[hit for hit in more if isinstance(hit, dict)]]
 
 
-def _web_search(ctx: Context, query: str = "", buying: str = "") -> dict:
+def _widen_for_mode(search, query: str, mode: str, hits: list, cap: int) -> list:
+    """The hits, plus one search shaped for a Chat mode (see `exactfind.mode_query`).
+
+    Alternatives, prices and sellers are not on the page of the product the
+    first search found, so the mode looks once more. A failed second search is
+    not a failed turn, and a reader-provided link is never widened.
+    """
+    extra = exactfind.mode_query(query, mode, exactfind.region_of(query))
+    if not extra:
+        return hits
+    try:
+        more = search(extra, cap) or []
+    except Exception:  # noqa: BLE001 - the first search stands on its own
+        return hits
+    # Alternately, so the result cap keeps a share of both searches instead of
+    # filling up with the first one's hits.
+    first = [hit for hit in hits if isinstance(hit, dict)]
+    second = [hit for hit in more if isinstance(hit, dict)]
+    merged: list = []
+    for index in range(max(len(first), len(second))):
+        merged += first[index:index + 1] + second[index:index + 1]
+    return merged
+
+
+def _web_search(ctx: Context, query: str = "", buying: str = "", mode: str = "") -> dict:
     """Search the configured web plane and read up to three result pages.
 
     Search titles/snippets identify results only. A page excerpt is kept in a
@@ -956,6 +980,7 @@ def _web_search(ctx: Context, query: str = "", buying: str = "") -> dict:
             hits = search(query[:300], cap) or []
             if purchase:
                 hits = _widen_for_buying(search, query, hits, cap)
+            hits = _widen_for_mode(search, query, str(mode).strip().casefold(), hits, cap)
     except Exception as exc:  # noqa: BLE001 - report a failed search as a source row
         return {"rows": [], "truncated": False,
                 "note": f"web search failed: {type(exc).__name__}", "error": True}
@@ -1131,7 +1156,8 @@ SOURCES: dict[str, Source] = {s.name: s for s in (
         "web_search",
         "Searches the public web and reads up to three result pages. Page excerpts are fetched text; search titles and snippets are leads only.",
         {"query": "words to search the public web for",
-         "buying": "optional: yes when the reader wants something to buy; trusted shops are read first"},
+         "buying": "optional: yes when the reader wants something to buy; trusted shops are read first",
+         "mode": "optional: alternatives, cheapest or merchants; adds one search for what that mode is about"},
         "web pages", lambda a: f"searching the web for {_quoted(a)}", _web_search),
     Source(
         "product_match",

@@ -1,6 +1,7 @@
 """Explicit candidates and dated prices; unknown cost stays unknown."""
 
 import os
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -38,12 +39,25 @@ SEARCHES = {
 }
 
 
+PROFILE_LABELS = {
+    "m25-deepseek": "Mercury 2.5 · DeepSeek",
+    "m3-deepseek": "Mercury 3 · DeepSeek",
+    "m8-deepseek": "Ministral 8B · DeepSeek",
+    "m14-deepseek": "Ministral 14B · DeepSeek",
+    "large4-deepseek": "Large 4 · DeepSeek",
+    "m25-exa": "Mercury 2.5 · Exa",
+    "m25-tavily": "Mercury 2.5 · Tavily",
+    "m25-federated": "Mercury 2.5 · all searches",
+    "m25-verify-m3": "DeepSeek · 2.5 → 3",
+    "m25-federated-verify-m3": "All searches · 2.5 → 3",
+    "m25-parallel": "Mercury 2.5 · parallel",
+}
 def load_keys(path: Path) -> None:
     """Load only named credentials from an explicitly selected dotenv file."""
     from app.keys import parse
 
     allowed = {m.key_env for m in MODELS.values()} | {s[1] for s in SEARCHES.values()}
-    if os.name == "nt":
+    if sys.platform == "win32":
         # Desktop processes may predate a setx or Settings environment change.
         import winreg
 

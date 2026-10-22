@@ -406,10 +406,125 @@ PRODUCT_ONLY_RULES = [
 ]
 
 
+#: What a buying turn can be asked to do beyond "find me one". A small closed
+#: set of things a reader does with a product, not a vocabulary of products.
+MODES = ("alternatives", "cheapest", "merchants")
+
+#: Added to `BUYING_RULES`, never instead of them: a mode changes what the answer
+#: is *about*, and the evidence rules on exact products, codes, prices and
+#: sellers still hold for every line it prints.
+MODE_RULES = {
+    "alternatives": [
+        "MODE: ALTERNATIVES. The reader has a product in mind and wants other products",
+        "that do the same job. Do not repeat the product they named as an answer.",
+        "1. State in one line what the named product must do, from the reader's own words",
+        "and the pages: the requirement every alternative has to meet (size, fit, standard,",
+        "capacity, budget). An alternative that fails it is not listed.",
+        "2. Give 3 to 5 alternatives. For each: the exact product, what it shares with the",
+        "named one, and the one thing that differs most (price, a feature it lacks, a",
+        "variant it does not fit), each tied to a page you read.",
+        "3. Say when a fetched page does not show a requirement is met: 'not shown', never a",
+        "guess. A similar name is not a similar product.",
+    ],
+    "cheapest": [
+        "MODE: CHEAPEST. The reader wants the lowest price for this exact product.",
+        "1. Compare only the same exact product: same code, size, variant and condition",
+        "(new against used or refurbished). A cheaper different product is not a cheaper",
+        "offer; list it once, apart, and say it is a different product.",
+        "2. Order the offers from the lowest price up, each with the figure, currency and",
+        "page it came from, and say whether shipping, tax or a coupon is in the figure or",
+        "not shown. Never add, convert or estimate a price no page states.",
+        "3. A low price from a seller the pages show nothing about, or one with a red flag,",
+        "is flagged in the same line, never presented as the winner. The recommendation is",
+        "the lowest price among sellers the pages give no reason to doubt.",
+        "4. If only one price was found, say so; one price is not a comparison.",
+    ],
+    "merchants": [
+        "MODE: MERCHANTS. The same product is sold by many merchants, and the reader wants to",
+        "know which of them to trust. The question is the merchant, not the product.",
+        "1. One line per merchant (up to 6): its name, where it sells (its own shop or a",
+        "marketplace), the price on the page, and what the page shows about it:",
+        "seller_signals (a rating, an official or authorised claim, a company or tax",
+        "identity, a red flag) and source_trust. Write each as 'the page says'; these are",
+        "the merchant's claims, not a finding of Kriko's.",
+        "2. Rank them: the maker's own shop and authorised sellers first, then established",
+        "shops with a shown rating or company identity, then merchants nothing is shown",
+        "about. Say 'nothing shown' for a missing signal, never fill it in.",
+        "3. Name the one to avoid, if a page shows a red flag. Do not call a merchant safe;",
+        "say what the pages show and what they do not.",
+        "4. If the pages name one merchant only, say so and say what to look for on the",
+        "listing before paying (seller name, return terms, company identity).",
+    ],
+}
+
+# Language intents, matched on accent-folded text, in the languages readers write
+# in. They name what the reader wants done, never a product.
+_MODE_PATTERNS = {
+    "alternatives": re.compile(
+        r"\b(?:alternatives?|alternatively|similar (?:to|products?|ones?|items?)|"
+        r"something (?:like|similar)|(?:equivalents?|substitutes?|competitors?) (?:to|of|for)|"
+        r"instead of|other options?|"
+        r"alternatif\w*|muadil\w*|benzer\w*|yerine|baska secenek\w*|"
+        r"alternative[sn]?|similaires?|ersatz\w*|alternativas?)\b"),
+    "cheapest": re.compile(
+        r"\b(?:cheapest|cheaper|lowest[- ]priced?|lowest price|best price|least expensive|"
+        r"best deals?|cheap(?:ly)? (?:one|ones|option|version)|"
+        r"en ucuz\w*|ucuzu|ucuzunu|en uygun fiyat\w*|en dusuk fiyat\w*|"
+        r"moins cher|le meilleur prix|guenstigste\w*|billigste\w*|mas barato|mas baratos?)\b"),
+    "merchants": re.compile(
+        r"\b(?:(?:which|what|who|any)\b.{0,30}\b(?:sellers?|merchants?|vendors?|retailers?|shops?|stores?)|"
+        r"(?:trust(?:ed|worthy)?|reliable|reputable|legit(?:imate)?|safe)\b.{0,30}"
+        r"\b(?:sellers?|merchants?|vendors?|retailers?|shops?|stores?)|"
+        r"who sells|sellers? (?:of|for|selling)|"
+        r"hangi (?:satici|magaza)\w*|satici\w*|"
+        r"qui vend|welcher (?:verkaeufer|haendler))\b"),
+}
+
+
+#: A request for a piece of work rather than a product, in the languages readers write in.
+_WORK_REQUEST = re.compile(
+    r"^\s*(?:explain|write|translate|summari[sz]e|calculate|solve|convert|define|fix|debug|"
+    r"acikla|yaz|cevir|hesapla|coz)\b", re.I)
+
+
+def detect_mode(message: str, history: Sequence[dict] = ()) -> str:
+    """The mode a message asks for in its own words, or empty.
+
+    Alternatives first, then price, then merchants: "cheapest alternatives" is a
+    request for other products, and "cheapest trusted seller" is a price that
+    still has to come from a merchant the pages give no reason to doubt (the
+    cheapest rules say so). The words alone are not enough. "Cheapest planet" is
+    not a shopping request, so a message needs something that makes it one: a
+    buying word, a model or size, or a conversation that already read the web
+    about a product.
+    """
+    if _DIRECT_NEED.search(message) or _WORK_REQUEST.match(_folded(message)):
+        return ""
+    folded = _folded(message)
+    for mode, pattern in _MODE_PATTERNS.items():
+        found = pattern.search(folded)
+        if not found:
+            continue
+        # The mode's own word ("cheapest") is a buying word too, so it cannot be
+        # what makes the message a shopping request.
+        rest = (folded[:found.start()] + " " + folded[found.end():]).strip()
+        if (exactfind.is_purchase_request(rest) or _DIGIT_WORD.search(message)
+                or _has_web_sources(_last_sources(history))
+                or _last_sources(history) & (set(chatdata.SOURCES) - {"web_search"})):
+            return mode
+    return ""
+
+
+def mode_of(message: str, chosen: str = "", history: Sequence[dict] = ()) -> str:
+    """The reader's pressed chip, else what their words ask for, else nothing."""
+    pressed = str(chosen or "").strip().casefold()
+    return pressed if pressed in MODES else detect_mode(message, history)
+
+
 def web_answer_brief(message: str, history: Sequence[dict], rows: list[dict], note: str,
                      catalogue: dict | None = None, *, buying: bool = False,
                      identifiers: list[dict] | None = None,
-                     product_only: bool = False) -> str:
+                     product_only: bool = False, mode: str = "") -> str:
     """Answer from this turn's web source, with explicit evidence boundaries.
 
     `catalogue` is the same turn's `product_match` read, when the installation
@@ -422,6 +537,9 @@ def web_answer_brief(message: str, history: Sequence[dict], rows: list[dict], no
     with how many sites print each, when the reader wants something to buy.
     `product_only` is Chat's product-only mode: a linked shortlist instead of
     an essay, and it changes the shape of the reply, never its evidence.
+
+    `mode` is one of `MODES`: what the reader wants done with the product. Its
+    rules sit beside `BUYING_RULES`, which still apply to every line.
     """
     guidance = question_guidance(message)
     parts = [
@@ -467,6 +585,8 @@ def web_answer_brief(message: str, history: Sequence[dict], rows: list[dict], no
         ]
     if buying:
         parts += BUYING_RULES
+    if mode in MODE_RULES:
+        parts += MODE_RULES[mode]
     if product_only:
         parts += PRODUCT_ONLY_RULES
     parts += [
@@ -1195,7 +1315,8 @@ def run_turn(message: str, *, ask: Ask, ctx: chatdata.Context,
              clarify: Ask | None = None,
              history: Sequence[dict] = (), hooks=None,
              verify_answer: Callable[[str, list[dict]], dict] | None = None,
-             preferences: str = "", product_only: bool = False) -> dict:
+             preferences: str = "", product_only: bool = False,
+             mode: str = "") -> dict:
     """Plan, search and answer one message. Returns the answer and its trail.
 
     `ask_quick` is the same agent without its tools, for the one-line calls (the
@@ -1207,12 +1328,18 @@ def run_turn(message: str, *, ask: Ask, ctx: chatdata.Context,
     nothing. `preferences` is what the reader wrote about themselves, shown to
     that one pass so a detail already saved is not asked again.
 
+    `mode` is the chip the reader pressed (one of `MODES`, else ignored). Without
+    one, the words of the message may ask for a mode themselves; either way a
+    mode turn is a buying turn on the web, with that mode's rules and one more
+    search shaped for it.
+
     `hooks` takes `set(progress, message)`, `log(line)`, `partial(dict)` and
     `check()`: the job's own progress channel, so a reader sees each step as it
     happens and a cancel is honoured between steps.
     """
     hooks = hooks or _Silent()
     message = str(message or "").strip()[:16000]
+    mode = mode_of(message, mode, history)
     spent = {"calls": 0}
 
     def agent(prompt: str, *, on_text: Callable[[str], None] | None = None) -> str:
@@ -1245,7 +1372,7 @@ def run_turn(message: str, *, ask: Ask, ctx: chatdata.Context,
                 "answer": "", "questions": [question], "sources": [], "steps": [],
                 "products": [], "activity": [],
                 "agent_calls": spent["calls"], "search_rounds": 0,
-                "fallback": False, "need": {},
+                "fallback": False, "mode": mode, "need": {},
             }
 
     def answer_call(prompt: str) -> str:
@@ -1351,9 +1478,13 @@ def run_turn(message: str, *, ask: Ask, ctx: chatdata.Context,
         # without a buying verb, and an answer to it owes links the reader can
         # open. This is the same shape the router already treats as a product
         # request, so it turns on the seller checks and the links section.
-        buying = _buying_request(message)
-        web_call: dict = {"source": "web_search",
-                          "args": {"query": query, **({"buying": "yes"} if buying else {})}}
+        buying = (_buying_request(message) or bool(mode)
+                  or exactfind.is_purchase_request(message)
+                  or _bare_product_request(message, _folded(message)))
+        shape = {"buying": "yes"} if buying else {}
+        if mode:
+            shape["mode"] = mode
+        web_call: dict = {"source": "web_search", "args": {"query": query, **shape}}
         step = _step(1, web_call)
         steps.append(step)
         hooks.set(0.3, "searching the web")
@@ -1367,8 +1498,7 @@ def run_turn(message: str, *, ask: Ask, ctx: chatdata.Context,
         trail.append({"calls": [web_call], "results": [out]})
         if (not out["rows"] or not any(row.get("page_read") for row in out["rows"])) and not out.get("error") and plain and plain != query:
             # The written words found nothing; the reader's own may.
-            retry_call: dict = {"source": "web_search",
-                                "args": {"query": plain, **({"buying": "yes"} if buying else {})}}
+            retry_call: dict = {"source": "web_search", "args": {"query": plain, **shape}}
             retry_step = _step(len(steps) + 1, retry_call)
             steps.append(retry_step)
             hooks.partial(snapshot())
@@ -1416,7 +1546,8 @@ def run_turn(message: str, *, ask: Ask, ctx: chatdata.Context,
             brief = web_answer_brief(message, history, rows, out["note"],
                                      catalogue=catalogue, buying=buying,
                                      identifiers=out.get("identifiers"),
-                                     product_only=product_only and buying)
+                                     product_only=product_only and buying,
+                                     mode=mode)
             text = answer_call(brief)
             wanted = search_request(text)
             protocol_reply = bool(wanted or _SEARCH_TOOL_PREFIX.match(text)
@@ -1426,7 +1557,7 @@ def run_turn(message: str, *, ask: Ask, ctx: chatdata.Context,
             if not wanted or rounds >= MAX_SEARCH_ROUNDS or spent["calls"] >= MAX_AGENT_CALLS:
                 raise RuntimeError("The research budget ended before the agent delivered an answer; the search trail is saved.")
             rounds += 1
-            call: dict = {"source": "web_search", "args": {"query": wanted, **({"buying": "yes"} if buying else {})}}
+            call: dict = {"source": "web_search", "args": {"query": wanted, **shape}}
             next_step = _step(len(steps) + 1, call)
             steps.append(next_step)
             hooks.set(0.85, "checking another source")
@@ -1508,12 +1639,13 @@ def run_turn(message: str, *, ask: Ask, ctx: chatdata.Context,
             "products": turn_products(trail, rows, include_listings=buying),
             "activity": [dict(one) for one in activity],
             "agent_calls": spent["calls"], "search_rounds": rounds,
-            "fallback": False, "need": {"product": message, "requests": [one["text"] for one in history if one.get("role") == "reader"]},
+            "fallback": False, "mode": mode,
+            "need": {"product": message, "requests": [one["text"] for one in history if one.get("role") == "reader"]},
             "verification": {"status": "unverified" if unverified else "references_checked",
                              "unverified_urls": unverified, "claim_support": review},
         }
 
-    route = route_message(message, history)
+    route = "web" if mode else route_message(message, history)
     if route == "chat":
         hooks.set(0.9, "writing the answer")
         text = answer_call(chat_brief(message, history))
@@ -1538,7 +1670,7 @@ def run_turn(message: str, *, ask: Ask, ctx: chatdata.Context,
             "answer": answer, "sources": [], "steps": [], "products": [],
             "activity": [],
             "agent_calls": spent["calls"], "search_rounds": 0,
-            "fallback": False, "need": {},
+            "fallback": False, "mode": mode, "need": {},
         }
 
     if route == "web":
@@ -1608,6 +1740,6 @@ def run_turn(message: str, *, ask: Ask, ctx: chatdata.Context,
         "activity": [dict(one) for one in activity],
         "agent_calls": spent["calls"],
         "search_rounds": rounds,
-        "fallback": fallback,
+        "fallback": fallback, "mode": mode,
         "need": need,
     }

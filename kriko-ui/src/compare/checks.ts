@@ -1,4 +1,5 @@
 import { get, seg } from '../engine/api'
+import { evidenceOf, type Evidence as Thinness } from '../engine/thinness'
 
 /** A saved check, read for the table. The table is the engine's answers lined
  *  up and nothing else: a check's own claims, and the specifications of the
@@ -12,7 +13,15 @@ export interface Evidence {
   quote: string
   /** The engine's own word. "refutes" reads against the claim. */
   stance: string
+  /** Where the engine puts this source for the reader. Absent when it could not say. */
+  standing?: Standing
+  /** The kind of site, in the pack's own word. */
+  tier?: string
 }
+
+export type Standing = 'trusted' | 'neutral' | 'low'
+
+const standingOf = (value: unknown): Standing | undefined => (value === 'trusted' || value === 'neutral' || value === 'low' ? value : undefined)
 
 export interface Risk {
   key?: string
@@ -23,6 +32,8 @@ export interface Risk {
   sources: Evidence[]
   applicability?: string
   advice?: string
+  /** How thin the evidence is, as the engine derived it from the claim. Absent when the row had none. */
+  evidence?: Thinness
 }
 
 export interface Spec {
@@ -77,10 +88,11 @@ function riskFrom(claim: Record<string, unknown>): Risk {
     applicability: typeof claim.applicability === 'string' ? claim.applicability : claim.applicability && typeof claim.applicability === 'object'
       ? [text((claim.applicability as Record<string, unknown>).status), text((claim.applicability as Record<string, unknown>).reason)].filter(Boolean).join(': ') : '',
     advice: text(claim.advice),
+    evidence: evidenceOf(claim.evidence),
     sources: list(claim.sources)
       .map((s) => {
         const url = text(s.url)
-        return { host: text(s.domain) || hostOf(url), url, quote: text(s.quote), stance: text(s.stance) }
+        return { host: text(s.domain) || hostOf(url), url, quote: text(s.quote), stance: text(s.stance), standing: standingOf(s.standing), tier: text(s.tier) || undefined }
       })
       .filter((s) => s.url || s.host),
   }
@@ -198,12 +210,25 @@ export function demoCheck(lookupId: string, name: string): Check {
   DEMO_TITLES.forEach((title, i) => {
     const level = DEMO_LEVELS[(seed + i * 3) % DEMO_LEVELS.length]
     if (!level) return
+    // Every third demo finding stands on one forum post, and every fourth on a single page.
+    const lone = (seed + i) % 3 === 0
+    const single = (seed + i) % 4 === 0
     risks.push({
       title,
       level,
       disputed: (seed + i) % 7 === 0,
       body: `${name} has a report about ${title.toLowerCase()}. Read the sources before you buy.`,
-      sources: [{ host: 'maker.example.test', url: 'https://maker.example.test', quote: `A reader reports a ${title.toLowerCase()} problem.`, stance: 'supports' }],
+      evidence: lone
+        ? { level: 'thin', reasons: [{ code: 'single_source', text: 'Only one site says this. Nothing else confirms it yet.' }, { code: 'low_trust', text: 'The best source for this is a low-trust kind of site, such as a forum or an ad-driven blog.' }] }
+        : single
+          ? { level: 'partial', reasons: [{ code: 'single_source', text: 'Only one site says this. Nothing else confirms it yet.' }] }
+          : { level: 'solid', reasons: [] },
+      sources: (lone
+        ? [{ host: 'forum.example.test', url: 'https://forum.example.test', quote: `A reader reports a ${title.toLowerCase()} problem.`, stance: 'supports', standing: 'low', tier: 'forum_ugc' }]
+        : [
+            { host: 'maker.example.test', url: 'https://maker.example.test', quote: `The maker lists ${title.toLowerCase()} in its service notes.`, stance: 'supports', standing: 'trusted', tier: 'manufacturer' },
+            ...(single ? [] : [{ host: 'club.example.test', url: 'https://club.example.test', quote: `Owners report a ${title.toLowerCase()} problem.`, stance: 'supports', standing: 'neutral', tier: 'specialist' }]),
+          ]) as Evidence[],
     })
   })
   return {

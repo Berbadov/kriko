@@ -20,6 +20,7 @@ from unittest import mock
 
 from app.agentbench import checks, simulated
 from app.agentbench.web import FakeWeb
+from app.tuning import failures
 
 if TYPE_CHECKING:
     from app.web.jobs import Progress
@@ -174,11 +175,22 @@ def run_trial(task: dict, agent: str, *, rep: int = 1, profile: str = "reader",
             effort_settled=str(getattr(researcher, "effort_settled", "") or ""),
             harness_id=info["harness_id"], error=error)
         graded = checks.grade(observation)
+        resolved = checks.resolved(graded) and not error
+        # Why it failed, as classes a report can count (`tuning.failures`).
+        # The quote findings read the raw reply against the pages the agent
+        # was actually shown; an agent that browses for itself was shown
+        # nothing Kriko can see, so there is no quote to hold against a page.
+        quote_findings = ([] if resolved or observation.shown is None or not observation.reply
+                          else failures.classify_reply(observation.reply, observation.shown)[:6])
+        trial_failures = ([] if resolved else failures.classify_trial({
+            "error": error, "checks": [one.as_dict() for one in graded],
+            "quote_findings": quote_findings}))
         return {
             "task": task["id"], "dimension": task.get("dimension", ""),
             "agent": agent, "rep": rep, "profile": profile,
-            "resolved": checks.resolved(graded) and not error,
+            "resolved": resolved,
             "error": error,
+            "failures": trial_failures, "quote_findings": quote_findings,
             "checks": [one.as_dict() for one in graded],
             "claims": checks.delivered_ids(observation),
             "measure": {

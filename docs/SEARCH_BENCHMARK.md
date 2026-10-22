@@ -11,8 +11,12 @@ costs, failures, and statistical comparisons.
 This is an experimental harness in `app.searchbench`. It does not select the
 application's research plane. Run it from the project root with the pipeline
 dependencies installed (`httpx`; HTTP/2 additionally needs `h2`).
+application's research plane. Install its optional dependencies and run it from
+the project root:
 
 ```powershell
+.venv/Scripts/python.exe -m pip install -e ".[searchbench]"
+
 .venv/Scripts/python.exe -m app.searchbench list
 
 # Search latency and content availability, without an answer model.

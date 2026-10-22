@@ -1,0 +1,134 @@
+{
+  "note": "Invented products and invented findings, drawn in the real extension panel (see capture.mjs). Nothing here assesses a real brand.",
+  "products": {
+    "hatchback": {
+      "title": "Hatchback D · 2017",
+      "label": "Hatchback D",
+      "pack": "example.cars",
+      "claims": [
+        {
+          "title": "Water gets into the rear footwell",
+          "severity": "high", "strength": "reported", "domain": "body",
+          "body": "Owners of this generation report a damp rear carpet after rain. The usual cause is a blocked drain in the boot channel, and it shows as a water line in the spare-wheel well.",
+          "advice": "Lift the boot floor and look for a water line or a musty smell.",
+          "sources": [{ "title": "Owner forum thread", "domain": "example.org", "url": "https://example.org/forum/hatchback-d-damp" }]
+        },
+        {
+          "title": "Timing belt due at 6 years or 90,000 km",
+          "severity": "medium", "strength": "documented", "domain": "engine",
+          "body": "The service schedule calls for a belt change at 6 years or 90,000 km, whichever comes first. A car sold at 7 years with no invoice may be overdue.",
+          "advice": "Ask for the invoice for the last belt and water-pump change.",
+          "sources": [{ "title": "Service schedule", "domain": "example.org", "url": "https://example.org/manual/schedule" }]
+        },
+        {
+          "title": "Dual-clutch judders when pulling away",
+          "severity": "medium", "strength": "reported", "domain": "transmission",
+          "body": "A shudder from a standstill is a common complaint on the automatic version, worst in stop-start traffic.",
+          "advice": "Drive it in stop-start conditions, not only on a clear road.",
+          "sources": [{ "title": "Repair thread", "domain": "example.org", "url": "https://example.org/forum/dct-judder" }]
+        },
+        {
+          "title": "Screen reboots on cold mornings",
+          "severity": "low", "strength": "reported", "domain": "electrical",
+          "body": "The infotainment unit restarts a few times after a cold start. A software update stops it.",
+          "sources": []
+        }
+      ]
+    },
+    "laptop": {
+      "title": "Laptop A · 256 GB",
+      "label": "Laptop A",
+      "pack": "example.laptops",
+      "claims": [
+        {
+          "title": "The review tested the 1 TB model, not 256 GB",
+          "severity": "high", "strength": "documented", "domain": "storage",
+          "body": "The headline speed comes from a review of the 1 TB version. The 256 GB drive has fewer chips and is slower in the same test lineup.",
+          "advice": "Look for a test of the 256 GB configuration before trusting the headline speed.",
+          "sources": [{ "title": "Review test sheet", "domain": "example.org", "url": "https://example.org/review/laptop-a" }]
+        },
+        {
+          "title": "Fan ramps up under light load",
+          "severity": "medium", "strength": "reported", "domain": "cooling",
+          "body": "Several owners report the fan spinning up during video calls and browsing, not only under heavy work.",
+          "advice": "Run a video call for ten minutes and listen.",
+          "sources": [{ "title": "Owner reports", "domain": "example.org", "url": "https://example.org/forum/laptop-a-fan" }]
+        },
+        {
+          "title": "Charging port loosens over time",
+          "severity": "medium", "strength": "reported", "domain": "power",
+          "body": "The left charging port works loose after a few months of daily use on some units.",
+          "advice": "Wiggle the cable gently in each port when you inspect it.",
+          "sources": [{ "title": "Repair guide", "domain": "example.org", "url": "https://example.org/repair/laptop-a-port" }]
+        },
+        {
+          "title": "Battery claim is for low-brightness video",
+          "severity": "low", "strength": "documented", "domain": "battery",
+          "body": "The advertised battery life was measured with video playback at a low screen brightness.",
+          "sources": []
+        }
+      ]
+    },
+    "headphones": {
+      "title": "Headphones B · Wireless",
+      "label": "Headphones B",
+      "pack": "example.audio",
+      "claims": [
+        {
+          "title": "Hinge cracks near the swivel",
+          "severity": "high", "strength": "reported", "domain": "build",
+          "body": "A hairline crack appears where the earcup meets the headband after several months of folding them into a bag.",
+          "advice": "Check the plastic around both swivels in good light.",
+          "sources": [{ "title": "Teardown notes", "domain": "example.org", "url": "https://example.org/teardown/headphones-b" }]
+        },
+        {
+          "title": "Ear-pad foam flakes after a year",
+          "severity": "medium", "strength": "reported", "domain": "comfort",
+          "body": "The pad covering peels with sweat and warmth. Replacement pads are sold separately.",
+          "advice": "Ask whether pads are included for replacement and what they cost.",
+          "sources": [{ "title": "Long-term review", "domain": "example.org", "url": "https://example.org/review/headphones-b" }]
+        },
+        {
+          "title": "Hiss with noise cancelling on early firmware",
+          "severity": "low", "strength": "reported", "domain": "audio",
+          "body": "A faint hiss in quiet rooms is fixed by a firmware update released after launch.",
+          "sources": []
+        }
+      ]
+    },
+    "espresso": {
+      "title": "Espresso machine C · 15 bar",
+      "label": "Espresso machine C",
+      "pack": "example.coffee",
+      "claims": [
+        {
+          "title": "Pump gets loud and weak after a year",
+          "severity": "high", "strength": "reported", "domain": "pump",
+          "body": "Owners report the vibration pump turning noisy and losing pressure after about 12 months of daily use.",
+          "advice": "Ask for the purchase date and whether the pump has been replaced.",
+          "sources": [{ "title": "Owner forum thread", "domain": "example.org", "url": "https://example.org/forum/espresso-c-pump" }]
+        },
+        {
+          "title": "Scale builds up fast in hard water",
+          "severity": "medium", "strength": "documented", "domain": "boiler",
+          "body": "The small boiler scales quickly. The manual asks for descaling every four to six weeks in hard-water areas.",
+          "advice": "Look for white deposits and ask how often it was descaled.",
+          "sources": [{ "title": "Service manual", "domain": "example.org", "url": "https://example.org/manual/espresso-c" }]
+        },
+        {
+          "title": "Steam wand seal leaks",
+          "severity": "medium", "strength": "reported", "domain": "steam",
+          "body": "A slow drip from the steam wand appears once the rubber seal hardens, usually after two to three years.",
+          "advice": "Run the steam wand, then watch for drips when it is off.",
+          "sources": [{ "title": "Repair thread", "domain": "example.org", "url": "https://example.org/forum/espresso-c-seal" }]
+        },
+        {
+          "title": "Drip-tray sensor sticks",
+          "severity": "low", "strength": "reported", "domain": "body",
+          "body": "The float in the drip tray sticks and shows an empty-tank warning while the tank is full.",
+          "sources": []
+        }
+      ]
+    }
+  }
+}

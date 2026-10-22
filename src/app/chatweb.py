@@ -14,8 +14,9 @@ import socket
 import urllib.error
 import urllib.parse
 import urllib.request
+from functools import partial
 
-from app.providers import fetch, network
+from app.providers import fetch, network, proxypool
 from kriko.research import Fetched
 
 MAX_BYTES = 2_000_000
@@ -72,9 +73,12 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
         return None
 
 
-def _open_one(url: str, timeout: float):
-    """Open one request, returning HTTPError redirects as response objects."""
-    opener = urllib.request.build_opener(_NoRedirect())
+def _open_one(url: str, timeout: float, via=None):
+    """Open one request, returning HTTPError redirects as response objects.
+
+    `via` is an opener that connects through a proxy (`proxypool.Router.opener`).
+    """
+    opener = via or urllib.request.build_opener(_NoRedirect())
     request = urllib.request.Request(url, headers={"user-agent": USER_AGENT})
     try:
         return opener.open(request, timeout=timeout)
@@ -84,8 +88,68 @@ def _open_one(url: str, timeout: float):
         return response
 
 
-def reader(timeout: float = 5.0, *, check_cancelled=None):
-    """Make a `fetch.reader` compatible callable with public-hop validation."""
+def _open(current: str, timeout: float, checker, router):
+    """The response for one hop, or None when the page cannot be read.
+
+    Direct, as it always was. With a proxy pool on (Settings, off by default)
+    a host is read through the pool only after a direct read of it was
+    measured as refused (403, 429) or answered a bot check
+    (`proxypool.should_route`): nothing here names a site.
+    """
+    host = urllib.parse.urlsplit(current).hostname or ""
+
+    def direct():
+        return network.urlopen(current, timeout=timeout, check=checker, opener=_open_one)
+
+    if router is None:
+        return direct()
+    if not router.should_route(host):
+        response = direct()
+        if response.getcode() not in proxypool.BLOCK_STATUSES:
+            return response
+        response.close()
+        router.note_blocked(host)
+    if not router.robots_allow(current):
+        router.say(f"{host}: robots.txt asks not to be read, so it was not retried through a proxy")
+        router.note("unreadable")
+        return None
+    tried = router.candidates()
+    if not tried:
+        router.say(f"{host}: no healthy proxy is left; reading directly")
+        router.note("direct_fallbacks")
+        return direct()
+    for proxy in tried:
+        if checker is not None:
+            checker()
+        via = router.opener(proxy, _NoRedirect())
+        try:
+            response = network.urlopen(current, timeout=timeout, check=checker,
+                                       opener=partial(_open_one, via=via))
+        except (urllib.error.URLError, OSError) as error:
+            router.retire(proxy, type(getattr(error, "reason", error)).__name__)
+            continue
+        code = response.getcode()
+        if code in proxypool.PROXY_FAILURES:
+            response.close()
+            router.retire(proxy, f"HTTP {code}")
+            continue
+        if code in proxypool.BLOCK_STATUSES:
+            response.close()
+            continue
+        router.say(f"{host}: read through {router.label(proxy)}")
+        router.note("proxied_reads")
+        return response
+    router.say(f"{host}: could not be read, still blocked after {len(tried)} proxies")
+    router.note("unreadable")
+    return None
+
+
+def reader(timeout: float = 5.0, *, check_cancelled=None, proxies=None):
+    """Make a `fetch.reader` compatible callable with public-hop validation.
+
+    `proxies` is `proxypool.reader_options()["proxies"]` when the reader has
+    turned the pool on, and absent otherwise, which is every other case.
+    """
 
     def read(url: str) -> Fetched:
         current = str(url or "")
@@ -99,8 +163,10 @@ def reader(timeout: float = 5.0, *, check_cancelled=None):
             if checker is not None:
                 checker()
             try:
-                with network.urlopen(current, timeout=timeout, check=checker,
-                                     opener=_open_one) as response:
+                opened = _open(current, timeout, checker, proxies)
+                if opened is None:
+                    return Fetched("")
+                with opened as response:
                     status = response.getcode()
                     if status in REDIRECTS:
                         location = str(response.headers.get("Location") or "").strip()
@@ -144,6 +210,8 @@ def reader(timeout: float = 5.0, *, check_cancelled=None):
                         markup = response.read(MAX_BYTES).decode(charset, "replace")
                         text = fetch.to_text(markup)
                         if fetch.challenged(text):
+                            if proxies is not None:
+                                proxies.note_blocked(urllib.parse.urlsplit(current).hostname or "")
                             return Fetched("")
                         image = _public_url(fetch.image_url(markup, current))
                         return Fetched(text, fetch.published_at(markup), image)

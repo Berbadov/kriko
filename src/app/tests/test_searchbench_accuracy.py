@@ -143,6 +143,25 @@ def test_verification_charges_both_models_and_distinguishes_draft_latency(monkey
     asyncio.run(exercise())
 
 
+def test_federation_returns_the_merged_evidence_that_the_auditor_will_see(monkeypatch):
+    for key in ("DEEPSEEK_API_KEY", "EXA_API_KEY", "TAVILY_API_KEY"):
+        monkeypatch.setenv(key, "fake")
+    def respond(request):
+        if "deepseek" in request.url.host:
+            return httpx.Response(200, json={"results": [
+                {"url": "https://other.test/first", "content": "Other page"},
+                {"url": "https://same.test/page", "content": "Full evidence from a later rank"}]})
+        return httpx.Response(200, json={"results": [{"url": "https://same.test/page", "content": "Short snippet"}]})
+    async def exercise():
+        async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
+            retrieval = FederatedRetrieval(Wire(client))
+            returned = await retrieval.search("query")
+            source = next(s for s in returned if s["url"] == "https://same.test/page")
+            assert source == retrieval.sources[source["url"]]
+            assert source["text"] == "Full evidence from a later rank" and source["has_page_content"]
+    asyncio.run(exercise())
+
+
 @pytest.mark.parametrize("rate,expected", [(None, None), (.008, .008)])
 def test_tavily_dollars_require_an_explicit_comparison_rate(monkeypatch, rate, expected):
     monkeypatch.setenv("TAVILY_API_KEY", "fake")

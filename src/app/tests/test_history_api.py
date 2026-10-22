@@ -70,8 +70,8 @@ def test_history_stays_empty_when_nothing_was_asked(client):
 
 
 def test_settings_round_trip_through_the_api(client):
-    assert client.get("/api/settings").json() == {}
+    assert client.get("/api/settings").json() == {"info_sensitivity": "all"}
     client.post("/api/settings", json={"values": {"mode": "author"}})
-    assert client.get("/api/settings").json() == {"mode": "author"}
+    assert client.get("/api/settings").json() == {"mode": "author", "info_sensitivity": "all"}
 
 

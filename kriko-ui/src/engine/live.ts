@@ -2,6 +2,7 @@ import { useCallback, useEffect, useReducer, useRef, useState } from 'react'
 import { EMPTY, runReducer, turnOf, type Product, type Row, type RunApi, type Turn } from '../activity/run'
 import { EngineError, get, post, postQuestion, seg, type ApiActivity, type ApiFeedEvent, type ApiJob, type ApiMessage, type ApiProduct, type ApiStep, type ApiTurn } from './api'
 import { threadsChanged } from './threads'
+import { pagesFrom, usageFrom } from '../chat/view'
 
 /** A real turn: ask the engine, then read the job every 700 ms until it ends.
  *  The job's result holds the turn so far: its steps, and the answer once it
@@ -168,7 +169,7 @@ export function useLiveRun(): RunApi {
         if (ACTIVE.has(current.state)) {
           dispatch({
             type: 'replace',
-            patch: { rows: rowsFrom(turn.steps ?? [], seen.current, turn.activity, turn.sources, current.feed), answer: turn.answer ?? '', products: productsFrom(turn.products), followups: turn.followups ?? [], questions: turn.questions ?? [], answerFinal: turn.answer_final === true },
+            patch: { rows: rowsFrom(turn.steps ?? [], seen.current, turn.activity, turn.sources, current.feed), answer: turn.answer ?? '', products: productsFrom(turn.products), followups: turn.followups ?? [], questions: turn.questions ?? [], pages: pagesFrom(turn.activity, turn.sources), usage: usageFrom(turn), answerFinal: turn.answer_final === true },
           })
           timer.current = window.setTimeout(() => void poll(jobId, threadId), POLL_MS)
           return
@@ -189,6 +190,9 @@ export function useLiveRun(): RunApi {
               ...(last?.agent?.id ? { agent: { id: last.agent.id, label: last.agent.label || last.agent.id } } : {}),
               followups: finished.followups ?? [],
               questions: last?.questions ?? finished.questions ?? [],
+              pages: pagesFrom(finished.activity, finished.sources),
+              // The job that answered recorded what it spent; the message points at it.
+              usage: usageFrom(last?.spend ?? turn),
               answerFinal: true,
             },
           })
@@ -215,7 +219,7 @@ export function useLiveRun(): RunApi {
   )
 
   const start = useCallback<RunApi['start']>(
-    (prompt, agent) => {
+    (prompt, agent, mode) => {
       clear()
       seen.current = new Map()
       job.current = ''
@@ -235,6 +239,7 @@ export function useLiveRun(): RunApi {
             text: prompt,
             harness: agent.backend === 'local' ? '' : agent.id,
             backend: agent.backend,
+            ...(mode ? { mode } : {}),
           })
           job.current = sent.job_id
           threadsChanged()
@@ -291,6 +296,8 @@ export function useLiveRun(): RunApi {
             turn.rows = rowsFrom(message.steps ?? [], seen.current, message.activity, message.sources, message.feed)
             turn.followups = message.followups ?? []
             turn.questions = message.questions ?? []
+            turn.pages = pagesFrom(message.activity, message.sources)
+            turn.usage = usageFrom(message.spend)
           }
         }
         const waiting = data.job_id && found.length && !found[found.length - 1].answer ? found.pop() : undefined

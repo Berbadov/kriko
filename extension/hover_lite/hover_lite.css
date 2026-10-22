@@ -37,6 +37,12 @@
   --low-border:  rgba(61,220,151,0.30);
   --low-ink:     #3ddc97;
 
+  /* Data companions to the brand blue, the app's own (kriko-ui tokens.css). */
+  --violet:      #9d8cff;
+  --teal:        #38d9e3;
+  --mint:        #52e5b3;
+  --sky:         #6cc6ff;
+
   /* Design system: brand, ice, LED, bezel, glass, well */
   --brand:       #3d6bff;
   --brand-hover: #5a82ff;
@@ -54,6 +60,17 @@
   --glass-3:     rgba(255, 255, 255, 0.1);
   --well:        #0f121a;
   --border-control: rgba(255,255,255,0.16);
+
+  /* The panel lets the page show through (#260). The colour is kept as bare
+     channels so one alpha can sit over it; the alpha and the backdrop are
+     tuned per theme so the three text levels stay at or above 4.5:1 over the
+     worst page there is (a white one under the dark panel, a black one under
+     the light one; a test computes it from these very values). `brightness` on the dark backdrop is what pays for that:
+     it is a pane of smoked glass, not a clear one. Settings can make it
+     opaque (`data-glass="solid"`), and so does the system's own request. */
+  --bg-panel-rgb: 9, 11, 17;
+  --glass-panel-alpha: 0.72;
+  --glass-backdrop: blur(16px) saturate(1.6) brightness(0.6);
 
   /* Accent, resolved from the panel's alias */
   --accent:      #7b98ff;
@@ -121,6 +138,9 @@
   --light-glass-3:      rgba(16, 20, 40, 0.10);
   --light-well:         #f2f3f7;
   --light-border-control: rgba(12,18,40,0.17);
+  --light-bg-panel-rgb: 242, 243, 247;
+  --light-glass-panel-alpha: 0.88;
+  --light-glass-backdrop: blur(16px) saturate(1.6);
   --light-accent:       #2448d6;
 
   --light-hover-face:  #e9ecf4;
@@ -261,6 +281,10 @@
     --med-surface: var(--light-med-surface);
     --med-border: var(--light-med-border);
     --med-ink: var(--light-med-ink);
+    --violet: #6e5bf2;
+    --teal: #0aa3b2;
+    --mint: #12a66a;
+    --sky: #2b8ee0;
     --low-surface: var(--light-low-surface);
     --low-border: var(--light-low-border);
     --low-ink: var(--light-low-ink);
@@ -280,6 +304,9 @@
     --glass-3: var(--light-glass-3);
     --well: var(--light-well);
     --border-control: var(--light-border-control);
+    --bg-panel-rgb: var(--light-bg-panel-rgb);
+    --glass-panel-alpha: var(--light-glass-panel-alpha);
+    --glass-backdrop: var(--light-glass-backdrop);
     --accent: var(--light-accent);
     --hover-face: var(--light-hover-face);
     --hover-edge: var(--light-hover-edge);
@@ -321,6 +348,10 @@
   --med-surface: var(--light-med-surface);
   --med-border: var(--light-med-border);
   --med-ink: var(--light-med-ink);
+  --violet: #6e5bf2;
+  --teal: #0aa3b2;
+  --mint: #12a66a;
+  --sky: #2b8ee0;
   --low-surface: var(--light-low-surface);
   --low-border: var(--light-low-border);
   --low-ink: var(--light-low-ink);
@@ -340,6 +371,9 @@
   --glass-3: var(--light-glass-3);
   --well: var(--light-well);
   --border-control: var(--light-border-control);
+  --bg-panel-rgb: var(--light-bg-panel-rgb);
+  --glass-panel-alpha: var(--light-glass-panel-alpha);
+  --glass-backdrop: var(--light-glass-backdrop);
   --accent: var(--light-accent);
   --hover-face: var(--light-hover-face);
   --hover-edge: var(--light-hover-edge);
@@ -362,6 +396,20 @@
   --shadow-card: var(--light-shadow-card);
   --well-shadow: var(--light-well-shadow);
   color-scheme: light;
+}
+
+/* Opaque, for a reader who finds the glass hard to read: the Settings choice
+   (`data-glass="solid"` on the host) or the system's own request for less
+   transparency. After both light mappings so it wins over either. */
+:host([data-glass="solid"]) {
+  --glass-panel-alpha: 1;
+  --glass-backdrop: none;
+}
+@media (prefers-reduced-transparency: reduce) {
+  :host, :host([data-theme]), :host:not([data-theme="dark"]) {
+    --glass-panel-alpha: 1;
+    --glass-backdrop: none;
+  }
 }
 
 /* Motion profiles. Standard is what the tokens above already hold; Calm and
@@ -447,7 +495,8 @@
   z-index: 2147483000;
   font-family: var(--font-body);
   color: var(--fg);
-  background: var(--bg-panel);
+  -webkit-backdrop-filter: var(--glass-backdrop);
+  backdrop-filter: var(--glass-backdrop);
   border: 1px solid var(--border);
   overflow: hidden;
   display: flex;
@@ -462,7 +511,7 @@
 
 .lite-task-log { margin-top: 12px; }
 .lite-task-log summary { cursor: pointer; }
-.lite-task-log[data-active="true"] summary::before { content: "● "; color: var(--low-ink); animation: lite-asked-breathe 1.5s ease-in-out infinite; }
+.lite-task-log[data-active="true"] summary::before { content: ""; display: inline-block; width: 3px; height: 10px; margin-right: 7px; vertical-align: -1px; border-radius: 1.5px; background: var(--low-ink); animation: lite-asked-breathe 1.5s ease-in-out infinite; }
 .lite-task-log-controls { display: flex; flex-wrap: wrap; gap: 8px; }
 .lite-task-log-text { max-height: 240px; overflow-y: auto; white-space: pre-wrap; overflow-wrap: anywhere; font: 11px/1.5 var(--font-code); }
 .lite-quick-sources a { color: var(--low-ink); }
@@ -1731,6 +1780,98 @@
 @media (prefers-reduced-motion: reduce) {
   .lite-progress-fill { animation: none; transition: none; background: var(--accent); }
 }
+/* The run in flight, as its real stages (`run_progress.js`): one segment per
+   stage, filled as the run's own log reaches it, and the facts the run has
+   written beneath. No width here is a share of anything. The current segment
+   breathes so a long stage reads as alive without claiming to be moving. */
+.lite-run { margin: 8px 0 2px; }
+.lite-run[hidden] { display: none; }
+/* The stage bar is a stepper of four pixel tiles joined by a dashed pixel line,
+   the app's own (kriko-ui/src/styles/shell.css, .pstep). A tile is lit once its
+   stage is done, the current one carries a caret, and no length here is a share
+   of anything: the line only says which stages have been reached. */
+.lite-run-bar {
+  --cell: 4px;
+  --gap: 2px;
+  display: flex;
+  align-items: flex-start;
+  padding-top: 12px;
+}
+.lite-run-seg {
+  position: relative;
+  display: flex;
+  flex: 1 1 0;
+  align-items: flex-start;
+  min-width: 0;
+}
+.lite-run-seg:first-child { flex: 0 0 auto; }
+.lite-run-seg:nth-child(1) { --seg: var(--violet); }
+.lite-run-seg:nth-child(2) { --seg: var(--brand-bright); }
+.lite-run-seg:nth-child(3) { --seg: var(--sky); }
+.lite-run-seg:nth-child(4) { --seg: var(--teal); }
+/* The dashed pixel line that leads to this tile. */
+.lite-run-seg:not(:first-child)::before {
+  content: "";
+  flex: 1 1 0;
+  height: 4px;
+  margin: 8px 5px 0;
+  background: var(--led-off);
+  -webkit-mask: repeating-linear-gradient(90deg, #000 0 var(--cell), transparent var(--cell) calc(var(--cell) + var(--gap)));
+  mask: repeating-linear-gradient(90deg, #000 0 var(--cell), transparent var(--cell) calc(var(--cell) + var(--gap)));
+}
+.lite-run-seg[data-state="done"]::before,
+.lite-run-seg[data-state="now"]::before { background: linear-gradient(90deg, var(--violet), var(--seg)); }
+/* The tile, with notched corners; hollow until its stage is reached. */
+.lite-run-seg::after {
+  content: attr(data-n);
+  flex: none;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--led-off);
+  background: var(--bg-surface);
+  color: var(--fg-muted);
+  font: 500 10px/1 var(--font-code, monospace);
+  clip-path: polygon(3px 0, calc(100% - 3px) 0, 100% 3px, 100% calc(100% - 3px), calc(100% - 3px) 100%, 3px 100%, 0 calc(100% - 3px), 0 3px);
+}
+.lite-run-seg[data-state="done"]::after,
+.lite-run-seg[data-state="now"]::after {
+  border-color: transparent;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--seg) 78%, white), var(--seg));
+  color: #fff;
+}
+.lite-run-seg[data-state="now"]::after { animation: lite-asked-breathe 1.4s ease-in-out infinite; }
+.lite-run-seg[data-state="stopped"]::after { border-color: transparent; background: var(--warn-ink); color: #fff; }
+/* The caret over the current tile: a V drawn in 2px pixels. */
+.lite-run-seg > i {
+  position: absolute;
+  top: -9px;
+  right: 6px;
+  width: 2px;
+  height: 2px;
+  background: var(--fg-muted);
+  box-shadow: 6px 0 0 var(--fg-muted), 2px 2px 0 var(--fg-muted), 4px 2px 0 var(--fg-muted);
+  visibility: hidden;
+}
+.lite-run-seg[data-state="now"] > i { visibility: visible; }
+.lite-run-facts {
+  margin: 6px 0 0;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--fg-muted);
+}
+.lite-run-facts:empty { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .lite-run-seg[data-state="now"]::after { animation: none; opacity: 0.6; }
+}
+.lite-research[data-state="running"] .lite-research-status,
+.lite-research[data-state="queued"] .lite-research-status,
+.lite-research[data-state="starting"] .lite-research-status {
+  color: var(--fg);
+  font-weight: 600;
+}
 .lite-research[data-state="failed"] .lite-research-status { color: var(--high-ink); }
 .lite-research[data-state="cancelled"] .lite-research-status { color: var(--fg-muted); }
 .lite-research button { margin: 4px 4px 0 0; }
@@ -1875,11 +2016,6 @@
 .lite-quick { display: grid; gap: 8px; margin: 10px 0; }
 .lite-quick-assumed { margin: 0; color: var(--fg-muted); font-size: 12px; }
 .lite-quick-cards { display: grid; gap: 8px; }
-.lite-quick-src {
-  margin: 8px 0 0; padding: 6px 10px; border-left: 2px solid var(--accent);
-  color: var(--fg-body); font-size: 12px; font-style: italic;
-}
-.lite-quick-src a { color: var(--accent); font-style: normal; }
 
 /* ═════════════════════════════════════════════
    The Kriko design system, worn by the panel
@@ -1895,7 +2031,7 @@
 .lite-panel {
   background:
     radial-gradient(120% 60% at 100% 0%, rgba(44,83,224,0.10), transparent 60%),
-    var(--bg-base);
+    rgba(var(--bg-panel-rgb), var(--glass-panel-alpha));
   border: 1px solid var(--border);
   border-radius: 22px;
   box-shadow:
@@ -2140,6 +2276,150 @@
 .lite-rc-body { border-top-color: var(--border-soft); }
 .lite-rc-text { font-size: 13px; color: var(--fg-body); }
 
+/* A finding reads claim first, then the words it rests on and where they came
+   from (#262). Collapsed, the card shows its first quote under the claim;
+   opened, the claim's own text and then every source, quote above address. */
+.lite-rc-peek {
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.4;
+  font-style: italic;
+  color: var(--fg-muted);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.lite-rc-peek-src { font-style: normal; font-size: 11px; font-weight: 600; color: var(--fg-muted); }
+.lite-rc-peek-src::after { content: ":"; }
+.lite-rc[data-open="1"] .lite-rc-peek,
+.lite-rc[data-compact="1"] .lite-rc-peek { display: none; }
+.lite-rc-label {
+  margin-bottom: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--fg-muted);
+}
+.lite-rc-sources { display: flex; flex-direction: column; gap: 2px; }
+.lite-rc-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+
+/* A source as a chip: a tier meter for where it stands, and its site. The app
+   draws the same chip (kriko-ui/src/styles/rail.css, .claim-chip), so the two
+   surfaces read alike and the number of lit bars, not only colour, says it. */
+.lite-chip { --tone: var(--fg-muted); }
+.lite-chip[data-standing="trusted"] { --tone: var(--mint); }
+.lite-chip[data-standing="neutral"] { --tone: var(--sky); }
+.lite-chip[data-standing="low"] { --tone: var(--med-ink); }
+.lite-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 100%;
+  padding: 4px 10px 4px 7px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--fg) 7%, var(--bg-item)), var(--bg-item));
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--fg) 9%, transparent);
+  color: var(--fg-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+}
+.lite-chip:hover, .lite-chip[aria-expanded="true"] {
+  border-color: color-mix(in srgb, var(--tone) 50%, var(--border-control));
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--fg) 9%, transparent), 0 0 0 3px color-mix(in srgb, var(--tone) 12%, transparent);
+  color: var(--fg);
+}
+.lite-chip:focus-visible { outline: 2px solid var(--ice); outline-offset: 2px; }
+.lite-chip[data-stance="refutes"] { border-style: dashed; }
+.lite-chip-site { overflow: hidden; max-width: 18ch; text-overflow: ellipsis; white-space: nowrap; }
+/* The tier meter: three bars that rise like a signal, lit 3, 2 or 1. Flat, so it
+   can never read as an emoji; the app draws the same meter. */
+.lite-chip-meter { display: inline-flex; flex: none; align-items: flex-end; gap: 2px; height: 11px; }
+.lite-chip-meter i { width: 3px; border-radius: 1.5px; background: color-mix(in srgb, var(--tone) 26%, transparent); }
+.lite-chip-meter i:nth-child(1) { height: 5px; }
+.lite-chip-meter i:nth-child(2) { height: 8px; }
+.lite-chip-meter i:nth-child(3) { height: 11px; }
+.lite-chip-meter[data-lit="3"] i,
+.lite-chip-meter[data-lit="2"] i:nth-child(-n + 2),
+.lite-chip-meter[data-lit="1"] i:first-child {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--tone) 78%, white), var(--tone));
+}
+
+.lite-rc-src { margin: 8px 0 0; padding: 0 0 0 10px; border-left: 2px solid var(--border-control); }
+.lite-rc-src[hidden] { display: none; }
+.lite-rc-src[data-stance="refutes"] { border-left-color: var(--med-ink); }
+.lite-rc-src blockquote {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  font-style: italic;
+  color: var(--fg-body);
+  overflow-wrap: anywhere;
+}
+.lite-rc-src-none { font-size: 12px; color: var(--fg-muted); }
+.lite-rc-src figcaption { margin-top: 3px; font-size: 11.5px; color: var(--fg-muted); overflow-wrap: anywhere; }
+.lite-rc-src figcaption a { color: var(--accent); text-underline-offset: 2px; }
+.lite-rc-src-kind { margin-left: 4px; text-transform: capitalize; }
+.lite-rc-src-note { color: var(--med-ink); font-weight: 600; }
+
+/* How much a finding stands on (#263): three rising bars, one, two or three
+   lit, and a word beside the two that are not solid. Shape and word carry the
+   level, so it does not lean on colour; the reason is the tip below. */
+.lite-rc-meta { flex-wrap: wrap; row-gap: 4px; }
+.lite-rc-ev {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: 8px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fg-muted);
+  cursor: help;
+}
+.lite-rc-ev svg rect { fill: var(--led-off); }
+.lite-rc-ev svg rect[data-lit="1"] { fill: var(--fg-muted); }
+.lite-rc-ev[data-level="solid"] svg rect[data-lit="1"] { fill: var(--accent); }
+.lite-rc-ev[data-level="thin"] { color: var(--warn-ink); }
+.lite-rc-ev[data-level="thin"] svg rect[data-lit="1"] { fill: var(--warn-ink); }
+.lite-rc-ev:focus-visible { outline: 2px solid var(--ice); outline-offset: 2px; }
+.lite-ev-tip {
+  position: absolute;
+  z-index: 30;
+  width: max-content;
+  max-width: min(260px, calc(100% - 16px));
+  padding: 7px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--hover-edge);
+  background: var(--hover-face);
+  color: var(--fg);
+  font-size: 11.5px;
+  line-height: 1.4;
+  box-shadow: var(--shadow-card);
+  pointer-events: none;
+}
+.lite-ev-tip[hidden] { display: none; }
+
+/* "3 thin findings hidden", and the way to see them. */
+.lite-thin-note {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  margin-top: 8px;
+  padding: 7px 10px;
+  border: 1px dashed var(--border-control);
+  border-radius: 10px;
+  font-size: 12px;
+}
+.lite-thin-text { flex: 1 1 auto; color: var(--fg-body); }
+.lite-thin-note .lite-chip { border-radius: 999px; }
+
 /* the footer: the pack that answered, and the way into the app as a key */
 .lite-footer {
   padding: 10px 14px;
@@ -2272,7 +2552,7 @@
 .lite-research { overflow-wrap: anywhere; }
 .lite-research input, .lite-research textarea { width: 100%; min-width: 0; max-width: 100%; }
 .lite-rc-titlebox { flex: 1 1 0; }
-.lite-rc-title, .lite-rc-meta, .lite-quick-assumed, .lite-quick-src,
+.lite-rc-title, .lite-rc-meta, .lite-quick-assumed, .lite-rc-src,
 .lite-listing-title, .lite-unknown-name { overflow-wrap: anywhere; }
 .lite-research .lite-rc-toggle { flex: 0 0 30px; padding: 0; margin: 0 10px 0 0; }
 .lite-question-form { flex-wrap: wrap; }
@@ -2924,3 +3204,9 @@
 .lite-pick-answer { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border-soft); white-space: pre-wrap; }
 
 .lite-buy-check { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--fg-muted); }
+
+/* A browser that cannot blur what is behind the panel gets the opaque one:
+   text over an unblurred page is the thing the blur exists to prevent. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .lite-panel { background: radial-gradient(120% 60% at 100% 0%, rgba(44,83,224,0.10), transparent 60%), var(--bg-base); }
+}
