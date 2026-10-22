@@ -135,3 +135,36 @@ def test_a_bench_summary_reports_rates_and_stability() -> None:
     assert report["false_kept"] == 0 and report["false_runs"] == 1
     assert report["p50"] == 4.0 and report["p95"] == 6.0
     assert cr.stability(rows)["true-a"] == (2, 1)
+
+
+def test_a_query_is_the_product_quoted_and_three_claim_words() -> None:
+    queries = cr.queries_for(
+        "Sony WH-1000XM4",
+        "headphones connect briefly and then immediately disconnect")
+    assert queries[0] == '"Sony WH-1000XM4" immediately headphones disconnect'
+    assert queries[1].endswith("forum")
+    assert "sony" not in queries[0].removeprefix('"Sony WH-1000XM4"')
+
+
+def test_results_that_are_threads_about_the_model_rank_first() -> None:
+    hits = [
+        {"url": "https://shop.example/v11", "title": "Dyson V11 battery"},
+        {"url": "https://www.reddit.com/r/dyson/comments/a/b", "title": "trigger stuck"},
+        {"url": "https://example.com/blog", "title": "vacuum tips"},
+    ]
+    ordered = cr.rank_hits(hits, "Dyson V11",
+                           "the trigger does not turn the vacuum off when released")
+    assert ordered[0]["url"].startswith("https://www.reddit.com")
+
+
+def test_a_possibility_is_not_a_report() -> None:
+    claim = cr.make_claim("the trigger does not turn the vacuum off when released",
+                          "Dyson V11", cr.stems)
+    terms = cr.product_terms("Dyson V11")
+    scorer = cr.Scorer(None, embedder_available=False)
+    speculative = ("The Dyson V11 is covered here. Outdated firmware might lead to a trigger "
+                   "that does not turn the vacuum off when released, according to the vendor.")
+    assert cr.judge_page(scorer, claim, speculative, terms, None)[0] is None
+    reported = ("The Dyson V11 is covered here. My trigger does not turn the vacuum off when "
+                "released, so it keeps running until I pull the battery.")
+    assert cr.judge_page(scorer, claim, reported, terms, None)[0] is not None

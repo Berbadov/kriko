@@ -401,6 +401,12 @@ def report_sentence(sentence: str) -> bool:
     return len(text) >= MIN_SENTENCE and "?" not in text
 
 
+# Grammar, not a fault vocabulary: a possibility is not a report. "Outdated
+# firmware might lead to suboptimal noise cancellation" is advice about a class
+# of products; a person reporting a fault says it happened.
+SPECULATIVE = re.compile(r"\b(?:might|may|could)\b", re.I)
+
+
 def product_terms(product: str) -> set[str]:
     """The words that make this product itself, not its brand.
 
@@ -412,6 +418,63 @@ def product_terms(product: str) -> set[str]:
     codes = {token for token in tokens
              if any(char.isdigit() for char in token) or len(token) >= 6}
     return codes or {token for token in tokens if len(token) >= 4}
+
+
+def keywords_of(claim: str, product: str, limit: int = 3) -> list[str]:
+    """The claim's own words, without the product's, for a search query.
+
+    A whole sentence is a bad query: the engine matches its topic and answers
+    with guides, other models and retailers. Three or four content words plus
+    the quoted product is short enough that every word can be required. Longest
+    first, because without a frequency table length is the only rarity clue.
+    """
+    product_stems = stems(product)
+    words: list[str] = []
+    for word in TOKEN.findall(claim.casefold()):
+        if len(word) < 4 or word in _FILLER or word[:STEM_LENGTH] in product_stems:
+            continue
+        if word not in words:
+            words.append(word)
+    words.sort(key=len, reverse=True)
+    return words[:limit]
+
+
+def queries_for(product: str, claim: str) -> list[str]:
+    """What to ask the engines: the product and the claim's own words.
+
+    The second query names the place reports are written. It is a word, not a
+    site list: which forum answers is the engine's business.
+    """
+    words = keywords_of(claim, product)
+    quoted, core = f'"{product}"', " ".join(words)
+    queries = [f"{quoted} {core}".strip()[:200]]
+    if words:
+        queries.append(f"{quoted} {core} forum"[:200])
+    return queries
+
+
+def rank_hits(hits: list[dict], product: str, claim: str) -> list[dict]:
+    """Order results before reading them: a thread that names the model first.
+
+    Fetching is the expensive half of a look (four seconds of six), and most
+    results for a symptom query are the wrong model, an accessory or a guide.
+    A discussion address and the product's code in the title are the two cheap
+    signals that a result is about this fault of this product.
+    """
+    terms = product_terms(product)
+    words = keywords_of(claim, product)
+
+    def points(hit: dict) -> int:
+        url = str(hit.get("url") or "")
+        text = f"{hit.get('title') or ''} {url}".casefold()
+        score = 3 if is_discussion(url) else 0
+        if any(term in text for term in terms):
+            score += 2
+        if any(word in text for word in words):
+            score += 1
+        return score
+
+    return sorted(hits, key=points, reverse=True)
 
 
 def read_page(reader, url: str) -> str:
@@ -535,6 +598,8 @@ def judge_page(scorer: Scorer, claim: Claim, text: str, terms: set[str],
         units += [(" ".join(sentences[index:index + 2]), True, index)
                   for index in range(len(sentences) - 1)]
     for joined, paired, index in units:
+        if SPECULATIVE.search(joined):
+            continue
         distance = (min(abs(index - at) for at in near) if near
                     else DISTANCE_CAP)
         if paired and near:
@@ -549,24 +614,41 @@ def judge_page(scorer: Scorer, claim: Claim, text: str, terms: set[str],
 
 
 def run_seed(seed: dict, search, reader, pages: int, scorer: Scorer,
-             embedder: Embedder | None, window: bool = False) -> dict:
+             embedder: Embedder | None, window: bool = False,
+             plain_query: bool = False) -> dict:
     product, claim_text = seed["product"], seed["claim"]
     claim = make_claim(claim_text, product, stems)
     terms = product_terms(product)
-    query = f'"{product}" {claim_text}'[:240]
+    queries = ([f'"{product}" {claim_text}'[:240]] if plain_query
+               else queries_for(product, claim_text))
     record = {"id": seed["id"], "product": product, "claim": claim_text,
-              "terms": sorted(claim.stems), "query": query, "scorer": scorer.note,
-              "window": window, "stem_length": STEM_LENGTH, "depth": pages}
+              "terms": sorted(claim.stems), "query": queries[0], "queries": queries,
+              "query_mode": "sentence" if plain_query else "keywords",
+              "scorer": scorer.note, "window": window, "stem_length": STEM_LENGTH,
+              "depth": pages}
     started = time.perf_counter()
-    try:
-        hits = search(query, pages)
-    except Exception as error:  # noqa: BLE001 - a search is a network boundary
-        record.update(error=f"{type(error).__name__}: {error}", hits=0, pages=0,
-                      recurring=False, publishers=[], sources=[], threads=[],
+    hits: list[dict] = []
+    seen_urls: set[str] = set()
+    failures: list[str] = []
+    for query in queries:
+        try:
+            answered = search(query, pages)
+        except Exception as error:  # noqa: BLE001 - a search is a network boundary
+            failures.append(f"{type(error).__name__}: {error}")
+            continue
+        for hit in answered:
+            if (isinstance(hit, dict) and hit.get("url")
+                    and hit["url"] not in seen_urls):
+                seen_urls.add(hit["url"])
+                hits.append(hit)
+    record["search_seconds"] = round(time.perf_counter() - started, 2)
+    if not hits and failures:
+        record.update(error=failures[-1], hits=0, pages=0, recurring=False,
+                      publishers=[], sources=[], threads=[],
                       seconds=round(time.perf_counter() - started, 2))
         return record
-    record["search_seconds"] = round(time.perf_counter() - started, 2)
-    hits = [hit for hit in hits if isinstance(hit, dict) and hit.get("url")]
+    record["offered"] = len(hits)
+    hits = rank_hits(hits, product, claim_text)[:max(1, pages)]
     record["hits"] = len(hits)
     fetch_started = time.perf_counter()
     with ThreadPoolExecutor(max_workers=min(5, max(1, len(hits)))) as pool:
@@ -883,6 +965,12 @@ def main() -> int:
                         help="do not try to load static embeddings")
     parser.add_argument("--window", action="store_true",
                         help="also try two joined sentences (measured: adds a false source, not a true one)")
+    parser.add_argument("--plain-query", action="store_true",
+                        help="send the whole claim sentence, the way the bench used to")
+    parser.add_argument("--engines", default="",
+                        help="engine list for the search service; default is the app's")
+    parser.add_argument("--pause", type=float, default=0.0,
+                        help="seconds to wait after each run, for a rate-limited service")
     parser.add_argument("--offline", action="store_true",
                         help="count over every page excerpt already fetched, no search")
     parser.add_argument("--fetch-known", action="store_true",
@@ -900,7 +988,8 @@ def main() -> int:
     weights = "wordfreq" if WORD_WEIGHTS else "uniform (wordfreq absent: no rarity guard)"
     print(f"scorer: {scorer.note}; weights: {weights}; "
           f"embeddings: {'on' if embedder and embedder.available else 'off'}; "
-          f"window: {'on' if window else 'off'}\n")
+          f"window: {'on' if window else 'off'}; "
+          f"query: {'sentence' if args.plain_query else 'keywords'}\n")
 
     if args.fetch_known:
         known = known_urls()
@@ -965,13 +1054,16 @@ def main() -> int:
         record: dict = {}
         while attempts < 2:
             attempts += 1
-            own_search = openserp.searcher("", engine=openserp.LOCAL_ENGINES,
-                                           language="en", timeout=args.timeout)
+            own_search = openserp.searcher(
+                "", engine=args.engines or openserp.LOCAL_ENGINES,
+                language="en", timeout=args.timeout)
             record = run_seed(seed, own_search, fetch.reader(timeout=8.0),
-                              depth, scorer, embedder, window)
+                              depth, scorer, embedder, window, args.plain_query)
             if not record.get("error"):
                 break
         record.update(attempts=attempts, repeat=repeat)
+        if args.pause:
+            time.sleep(args.pause)
         return depth, repeat, seed, record
 
     depths = ([int(part) for part in args.depths.split(",") if part.strip()]

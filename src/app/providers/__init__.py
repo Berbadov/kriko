@@ -489,7 +489,7 @@ def _local_parts(*, base_url: str, serving_name: str, search_base_url: str,
                  context_tokens: int | None = None, search_language: str = "en",
                  engine: str = ""):
     """The sockets both local doors share: a completion and a search."""
-    from app.providers import local_inference, openserp
+    from app.providers import local_inference, openserp, searxng
 
     if not serving_name.strip():
         raise ValueError(
@@ -501,6 +501,9 @@ def _local_parts(*, base_url: str, serving_name: str, search_base_url: str,
         base_url, serving_name, timeout=timeout or local_inference.DEFAULT_TIMEOUT,
         response_json_schema=schema, runtime_options=runtime_options,
         temperature=temperature, max_tokens=max_tokens, context_tokens=context_tokens)
+    if search_kind == "searxng":
+        return complete, searxng.searcher(search_base_url,
+                                          language=search_language), "searxng"
     return complete, openserp.searcher(search_base_url, engine=engine,
                                      language=search_language), "openserp"
 
