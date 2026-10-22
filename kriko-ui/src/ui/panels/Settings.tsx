@@ -362,8 +362,14 @@ function CapField({ id, cap, today, onChange }: { id: CapResource; cap: number |
       return
     }
     const value = Number(text.replace(',', '.'))
-    if (!Number.isFinite(value) || value <= 0) {
+    if (!Number.isFinite(value) || value < 0) {
       setDraft(cap === null ? '' : String(cap))
+      return
+    }
+    // Zero is a cap nothing could pass, so it means no cap, like an empty field.
+    if (value === 0) {
+      if (cap !== null) onChange(null)
+      setDraft('')
       return
     }
     if (value !== cap) onChange(value)
