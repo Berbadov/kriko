@@ -118,16 +118,10 @@ def load_registry(home) -> dict:
 
 
 def registrable(url: str) -> str:
-    """The registrable domain of a URL: `shop.example.co.uk` is `example.co.uk`."""
-    host = (urlsplit(url if "//" in url else f"//{url}").hostname or "").lower().rstrip(".")
-    if not host:
-        return ""
-    try:
-        from app.providers.local_pipeline import publisher
-        return publisher(f"https://{host}") or host
-    except Exception:  # noqa: BLE001 - a missing suffix list must not fail a search
-        labels = host.split(".")
-        return ".".join(labels[-2:]) if len(labels) > 1 else host
+    """Registrable domain, shared with the local pipeline without loading it."""
+    from app.domains import publisher
+
+    return publisher(url)
 
 
 def _question_words(question: str) -> set[str]:

@@ -5,11 +5,12 @@ import { pageKey } from '../chat/view'
 import { usePrefs } from '../prefs'
 import { Icon } from '../ui/Icon'
 import { PixelGlyph } from '../ui/PixelGlyph'
-import { Elapsed, Fold, Shimmer, WordStream, formatSeconds } from '../ui/text'
+import { Elapsed, Fold, Shimmer, WordStream, count, formatSeconds } from '../ui/text'
 import type { Row, Run } from './run'
 
-/** The live record of one run. It opens while work runs and folds when the run
- *  ends. The reader can open or fold any part. A choice the reader makes stays. */
+/** The live record of one run. A run opens it and it stays open when the run
+ *  ends, so the answer does not move under the reader at the moment it is
+ *  finished. The reader folds it, or a turn from the thread starts folded. */
 
 function useOpen(auto: boolean) {
   const [chosen, setChosen] = useState<boolean | null>(null)
@@ -18,7 +19,7 @@ function useOpen(auto: boolean) {
 
 export function Timeline({ run, historical = false }: { run: Run; historical?: boolean }) {
   const running = run.status === 'running'
-  const [open, toggle] = useOpen(running)
+  const [open, toggle] = useOpen(!historical)
   const label = running ? 'Research' : run.status === 'done' ? 'Done' : run.status === 'failed' ? 'Failed' : 'Stopped'
   const total = (run.endedAt ?? run.startedAt) - run.startedAt
   const measured = run.rows.flatMap((row) => (row.kind === 'event' || row.kind === 'tool') && row.counts?.pagesRead !== undefined ? [row.counts] : [])
@@ -92,9 +93,9 @@ function Thought({ row }: { row: Extract<Row, { kind: 'thought' }> }) {
 function Tool({ row }: { row: Extract<Row, { kind: 'tool' }> }) {
   const running = row.ms === undefined
   const counts = [
-    row.counts?.searchResults === undefined ? '' : `${row.counts.searchResults} search results`,
-    row.counts?.pagesAttempted === undefined ? '' : `${row.counts.pagesAttempted} pages attempted`,
-    row.counts?.pagesRead === undefined ? '' : `${row.counts.pagesRead} pages read`,
+    row.counts?.searchResults === undefined ? '' : count(row.counts.searchResults, 'search result'),
+    row.counts?.pagesAttempted === undefined ? '' : `${count(row.counts.pagesAttempted, 'page')} attempted`,
+    row.counts?.pagesRead === undefined ? '' : `${count(row.counts.pagesRead, 'page')} read`,
   ].filter(Boolean)
   const source = safeHttpUrl(row.url)
   return (
@@ -129,10 +130,12 @@ function Event({ row }: { row: Extract<Row, { kind: 'event' }> }) {
   const source = safeHttpUrl(row.sourceUrl)
   const focus = useFocus()
   const key = source ? pageKey(source) : undefined
+  /** A feed line that is a source carries the address as its text; print it once. */
+  const sameUrl = !!source && row.text.trim() === (row.sourceUrl ?? '').trim()
   const counts = [
-    row.counts?.searchResults === undefined ? '' : `${row.counts.searchResults} search results`,
-    row.counts?.pagesAttempted === undefined ? '' : `${row.counts.pagesAttempted} pages attempted`,
-    row.counts?.pagesRead === undefined ? '' : `${row.counts.pagesRead} pages read`,
+    row.counts?.searchResults === undefined ? '' : count(row.counts.searchResults, 'search result'),
+    row.counts?.pagesAttempted === undefined ? '' : `${count(row.counts.pagesAttempted, 'page')} attempted`,
+    row.counts?.pagesRead === undefined ? '' : `${count(row.counts.pagesRead, 'page')} read`,
   ].filter(Boolean)
   return (
     <div
@@ -143,7 +146,7 @@ function Event({ row }: { row: Extract<Row, { kind: 'event' }> }) {
       onClick={key ? (event) => !(event.target as HTMLElement).closest('a') && focus.select(key, 'thread') : undefined}
     >
       {row.stage && <span className="run-event-stage">{row.stage}</span>}
-      <span>{row.text}</span>
+      {!sameUrl && <span>{row.text}</span>}
       {source && <a className="run-event-url" href={source} target="_blank" rel="noreferrer">{row.sourceUrl}</a>}
       {counts.length > 0 && <span className="tool-counts">{counts.join(' · ')}</span>}
     </div>
@@ -156,7 +159,7 @@ function Plan({ row }: { row: Extract<Row, { kind: 'plan' }> }) {
     <div className="plan">
       <div className="row-head static">
         <Icon name="queue" size={15} />
-        <span>Plan · {row.steps.length} steps</span>
+        <span>Plan · {count(row.steps.length, 'step')}</span>
       </div>
       <ul>
         {row.steps.map((step) => (

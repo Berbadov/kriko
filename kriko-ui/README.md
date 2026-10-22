@@ -92,7 +92,8 @@ to `kriko-ui/builds/`:
 |---|---|
 | `kriko-<version>-x86_64-setup.exe` | The per-user installer for Windows. It needs no administrator rights. |
 | `kriko-<version>-win64-portable.zip` | `kriko.exe`, `kriko-sidecar.exe` (with `_internal\`) and `OpenSERP.exe`, without an install. |
-| `SHA256SUMS.txt` | The hashes of both files. |
+| `kriko-engine-<version>-win64.zip` | The engine alone, for in-app updates. |
+| `SHA256SUMS.txt` | The hashes of all three release files. |
 
 Both programs ship in every Windows package, because the app starts the engine
 from its own folder. The installer stops a running Kriko first, because a live

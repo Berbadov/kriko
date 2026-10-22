@@ -1,6 +1,6 @@
 # Kriko
 
-[![version](https://img.shields.io/badge/version-0.2.6-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
+[![version](https://img.shields.io/badge/version-0.3.0-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
 
 Kriko researches what can go wrong with a product and keeps the sources beside
 its findings. It runs on your computer, with a Windows desktop app and a browser
@@ -18,6 +18,10 @@ Contents: [Install](#install-and-start) · [Agents](#working-with-agents) ·
 [Buying help](#buying-help) · [Catalogs](#catalogs-and-saved-work) ·
 [Your data](#your-data) · [Build and verify](#build-and-verify)
 
+Version 0.3.0 adds Kriko Agent, product result cards, source quote chips,
+evidence sensitivity, usage meters and daily caps, and provider and local
+runtime settings. See the [changelog](CHANGELOG.md#030) for the release notes.
+
 ## Install and start
 
 Download the Windows x86_64 setup EXE or portable ZIP from the
@@ -25,8 +29,8 @@ Download the Windows x86_64 setup EXE or portable ZIP from the
 
 | Artifact | Use |
 |---|---|
-| `kriko-0.2.6-x86_64-setup.exe` | Per-user Windows installer; no administrator rights required. |
-| `kriko-0.2.6-win64-portable.zip` | Extract the whole archive and open `kriko.exe`. |
+| `kriko-0.3.0-x86_64-setup.exe` | Per-user Windows installer; no administrator rights required. |
+| `kriko-0.3.0-win64-portable.zip` | Extract the whole archive and open `kriko.exe`. |
 
 The installer is unsigned; Windows may show a SmartScreen warning. The desktop
 source can be built on other systems, but the published desktop release scope is

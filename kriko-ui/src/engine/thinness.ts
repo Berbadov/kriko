@@ -55,6 +55,6 @@ export function evidenceOf(raw: unknown): Evidence | undefined {
 
 /** One sentence for the indicator's hover and focus. */
 export function whyLine(evidence: Evidence): string {
-  if (evidence.level === 'solid') return 'Solid: several trusted sources, each with its quote, and nothing left open.'
+  if (evidence.level === 'solid') return 'Solid: no evidence gaps were recorded.'
   return `${LEVEL_WORD[evidence.level]}: ${evidence.reasons.map((reason) => reason.text).join(' ')}`
 }

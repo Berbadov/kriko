@@ -3,14 +3,33 @@
 Reader-visible changes for each release. Newest first. Published versions are
 immutable; a correction is a newer version.
 
-### Unreleased
+### 0.3.0
+
+- **Kriko Agent and local research.** A built-in agent combines web search,
+  page reading and quoted findings. Search answers are cached for a week;
+  local research records each stage and why a page or claim was kept.
+  Buying answers can show product cards with direct shop links and images.
+- **Evidence you can inspect.** Source chips open the quoted passage. Evidence
+  sensitivity can hide thin findings, and missing listing details remain
+  visible beside the claims that depend on them. Subdomains of one publisher
+  count as one source when judging independent corroboration.
+- **Settings and usage.** Separate meters show model APIs, web search, local
+  models and coding agents. Daily caps, search provider fallbacks, optional
+  proxies, local runtimes and MCP client setup are available in Settings.
+  The log viewer filters and exports redacted job steps.
+- **Research measurements.** Search, product listing, model tuning and claim
+  recurrence tools measure results and cost. Tuning now refuses to pass an
+  answer whose product identity was not confirmed.
+- **Website and desktop.** The website has Turkish pages and a privacy policy.
+  The desktop has an updated navigation rail and agent marks, clearer activity
+  counts and product prices, and a Windows title bar that follows its theme.
 
 - **Chat asks before it answers.** When one detail would change the answer — a
   tyre size, a model year, an engine, the market you buy in — Chat asks for it
   first, with choices you press, on whichever agent you chose. A second
   question can follow the first; the same one is never asked twice, and a
   detail written in Chat settings is not asked at all.
-- **Chat settings.** Under More, Chat, write what Kriko should remember about
+- **Chat settings.** In Settings, write what Kriko should remember about
   you — your car and the size on it, the shops you trust, a budget — and turn
   on product-only answers: a short list of products with links and at most two
   warnings, instead of a long answer.

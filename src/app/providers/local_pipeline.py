@@ -7,7 +7,6 @@ Unknown identity or unsupported assertions never become accepted findings.
 """
 from __future__ import annotations
 
-from functools import lru_cache
 import hashlib
 import json
 import re
@@ -15,6 +14,7 @@ from urllib.parse import urlsplit
 from typing import Any
 
 from app import pagefacts
+from app.domains import publisher
 from app.providers.local_identity import (
     IDENTITY_SCHEMA, anchor_terms, clean_product_name, conflicting_identity,
     fold, identity_prompt, names_subject, parse_identity, relevant_source, scope_note,
@@ -417,51 +417,6 @@ def _identity_brief(identity) -> dict[str, Any]:
     return {key: data[key] for key in
             ("canonical_name", "variant", "brand", "item", "fits")
             if data.get(key)}
-
-
-@lru_cache(maxsize=1)
-def _suffix_rules() -> tuple[set[str], set[str], set[str]]:
-    """Offline PSL snapshot, shipped as app data including its MPL attribution."""
-    from importlib.resources import files
-    raw = files("app").joinpath("public_suffix_list.dat").read_text(encoding="utf-8")
-    normal: set[str] = set()
-    wildcard: set[str] = set()
-    exceptions: set[str] = set()
-    for line in raw.splitlines():
-        rule = line.strip()
-        if not rule or rule.startswith("//"):
-            continue
-        target = exceptions if rule.startswith("!") else wildcard if rule.startswith("*.") else normal
-        rule = rule.removeprefix("!").removeprefix("*.")
-        target.add(rule.encode("idna").decode("ascii").lower())
-    return normal, wildcard, exceptions
-
-
-def publisher(url: str) -> str:
-    """Registrable domain from the bundled public-suffix list, no network lookup."""
-    host = (urlsplit(url).hostname or "").lower().rstrip(".")
-    if not host:
-        return ""
-    try:
-        import ipaddress
-        ipaddress.ip_address(host)
-        return host
-    except ValueError:
-        pass
-    host = host.encode("idna").decode("ascii")
-    labels = host.split(".")
-    normal, wildcard, exceptions = _suffix_rules()
-    suffix_length = 1
-    for index in range(len(labels)):
-        suffix = ".".join(labels[index:])
-        if suffix in exceptions:
-            suffix_length = len(labels) - index - 1
-            break
-        if suffix in normal:
-            suffix_length = max(suffix_length, len(labels) - index)
-        if index + 1 < len(labels) and ".".join(labels[index + 1:]) in wildcard:
-            suffix_length = max(suffix_length, len(labels) - index)
-    return ".".join(labels[-(suffix_length + 1):])
 
 
 def canonical_url(url: str) -> str:
@@ -1444,4 +1399,3 @@ class QuickLookPipeline:
             "risks": output,
             "specs": rendered_specs,
         }, ensure_ascii=False)
-

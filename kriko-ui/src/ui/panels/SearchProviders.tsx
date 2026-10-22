@@ -32,8 +32,8 @@ function keyLine(row: SearchProviderRow): string {
 
 /** Which service searches the web, what it falls back to, and whether each one works. */
 export function SearchProvidersGroup() {
-  const { doc, problem, tested, save, test } = useSearchProviders()
-  if (!doc) return null
+  const { doc, problem, tested, save, test, reload } = useSearchProviders()
+  if (!doc) return problem ? <p className="error-note" role="alert">Could not read search providers. {problem} <button className="btn" onClick={() => void reload()}>Try again</button></p> : null
   const byId = new Map(doc.providers.map((row) => [row.id, row]))
   const label = (id: string) => byId.get(id)?.label ?? id
   const addable = doc.providers.filter((row) => row.id !== doc.primary && !doc.fallback.includes(row.id))
