@@ -489,7 +489,8 @@ def _local_parts(*, base_url: str, serving_name: str, search_base_url: str,
                  context_tokens: int | None = None, search_language: str = "en",
                  engine: str = ""):
     """The sockets both local doors share: a completion and a search."""
-    from app.providers import local_inference, openserp, searxng
+    from app.providers import local_inference, openserp, searchcache, searxng
+    from app.web.settings import KRIKO_HOME
 
     if not serving_name.strip():
         raise ValueError(
@@ -502,10 +503,15 @@ def _local_parts(*, base_url: str, serving_name: str, search_base_url: str,
         response_json_schema=schema, runtime_options=runtime_options,
         temperature=temperature, max_tokens=max_tokens, context_tokens=context_tokens)
     if search_kind == "searxng":
-        return complete, searxng.searcher(search_base_url,
-                                          language=search_language), "searxng"
-    return complete, openserp.searcher(search_base_url, engine=engine,
-                                     language=search_language), "openserp"
+        found = searxng.searcher(search_base_url, language=search_language)
+    else:
+        found = openserp.searcher(search_base_url, engine=engine,
+                                  language=search_language)
+    # Free endpoints challenge an address after a handful of questions, so the
+    # same question is answered from disk for a week instead of asked again.
+    return (complete,
+            searchcache.cached(found, path=KRIKO_HOME / "search-cache.sqlite"),
+            search_kind if search_kind in {"searxng", "openserp"} else "openserp")
 
 
 def local_researcher(*, base_url: str = "", serving_name: str = "",
