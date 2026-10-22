@@ -34,8 +34,8 @@ def test_a_json_page_becomes_the_shape_the_engine_searches_with() -> None:
 
     assert hits == [
         {"url": "https://www.ifixit.com/Answers/View/1/trigger",
-         "title": "Trigger stuck", "site": "google"},
-        {"url": "https://example.com/a", "title": "", "site": "duckduckgo"},
+         "title": "Trigger stuck", "site": "google", "snippet": ""},
+        {"url": "https://example.com/a", "title": "", "site": "duckduckgo", "snippet": ""},
     ]
     assert "format=json" in seen["url"]
     assert "q=dyson+trigger" in seen["url"]

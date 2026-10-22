@@ -157,6 +157,28 @@ def test_results_that_are_threads_about_the_model_rank_first() -> None:
     assert ordered[0]["url"].startswith("https://www.reddit.com")
 
 
+def test_a_page_behind_a_bot_wall_falls_back_to_its_snippet() -> None:
+    seed = {"id": "true-x", "product": "Dyson V11",
+            "claim": "the trigger does not turn the vacuum off when released"}
+    hits = [{
+        "url": "https://www.reddit.com/r/dyson/comments/a/b",
+        "title": "V11 trigger",
+        "snippet": ("My Dyson V11 trigger does not turn the vacuum off when released, "
+                    "so it runs until I pull the battery."),
+    }]
+
+    def search(query: str, limit: int) -> list[dict]:
+        return hits
+
+    def reader(url: str) -> str:
+        return "Reddit"  # a script shell, the shape a bot wall reads as
+
+    record = cr.run_seed(seed, search, reader, 4,
+                         cr.Scorer(None, embedder_available=False), None)
+    assert record["snippets"] == 1
+    assert record["sources"] == [["reddit.com"]]
+
+
 def test_a_possibility_is_not_a_report() -> None:
     claim = cr.make_claim("the trigger does not turn the vacuum off when released",
                           "Dyson V11", cr.stems)

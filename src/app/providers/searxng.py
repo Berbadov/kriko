@@ -85,7 +85,8 @@ def searcher(base_url: str = "", *, language: str = "en", timeout: float = TIMEO
             if not isinstance(row, dict) or not row.get("url"):
                 continue
             hits.append({"url": str(row["url"]), "title": str(row.get("title") or ""),
-                         "site": str(row.get("engine") or "")})
+                         "site": str(row.get("engine") or ""),
+                         "snippet": str(row.get("content") or "")})
             if len(hits) >= max(1, limit):
                 break
         stats["hits"] += len(hits)
