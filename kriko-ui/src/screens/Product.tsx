@@ -201,15 +201,6 @@ export function ProductScreen({ lookupId, onBack, onCompare }: { lookupId: strin
                   </div>
                   {risk.body && <p>{risk.body}</p>}
                   <RiskEvidence risk={risk} />
-                  {risk.sources.length > 0 && (
-                    <span className="srcs">
-                      {risk.sources.slice(0, 3).map((s, i) => (
-                        <ExternalLink key={i} href={s.url || undefined}>
-                          {s.host || s.url}
-                        </ExternalLink>
-                      ))}
-                    </span>
-                  )}
                 </div>
               </li>
             ))}

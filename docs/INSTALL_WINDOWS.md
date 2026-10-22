@@ -33,15 +33,17 @@ research provider and internet access.
 
 ## Add the browser extension
 
-In **More → Set up Kriko**, press **Prepare browser extension**. Then:
+Install it from the Chrome Web Store:
+<https://chromewebstore.google.com/detail/kriko/bdifnaggafjokndlpjgmlfappcoehdjb>.
+Then open a product listing and return to **More → Set up Kriko** to check the
+browser connection. The store package updates with the browser.
 
-1. Open your Chromium browser's Extensions page.
-2. Enable **Developer mode**.
-3. Choose **Load unpacked** and select the folder shown by Kriko.
-4. Open a product listing. Return to setup and check the browser connection.
+A checkout can load the folder instead. In **More → Set up Kriko**, open
+**Installing from a checkout instead** and press **Prepare extension folder**.
+Then open your Chromium browser's Extensions page, enable **Developer mode**,
+choose **Load unpacked** and select the folder Kriko shows. After an app update,
+prepare the extension again and reload it in the browser.
 
-The extension is loaded manually; these steps do not install a Web Store package.
-After an app update, prepare the extension again and reload it in the browser.
 Firefox development staging is available through the local API, but permanent
 Firefox installation requires a Mozilla-signed package; the desktop setup panel
 currently guides Chromium browsers.

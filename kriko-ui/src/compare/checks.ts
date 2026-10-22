@@ -13,7 +13,15 @@ export interface Evidence {
   quote: string
   /** The engine's own word. "refutes" reads against the claim. */
   stance: string
+  /** Where the engine puts this source for the reader. Absent when it could not say. */
+  standing?: Standing
+  /** The kind of site, in the pack's own word. */
+  tier?: string
 }
+
+export type Standing = 'trusted' | 'neutral' | 'low'
+
+const standingOf = (value: unknown): Standing | undefined => (value === 'trusted' || value === 'neutral' || value === 'low' ? value : undefined)
 
 export interface Risk {
   key?: string
@@ -84,7 +92,7 @@ function riskFrom(claim: Record<string, unknown>): Risk {
     sources: list(claim.sources)
       .map((s) => {
         const url = text(s.url)
-        return { host: text(s.domain) || hostOf(url), url, quote: text(s.quote), stance: text(s.stance) }
+        return { host: text(s.domain) || hostOf(url), url, quote: text(s.quote), stance: text(s.stance), standing: standingOf(s.standing), tier: text(s.tier) || undefined }
       })
       .filter((s) => s.url || s.host),
   }
@@ -215,7 +223,12 @@ export function demoCheck(lookupId: string, name: string): Check {
         : single
           ? { level: 'partial', reasons: [{ code: 'single_source', text: 'Only one site says this. Nothing else confirms it yet.' }] }
           : { level: 'solid', reasons: [] },
-      sources: [{ host: 'maker.example.test', url: 'https://maker.example.test', quote: `A reader reports a ${title.toLowerCase()} problem.`, stance: 'supports' }],
+      sources: (lone
+        ? [{ host: 'forum.example.test', url: 'https://forum.example.test', quote: `A reader reports a ${title.toLowerCase()} problem.`, stance: 'supports', standing: 'low', tier: 'forum_ugc' }]
+        : [
+            { host: 'maker.example.test', url: 'https://maker.example.test', quote: `The maker lists ${title.toLowerCase()} in its service notes.`, stance: 'supports', standing: 'trusted', tier: 'manufacturer' },
+            ...(single ? [] : [{ host: 'club.example.test', url: 'https://club.example.test', quote: `Owners report a ${title.toLowerCase()} problem.`, stance: 'supports', standing: 'neutral', tier: 'specialist' }]),
+          ]) as Evidence[],
     })
   })
   return {

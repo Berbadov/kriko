@@ -46,6 +46,24 @@
   --warm: #ffb27a;
   --ok: #3ddc97;
   --warn: #f5b84b;
+  /* data companions to the brand blue: one hue each, used by bars, meters and charts */
+  --violet: #9d8cff;
+  --teal: #38d9e3;
+  --mint: #52e5b3;
+  --sky: #6cc6ff;
+  --bar: linear-gradient(90deg, var(--violet), var(--accent-hi) 48%, var(--teal));
+  /* on a lit fill, in both themes: the fill is the same gradient either way */
+  --on-fill: #ffffff;
+  --lit: rgba(255, 255, 255, 0.3);
+  --sunk: rgba(0, 0, 0, 0.18);
+  --pill-bg: rgba(8, 10, 22, 0.55);
+  --pill-edge: rgba(255, 255, 255, 0.22);
+  --step-0: var(--violet);
+  --step-1: var(--accent-hi);
+  --step-2: var(--sky);
+  --step-3: var(--teal);
+  --bar-done: linear-gradient(90deg, var(--teal), var(--mint));
+  --inset: color-mix(in srgb, var(--ink) 5%, var(--ground));
   --risk: #ff6b7a;
   --scrim: rgba(4, 6, 12, 0.66);
   --glass: rgba(22, 27, 42, 0.58);
@@ -72,6 +90,13 @@
     --warm: #e0803a;
     --ok: #12a66a;
     --warn: #c98a12;
+    --violet: #6e5bf2;
+    --teal: #0aa3b2;
+    --mint: #12a66a;
+    --sky: #2b8ee0;
+    --bar: linear-gradient(90deg, var(--violet), var(--accent) 50%, var(--teal));
+    --bar-done: linear-gradient(90deg, var(--teal), var(--mint));
+    --inset: color-mix(in srgb, var(--ink) 5%, var(--panel));
     --risk: #e04458;
     --scrim: rgba(12, 18, 40, 0.5);
     --glass: rgba(255, 255, 255, 0.66);
@@ -98,6 +123,13 @@
   --warm: #e0803a;
   --ok: #12a66a;
   --warn: #c98a12;
+  --violet: #6e5bf2;
+  --teal: #0aa3b2;
+  --mint: #12a66a;
+  --sky: #2b8ee0;
+  --bar: linear-gradient(90deg, var(--violet), var(--accent) 50%, var(--teal));
+  --bar-done: linear-gradient(90deg, var(--teal), var(--mint));
+  --inset: color-mix(in srgb, var(--ink) 5%, var(--panel));
   --risk: #e04458;
   --scrim: rgba(12, 18, 40, 0.5);
   --glass: rgba(255, 255, 255, 0.66);

@@ -61,32 +61,79 @@
           domain: String(row.domain || hostOf(url) || row.url || ""),
           quote: String(row.quote || "").replace(/\s+/g, " ").trim(),
           disputes: row.stance === "refutes",
+          // Where the engine puts the source (`src/app/evidence.py`): one of
+          // three words, or nothing, in which case the chip draws no mark.
+          standing: Object.prototype.hasOwnProperty.call(STANDING_WORD, row.standing) ? row.standing : "",
+          tier: String(row.tier || "").replace(/_/g, " "),
         };
       });
   }
 
-  function sourceMarkup(source) {
+  /* A source is a chip: the mark for where it stands, and its site. The exact
+   * quote opens under the row when the chip is pressed. The app draws the same
+   * chip (`kriko-ui/src/ui/ClaimChip.tsx`); the shapes are filled, half and
+   * ring, so colour is never the only cue. */
+  const STANDING_WORD = { trusted: "Trusted", neutral: "Neutral", low: "Low" };
+  const STANDING_LIT = { trusted: 3, neutral: 2, low: 1 };
+  let sourceSerial = 0;
+
+  function sourceMarkup(source, id) {
     const link = source.url
       ? `<a href="${escapeHtml(source.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(source.domain)}</a>`
       : `<span>${escapeHtml(source.domain)}</span>`;
-    return `<figure class="lite-rc-src"${source.disputes ? ' data-stance="refutes"' : ""}>
-      ${source.quote ? `<blockquote>\u201c${escapeHtml(source.quote)}\u201d</blockquote>` : ""}
-      <figcaption>${link}${source.disputes ? ' <span class="lite-rc-src-note">disputes this</span>' : ""}</figcaption>
+    const word = STANDING_WORD[source.standing] || "";
+    const kind = [word, source.tier].filter(Boolean).join(" \u00b7 ");
+    return `<figure class="lite-rc-src" id="${id}" hidden${source.disputes ? ' data-stance="refutes"' : ""}>
+      ${source.quote ? `<blockquote>\u201c${escapeHtml(source.quote)}\u201d</blockquote>` : `<div class="lite-rc-src-none">No quote is recorded for this source.</div>`}
+      <figcaption>${link}${kind ? ` <span class="lite-rc-src-kind">${escapeHtml(kind)}</span>` : ""}${source.disputes ? ' <span class="lite-rc-src-note">disputes this</span>' : ""}</figcaption>
     </figure>`;
   }
 
-  /* The first two are shown; the rest fold away, so a claim with six sources
-   * is not a card six quotes tall. */
-  const SOURCES_SHOWN = 2;
+  function chipMarkup(source, id) {
+    const word = STANDING_WORD[source.standing] || "";
+    const label = `Source ${source.domain}${word ? `, ${word.toLowerCase()}` : ""}${source.disputes ? ", disputes this" : ""}`;
+    return `<button type="button" class="lite-chip"${source.standing ? ` data-standing="${source.standing}"` : ""}${source.disputes ? ' data-stance="refutes"' : ""}
+        aria-expanded="false" aria-controls="${id}" aria-label="${escapeHtml(label)}">
+      ${source.standing ? `<span class="lite-chip-meter" data-lit="${STANDING_LIT[source.standing]}" aria-hidden="true"><i></i><i></i><i></i></span>` : ""}<span class="lite-chip-site">${escapeHtml(source.domain)}</span>
+    </button>`;
+  }
+
   function sourcesMarkup(sources) {
     if (!sources.length) return "";
-    const shown = sources.slice(0, SOURCES_SHOWN).map(sourceMarkup).join("");
-    const rest = sources.slice(SOURCES_SHOWN);
+    const ids = sources.map(() => `lite-src-${++sourceSerial}`);
     return `<div class="lite-rc-sources">
       <div class="lite-rc-label">${sources.length === 1 ? "Source" : `Sources \u00b7 ${sources.length}`}</div>
-      ${shown}
-      ${rest.length ? `<details class="lite-rc-more"><summary>${rest.length} more source${rest.length === 1 ? "" : "s"}</summary>${rest.map(sourceMarkup).join("")}</details>` : ""}
+      <div class="lite-rc-chips">${sources.map((one, at) => chipMarkup(one, ids[at])).join("")}</div>
+      ${sources.map((one, at) => sourceMarkup(one, ids[at])).join("")}
     </div>`;
+  }
+
+  /* One quote is open at a time. A second press on the same chip closes it,
+   * and Escape closes it from inside the row. */
+  function wireChips(article) {
+    const box = article.querySelector(".lite-rc-sources");
+    if (!box) return;
+    const chips = [...box.querySelectorAll(".lite-chip")];
+    const close = () => chips.forEach((chip) => {
+      chip.setAttribute("aria-expanded", "false");
+      const figure = box.querySelector("#" + chip.getAttribute("aria-controls"));
+      if (figure) figure.hidden = true;
+    });
+    chips.forEach((chip) => {
+      chip.addEventListener("click", () => {
+        const wasOpen = chip.getAttribute("aria-expanded") === "true";
+        close();
+        if (wasOpen) return;
+        chip.setAttribute("aria-expanded", "true");
+        const figure = box.querySelector("#" + chip.getAttribute("aria-controls"));
+        if (figure) figure.hidden = false;
+      });
+    });
+    box.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape" || !chips.some((chip) => chip.getAttribute("aria-expanded") === "true")) return;
+      event.stopPropagation();
+      close();
+    });
   }
 
   /* ─── How much a finding stands on (#263) ──────────────────────────────
@@ -353,6 +400,7 @@
         </div>
       </div>
     `;
+    wireChips(article);
     return article;
   }
 
