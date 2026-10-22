@@ -129,6 +129,15 @@ def test_a_sound_answer_is_accepted():
     assert graded["links"]["total"] == 1 and graded["links"]["open"] == 1
 
 
+def test_an_unconfirmed_product_identity_cannot_pass_even_when_the_facts_are_supported():
+    reply = fakes.verdict()
+    reply.pop("identity")
+    graded, _ = _graded(fakes.CASE, fakes.good_answer(), reply)
+    assert graded["accepted"] is False
+    assert graded["identity"]["matches"] is None
+    assert "the answer's product or variant identity was not confirmed" in graded["failed_because"]
+
+
 def test_a_fact_marked_met_with_no_quotation_the_page_carries_is_downgraded():
     reply = fakes.verdict(facts=[
         {"id": "material", "status": "met", "url": fakes.URL, "quote": "made of solid titanium", "reason": "x"},

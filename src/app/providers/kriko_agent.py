@@ -187,7 +187,7 @@ def _bound_tool_calls(message: dict) -> dict:
         if not isinstance(args, dict):
             args = {}
         if name == "search":
-            safe = {"query": str(args.get("query") or "")[:128]}
+            safe: dict[str, object] = {"query": str(args.get("query") or "")[:128]}
             count = args.get("count")
             if isinstance(count, int) and not isinstance(count, bool):
                 safe["count"] = count
@@ -392,7 +392,7 @@ def _completion(*, model: str, timeout: float, api_key: str,
         return {}, stream_error
     if finish_reason not in ("stop", "tool_calls"):
         return {}, "Mercury stream ended before a complete response"
-    message = {"role": "assistant", "content": "".join(pieces) or None}
+    message: dict[str, object] = {"role": "assistant", "content": "".join(pieces) or None}
     if tool_calls:
         message["tool_calls"] = [tool_calls[index] for index in sorted(tool_calls)]
     return {"message": message, "usage": usage}, ""
@@ -707,9 +707,12 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
                     if call_index >= allowed_calls:
                         future = None
                     elif name == "search":
-                        future = current_pool.submit(run_search, args.get("query"), args.get("count", 3))
+                        query_value = str(args.get("query") or "")
+                        count_value = args.get("count", 3)
+                        count = count_value if isinstance(count_value, int) and not isinstance(count_value, bool) else 3
+                        future = current_pool.submit(run_search, query_value, count)
                     elif name == "fetch":
-                        future = current_pool.submit(fetch, args.get("url"))
+                        future = current_pool.submit(fetch, str(args.get("url") or ""))
                     else:
                         future = current_pool.submit(lambda: {"error": "Unsupported tool"})
                     futures.append((call_id, future))

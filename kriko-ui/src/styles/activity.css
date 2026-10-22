@@ -211,7 +211,6 @@
 .run-event-stage {
   color: var(--ink-3);
   font-size: 11px;
-  text-transform: capitalize;
 }
 
 .tool-time {

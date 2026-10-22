@@ -13,8 +13,9 @@
   right: 0;
   height: 68%;
   pointer-events: none;
-  -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 42%, transparent 97%);
-  mask-image: linear-gradient(to bottom, #000 0, #000 42%, transparent 97%);
+  /* A mask's colour is its alpha; the theme never changes it. */
+  -webkit-mask-image: linear-gradient(to bottom, black 0, black 42%, transparent 97%);
+  mask-image: linear-gradient(to bottom, black 0, black 42%, transparent 97%);
 }
 
 .sky canvas {
@@ -51,6 +52,7 @@
 }
 
 .dock {
+  position: relative;
   display: flex;
   flex-direction: column;
   flex: none;
@@ -232,6 +234,7 @@
   background: var(--accent-soft);
   border: 1px solid var(--edge);
   border-radius: 18px 18px 6px 18px;
+  overflow-wrap: anywhere;
 }
 
 .answer p {
@@ -254,11 +257,17 @@
 
 .product-card > div:first-child {
   display: grid;
+  min-width: 0;
+}
+
+.product-card strong {
+  overflow-wrap: anywhere;
 }
 
 .product-card span {
   color: var(--ink-3);
   font-size: 12px;
+  overflow-wrap: anywhere;
 }
 
 .listing-product-card {
@@ -308,11 +317,16 @@
 }
 
 .step-pill {
-  align-self: center;
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 10px);
+  left: 0;
   display: inline-flex;
   align-items: center;
   gap: 9px;
-  margin-bottom: 10px;
+  width: fit-content;
+  margin-right: auto;
+  margin-left: auto;
   padding: 6px 13px;
   background: var(--glass);
   border: 1px solid var(--glass-edge);
@@ -609,6 +623,11 @@
   font-weight: 540;
 }
 
+.answer-head span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .answer-actions {
   display: flex;
   gap: 4px;
@@ -629,6 +648,7 @@
   color: var(--ink);
   font-size: 16px;
   line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 
 .ask-options {
@@ -638,13 +658,16 @@
 }
 
 .ask-option {
-  height: 34px;
-  padding: 0 14px;
+  height: auto;
+  min-height: 34px;
+  padding: 6px 14px;
   border: 1px solid var(--edge-strong);
   border-radius: 999px;
   color: var(--ink);
   background: var(--panel-2);
   font-size: 13.5px;
+  line-height: 1.35;
+  text-align: left;
   transition:
     background-color calc(140ms * var(--tm)),
     border-color calc(140ms * var(--tm)),
@@ -674,6 +697,7 @@
   margin: 12px 0 0;
   color: var(--ink-3);
   font-size: 12.5px;
+  overflow-wrap: anywhere;
 }
 
 .hello-actions {
@@ -781,4 +805,4 @@
 }
 
 .followup-prompts > p { flex-basis: 100%; margin: 0; }
-.followup-prompts > button { white-space: normal; text-align: start; }
+.followup-prompts > button { white-space: normal; text-align: start; overflow-wrap: anywhere; }

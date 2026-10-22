@@ -47,7 +47,7 @@ function CatalogProductCard({ product, onOpen }: { product: Product; onOpen: (lo
       <div className="card-actions">
         <button className="btn" onClick={() => void open(onOpen)} disabled={opening.step === 'busy'}>
           {opening.step === 'busy' ? <PixelGlyph size={14} active /> : null}
-          {opening.step === 'busy' ? 'Opens' : 'Open'}
+          Open
         </button>
         <button className="btn" onClick={() => void addToCompare()} disabled={adding.step === 'busy' || adding.step === 'done'}>
           {adding.step === 'done' ? <Icon name="check" size={14} /> : adding.step === 'busy' ? <PixelGlyph size={14} active /> : <Icon name="plus" size={14} />}
@@ -55,7 +55,7 @@ function CatalogProductCard({ product, onOpen }: { product: Product; onOpen: (lo
         </button>
         <button className="btn ghost" onClick={() => void readAgain()} disabled={reading.step === 'busy'}>
           {reading.step === 'busy' ? <PixelGlyph size={14} active /> : null}
-          {reading.step === 'done' ? 'Read again' : reading.step === 'busy' ? 'Reads' : 'Read again'}
+          Read again
         </button>
       </div>
     </motion.div>

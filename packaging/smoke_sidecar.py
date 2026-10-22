@@ -366,6 +366,23 @@ def main(argv: list[str]) -> int:
         if not benchmark_ok(port):
             return 1
 
+        # Settings load through separate module graphs. Health alone does not
+        # prove these imports survived freezing; a missing one hides a whole
+        # feature behind a failed initial request.
+        for path, field in (
+            ("/api/usage/meters", "resources"),
+            ("/api/search-providers", "providers"),
+            ("/api/proxies", "pool"),
+            ("/api/local-runtimes", "runtimes"),
+            ("/api/mcp-clients", "clients"),
+            ("/api/logs/jobs", "items"),
+        ):
+            document = fetch(port, path)
+            if not isinstance(document, dict) or field not in document:
+                print(f"frozen settings response is incomplete: {path}")
+                return 1
+            print(f"settings ok: {path}")
+
         # Beyond liveness. Each of these fails *only* when freezing dropped
         # something, and each drops a different module graph:
         #   lookup   -> kriko.lookup + the store

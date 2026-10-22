@@ -115,7 +115,7 @@ def test_a_mode_turn_searches_the_web_as_a_buying_turn_with_the_modes_rules(
     brief = answering.prompts[-1]
     assert marker in brief
     assert "THE READER WANTS SOMETHING TO BUY" in brief  # the buying rules still hold
-    assert "LINKS ARE REQUIRED" in brief
+    assert "markdown link" in brief and "never one built from memory" in brief
     assert out["mode"] == mode
     assert "shop.example/battery" in out["answer"]
 

@@ -90,11 +90,13 @@ export function useSearchProviders() {
   const load = useCallback(async () => {
     if (mode === 'checking') return
     if (mode !== 'live') {
+      setProblem('')
       setDoc(structuredClone(demo.current))
       return
     }
     try {
       setDoc(await get<SearchProvidersDoc>('/api/search-providers'))
+      setProblem('')
     } catch (error) {
       setProblem(error instanceof Error ? error.message : 'Could not read the search providers.')
     }

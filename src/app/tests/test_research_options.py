@@ -46,4 +46,9 @@ def test_the_choices_list_the_kinds_and_the_stored_options(tmp_path):
         out = prefs.research_options(conn)
     finally:
         conn.close()
-    assert out == {"sources": prefs.MAX_RESEARCH_SOURCES, "kinds": []}
+    assert out == {
+        "sources": prefs.MAX_RESEARCH_SOURCES,
+        "kinds": [],
+        "thoroughness": prefs.KRIKO_AGENT_DEFAULT_THOROUGHNESS,
+        "validation_sensitivity": prefs.KRIKO_AGENT_DEFAULT_VALIDATION_SENSITIVITY,
+    }

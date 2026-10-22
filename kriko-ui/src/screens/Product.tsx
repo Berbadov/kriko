@@ -31,6 +31,12 @@ type Asked = ApiJob & { params?: { question?: string } }
 
 const reasonOf = (error: unknown) => (error instanceof EngineError ? error.message : 'The engine does not answer.')
 const answerOf = (job: ApiJob) => (job.result as { answer?: string } | null | undefined)?.answer ?? ''
+/** How a lost research reads when the engine sends no words of its own. */
+const STOPPED: Record<string, string> = {
+  cancelled: 'The research was stopped.',
+  interrupted: 'The research was interrupted. Ask again to continue.',
+  failed: 'The research failed.',
+}
 
 /** One saved check, and the questions about it. The extension hands a product
  *  over to this page. The questions go to the engine, which answers them with a
@@ -66,7 +72,7 @@ export function ProductScreen({ lookupId, onBack, onCompare }: { lookupId: strin
   const settle = useCallback(
     (id: string, job: ApiJob) => {
       if (job.state === 'succeeded') patch(id, { answer: answerOf(job) || 'No answer came back.', state: 'done' })
-      else patch(id, { answer: answerOf(job), state: 'failed', note: job.message || `The research ${job.state}.` })
+      else patch(id, { answer: answerOf(job), state: 'failed', note: job.message || STOPPED[job.state] || 'The research did not finish.' })
     },
     [patch],
   )
@@ -151,11 +157,13 @@ export function ProductScreen({ lookupId, onBack, onCompare }: { lookupId: strin
   return (
     <section className="product">
       <header className="page-head rise" style={{ '--i': 0 } as CSSProperties}>
-        <button className="icon-btn" onClick={onBack} aria-label="Back to Chat">
-          <Icon name="collapse" size={18} />
-        </button>
-        <h1>{check?.name ?? 'Check'}</h1>
-        {check && <span className="muted">{check.category || 'Quick look'}</span>}
+        <div className="head-main">
+          <button className="icon-btn" onClick={onBack} aria-label="Back to Chat">
+            <Icon name="collapse" size={18} />
+          </button>
+          <h1 title={check?.name}>{check?.name ?? 'Check'}</h1>
+          {check && <span className="muted">{check.category || 'Quick look'}</span>}
+        </div>
         <div className="head-tools">
           {check && <button className="btn" disabled={turns.some((turn) => turn.state === 'running')} onClick={() => void ask('Research this exact product again for current evidence, prices and availability. Keep the recorded variant and market assumptions explicit and cite the sources.')}>Ask for fresh evidence</button>}
           {onBoard ? (
