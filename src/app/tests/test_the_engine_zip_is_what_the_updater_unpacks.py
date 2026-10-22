@@ -44,7 +44,7 @@ def test_the_zip_holds_the_manifest_the_program_and_the_folder(packer, tmp_path)
     assert {"engine.json", "kriko-sidecar.exe", "_internal/python313.dll",
             "_internal/kriko-9.9.9.dist-info/METADATA"} <= names
     assert manifest["version"] == "9.9.9" and manifest["asset"] == zip_path.name
-    assert manifest["min_shell"] == "0.3.0"
+    assert manifest["min_shell"] == "0.3.1"
     assert json.loads((tmp_path / "out" / "engine.json").read_text(encoding="utf-8")) == manifest
 
 
@@ -66,13 +66,14 @@ def test_what_the_packer_writes_the_updater_stages(packer, tmp_path, monkeypatch
 
     monkeypatch.setattr(appupdate, "_open", fake)
     parsed = appupdate.parse_release(release)
-    # This release changes the desktop UI. Existing 0.2.6 users must get the
+    # This release changes the desktop UI. Existing users must get the
     # installer so the new engine is not paired with their old window.
     assert engineupdate.offer(parsed, "0.2.5", "0.2.6") == {}
-    offered = engineupdate.offer(parsed, "0.2.5", "0.3.0")
-    assert offered["version"] == "9.9.9" and offered["min_shell"] == "0.3.0"
+    assert engineupdate.offer(parsed, "0.2.5", "0.3.0") == {}
+    offered = engineupdate.offer(parsed, "0.2.5", "0.3.1")
+    assert offered["version"] == "9.9.9" and offered["min_shell"] == "0.3.1"
     root = tmp_path / "engines"
-    engineupdate.stage(offered, root=root, shell="0.3.0")
+    engineupdate.stage(offered, root=root, shell="0.3.1")
     assert (root / "9.9.9" / "kriko-sidecar.exe").read_bytes() == b"engine"
     assert (root / "9.9.9" / engineupdate.READY).is_file()
 

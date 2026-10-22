@@ -123,7 +123,7 @@ OPENAI_COMPATIBLE = ApiAgent(
 
 KRIKO_AGENT = ApiAgent(
     id="kriko-agent",
-    label="Kriko Agent",
+    label="Kriko Agent · Soon",
     key="mercury",
     default_model="mercury-2.5",
     search_tool="deepseek_search",
@@ -136,8 +136,9 @@ KRIKO_AGENT = ApiAgent(
         "returned by these tools as the only source for verbatim quotes.\n"
     ),
     model_hint=(
-        "Fixed stack: Mercury 2.5 for research and DeepSeek Search/Fetch for "
-        "retrieval. Both provider keys are required."
+        "Experimental preview: Mercury 2.5 for research and DeepSeek Search/Fetch "
+        "for retrieval. Uses your own provider keys on this computer; "
+        "no shared Kriko credentials are included."
     ),
     install_hint=(
         "Add both MERCURY_API_KEY and DEEPSEEK_API_KEY in Settings → Research."

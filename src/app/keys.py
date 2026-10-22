@@ -90,12 +90,12 @@ PROVIDERS = (
     ),
     Provider(
         id="deepseek",
-        label="DeepSeek",
+        label="DeepSeek Search",
         env="DEEPSEEK_API_KEY",
-        purpose="A search provider that stands behind OpenSERP when it fails or "
-        "finds nothing. Receives the same queries Exa would — words built from "
-        "a subject's own attributes — and only after the local search service "
-        "has not answered. Never a page you visited and never a listing URL.",
+        purpose="Runs DeepSeek Search and Fetch for Kriko Agent and provides "
+        "search fallback when OpenSERP cannot answer. Receives search queries "
+        "and URLs selected for retrieval. The key is sent only to DeepSeek's API. "
+        "Never returned to Settings.",
         optional=True,
     ),
     Provider(
@@ -135,15 +135,6 @@ PROVIDERS = (
         "stays on this machine and is sent only to Inception's API. Never "
         "returned to the Settings screen.",
         optional=True,
-    ),
-    Provider(
-        id="deepseek",
-        label="DeepSeek Search",
-        env="DEEPSEEK_API_KEY",
-        purpose="Runs DeepSeek Search and Fetch for Kriko Agent. It receives "
-        "search queries and URLs selected from search results, and returns "
-        "page text. The key stays on this machine and is sent only to "
-        "DeepSeek's API. Never returned to the Settings screen.",
     ),
     Provider(
         id="proxy",

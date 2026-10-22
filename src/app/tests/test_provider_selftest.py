@@ -333,6 +333,27 @@ def test_a_completion_check_records_the_tokens_it_counted(isolated, monkeypatch)
     assert rows[0]["tokens"] == 8
 
 
+def test_mercury_key_test_never_uses_the_openai_endpoint_or_model(isolated, monkeypatch):
+    monkeypatch.setenv("MERCURY_API_KEY", SECRET)
+    monkeypatch.setenv("LLM_BASE_URL", "https://unrelated.example/v1")
+    monkeypatch.setenv("LLM_MODEL", "gpt-4o-mini")
+    requests = []
+
+    def answer(request):
+        requests.append(request)
+        return openai_hit()
+
+    serve(monkeypatch, answer)
+    client, _ = make_client(isolated)
+    response = client.post("/api/keys/test", json={"provider": "mercury"})
+    assert response.json()["ok"] is True
+    assert len(requests) == 1
+    assert requests[0].full_url == "https://api.inceptionlabs.ai/v1/chat/completions"
+    assert json.loads(requests[0].data)["model"] == "mercury-2.5"
+    assert requests[0].get_header("Authorization") == f"Bearer {SECRET}"
+    assert SECRET not in response.text
+
+
 def test_anthropic_without_a_chosen_llm_reports_no_model(isolated, monkeypatch):
     monkeypatch.setenv("ANTHROPIC_API_KEY", SECRET)
     calls = []

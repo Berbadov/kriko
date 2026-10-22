@@ -524,13 +524,13 @@ function KeyItem({
       <div className="key-head">
         <span>
           <strong>{label}</strong>
-          <small>{row.present ? `Set${row.hint ? ` · ends ${row.hint}` : ''}${row.source === 'env' ? ' · from the environment' : ''}` : 'Not set'}</small>
+          <small>{row.present ? `Set${row.hint ? ` · ends ${row.hint}` : ''}${row.source === 'environment' ? ' · from the environment' : ''}` : 'Not set'}</small>
         </span>
         {!editing && (
           <span className="key-actions">
             {row.present && <button onClick={onTest}>Test</button>}
             <button onClick={() => setEditing(true)}>{row.present ? 'Change' : 'Add'}</button>
-            {row.present && row.source !== 'env' && <button onClick={onRemove}>Remove</button>}
+            {row.present && row.source !== 'environment' && <button onClick={onRemove}>Remove</button>}
           </span>
         )}
       </div>

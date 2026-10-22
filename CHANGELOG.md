@@ -3,6 +3,18 @@
 Reader-visible changes for each release. Newest first. Published versions are
 immutable; a correction is a newer version.
 
+### 0.3.1
+
+- **Kriko Agent is experimental.** Its picker label now includes **Soon**.
+  The preview uses the Mercury and DeepSeek keys configured on the reader's
+  own computer. Downloads contain no shared Kriko credentials.
+- **Mercury key testing uses Mercury.** Settings previously sent its key test
+  to the configured OpenAI-compatible endpoint with that endpoint's model.
+  It now uses Inception's endpoint and Mercury 2.5, independently of OpenAI
+  settings. Actual Kriko Agent requests already used Inception's endpoint.
+- **One DeepSeek key row.** A duplicate entry is removed. Settings correctly
+  identifies keys supplied through the environment.
+
 ### 0.3.0
 
 - **Kriko Agent and local research.** A built-in agent combines web search,

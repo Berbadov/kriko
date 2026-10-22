@@ -41,6 +41,11 @@ from app.web.settings import Settings
 FIXTURE = "sk-test-DO-NOT-LEAK-0123456789abcdef4f2a"
 
 
+def test_each_key_has_one_settings_row():
+    ids = [provider.id for provider in keys.PROVIDERS]
+    assert len(ids) == len(set(ids))
+
+
 def _client(tmp_path):
     return TestClient(
         create_app(
