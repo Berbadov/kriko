@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react'
+import { CAP_ORDER, CAP_WORDS, usedToday, useCaps, type CapResource } from '../../engine/caps'
 import { useAppUpdate } from '../../engine/appupdate'
 import { useSensitivity } from '../../engine/sensitivity'
 import { useAbout, useKeys, usePrefsDoc, useSpent, type KeyRow } from '../../engine/settings'
 import type { Sensitivity } from '../../engine/thinness'
+import { useUsage } from '../../engine/usage'
 import { usePrefs, type Profile, type ThemePref } from '../../prefs'
 import { startTour } from '../../tour/Tour'
 import { Chip, Segmented, Select, Switch } from '../controls'
+import { showDrawer } from '../drawerEvents'
 import { McpClientsGroup } from './McpClients'
 import { ProxiesGroup } from './Proxies'
 import { SearchProvidersGroup } from './SearchProviders'
@@ -51,6 +54,8 @@ export function SettingsPanel(_: { onOpen?: (lookupId: string) => void }) {
   const about = useAbout()
   const update = useAppUpdate()
   const { sensitivity, choose } = useSensitivity()
+  const { caps, setCap } = useCaps()
+  const { meters, demo: demoMeters } = useUsage()
   const [sensitivityProblem, setSensitivityProblem] = useState('')
 
   return (
@@ -76,6 +81,28 @@ export function SettingsPanel(_: { onOpen?: (lookupId: string) => void }) {
           </span>
           <button className="btn" onClick={startTour}>
             Take the tour
+          </button>
+        </div>
+      </section>
+
+      <section className="panel-group">
+        <h3>Chat</h3>
+        <div className="setting">
+          <span>
+            Chat settings
+            <small>What it remembers, and how an answer is shaped.</small>
+          </span>
+          <button className="btn ghost" onClick={() => showDrawer('chat')}>
+            Open
+          </button>
+        </div>
+        <div className="setting">
+          <span>
+            Set up Kriko
+            <small>Verify an agent and connect your browser.</small>
+          </span>
+          <button className="btn ghost" onClick={() => showDrawer('setup')}>
+            Open
           </button>
         </div>
       </section>
@@ -243,6 +270,24 @@ export function SettingsPanel(_: { onOpen?: (lookupId: string) => void }) {
 
       <McpClientsGroup />
 
+      <section className="panel-group">
+        <h3>Usage caps</h3>
+        <p className="panel-note">
+          A cap is a warning, not a stop: the usage pill turns amber once a day passes one, and nothing is blocked. Leave a
+          field empty for no cap. Caps are kept on this computer.
+        </p>
+        {CAP_ORDER.map((id) => (
+          <CapField
+            key={id}
+            id={id}
+            cap={caps[id]}
+            today={usedToday(meters, id)}
+            onChange={(value) => setCap(id, value)}
+          />
+        ))}
+        {demoMeters && <p className="panel-note">Example numbers, because no engine answers.</p>}
+      </section>
+
       {spent && (
         <section className="panel-group">
           <h3>Spent in {spent.days} days</h3>
@@ -301,6 +346,56 @@ export function SettingsPanel(_: { onOpen?: (lookupId: string) => void }) {
           </div>
         </section>
       )}
+    </div>
+  )
+}
+
+function CapField({ id, cap, today, onChange }: { id: CapResource; cap: number | null; today: number | null; onChange: (value: number | null) => void }) {
+  const word = CAP_WORDS[id]
+  const [draft, setDraft] = useState(cap === null ? '' : String(cap))
+  useEffect(() => setDraft(cap === null ? '' : String(cap)), [cap])
+
+  const commit = () => {
+    const text = draft.trim()
+    if (!text) {
+      if (cap !== null) onChange(null)
+      return
+    }
+    const value = Number(text.replace(',', '.'))
+    if (!Number.isFinite(value) || value <= 0) {
+      setDraft(cap === null ? '' : String(cap))
+      return
+    }
+    if (value !== cap) onChange(value)
+  }
+
+  const used = today === null ? 'Nothing counted today.' : `${word.money ? `$${today.toFixed(today < 0.01 ? 4 : 2)}` : today.toLocaleString('en-GB')} today.`
+
+  return (
+    <div className="setting">
+      <span>
+        {word.title} a day
+        <small>
+          {used} {cap === null ? 'No cap set.' : 'A warning only.'}
+        </small>
+      </span>
+      <label className="cap-field">
+        <input
+          type="number"
+          min="0"
+          step={word.money ? '0.01' : '1'}
+          inputMode={word.money ? 'decimal' : 'numeric'}
+          placeholder="No cap"
+          aria-label={`${word.title} a day`}
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          onBlur={commit}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') event.currentTarget.blur()
+          }}
+        />
+        <span className="cap-unit">{word.money ? '$' : word.unit}</span>
+      </label>
     </div>
   )
 }
