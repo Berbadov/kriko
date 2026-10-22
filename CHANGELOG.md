@@ -27,6 +27,9 @@ immutable; a correction is a newer version.
   direct setup buttons. An engine failure shows Reconnect instead of switching
   to demo answers. Keyboard focus stays inside Settings while it is open.
   The installer omits unused development tools and their thousands of files.
+- **Install the extension from the store.** The README and English and Turkish
+  website pages link directly to the Chrome Web Store. The extension updates
+  through the browser and works alongside the running desktop app.
 
 - **Chat asks before it answers.** When one detail would change the answer — a
   tyre size, a model year, an engine, the market you buy in — Chat asks for it

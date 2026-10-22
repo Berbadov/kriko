@@ -41,11 +41,16 @@ stable desktop research promise.
 2. Choose an agent in **Agents**. Return to setup and press **Check connection**.
 3. Open **Catalogs → Find release catalogs**, or import a `.kpack` file. Public
    research also works without an installed catalog when a research provider is ready.
-4. In setup, press **Prepare browser extension** and follow the browser steps.
+4. Install [Kriko from the Chrome Web Store](https://chromewebstore.google.com/detail/kriko/bdifnaggafjokndlpjgmlfappcoehdjb)
+   in Chrome, Edge or Brave. Keep the desktop app running, open a product listing,
+   and press the Kriko toolbar button or **Alt + K**. The store handles extension updates.
 5. Ask a product question in **Chat** and inspect a source before making a decision.
 
 The main navigation is **Chat**, **Compare**, and **Queue**. **More** contains setup,
 agents, local models, catalogs, sites, history, settings, and backup/restore.
+The extension needs the desktop app. **More → Set up Kriko** checks its connection;
+manual folder loading is only needed for a development checkout. See the
+[Windows installation guide](docs/INSTALL_WINDOWS.md) for details.
 
 ## Working with agents
 
