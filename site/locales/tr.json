@@ -52,14 +52,11 @@
   "Add knowledge.": "Bilgi ekle.",
   "Open <strong>Catalogs</strong>, choose <strong>Find release catalogs</strong> and install one. You can also research without one.": "<strong>Catalogs</strong>'u aç, <strong>Find release catalogs</strong>'u seç ve birini kur. Katalog olmadan da araştırabilirsin.",
   "Add Kriko to your browser.": "Kriko'yu tarayıcına ekle.",
-  "Open <strong>More</strong>, then <strong>Set up Kriko</strong>, and press <strong>Prepare browser extension</strong>. Follow the steps for Chrome, Edge or Brave.": "<strong>More</strong>'u, ardından <strong>Set up Kriko</strong>'yu aç ve <strong>Prepare browser extension</strong>'a bas. Chrome, Edge ya da Brave için adımları izle.",
   "Open a listing.": "Bir ilan aç.",
   "Kriko for Windows": "Windows için Kriko",
-  "64-bit Windows. Desktop app and browser extension.": "64 bit Windows. Masaüstü uygulaması ve tarayıcı uzantısı.",
   "Get the Windows installer": "Windows yükleyicisini indir",
   "Choose the setup .exe file on the latest release page. The installer is not code-signed yet, so Windows may show a SmartScreen warning.": "Son sürüm sayfasında kurulum .exe dosyasını seç. Yükleyici henüz kod imzalı değil; bu yüzden Windows bir SmartScreen uyarısı gösterebilir.",
   "Prefer a portable version? Choose the .zip.": "Taşınabilir sürümü mü tercih ediyorsun? .zip dosyasını seç.",
-  "On macOS or Linux? <a href=\"https://github.com/Berbadov/kriko#build-from-source\">See the source build options.</a>": "macOS ya da Linux mu kullanıyorsun? <a href=\"https://github.com/Berbadov/kriko#build-from-source\">Kaynaktan derleme seçeneklerine bak.</a>",
   "Good to know.": "Bilmekte fayda var.",
   "Where does my research live?": "Araştırmalarım nerede saklanıyor?",
   "On your computer. Catalogs, history and settings stay with you, and there is no account to create. Online research sends your question and the pages it read to the provider you choose. Read the <a href=\"/privacy/\">privacy policy</a> for every case.": "Bilgisayarında. Kataloglar, geçmiş ve ayarlar sende kalır; hesap açman gerekmez. Çevrimiçi araştırma, sorduğun soruyu ve okuduğu sayfaları seçtiğin sağlayıcıya gönderir. Her durumun ayrıntısı için <a href=\"/privacy/\">gizlilik politikasını</a> oku.",
@@ -118,5 +115,9 @@
   "<span class=\"index\">06</span>Questions": "<span class=\"index\">06</span>Sorular",
   "Your data, the cost and the limits.": "Verilerin, maliyet ve sınırlar.",
   "The Kriko panel for an invented laptop. It lists four things to check, from a serious storage mismatch down to a minor battery note.": "Kurgusal bir dizüstü için Kriko paneli. Ciddi bir depolama uyuşmazlığından küçük bir pil notuna kadar kontrol edilecek dört şeyi listeliyor.",
-  "The Kriko panel open beside an invented laptop listing, listing four things to check.": "Kurgusal bir dizüstü ilanının yanında açık Kriko paneli; kontrol edilecek dört şeyi listeliyor."
+  "The Kriko panel open beside an invented laptop listing, listing four things to check.": "Kurgusal bir dizüstü ilanının yanında açık Kriko paneli; kontrol edilecek dört şeyi listeliyor.",
+  "Get the browser extension": "Tarayıcı uzantısını yükle",
+  "Install <a href=\"https://chromewebstore.google.com/detail/kriko/bdifnaggafjokndlpjgmlfappcoehdjb\">Kriko from the Chrome Web Store</a> in Chrome, Edge or Brave. The store handles updates. Keep the desktop app running; the extension needs it to work.": "Chrome, Edge ya da Brave için <a href=\"https://chromewebstore.google.com/detail/kriko/bdifnaggafjokndlpjgmlfappcoehdjb\">Kriko’yu Chrome Web Mağazası’ndan yükle</a>. Güncellemeleri mağaza yapar. Masaüstü uygulamasını açık tut; uzantının çalışması için gereklidir.",
+  "Version 0.3.0 for 64-bit Windows. Install the desktop app, then add the browser extension from the Chrome Web Store.": "64 bit Windows için 0.3.0 sürümü. Masaüstü uygulamasını kur, ardından tarayıcı uzantısını Chrome Web Mağazası’ndan ekle.",
+  "On macOS or Linux? <a href=\"https://github.com/Berbadov/kriko#build-and-verify\">See the source build options.</a>": "macOS ya da Linux mu kullanıyorsun? <a href=\"https://github.com/Berbadov/kriko#build-and-verify\">Kaynaktan derleme seçeneklerine bak.</a>"
 }
