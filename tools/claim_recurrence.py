@@ -556,7 +556,7 @@ def run_seed(seed: dict, search, reader, pages: int, scorer: Scorer,
     query = f'"{product}" {claim_text}'[:240]
     record = {"id": seed["id"], "product": product, "claim": claim_text,
               "terms": sorted(claim.stems), "query": query, "scorer": scorer.note,
-              "window": window, "stem_length": STEM_LENGTH}
+              "window": window, "stem_length": STEM_LENGTH, "depth": pages}
     started = time.perf_counter()
     try:
         hits = search(query, pages)
@@ -565,14 +565,18 @@ def run_seed(seed: dict, search, reader, pages: int, scorer: Scorer,
                       recurring=False, publishers=[], sources=[], threads=[],
                       seconds=round(time.perf_counter() - started, 2))
         return record
+    record["search_seconds"] = round(time.perf_counter() - started, 2)
     hits = [hit for hit in hits if isinstance(hit, dict) and hit.get("url")]
     record["hits"] = len(hits)
+    fetch_started = time.perf_counter()
     with ThreadPoolExecutor(max_workers=min(5, max(1, len(hits)))) as pool:
         texts = list(pool.map(lambda hit: read_page(reader, hit["url"]), hits))
+    record["fetch_seconds"] = round(time.perf_counter() - fetch_started, 2)
     pages_read = [(hit["url"], str(hit.get("title") or ""), text)
                   for hit, text in zip(hits, texts) if text]
     record["pages"] = len(pages_read)
 
+    judge_started = time.perf_counter()
     seen: set[str] = set()
     found: dict[str, list[tuple[str, float]]] = {}
     matched: list[str] = []
@@ -601,6 +605,7 @@ def run_seed(seed: dict, search, reader, pages: int, scorer: Scorer,
         outcomes.append(outcome)
 
     record.update(summarise(found, matched, outcomes),
+                  judge_seconds=round(time.perf_counter() - judge_started, 2),
                   seconds=round(time.perf_counter() - started, 2))
     return record
 
@@ -784,6 +789,71 @@ def print_evaluation(rows: list[dict]) -> None:
           f"{report['false_recurring']}/{report['false']} recurring")
 
 
+def percentile(values: list[float], fraction: float) -> float:
+    if not values:
+        return 0.0
+    ordered = sorted(values)
+    index = min(len(ordered) - 1, max(0, int(round(fraction * (len(ordered) - 1)))))
+    return ordered[index]
+
+
+def summarise_runs(rows: list[dict]) -> dict:
+    """One depth's performance: how long one seed takes, and what it settled.
+
+    `wall` is the sum of per-seed seconds, which is the work done, not the
+    bench's elapsed time: the workers run seeds side by side.
+    """
+    runs = [row for row in rows if not row.get("error")]
+    seconds = [float(row.get("seconds") or 0.0) for row in runs]
+
+    def mean(key: str) -> float:
+        return round(sum(float(row.get(key) or 0.0) for row in runs)
+                     / max(1, len(runs)), 2)
+
+    true = [row for row in runs if str(row["id"]).startswith("true-")]
+    false = [row for row in runs if str(row["id"]).startswith("false-")]
+    return {
+        "runs": len(rows), "errors": len(rows) - len(runs),
+        "wall": round(sum(seconds), 1), "p50": percentile(seconds, 0.5),
+        "p95": percentile(seconds, 0.95), "mean": mean("seconds"),
+        "hits": mean("hits"), "pages": mean("pages"),
+        "search": mean("search_seconds"), "fetch": mean("fetch_seconds"),
+        "judge": mean("judge_seconds"),
+        "true_found": sum(bool(row.get("sources")) for row in true),
+        "true_runs": len(true),
+        "true_recurring": sum(bool(row.get("recurring")) for row in true),
+        "false_kept": sum(bool(row.get("sources")) for row in false),
+        "false_runs": len(false),
+    }
+
+
+def stability(rows: list[dict]) -> dict[str, tuple[int, int]]:
+    """Per seed: in how many runs it found a source, out of how many ran."""
+    seen: dict[str, tuple[int, int]] = {}
+    for row in rows:
+        if row.get("error"):
+            continue
+        runs, found = seen.get(str(row["id"]), (0, 0))
+        seen[str(row["id"])] = (runs + 1, found + bool(row.get("sources")))
+    return seen
+
+
+def print_bench(groups: dict[int, list[dict]]) -> None:
+    print(f"\n{'depth':>5} {'runs':>4} {'err':>3} {'seed-s':>6} {'p50':>5} {'p95':>5} "
+          f"{'mean':>5} {'pages':>5} {'true':>7} {'rec':>3} {'false':>6} "
+          f"{'search':>6} {'fetch':>5} {'judge':>5}")
+    for depth, rows in sorted(groups.items()):
+        s = summarise_runs(rows)
+        print(f"{depth:>5} {s['runs']:>4} {s['errors']:>3} {s['wall']:>5.0f}s "
+              f"{s['p50']:>5.1f} {s['p95']:>5.1f} {s['mean']:>5.1f} {s['pages']:>5.1f} "
+              f"{s['true_found']:>3}/{s['true_runs']:<3} {s['true_recurring']:>3} "
+              f"{s['false_kept']:>3}/{s['false_runs']:<2} "
+              f"{s['search']:>5.1f}s {s['fetch']:>4.1f}s {s['judge']:>4.1f}s")
+    found = stability([row for rows in groups.values() for row in rows])
+    print("found per seed: " + ", ".join(f"{name} {hits}/{runs}"
+                                         for name, (runs, hits) in sorted(found.items())))
+
+
 def scorer_for(args) -> tuple[Scorer, Embedder | None]:
     model = load_model(args.model) if args.model else None
     embedder = Embedder(enabled=not args.no_embedding)
@@ -797,6 +867,12 @@ def main() -> int:
     parser.add_argument("--seeds", type=Path, default=ROOT / "tools" / "recurrence_seeds.json")
     parser.add_argument("--limit", type=int, default=0, help="first N seeds only")
     parser.add_argument("--pages", type=int, default=4)
+    parser.add_argument("--depths", default="",
+                        help="comma-separated page depths for a bench, e.g. 4,8,12")
+    parser.add_argument("--repeats", type=int, default=1,
+                        help="run every seed this many times per depth")
+    parser.add_argument("--verbose", action="store_true",
+                        help="print every bench run, not just the depth table")
     parser.add_argument("--workers", type=int, default=3,
                         help="seeds expanded side by side (each with its own searcher)")
     parser.add_argument("--timeout", type=float, default=12.0)
@@ -879,7 +955,8 @@ def main() -> int:
         print(f"\nwrote {output}")
         return 0
 
-    def one(seed: dict) -> dict:
+    def one(job: tuple[int, int, dict]) -> tuple[int, int, dict, dict]:
+        depth, repeat, seed = job
         # A searcher per worker: the adapter carries per-instance pacing and
         # cancellation state, so sharing one across threads would mix them.
         # A resubmitted search gets a new one; the old searcher's budget was
@@ -891,18 +968,34 @@ def main() -> int:
             own_search = openserp.searcher("", engine=openserp.LOCAL_ENGINES,
                                            language="en", timeout=args.timeout)
             record = run_seed(seed, own_search, fetch.reader(timeout=8.0),
-                              args.pages, scorer, embedder, window)
+                              depth, scorer, embedder, window)
             if not record.get("error"):
                 break
-        record["attempts"] = attempts
-        return record
+        record.update(attempts=attempts, repeat=repeat)
+        return depth, repeat, seed, record
 
-    print(f"{'seed':24} {'hits':>4} {'pages':>5} {'menu':>4} {'off':>3} {'src':>3} "
-          f"{'thr':>3} {'secs':>6}  verdict")
-    rows = []
+    depths = ([int(part) for part in args.depths.split(",") if part.strip()]
+              if args.depths else [args.pages])
+    jobs = [(depth, repeat, seed) for depth in depths
+            for repeat in range(max(1, args.repeats)) for seed in seeds]
+    bench = len(jobs) > len(seeds) or len(depths) > 1
+    if bench:
+        print(f"bench: {len(seeds)} seed(s) x {len(depths)} depth(s) x "
+              f"{max(1, args.repeats)} repeat(s) = {len(jobs)} run(s), "
+              f"{max(1, args.workers)} at a time")
+    else:
+        print(f"{'seed':24} {'hits':>4} {'pages':>5} {'menu':>4} {'off':>3} {'src':>3} "
+              f"{'thr':>3} {'secs':>6}  verdict")
+
+    started = time.perf_counter()
+    rows: list[dict] = []
+    groups: dict[int, list[dict]] = {}
     with ThreadPoolExecutor(max_workers=max(1, args.workers)) as pool:
-        for seed, record in zip(seeds, pool.map(one, seeds)):
+        for depth, _repeat, seed, record in pool.map(one, jobs):
             rows.append(record)
+            groups.setdefault(depth, []).append(record)
+            if bench and not args.verbose:
+                continue
             verdict = ("ERROR" if record.get("error") else
                        "RECURRING" if record.get("recurring") else
                        "single" if record.get("single") else "none")
@@ -915,7 +1008,14 @@ def main() -> int:
                 print(f"    {domain:28} {sentences[0][:100]}")
             if record.get("error"):
                 print(f"    {record['error']}")
-    print_evaluation(rows)
+    elapsed = time.perf_counter() - started
+    if bench:
+        print_bench(groups)
+        print(f"\n{len(jobs)} run(s) in {elapsed:.1f}s "
+              f"({len(jobs) / max(elapsed, 0.001):.2f} seeds/s)")
+    else:
+        print_evaluation(rows)
+    print(f"elapsed {elapsed:.1f}s")
     with output.open("a", encoding="utf-8") as handle:
         for record in rows:
             handle.write(json.dumps(record, ensure_ascii=False) + "\n")
