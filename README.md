@@ -58,12 +58,37 @@ manual folder loading is only needed for a development checkout. See the
 Kriko Agent is an experimental preview, marked **Soon**. Its Mercury 2.5 model
 and DeepSeek Search/Fetch use your own provider keys on this computer. Downloads
 include no shared Kriko credentials; the app does not provide a hosted research
-account.
+account. Two things let someone else use your keys anyway, and both are yours to
+give:
+
+- **An access code and a password** (Settings → Shared access). You make the
+  code from the keys saved on your computer, send it and a password to a friend
+  in two separate messages, and their Kriko Agent runs on your keys. The code is
+  sealed with the password *and* with a secret inside the shipped app, so the
+  password is worth nothing outside Kriko; no key is ever written in the clear,
+  and on Windows the opened grant is bound to the Windows account that opened
+  it. Replace your keys at the providers to stop every code working.
+- **A trial**, if the build you installed carries one: a few Kriko Agent
+  questions for someone who has been given nothing, counted on their own
+  computer. What it can and cannot protect is in
+  [shared access](docs/security/shared-access.md) — the short version is that a
+  trial key belongs at the provider with a spend limit on it.
 
 An ordinary request starts the work. Agents receive shared instructions to carry
 it through, use another source when a read fails, preserve your constraints and
 ask only for details that materially change the answer. Empty offers receive a
-repair attempt; unanswered tool requests cannot become completed answers.
+repair attempt; unanswered tool requests cannot become completed answers. A
+research turn is bounded on every side — its own deadline, a whole-request limit
+on each search, a bounded wait for the retrieval pool — and says what it is doing
+while it does it, so a slow search is visible rather than a frozen step. Buying
+answers identify the product and its parts before they name a candidate or a
+seller, and say which parts they could not identify.
+
+Each agent also chooses whose web search it uses (Settings → Agents): its own
+tools, which is the default, or Kriko's — Kriko searches and reads the pages and
+then checks every quote against a page it fetched itself. Kriko's is the
+experimental one, and the one to choose when checked quotes matter more than the
+agent's own reach.
 
 Chat reads multiple supplied links, can continue a search, and keeps older user
 requirements in conversation context. The local reader supports public HTML/text

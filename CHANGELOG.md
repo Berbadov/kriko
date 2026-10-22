@@ -7,7 +7,48 @@ immutable; a correction is a newer version.
 
 - **Kriko Agent is experimental.** Its picker label now includes **Soon**.
   The preview uses the Mercury and DeepSeek keys configured on the reader's
-  own computer. Downloads contain no shared Kriko credentials.
+  own computer. Downloads contain no shared Kriko credentials unless a build
+  was given a trial bundle on purpose (see Shared access below).
+- **Kriko Agent can no longer get stuck on a search.** A research turn had one
+  bound on the model call and none on retrieval, so a search socket that
+  dribbled held the job — and the screen — for as long as it did. Every bound
+  now has a value and a sentence: the turn's own deadline, a whole-request
+  limit on each DeepSeek call, a bounded wait on the retrieval pool, and a pool
+  that is not joined on the way out. A turn also says what it is doing: each
+  search, each cache hit, each failure and the trial count appear in the run's
+  log as they happen instead of one frozen "searching the web".
+- **A password for friends, and a free trial for strangers.** Settings → Shared
+  access: make an access code, send it and a password to a friend, and their
+  Kriko Agent runs on the owner's Mercury and DeepSeek keys. The code is sealed
+  with the password and with a secret that lives in the shipped build and not in
+  this repository, so the password works inside Kriko and nowhere else; no key
+  is written in the clear, and on Windows the opened grant is bound to the
+  Windows account that opened it. A build may also carry a trial bundle — ten
+  Kriko Agent questions, counted on the reader's own machine — for people who
+  have been given nothing. `docs/security/shared-access.md` says what it does
+  and does not protect.
+- **Each agent chooses whose web search it uses.** Settings → Agents has a third
+  dial beside the model and the effort. The default is the agent's own web
+  search, because Kriko's is the experimental one; choosing Kriko's means Kriko
+  searches and reads the pages and checks every quote against a page it fetched
+  itself. An agent whose protocol has no web tools is read for whatever the dial
+  says, and the run says so.
+- **The agent you pick is the agent that answers.** The picker's choice was
+  component state, so opening a product card from chat threw it away, and every
+  settings load or key save could empty it and fall back to the first agent in
+  the roster. The pick is now kept with the engine and sent with the question.
+- **An answer no longer disappears and loads again.** When a turn called the
+  agent a second time — to repair an offer, to revise a citation, to answer the
+  evidence review — the new draft streamed from its first word over the text the
+  reader was already reading, and the whole reply animated in again. What is on
+  screen now stays until the new draft has said at least as much.
+- **Buying answers identify the parts before they name a product.** The brief
+  asks for the product, its parts and their codes, and what is reported to fail
+  on each candidate, before any candidate or seller is named — and asks the
+  agent to say which parts it could not identify rather than passing over them.
+- **Settings is one press away and easier to see.** A gear in the top bar opens
+  Settings directly, the drawer's rows are larger, and closing the drawer
+  returns it to its list of panels instead of reopening the page read last.
 - **Mercury key testing uses Mercury.** Settings previously sent its key test
   to the configured OpenAI-compatible endpoint with that endpoint's model.
   It now uses Inception's endpoint and Mercury 2.5, independently of OpenAI
