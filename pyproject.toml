@@ -59,6 +59,7 @@ pipeline = [
     "python-dotenv",
 ]
 dev = ["pytest>=8.0.0", "pytest-xdist>=3.5", "ruff>=0.16", "mypy>=2.3"]
+searchbench = ["httpx[http2]>=0.27.0", "matplotlib>=3.9"]
 
 [tool.setuptools.package-data]
 # The store's DDL is read from disk at every `connect()`, not imported. Without

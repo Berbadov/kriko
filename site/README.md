@@ -1,7 +1,8 @@
 # Kriko website
 
-Static HTML, CSS and JavaScript. Cloudflare Pages publishes `site/` from `main`
-without a build step. Serve the entire directory, including assets and `/tr/`.
+Static HTML, CSS and a few lines of JavaScript. Cloudflare Pages publishes
+`site/` from `main` without a build step at https://kriko.cc. Serve the whole
+directory, including `assets/`, `/tr/` and `/privacy/`.
 
 ```sh
 npm ci
@@ -9,49 +10,65 @@ npm run serve:site
 npm run test:site
 ```
 
-The English page is `/`; the complete Turkish page is `/tr/`. The header has
-explicit EN/TR links. Each page has its own language, metadata, canonical URL
-and alternate-language links. Both remain readable without JavaScript. The
-shared interaction script localizes product switching, motion controls, menu
-labels and announcements using the page's language.
+The page is white by default and follows the visitor's system for dark. Every
+colour is a token at the top of `styles.css`; the dark theme is one block. The
+look is Kriko's own and is kept on purpose, not left to defaults:
+
+- **Headings** are Barlow Condensed, which is the wordmark's own proportion.
+- **Body text** is Atkinson Hyperlegible Next, a face drawn for reading.
+- **The sky** is the app's dithered pixel sky, drawn by `tools/dither_sky.py` with
+  the app's own method and palette, in a light and a dark version.
+- **The paper** is a warm white, with the product's blue used only for actions,
+  numbers and links.
+
+Both typefaces are served from `assets/fonts/` (OFL), so no page loads anything
+from another site.
 
 ## Editing
 
-- `index.html`: English page and structure.
-- `examples.js`: English and Turkish fictional scenarios and sample evidence.
-- `locales/tr.json`: Turkish translations of static page text and labels.
-- `script.js`: shared interactions and localized control labels.
-- `styles.css`: shared responsive layout.
+- `index.html`: the English page and its structure. It is the source of the
+  Turkish page.
+- `locales/tr.json`: the Turkish text. Each key is a unit of text exactly as it is
+  written in the English page, including any `<strong>` or `<a>` inside it. A
+  sentence is translated whole, never in pieces. The app's own menu names stay
+  English in both languages, because the app is English.
+- `privacy/index.html`: the privacy policy. English only.
+- `styles.css`, `script.js`: shared by every page. `script.js` only runs the menu
+  on a narrow screen.
 
-After editing the English page, examples or translations, regenerate both static
-fallbacks and the Turkish page, then run the tests:
+After editing the English page, the stylesheet, the script or the translations:
 
 ```sh
 node site/tools/render-locales.cjs
 npm run test:site
 ```
 
-The renderer reports missing translations. Commit `tr/index.html` with its
-source changes; Cloudflare serves the generated page directly.
+The renderer writes `tr/index.html`, puts a content hash on the stylesheet and
+script of every page, and fails with the list of texts that have no translation.
+A test fails if `tr/index.html` is stale.
 
 ## Examples
 
-All four public demonstrations use fictional products, listings and evidence
-notes, visibly labeled as such. They assess no real manufacturer or model and
-link to no brand-specific failure reports. The illustrations are generic.
+The four example products are invented, and so is every finding on them. They are
+drawn in the real extension panel: `tools/capture.mjs` runs the extension's own
+code in a browser, hands it each product from `tools/examples.json` the way the
+engine would, and photographs the panel in light and dark. Nothing on the site
+assesses a real manufacturer or model, and each picture says it is an example.
 
-- Laptop A: a 256 GB basket compared with a review of the 1 TB configuration.
-- Headphones B: a sample crack report, an unknown failure rate and repair checks.
-- Espresso machine C: two noise observations with different timing and pressure.
-- Hatchback D: dry upper carpet and a water mark in the spare-wheel well.
+To change an example, edit `tools/examples.json` and then:
 
-Each includes an observation, uncertainty and a concrete next check. Sample
-notes are displayed in the walkthrough itself. They are not presented as actual
-research results, owner reports or catalog findings. Real Kriko research keeps
-links to its original sources; this landing page does not run live research.
+```sh
+PLAYWRIGHT_MODULE=/path/to/playwright/index.mjs node site/tools/capture.mjs
+python3 site/tools/optimise_images.py
+```
 
-Product selectors update the illustration, listing, findings and evidence notes
-together. Tabs support arrow keys, Home and End. Motion respects reduced-motion
-preferences; timed walkthrough playback is opt-in and pauses off-screen or in
-background tabs. Tests use jsdom; check the deployed preview visually on desktop
-and phone widths as well.
+Playwright and Pillow are only needed for this step; the site itself needs
+neither. Commit the new pictures in `assets/examples/`. The sky pictures are made
+the same way (`python3 site/tools/dither_sky.py`) and live in `assets/sky/`.
+
+## Readability
+
+Body text is 19px with 1.7 line height, lines stay under about 70 characters,
+and nothing is set under 15px. The tests check contrast in both themes (7:1 for
+body text, 4.5:1 for everything else) and the smallest font size, so a colour or
+size change that hurts reading fails the run.

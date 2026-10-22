@@ -31,7 +31,15 @@ LOCAL_PICK = "local"
 AGENT_ORDER = "agent_order"
 MODEL = "llm_model"
 SEARCH = "search_provider"
+#: The providers asked when the first choice fails or finds nothing, in order,
+#: as comma-separated ids. Empty is automatic (DeepSeek, once it has a key) and
+#: `none` is nothing behind the first choice (`providers/websearch.py`).
+SEARCH_FALLBACK = "search_fallback"
 CLASSIFICATION_PROVIDER = "classification_provider"
+#: Rotating proxies for pages that block Kriko's reads (`providers/proxypool.py`):
+#: off unless "1", and the pool as addresses without credentials, one per line.
+PROXY_ENABLED = "proxy_enabled"
+PROXY_POOL = "proxy_pool"
 #: How an agent is run: `auto` (a resident worker where the agent has a
 #: persistent protocol, else a process), `persistent` (require it) or `exec`.
 #: It applies to every agent. `codex_transport` is the name it had while only
@@ -102,6 +110,10 @@ HARNESS_EFFORT_KEYS = tuple(harness_effort_key(one) for one in _harness_ids())
 #: should use, the search service's address, and how long one completion may
 #: take, in seconds. All optional: empty means "discover it" (`app/localplane.py`).
 LOCAL_URL = "local_url"
+#: Which program serves the local model, as the reader named it in Settings
+#: (`providers/local_runtimes.py` lists them). Empty is automatic. It is only a
+#: label beside `LOCAL_URL`: every one of them is reached the same way.
+LOCAL_RUNTIME = "local_runtime"
 LOCAL_MODEL = "local_model"
 LOCAL_SEARCH_URL = "local_search_url"
 LOCAL_TIMEOUT = "local_timeout"
@@ -117,7 +129,7 @@ LLM_BASE_URL = "llm_base_url"
 # Names used by the local research provider's constructor.
 OUTPUT_LANGUAGE = LOCAL_OUTPUT_LANGUAGE
 SEARCH_LANGUAGE = LOCAL_SEARCH_LANGUAGE
-LOCAL_KEYS = (LOCAL_URL, LOCAL_MODEL, LOCAL_SEARCH_URL, LOCAL_TIMEOUT,
+LOCAL_KEYS = (LOCAL_URL, LOCAL_RUNTIME, LOCAL_MODEL, LOCAL_SEARCH_URL, LOCAL_TIMEOUT,
               LOCAL_DEVICE, LOCAL_CONTEXT, LOCAL_GPU_LAYERS,
               LOCAL_OUTPUT_LANGUAGE, LOCAL_SEARCH_LANGUAGE)
 REGIONS = {
@@ -246,6 +258,10 @@ KRIKO_AGENT_TUNING_KEYS = (
 )
 KRIKO_AGENT_DEFAULT_THOROUGHNESS = 50
 KRIKO_AGENT_DEFAULT_VALIDATION_SENSITIVITY = 50
+#: How much doubt the reader wants to see: `all` (the default), `hide_thin` or
+#: `strict`. It decides which findings an interface draws and nothing else; no
+#: setting changes what is stored or a pack's `content_digest`.
+INFO_SENSITIVITY = "info_sensitivity"
 #: The ceiling Settings offers. Each run is a CLI process or a model's
 #: attention plus its own fetches; past four the machine, the provider's rate
 #: limit and the reader's bill all say no before this number would.
@@ -270,12 +286,12 @@ def run_concurrency(conn) -> int:
     return max(1, min(wanted, MAX_RUN_CONCURRENCY))
 
 
-KEYS = (HARNESS, MODEL, SEARCH, AGENT_ORDER, *ROLE_KEYS,
+KEYS = (HARNESS, MODEL, SEARCH, SEARCH_FALLBACK, AGENT_ORDER, *ROLE_KEYS,
         *HARNESS_MODEL_KEYS, *HARNESS_EFFORT_KEYS, *LOCAL_KEYS, MARKET_REGION,
         LLM_BASE_URL, *RESEARCH_KEYS,
         RUN_CONCURRENCY, CHAT_PRODUCT_ONLY, *KRIKO_AGENT_TUNING_KEYS,
-        AGENT_TRANSPORT, CODEX_TRANSPORT,
-        CLASSIFICATION_PROVIDER)
+        INFO_SENSITIVITY, AGENT_TRANSPORT, CODEX_TRANSPORT,
+        CLASSIFICATION_PROVIDER, PROXY_ENABLED, PROXY_POOL)
 
 
 def chat_product_only(conn) -> bool:
@@ -286,6 +302,13 @@ def chat_product_only(conn) -> bool:
     """
     return str(read(conn).get(CHAT_PRODUCT_ONLY) or "").strip() in {
         "1", "true", "yes", "on"}
+
+
+def info_sensitivity(conn) -> str:
+    """`all`, `hide_thin` or `strict`; anything else, or nothing, is `all`."""
+    from app import evidence
+
+    return evidence.normalise(read(conn).get(INFO_SENSITIVITY))
 
 
 def for_role(conn, role: str, override: str = "") -> str:
@@ -368,13 +391,16 @@ def effective(conn, *, model: str = "", search: str = "", harness: str = "") -> 
     provider = modelcatalogue.provider_for(name, KRIKO_HOME)
     ready = {one["id"] for one in keys.status() if one["present"]}
     searchers = keys.search_providers()
-    search = search.strip() or stored[SEARCH] or next(iter(searchers), "")
+    search = search.strip() or stored[SEARCH]
+    if search == "openserp":  # the free local search is Chat's, not the paid plane's
+        search = ""
+    search = search or next(iter(searchers), "")
     reasons = []
     unavailable = modelcatalogue._usable(provider, ready)
     if unavailable:
         reasons.append(unavailable)
     if not search:
-        reasons.append("no search key — add Exa or Tavily in Settings")
+        reasons.append("no search key — add Exa, Tavily or DeepSeek in Settings")
     elif search not in searchers:
         reasons.append(f"selected search provider {search!r} is unavailable — add its key or change the selection")
     wanted = harness.strip() or stored[HARNESS]

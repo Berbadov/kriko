@@ -115,6 +115,8 @@ const DEMO_KEYS: KeysDoc = {
   providers: [
     { id: 'exa', label: 'Exa', purpose: 'Search words only. Never a page you visited.', present: false, hint: '', source: '' },
     { id: 'tavily', label: 'Tavily', purpose: 'Search words only. Never a page you visited.', present: true, hint: 'a1b2', source: 'file' },
+    { id: 'deepseek', label: 'DeepSeek', purpose: 'Searches when OpenSERP fails or finds nothing. Receives only the words searched.', present: true, hint: 'c3d4', source: 'file' },
+    { id: 'proxy', label: 'Proxy login', purpose: 'The user:password your proxies ask for, if they ask. Sent only to the proxies you list.', present: false, hint: '', source: '' },
     { id: 'openai', label: 'OpenAI', purpose: 'Reads the pages that research fetched.', present: false, hint: '', source: '' },
     { id: 'typesafe', label: 'TypeSafe (Jev)', purpose: 'Used for product classification when selected.', present: false, hint: '', source: '' },
   ],

@@ -14,7 +14,8 @@ from urllib.parse import urlsplit
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict
 
-from app import costs, prefs
+from app import costs, evidence, prefs
+from app.providers import local_runtimes, proxypool, websearch
 from app.web.deps import get_app_state
 
 router = APIRouter(prefix="/api", tags=["prefs"])
@@ -23,6 +24,8 @@ router = APIRouter(prefix="/api", tags=["prefs"])
 #: The longest a stored preference may be. One bound for all of them: every
 #: value here is a short name — a harness id, a model id, an effort level.
 VALUE_MAX = 200
+#: The proxy pool is a list of addresses, so it cannot be a "short name".
+POOL_MAX = 6000
 
 
 class PrefsWrite(BaseModel):
@@ -100,10 +103,42 @@ def write_prefs(body: PrefsWrite, conn=Depends(get_app_state)) -> dict:
     since there is no per-field `max_length` left to carry it.
     """
     written = {
-        key: str(value)[:VALUE_MAX]
+        key: str(value)[:POOL_MAX if key == prefs.PROXY_POOL else VALUE_MAX]
         for key, value in body.model_dump().items()
         if value is not None and key in prefs.KEYS
     }
+    if prefs.SEARCH in written and written[prefs.SEARCH] not in {"", *websearch.KNOWN}:
+        raise HTTPException(422, detail="search_provider must be one of: " + ", ".join(websearch.KNOWN))
+    if prefs.SEARCH_FALLBACK in written:
+        value = written[prefs.SEARCH_FALLBACK].strip().casefold()
+        names = [] if value in {"", websearch.NONE} else [one.strip() for one in value.split(",")]
+        if any(one not in websearch.KNOWN for one in names):
+            raise HTTPException(
+                422, detail="search_fallback must be empty, 'none' or a comma-separated list of: "
+                + ", ".join(websearch.KNOWN))
+        written[prefs.SEARCH_FALLBACK] = ",".join(dict.fromkeys(names)) if names else value
+    if prefs.LOCAL_RUNTIME in written:
+        known = {one["id"] for one in local_runtimes.runtimes()}
+        if written[prefs.LOCAL_RUNTIME] not in {"", *known}:
+            raise HTTPException(422, detail="local_runtime must be one of: " + ", ".join(sorted(known)))
+    if prefs.LOCAL_URL in written and written[prefs.LOCAL_URL]:
+        address = local_runtimes.valid_address(written[prefs.LOCAL_URL])
+        if not address:
+            raise HTTPException(
+                422, detail="local_url must be an http(s) address without credentials or query parameters")
+        written[prefs.LOCAL_URL] = address
+    if prefs.PROXY_ENABLED in written:
+        if written[prefs.PROXY_ENABLED] not in {"", "0", "1"}:
+            raise HTTPException(422, detail="proxy_enabled must be 0 or 1")
+        written[prefs.PROXY_ENABLED] = "1" if written[prefs.PROXY_ENABLED] == "1" else "0"
+    if prefs.PROXY_POOL in written:
+        lines = [one for one in written[prefs.PROXY_POOL].replace(",", "\n").split() if one]
+        pool = proxypool.parse_pool(written[prefs.PROXY_POOL])
+        if len(pool) != len(dict.fromkeys(lines)):
+            raise HTTPException(
+                422, detail="proxy_pool takes one http(s) address per line, like http://host:8080, "
+                "with no login in it: save the login under Keys")
+        written[prefs.PROXY_POOL] = "\n".join(pool)
     for key in (prefs.AGENT_TRANSPORT, prefs.CODEX_TRANSPORT):
         if key in written and written[key] not in {"", "auto", "exec", "persistent"}:
             raise HTTPException(422, detail=f"{key} must be auto, exec, or persistent")
@@ -124,6 +159,10 @@ def write_prefs(body: PrefsWrite, conn=Depends(get_app_state)) -> dict:
                     "such as en or tr-TR"
                 ),
             )
+    if (prefs.INFO_SENSITIVITY in written
+            and written[prefs.INFO_SENSITIVITY] not in {"", *evidence.SENSITIVITIES}):
+        raise HTTPException(
+            422, detail="info_sensitivity must be all, hide_thin, or strict")
     if prefs.MARKET_REGION in written and written[prefs.MARKET_REGION] not in prefs.REGIONS:
         raise HTTPException(422, detail="market_region must be a supported region code")
     for key in prefs.KRIKO_AGENT_TUNING_KEYS:
@@ -158,6 +197,8 @@ def write_prefs(body: PrefsWrite, conn=Depends(get_app_state)) -> dict:
             )
         written[prefs.LOCAL_CONTEXT] = str(context_tokens)
     prefs.write(conn, written)
+    if prefs.PROXY_ENABLED in written or prefs.PROXY_POOL in written:
+        proxypool.forget()
     return prefs.choices(conn)
 
 

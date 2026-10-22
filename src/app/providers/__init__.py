@@ -117,6 +117,11 @@ def _searcher(app_state_path, preferred: str = ""):
         finally:
             conn.close()
     wanted = wanted.strip()
+    # OpenSERP is the free local service the chat's search uses. It has no
+    # key and no part in the paid plane, so choosing it for Chat leaves the
+    # paid plane to take whichever keyed provider it would have taken.
+    if wanted == "openserp":
+        wanted = ""
     have = keys.search_providers()
     if wanted:
         if wanted not in have:
@@ -127,12 +132,28 @@ def _searcher(app_state_path, preferred: str = ""):
     else:
         raise MissingKey(
             "no search key is set. The paid plane searches and reads: add an "
-            "Exa or Tavily key in Settings → Research."
+            "Exa, Tavily or DeepSeek key in Settings → Research."
         )
     if picked == "tavily":
         from app.providers import tavily
 
         return tavily.searcher(), "tavily"
+    if picked == "deepseek":
+        from app.providers import deepseek
+        from app.providers._http import SearchFailed
+
+        inner = deepseek.searcher()
+
+        def search(query: str, limit: int = 5) -> list[dict]:
+            # The paid plane's gather treats a miss as a miss, as it does for
+            # Exa and Tavily. The chat chain wants the reason and builds this
+            # adapter itself (`websearch._hosted_factory`).
+            try:
+                return inner(query, limit)
+            except SearchFailed:
+                return []
+
+        return search, "deepseek"
     return exa.searcher(), "exa"
 
 

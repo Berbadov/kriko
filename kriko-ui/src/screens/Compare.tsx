@@ -4,11 +4,15 @@ import { useCompare, MAX_SLOTS, type Question } from '../compare'
 import { riskRows, specRows, riskKey, type Check, type Level, type Risk } from '../compare/checks'
 import { useEngine } from '../engine/Engine'
 import { useHistory } from '../engine/history'
+import { useSensitivity } from '../engine/sensitivity'
+import { hiddenLine, shown } from '../engine/thinness'
 import { usePrefs } from '../prefs'
 import { useQueue } from '../queue'
 import { Composer } from '../ui/Composer'
 import { Decide } from '../ui/Decide'
-import { PixelBar, Switch } from '../ui/controls'
+import { ClaimSources } from '../ui/ClaimChip'
+import { EvidenceMark } from '../ui/EvidenceMark'
+import { AgentSteps, Switch } from '../ui/controls'
 import { ExternalLink } from '../ui/ExternalLink'
 import { Icon } from '../ui/Icon'
 import { Markdown } from '../ui/Markdown'
@@ -29,6 +33,10 @@ export function CompareScreen() {
   const [only, setOnly] = useState(false)
   const [picker, setPicker] = useState(false)
   const [specsOpen, setSpecsOpen] = useState(false)
+  const { sensitivity } = useSensitivity()
+  /** Columns whose hidden findings the reader asked to see, at the step they asked at. */
+  const [reveal, setReveal] = useState<{ step: string; ids: string[] }>({ step: '', ids: [] })
+  const revealed = reveal.step === sensitivity ? reveal.ids : []
 
   const working = items.filter((i) => i.state !== 'done')
   const ready = slots.flatMap((id) => {
@@ -85,7 +93,10 @@ export function CompareScreen() {
                 {slots.map((id) => {
                   const found = checks[id]
                   if (found?.status === 'ready') {
+                    const open = revealed.includes(id)
+                    const hidden = found.check.risks.filter((r) => !shown(r.evidence?.level, sensitivity))
                     const list = found.check.risks
+                      .filter((r) => open || shown(r.evidence?.level, sensitivity))
                       .filter((r) => !only || differing.has(riskKey(r)))
                       .sort((a, b) => LEVEL_ORDER[a.level] - LEVEL_ORDER[b.level])
                     return (
@@ -94,7 +105,9 @@ export function CompareScreen() {
                           <p className="mx-none">
                             {found.check.risks.length === 0
                               ? 'The agents found no sourced problems. That is not proof there are none.'
-                              : 'Nothing here differs from the others.'}
+                              : hidden.length === found.check.risks.length
+                                ? 'Every finding here is hidden at this sensitivity.'
+                                : 'Nothing here differs from the others.'}
                           </p>
                         ) : (
                           <ul className="mx-risks">
@@ -102,6 +115,14 @@ export function CompareScreen() {
                               <RiskCard key={riskKey(risk)} risk={risk} also={(shared.get(riskKey(risk)) ?? 1) - 1} of={ready.length} />
                             ))}
                           </ul>
+                        )}
+                        {hidden.length > 0 && (
+                          <p className="ev-hidden" role="status">
+                            <span>{open ? 'Showing the hidden findings.' : `${hiddenLine(hidden.length, sensitivity)}.`}</span>
+                            <button className="btn ghost" onClick={() => setReveal({ step: sensitivity, ids: open ? revealed.filter((one) => one !== id) : [...revealed, id] })} aria-pressed={open}>
+                              {open ? 'Hide them again' : 'Show them'}
+                            </button>
+                          </p>
                         )}
                       </Column>
                     )
@@ -140,7 +161,7 @@ export function CompareScreen() {
                         <PixelGlyph size={13} active={item.state === 'researching'} />
                         {item.line}
                       </span>
-                      <PixelBar value={item.progress} active={item.state === 'researching'} cells={18} />
+                      <AgentSteps value={item.progress} state={item.state} labels={false} />
                     </div>
                     <div className="mx-risks">
                       {[0, 1, 2].map((n) => (
@@ -220,12 +241,15 @@ function Column({ check, onRemove, children, transition }: { check: Check; onRem
   )
 }
 
-/** One problem the agents found, in words. It opens to the sources and their quotes. */
+/** One problem the agents found, in words. Its sources sit under it as chips; the quote opens from each. */
 function RiskCard({ risk, also, of }: { risk: Risk; also: number; of: number }) {
   const [open, setOpen] = useState(false)
   const pages = risk.sources.length
   return (
-    <li className="mx-risk" data-open={open}>
+    <li className="mx-risk" data-open={open} data-thin={risk.evidence?.level === 'thin' || undefined}>
+      <span className="ev-corner">
+        <EvidenceMark evidence={risk.evidence} />
+      </span>
       <button className="mx-risk-main" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
         <span className="mx-risk-top">
           <span className="level" data-level={risk.level}>
@@ -244,19 +268,10 @@ function RiskCard({ risk, also, of }: { risk: Risk; also: number; of: number }) 
         {risk.advice && <span>{risk.advice}</span>}
         <span className="mono muted mx-risk-meta">{pages === 1 ? '1 source' : `${pages} sources`}</span>
       </button>
-      {open && pages > 0 && (
-        <ul className="sources">
-          {risk.sources.map((s, i) => (
-            <li key={i} data-stance={s.stance.toLowerCase() === 'refutes' ? 'against' : 'for'}>
-              {s.url ? (
-                <ExternalLink href={s.url}>{s.host || s.url}</ExternalLink>
-              ) : (
-                <span>{s.host}</span>
-              )}
-              {s.quote && <q>{s.quote}</q>}
-            </li>
-          ))}
-        </ul>
+      {pages > 0 && (
+        <div className="mx-risk-sources">
+          <ClaimSources sources={risk.sources} />
+        </div>
       )}
     </li>
   )

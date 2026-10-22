@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { motion } from 'motion/react'
 import type { Product } from '../activity/run'
+import { useFocus } from '../chat/focus'
+import { productKey } from '../chat/view'
 import { useProductActions } from '../engine/products'
 import { usePrefs } from '../prefs'
 import { ExternalLink } from './ExternalLink'
@@ -16,6 +18,8 @@ export function ProductCard({ product, onOpen }: { product: Product; onOpen: (lo
 function CatalogProductCard({ product, onOpen }: { product: Product; onOpen: (lookupId: string) => void }) {
   const { motion: m } = usePrefs()
   const { adding, reading, opening, open, addToCompare, readAgain } = useProductActions(product)
+  const focus = useFocus()
+  const key = productKey(product.id)
   const note = adding.step === 'failed' ? adding.note
     : reading.step === 'failed' ? reading.note
       : opening.step === 'failed' ? opening.note
@@ -24,6 +28,9 @@ function CatalogProductCard({ product, onOpen }: { product: Product; onOpen: (lo
   return (
     <motion.div
       className="product-card"
+      data-focus-key={key}
+      data-lit={focus.key === key || undefined}
+      onClick={() => focus.select(key, 'thread')}
       initial={{ opacity: 0, y: m.d(14), scale: m.on ? 0.98 : 1 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={m.tx.spring}
