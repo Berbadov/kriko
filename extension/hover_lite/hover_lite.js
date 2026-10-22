@@ -1402,7 +1402,7 @@
           + (rejectionSummary ? ` · reasons: ${rejectionSummary}` : ""))}</p>` : ""}
         <div class="lite-run" hidden>
           <div class="lite-run-bar" role="progressbar" aria-label="Research progress" aria-valuemin="1" aria-valuemax="4">
-            <span class="lite-run-seg"></span><span class="lite-run-seg"></span><span class="lite-run-seg"></span><span class="lite-run-seg"></span>
+            <span class="lite-run-seg" data-n="1"><i></i></span><span class="lite-run-seg" data-n="2"><i></i></span><span class="lite-run-seg" data-n="3"><i></i></span><span class="lite-run-seg" data-n="4"><i></i></span>
           </div>
           <p class="lite-run-facts"></p>
         </div>

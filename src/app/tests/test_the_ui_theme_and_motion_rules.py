@@ -81,7 +81,7 @@ def test_a_raw_colour_outside_the_theme_is_one_of_the_few_that_must_not_follow_i
         "styles/chat.css": 6,  # a mask, and white text and its shadow over the hero sky
         "styles/compare.css": 1,  # white on a critical fill
         "styles/activity.css": 1,  # ink on the green check
-        "ui/Rail.tsx": 1,  # the logo's own white, swapped for the text colour
+        "ui/TopBar.tsx": 1,  # the logo's own white, swapped for the text colour
         "ui/Starting.tsx": 1,  # the same logo white, swapped the same way
     }
     pattern = re.compile(r"#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\(")

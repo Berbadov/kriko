@@ -327,29 +327,31 @@
 
 .ctx-track {
   flex: 0 0 150px;
-  height: 7px;
-  background: var(--panel-2);
-  border: 1px solid var(--edge-strong);
+  height: 8px;
+  background: var(--inset);
+  border: 1px solid var(--edge);
   border-radius: 999px;
+  box-shadow: inset 0 1px 2px var(--sunk);
   overflow: hidden;
 }
 
 .ctx-track i {
   display: block;
   height: 100%;
-  background: var(--accent-hi);
+  background: var(--bar);
   border-radius: 999px;
+  box-shadow: inset 0 1px 0 var(--lit);
   transition:
     width calc(320ms * var(--tm)) var(--ease-out),
     background-color calc(200ms * var(--tm));
 }
 
 .ctx[data-tone='amber'] .ctx-track i {
-  background: var(--warn);
+  background: linear-gradient(90deg, var(--warn), var(--warm));
 }
 
 .ctx[data-tone='red'] .ctx-track i {
-  background: var(--risk);
+  background: linear-gradient(90deg, var(--warm), var(--risk));
 }
 
 .ctx[data-tone='amber'] .ctx-text {
@@ -412,24 +414,50 @@
   outline-offset: 2px;
 }
 
-/* Three shapes, not three colours: solid is filled, partial is half, thin is a ring. */
+/* Three bars that rise like a signal: solid lights three, partial two, thin one.
+   The tone follows the level, and no circle is drawn anywhere. */
+.ev-mark {
+  --tone: var(--mint);
+}
+
+.ev-mark[data-level='partial'] {
+  --tone: var(--warn);
+}
+
+.ev-mark[data-level='thin'] {
+  --tone: var(--risk);
+}
+
 .ev-glyph {
-  box-sizing: border-box;
-  width: 9px;
-  height: 9px;
-  border: 1.5px solid var(--ok);
-  border-radius: 50%;
-  background: var(--ok);
+  display: inline-flex;
+  flex: none;
+  align-items: flex-end;
+  gap: 2px;
+  height: 10px;
 }
 
-.ev-mark[data-level='partial'] .ev-glyph {
-  border-color: var(--warn);
-  background: linear-gradient(90deg, var(--warn) 50%, transparent 50%);
+.ev-glyph i {
+  width: 3px;
+  background: color-mix(in srgb, var(--tone) 26%, transparent);
+  border-radius: 1.5px;
 }
 
-.ev-mark[data-level='thin'] .ev-glyph {
-  border-color: var(--risk);
-  background: transparent;
+.ev-glyph i:nth-child(1) {
+  height: 4px;
+}
+
+.ev-glyph i:nth-child(2) {
+  height: 7px;
+}
+
+.ev-glyph i:nth-child(3) {
+  height: 10px;
+}
+
+.ev-mark[data-level='solid'] .ev-glyph i,
+.ev-mark[data-level='partial'] .ev-glyph i:nth-child(-n + 2),
+.ev-mark[data-level='thin'] .ev-glyph i:first-child {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--tone) 78%, white), var(--tone));
 }
 
 .ev-mark[data-level='thin'] .ev-dot {
@@ -509,4 +537,512 @@
   height: 28px;
   padding: 0 12px;
   font-size: 12.5px;
+}
+
+/* ---- the claim chip: a source's standing, its site, and its quote on hover ----
+   The mark is a three-bar tier meter, lit 3, 2 or 1; the card's wash is the
+   tier's colour. The extension panel carries the same chip
+   (extension/hover_lite/hover_lite.css). */
+
+.claim-chip,
+.claim-card {
+  --tone: var(--ink-3);
+}
+
+[data-standing='trusted'] {
+  --tone: var(--mint);
+}
+
+[data-standing='neutral'] {
+  --tone: var(--sky);
+}
+
+[data-standing='low'] {
+  --tone: var(--warn);
+}
+
+.claim-sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.claim-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 100%;
+  padding: 4px 10px 4px 7px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--ink) 7%, var(--panel-2)), var(--panel-2));
+  border: 1px solid var(--edge);
+  border-radius: 999px;
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--ink) 9%, transparent), var(--shadow-1);
+  color: var(--ink-2);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  transition:
+    border-color calc(160ms * var(--tm)),
+    color calc(160ms * var(--tm)),
+    box-shadow calc(160ms * var(--tm));
+}
+
+.claim-chip[data-compact] {
+  padding: 5px;
+}
+
+.claim-chip:hover,
+.claim-chip[aria-expanded='true'] {
+  border-color: color-mix(in srgb, var(--tone) 50%, var(--edge-strong));
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--ink) 9%, transparent),
+    0 0 0 3px color-mix(in srgb, var(--tone) 12%, transparent);
+  color: var(--ink);
+}
+
+.claim-chip:focus-visible,
+.claim-card :focus-visible {
+  outline: 2px solid var(--accent-hi);
+  outline-offset: 2px;
+}
+
+.claim-chip[data-stance='against'] {
+  border-style: dashed;
+}
+
+.claim-site {
+  overflow: hidden;
+  max-width: 18ch;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The tier meter: three bars that rise like a signal. Trusted lights all three,
+   neutral two, low one. Flat on purpose, so it can never read as an emoji. */
+.claim-meter {
+  display: inline-flex;
+  flex: none;
+  align-items: flex-end;
+  gap: 2px;
+  height: 11px;
+}
+
+.claim-meter i {
+  width: 3px;
+  background: color-mix(in srgb, var(--tone) 26%, transparent);
+  border-radius: 1.5px;
+}
+
+.claim-meter i:nth-child(1) {
+  height: 5px;
+}
+
+.claim-meter i:nth-child(2) {
+  height: 8px;
+}
+
+.claim-meter i:nth-child(3) {
+  height: 11px;
+}
+
+.claim-meter[data-lit='3'] i,
+.claim-meter[data-lit='2'] i:nth-child(-n + 2),
+.claim-meter[data-lit='1'] i:first-child {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--tone) 78%, white), var(--tone));
+}
+
+.claim-card {
+  position: fixed;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: hidden;
+  width: min(340px, calc(100vw - 24px));
+  padding: 15px 14px 12px;
+  background:
+    radial-gradient(120% 90px at 0% 0%, color-mix(in srgb, var(--tone) 14%, transparent), transparent 70%),
+    color-mix(in srgb, var(--panel) 96%, transparent);
+  backdrop-filter: blur(16px) saturate(1.2);
+  border: 1px solid var(--edge-strong);
+  border-radius: var(--r-m);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--ink) 10%, transparent),
+    var(--shadow-2);
+  color: var(--ink);
+  animation: claim-card-in calc(180ms * var(--tm)) var(--ease-out) both;
+}
+
+/* A hairline of the tier's own colour along the top edge, fading out to the right. */
+.claim-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 1.5px;
+  background: linear-gradient(90deg, var(--tone), transparent 75%);
+  opacity: 0.8;
+}
+
+@keyframes claim-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(calc(5px * var(--dm)));
+  }
+}
+
+.claim-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.claim-card-word {
+  margin-left: auto;
+  padding: 2px 7px;
+  background: color-mix(in srgb, var(--tone) 14%, transparent);
+  border-radius: 999px;
+  color: color-mix(in srgb, var(--tone) 60%, var(--ink));
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.claim-card blockquote {
+  margin: 0;
+  padding: 1px 0 1px 12px;
+  border-left: 2px solid transparent;
+  border-image: linear-gradient(180deg, var(--tone), color-mix(in srgb, var(--tone) 10%, transparent)) 1;
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+
+.claim-card-none,
+.claim-card-meta {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+.claim-card-acts {
+  display: flex;
+  gap: 8px;
+}
+
+.claim-card-acts a,
+.claim-card-acts button {
+  padding: 6px 11px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--ink) 7%, var(--panel-2)), var(--panel-2));
+  border: 1px solid var(--edge-strong);
+  border-radius: var(--r-s);
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.claim-card-acts a {
+  background: linear-gradient(180deg, var(--accent-hi), var(--accent));
+  border-color: color-mix(in srgb, var(--accent) 70%, black);
+  box-shadow: inset 0 1px 0 var(--lit);
+  color: var(--accent-ink);
+}
+
+/* ---- card depth: a wash of the brand violet in the top-left corner and a lit top edge ----
+   The same treatment the claim card carries in its tier's colour. */
+
+.mx-col,
+.queue-item {
+  background:
+    radial-gradient(130% 130px at 0% 0%, color-mix(in srgb, var(--violet) 11%, transparent), transparent 70%),
+    var(--panel);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--ink) 7%, transparent);
+}
+
+/* ---- the usage pill and its card ---- */
+
+.topbar-usage {
+  position: relative;
+}
+
+.usage-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  height: 34px;
+  padding: 0 13px 0 11px;
+  background: var(--inset);
+  border: 1px solid var(--edge);
+  border-radius: 999px;
+  color: var(--ink-2);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.usage-pill:hover,
+.usage-pill[aria-expanded='true'] {
+  border-color: var(--edge-strong);
+  color: var(--ink);
+}
+
+.usage-pill-text {
+  color: var(--ink-3);
+}
+
+.usage-gauge {
+  display: inline-flex;
+  flex: none;
+  align-items: flex-end;
+  gap: 2px;
+  height: 12px;
+  --tone: var(--mint);
+}
+
+.usage-gauge[data-tone='warn'] {
+  --tone: var(--warn);
+}
+
+.usage-gauge[data-tone='out'] {
+  --tone: var(--risk);
+}
+
+.usage-gauge i {
+  width: 3px;
+  background: color-mix(in srgb, var(--tone) 26%, transparent);
+  border-radius: 1.5px;
+}
+
+.usage-gauge i:nth-child(1) {
+  height: 5px;
+}
+
+.usage-gauge i:nth-child(2) {
+  height: 8px;
+}
+
+.usage-gauge i:nth-child(3) {
+  height: 12px;
+}
+
+.usage-gauge[data-lit='3'] i,
+.usage-gauge[data-lit='2'] i:nth-child(-n + 2),
+.usage-gauge[data-lit='1'] i:first-child {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--tone) 78%, white), var(--tone));
+}
+
+.usage-card {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: min(420px, calc(100vw - 24px));
+  max-height: min(78vh, 680px);
+  padding: 16px;
+  overflow: auto;
+  background:
+    radial-gradient(120% 120px at 100% 0%, color-mix(in srgb, var(--violet) 12%, transparent), transparent 70%),
+    color-mix(in srgb, var(--panel) 97%, transparent);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--edge-strong);
+  border-radius: var(--r-l);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--ink) 8%, transparent), var(--shadow-2);
+  color: var(--ink);
+  animation: claim-card-in calc(180ms * var(--tm)) var(--ease-out) both;
+}
+
+.usage-demo {
+  margin: 0;
+  padding: 6px 10px;
+  background: color-mix(in srgb, var(--warn) 14%, transparent);
+  border-radius: var(--r-s);
+  color: var(--warn);
+  font-size: 12px;
+}
+
+.usage-block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid var(--edge);
+}
+
+.usage-block:first-of-type {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.usage-block header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.usage-block header strong {
+  display: block;
+  font-size: 13.5px;
+}
+
+.usage-block header small {
+  display: block;
+  color: var(--ink-3);
+  font-size: 11.5px;
+}
+
+.usage-icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  background: var(--inset);
+  border: 1px solid var(--edge);
+  border-radius: 9px;
+  color: var(--ink-2);
+}
+
+.usage-limits {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.usage-limit {
+  display: grid;
+  grid-template-columns: 72px 1fr auto;
+  align-items: center;
+  gap: 4px 10px;
+  font-size: 12.5px;
+}
+
+.usage-limit-name {
+  color: var(--ink-2);
+}
+
+.usage-limit-left {
+  min-width: 70px;
+  text-align: right;
+}
+
+.usage-limit[data-standing='warn'] .usage-limit-left {
+  color: var(--warn);
+}
+
+.usage-limit[data-standing='out'] .usage-limit-left {
+  color: var(--risk);
+}
+
+.usage-limit-reset {
+  grid-column: 2 / 4;
+  color: var(--ink-3);
+  font-size: 11px;
+}
+
+.usage-limit-reset:empty {
+  display: none;
+}
+
+.usage-flag {
+  grid-column: 2 / 4;
+  color: var(--warn);
+  font-size: 11px;
+}
+
+.usage-asof {
+  color: var(--ink-3);
+  font-size: 11px;
+}
+
+.usage-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.usage-table th,
+.usage-table td {
+  padding: 5px 0;
+  text-align: right;
+  font-weight: 400;
+}
+
+.usage-table th:first-child {
+  text-align: left;
+  color: var(--ink-2);
+}
+
+.usage-table thead th {
+  color: var(--ink-3);
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.usage-table tbody tr + tr > * {
+  border-top: 1px solid var(--edge);
+}
+
+.usage-sources {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  color: var(--ink-3);
+  font-size: 11.5px;
+  list-style: none;
+}
+
+.usage-sources li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.usage-note {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 11px;
+}
+
+/* A reader's own daily ceiling. A warning: the line says where today stands,
+   and the amber is the only thing that changes. */
+.usage-cap {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 11.5px;
+}
+
+.usage-cap[data-over='true'] {
+  color: var(--warn);
+}
+
+.usage-cap-mark {
+  font-weight: 600;
+}
+
+.usage-pill[data-over='true'] {
+  border-color: color-mix(in srgb, var(--warn) 55%, var(--edge));
+  color: var(--warn);
+}
+
+.usage-pill[data-over='true'] .usage-pill-text {
+  color: color-mix(in srgb, var(--warn) 75%, var(--ink-3));
+}
+
+@media (max-width: 1320px) {
+  .usage-pill-text {
+    display: none;
+  }
 }

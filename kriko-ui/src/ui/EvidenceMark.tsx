@@ -11,7 +11,11 @@ export function EvidenceMark({ evidence }: { evidence?: Evidence }) {
   return (
     <span className="ev-mark" data-level={evidence.level}>
       <button type="button" className="ev-dot" aria-label={`Evidence: ${why}`} aria-describedby={tip}>
-        <span className="ev-glyph" aria-hidden="true" />
+        <span className="ev-glyph" aria-hidden="true">
+          <i />
+          <i />
+          <i />
+        </span>
         <span className="ev-word">{LEVEL_WORD[evidence.level]}</span>
       </button>
       <span id={tip} role="tooltip" className="ev-tip">
