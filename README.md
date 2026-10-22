@@ -1,6 +1,6 @@
 # Kriko
 
-[![version](https://img.shields.io/badge/version-0.3.0-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
+[![version](https://img.shields.io/badge/version-0.3.1-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
 
 Kriko researches what can go wrong with a product and keeps the sources beside
 its findings. It runs on your computer, with a Windows desktop app and a browser
@@ -18,9 +18,10 @@ Contents: [Install](#install-and-start) · [Agents](#working-with-agents) ·
 [Buying help](#buying-help) · [Catalogs](#catalogs-and-saved-work) ·
 [Your data](#your-data) · [Build and verify](#build-and-verify)
 
-Version 0.3.0 adds Kriko Agent, product result cards, source quote chips,
-evidence sensitivity, usage meters and daily caps, and provider and local
-runtime settings. See the [changelog](CHANGELOG.md#030) for the release notes.
+Version 0.3.1 marks Kriko Agent as an experimental preview, corrects Mercury key
+testing and removes the duplicate DeepSeek key row. Version 0.3.0 introduced
+product cards, source quote chips, evidence sensitivity, usage meters, daily caps
+and provider settings. See the [changelog](CHANGELOG.md) for the release notes.
 
 ## Install and start
 
@@ -29,8 +30,8 @@ Download the Windows x86_64 setup EXE or portable ZIP from the
 
 | Artifact | Use |
 |---|---|
-| `kriko-0.3.0-x86_64-setup.exe` | Per-user Windows installer; no administrator rights required. |
-| `kriko-0.3.0-win64-portable.zip` | Extract the whole archive and open `kriko.exe`. |
+| `kriko-0.3.1-x86_64-setup.exe` | Per-user Windows installer; no administrator rights required. |
+| `kriko-0.3.1-win64-portable.zip` | Extract the whole archive and open `kriko.exe`. |
 
 The installer is unsigned; Windows may show a SmartScreen warning. The desktop
 source can be built on other systems, but the published desktop release scope is
@@ -53,6 +54,11 @@ manual folder loading is only needed for a development checkout. See the
 [Windows installation guide](docs/INSTALL_WINDOWS.md) for details.
 
 ## Working with agents
+
+Kriko Agent is an experimental preview, marked **Soon**. Its Mercury 2.5 model
+and DeepSeek Search/Fetch use your own provider keys on this computer. Downloads
+include no shared Kriko credentials; the app does not provide a hosted research
+account.
 
 An ordinary request starts the work. Agents receive shared instructions to carry
 it through, use another source when a read fails, preserve your constraints and

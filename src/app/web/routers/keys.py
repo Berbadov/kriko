@@ -188,6 +188,10 @@ def _search_base(provider_id: str) -> str:
 
 
 def _completion_base(provider_id: str, app_state_path=None) -> str:
+    if provider_id == "mercury":
+        from app.providers import kriko_agent
+
+        return kriko_agent.MERCURY_BASE_URL
     if provider_id == "anthropic":
         from app.providers import anthropic_llm as anthropic_provider
 
@@ -348,6 +352,10 @@ def _test_completion(provider_id: str, key: str, app_state_path=None) -> dict:
             from app.providers import mistral
 
             name = mistral.DEFAULT_MODEL
+        elif provider_id == "mercury":
+            from app.providers import kriko_agent
+
+            name = kriko_agent.MODEL
         else:
             name = llm_provider.model_name()
         url = _completion_base(provider_id, app_state_path) + "/chat/completions"
