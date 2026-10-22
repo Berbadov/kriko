@@ -120,3 +120,18 @@ def test_three_threads_on_one_publisher_are_enough() -> None:
 def test_a_joined_pair_must_cover_more_of_the_claim_than_one_sentence() -> None:
     assert not cr.rule(features(window=1.0, containment=0.55), 5)
     assert cr.rule(features(window=1.0, containment=0.65), 5)
+
+
+def test_a_bench_summary_reports_rates_and_stability() -> None:
+    rows = [
+        {"id": "true-a", "seconds": 2.0, "pages": 4, "sources": ["x"]},
+        {"id": "true-a", "seconds": 4.0, "pages": 4, "sources": []},
+        {"id": "false-b", "seconds": 6.0, "pages": 4, "sources": []},
+        {"id": "true-c", "seconds": 0.0, "error": "search failed"},
+    ]
+    report = cr.summarise_runs(rows)
+    assert report["runs"] == 4 and report["errors"] == 1
+    assert report["true_found"] == 1 and report["true_runs"] == 2
+    assert report["false_kept"] == 0 and report["false_runs"] == 1
+    assert report["p50"] == 4.0 and report["p95"] == 6.0
+    assert cr.stability(rows)["true-a"] == (2, 1)
