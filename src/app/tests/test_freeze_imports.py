@@ -7,6 +7,7 @@ asserted here — collecting all of `mcp` imports `mcp.cli`, which raises "typer
 is required" and failed the freeze on all three runners at once.
 """
 
+import ast
 import sys
 from pathlib import Path
 
@@ -54,9 +55,28 @@ def test_the_binary_carries_no_tests_and_no_pipeline_extra():
     """
     pytest.importorskip("PyInstaller")
     assert not [name for name in freeze_imports.kriko_submodules() if ".tests" in name]
-    for name in ("pytest", "_pytest", "trafilatura", "numpy", "PIL", "mistralai"):
+    for name in ("pytest", "_pytest", "trafilatura", "numpy", "PIL", "mistralai",
+                 "IPython", "jedi", "parso", "mypy"):
         assert name in freeze_imports.FROZEN_EXCLUDES, name
     spec = (
         Path(__file__).resolve().parents[3] / "packaging" / "kriko-sidecar.spec"
     ).read_text(encoding="utf-8")
     assert "excludes=list(FROZEN_EXCLUDES)" in spec
+
+
+def test_excluded_developer_packages_are_not_imported_by_runtime_source():
+    """An exclusion must not hide a package the shipped app actually uses."""
+    root = Path(__file__).resolve().parents[3]
+    blocked = {"IPython", "jedi", "parso", "mypy"}
+    used = set()
+    for package in (root / "src" / "app", root / "src" / "kriko"):
+        for source in package.rglob("*.py"):
+            if "tests" in source.parts:
+                continue
+            tree = ast.parse(source.read_text(encoding="utf-8"), filename=str(source))
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Import):
+                    used.update(alias.name.split(".", 1)[0] for alias in node.names)
+                elif isinstance(node, ast.ImportFrom) and node.module:
+                    used.add(node.module.split(".", 1)[0])
+    assert not (used & blocked), sorted(used & blocked)

@@ -4,6 +4,7 @@ import { usePrefs } from './prefs'
 import { ChatProvider, useChat } from './chat'
 import { CompareProvider, useCompare } from './compare'
 import { useAttention } from './engine/buyer'
+import { useEngine } from './engine/Engine'
 import { useHandoff, type Landing } from './handoff'
 import { QueueProvider, useQueue } from './queue'
 import { ChatScreen } from './screens/Chat'
@@ -12,11 +13,12 @@ import { ProductScreen } from './screens/Product'
 import { QueueScreen } from './screens/Queue'
 import { Tour } from './tour/Tour'
 import { Drawer } from './ui/Drawer'
-import { DRAWER_EVENT } from './ui/drawerEvents'
+import { DRAWER_EVENT, showDrawer } from './ui/drawerEvents'
 import { ORDER, TopBar, type Screen } from './ui/TopBar'
 
 function Shell() {
   const { motion: m } = usePrefs()
+  const engine = useEngine()
   const { active } = useQueue()
   const { add } = useCompare()
   const attention = useAttention()
@@ -111,6 +113,13 @@ function Shell() {
     <MotionConfig reducedMotion={m.on ? 'never' : 'always'}>
       <div className="app">
         <TopBar screen={screen} onNavigate={go} onMore={() => setDrawer(true)} onNewChat={startChat} onOpenChat={showChat} queueCount={active} attention={attention} />
+        {engine.mode === 'live' && !engine.agentAvailable && (
+          <aside className="engine-notice" role="status">
+            <span>No research agent is ready. Set one up before asking Kriko to research a product.</span>
+            <button className="btn" onClick={() => showDrawer('agents')}>Choose or install an agent</button>
+            <button className="btn ghost" onClick={() => showDrawer('settings')}>Add a provider key</button>
+          </aside>
+        )}
         <main className="stage">
           <AnimatePresence mode="popLayout" initial={false} custom={direction}>
             <motion.div

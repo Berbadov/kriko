@@ -101,6 +101,22 @@
   padding: 0 6px 0 8px;
 }
 
+.engine-notice {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  padding: 8px 12px;
+  border: 1px solid color-mix(in srgb, var(--warn) 38%, var(--edge));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--warn) 10%, var(--ground));
+  color: var(--ink);
+  font-size: 13px;
+  text-align: center;
+}
+
 .topbar-left,
 .topbar-right {
   display: flex;
