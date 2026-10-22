@@ -1261,4 +1261,11 @@
   background: var(--warn);
   color: var(--ground);
   text-align: center;
+  line-height: 1.35;
+}
+
+/* The banner is the top of the window while demo mode is on. Without this the
+   fixed strip covers the top bar it sits above, and a reader cannot press it. */
+.demo-banner + .app {
+  padding-top: 41px;
 }
