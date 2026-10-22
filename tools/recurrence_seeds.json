@@ -1,0 +1,12 @@
+[
+  {"id": "true-dyson", "product": "Dyson V11", "claim": "the trigger does not turn the vacuum off when released"},
+  {"id": "true-sony", "product": "Sony WH-1000XM4", "claim": "headphones connect briefly and then immediately disconnect"},
+  {"id": "true-t480", "product": "Lenovo ThinkPad T480", "claim": "screen stays frozen for about 20 to 30 seconds after power on"},
+  {"id": "true-bosch", "product": "Bosch SMS6ZCW00E", "claim": "error code E15 leak in the base"},
+  {"id": "true-dewalt", "product": "DeWalt DWE7491RS", "claim": "the fence moves during cuts and will not stay aligned"},
+  {"id": "false-dyson-charging", "product": "Dyson V11", "claim": "battery not charging"},
+  {"id": "false-dyson-life", "product": "Dyson V11", "claim": "short battery life"},
+  {"id": "false-sony-anc", "product": "Sony WH-1000XM4", "claim": "noise cancellation problems"},
+  {"id": "false-bosch-problems", "product": "Bosch SMS6ZCW00E", "claim": "common dishwasher problems"},
+  {"id": "false-dewalt-steps", "product": "DeWalt DWE7491RS", "claim": "troubleshooting steps"}
+]
