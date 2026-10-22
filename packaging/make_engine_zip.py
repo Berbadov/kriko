@@ -1,7 +1,7 @@
 """Pack the frozen engine as the release asset an installed Kriko updates itself from.
 
     python packaging/make_engine_zip.py --engine dist/kriko-engine \
-        --out kriko-ui/builds --version 0.2.6
+        --out kriko-ui/builds
 
 writes two files into `--out`:
 
@@ -14,10 +14,12 @@ files over the old ones. The zip is the whole engine, nothing else: the desktop
 app, the window and OpenSERP are not in it and an engine update never touches
 them.
 
-`min_shell` is the oldest desktop app this engine runs under. Leave it at `0`
-until an engine needs something from the app that older apps lack (a new
-command, a new environment variable), then raise it in the same commit: an app
-older than that is shown the installer instead of an engine it cannot run.
+`min_shell` is the oldest desktop app this engine update is offered to. It
+also gates releases with substantial UI or startup changes: those need the full
+installer so readers do not update only the engine and keep the previous
+window. Raise it with such a release; older desktop apps are offered the
+installer, not an engine-only update. A runtime protocol addition the older app
+cannot use needs the same floor.
 """
 
 from __future__ import annotations
@@ -29,8 +31,8 @@ import tomllib
 import zipfile
 from pathlib import Path
 
-#: The oldest desktop app this engine can run under. See the module docstring.
-MIN_SHELL = "0"
+#: The oldest desktop app offered this engine update. See the module docstring.
+MIN_SHELL = "0.3.0"
 
 ROOT = Path(__file__).resolve().parents[1]
 SIDECAR = "kriko-sidecar.exe"
