@@ -33,6 +33,7 @@ from dataclasses import asdict, dataclass
 from functools import lru_cache
 from pathlib import Path
 from typing import Callable
+from urllib.parse import urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
@@ -374,16 +375,30 @@ class Scorer:
 
 from app.providers import fetch, openserp  # noqa: E402
 from app.providers.local_identity import fold  # noqa: E402
-from app.providers.local_pipeline import _stems, menu_page, publisher  # noqa: E402
+from app.providers.local_pipeline import _FILLER, menu_page, publisher  # noqa: E402
 
 MIN_SENTENCE = 40
 SNIPPET = 220
+STEM_LENGTH = 6
+LETTERS = re.compile(r"[^\W\d_]{4,}")
+
+
+def stems(text: str) -> set[str]:
+    """Content stems at six characters.
+
+    Five conflate words that are not the same: `disconnect` and `discoverable`
+    both became `disco`, which let a pair of pairing instructions count as a
+    report of disconnects. Six keeps `discon` and `discov` apart and still
+    joins the inflections that are the same word.
+    """
+    return {word[:STEM_LENGTH] for word in LETTERS.findall(text.casefold())
+            if word not in _FILLER}
 
 
 def report_sentence(sentence: str) -> bool:
     """A sentence that could be a report: not a heading, not a question."""
     text = " ".join(sentence.split())
-    return len(text) >= MIN_SENTENCE and not text.endswith("?")
+    return len(text) >= MIN_SENTENCE and "?" not in text
 
 
 def product_terms(product: str) -> set[str]:
@@ -428,35 +443,65 @@ def names_product(text: str, terms: set[str]) -> bool:
     return any(term in folded for term in terms)
 
 
-def judge_page(scorer: Scorer, claim: Claim, text: str, terms: set[str],
-               embedder: Embedder | None) -> tuple[str, float] | None:
-    """The first sentence on this page a scorer would count, and its score.
-
-    The page must name the product: a claim repeated about the same *kind* of
-    thing is not a recurrence about this one. Distance is in sentences from the
-    nearest mention, so a match in a sidebar runs further away than a match in
-    the paragraph the product is named in.
-    """
-    if not names_product(text, terms):
-        return None
-    sentences = page_sentences(text)
-    near = product_mentions(sentences, terms)
-    similarities = (embedder.similarities(claim.text, sentences)
-                    if embedder and embedder.available else [0.0] * len(sentences))
-    for index, sentence in enumerate(sentences):
-        distance = min(abs(index - at) for at in near) if near else DISTANCE_CAP
-        f = features(claim, sentence, _stems(sentence), distance, False,
-                     similarities[index])
-        keep, score = scorer.decide(f, len(claim.stems))
-        if keep:
-            return sentence, score
-    return None
-
-
 def count_publishers(found: dict[str, list[tuple[str, float]]]) -> list[list[str]]:
     """One matched sentence per publisher, near-copies counted once."""
     first = {domain: sentences[0][0] for domain, sentences in found.items()}
     return independent_sources(first)
+
+
+# --- Tier 1: threads, not only publishers -----------------------------------
+#
+# Two independent publishers is the honest bar and the rare one: a fault on one
+# forum thread and one support article is already a good answer. Count a second
+# unit instead, the thread, but only where the URL is a discussion: three
+# separate threads on one forum are three people, while three articles on one
+# review site are one editor.
+#
+# This is address structure, not site data: no host appears here.
+
+DISCUSSION_PATH = re.compile(
+    r"/(?:threads?|topics?|discussions?|forums?|questions?|answers?|comments?|"
+    r"community|viewtopic|showthread|t\d*)(?:/|$|\.php)", re.I)
+DISCUSSION_QUERY = re.compile(r"[?&](?:t|tid|thread|threadid|topic|topicid)=", re.I)
+PAGING = re.compile(r"/(?:page|p)/\d+$", re.I)
+PAGING_PARAMS = {"page", "paged", "pg", "pagenum", "start", "offset"}
+THREAD_PARAMS = {"t", "tid", "thread", "threadid", "topic", "topicid"}
+MIN_PUBLISHERS = 2
+MIN_THREADS = 3
+
+
+def thread_of(url: str) -> str:
+    """The page a match sits on, without its pagination.
+
+    A discussion usually keeps its thread in the path (`/threads/12345`), so
+    the query is dropped there; a bare script keeps it in the query
+    (`viewtopic.php?t=99`) and only the thread parameters survive. A page that
+    is not a discussion keeps its query without paging, so two blog posts
+    (`?p=77`) do not collapse into one.
+    """
+    parts = urlsplit(url)
+    path = PAGING.sub("", parts.path.rstrip("/")) or "/"
+    host = (parts.hostname or "").lower()
+    pairs = [pair for pair in parts.query.split("&") if pair]
+    if DISCUSSION_PATH.search(path):
+        kept = [pair for pair in pairs
+                if pair.split("=")[0].lower() in THREAD_PARAMS]
+        query = "&".join(sorted(kept))
+        return f"{host}{path}" + (f"?{query}" if query else "")
+    kept = [pair for pair in pairs
+            if pair.split("=")[0].lower() not in PAGING_PARAMS]
+    query = "&".join(sorted(kept))
+    return f"{host}{path}" + (f"?{query}" if query else "")
+
+
+def is_discussion(url: str) -> bool:
+    parts = urlsplit(url)
+    return bool(DISCUSSION_PATH.search(parts.path)
+                or DISCUSSION_QUERY.search(f"?{parts.query}"))
+
+
+def discussion_threads(urls: list[str]) -> list[str]:
+    return sorted({thread_of(url) for url in urls if is_discussion(url)})
 
 
 def occurrences(found: dict[str, list[tuple[str, float]]]) -> dict[str, list[str]]:
@@ -464,20 +509,60 @@ def occurrences(found: dict[str, list[tuple[str, float]]]) -> dict[str, list[str
             for domain, sentences in found.items()}
 
 
+@dataclass
+class Match:
+    sentence: str
+    score: float
+    window: bool
+
+
+def judge_page(scorer: Scorer, claim: Claim, text: str, terms: set[str],
+               embedder: Embedder | None, window: bool = False) -> tuple[Match | None, int]:
+    """The first sentence on this page a scorer would count, and how many were tried.
+
+    Single sentences come first; only when none matches are two joined, and the
+    rule asks a joined pair to cover more of the claim, because a longer text
+    covers more by chance. The page must name the product: a claim repeated
+    about the same *kind* of thing is not a recurrence about this one.
+    """
+    if not names_product(text, terms):
+        return None, 0
+    sentences = page_sentences(text)
+    near = product_mentions(sentences, terms)
+    units: list[tuple[str, bool, int]] = [(s, False, index)
+                                          for index, s in enumerate(sentences)]
+    if window:
+        units += [(" ".join(sentences[index:index + 2]), True, index)
+                  for index in range(len(sentences) - 1)]
+    for joined, paired, index in units:
+        distance = (min(abs(index - at) for at in near) if near
+                    else DISTANCE_CAP)
+        if paired and near:
+            distance = min(distance, min(abs(index + 1 - at) for at in near))
+        similarity = (embedder.similarities(claim.text, [joined])[0]
+                      if embedder and embedder.available else 0.0)
+        f = features(claim, joined, stems(joined), distance, paired, similarity)
+        keep, score = scorer.decide(f, len(claim.stems))
+        if keep:
+            return Match(joined, score, paired), len(sentences)
+    return None, len(sentences)
+
+
 def run_seed(seed: dict, search, reader, pages: int, scorer: Scorer,
-             embedder: Embedder | None) -> dict:
+             embedder: Embedder | None, window: bool = False) -> dict:
     product, claim_text = seed["product"], seed["claim"]
-    claim = make_claim(claim_text, product, _stems)
+    claim = make_claim(claim_text, product, stems)
     terms = product_terms(product)
     query = f'"{product}" {claim_text}'[:240]
     record = {"id": seed["id"], "product": product, "claim": claim_text,
-              "terms": sorted(claim.stems), "query": query, "scorer": scorer.note}
+              "terms": sorted(claim.stems), "query": query, "scorer": scorer.note,
+              "window": window, "stem_length": STEM_LENGTH}
     started = time.perf_counter()
     try:
         hits = search(query, pages)
     except Exception as error:  # noqa: BLE001 - a search is a network boundary
         record.update(error=f"{type(error).__name__}: {error}", hits=0, pages=0,
-                      recurring=False, publishers=[], sources=[],
+                      recurring=False, publishers=[], sources=[], threads=[],
                       seconds=round(time.perf_counter() - started, 2))
         return record
     hits = [hit for hit in hits if isinstance(hit, dict) and hit.get("url")]
@@ -490,30 +575,33 @@ def run_seed(seed: dict, search, reader, pages: int, scorer: Scorer,
 
     seen: set[str] = set()
     found: dict[str, list[tuple[str, float]]] = {}
-    skipped_menus = skipped_offproduct = 0
+    matched: list[str] = []
+    outcomes: list[dict] = []
     for url, title, text in pages_read:
+        outcome = {"url": url, "publisher": publisher(url)}
         fingerprint = hashlib.sha256(" ".join(fold(text).split()).encode()).hexdigest()
         if fingerprint in seen:
-            continue
+            outcome["verdict"] = "duplicate"
+        elif menu_page(url, title):
+            outcome["verdict"] = "menu"
+        elif not names_product(text, terms):
+            outcome["verdict"] = "off_product"
+        else:
+            match, tried = judge_page(scorer, claim, text, terms, embedder, window)
+            outcome["sentences"] = tried
+            if match is None:
+                outcome["verdict"] = "no_match"
+            else:
+                outcome.update(verdict="matched", score=round(match.score, 3),
+                               window=match.window, quote=match.sentence[:SNIPPET])
+                found.setdefault(publisher(url), []).append(
+                    (match.sentence, match.score))
+                matched.append(url)
         seen.add(fingerprint)
-        if menu_page(url, title):
-            skipped_menus += 1
-            continue
-        judged = judge_page(scorer, claim, text, terms, embedder)
-        if judged is None:
-            if not names_product(text, terms):
-                skipped_offproduct += 1
-            continue
-        found.setdefault(publisher(url), []).append(judged)
+        outcomes.append(outcome)
 
-    sources = count_publishers(found)
-    record.update(
-        skipped_menus=skipped_menus, skipped_offproduct=skipped_offproduct,
-        publishers=sorted(found), sources=sources,
-        occurrences=occurrences(found),
-        recurring=len(sources) >= 2, single=len(sources) == 1,
-        seconds=round(time.perf_counter() - started, 2),
-    )
+    record.update(summarise(found, matched, outcomes),
+                  seconds=round(time.perf_counter() - started, 2))
     return record
 
 
@@ -562,29 +650,59 @@ def load_corpus() -> list[dict]:
     return rows
 
 
-def occurrences_in_corpus(seed: dict, corpus: list[dict], scorer: Scorer,
-                          embedder: Embedder | None) -> tuple[dict, int]:
+def summarise(found: dict[str, list[tuple[str, float]]], matched: list[str],
+              outcomes: list[dict]) -> dict:
+    """Everything one seed's pages settle: sources, threads, and why pages fell."""
+    sources = count_publishers(found)
+    threads = discussion_threads(matched)
+    verdicts = [one["verdict"] for one in outcomes]
+    return {
+        "skipped_menus": verdicts.count("menu"),
+        "skipped_offproduct": verdicts.count("off_product"),
+        "skipped_duplicates": verdicts.count("duplicate"),
+        "pages_judged": sum(1 for verdict in verdicts if verdict != "duplicate"),
+        "publishers": sorted(found), "sources": sources, "threads": threads,
+        "occurrences": occurrences(found), "page_outcomes": outcomes,
+        "recurring": (len(sources) >= MIN_PUBLISHERS
+                      or len(threads) >= MIN_THREADS),
+        "single": len(sources) == 1,
+    }
+
+
+def judge_corpus(seed: dict, corpus: list[dict], scorer: Scorer,
+                 embedder: Embedder | None, window: bool = False) -> tuple[dict, list[str], list[dict]]:
     product, claim_text = seed["product"], seed["claim"]
-    claim = make_claim(claim_text, product, _stems)
+    claim = make_claim(claim_text, product, stems)
     terms = product_terms(product)
     found: dict[str, list[tuple[str, float]]] = {}
-    offproduct = 0
+    matched: list[str] = []
+    outcomes: list[dict] = []
     seen: set[str] = set()
     for page in corpus:
+        outcome = {"url": page["url"], "publisher": page["publisher"]}
         fingerprint = hashlib.sha256(
             " ".join(fold(page["text"]).split()).encode()).hexdigest()
         if fingerprint in seen:
-            continue
+            outcome["verdict"] = "duplicate"
+        elif menu_page(page["url"]):
+            outcome["verdict"] = "menu"
+        elif not names_product(page["text"], terms):
+            outcome["verdict"] = "off_product"
+        else:
+            match, tried = judge_page(scorer, claim, page["text"], terms,
+                                      embedder, window)
+            outcome["sentences"] = tried
+            if match is None:
+                outcome["verdict"] = "no_match"
+            else:
+                outcome.update(verdict="matched", score=round(match.score, 3),
+                               window=match.window, quote=match.sentence[:SNIPPET])
+                found.setdefault(page["publisher"], []).append(
+                    (match.sentence, match.score))
+                matched.append(page["url"])
         seen.add(fingerprint)
-        if menu_page(page["url"]):
-            continue
-        judged = judge_page(scorer, claim, page["text"], terms, embedder)
-        if judged is None:
-            if not names_product(page["text"], terms):
-                offproduct += 1
-            continue
-        found.setdefault(page["publisher"], []).append(judged)
-    return found, offproduct
+        outcomes.append(outcome)
+    return found, matched, outcomes
 
 
 def known_urls() -> dict[str, set[str]]:
@@ -631,9 +749,39 @@ def print_seed(seed: dict, record: dict) -> None:
     verdict = ("ERROR" if record.get("error") else
                "RECURRING" if record.get("recurring") else
                "single" if record.get("single") else "none")
-    print(f"{seed['id']:24} {len(record.get('sources') or []):>2} source(s)  {verdict}")
+    print(f"{seed['id']:24} {len(record.get('sources') or []):>2} source(s) "
+          f"{len(record.get('threads') or []):>2} thread(s)  {verdict}")
     for domain, sentences in (record.get("occurrences") or {}).items():
         print(f"    {domain:28} {sentences[0][:100]}")
+
+
+def evaluate(rows: list[dict]) -> dict:
+    """What the seed set settled: faults found, headings kept, and recurrence.
+
+    The seed id says which class it is, so the tool can report a rate instead
+    of a vibe. `found` means at least one page matched; `recurring` is the
+    threshold verdict.
+    """
+    def count(prefix: str) -> tuple[int, int, int]:
+        group = [row for row in rows if str(row.get("id", "")).startswith(prefix)]
+        found = sum(bool(row.get("sources")) for row in group)
+        recurring = sum(bool(row.get("recurring")) for row in group)
+        return len(group), found, recurring
+
+    total_true, true_found, true_recurring = count("true-")
+    total_false, false_found, false_recurring = count("false-")
+    return {"true": total_true, "true_found": true_found,
+            "true_recurring": true_recurring,
+            "false": total_false, "false_kept": false_found,
+            "false_recurring": false_recurring}
+
+
+def print_evaluation(rows: list[dict]) -> None:
+    report = evaluate(rows)
+    print(f"\ntrue: {report['true_found']}/{report['true']} found, "
+          f"{report['true_recurring']}/{report['true']} recurring  ·  "
+          f"false: {report['false_kept']}/{report['false']} kept, "
+          f"{report['false_recurring']}/{report['false']} recurring")
 
 
 def scorer_for(args) -> tuple[Scorer, Embedder | None]:
@@ -657,6 +805,8 @@ def main() -> int:
                         help="a fitted Tier 2 model (JSON); default is the Tier 1 rule")
     parser.add_argument("--no-embedding", action="store_true",
                         help="do not try to load static embeddings")
+    parser.add_argument("--window", action="store_true",
+                        help="also try two joined sentences (measured: adds a false source, not a true one)")
     parser.add_argument("--offline", action="store_true",
                         help="count over every page excerpt already fetched, no search")
     parser.add_argument("--fetch-known", action="store_true",
@@ -670,9 +820,11 @@ def main() -> int:
                              / f"{time.strftime('%Y%m%d-%H%M%S')}.jsonl")
     output.parent.mkdir(parents=True, exist_ok=True)
     scorer, embedder = scorer_for(args)
+    window = args.window
     weights = "wordfreq" if WORD_WEIGHTS else "uniform (wordfreq absent: no rarity guard)"
     print(f"scorer: {scorer.note}; weights: {weights}; "
-          f"embeddings: {'on' if embedder and embedder.available else 'off'}\n")
+          f"embeddings: {'on' if embedder and embedder.available else 'off'}; "
+          f"window: {'on' if window else 'off'}\n")
 
     if args.fetch_known:
         known = known_urls()
@@ -689,18 +841,18 @@ def main() -> int:
                     if text:
                         corpus.append({"url": url, "text": text,
                                        "publisher": publisher(url)})
-            found, offproduct = occurrences_in_corpus(seed, corpus, scorer, embedder)
-            sources = count_publishers(found)
+            found, matched, outcomes = judge_corpus(seed, corpus, scorer, embedder, window)
             record = {"id": seed["id"], "product": seed["product"], "claim": seed["claim"],
-                      "mode": "fetch-known", "matched_product": key, "scorer": scorer.note,
-                      "pages": len(corpus), "skipped_offproduct": offproduct,
-                      "publishers": sorted(found), "sources": sources,
-                      "occurrences": occurrences(found),
-                      "recurring": len(sources) >= 2, "single": len(sources) == 1}
+                      "mode": "fetch-known", "matched_product": key,
+                      "window": window, "stem_length": STEM_LENGTH,
+                      "scorer": scorer.note, "pages": len(corpus), **summarise(
+                          found, matched, outcomes)}
             rows.append(record)
-            print(f"{seed['id']:24} {len(corpus):>3} page(s)  {len(sources)} source(s)")
+            print(f"{seed['id']:24} {len(corpus):>3} page(s)  "
+                  f"{len(record['sources'])} source(s)  {len(record['threads'])} thread(s)")
             for domain, sentences in record["occurrences"].items():
                 print(f"    {domain:28} {sentences[0][:100]}")
+        print_evaluation(rows)
         with output.open("a", encoding="utf-8") as handle:
             for record in rows:
                 handle.write(json.dumps(record, ensure_ascii=False) + "\n")
@@ -713,15 +865,14 @@ def main() -> int:
               f"{len({page['publisher'] for page in corpus})} publisher(s)\n")
         rows = []
         for seed in seeds:
-            found, offproduct = occurrences_in_corpus(seed, corpus, scorer, embedder)
-            sources = count_publishers(found)
+            found, matched, outcomes = judge_corpus(seed, corpus, scorer, embedder, window)
             record = {"id": seed["id"], "product": seed["product"], "claim": seed["claim"],
                       "mode": "offline", "scorer": scorer.note,
-                      "skipped_offproduct": offproduct, "publishers": sorted(found),
-                      "sources": sources, "occurrences": occurrences(found),
-                      "recurring": len(sources) >= 2, "single": len(sources) == 1}
+                      "window": window, "stem_length": STEM_LENGTH,
+                      **summarise(found, matched, outcomes)}
             rows.append(record)
             print_seed(seed, record)
+        print_evaluation(rows)
         with output.open("a", encoding="utf-8") as handle:
             for record in rows:
                 handle.write(json.dumps(record, ensure_ascii=False) + "\n")
@@ -740,14 +891,14 @@ def main() -> int:
             own_search = openserp.searcher("", engine=openserp.LOCAL_ENGINES,
                                            language="en", timeout=args.timeout)
             record = run_seed(seed, own_search, fetch.reader(timeout=8.0),
-                              args.pages, scorer, embedder)
+                              args.pages, scorer, embedder, window)
             if not record.get("error"):
                 break
         record["attempts"] = attempts
         return record
 
     print(f"{'seed':24} {'hits':>4} {'pages':>5} {'menu':>4} {'off':>3} {'src':>3} "
-          f"{'secs':>6}  verdict")
+          f"{'thr':>3} {'secs':>6}  verdict")
     rows = []
     with ThreadPoolExecutor(max_workers=max(1, args.workers)) as pool:
         for seed, record in zip(seeds, pool.map(one, seeds)):
@@ -758,11 +909,13 @@ def main() -> int:
             print(f"{seed['id']:24} {record.get('hits', 0):>4} {record.get('pages', 0):>5} "
                   f"{record.get('skipped_menus', 0):>4} {record.get('skipped_offproduct', 0):>3} "
                   f"{len(record.get('sources') or []):>3} "
+                  f"{len(record.get('threads') or []):>3} "
                   f"{record.get('seconds', 0):>6.1f}  {verdict}")
             for domain, sentences in (record.get("occurrences") or {}).items():
                 print(f"    {domain:28} {sentences[0][:100]}")
             if record.get("error"):
                 print(f"    {record['error']}")
+    print_evaluation(rows)
     with output.open("a", encoding="utf-8") as handle:
         for record in rows:
             handle.write(json.dumps(record, ensure_ascii=False) + "\n")

@@ -19,10 +19,6 @@ sys.path.insert(0, str(TOOLS))
 import claim_recurrence as cr  # noqa: E402
 
 
-def stems(text: str) -> set[str]:
-    return {word[:5] for word in cr.tokens(text) if len(word) >= 4}
-
-
 def features(**overrides: float) -> dict[str, float]:
     base = {"containment": 0.75, "shared": 3.0, "rare_shared": 2.0,
             "negation_mismatch": 0.0, "contrast": 0.0, "product_distance": 0.2,
@@ -49,8 +45,8 @@ def test_a_contrast_phrase_vetoes_the_rule_and_the_model() -> None:
 
 
 def test_a_claim_does_not_share_words_with_its_own_product() -> None:
-    claim = cr.make_claim("the Dyson V11 trigger sticks", "Dyson V11", stems)
-    assert "trigg" in claim.stems
+    claim = cr.make_claim("the Dyson V11 trigger sticks", "Dyson V11", cr.stems)
+    assert "trigge" in claim.stems
     assert "dyson" not in claim.stems
 
 
@@ -100,3 +96,27 @@ def test_training_refuses_a_label_set_that_cannot_be_folded_by_page() -> None:
              "features": features()} for index in range(30)]
     with pytest.raises(ValueError, match="distinct pages"):
         cr.train(rows)
+
+
+def test_a_thread_is_one_page_and_its_pagination_is_not_a_second() -> None:
+    first = "https://www.ifixit.com/Answers/View/12345/trigger+stuck"
+    second = first + "?page=2"
+    assert cr.thread_of(first) == cr.thread_of(second)
+    other = "https://www.ifixit.com/Answers/View/99999/other+fault"
+    assert cr.thread_of(first) != cr.thread_of(other)
+    assert not cr.is_discussion("https://example.com/review/dyson-v11")
+    assert cr.is_discussion("https://board.example.com/viewtopic.php?t=99")
+
+
+def test_three_threads_on_one_publisher_are_enough() -> None:
+    sentence = "the trigger does not turn the vacuum off when released and the motor runs on"
+    urls = [f"https://forum.example.com/threads/{number}/x" for number in (1, 2, 3)]
+    record = cr.summarise({"forum.example.com": [(sentence, 1.0)]}, urls,
+                          [{"url": url, "verdict": "matched"} for url in urls])
+    assert record["recurring"]
+    assert len(record["threads"]) == 3
+
+
+def test_a_joined_pair_must_cover_more_of_the_claim_than_one_sentence() -> None:
+    assert not cr.rule(features(window=1.0, containment=0.55), 5)
+    assert cr.rule(features(window=1.0, containment=0.65), 5)
