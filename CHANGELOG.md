@@ -23,6 +23,10 @@ immutable; a correction is a newer version.
 - **Website and desktop.** The website has Turkish pages and a privacy policy.
   The desktop has an updated navigation rail and agent marks, clearer activity
   counts and product prices, and a Windows title bar that follows its theme.
+- **Easier first use and recovery.** A fresh install without an agent shows
+  direct setup buttons. An engine failure shows Reconnect instead of switching
+  to demo answers. Keyboard focus stays inside Settings while it is open.
+  The installer omits unused development tools and their thousands of files.
 
 - **Chat asks before it answers.** When one detail would change the answer — a
   tyre size, a model year, an engine, the market you buy in — Chat asks for it

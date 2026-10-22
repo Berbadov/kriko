@@ -34,6 +34,13 @@ FROZEN_EXCLUDES = (
     "trafilatura",
     "pytest",
     "_pytest",
+    # PyInstaller's optional-IPython hook followed the build environment's
+    # IPython install into thousands of editor-only Jedi/parso files. None is
+    # imported by the running app; the packaging environment includes dev tools.
+    "IPython",
+    "jedi",
+    "parso",
+    "mypy",
     "numpy",
     "PIL",
 )

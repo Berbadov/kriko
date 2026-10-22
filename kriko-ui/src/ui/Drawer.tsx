@@ -4,6 +4,7 @@ import { useEngine } from '../engine/Engine'
 import { DRAWER } from '../mock/data'
 import { usePrefs } from '../prefs'
 import { Icon } from './Icon'
+import { keepTabInside } from './focusTrap'
 import { AgentsPanel } from './panels/Agents'
 import { CatalogsPanel } from './panels/Catalogs'
 import { ChatPanel } from './panels/Chat'
@@ -52,9 +53,12 @@ export function Drawer({ open, panel: asked, onClose, offset, onOpen }: { open: 
     const cameFrom = document.activeElement as HTMLElement | null
     panel.current?.focus()
     const onKey = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return
-      if (inside) setInside(null)
-      else onClose()
+      if (event.key === 'Escape') {
+        if (inside) setInside(null)
+        else onClose()
+        return
+      }
+      if (panel.current) keepTabInside(event, panel.current)
     }
     window.addEventListener('keydown', onKey)
     return () => {
@@ -77,6 +81,7 @@ export function Drawer({ open, panel: asked, onClose, offset, onOpen }: { open: 
             data-wide={Boolean(Body)}
             data-panel={inside ?? undefined}
             role="dialog"
+            aria-modal="true"
             aria-label={item?.title ?? 'More'}
             tabIndex={-1}
             style={{ left: offset + 20 }}

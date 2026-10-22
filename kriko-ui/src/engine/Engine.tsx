@@ -41,6 +41,8 @@ interface Engine {
   /** What the shell says when it could not start the engine. */
   problem: string
   agents: Agent[]
+  /** At least one provider or configured local agent is available to answer. */
+  agentAvailable: boolean
   /** The agent the reader chose in Settings. */
   preferred: string
   /** The reader changed the default agent. */
@@ -67,6 +69,7 @@ const forced = () => new URLSearchParams(window.location.search).has('demo')
 export function EngineProvider({ children }: { children: ReactNode }) {
   const [mode, setMode] = useState<Mode>('checking')
   const [agents, setAgents] = useState<Agent[]>(DEMO_AGENTS)
+  const [agentAvailable, setAgentAvailable] = useState(false)
   const [preferred, setPreferred] = useState('')
   const [problem, setProblem] = useState('')
   const [attempt, setAttempt] = useState(0)
@@ -85,6 +88,7 @@ export function EngineProvider({ children }: { children: ReactNode }) {
         const prefs = await get<AgentAvailability>('/api/agent-availability', 4000)
         if (!live) return
         setAgents(agentRoster(prefs.harnesses))
+        setAgentAvailable((prefs.harnesses?.length ?? 0) > 0)
         setPreferred(prefs.chosen?.preferred_harness ?? '')
         setMode('live')
       })
@@ -106,6 +110,7 @@ export function EngineProvider({ children }: { children: ReactNode }) {
         .then((availability) => {
           if (!live) return
           setAgents(agentRoster(availability.harnesses))
+          setAgentAvailable((availability.harnesses?.length ?? 0) > 0)
           setPreferred(availability.chosen?.preferred_harness ?? '')
         })
         .catch(() => undefined)
@@ -136,7 +141,7 @@ export function EngineProvider({ children }: { children: ReactNode }) {
         .then((status) => {
           if (!live || status.state !== 'failed') return
           setProblem(`${status.title ?? 'The engine stopped'}. ${status.detail ?? ''}`.trim())
-          setMode('demo')
+          setMode('offline')
         })
         .catch(() => undefined)
     }, 5000)
@@ -146,7 +151,7 @@ export function EngineProvider({ children }: { children: ReactNode }) {
     }
   }, [mode])
 
-  const value = useMemo(() => ({ mode, problem, agents, preferred, setPreferred, retry }), [mode, problem, agents, preferred, retry])
+  const value = useMemo(() => ({ mode, problem, agents, agentAvailable, preferred, setPreferred, retry }), [mode, problem, agents, agentAvailable, preferred, retry])
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }
 
