@@ -14,8 +14,8 @@ SQL and that tree, the UI is Streamlit, deployment is Compose plus a Postgres du
 Streamlit: a service, a UI and a database. It cannot be imported into a desktop sidecar,
 and taking it would put Postgres on the reader's machine. Not a fit.
 
-**The one idea that maps.** `query_rag(keywords: List[str])` in `src/agents/tools_pg.py`:
-the model gives keywords, the database composes the query (`plainto_tsquery`), the
+**The one idea that maps.** The `query_rag` tool in `src/agents/tools_pg.py` (theirs, not
+ours): the model gives keywords, the database composes the query (`plainto_tsquery`), the
 docstring pins granularity with an example, and the tool carries its own budget (`limit`,
 `count_only`). The model never writes a query string. Stage: **queries**. It would replace
 the free text `_QUERY_ASK` returns and the rewrite in `local_pipeline.run` (strip quotes,
