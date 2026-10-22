@@ -394,6 +394,10 @@ def require(provider_id: str) -> str:
     adapter in the same process — never through an endpoint. `MissingKey`
     rather than an empty string so the failure is a screen the reader can act
     on instead of a 401 from a vendor.
+
+    A shared access code is the last place this looks (`app/sharekeys.py`): a
+    friend who pasted one has no key of their own, and the owner's key is
+    opened in memory for this call rather than written anywhere.
     """
     from app.providers import MissingKey
 
@@ -404,8 +408,39 @@ def require(provider_id: str) -> str:
     if not value:
         value = str(parse(_read(env_path())).get(provider.env) or "").strip()
     if not value:
+        from app import sharekeys
+
+        if str(provider_id).strip().lower() in sharekeys.SHARED_PROVIDERS:
+            value = sharekeys.granted(provider.id)
+            if not value:
+                why = sharekeys.refusal(provider.id)
+                if why:
+                    raise MissingKey(why)
+    if not value:
         raise MissingKey(
             f"{provider.label} needs a key — set one in Settings → Research "
             f"(or export {provider.env})"
         )
     return value
+
+
+def origin(provider_id: str) -> str:
+    """Where this provider's key comes from: `environment`, `file`, `shared`,
+    `trial`, or "" when there is none.
+
+    The environment and the file are the reader's own keys and are not counted
+    against anything. `shared` and `trial` are somebody else's, which is why a
+    caller that is about to spend one says so (`kriko_agent.converse`).
+    """
+    provider = BY_ID.get(str(provider_id).strip().lower())
+    if provider is None:
+        return ""
+    if str(os.environ.get(provider.env) or "").strip():
+        return "environment"
+    if str(parse(_read(env_path())).get(provider.env) or "").strip():
+        return "file"
+    from app import sharekeys
+
+    if provider.id in sharekeys.SHARED_PROVIDERS:
+        return sharekeys.origin(provider.id)
+    return ""

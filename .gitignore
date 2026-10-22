@@ -127,3 +127,12 @@ dl/
 server/.env
 server/*.sqlite*
 server/*.key
+
+# --- Shared access (src/app/sharekeys.py) -----------------------------------
+# The build pepper and the trial bundle ARE credentials: whoever holds the
+# pepper can open an access code without the app that sealed it, and whoever
+# holds the trial bundle can spend the key it carries. Written by
+# `tools/make_share_pepper.py` and `tools/make_trial_access.py`, on the machine
+# that makes the release, and never committed.
+src/app/sharekeys_pepper.py
+src/app/trial_access.json

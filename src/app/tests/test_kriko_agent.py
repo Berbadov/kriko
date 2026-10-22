@@ -1,6 +1,8 @@
 """The fixed Mercury 2.5 + DeepSeek stack, exercised without network access."""
 
 import json
+import threading
+import time
 
 import pytest
 
@@ -252,6 +254,79 @@ def test_duplicate_searches_share_one_request_and_empty_search_is_not_billed(mon
     assert reply.billed_tool_calls == 0
     assert reply.tool_calls == 0
     assert len(attempts) == 1
+
+
+def test_a_retrieval_that_never_answers_ends_the_turn_at_the_deadline(monkeypatch):
+    """A search that hangs must cost the reader a reason, not the whole turn."""
+    monkeypatch.setattr(keys, "require", lambda provider: f"fixture-{provider}")
+    searches: list[float] = []
+    released = threading.Event()
+
+    def stream(url, payload, headers, timeout, on_event, *, cancel_event=None):
+        _emit_tool_call(on_event, "search", {"query": "widget gearbox failure", "count": 3})
+        return 1, ""
+
+    def post(url, payload, headers, timeout):
+        searches.append(timeout)
+        # Longer than the turn's own deadline, as a socket that dribbles is.
+        released.wait(10.0)
+        return {"results": []}, ""
+
+    monkeypatch.setattr(kriko_agent, "post_sse_or_why", stream)
+    monkeypatch.setattr(kriko_agent, "post_json_or_why", post)
+    steps: list[str] = []
+    started = time.monotonic()
+    try:
+        reply = kriko_agent.converse("Research the Widget gearbox", timeout=0.5,
+                                     on_step=steps.append)
+    finally:
+        released.set()
+    elapsed = time.monotonic() - started
+
+    assert elapsed < 5.0, f"the turn waited on a retrieval for {elapsed:.1f}s"
+    assert any("searching: widget gearbox failure" in line for line in steps), steps
+    assert any("stopped" in line or "failed" in line for line in steps), steps
+    assert reply.error, "the turn ends with a reason rather than hanging"
+
+
+def test_the_chosen_kind_is_on_the_run_line_and_an_unknown_one_is_not_guessed(monkeypatch):
+    """The reader's "all must be observable": which kind, which words, what came back."""
+    monkeypatch.setattr(keys, "require", lambda provider: f"fixture-{provider}")
+    steps: list[str] = []
+    asked: list[str] = []
+
+    def stream(url, payload, headers, timeout, on_event, *, cancel_event=None):
+        asked.append(str(payload["messages"][-1].get("role")))
+        if len(asked) == 1:
+            _emit_tool_call(on_event, "search",
+                            {"query": "widget pump seal failure", "count": 3,
+                             "kind": "forums"})
+        elif len(asked) == 2:
+            # A kind the app does not know: dropped, not guessed at.
+            _emit_tool_call(on_event, "search",
+                            {"query": "widget pump recall notice", "count": 3,
+                             "kind": "bulletin boards"})
+        else:
+            _emit_text(on_event, "{\"findings\": []}")
+        return 1, ""
+
+    def post(url, payload, headers, timeout):
+        return {"results": [{
+            "url": "https://forum.example/thread/1", "title": "Thread",
+            "content": "Owners report the seal fails.", "summary": "", "snippet": "",
+        }]}, ""
+
+    monkeypatch.setattr(kriko_agent, "post_sse_or_why", stream)
+    monkeypatch.setattr(kriko_agent, "post_json_or_why", post)
+    reply = kriko_agent.converse("Research the Widget", on_step=steps.append)
+
+    assert reply.error == ""
+    assert "searching kind forums: widget pump seal failure" in steps
+    assert any(line.startswith("searched kind forums: widget pump seal failure -> ")
+               and "forum.example" in line for line in steps), steps
+    assert "searching: widget pump recall notice" in steps, (
+        "an unknown kind is left off the line rather than invented")
+    assert not any("bulletin boards" in line for line in steps)
 
 
 def test_successful_call_accounting_does_not_bill_an_empty_search(tmp_path):

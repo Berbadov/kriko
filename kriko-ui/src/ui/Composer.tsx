@@ -41,7 +41,7 @@ export function Composer({
   recall?: string[]
 }) {
   const { motion: m } = usePrefs()
-  const { agents, preferred } = useEngine()
+  const { agents, preferred, chooseAgent } = useEngine()
   const [text, setText] = useState('')
   const [chosen, setChosen] = useState('')
   // The reader's own choice wins. Then the agent set in Settings. Then the first.
@@ -195,6 +195,9 @@ export function Composer({
                       aria-selected={item.id === agent.id}
                       onClick={() => {
                         setChosen(item.id)
+                        // Kept, not just used once: this is the pick the next
+                        // question starts on, and the one Settings shows.
+                        chooseAgent(item.id)
                         setMenu(false)
                       }}
                     >

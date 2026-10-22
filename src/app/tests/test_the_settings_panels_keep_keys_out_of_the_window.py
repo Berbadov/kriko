@@ -44,7 +44,11 @@ def test_the_key_travels_in_a_body_and_not_in_an_address():
 
 
 def test_no_state_in_the_key_hook_holds_a_key():
-    hook = HOOKS[HOOKS.index("export function useKeys") : HOOKS.index("export function useSpent")]
+    # Bounded at the *next* hook rather than at `useSpent` by name: the slice is
+    # how this test reads one hook, and naming its neighbour made a new hook
+    # between them fail a test about `useKeys`.
+    hook = HOOKS[HOOKS.index("export function useKeys") :]
+    hook = hook[: hook.index("export function ", 1)]
     states = re.findall(r"const \[(\w+), set\w+\] = useState", hook)
     assert states == ["doc", "problem", "tested"], (
         f"useKeys keeps {states}: a new piece of state may be holding a key"

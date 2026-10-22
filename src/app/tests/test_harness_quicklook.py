@@ -2,9 +2,20 @@
 
 from types import SimpleNamespace
 
+import pytest
+
+from app import prefs
 from app.providers import harness, openserp
 from app.tests.harness_fixtures import row
 from kriko.research.base import ResearchTask
+
+
+@pytest.fixture(autouse=True)
+def _kriko_reads_the_pages(monkeypatch):
+    """This file is about the host-read plane: Kriko searches, Kriko reads, and
+    the agent is handed the text. The reader's default is the agent's own
+    search, so the dial is set here once rather than in every constructor."""
+    monkeypatch.setattr(prefs, "DEFAULT_HARNESS_SEARCH", prefs.SEARCH_KRIKO)
 
 
 PAGE = (

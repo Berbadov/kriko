@@ -320,9 +320,28 @@ def harness_researcher(*, preferred: str = "", timeout: float = 0.0,
             effort = default_effort
     picked = (model.strip(), effort.strip())
     model, effort = harness.settle_effort(found, *picked)
+    # Which web search this run uses: the agent's own tools, or Kriko's
+    # host-side search handed to it in the brief. Read here, beside the model
+    # and the effort, for the same reason — a call site that forgot it would
+    # run the reader's other choice silently.
+    search_choice = ""
+    if app_state_path is not None:
+        from app import prefs
+        from app.web import state
+
+        try:
+            conn = state.connect(app_state_path)
+        except Exception:  # noqa: BLE001 — see `_preferred_model`
+            conn = None
+        if conn is not None:
+            try:
+                search_choice = prefs.search_for_harness(conn, found.id)
+            finally:
+                conn.close()
     researcher = harness.HarnessResearcher(
         found, timeout=timeout or harness.TIMEOUT_SECONDS, model=model.strip(),
-        effort=effort.strip(), app_state_path=app_state_path,
+        effort=effort.strip(), search=search_choice,
+        app_state_path=app_state_path,
     )
     if app_state_path is not None and not harness.transport_env():
         from app import prefs

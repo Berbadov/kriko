@@ -167,9 +167,13 @@ export function useLiveRun(): RunApi {
         if (!live.current || job.current !== jobId) return
         const turn: ApiTurn = current.result ?? {}
         if (ACTIVE.has(current.state)) {
+          // A snapshot from a step carries no answer of its own while the turn
+          // works. Keeping the words already on screen stops the reader's reply
+          // from vanishing and animating in again on the next poll.
+          const answer = (typeof turn.answer === 'string' && turn.answer) || latest.current.answer
           dispatch({
             type: 'replace',
-            patch: { rows: rowsFrom(turn.steps ?? [], seen.current, turn.activity, turn.sources, current.feed), answer: turn.answer ?? '', products: productsFrom(turn.products), followups: turn.followups ?? [], questions: turn.questions ?? [], pages: pagesFrom(turn.activity, turn.sources), usage: usageFrom(turn), answerFinal: turn.answer_final === true },
+            patch: { rows: rowsFrom(turn.steps ?? [], seen.current, turn.activity, turn.sources, current.feed), answer, products: productsFrom(turn.products), followups: turn.followups ?? [], questions: turn.questions ?? [], pages: pagesFrom(turn.activity, turn.sources), usage: usageFrom(turn), answerFinal: turn.answer_final === true },
           })
           timer.current = window.setTimeout(() => void poll(jobId, threadId), POLL_MS)
           return
@@ -184,7 +188,7 @@ export function useLiveRun(): RunApi {
             type: 'replace',
             patch: {
               rows: rowsFrom(finished.steps ?? [], seen.current, finished.activity, finished.sources, last?.feed ?? current.feed),
-              answer: last?.text ?? finished.answer ?? '',
+              answer: last?.text || finished.answer || latest.current.answer,
               products: productsFrom(finished.products),
               // What actually answered. A reader who left the agent on the default is told which one it was.
               ...(last?.agent?.id ? { agent: { id: last.agent.id, label: last.agent.label || last.agent.id } } : {}),
