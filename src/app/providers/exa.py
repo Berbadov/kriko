@@ -12,7 +12,7 @@ the callable is injected — so the translation happens here and nowhere else.
 from urllib.parse import urlsplit
 
 from app.keys import require
-from app.providers._http import post_json
+from app.providers._http import TIMEOUT, post_json
 
 #: Overridable through `EXA_BASE_URL` for anyone proxying it, the same way
 #: the LLM adapter takes a base URL: a fork should not have to patch source to
@@ -30,7 +30,7 @@ def searcher(api_key: str = "", base_url: str = ""):
     key = api_key or require("exa")
     endpoint = (base_url or _base_url()).rstrip("/") + "/search"
 
-    def search(query: str, limit: int = 5) -> list[dict]:
+    def search(query: str, limit: int = 5, *, timeout: float | None = None) -> list[dict]:
         payload = {
             "query": query,
             "numResults": max(1, int(limit)),
@@ -39,7 +39,8 @@ def searcher(api_key: str = "", base_url: str = ""):
             # phrase, and picking wrong costs a whole query's worth of budget.
             "type": "auto",
         }
-        body = post_json(endpoint, payload, {"x-api-key": key})
+        body = post_json(endpoint, payload, {"x-api-key": key},
+                         timeout=TIMEOUT if timeout is None else max(0.0, float(timeout)))
         results = body.get("results")
         if not isinstance(results, list):
             return []
@@ -59,6 +60,8 @@ def searcher(api_key: str = "", base_url: str = ""):
             )
         return out
 
+    search.supports_timeout = True  # type: ignore[attr-defined]
+    search.default_timeout = TIMEOUT  # type: ignore[attr-defined]
     return search
 
 

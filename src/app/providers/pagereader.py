@@ -17,13 +17,17 @@ report the page unread rather than half-read.
 """
 
 import json
+import logging
 import re
 import urllib.error
 import urllib.request
 from app.providers import egress, network
+from app.providers._http import _read_body
 from urllib.parse import urlsplit
 
 from app.providers.fetch import LINK_CLOSE, LINK_OPEN, prose_lines
+
+log = logging.getLogger(__name__)
 
 PARALLEL_ENDPOINT = "https://search.parallel.ai/mcp"
 PARALLEL_TOOL = "web_fetch"
@@ -62,7 +66,14 @@ def _rpc(endpoint: str, body: dict, session: str = "", *,
         options = {"check": check_cancelled} if check_cancelled is not None else {}
         with network.urlopen(request, timeout=timeout, **options) as response:
             session = response.headers.get("mcp-session-id") or session
-            raw = response.read().decode("utf-8", "replace")
+            # The whole body inside `timeout`, not just each wait on the
+            # socket: a reader service that drips a byte at a time never trips
+            # a per-recv timeout (`_http._read_body`).
+            got, why = _read_body(response, timeout)
+            if why:
+                log.info("the page reader service %s", why)
+                return {}, session
+            raw = got.decode("utf-8", "replace")
         if check_cancelled is not None:
             check_cancelled()
     except (urllib.error.URLError, urllib.error.HTTPError, OSError):

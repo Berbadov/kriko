@@ -29,6 +29,7 @@ from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
 
 from app.providers.local_inference import LocalInferenceError
 from app.providers import local_components
+from app.providers import local_search_plan as search_plan
 from app.providers.local_components import evidence, identity
 from app.providers.local_components import plan as plan, triage as triage, verify as verify
 
@@ -337,7 +338,7 @@ class LocalAsker:
         queries = identity.anchor_queries(prompt, self._queries(prompt))
         self.telemetry["queries"] = queries
         self._say("searching: " + "; ".join(queries))
-        pages = self._read(queries)
+        pages = self._read(queries, kinds=getattr(self, "_chosen_kinds", None))
         if not pages:
             raise LocalInferenceError(
                 f"no page could be read through {self.search_provider} for: "
@@ -528,16 +529,22 @@ class LocalAsker:
         # A case may name its own queries (B185): the fixed set's queries
         # are part of its versioned ground truth, and letting the model
         # invent its own would quietly change what the run measured.
+        #: The kinds the question asks for, which the queries below are built
+        #: from. `_read` reads it, so the log says what each search targeted.
+        self._chosen_kinds: list[str] = []
         if self.given_queries:
             return list(self.given_queries)[:QUERIES]
+        kinds = search_plan.choose_kinds(prompt, limit=QUERIES,
+                                         default=search_plan.DEFAULT_KINDS)
         if self.identity:
             # A quick check already has its exact subject. Avoid a separate
             # CPU inference just to restate that subject as search queries.
             # The angles are how a buyer words the question, so each one lands
-            # on a different kind of page: reports, reviews, forums, repairs.
-            # A local scraper takes one query at a time, so it gets fewer.
-            angles = QUICK_ANGLES if self.parallel_search else QUICK_ANGLES[:3]
-            return [f"{self.identity} {angle}" for angle in angles]
+            # on a different kind of page: reports, reviews, the manual. Which
+            # kinds those are is the agent's decision, from the question.
+            self._chosen_kinds = list(kinds)
+            return [f"{self.identity} {search_plan.kind_terms(kind, self.search_language)}"
+                    for kind in kinds]
         task = prompt[:PLAN_CHARS]
         queries = self._usable(self._plan(_QUERY_ASK.format(n=QUERIES, task=task)))
         if not queries:
@@ -554,6 +561,13 @@ class LocalAsker:
             identity = set(re.findall(r"\w+", self.identity.casefold()))
             queries = [query if len(identity & set(re.findall(r"\w+", query.casefold()))) >= max(2, len(identity) // 2)
                        else f"{self.identity} {query}" for query in queries]
+        # The agent's decision, applied to whatever words the model proposed:
+        # every kind the question asks for gets a query that asks for it, and
+        # the label per query is what the job log prints.
+        queries, labels = search_plan.plan_queries(
+            queries, kinds, subject=self.identity, language=self.search_language,
+            limit=QUERIES)
+        self._chosen_kinds = labels
         return queries
 
     @staticmethod
@@ -580,19 +594,53 @@ class LocalAsker:
                 break
         return queries
 
+    def _kinds_for(self, queries: list[str], kinds) -> list[str]:
+        """One kind of source per query: the agent's choice, else the words' own.
+
+        A query the agent labelled keeps its label; one it did not (a model's
+        own query, or a case's given query) is labelled with the kind its words
+        ask for, so the job log says what each search targeted either way.
+        """
+        given = list(kinds or [])
+        out: list[str] = []
+        for index, query in enumerate(queries):
+            chosen = str(given[index]) if index < len(given) else ""
+            if chosen not in search_plan.SOURCE_KINDS:
+                chosen = search_plan.kind_of(str(query))
+            out.append(chosen)
+        return out
+
+    @staticmethod
+    def _search_failed_line(kind: str, query: str, failure: str) -> str:
+        """A failed search, still read as one by the job log (`web.steps`)."""
+        head = f"search failed for kind {kind}" if kind else "search failed"
+        return f"{head}: {query}: {failure}"
+
     def _read(self, queries: list[str], *, identity=None,
               prefer_issues: bool = False,
-              quick: bool = False) -> list[tuple[str, str]]:
-        """Prefer issue discussions and replace unreadable/unrelated pages."""
+              quick: bool = False, kinds: list[str] | None = None) -> list[tuple[str, str]]:
+        """Prefer issue discussions and replace unreadable/unrelated pages.
+
+        ``kinds`` is the agent's own choice of source kinds, one per query
+        (`local_search_plan.plan_queries`); a query it does not name is labelled
+        with the kind its own words ask for. Every search then says in the job
+        log which kind it targeted, the words it used and what came back.
+        """
         from app.providers.local_pipeline import canonical_url, publisher, repair_offer_page
         from app.providers.local_identity import relevant_source, source_scope
         import hashlib
 
+        wanted_kinds = self._kinds_for(queries, kinds)
+        # The decision, before any of it is spent: which kinds of source this
+        # run goes to. Said here because every local search comes through here.
+        decided = search_plan.kinds_line(list(dict.fromkeys(k for k in wanted_kinds if k)))
+        if decided:
+            self._say(decided)
         self.search_coverage = {"queries_searched": 0, "search_errors": 0,
                                 "unique_hits": 0, "pages_unreadable": 0,
                                 "pages_read": 0, "pages_irrelevant": 0,
                                 "pages_duplicate": 0, "pages_selected": 0,
-                                "pages_service_offers": 0,
+                                "pages_service_offers": 0, "search_attempts": [],
                                 "publishers_read": 0, "pages_timed_out": 0}
         self.relevant_sources = {}
         if self.given_sources is not None:
@@ -711,9 +759,11 @@ class LocalAsker:
                 return [], str(error)
 
         # Said before the wait, not after it: a search can take half a minute,
-        # and a screen that shows nothing meanwhile reads as a hang.
-        for query in queries:
-            self._say(f"searching: {query}")
+        # and a screen that shows nothing meanwhile reads as a hang. The kind
+        # is on the line so the run's source selection can be read, not guessed.
+        for query, kind in zip(queries, wanted_kinds):
+            self._say(f"searching kind {kind}: {query}" if kind
+                      else f"searching: {query}")
 
         # In a Quick Look, page reads start as soon as the first query has
         # results, alongside the remaining searches. A slow secondary query
@@ -808,11 +858,13 @@ class LocalAsker:
                         prefetch_results[index] = result
                         prefetch_ready()
                         hits, failure = result
+                        kind = wanted_kinds[index] if index < len(wanted_kinds) else ""
                         if failure:
-                            self._say(f"search failed for {queries[index]!r}: {failure}")
+                            self._say(self._search_failed_line(kind, queries[index], failure))
                         else:
-                            self._say(
-                                f"search returned {len(hits)} result(s) for {queries[index]!r}")
+                            self._say(search_plan.searched_line(
+                                kind, queries[index], hits,
+                                "" if hits else "the search service answered with no results"))
                     if quick:
                         for url, prefetch_future in prefetch_futures.items():
                             if prefetch_future.done() and prefetch_future not in prefetch_announced:
@@ -901,14 +953,32 @@ class LocalAsker:
                 prefetch_results[index] = result
             prefetch_ready()
         hits_by_query = []
-        for query, (hits, failure) in zip(queries, answered):
+        for index, (query, (hits, failure)) in enumerate(zip(queries, answered)):
+            kind = wanted_kinds[index] if index < len(wanted_kinds) else ""
+            self.search_coverage["search_attempts"].append({
+                "provider": self.search_provider or "the search service",
+                "query": query, "kind": kind,
+                "outcome": "error" if failure else ("ok" if hits else "empty"),
+                "reason": failure or ("" if hits else "answered, with no results"),
+            })
             if failure:
                 if not concurrent_search:
-                    self._say(f"search failed for {query!r}: {failure}")
+                    self._say(self._search_failed_line(kind, query, failure))
                 self.search_coverage["search_errors"] += 1
                 continue
             self.search_coverage["queries_searched"] += 1
             hits_by_query.append(hits)
+            if not concurrent_search:
+                # In the parallel path this line is already said as each query
+                # lands, so a fast answer is visible before the slow one.
+                self._say(search_plan.searched_line(
+                    kind, query, hits,
+                    "" if hits else "the search service answered with no results"))
+        # A searcher that kept its own record of the doors it tried (the chat
+        # chain does) is quoted as it said it, not paraphrased here.
+        self.search_coverage["search_attempts"].extend(
+            row for row in getattr(self._search, "attempts", None) or ()
+            if isinstance(row, dict))
         wanted, seen = [], set()
         # A query cannot fill the entire source set before the next query runs.
         for rank in range(10 if prefer_issues else HITS_PER_QUERY):
