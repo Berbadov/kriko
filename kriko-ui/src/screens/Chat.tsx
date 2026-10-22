@@ -67,16 +67,6 @@ export function ChatScreen({ onOpen }: { onOpen: (lookupId: string) => void }) {
               transition={m.tx.page}
             >
               <h1>What do you want to check?</h1>
-              <div className="hello-actions">
-                <button className="btn hello-main" onClick={() => showDrawer('setup')}>
-                  <Icon name="check" size={16} />
-                  Set up and verify Kriko
-                </button>
-                <button className="btn hello-side" onClick={() => showDrawer('chat')}>
-                  <Icon name="gear" size={16} />
-                  Chat settings
-                </button>
-              </div>
             </motion.header>
           )}
           {thread && (

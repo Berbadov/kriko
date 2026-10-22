@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { capLine, overCap, useCaps } from '../engine/caps'
 import { useUsage } from '../engine/usage'
 import {
   RESOURCE_WORDS,
@@ -11,6 +12,7 @@ import {
   standingOf,
   statusWord,
   usedResources,
+  type Meters,
   type Resource,
   type ResourceId,
   type SourceSum,
@@ -38,10 +40,12 @@ function Gauge({ fill }: { fill: number }) {
 
 /** The usage pill in the top bar and the card it opens. The pill says the two
  *  things worth a glance: how much of the tightest coding-agent window is left,
- *  and what the last day cost. The card keeps every resource apart. A number
- *  nobody reported is not drawn, and a resource never used is left out. */
+ *  and what the last day cost. The card keeps every resource apart, and says
+ *  where a reader's own daily cap stands. A number nobody reported is not
+ *  drawn, and a resource never used is left out. */
 export function UsagePill() {
   const { meters, demo, reload } = useUsage()
+  const { caps } = useCaps()
   const [open, setOpen] = useState(false)
   const box = useRef<HTMLDivElement>(null)
   const now = meters?.as_of ?? 0
@@ -66,10 +70,11 @@ export function UsagePill() {
   const used = usedResources(meters)
   if (!meters || used.length === 0) return null
   const { fill, text } = pillParts(meters)
+  const over = used.some((id) => overCap(meters, id, caps[id]))
 
   return (
     <div className="topbar-usage" ref={box}>
-      <button className="usage-pill" onClick={() => setOpen((v) => !v)} aria-expanded={open} aria-haspopup="dialog" data-tour="usage" title="What you have used">
+      <button className="usage-pill" data-over={over || undefined} onClick={() => setOpen((v) => !v)} aria-expanded={open} aria-haspopup="dialog" data-tour="usage" title={over ? 'A daily cap is passed' : 'What you have used'}>
         {fill !== null && <Gauge fill={fill} />}
         <span className="mono">{fill !== null ? `${Math.round(fill * 100)}% left` : ''}</span>
         {text && <span className="mono usage-pill-text">{text}</span>}
@@ -79,7 +84,7 @@ export function UsagePill() {
         <div className="usage-card" role="dialog" aria-label="What you have used">
           {demo && <p className="usage-demo">Example numbers. Nothing here was measured.</p>}
           {used.map((id) => (
-            <ResourceBlock key={id} id={id} resource={meters.resources[id]} now={now} />
+            <ResourceBlock key={id} id={id} resource={meters.resources[id]} now={now} cap={caps[id]} meters={meters} />
           ))}
           <p className="usage-note">Counts what Kriko itself sent. Use outside Kriko, and any balance at a provider, is not visible here.</p>
         </div>
@@ -88,9 +93,11 @@ export function UsagePill() {
   )
 }
 
-function ResourceBlock({ id, resource, now }: { id: ResourceId; resource: Resource; now: number }) {
+function ResourceBlock({ id, resource, now, cap, meters }: { id: ResourceId; resource: Resource; now: number; cap: number | null; meters: Meters }) {
   const words = RESOURCE_WORDS[id]
   const agents = id === 'cli_agent' ? agentLimits(resource) : []
+  const line = capLine(meters, id, cap)
+  const over = overCap(meters, id, cap)
   return (
     <section className="usage-block" data-resource={id}>
       <header>
@@ -100,6 +107,12 @@ function ResourceBlock({ id, resource, now }: { id: ResourceId; resource: Resour
           <small>{words.line}</small>
         </div>
       </header>
+      {line && (
+        <p className="usage-cap" data-over={over || undefined}>
+          {line}
+          {over && <span className="usage-cap-mark">Cap passed</span>}
+        </p>
+      )}
       {agents.map((agent) => (
         <div key={agent.agent} className="usage-limits">
           {agent.windows.map((window) => {
