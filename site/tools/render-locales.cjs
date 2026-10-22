@@ -1,98 +1,103 @@
-// Run after editing index.html, examples.js or locales/tr.json.
-// English is the source page; /tr/ is a fully rendered, no-JavaScript translation.
+// Builds the Turkish page from the English one and stamps asset versions.
+//
+//   node site/tools/render-locales.cjs
+//
+// `index.html` is the source. `tr/index.html` is generated from it and
+// `locales/tr.json`: every unit of text (a paragraph, a heading, a button's
+// label, a list item) is looked up whole, as written in the English page, so a
+// sentence with a bold word in it is translated as one sentence and not in
+// pieces. A unit with no translation is reported, and the build fails.
+// The same step puts a content hash on the stylesheet and script of every
+// page, so a visitor with an old copy cached gets the new one.
 const fs = require('node:fs');
 const path = require('node:path');
-const vm = require('node:vm');
 const { createHash } = require('node:crypto');
 const { JSDOM } = require('jsdom');
+
 const root = path.resolve(__dirname, '..');
-const context = { window: {} };
-vm.runInNewContext(fs.readFileSync(path.join(root, 'examples.js'), 'utf8'), context);
-const fields = vm.runInNewContext('(' + fs.readFileSync(path.join(root, 'script.js'), 'utf8').match(/const productFields = (\{[\s\S]*?\n  \});/)[1] + ')');
 const translations = JSON.parse(fs.readFileSync(path.join(root, 'locales/tr.json'), 'utf8'));
 
-function populate(document, lang) {
-  const products = context.window.KRIKO_EXAMPLES[lang];
-  const product = products.laptop;
-  for (const [key, selectors] of Object.entries(fields)) {
-    for (const selector of selectors) document.querySelector(selector).textContent = product.fields[key];
+const hash = (file) => createHash('sha256').update(fs.readFileSync(path.join(root, file))).digest('hex').slice(0, 12);
+
+// 1. Content-hash the local stylesheet and script, in the page's own source text.
+const ASSETS = ['styles.css', 'script.js'];
+function stamp(file) {
+  const target = path.join(root, file);
+  let html = fs.readFileSync(target, 'utf8');
+  const depth = file.split('/').length - 1;
+  for (const asset of ASSETS) {
+    const prefix = '../'.repeat(depth);
+    const pattern = new RegExp(`((?:href|src)=")${prefix}${asset.replace('.', '\\.')}(?:\\?v=[0-9a-f]+)?(")`, 'g');
+    html = html.replace(pattern, `$1${prefix}${asset}?v=${hash(asset)}$2`);
   }
-  document.querySelectorAll('.listing-specs span').forEach((el, i) => { el.textContent = product.specs[i]; });
-  document.querySelectorAll('[data-art]').forEach(el => { el.toggleAttribute('hidden', el.dataset.art !== 'laptop'); });
-  document.querySelectorAll('.product-option').forEach(el => { el.setAttribute('aria-pressed', String(el.dataset.product === 'laptop')); });
-  document.querySelectorAll('.product-example').forEach(el => {
-    el.classList.toggle('is-selected', el.dataset.product === 'laptop');
-    el.querySelector('h3').textContent = products[el.dataset.product].fields.name;
-  });
-  document.querySelectorAll('.evidence-source').forEach((el, i) => {
-    const source = product.sources[i];
-    el.querySelector('.source-initial').textContent = source.initial;
-    el.querySelector('strong').textContent = source.label;
-    el.querySelector('strong + span').textContent = source.detail;
-    el.querySelector('.source-excerpt').textContent = source.excerpt;
-  });
-  document.querySelector('.hero-visual').setAttribute('aria-label', lang === 'tr' ? 'Dizüstü A için temsili Kriko önizlemesi' : 'Illustrative Kriko preview for Laptop A');
+  fs.writeFileSync(target, html);
+}
+for (const file of ['index.html', 'privacy/index.html']) if (fs.existsSync(path.join(root, file))) stamp(file);
+
+// 2. Turkish.
+const dom = new JSDOM(fs.readFileSync(path.join(root, 'index.html'), 'utf8'));
+const document = dom.window.document;
+const missing = new Set();
+const BLOCKS = 'p,h1,h2,h3,ul,ol,li,div,section,details,figure,nav,header,footer,main,table';
+
+// Numbers, language codes and the product's own name read the same in both languages.
+const SAME = /^(?:[\d\s.,/+·-]+|EN|TR|Kriko|GitHub)$/;
+
+function translateUnit(element) {
+  const key = element.innerHTML.trim();
+  if (SAME.test(key)) return;
+  if (translations[key] === undefined) { missing.add(key); return; }
+  element.innerHTML = translations[key];
 }
 
-const english = new JSDOM(fs.readFileSync(path.join(root, 'index.html'), 'utf8'));
-// Same-origin visitors may have cached the previous script. Content versions
-// keep English and Turkish pages on matching assets after every publication.
-for (const el of english.window.document.querySelectorAll('script[src], link[rel="stylesheet"]')) {
-  const attr = el.hasAttribute('src') ? 'src' : 'href';
-  const asset = el.getAttribute(attr).split('?')[0];
-  if (/^https?:/.test(asset)) continue;
-  const version = createHash('sha256').update(fs.readFileSync(path.join(root, asset))).digest('hex').slice(0, 12);
-  el.setAttribute(attr, `${asset}?v=${version}`);
-}
-english.window.document.title = 'Kriko';
-populate(english.window.document, 'en');
-fs.writeFileSync(path.join(root, 'index.html'), english.serialize());
-const turkish = new JSDOM(english.serialize());
-const d = turkish.window.document;
-const missing = new Set();
-const attributes = ['aria-label', 'alt', 'title'];
-function translate(value) {
-  const key = value.trim();
-  if (!key || /^[\d\s/↗↓+♡?€∞.]+$/.test(key) || ['EN', 'TR', 'EN + TR', 'GitHub ↗', 'Kriko', 'k', 'S', 'C / 01', 'Q / ∞', 'Quick look', 'Windows', '16 GB RAM', '256 GB SSD'].includes(key)) return value;
-  if (translations[key] === undefined) { missing.add(key); return value; }
-  return value.replace(key, translations[key]);
-}
 function walk(node) {
-  for (const child of node.childNodes) {
-    if (child.nodeType === 3) child.textContent = translate(child.textContent);
-    else if (child.nodeType === 1 && !['SCRIPT', 'STYLE', 'SVG'].includes(child.tagName)) {
-      for (const attr of attributes) if (child.hasAttribute(attr)) child.setAttribute(attr, translate(child.getAttribute(attr)));
-      walk(child);
-    }
+  for (const child of [...node.children]) {
+    if (['SCRIPT', 'STYLE', 'SVG', 'PICTURE'].includes(child.tagName.toUpperCase())) continue;
+    const hasText = [...child.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
+    if (hasText && !child.querySelector(BLOCKS)) translateUnit(child);
+    else walk(child);
   }
 }
-// Dynamic example fields are translated from their own structured dataset.
-const dynamic = new Set(Object.values(context.window.KRIKO_EXAMPLES.en.laptop.fields));
-for (const item of context.window.KRIKO_EXAMPLES.en.laptop.sources) Object.values(item).forEach(x => dynamic.add(x));
-for (const product of Object.values(context.window.KRIKO_EXAMPLES.en)) dynamic.add(product.fields.name);
-context.window.KRIKO_EXAMPLES.en.laptop.specs.forEach(x => dynamic.add(x));
-walk(d.body);
-populate(d, 'tr');
-d.documentElement.lang = 'tr';
-d.title = 'Kriko';
-const description = 'Sıfır veya ikinci el ürünlerde gözden kaçan ayrıntıları keşfet. Kriko, kullanıcı deneyimlerini ve onarım bulgularını kaynaklarıyla birlikte araştırır.';
-d.querySelector('meta[name="description"]').content = description;
-d.querySelector('meta[property="og:title"]').content = 'Kriko — İlan, hikâyenin yarısını anlatır.';
-d.querySelector('meta[property="og:description"]').content = description;
-d.querySelector('link[rel="canonical"]').href = 'https://kriko.cc/tr/';
-d.querySelector('.language-switch [lang="en"]').removeAttribute('aria-current');
-d.querySelector('.language-switch [lang="tr"]').setAttribute('aria-current', 'page');
-for (const el of d.querySelectorAll('[src], link[rel="stylesheet"]')) {
-  const attr = el.hasAttribute('src') ? 'src' : 'href';
-  const value = el.getAttribute(attr);
-  if (value && !/^(https?:|\/|#)/.test(value)) el.setAttribute(attr, '../' + value);
+walk(document.body);
+
+for (const el of document.querySelectorAll('[alt], [aria-label]')) {
+  for (const attribute of ['alt', 'aria-label']) {
+    const value = el.getAttribute(attribute);
+    if (value === null || value === '' || SAME.test(value)) continue;
+    if (translations[value] === undefined) { missing.add(value); continue; }
+    el.setAttribute(attribute, translations[value]);
+  }
 }
-d.querySelector('link[rel="icon"]').setAttribute('href', '../assets/icon-32.png');
-d.querySelector('meta[property="og:image"]').content = 'https://kriko.cc/assets/icon-128.png';
+
+const meta = translations['@meta'];
+document.documentElement.lang = 'tr';
+document.title = meta.title;
+document.querySelector('meta[name="description"]').content = meta.description;
+document.querySelector('meta[property="og:title"]').content = meta['og:title'];
+document.querySelector('meta[property="og:description"]').content = meta['og:description'];
+document.querySelector('link[rel="canonical"]').href = 'https://kriko.cc/tr/';
+const switchLinks = document.querySelectorAll('.language-switch a');
+for (const a of switchLinks) {
+  if (a.lang === 'tr') a.setAttribute('aria-current', 'page');
+  else a.removeAttribute('aria-current');
+}
+document.querySelector('.brand').setAttribute('href', '/tr/');
+for (const a of document.querySelectorAll('.brand')) a.setAttribute('href', '/tr/');
+
+// Assets are one folder down from /tr/.
+for (const el of document.querySelectorAll('[src], [href], [srcset]')) {
+  for (const attribute of ['src', 'href', 'srcset']) {
+    const value = el.getAttribute(attribute);
+    if (value && /^(assets\/|styles\.css|script\.js)/.test(value)) el.setAttribute(attribute, `../${value}`);
+  }
+}
+
 fs.mkdirSync(path.join(root, 'tr'), { recursive: true });
-fs.writeFileSync(path.join(root, 'tr/index.html'), turkish.serialize());
-const untranslated = [...missing].filter(x => !dynamic.has(x) && !x.startsWith('Illustrative Kriko preview'));
-if (untranslated.length) {
-  console.error('Missing Turkish translations:', JSON.stringify(untranslated, null, 2));
-  process.exitCode = 1;
-} else console.log('Rendered English and Turkish pages. All static text translated.');
+fs.writeFileSync(path.join(root, 'tr/index.html'), dom.serialize());
+
+if (missing.size) {
+  console.error(`${missing.size} text(s) have no Turkish translation in locales/tr.json:`);
+  for (const key of missing) console.error(`  ${JSON.stringify(key)}`);
+  process.exit(1);
+}
+console.log('Rendered the Turkish page. All text translated.');

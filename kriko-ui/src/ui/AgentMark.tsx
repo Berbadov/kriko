@@ -1,19 +1,34 @@
+import antigravity from '../assets/agents/antigravity.svg?raw'
+import claude from '../assets/agents/claude.svg?raw'
+import claudeCode from '../assets/agents/claudecode.svg?raw'
+import codex from '../assets/agents/codex.svg?raw'
+import cursor from '../assets/agents/cursor.svg?raw'
+import mistral from '../assets/agents/mistral-color.svg?raw'
 import { Icon } from './Icon'
 
-/** The mark of the agent that wrote an answer. Each is a small shape of its own on
- *  a tile in its own colour, so a thread of answers shows who said what at a glance.
- *  They are Kriko's own drawings, not the makers' logos. */
+/** The mark of the agent that wrote an answer: the maker's own logo, on a quiet tile,
+ *  so a thread of answers shows who said what at a glance. The logos are the makers'
+ *  trademarks, shown only to say which agent answered (see `assets/agents/NOTICE.md`).
+ *  The local model and any agent without a logo keep Kriko's own drawing.
+ *
+ *  `state` moves the tile the way the agent is doing: a ring runs round it while it
+ *  works, it breathes while it waits, it greys with an amber ring when paused, it
+ *  flashes mint once when done and shakes in red when it failed. */
 
-type Look = { tone: string; glyph: 'burst' | 'prompt' | 'peak' | 'blocks' | 'pointer' | 'chip' | 'spark' }
+export type AgentState = 'idle' | 'working' | 'waiting' | 'paused' | 'done' | 'failed'
+
+/** A logo, the colour it is drawn in (`currentColor` in the file), or `own` when the
+ *  file carries its own colours. */
+type Look = { svg?: string; tone: string; own?: boolean; glyph?: 'chip' | 'spark' }
 
 const LOOKS: Record<string, Look> = {
-  'claude-code': { tone: '#e0825f', glyph: 'burst' },
-  'claude-desktop': { tone: '#e0825f', glyph: 'burst' },
-  codex: { tone: '#56d6a0', glyph: 'prompt' },
-  'antigravity-cli': { tone: '#7b98ff', glyph: 'peak' },
-  'mistral-vibe': { tone: '#ff9a3d', glyph: 'blocks' },
-  'mistral-api': { tone: '#ff9a3d', glyph: 'blocks' },
-  cursor: { tone: '#c3c8d6', glyph: 'pointer' },
+  'claude-code': { svg: claudeCode, tone: '#D97757' },
+  'claude-desktop': { svg: claude, tone: '#D97757' },
+  codex: { svg: codex, tone: 'var(--ink)' },
+  'antigravity-cli': { svg: antigravity, tone: '#3186FF' },
+  'mistral-vibe': { svg: mistral, tone: 'var(--ink)', own: true },
+  'mistral-api': { svg: mistral, tone: 'var(--ink)', own: true },
+  cursor: { svg: cursor, tone: 'var(--ink)' },
   local: { tone: '#3ddc97', glyph: 'chip' },
 }
 
@@ -21,38 +36,21 @@ const FALLBACK: Look = { tone: '#7b98ff', glyph: 'spark' }
 
 export const lookOf = (id: string): Look => LOOKS[id] ?? FALLBACK
 
-function Glyph({ glyph, size }: { glyph: Look['glyph']; size: number }) {
-  if (glyph === 'chip') return <Icon name="cpu" size={size} />
-  if (glyph === 'spark') return <Icon name="spark" size={size} />
-  const lines: Record<string, string> = {
-    burst: 'M12 4v16M4 12h16M6.3 6.3l11.4 11.4M17.7 6.3 6.3 17.7',
-    prompt: 'M6 8l5 4-5 4M13 17h5',
-    peak: 'M12 5l7 14H5ZM9 14h6',
-    pointer: 'M6 4l12 7-5 1.6L10.6 18Z',
-  }
-  if (glyph === 'blocks') {
-    // Pixel blocks in the shape of an M, as the app's own dither draws.
-    const cells: [number, number][] = [[4, 5], [4, 9], [4, 13], [4, 17], [8, 9], [12, 13], [16, 9], [20, 5], [20, 9], [20, 13], [20, 17]]
-    return (
-      <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true" fill="currentColor" stroke="none">
-        {cells.map(([x, y]) => (
-          <rect key={`${x}-${y}`} x={x - 2} y={y - 2} width="4" height="4" rx="0.6" />
-        ))}
-      </svg>
-    )
-  }
-  return (
-    <svg className="icon" viewBox="0 0 24 24" width={size} height={size} aria-hidden="true">
-      <path d={lines[glyph]} />
-    </svg>
-  )
-}
+/** The files are sized `1em` with an inline style; the tile sizes them instead. */
+const bare = (svg: string) => svg.replace(/ height="1em"| width="1em"| style="[^"]*"/g, '')
 
-export function AgentMark({ id, size = 28 }: { id: string; size?: number }) {
+export function AgentMark({ id, size = 28, state = 'idle' }: { id: string; size?: number; state?: AgentState }) {
   const look = lookOf(id)
+  const inner = Math.round(size * 0.62)
   return (
-    <span className="agent-mark" style={{ '--tone': look.tone, width: size, height: size } as React.CSSProperties} aria-hidden="true">
-      <Glyph glyph={look.glyph} size={Math.round(size * 0.58)} />
+    <span className="agent-mark" data-state={state} style={{ '--tone': look.tone, width: size, height: size } as React.CSSProperties} aria-hidden="true">
+      {look.svg ? (
+        <span className="agent-logo" style={{ width: inner, height: inner }} dangerouslySetInnerHTML={{ __html: bare(look.svg) }} />
+      ) : (
+        <span className="agent-logo">
+          <Icon name={look.glyph === 'chip' ? 'cpu' : 'spark'} size={inner} />
+        </span>
+      )}
     </span>
   )
 }

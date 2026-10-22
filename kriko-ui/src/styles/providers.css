@@ -1,0 +1,120 @@
+/* The web search, local server and proxy groups in Settings and Local. */
+
+.field {
+  width: 100%;
+  min-width: 0;
+  padding: 8px 12px;
+  background: var(--panel-2);
+  border: 1px solid var(--edge-strong);
+  border-radius: var(--r-m);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 12.5px;
+  resize: vertical;
+}
+
+.field:disabled {
+  color: var(--ink-3);
+}
+
+.field:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.order-list {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: order;
+}
+
+.order-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 0;
+  border-top: 1px solid var(--edge);
+  counter-increment: order;
+}
+
+.order-list li > span:first-child {
+  position: relative;
+  display: grid;
+  padding-left: 22px;
+}
+
+.order-list li > span:first-child::before {
+  content: counter(order) '.';
+  position: absolute;
+  left: 0;
+  color: var(--ink-3);
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.order-list small {
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+.order-list button:disabled,
+.key-actions button:disabled {
+  color: var(--ink-3);
+  cursor: default;
+}
+
+.order-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.test-result {
+  display: grid;
+  gap: 4px;
+  padding: 8px 10px;
+  background: var(--panel-2);
+  border-radius: var(--r-m);
+  color: var(--ink-2);
+  font-size: 12.5px;
+}
+
+.test-result[data-ok='true'] > small:first-child {
+  color: var(--ok);
+}
+
+.test-result[data-ok='false'] {
+  color: var(--risk);
+}
+
+.test-result ul {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.test-result li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+
+.test-result li > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.test-result li small {
+  flex: none;
+  color: var(--ink-3);
+}

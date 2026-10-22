@@ -2,8 +2,9 @@ import { useMemo, useState } from 'react'
 import { usePrefsDoc } from '../../engine/settings'
 import { useLocal, type Library, type Model, type VllmPlan, type VllmServer } from '../../engine/local'
 import { Icon } from '../Icon'
-import { PixelBar, Select } from '../controls'
+import { ProgressBar, Select } from '../controls'
 import { HfStore } from './HfStore'
+import { LocalRuntimeGroup } from './LocalRuntime'
 
 const gb = (bytes: number) => `${(bytes / 1e9).toFixed(1)} GB`
 const mb = (value: number) => `${(value / 1024).toFixed(value >= 10240 ? 0 : 1)} GB`
@@ -62,6 +63,8 @@ export function LocalPanel(_: { onOpen?: (lookupId: string) => void }) {
         )}
       </section>
 
+      <LocalRuntimeGroup stepsBelow={Boolean(machine?.vllm)} />
+
       {machine?.vllm && <VllmCard plan={machine.vllm} server={local.vllm} checking={local.checking} onCheck={() => void local.recheck()} />}
 
       {running && (
@@ -92,7 +95,7 @@ export function LocalPanel(_: { onOpen?: (lookupId: string) => void }) {
                 </span>
               ) : (
                 <>
-                  <PixelBar value={pull.progress} active cells={26} />
+                  <ProgressBar value={pull.progress} active />
                   <button onClick={() => void local.stopPull()}>Stop</button>
                 </>
               )}

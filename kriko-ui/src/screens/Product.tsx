@@ -5,8 +5,11 @@ import { useCompare } from '../compare'
 import { useEngine } from '../engine/Engine'
 import { EngineError, get, post, seg, type ApiJob } from '../engine/api'
 import { followJob } from '../engine/jobs'
+import { useSensitivity } from '../engine/sensitivity'
+import { hiddenLine, shown } from '../engine/thinness'
 import { usePrefs } from '../prefs'
 import { Composer } from '../ui/Composer'
+import { EvidenceMark } from '../ui/EvidenceMark'
 import { ExternalLink } from '../ui/ExternalLink'
 import { Icon } from '../ui/Icon'
 import { Markdown } from '../ui/Markdown'
@@ -40,6 +43,11 @@ export function ProductScreen({ lookupId, onBack, onCompare }: { lookupId: strin
   const [problem, setProblem] = useState('')
   const [loadAttempt, setLoadAttempt] = useState(0)
   const [turns, setTurns] = useState<Turn[]>([])
+  const { sensitivity } = useSensitivity()
+  /** The reader pressed "show them", for this check at this step. A different check or step is a new question. */
+  const [reveal, setReveal] = useState({ key: '', on: false })
+  const revealKey = `${lookupId}|${sensitivity}`
+  const revealed = reveal.on && reveal.key === revealKey
   const alive = useRef(true)
   const end = useRef<HTMLDivElement>(null)
   const stopRequested = useRef(false)
@@ -128,6 +136,9 @@ export function ProductScreen({ lookupId, onBack, onCompare }: { lookupId: strin
     }
   }
 
+  const hidden = check ? check.risks.filter((risk) => !shown(risk.evidence?.level, sensitivity)) : []
+  const drawn = check ? check.risks.filter((risk) => revealed || shown(risk.evidence?.level, sensitivity)) : []
+
   const onBoard = slots.includes(lookupId)
   const asking = turns.some((t) => t.state === 'running')
   const stop = () => {
@@ -177,28 +188,31 @@ export function ProductScreen({ lookupId, onBack, onCompare }: { lookupId: strin
         {check && (
           <ul className="risk-list rise" style={{ '--i': 1 } as CSSProperties}>
             {check.risks.length === 0 && <li className="muted">No risk is on record.</li>}
-            {check.risks.map((risk) => (
-              <li key={risk.title}>
+            {check.risks.length > 0 && drawn.length === 0 && <li className="muted">Every finding on record is hidden at this sensitivity.</li>}
+            {drawn.map((risk) => (
+              <li key={risk.title} data-thin={risk.evidence?.level === 'thin' || undefined}>
                 <span className="level" data-level={risk.level}>
                   {LEVEL_WORD[risk.level]}
                 </span>
                 <div>
-                  <strong>{risk.title}</strong>
+                  <div className="risk-title">
+                    <strong>{risk.title}</strong>
+                    <EvidenceMark evidence={risk.evidence} />
+                  </div>
                   {risk.body && <p>{risk.body}</p>}
                   <RiskEvidence risk={risk} />
-                  {risk.sources.length > 0 && (
-                    <span className="srcs">
-                      {risk.sources.slice(0, 3).map((s, i) => (
-                        <ExternalLink key={i} href={s.url || undefined}>
-                          {s.host || s.url}
-                        </ExternalLink>
-                      ))}
-                    </span>
-                  )}
                 </div>
               </li>
             ))}
           </ul>
+        )}
+        {check && hidden.length > 0 && (
+          <p className="ev-hidden" role="status">
+            <span>{revealed ? 'Showing the hidden findings.' : `${hiddenLine(hidden.length, sensitivity)}.`}</span>
+            <button className="btn ghost" onClick={() => setReveal({ key: revealKey, on: !revealed })} aria-pressed={revealed}>
+              {revealed ? 'Hide them again' : 'Show them'}
+            </button>
+          </p>
         )}
 
         <div className="talk wide">

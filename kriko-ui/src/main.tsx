@@ -10,6 +10,8 @@ import './styles/chat.css'
 import './styles/activity.css'
 import './styles/compare.css'
 import './styles/panels.css'
+import './styles/logs.css'
+import './styles/rail.css'
 import './styles/tour.css'
 
 createRoot(document.getElementById('root')!).render(

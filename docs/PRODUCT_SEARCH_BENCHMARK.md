@@ -30,6 +30,8 @@ budgets, protocol versions and response formats into a single leaderboard.
 
 # Pack original answers and metrics into the interactive conversation view.
 .venv/Scripts/python.exe -m app.searchbench.interactive FIRST_FOLDER SECOND_FOLDER --out .local-evaluation/searchbench/product-benchmark-interactive.html
+# Build plain tables with low/high sort links and expandable logs (no JavaScript).
+.venv/Scripts/python.exe -m app.searchbench.listing FIRST_FOLDER SECOND_FOLDER --out .local-evaluation/searchbench/simple-results
 ```
 
 The default corpus is `src/app/searchbench/products.json`: three categories
@@ -155,6 +157,20 @@ cash expenditure. DeepSeek and model price assumptions are frozen in results.
 
 ## Output and inspection
 
+Open `simple-results/index.html` for the compact results table. Every metric has
+low-to-high and high-to-low links. Expand a stack's logs to see the original
+answers, individual request timings and usage, citations, and evaluator results.
+Copy the whole folder when sharing; sorting navigates between static HTML pages.
+
+The table labels its fact F1 as a **proxy**, not standard classification F1.
+For each factual research attempt and evaluator, precision is correct audited
+material claims divided by all audited claims (including unknowns); recall is
+the mean required-criterion credit. Their harmonic mean is averaged over both
+evaluators, then over factual attempts. Runtime failures score zero, missing
+grades remain unscored, and identity/clarification tasks use the acceptance
+column instead. Source-grounding and critical-fact gates remain separate from
+this descriptive composite. A high proxy can coexist with a rejected answer.
+
 Each experiment folder contains:
 
 - `results.json`: questions, rubrics, raw answers/evidence, request ledgers,
@@ -176,3 +192,46 @@ explicit to keep those mutations separate.
 
 Primary reference URLs live beside each case. Provider interface and pricing
 references are in [the original benchmark guide](SEARCH_BENCHMARK.md).
+
+## Tuning the engine on real cases (`tune`)
+
+The benchmark above compares search providers. `tune` asks a different
+question: does a change to the engine make the answers your own agent and
+search provider give better or worse? It answers each case with the preferred
+agent and search provider read from Settings (`app.sqlite`), then a different
+agent grades the answer against fetched evidence.
+
+```
+python -m app.searchbench tune list
+python -m app.searchbench tune run --label before            # prints the plan and cost, exits 2
+python -m app.searchbench tune run --label before --yes      # spends
+# change the engine, then
+python -m app.searchbench tune run --label after --yes
+python -m app.searchbench tune compare <before-folder> <after-folder>
+```
+
+- Without `--yes`, `run` prints how many answers and gradings it would make
+  and exits without spending.
+- The grader is never the answerer, and never the same model. If Settings
+  holds no second agent the command stops and says so. The grader sees the
+  question, the rubric, the final answer, link results and the evidence pages,
+  never the answerer's reasoning.
+- Each case is checked for required facts, supported citations (a quote that
+  is not on its page is downgraded), product identity, links that open, and
+  whether a clarifying question was the right move. Every answer and grading
+  names the agent that produced it.
+- The ledger and the sortable HTML report are scrubbed of credentials; the
+  grader's reasoning is expandable per case.
+- `compare` pairs the same case and repetition, reports the pass-rate
+  difference with a bootstrap interval over whole cases and an exact sign
+  test, and flags a different grader, answerer, case set, protocol, or an
+  identical engine commit at the top.
+- Every failed trial carries a class from a closed list (timeout,
+  malformed_json, paraphrased_quote, invented_quote, invented_link,
+  wrong_identity, missed_fact, and so on); the report counts them.
+- `tune propose --thread ID` proposes cases from the saved chats you name.
+  Nothing leaves the machine; the output is a file to edit before it is used.
+
+Caveat: a rehearsal (`--limit`) is not a verdict, a small case set gives a
+wide interval, and no before/after quality figure is claimed here. Measure
+with your own keys.

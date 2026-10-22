@@ -7,6 +7,15 @@ import statistics
 from pathlib import Path
 
 from app.searchbench.accuracy import citation_ids
+from app.searchbench.config import PROFILE_LABELS
+
+#: The page's look, shared with the tuning reports so both read the same.
+PAGE_STYLE = ("body{font:15px system-ui;max-width:1150px;margin:28px auto;padding:0 16px;color:#202124;background:#fff}"
+              "table{border-collapse:collapse;width:100%}td,th{text-align:left;border-bottom:1px solid #ddd;padding:10px}"
+              "th small{white-space:nowrap}a{color:#1755a5}details{margin:8px 0}summary{cursor:pointer}"
+              "pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit}p{overflow-wrap:anywhere}"
+              ".scroll{overflow-x:auto}.note{color:#555;font-size:13px}.logs>td{padding-top:0}"
+              "h1{font-size:23px}nav{margin:16px 0}")
 
 
 def fact_f1_proxy(audit):
@@ -49,8 +58,6 @@ def summarize(rows):
 
 
 def build(folders, output):
-    from app.searchbench.interactive import LABELS
-
     output.mkdir(parents=True, exist_ok=True)
     def esc(value):
         return html.escape(str(value))
@@ -96,14 +103,14 @@ def build(folders, output):
         for metric in metrics:
             for direction in ("asc", "desc"):
                 ordered = sorted(summary, key=lambda r: (r[metric] is None, -(r[metric] or 0) if direction == "desc" else (r[metric] or 0), r["profile"]))
-                page = "<!doctype html><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>Benchmark results</title><style>body{font:15px system-ui;max-width:1150px;margin:28px auto;padding:0 16px;color:#202124;background:#fff}table{border-collapse:collapse;width:100%}td,th{text-align:left;border-bottom:1px solid #ddd;padding:10px}th small{white-space:nowrap}a{color:#1755a5}details{margin:8px 0}summary{cursor:pointer}pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit}p{overflow-wrap:anywhere}.scroll{overflow-x:auto}.note{color:#555;font-size:13px}.logs>td{padding-top:0}h1{font-size:23px}nav{margin:16px 0}</style><h1>Benchmark results</h1>"
+                page = "<!doctype html><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>Benchmark results</title><style>" + PAGE_STYLE + "</style><h1>Benchmark results</h1>"
                 page += "<nav>" + " · ".join(f"<a href='{name(i)}'>{'● ' if i == block else ''}Block {i} ({len(d['runs'])} attempts)</a>" for i, d in enumerate(documents, 1)) + "</nav>"
                 page += f"<p>{esc(metrics[metric])}: {'low → high' if direction == 'asc' else 'high → low'}</p><div class='scroll'><table><tr><th>Stack</th>"
                 for key, label in metrics.items():
                     page += f"<th>{label}<br><small><a href='{name(block,key,'asc')}' aria-label='{label} low to high'>↑ low</a> / <a href='{name(block,key,'desc')}' aria-label='{label} high to low'>↓ high</a></small></th>"
                 page += "</tr>"
                 for row in ordered:
-                    values = [LABELS.get(row["profile"], row["profile"]), percent(row["f1"]), f"{row['accepted']}/{row['n']}",
+                    values = [PROFILE_LABELS.get(row["profile"], row["profile"]), percent(row["f1"]), f"{row['accepted']}/{row['n']}",
                               f"{row['seconds']:.2f}", ("" if row["cost_complete"] else "≥ ") + f"{row['cost']:.5f}",
                               ("" if row["tokens_complete"] else "≥ ") + f"{row['tokens']:,.0f}"]
                     page += "<tr>" + "".join(f"<td>{esc(v)}</td>" for v in values) + "</tr>"

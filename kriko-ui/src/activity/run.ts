@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react'
 import { demoThreads } from '../engine/threads'
+import { DEMO_PAGES, demoUsage } from '../mock/data'
 
 /** One run of an agent, as the interface sees it. The mock engine below fills
  *  it in time. The real engine will fill the same shape from its live feed. */
@@ -45,6 +46,37 @@ export interface Product {
   pageRead?: boolean
 }
 
+/** A page a turn read or cited, with the kind of site the engine says it is. */
+export interface SourcePage {
+  url: string
+  host: string
+  title: string
+  /** Read, tried and could not be read, or only named by the answer. */
+  read: 'read' | 'failed' | 'listed'
+  cited: boolean
+  /** The engine's own words for the kind of site, and where it stands. */
+  tier?: string
+  standing?: 'trusted' | 'neutral' | 'low'
+}
+
+/** What one turn spent. Every number is what a plane reported; null is "not reported". */
+export interface Usage {
+  tokensIn: number | null
+  tokensOut: number | null
+  tokens: number | null
+  usd: number | null
+  model: string
+  /** The model's window in tokens, from the catalogue, and the largest prompt this turn sent. */
+  window: number | null
+  windowSource: string
+  used: number | null
+  state: 'measured' | 'not_reported' | 'pending'
+  fill: number | null
+  trimmed: boolean
+  droppedReplies: number
+  omittedRequests: number
+}
+
 /** Which agent answered: the id picks its mark, the label is what the reader reads. */
 export interface AgentRef {
   id: string
@@ -72,6 +104,9 @@ export interface Run {
   followups?: string[]
   /** The one question this turn asked, when it asked instead of answering. */
   questions?: Question[]
+  /** The pages this turn read or cited, drawn once from its own `activity` and `sources`. */
+  pages?: SourcePage[]
+  usage?: Usage
   /** The answer is complete, even if the turn is still naming its follow-ups. */
   answerFinal?: boolean
   /** Why the run failed, in the engine's words. */
@@ -90,10 +125,15 @@ export interface Turn {
   rows?: Row[]
   followups?: string[]
   questions?: Question[]
+  pages?: SourcePage[]
+  usage?: Usage
   /** Why the turn failed, when it did. */
   error?: string
   agent?: AgentRef
 }
+
+/** What the reader can ask Chat to do with a product. The engine knows the same three by name. */
+export type ChatMode = 'alternatives' | 'cheapest' | 'merchants'
 
 /** What the screens hold: the chat so far, the run now, and what the reader can do. */
 export interface RunApi {
@@ -102,7 +142,7 @@ export interface RunApi {
   turns: Turn[]
   /** The chat that the run belongs to. Empty before the first question. */
   threadId: string
-  start: (prompt: string, agent: { id: string; label?: string; backend: 'harness' | 'local' }) => void
+  start: (prompt: string, agent: { id: string; label?: string; backend: 'harness' | 'local' }, mode?: ChatMode) => void
   stop: () => void
   /** Leave this chat and start a new, empty one. */
   newChat: () => void
@@ -114,7 +154,7 @@ export interface RunApi {
 export const turnOf = (run: Run): Turn | null =>
   run.status === 'idle' || run.status === 'running' || !run.prompt
     ? null
-    : { id: String(run.startedAt), prompt: run.prompt, answer: run.answer, products: run.products, rows: run.rows, followups: run.followups, questions: run.questions, error: run.error, agent: run.agent }
+    : { id: String(run.startedAt), prompt: run.prompt, answer: run.answer, products: run.products, rows: run.rows, followups: run.followups, questions: run.questions, pages: run.pages, usage: run.usage, error: run.error, agent: run.agent }
 
 export type Action =
   | { type: 'start'; prompt: string; now: number }
@@ -196,7 +236,7 @@ const THOUGHT_2 = 'Two makers report heat under long load. Read the maker page f
 const ANSWER =
   'Alpha Unit 200 has **one sourced report**: it overheats under long loads. The maker states a limit of 40 minutes of full load. Check your use against that limit before you buy.'
 
-function script(): Beat[] {
+function script(turn: number): Beat[] {
   const beats: Beat[] = []
   let t = 300
   const add = (delay: number, fn: (api: Api) => void) => {
@@ -236,7 +276,11 @@ function script(): Beat[] {
   add(200, ({ dispatch }) =>
     dispatch({ type: 'add', row: { kind: 'tool', id: 'k3', name: 'Read page', detail: 'maker.example.test', startedAt: Date.now() } }),
   )
-  add(2300, ({ dispatch }) => dispatch({ type: 'patch', id: 'k3', patch: { ms: 2300 } }))
+  add(2300, ({ dispatch }) => {
+    dispatch({ type: 'patch', id: 'k3', patch: { ms: 2300 } })
+    dispatch({ type: 'add', row: { kind: 'event', id: 'activity-web-1-read-1', stage: 'Page read', text: DEMO_PAGES[0].title, sourceUrl: DEMO_PAGES[0].url } })
+    dispatch({ type: 'replace', patch: { pages: DEMO_PAGES.slice(0, 1) } })
+  })
   add(250, ({ dispatch }) => dispatch({ type: 'add', row: { kind: 'thought', id: 't2', text: '', done: false } }))
   stream('t2', THOUGHT_2, 'thought')
   add(200, ({ dispatch }) => dispatch({ type: 'patch', id: 't2', patch: { done: true } }))
@@ -244,10 +288,14 @@ function script(): Beat[] {
   add(200, ({ dispatch }) =>
     dispatch({ type: 'add', row: { kind: 'tool', id: 'k4', name: 'Check quote', detail: '2 sources', startedAt: Date.now() } }),
   )
-  add(1600, ({ dispatch }) => dispatch({ type: 'patch', id: 'k4', patch: { ms: 1600 } }))
+  add(1600, ({ dispatch }) => {
+    dispatch({ type: 'patch', id: 'k4', patch: { ms: 1600 } })
+    dispatch({ type: 'add', row: { kind: 'event', id: 'activity-web-1-read-2', stage: 'Page read', text: DEMO_PAGES[1].title, sourceUrl: DEMO_PAGES[1].url } })
+    dispatch({ type: 'replace', patch: { pages: DEMO_PAGES, usage: { ...demoUsage(turn), state: 'pending', used: null, fill: null, tokensIn: null, tokensOut: null, tokens: null, usd: null } } })
+  })
   stream('', ANSWER, 'answer', 45)
   add(300, ({ dispatch }) => {
-    dispatch({ type: 'replace', patch: { products: [{ id: 'alpha', name: 'Alpha Unit 200', note: '1 risk' }] } })
+    dispatch({ type: 'replace', patch: { products: [{ id: 'alpha', name: 'Alpha Unit 200', note: '1 risk' }], pages: DEMO_PAGES, usage: demoUsage(turn) } })
     dispatch({ type: 'end', status: 'done', now: Date.now() })
   })
   return beats
@@ -273,11 +321,11 @@ export function useDemoRun(): RunApi {
       dispatch({ type: 'start', prompt, now: Date.now() })
       if (agent) dispatch({ type: 'replace', patch: { agent: { id: agent.id, label: agent.label ?? agent.id } } })
       const api: Api = { dispatch }
-      for (const beat of script()) {
+      for (const beat of script(turns.length + (last ? 1 : 0) + 1)) {
         timers.current.push(window.setTimeout(() => beat.do(api), beat.at))
       }
     },
-    [clear, run, threadId],
+    [clear, run, threadId, turns],
   )
 
   const stop = useCallback(() => {

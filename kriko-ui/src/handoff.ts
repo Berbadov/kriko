@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import type { Screen } from './ui/Rail'
+import type { Screen } from './ui/TopBar'
 
 /** The browser extension hands a product to this window. It names a route:
  *  `check`, `result/<id>`, `questions/<id>` or `compare/<id>`. The engine

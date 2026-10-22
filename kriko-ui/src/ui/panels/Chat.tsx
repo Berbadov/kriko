@@ -22,21 +22,18 @@ export function ChatPanel(_: { onOpen?: (lookupId: string) => void }) {
       <section className="panel-group">
         <h3>Before it answers</h3>
         <p className="panel-note">
-          When one detail would change the answer — a tyre size, a model year, an engine, the market you buy in — Chat
-          asks for it first, with choices you can press. It asks only what the question and your notes below cannot settle.
+          When one detail would change the answer (a tyre size, a model year, the market), Chat asks for it first, with
+          choices. It asks only what your notes below cannot settle.
         </p>
       </section>
 
       <section className="panel-group">
         <h3>What it remembers about you</h3>
-        <p className="panel-note">
-          Written once, used in every chat. Your car and the size on it, the shops you trust, a budget, how you use the
-          thing. These are the same notes as <strong>For you</strong>.
-        </p>
+        <p className="panel-note">Used in every chat. The same notes as For you.</p>
         <label className="need-field">
           <span>
             Your words
-            <small>A sentence or two. A detail written here is not asked again.</small>
+            <small>A sentence or two. Nothing written here is asked again.</small>
           </span>
           <textarea
             value={about}
@@ -65,7 +62,7 @@ export function ChatPanel(_: { onOpen?: (lookupId: string) => void }) {
           <span>
             Product-only answers
             <small>
-              Same product research and checks, with a brief result. Product cards show links and page images when available.
+              Same product research and checks, with a brief result: the product, where to buy it, and at most two warnings. Product cards show links and page images when available.
             </small>
           </span>
           <Switch
