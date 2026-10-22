@@ -61,6 +61,7 @@ export function ChatScreen({ onOpen }: { onOpen: (lookupId: string) => void }) {
             <motion.header
               key="hello"
               className="hello"
+              layout="position"
               initial={{ opacity: 0, y: m.d(12) }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -m.d(12) }}
@@ -170,7 +171,7 @@ function AnswerActions({ text, onRetry, usage }: { text: string; onRetry?: () =>
         <span>{copied ? 'Copied' : 'Copy'}</span>
       </button>
       {onRetry && (
-        <button className="act" onClick={onRetry} aria-label="Ask again" title="Ask the same question again">
+        <button className="act" onClick={onRetry} aria-label="Retry" title="Ask the same question again">
           <Icon name="retry" size={15} />
           <span>Retry</span>
         </button>
@@ -247,8 +248,10 @@ function Thread({
   const { motion: m } = usePrefs()
   const scroller = useRef<HTMLDivElement>(null)
   const inner = useRef<HTMLDivElement>(null)
+  const answer = useRef<HTMLElement>(null)
   const stuck = useRef(true)
   const done = run.status === 'done'
+  const running = run.status === 'running'
   const followups = done ? run.followups : run.status === 'idle' ? turns.at(-1)?.followups : []
   const idle = run.status === 'idle'
   /** The answer is complete even if the turn is still naming its follow-ups. */
@@ -271,18 +274,44 @@ function Thread({
 
   // The thread grows by streaming text, steps and cards that animate in, so it
   // is the size that is watched, not a list of the things that can change it.
+  // Only a run in flight is followed: the cards and follow-ups that arrive with
+  // the finished turn must not pull the reader off the answer they just read.
   useEffect(() => {
     const el = scroller.current
     const body = inner.current
     if (!el || !body) return
     const follow = () => {
-      if (stuck.current) el.scrollTop = el.scrollHeight
+      if (body.dataset.running === 'true' && stuck.current) el.scrollTop = el.scrollHeight
+      setAway(el.scrollHeight - el.scrollTop - el.clientHeight > 120)
     }
     follow()
     const watch = new ResizeObserver(follow)
     watch.observe(body)
     return () => watch.disconnect()
   }, [])
+
+  // The answer is settled: the actions, products and follow-ups below it arrive
+  // now. Reveal all of them when the answer still starts in view after the
+  // scroll; otherwise leave its last lines in view and let the reader choose to
+  // go further. Never yank them off the answer they just read.
+  const arrived = useRef(false)
+  useEffect(() => {
+    if (running) {
+      arrived.current = false
+      return
+    }
+    const el = scroller.current
+    const box = answer.current
+    if (!el || !box || arrived.current || !stuck.current) return
+    arrived.current = true
+    const view = el.getBoundingClientRect()
+    const text = box.getBoundingClientRect()
+    const below = el.scrollHeight - el.scrollTop - el.clientHeight
+    const hidesStart = text.top - below < view.top
+    const amount = Math.max(0, text.bottom - view.bottom + 12)
+    const top = hidesStart ? el.scrollTop + amount : el.scrollTop + below
+    if (top > el.scrollTop + 1) el.scrollTo({ top, behavior: m.on ? 'smooth' : 'auto' })
+  }, [running, m.on])
 
   // A new question is the reader's own act: take them to it.
   useEffect(() => {
@@ -294,7 +323,7 @@ function Thread({
 
   const watch = (event: UIEvent<HTMLDivElement>) => {
     const el = event.currentTarget
-    setAway(el.scrollHeight - el.scrollTop - el.clientHeight > 260)
+    setAway(el.scrollHeight - el.scrollTop - el.clientHeight > 120)
   }
   const latest = () => {
     const el = scroller.current
@@ -306,7 +335,7 @@ function Thread({
 
   return (
     <div className="thread-scroll" ref={scroller} onScroll={watch}>
-      <div className="thread-inner" ref={inner}>
+      <div className="thread-inner" ref={inner} data-running={running ? 'true' : undefined}>
         {turns.map((turn) => (
           <div key={turn.id} className="turn">
             <div className="you-row">
@@ -349,7 +378,10 @@ function Thread({
             <p className="you">{run.prompt}</p>
           </div>
         )}
-        {run.status !== 'idle' && !questions.length && <Timeline run={run} />}
+        {/* Only a run with activity has a record to show. A turn that asks one
+            question, or fails before its first step, keeps no empty card; a run
+            that is still waiting for an answer keeps the rows it already has. */}
+        {run.status !== 'idle' && run.rows.length > 0 && <Timeline key={`timeline-${run.startedAt}`} run={run} />}
         {run.status !== 'idle' && <TaskActions prompt={run.prompt} />}
         {!!questions.length ? (
           <AskCard question={questions[0]} agent={run.agent} busy={run.status === 'running'} onAnswer={(text) => onAnswer(text, run.agent)} onOwn={onOwn} />
@@ -358,7 +390,7 @@ function Thread({
             // Kept mounted for the whole turn, and re-keyed only when a new one
             // starts: unmounting it between polls reset the word counter and the
             // whole answer rose out of the blur again, once per poll.
-            <article key={run.startedAt} className="answer rise">
+            <article key={run.startedAt} className="answer rise" ref={answer}>
               {run.rows.some((row) => row.id === 'activity-citation-warning' || row.id === 'activity-evidence-warning') && <p className="error-note" role="alert">Some claims or references could not be verified against the supplied evidence. Check the sources before relying on this answer.</p>}
               <AnswerHead agent={run.agent} state={run.status === 'running' ? 'working' : run.status === 'failed' ? 'failed' : run.status === 'done' ? 'done' : 'idle'} />
               {run.answer && <Markdown text={run.answer} live={!settled} />}

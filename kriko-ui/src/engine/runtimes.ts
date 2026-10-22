@@ -51,11 +51,13 @@ export function useLocalRuntimes() {
   const load = useCallback(async () => {
     if (mode === 'checking') return
     if (mode !== 'live') {
+      setProblem('')
       setDoc(structuredClone(demo.current))
       return
     }
     try {
       setDoc(await get<RuntimesDoc>('/api/local-runtimes'))
+      setProblem('')
     } catch (error) {
       setProblem(error instanceof Error ? error.message : 'Could not read the runtimes.')
     }
@@ -116,5 +118,5 @@ export function useLocalRuntimes() {
     [mode],
   )
 
-  return { doc, problem, checked, save, check }
+  return { doc, problem, checked, save, check, reload: load }
 }

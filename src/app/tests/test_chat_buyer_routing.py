@@ -109,3 +109,12 @@ def test_product_fitment_advice_routes_to_live_shopping_search(message):
 ])
 def test_a_question_or_a_task_with_a_number_stays_chat(message):
     assert chat.route_message(message) == "chat"
+
+
+@pytest.mark.parametrize("message", [
+    "What is the latest model specification?",
+    "Find the official manual for the latest model specification",
+])
+def test_a_factual_product_question_uses_web_without_shopping_fanout(message):
+    assert chat.route_message(message) == "web"
+    assert not chat._buying_request(message)

@@ -1,10 +1,13 @@
 import { useState } from 'react'
 import type { Check, Risk } from '../compare/checks'
 import { ClaimSources } from './ClaimChip'
+import { count } from './format'
 
 export function CheckContext({ check }: { check: Check }) {
   const [openedAt] = useState(() => Date.now())
-  const checked = check.checkedAt ? new Date(check.checkedAt) : null
+  // A timestamp the engine could not parse must not print "Invalid Date".
+  const parsed = check.checkedAt ? new Date(check.checkedAt) : null
+  const checked = parsed && !Number.isNaN(parsed.getTime()) ? parsed : null
   const old = checked && openedAt - checked.getTime() > 7 * 86400000
   return <div className="check-context">
     {checked && <p className="muted">Saved {checked.toLocaleString()}{old ? ' · Evidence may have changed; research again for current prices and availability.' : ''}</p>}
@@ -21,6 +24,6 @@ export function RiskEvidence({ risk }: { risk: Risk }) {
     {risk.applicability && <p>Applies: {risk.applicability}</p>}
     {risk.disputed && <p>Sources disagree about this finding.</p>}
     {risk.advice && <p>{risk.advice}</p>}
-    <ClaimSources sources={risk.sources} />
+    {risk.sources.length > 0 && <details><summary>Evidence · {count(risk.sources.length, 'source')}</summary><ClaimSources sources={risk.sources} /></details>}
   </>
 }

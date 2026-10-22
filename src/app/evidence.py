@@ -102,12 +102,19 @@ def hidden_count(levels: Iterable[str], sensitivity: object) -> int:
 
 
 def _host(source: Mapping) -> str:
+    """The registrable site, so subdomains do not masquerade as corroboration."""
     domain = str(source.get("domain") or "").strip().lower()
-    if domain:
-        return domain.removeprefix("www.")
     url = str(source.get("url") or "")
-    host = (urlsplit(url if "//" in url else f"//{url}").hostname or "").lower()
-    return host.removeprefix("www.")
+    address = domain if domain else url
+    if not address:
+        return ""
+    from app.domains import publisher
+
+    try:
+        return publisher(address)
+    except Exception:  # noqa: BLE001 - malformed addresses add no certainty
+        host = (urlsplit(address if "://" in address else f"//{address}").hostname or "").lower()
+        return host.removeprefix("www.")
 
 
 def _trust(source: Mapping) -> float | None:

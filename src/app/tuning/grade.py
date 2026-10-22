@@ -190,8 +190,8 @@ def judge(case: dict, answer, pages: list[dict], links: dict, reply: dict) -> di
         why.append(f"{supported} of {len(claims)} claims supported by the pages they cite")
     if links["invented"]:
         why.append(f"{len(links['invented'])} link(s) never read and do not open")
-    if matches is False:
-        why.append("the answer is about a different product or variant")
+    if matches is not True:
+        why.append("the answer's product or variant identity was not confirmed")
     if ignored:
         why.append("ignored a requirement: " + "; ".join(ignored[:2]))
     if len(primary) < int(case.get("primary_min") or 0):

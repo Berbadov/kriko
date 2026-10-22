@@ -7,10 +7,10 @@ const SHOWN_MODELS = 12
 
 /** Which program serves the local model, where it listens, and whether it answers. Installs nothing. */
 export function LocalRuntimeGroup({ stepsBelow = false }: { stepsBelow?: boolean }) {
-  const { doc, problem, checked, save, check } = useLocalRuntimes()
+  const { doc, problem, checked, save, check, reload } = useLocalRuntimes()
   // What is typed in the field, for the Check beside it. The field itself owns the typing.
   const [typed, setTyped] = useState<string | null>(null)
-  if (!doc) return null
+  if (!doc) return problem ? <p className="error-note" role="alert">Could not read local server settings. {problem} <button className="btn" onClick={() => void reload()}>Try again</button></p> : null
   const picked = doc.runtimes.find((row) => row.id === doc.chosen)
   const address = (typed ?? doc.url).trim() || picked?.url || ''
 

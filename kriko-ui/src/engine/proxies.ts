@@ -49,11 +49,13 @@ export function useProxies() {
   const load = useCallback(async () => {
     if (mode === 'checking') return
     if (mode !== 'live') {
+      setProblem('')
       setDoc(structuredClone(demo.current))
       return
     }
     try {
       setDoc(await get<ProxiesDoc>('/api/proxies'))
+      setProblem('')
     } catch (error) {
       setProblem(error instanceof Error ? error.message : 'Could not read the proxy settings.')
     }
@@ -102,5 +104,5 @@ export function useProxies() {
     }
   }, [mode])
 
-  return { doc, problem, checked, save, check }
+  return { doc, problem, checked, save, check, reload: load }
 }

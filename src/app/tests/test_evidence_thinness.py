@@ -45,6 +45,12 @@ def test_three_pages_of_one_site_are_still_one_source():
     assert codes(claim) == ["single_source"]
 
 
+def test_subdomains_of_one_publisher_are_not_independent_sites():
+    claim = {"sources": [source("shop.example.co.uk"),
+                         source("reviews.example.co.uk", "editorial", 0.7)]}
+    assert codes(claim) == ["single_source"]
+
+
 def test_a_lone_forum_post_is_thin_for_two_reasons():
     claim = {"sources": [source("forum.example.org", "forum_ugc", 0.45)]}
     assert codes(claim) == ["single_source", "low_trust"]

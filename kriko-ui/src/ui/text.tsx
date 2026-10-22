@@ -1,4 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { formatSeconds } from './format'
+
+export { count, formatSeconds } from './format'
 
 /** Text that sweeps light across it while work runs. */
 export function Shimmer({ children, active = true }: { children: ReactNode; active?: boolean }) {
@@ -35,12 +38,6 @@ export function Elapsed({ since, running, final }: { since: number; running: boo
   }, [running])
   const seconds = (running ? now - since : (final ?? now - since)) / 1000
   return <span className="mono">{formatSeconds(seconds)}</span>
-}
-
-export function formatSeconds(seconds: number): string {
-  if (seconds < 10) return `${seconds.toFixed(1)} s`
-  if (seconds < 60) return `${Math.round(seconds)} s`
-  return `${Math.floor(seconds / 60)} min ${Math.round(seconds % 60)} s`
 }
 
 /** A box that opens and closes by its content height. It uses a grid row, so

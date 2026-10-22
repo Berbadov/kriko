@@ -186,3 +186,7 @@ test('the pill says the tightest window left and what the last day cost, and not
   assert.deepEqual(meters.pillParts(bare), { fill: null, text: '' })
   assert.deepEqual(meters.pillParts(null), { fill: null, text: '' })
 })
+
+test('solid evidence wording reports only what the engine recorded', () => {
+  assert.equal(thinness.whyLine({ level: 'solid', reasons: [] }), 'Solid: no evidence gaps were recorded.')
+})

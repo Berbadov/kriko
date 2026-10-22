@@ -350,6 +350,7 @@
 
 .icon-btn {
   display: grid;
+  flex: none;
   place-items: center;
   width: 34px;
   height: 34px;
@@ -398,6 +399,7 @@
   height: 34px;
   padding: 0 15px;
   font-weight: 520;
+  white-space: nowrap;
 }
 
 .pill {

@@ -839,7 +839,6 @@ def _buying_request(message: str) -> bool:
         or _product_advice_request(message)
         or _bare_product_request(message, folded)
         or _CHOOSING.search(folded)
-        or _WEB_PRODUCT_QUESTION.search(message)
     )
 
 
@@ -995,14 +994,16 @@ def listing_cards(rows: Sequence[dict], *, limit: int = 5) -> list[dict]:
             continue
         url = chatdata._public_http_url(row.get("url"))
         title = _clip(row.get("title"), 180)
-        trust = row.get("source_trust") if isinstance(row.get("source_trust"), dict) else {}
+        trust_value = row.get("source_trust")
+        trust: dict = trust_value if isinstance(trust_value, dict) else {}
         trusted = exactfind.is_trusted(trust)
         if (not url or not title or title.casefold() in {"untitled", "untitled result"}
                 or not (row.get("page_read") or trusted)
                 or trust.get("tier") in {"reference", "community"}
                 or url in found):
             continue
-        seller_info = row.get("seller_signals") if isinstance(row.get("seller_signals"), dict) else {}
+        seller_value = row.get("seller_signals")
+        seller_info: dict = seller_value if isinstance(seller_value, dict) else {}
         found[url] = {
             "card_type": "listing",
             "id": url,

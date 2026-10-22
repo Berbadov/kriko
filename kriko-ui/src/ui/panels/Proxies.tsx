@@ -5,8 +5,8 @@ import '../../styles/providers.css'
 
 /** Rotating proxies for pages that refuse to be read. Off by default, and honest about what it does. */
 export function ProxiesGroup() {
-  const { doc, problem, checked, save, check } = useProxies()
-  if (!doc) return null
+  const { doc, problem, checked, save, check, reload } = useProxies()
+  if (!doc) return problem ? <p className="error-note" role="alert">Could not read proxy settings. {problem} <button className="btn" onClick={() => void reload()}>Try again</button></p> : null
   const pool = doc.pool.join('\n')
   const learned = doc.learned
 

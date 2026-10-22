@@ -28,6 +28,7 @@ the instance and read duck-typed, as everywhere else: `cost_basis`, `spent`,
 """
 
 import threading
+from collections.abc import Callable
 from collections import deque
 import time
 from dataclasses import dataclass, replace
@@ -393,11 +394,12 @@ class ApiAgentResearcher(harness.HarnessResearcher):
                 except Exception:  # noqa: BLE001 — defaults keep a run usable
                     pass
 
-            self._stream_converse = lambda prompt, **kw: kriko_agent.converse(
+            self._stream_converse: Callable[..., mistral.Reply | None] | None = (
+                lambda prompt, **kw: kriko_agent.converse(
                 prompt, max_tool_calls=self._calls_allowed(),
                 thoroughness=self.thoroughness,
                 validation_sensitivity=self.validation_sensitivity,
-                cache_path=self._cache_path, **kw)
+                cache_path=self._cache_path, **kw))
         else:
             self._stream_converse = (mistral.converse_stream
                                      if converse is None and agent.key == "mistral" else None)
