@@ -46,6 +46,14 @@ const ACTION_ICONS = {
 //: 50; a floating panel beside a listing is a list somebody scans, and the
 //: right answer to "I cannot see it" is a better query rather than more rows.
 const SEARCH_LIMIT = 12;
+
+//: How much of a run's log one progress tick asks for, and the ceiling the
+//: route itself enforces (`agent_runtime.log`: `limit` 1..16000). The first
+//: tick takes a whole page because the log already holds whatever the run has
+//: written; every tick after it takes the few lines that have appeared since.
+const JOB_LOG_PAGE_CHARS = 2000;
+const JOB_LOG_FIRST_CHARS = 16000;
+const EXTENSION_LOG_LIMIT = 16000;
 const STORAGE_KEY_PREFIX = "kriko_result_";
 
 /* Where a run says what it is doing, while it is doing it.
@@ -68,6 +76,7 @@ async function _stage(url, name, detail = "") {
     await extensionApi.storage.session.set({
       [STAGE_KEY_PREFIX + url]: { name, detail, at: Date.now() },
     });
+    void _pruneSessionLedger();
   } catch (_) {
     // Storage full, or the worker torn down mid-write. The run continues.
   }
@@ -385,6 +394,53 @@ async function apiBase() {
   return _normalizeBaseUrl(stored.krikoApiBaseUrl) || DEFAULT_API_BASE;
 }
 
+/* Where the app is allowed to be, as opposed to where its address points.
+ *
+ * `_normalizeBaseUrl` answers "is this a URL"; the manifest answers "may this
+ * extension call it", and it declares `http://127.0.0.1/*` and
+ * `http://localhost/*` and nothing else. So an address on any other host is
+ * one Chrome will refuse before a packet leaves the browser — and every
+ * refusal below was reported to the reader as "Kriko is not running", which
+ * sends them to start an app that is already running. Asking Chrome is the
+ * only way to tell the two apart.
+ */
+function _originOf(url) {
+  try {
+    return new URL(String(url)).origin;
+  } catch (_) {
+    return "";
+  }
+}
+
+const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "::1", "[::1]"]);
+
+async function _hostAllowed(origin) {
+  if (!origin) return false;
+  try {
+    if (await extensionApi.permissions.contains({ origins: [`${origin}/*`] })) return true;
+  } catch (_) {
+    // A runtime with no permissions API. The manifest's own host permissions
+    // are the fallback below, which is what that API would have reported for
+    // them anyway.
+  }
+  try {
+    return LOOPBACK_HOSTS.has(new URL(origin).hostname);
+  } catch (_) {
+    return false;
+  }
+}
+
+/** The sentence for an address this extension may not call. One wording, so
+ *  the options page and a failed request cannot disagree about the cause. */
+function _notPermittedError(origin) {
+  const error = new Error(
+    `Kriko cannot call ${origin}. Chrome only lets this extension reach an app `
+    + "on this computer (127.0.0.1 or localhost); an app at another address is "
+    + "out of reach, however it is configured.");
+  error.code = "APP_HOST_NOT_PERMITTED";
+  return error;
+}
+
 // ── which sites are worth scraping ──────────────────────────────────────
 
 function globToRegExp(pattern) {
@@ -505,6 +561,13 @@ async function _fetchApp(url, init) {
     // Our own clock, and nothing else: a transport failure that happens to
     // land after the timer is still "not running".
     const hung = timedOut && cause && cause.name === "AbortError";
+    const origin = _originOf(url);
+    if (!hung && origin && !(await _hostAllowed(origin))) {
+      // A permission problem, told as one. `fetch` rejects identically whether
+      // the app is down or Chrome blocked the call, and naming the wrong one
+      // sends the reader to a window that is already open.
+      throw _notPermittedError(origin);
+    }
     const down = hung
       ? new Error("Kriko is open but did not answer in 30 seconds. Try again; "
           + "if it keeps happening, quit Kriko from its tray icon and open it again.")
@@ -784,6 +847,53 @@ function siteToPattern(site) {
   return `https://*.${host}/*`;
 }
 
+/* ── the sites the reader has told Kriko to stop reading ─────────────────
+ *
+ * The grant to read pages is asked for once and covers the whole web, and
+ * until now that was all-or-nothing for ever: a reader who wanted one shop
+ * left alone had to give up the extension or revoke the grant for every site.
+ * A mute is the reader's decision, so it is kept in storage rather than in
+ * this worker's memory, and every door that reads a page consults it — the
+ * per-site registration, the every-site registration's exclusions, and the
+ * automatic analysis itself. An explicit press (the toolbar, or Analyze) still
+ * works: that is the reader asking again.
+ */
+const MUTED_KEY = "krikoMutedSites";
+
+async function mutedSites() {
+  try {
+    const stored = await extensionApi.storage.local.get([MUTED_KEY]);
+    const rows = stored[MUTED_KEY];
+    return Array.isArray(rows)
+      ? [...new Set(rows.map((one) => String(one || "")).filter((one) => HOSTNAME.test(one)))].sort()
+      : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+async function hostMuted(url) {
+  const host = _hostOf(url);
+  if (!host) return false;
+  const muted = await mutedSites();
+  return muted.some((one) => host === one || host.endsWith(`.${one}`));
+}
+
+async function setSiteMuted(site, muted) {
+  const host = String(site || "").trim().toLowerCase().replace(/^www\./, "");
+  if (!HOSTNAME.test(host)) return null;
+  const rows = new Set(await mutedSites());
+  if (muted) rows.add(host);
+  else rows.delete(host);
+  const next = [...rows].sort();
+  try {
+    await extensionApi.storage.local.set({ [MUTED_KEY]: next });
+  } catch (_) {
+    return null;
+  }
+  return next;
+}
+
 // Hosts the packaged manifest already injects on. Read off the manifest at
 // runtime rather than repeated here, so trimming a static block cannot leave
 // a site silently uncovered by both mechanisms.
@@ -887,11 +997,18 @@ async function syncSites({ fresh = false } = {}) {
   const wanted = wantedSites(rows);
   const sites = [];
   const keep = new Set();
+  const muted = await mutedSites();
 
   for (const entry of wanted) {
     if (!entry.pattern) {
       sites.push({ site: entry.site, state: "refused",
                    detail: "not a hostname the extension will inject on" });
+      continue;
+    }
+    // Muted, and not in `keep`: the entry is listed so the reader can turn it
+    // back on, and its registration is dropped by the stale pass below.
+    if (muted.includes(entry.site)) {
+      sites.push({ site: entry.site, pattern: entry.pattern, state: "muted" });
       continue;
     }
     if (!(await _granted(entry.pattern))) {
@@ -975,6 +1092,10 @@ async function _syncAnySite() {
   const current = all.find((s) => s.id === ANY_SITE_SCRIPT_ID);
   const exclude = [
     ...[...staticSiteHosts()].map((host) => `https://*.${host}/*`),
+    // A muted site is excluded from the every-site block as well as from its
+    // own registration: this block is what covers a page no pack named, and
+    // "stop reading this site" has to mean this one too.
+    ...(await mutedSites()).map((host) => `https://*.${host}/*`),
     ...all.filter((s) => String(s.id).startsWith(SITE_SCRIPT_PREFIX))
       .flatMap((s) => s.matches || []),
   ].sort();
@@ -1043,11 +1164,15 @@ async function _reportActivation(sites) {
 extensionApi.runtime.onInstalled.addListener((details) => {
   void syncThenGuide((details && details.reason) || "install");
   void refreshConnectionIcon();
+  void _pruneSessionLedger();
+  void _pruneAnswerCache();
 });
 if (extensionApi.runtime.onStartup) {
   extensionApi.runtime.onStartup.addListener(() => {
     void syncThenGuide("startup");
     void refreshConnectionIcon();
+    void _pruneSessionLedger();
+    void _pruneAnswerCache();
   });
 }
 
@@ -1476,11 +1601,157 @@ async function _readCachedAnalysis(url, signature) {
 
 async function _writeCachedAnalysis(url, entry) {
   if (!entry || entry.ok !== true) return;
+  const key = await _localCacheKey(url);
   try {
-    await extensionApi.storage.local.set({ [await _localCacheKey(url)]: entry });
+    await extensionApi.storage.local.set({ [key]: entry });
+    await _pruneAnswerCache();
   } catch (error) {
-    console.warn("[kriko] local result cache write failed", error?.message || error);
+    // The quota, in practice: this cache has no `unlimitedStorage`, and at ten
+    // megabytes the write failed into a `console.warn` — the answer simply
+    // stopped being remembered and nothing said so. Dropping the stale half
+    // and trying once more is the difference between a cache that keeps
+    // working and one that quietly stops.
+    const freed = await _pruneAnswerCache({ keep: 0 });
+    try {
+      await extensionApi.storage.local.set({ [key]: entry });
+    } catch (_) {
+      try {
+        await extensionApi.storage.local.set({ [CACHE_TROUBLE_KEY]: {
+          at: Date.now(), freed, detail: String(error?.message || error),
+        } });
+      } catch (_) {
+        // Nothing left to write with. The options page shows the last state it
+        // saw, and the next successful write clears it.
+      }
+    }
   }
+}
+
+/* ── what Kriko keeps, and for how long ──────────────────────────────────
+ *
+ * Every record below is a row about a page somebody read. The panel needs the
+ * last few to repaint without asking the app again, and needs none of them an
+ * hour later — but nothing ever removed one. The session area grew by up to
+ * three keys per page (a result, a stage and a facts row) for as long as the
+ * browser stayed open, each one carrying the page's address, and the six-hour
+ * answer cache grew until a write hit Chrome's quota. One bound, applied by
+ * prefix, covers both; the addresses of the oldest pages stop being kept at
+ * all, which is the part that is not merely disk.
+ */
+const SESSION_LEDGER_KEEP = 40;
+const LOCAL_CACHE_KEEP = 200;
+const CACHE_TROUBLE_KEY = "krikoCacheTrouble";
+
+/** The moment a per-page row was written, from whichever field it uses. */
+function _rowStamp(value) {
+  const at = Number((value && (value.fetchedAt || value.at)) || 0);
+  return Number.isFinite(at) && at > 0 ? at : 0;
+}
+
+/** Remove from `area` every row under `prefixes` that is expired, then the
+ *  oldest beyond `keep`. Returns how many keys went. */
+async function _pruneRows(area, { prefixes, keep, expired = null }) {
+  let all;
+  try {
+    all = await area.get(null);
+  } catch (_) {
+    return 0;
+  }
+  const now = Date.now();
+  const doomed = [];
+  const live = [];
+  for (const [key, value] of Object.entries(all || {})) {
+    if (!prefixes.some((prefix) => key.startsWith(prefix))) continue;
+    const at = _rowStamp(value);
+    if (expired && expired(at, now)) doomed.push(key);
+    else live.push({ key, at });
+  }
+  live.sort((a, b) => b.at - a.at);
+  doomed.push(...live.slice(keep).map((row) => row.key));
+  if (!doomed.length) return 0;
+  try {
+    await area.remove(doomed);
+  } catch (_) {
+    // The next write tries again. A bound that fails once is still a bound.
+  }
+  return doomed.length;
+}
+
+function _pruneSessionLedger() {
+  return _pruneRows(extensionApi.storage.session, {
+    prefixes: SESSION_LEDGER_PREFIXES,
+    keep: SESSION_LEDGER_KEEP,
+  });
+}
+
+async function _pruneAnswerCache({ keep = LOCAL_CACHE_KEEP } = {}) {
+  const gone = await _pruneRows(extensionApi.storage.local, {
+    prefixes: [LOCAL_CACHE_KEY_PREFIX],
+    keep,
+    expired: (at, now) => !at || now - at > RESULT_CACHE_TTL_MS,
+  });
+  if (gone) {
+    try {
+      await extensionApi.storage.local.remove(CACHE_TROUBLE_KEY);
+    } catch (_) { /* nothing to clear */ }
+  }
+  return gone;
+}
+
+//: Every per-page key the session ledger holds, in one place, so the reader's
+//: "clear that" and the worker's own bound cannot come to know different sets.
+//: Declared beside the last of the prefixes it names, because a `const`
+//: initialiser that reads one in its temporal dead zone throws at startup.
+
+/** What is kept on this machine, as counts. Never the addresses: a page that
+ *  showed the reader their own history back would be the thing this exists to
+ *  make avoidable. */
+async function _keptCounts() {
+  let local = {};
+  let session = {};
+  try { local = await extensionApi.storage.local.get(null); } catch (_) { local = {}; }
+  try { session = await extensionApi.storage.session.get(null); } catch (_) { session = {}; }
+  const localKeys = Object.keys(local || {});
+  const sessionKeys = Object.keys(session || {});
+  return {
+    answers: localKeys.filter((k) => k.startsWith(LOCAL_CACHE_KEY_PREFIX)).length,
+    pages: sessionKeys.filter((k) => SESSION_LEDGER_PREFIXES.some((p) => k.startsWith(p))).length,
+    intents: Array.isArray(local[RESEARCH_INTENTS_KEY]) ? local[RESEARCH_INTENTS_KEY].length : 0,
+    sites: Array.isArray(local[SITE_SYNC_KEY]?.sites) ? local[SITE_SYNC_KEY].sites.length : 0,
+    muted: await mutedSites(),
+    // Whether the answer cache is working, so "caching stopped" is something
+    // the reader can see rather than a console warning nobody reads.
+    trouble: local[CACHE_TROUBLE_KEY] || null,
+  };
+}
+
+/** Forget what the reader asked Kriko to forget. `what` is one of the counts
+ *  above or `all`; the mute list is a decision, not a record, and stays. */
+async function clearKept(what) {
+  let local = {};
+  let session = {};
+  try { local = await extensionApi.storage.local.get(null); } catch (_) { local = {}; }
+  try { session = await extensionApi.storage.session.get(null); } catch (_) { session = {}; }
+  const all = what === "all";
+  const dropLocal = [];
+  const dropSession = [];
+  if (all || what === "answers") {
+    dropLocal.push(...Object.keys(local).filter((k) => k.startsWith(LOCAL_CACHE_KEY_PREFIX)),
+      CACHE_TROUBLE_KEY);
+  }
+  if (all || what === "intents") dropLocal.push(RESEARCH_INTENTS_KEY);
+  if (all || what === "sites") dropLocal.push(SITE_SYNC_KEY);
+  if (all || what === "pages") {
+    dropSession.push(...Object.keys(session)
+      .filter((k) => SESSION_LEDGER_PREFIXES.some((p) => k.startsWith(p))));
+  }
+  try {
+    if (dropLocal.length) await extensionApi.storage.local.remove(dropLocal);
+    if (dropSession.length) await extensionApi.storage.session.remove(dropSession);
+  } catch (_) {
+    // The next read reports what is still there rather than what was meant.
+  }
+  return _keptCounts();
 }
 
 async function _updateBadgeForResult(result, tabId) {
@@ -1533,27 +1804,35 @@ async function _requestScrape(tabId, labels, panel, explore = false) {
   }
 }
 
+/* The page as `/api/analyze` and `/api/diagnose/identity` both take it.
+ *
+ * One builder, because the two routes read the *same* `ScrapeRequest`
+ * (`analyze.py:41-61`) and a diagnostic that describes a different reading
+ * than the answer it explains is worse than no diagnostic. `listing` is
+ * deliberately absent: the damage and equipment panels are rendered locally
+ * and the engine has no rule for them. */
+function _scrapeBody(scrape) {
+  return {
+    url: scrape.url,
+    title: scrape.title || "",
+    description: scrape.description || "",
+    fields: scrape.fields || {},
+    // The product's own name (B149): what a page on a site no adapter
+    // covers is recognised by, and what the panel offers to research.
+    product_name: String((scrape.product && scrape.product.name) || "").slice(0, 300),
+    // Which door this came in by. The app's history shows it, so a reader
+    // can tell an answer their browser produced from one they asked for.
+    origin: "extension",
+  };
+}
+
 async function requestAnalysis(scrape, timings = {}) {
   const endpoint = `${await apiBase()}/api/analyze`;
   const startedAt = _now();
   const response = await _fetchApp(endpoint, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    // `listing` is deliberately absent: the damage and equipment panels are
-    // rendered locally and the engine has no rule for them, so there is no
-    // reason to put them on the wire.
-    body: JSON.stringify({
-      url: scrape.url,
-      title: scrape.title || "",
-      description: scrape.description || "",
-      fields: scrape.fields || {},
-      // The product's own name (B149): what a page on a site no adapter
-      // covers is recognised by, and what the panel offers to research.
-      product_name: String((scrape.product && scrape.product.name) || "").slice(0, 300),
-      // Which door this came in by. The app's history shows it, so a reader
-      // can tell an answer their browser produced from one they asked for.
-      origin: "extension",
-    }),
+    body: JSON.stringify(_scrapeBody(scrape)),
   });
   timings.analyze_fetch_ms = _elapsed(startedAt);
 
@@ -1564,9 +1843,51 @@ async function requestAnalysis(scrape, timings = {}) {
   return response.json();
 }
 
+/* The page as it was read for the answer on screen, per tab.
+ *
+ * "Why did Kriko say that?" has to be answered about the reading the answer was
+ * computed from. Re-scraping would answer a slightly different question — the
+ * page may have re-rendered, lazily loaded a row, or put a banner over it — and
+ * the panel would be explaining a comparison the reader never saw. So the scrape
+ * that was just sent is kept, briefly, and the diagnose press reuses it; the
+ * panel itself never holds the scrape (the worker is the only thing that asks
+ * content.js for one).
+ *
+ * Bounded by tabs, and by age: a page left open all afternoon is re-read rather
+ * than explained from this morning's DOM. */
+const LAST_SCRAPE_TTL_MS = 10 * 60 * 1000;
+const LAST_SCRAPES_KEPT = 8;
+const lastScrapes = new Map();
+
+function _rememberScrape(tabId, scrape) {
+  if (!tabId || !scrape || !scrape.url) return;
+  lastScrapes.delete(tabId);
+  lastScrapes.set(tabId, { scrape, at: Date.now() });
+  while (lastScrapes.size > LAST_SCRAPES_KEPT) {
+    lastScrapes.delete(lastScrapes.keys().next().value);
+  }
+}
+
+function _rememberedScrape(tabId, url) {
+  const kept = lastScrapes.get(tabId);
+  if (!kept) return null;
+  if (Date.now() - kept.at > LAST_SCRAPE_TTL_MS) return null;
+  // The address has to be the one being explained: a tab that has navigated
+  // since has a different page, and its old scrape is not evidence about this
+  // one.
+  return kept.scrape.url === url ? kept.scrape : null;
+}
+
 // ── the run ─────────────────────────────────────────────────────────────
 
 async function runAnalysisForTab(tabId, url, { fresh = false, auto = false } = {}) {
+  // A page the reader told Kriko to leave alone is not read by itself. The
+  // registration excludes are what normally keeps this from being reached;
+  // this is the belt for the paths that do not go through them — the
+  // every-site grant arriving, a registration that failed, the imperative
+  // injection below. A press is different, and still works: only the
+  // automatic run stops here.
+  if (auto && await hostMuted(url)) return null;
   const storageKey = STORAGE_KEY_PREFIX + url;
   // A press of Refresh while another run for this same URL is already in
   // flight still waits for that run rather than starting a second one —
@@ -1598,6 +1919,11 @@ async function runAnalysisForTab(tabId, url, { fresh = false, auto = false } = {
 const PAGE_FACTS_PREFIX = "krikoFacts:";
 const PAGE_FACTS_MAX = 40;
 
+//: Every per-page key the session ledger holds, in one place, so the reader's
+//: "clear that" and the worker's own prune cannot come to know different sets.
+const SESSION_LEDGER_PREFIXES = [STORAGE_KEY_PREFIX, STAGE_KEY_PREFIX, PAGE_FACTS_PREFIX,
+                                 BUYER_KEY_PREFIX, GUARD_KEY_PREFIX];
+
 async function _keepPageFacts(url, scrape) {
   try {
     const facts = {};
@@ -1608,7 +1934,10 @@ async function _keepPageFacts(url, scrape) {
       if (k && v) facts[k] = v;
     }
     const description = String((scrape && scrape.description) || "").slice(0, 1500);
-    await extensionApi.storage.session.set({ [PAGE_FACTS_PREFIX + url]: { facts, description } });
+    await extensionApi.storage.session.set({
+      [PAGE_FACTS_PREFIX + url]: { facts, description, at: Date.now() },
+    });
+    void _pruneSessionLedger();
   } catch (_) {
     // A listing whose facts could not be kept still gets researched by name.
   }
@@ -1729,6 +2058,7 @@ async function _runAnalysisForTab(tabId, url, storageKey, { fresh = false, auto 
       throw failed;
     }
     scrape = reply.payload;
+    _rememberScrape(tabId, scrape);
     await _keepPageFacts(url, scrape);
     if (!adapter) {
       const product = scrape.product || {};
@@ -1800,6 +2130,7 @@ async function _runAnalysisForTab(tabId, url, storageKey, { fresh = false, auto 
     await _stage(url, "done",
       String(Array.isArray(result.claims) ? result.claims.length : 0));
     await extensionApi.storage.session.set({ [storageKey]: entry });
+    await _pruneSessionLedger();
     await _writeCachedAnalysis(url, entry);
     await _updateBadgeForResult(result, tabId);
     if (auto && hostRead) await _nudgePanel(tabId, url);
@@ -1821,6 +2152,7 @@ async function _runAnalysisForTab(tabId, url, storageKey, { fresh = false, auto 
     if (error.productName) errEntry.productName = error.productName;
     if (scrape) errEntry.listing = { ...(scrape.listing || {}), title: scrape.title || "" };
     await extensionApi.storage.session.set({ [storageKey]: errEntry });
+    await _pruneSessionLedger();
     // NO_ADAPTER is not a failure — it's most pages on the internet, which is
     // exactly why the badge used to paint a red "!" on every non-listing page
     // of the one site Kriko *does* read (extension-5, B145 audit). A page
@@ -2030,7 +2362,6 @@ async function _postApp(path, body) {
 const RESEARCH_INTENTS_KEY = "krikoResearchIntentsV1";
 const RESEARCH_INTENT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const RESEARCH_INTENTS_LIMIT = 32;
-const RESEARCH_INTENT_BODY_LIMIT = 64 * 1024;
 const _intentInFlight = new Map();
 let _researchIntentLock = Promise.resolve();
 let _researchIdCounter = 0;
@@ -2082,88 +2413,92 @@ async function _withResearchIntentLock(fn) {
   finally { release(); }
 }
 
+/* The retry ledger is an id per request, and nothing else.
+ *
+ * It used to keep the whole request body — which for "Research this product"
+ * is the listing's address, its name and the facts read off it — for the
+ * seven days a row may live. The rationale said the address was not in there
+ * because the row's *key* is a digest; the key is, and the body beside it was
+ * the address in plain text. What a retry actually needs is the same
+ * `client_request_id`, because the app dedupes on that and not on the body
+ * (`app/web/routers/extension.py` passes it to `runner.submit`). So the row
+ * carries the id, and the body is whatever this click builds — fresher, and
+ * gone from storage the moment the request is answered.
+ */
 async function _readResearchIntents() {
   const stored = await extensionApi.storage.local.get(RESEARCH_INTENTS_KEY);
   const now = Date.now();
   const rows = stored[RESEARCH_INTENTS_KEY];
   return Array.isArray(rows) ? rows.filter((row) => row && typeof row.key === "string" &&
-    typeof row.client_request_id === "string" && row.body &&
+    typeof row.client_request_id === "string" &&
     Number.isFinite(row.created_at) && now - row.created_at < RESEARCH_INTENT_TTL_MS)
     .slice(-RESEARCH_INTENTS_LIMIT) : [];
 }
 
 async function _writeResearchIntents(rows) {
-  const bounded = rows.slice(-RESEARCH_INTENTS_LIMIT);
-  if (bounded.some((row) => JSON.stringify(row.body).length > RESEARCH_INTENT_BODY_LIMIT)) {
-    throw new Error("The research request is too large to save safely for retry.");
-  }
   await extensionApi.storage.local.set({
-    [RESEARCH_INTENTS_KEY]: bounded,
+    [RESEARCH_INTENTS_KEY]: rows.slice(-RESEARCH_INTENTS_LIMIT),
   });
 }
 
-async function _postIdempotentIntent(path, baseBody, prepareBody = null) {
-  const key = await _intentKey(path, baseBody);
-  let record = await _withResearchIntentLock(async () => {
-    const rows = await _readResearchIntents();
-    const existing = rows.find((row) => row.key === key);
-    if (existing) {
-      await _writeResearchIntents(rows);
-      return existing;
-    }
-    const clientRequestId = _newClientRequestId();
-    const created = {
-      key,
-      path,
-      client_request_id: clientRequestId,
-      body: { ...baseBody, client_request_id: clientRequestId },
-      prepared: !prepareBody,
-      created_at: Date.now(),
-    };
-    await _writeResearchIntents([...rows, created]);
-    return created;
-  });
-
-  // The first request captures page facts in the durable body too. On a later
-  // invocation after a lost response, do not refetch changing page content.
-  if (!record.prepared && prepareBody) {
-    const body = { ...record.body };
-    await prepareBody(body);
-    body.client_request_id = record.client_request_id;
-    record = await _withResearchIntentLock(async () => {
-      const rows = await _readResearchIntents();
-      const index = rows.findIndex((row) => row.key === key);
-      if (index < 0) return record;
-      const prepared = { ...rows[index], body, prepared: true };
-      rows[index] = prepared;
-      await _writeResearchIntents(rows);
-      return prepared;
-    });
-  }
-
-  let job;
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    try {
-      job = await _postApp(path, record.body);
-      break;
-    } catch (error) {
-      const transient = error.status === undefined || error.status >= 500;
-      if (!transient || attempt === 2) throw error;
-      await new Promise((resolve) => setTimeout(resolve, 100 * (2 ** attempt)));
-    }
-  }
-  // The receipt is the only evidence that the server response made it back.
-  // If storage cleanup itself fails, replaying the same ID remains safe.
+/** Drop one row's id. Called on every terminal outcome — a receipt, or a
+ *  server that answered and did not accept — so the id does not outlive the
+ *  doubt it exists for. */
+async function _forgetResearchIntent(key, clientRequestId) {
   try {
     await _withResearchIntentLock(async () => {
       const rows = await _readResearchIntents();
       await _writeResearchIntents(rows.filter((row) => row.key !== key ||
-        row.client_request_id !== record.client_request_id));
+        row.client_request_id !== clientRequestId));
     });
   } catch (_) {
-    // A receipt still means success. Retaining the ID after a storage failure
+    // A receipt still means success. Retaining the id after a storage failure
     // is safe: another click asks the server for the same accepted job.
   }
+}
+
+async function _postIdempotentIntent(path, baseBody, prepareBody = null) {
+  const key = await _intentKey(path, baseBody);
+  const clientRequestId = await _withResearchIntentLock(async () => {
+    const rows = await _readResearchIntents();
+    const existing = rows.find((row) => row.key === key);
+    if (existing) return existing.client_request_id;
+    const created = _newClientRequestId();
+    await _writeResearchIntents([...rows, {
+      key, path, client_request_id: created, created_at: Date.now(),
+    }]);
+    return created;
+  });
+
+  // Built here, from this click, with the id the ledger remembers. Nothing of
+  // it is written down: page facts change, and the address is not ours to keep.
+  const body = { ...baseBody, client_request_id: clientRequestId };
+  if (prepareBody) await prepareBody(body);
+  body.client_request_id = clientRequestId;
+
+  let job = null;
+  let lastError = null;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      job = await _postApp(path, body);
+      lastError = null;
+      break;
+    } catch (error) {
+      lastError = error;
+      // A server that answered below 500 did not accept the request, and
+      // asking again with the same id will not change its mind. A transport
+      // failure, or a 5xx, may have landed — that is the doubt the id is for.
+      if (error.status !== undefined && error.status < 500) break;
+      if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, 100 * (2 ** attempt)));
+    }
+  }
+  if (!job) {
+    if (lastError && lastError.status !== undefined && lastError.status < 500) {
+      await _forgetResearchIntent(key, clientRequestId);
+    }
+    throw lastError;
+  }
+  await _forgetResearchIntent(key, clientRequestId);
   return job;
 }
 
@@ -2455,7 +2790,10 @@ extensionApi.runtime.onMessage.addListener((request, sender, sendResponse) => {
     // B148: the listing's own address, so the quick look is held to the bar
     // of the pack whose site this is.
     if (!subject_id && typeof input.url === "string" && input.url) body.url = input.url.slice(0, 2000);
-    // The agent the reader picked in the panel, for this run only.
+    // The agent the reader picked in the panel, for this run only. Nothing
+    // else about it: the engine derives the plane from the id it is given
+    // (`tasks._picked_local`, `_use_local_ask`), so a second field saying
+    // "local" or "harness" would be that same decision made twice.
     if (typeof input.harness === "string" && input.harness) body.harness = input.harness.slice(0, 64);
     if (Number.isFinite(input.cap) && input.cap > 0) body.cap = input.cap;
     _postIdempotent("/api/extension/research-plane", body, async (prepared) => {
@@ -2674,6 +3012,97 @@ extensionApi.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true; // async
   }
 
+  /* Why the page matched what it matched — or why it matched nothing.
+   *
+   * `POST /api/diagnose/identity` (`analyze.py:610-671`) is a second door onto
+   * the same adapt-then-lookup call `/api/analyze` already answered through: it
+   * returns the trace and no claims, writes no history and no analysis log, and
+   * runs no model. The panel asks for it only when the reader presses, so a
+   * page load still costs one request and no more.
+   *
+   * The scrape it is given is the one the answer came from (`_rememberedScrape`)
+   * whenever there is one, because the route's whole value depends on
+   * describing *that* reading. Only a tab whose scrape has aged out or whose
+   * address has changed is read again, and then the same way the analysis reads
+   * a page nothing claims. */
+  if (request.type === "DIAGNOSE_IDENTITY") {
+    const url = String(request.payload?.url || "").trim();
+    if (!url) {
+      sendResponse({ ok: false, error: "Missing URL" });
+      return false;
+    }
+    const run = async () => {
+      let tabId = sender.tab?.id;
+      if (!tabId) {
+        const tabs = await extensionApi.tabs.query({ active: true, currentWindow: true });
+        tabId = tabs[0]?.id;
+      }
+      if (!tabId) throw new Error("No active tab found.");
+      let scrape = _rememberedScrape(tabId, url);
+      if (!scrape) {
+        const reply = await _requestScrape(tabId, [], {}, true);
+        if (!reply || !reply.ok || !reply.payload) {
+          throw new Error("Kriko could not read this page to compare it.");
+        }
+        scrape = reply.payload;
+        _rememberScrape(tabId, scrape);
+      }
+      const response = await _fetchApp(`${await apiBase()}/api/diagnose/identity`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(_scrapeBody(scrape)),
+      });
+      if (!response.ok) {
+        const said = await response.text();
+        throw new Error(said || `The app answered ${response.status}.`);
+      }
+      return response.json();
+    };
+    run()
+      .then((diagnosis) => sendResponse({ ok: true, diagnosis }))
+      .catch((error) => sendResponse({
+        ok: false, code: error.code, error: error.message }));
+    return true; // async
+  }
+
+  /* A run's own log, a cursor at a time (`GET /api/jobs/{id}/log`).
+   *
+   * `docs/DESIGN.md`: "the browser extension reads its stage from the run's own
+   * log, so its stepper shows only which stages were reached". It used to read
+   * that log inside the job row, which carries up to `state.JOB_LOG_CHARS` of
+   * it and is re-sent whole on every tick — a second's poll paid 64 KB for one
+   * new line. The route exists for exactly this and its contract is a cursor:
+   * the caller asks from where it got to, and gets `limit` characters back plus
+   * `next_cursor`, `total_chars`, `eof` and `done`.
+   *
+   * `total_chars` is what makes the stored *tail* safe to page: it is the length
+   * of what is on disk, so a value smaller than the caller's cursor means the
+   * beginning was dropped under them and the offset no longer means what it
+   * did. The panel restarts from what is left rather than splicing text from
+   * two different logs together.
+   *
+   * The row is still what says how a run ended; this says where it is. */
+  if (request.type === "JOB_PROGRESS") {
+    const jobId = String(request.payload?.job_id || "").trim();
+    if (!jobId) {
+      sendResponse({ ok: false, error: "Missing job_id" });
+      return false;
+    }
+    const cursor = Math.max(0, Number(request.payload?.cursor) || 0);
+    // The page size is decided here rather than by the panel: the first read of
+    // a run takes a whole page of what it has already written, every read after
+    // it takes the few lines that appeared since. One place knows the route's
+    // ceiling (`agent_runtime.log`).
+    const asked = Number(request.payload?.limit) ||
+      (cursor ? JOB_LOG_PAGE_CHARS : JOB_LOG_FIRST_CHARS);
+    const limit = Math.min(Math.max(Math.floor(asked), 1), EXTENSION_LOG_LIMIT);
+    _getApp(`/api/jobs/${encodeURIComponent(jobId)}/log?cursor=${cursor}&limit=${limit}`)
+      .then((page) => sendResponse({ ok: true, page }))
+      .catch((error) => sendResponse({
+        ok: false, code: error.code, error: error.message }));
+    return true; // async
+  }
+
   /* What the rest of Kriko is doing, right now.
    *
    * The panel could see its own run and nothing else — so a reader whose
@@ -2706,12 +3135,21 @@ extensionApi.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.type === "GET_API_BASE") {
     extensionApi.storage.local
       .get(["krikoApiBaseUrl"])
-      .then((stored) => sendResponse({
-        ok: true,
-        base: _normalizeBaseUrl(stored.krikoApiBaseUrl) || DEFAULT_API_BASE,
-        stored: stored.krikoApiBaseUrl || "",
-        default: DEFAULT_API_BASE,
-      }))
+      .then(async (stored) => {
+        const base = _normalizeBaseUrl(stored.krikoApiBaseUrl) || DEFAULT_API_BASE;
+        // A stored address this extension may not call is worth saying out
+        // loud: the reader set it at some point, and every request since has
+        // failed with a sentence blaming the app.
+        const permitted = await _hostAllowed(base);
+        sendResponse({
+          ok: true,
+          base,
+          stored: stored.krikoApiBaseUrl || "",
+          default: DEFAULT_API_BASE,
+          permitted,
+          detail: permitted ? "" : _notPermittedError(base).message,
+        });
+      })
       .catch((error) => sendResponse({ ok: false, error: error.message }));
     return true; // async
   }
@@ -2724,6 +3162,14 @@ extensionApi.runtime.onMessage.addListener((request, sender, sendResponse) => {
       return false;
     }
     const run = async () => {
+      // A permission wall is not a setting. Chrome refuses every call to a
+      // host the manifest does not cover, so remembering one would leave the
+      // reader with an address that never works and a diagnosis ("Kriko is
+      // not running") pointing at the wrong thing.
+      if (base && !(await _hostAllowed(base))) {
+        return { ok: false, error: _notPermittedError(base).message,
+                 base: await apiBase(), stored: "" };
+      }
       // Empty means "go back to the default", which is a removal rather than
       // a stored empty string: `apiBase()` falls back on a missing key, and
       // storing "" would be a value that reads as a choice.
@@ -2777,6 +3223,41 @@ extensionApi.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.type === "KRIKO_SYNC_SITES") {
     syncSites({ fresh: true })
       .then((record) => sendResponse({ ok: true, status: record }))
+      .catch((error) => sendResponse({ ok: false, error: error.message }));
+    return true; // async
+  }
+
+  // "Stop reading this site" (E7). A mute is a reader's decision, so it is
+  // written down and then reconciled like any other change to what Kriko
+  // reads: the registration goes, and the every-site block is told to skip it.
+  if (request.type === "KRIKO_SET_MUTED") {
+    const site = String(request.payload?.site || "");
+    const muted = request.payload?.muted !== false;
+    (async () => {
+      const list = await setSiteMuted(site, muted);
+      if (!list) {
+        sendResponse({ ok: false, error: "That is not a site Kriko can read." });
+        return;
+      }
+      const record = await syncSites();
+      sendResponse({ ok: true, muted: list, status: record });
+    })().catch((error) => sendResponse({ ok: false, error: error.message }));
+    return true; // async
+  }
+
+  // What Kriko has kept on this machine, and the reader's way to be rid of it.
+  // Counts rather than contents: the page is a switchboard, not a viewer, and
+  // showing the addresses back would be the history this exists to avoid.
+  if (request.type === "KRIKO_KEPT") {
+    _keptCounts()
+      .then((kept) => sendResponse({ ok: true, kept }))
+      .catch((error) => sendResponse({ ok: false, error: error.message }));
+    return true; // async
+  }
+
+  if (request.type === "KRIKO_CLEAR") {
+    clearKept(String(request.payload?.what || "all"))
+      .then((kept) => sendResponse({ ok: true, kept }))
       .catch((error) => sendResponse({ ok: false, error: error.message }));
     return true; // async
   }

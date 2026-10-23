@@ -105,6 +105,7 @@ const recheckButton = document.getElementById("recheck");
 
 const SITE_WORD = {
   active: "reading",
+  muted: "not read",
   pending: "needs your permission",
   refused: "not usable",
 };
@@ -158,6 +159,18 @@ function renderSites(status) {
       why.textContent = row.detail;
       li.appendChild(why);
     }
+    // The off switch (E7). The grant to read pages covers the whole web and
+    // was all-or-nothing; this is the one site at a time the reader asked
+    // for. The worker owns the decision — this only asks it and repaints.
+    if (row.pattern) {
+      const toggle = document.createElement("button");
+      toggle.type = "button";
+      toggle.className = "site-mute quiet";
+      const muted = row.state === "muted";
+      toggle.textContent = muted ? "Read this site" : "Stop reading";
+      toggle.addEventListener("click", () => { void setMuted(row.site, !muted); });
+      li.appendChild(toggle);
+    }
     sitesList.appendChild(li);
   }
 
@@ -206,7 +219,90 @@ grantButton.addEventListener("click", () => {
 
 recheckButton.addEventListener("click", () => { void loadSites(true); });
 
+async function setMuted(site, muted) {
+  saySites(muted ? `Stopping ${site}…` : `Reading ${site} again…`);
+  const reply = await ask({ type: "KRIKO_SET_MUTED", payload: { site, muted } });
+  if (!reply.ok) {
+    saySites(reply.error, "error");
+    return;
+  }
+  renderSites(reply.status);
+  saySites(muted
+    ? `Kriko will not read ${site} again until you say so.`
+    : `Kriko reads ${site} again.`, muted ? "warn" : "ok");
+}
+
 void loadSites(false).then(() => { void showStep(); });
+
+// ── what Kriko kept, and the reader's way to be rid of it (E7) ─────────
+//
+// Same rule again: the worker holds the counts, this page renders them. They
+// are counts and never addresses — a page that showed the reader their own
+// history back would be the record this exists to make avoidable.
+
+const keptCounts = document.getElementById("kept-counts");
+const keptStatus = document.getElementById("kept-status");
+
+const KEPT_WORD = {
+  answers: ["saved answer", "saved answers"],
+  pages: ["page", "pages"],
+  intents: ["retry id", "retry ids"],
+  sites: ["site in the last check", "sites in the last check"],
+};
+
+function renderKept(kept) {
+  if (!keptCounts) return;
+  const parts = [];
+  for (const key of ["answers", "pages", "intents", "sites"]) {
+    const count = Number(kept && kept[key]) || 0;
+    if (count) parts.push(`${count} ${KEPT_WORD[key][count === 1 ? 0 : 1]}`);
+  }
+  keptCounts.textContent = parts.length
+    ? `Kept now: ${parts.join(", ")}.`
+    : "Kriko is keeping nothing at the moment.";
+  // A cache that stopped working is something the reader can be told about
+  // here rather than in a console warning nobody reads.
+  if (kept && kept.trouble && keptStatus && !keptStatus.textContent) {
+    keptStatus.textContent =
+      "The saved answers could not be written on this computer (the browser's "
+      + "storage is full), so Kriko stops remembering them.";
+    keptStatus.dataset.state = "warn";
+  }
+}
+
+async function loadKept() {
+  const reply = await ask({ type: "KRIKO_KEPT" });
+  if (!reply.ok) {
+    if (keptCounts) keptCounts.textContent = reply.error || "";
+    return;
+  }
+  renderKept(reply.kept);
+}
+
+async function clearKept(what, said) {
+  const reply = await ask({ type: "KRIKO_CLEAR", payload: { what } });
+  if (!reply.ok) {
+    if (keptStatus) keptStatus.textContent = reply.error;
+    return;
+  }
+  if (keptStatus) {
+    keptStatus.textContent = said;
+    keptStatus.dataset.state = "ok";
+  }
+  renderKept(reply.kept);
+}
+
+for (const [id, what, said] of [
+  ["clear-answers", "answers", "The saved answers are gone."],
+  ["clear-pages", "pages", "The pages Kriko remembered are gone."],
+  ["clear-intents", "intents", "The retry ids are gone."],
+  ["clear-all", "all", "Everything Kriko kept is gone."],
+]) {
+  const button = document.getElementById(id);
+  if (button) button.addEventListener("click", () => { void clearKept(what, said); });
+}
+
+void loadKept();
 
 // ── the two clocks ──────────────────────────────────────────────────────
 //
