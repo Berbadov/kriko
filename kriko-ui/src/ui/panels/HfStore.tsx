@@ -1,3 +1,4 @@
+import { Checkbox } from '../../arc/checkbox/checkbox'
 import { useState } from 'react'
 import { NO_FILTERS, useHfStore, type HfFilters, type HfModel, type HfQuant, type HfSort } from '../../engine/hfstore'
 import { Icon } from '../Icon'
@@ -93,13 +94,12 @@ export function HfStore({ vramMb, installed, pulling, onGet }: { vramMb: number 
           <Select label="Licence" value={filters.license} options={LICENSES} onChange={(value) => apply({ ...filters, license: value })} />
         </div>
         {vramB !== null && (
-          <label className="hf-fit">
-            <input type="checkbox" checked={fits} onChange={(event) => apply(filters, event.target.checked)} />
-            <span>
-              Fits my graphics card
-              <small>Up to about {vramB}B parameters at 4 bits.</small>
-            </span>
-          </label>
+          <Checkbox
+            checked={fits}
+            onCheckedChange={(next) => apply(filters, next === true)}
+            label="Fits my graphics card"
+            description={`Up to about ${vramB}B parameters at 4 bits.`}
+          />
         )}
       </div>
 

@@ -1,3 +1,4 @@
+import { Disclosure } from '../Disclosure'
 import { useEffect, useState } from 'react'
 import { get, post } from '../../engine/api'
 import { followJob } from '../../engine/jobs'
@@ -52,11 +53,10 @@ export function SetupPanel() {
   }
   return <div className="panel-body">
     <section className="panel-group"><h3>1. Choose who does the research</h3>
-      <details className="setup-dev">
-        <summary>Have an access code from a friend?</summary>
+      <Disclosure title="Have an access code from a friend?">
         <p className="panel-note">Paste the code and password below. You do not need your own API keys or another agent installed.</p>
         <SharedAccessGroup />
-      </details>
+      </Disclosure>
       <p>{verified ? 'Connection verified for this check.' : 'An installed agent still needs a working account and model connection.'}</p>
       <button className="btn" onClick={() => showDrawer('agents')}>Choose agent</button>{' '}
       <button className="btn" onClick={() => void verify()} disabled={working || mode !== 'live'}>Check connection</button>
@@ -70,12 +70,11 @@ export function SetupPanel() {
       <p>{extension?.connected ? 'The extension is connected.' : extension?.ever_connected ? 'Connected before; open a product page to check the connection again.' : 'Add Kriko to Chrome, then open any product page. The connection shows up here.'}</p>
       <ExternalLink className="btn primary" href={STORE}>Add Kriko to Chrome</ExternalLink>{' '}
       <button className="btn" onClick={() => void reload()}>Check browser connection</button>
-      <details className="setup-dev">
-        <summary>Installing from a checkout instead</summary>
+      <Disclosure title="Installing from a checkout instead">
         <p className="panel-note">For a development build. Open your browser's Extensions page, enable Developer mode, choose Load unpacked, and select this folder.</p>
         <button className="btn" onClick={() => void stage()} disabled={working || mode !== 'live'}>Prepare extension folder</button>
         {extension?.staged && <><p className="panel-path">{extension.path}</p><button className="btn" onClick={() => void post('/api/extension/reveal', {}).catch((error: unknown) => setStatus(error instanceof Error ? error.message : 'Could not open the folder.'))}>Open extension folder</button></>}
-      </details>
+      </Disclosure>
     </section>
     <section className="panel-group"><h3>4. Complete your first check</h3><p>In Chat, name a product and ask for known problems with sources. Open a source, ask a follow-up, then add the product to Compare. A connection test alone does not verify source access.</p><button className="btn" onClick={() => showDrawer(null)}>Start a sourced check</button></section>
     {status && <p role="status">{status}</p>}
