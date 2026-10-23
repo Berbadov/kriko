@@ -12,6 +12,7 @@ import { showDrawer } from '../drawerEvents'
 import { McpClientsGroup } from './McpClients'
 import { ProxiesGroup } from './Proxies'
 import { SearchProvidersGroup } from './SearchProviders'
+import { SETTINGS_PAGES, onSettingsPage, takeRequestedSettingsPage, type SettingsPage } from './settingsPages'
 
 const THEMES: { value: ThemePref; label: string }[] = [
   { value: 'system', label: 'System' },
@@ -46,7 +47,8 @@ const KIND_NAMES: Record<string, string> = {
   news: 'News',
 }
 
-/** Look, research, keys, spend, and what is installed. */
+/** Look, research, keys, connections, and usage. One page is drawn at a time, so
+ *  the drawer is a short list of choices instead of one long scroll. */
 export function SettingsPanel(_: { onOpen?: (lookupId: string) => void }) {
   const { theme, setTheme, profile, setProfile, reduce, setReduce } = usePrefs()
   const { doc, problem, save } = usePrefsDoc()
@@ -57,308 +59,341 @@ export function SettingsPanel(_: { onOpen?: (lookupId: string) => void }) {
   const { caps, setCap } = useCaps()
   const { meters, demo: demoMeters } = useUsage()
   const [sensitivityProblem, setSensitivityProblem] = useState('')
+  const [page, setPage] = useState<SettingsPage>(() => takeRequestedSettingsPage() ?? 'look')
+  useEffect(() => onSettingsPage(setPage), [])
 
   return (
     <div className="panel-body">
-      <section className="panel-group">
-        <h3>Look</h3>
-        <div className="setting">
-          <span>Theme</span>
-          <Segmented label="Theme" value={theme} options={THEMES} onChange={setTheme} />
-        </div>
-        <div className="setting">
-          <span>Motion</span>
-          <Segmented label="Motion" value={profile} options={PROFILES} onChange={setProfile} />
-        </div>
-        <div className="setting">
-          <span>Reduce motion</span>
-          <Switch label="Reduce motion" on={reduce} onChange={setReduce} />
-        </div>
-        <div className="setting">
-          <span>
-            Tour
-            <small>A short walk through the window.</small>
-          </span>
-          <button className="btn" onClick={startTour}>
-            Take the tour
-          </button>
-        </div>
-      </section>
-
-      <section className="panel-group">
-        <h3>Chat</h3>
-        <div className="setting">
-          <span>
-            Chat settings
-            <small>What it remembers, and how an answer is shaped.</small>
-          </span>
-          <button className="btn ghost" onClick={() => showDrawer('chat')}>
-            Open
-          </button>
-        </div>
-        <div className="setting">
-          <span>
-            Set up Kriko
-            <small>Verify an agent and connect your browser.</small>
-          </span>
-          <button className="btn ghost" onClick={() => showDrawer('setup')}>
-            Open
-          </button>
-        </div>
-      </section>
-
-      <section className="panel-group">
-        <h3>Information sensitivity</h3>
-        <div className="setting stack">
-          <span>
-            How much doubt to show
-            <small>
-              A finding is thin when one site alone says it, its best source is low in trust, its quote only partly matches
-              its page, or it depends on a detail your listing does not state. Each card says which. This changes what is
-              drawn, never what is stored.
-            </small>
-          </span>
-          <Segmented
-            label="Information sensitivity"
-            value={sensitivity}
-            options={SENSITIVITY}
-            onChange={(value) => void choose(value).then(setSensitivityProblem)}
-          />
-          <small className="panel-note">
-            {sensitivity === 'all' && 'Every finding is drawn, with its indicator.'}
-            {sensitivity === 'hide_thin' && 'Findings with two or more reasons for doubt are hidden, and counted so you can show them.'}
-            {sensitivity === 'strict' && 'Only findings with no reason for doubt are drawn. The rest are counted.'}
-          </small>
-          {sensitivityProblem && <p className="error-note">{sensitivityProblem}</p>}
-        </div>
-      </section>
-
       {problem && <p className="error-note">{problem}</p>}
 
-      {doc && (
-        <section className="panel-group">
-          <h3>Research</h3>
-          <div className="setting">
-            <span>
-              Products at once
-              <small>Each one uses an agent.</small>
-            </span>
-            <Segmented
-              label="Products at once"
-              value={doc.chosen.run_concurrency || '4'}
-              options={PARALLEL}
-              onChange={(value) => void save({ run_concurrency: value })}
-            />
-          </div>
-          <RangeSetting
-            label="Thoroughness"
-            value={doc.research.thoroughness}
-            note="More search calls and results. Applies to Kriko Agent."
-            onSave={(value) => void save({ kriko_agent_thoroughness: String(value) })}
-          />
-          <RangeSetting
-            label="Validation sensitivity"
-            value={doc.research.validation_sensitivity}
-            note="Higher values require longer, exact quotes. Applies to Kriko Agent."
-            onSave={(value) => void save({ kriko_agent_validation_sensitivity: String(value) })}
-          />
-          <div className="setting">
-            <span>
-              Extra sources
-              <small>Pages to read for each product. 0 is the default.</small>
-            </span>
-            <Select
-              label="Extra sources"
-              value={String(doc.research.sources)}
-              options={(SOURCE_COUNTS.includes(doc.research.sources) ? SOURCE_COUNTS : [doc.research.sources, ...SOURCE_COUNTS]).map((n) => ({ value: String(n), label: String(n) }))}
-              onChange={(value) => void save({ research_sources: value })}
-            />
-          </div>
-          <div className="setting stack" data-tour="source-kinds">
-            <span>Where to look</span>
-            <div className="choices">
-              {doc.source_kinds.map((kind) => {
-                const on = doc.research.kinds.includes(kind.id)
-                return (
-                  <Chip
-                    key={kind.id}
-                    on={on}
-                    onChange={(next) => {
-                      const kinds = next ? [...doc.research.kinds, kind.id] : doc.research.kinds.filter((id) => id !== kind.id)
-                      // One kind has to stay, or research has nowhere to look.
-                      if (kinds.length) void save({ research_source_kinds: kinds.join(',') })
-                    }}
-                  >
-                    {KIND_NAMES[kind.id] ?? kind.id}
-                  </Chip>
-                )
-              })}
+      <Segmented label="Settings page" value={page} options={SETTINGS_PAGES} onChange={setPage} />
+
+      {page === 'look' && (
+        <>
+          <section className="panel-group">
+            <h3>Look</h3>
+            <div className="setting">
+              <span>Theme</span>
+              <Segmented label="Theme" value={theme} options={THEMES} onChange={setTheme} />
             </div>
-          </div>
-          <div className="setting">
-            <span>
-              Product classification
-              <small>After deterministic checks, use your selected local, coding or API agent by default. Jev is an optional alternative that uses a separate TypeSafe key.</small>
-            </span>
-            <Select
-              label="Product classification"
-              value={doc.chosen.classification_provider || 'agent'}
-              options={doc.classification_providers.map((provider) => ({
-                value: provider.id,
-                label: provider.ready ? provider.label : `${provider.label} (no key)`,
-              }))}
-              onChange={(value) => void save({ classification_provider: value })}
-            />
-          </div>
-          <div className="setting">
-            <span>
-              Response language
-              <small>Automatic follows the product request. Quotes stay in their source language.</small>
-            </span>
-            <Select
-              label="Response language"
-              value={doc.chosen.local_output_language || 'auto'}
-              options={[
-                { value: 'auto', label: 'Automatic' },
-                ...(doc.chosen.local_output_language && !LANGUAGES.some((one) => one.value === doc.chosen.local_output_language)
-                  ? [{ value: doc.chosen.local_output_language, label: doc.chosen.local_output_language }]
-                  : []),
-                ...LANGUAGES,
-              ]}
-              onChange={(value) => void save({ local_output_language: value })}
-            />
-          </div>
-          <div className="setting">
-            <span>
-              Research language
-              <small>Language used to phrase web searches.</small>
-            </span>
-            <Select
-              label="Research language"
-              value={doc.chosen.local_search_language || 'en'}
-              options={[
-                ...(doc.chosen.local_search_language && !LANGUAGES.some((one) => one.value === doc.chosen.local_search_language)
-                  ? [{ value: doc.chosen.local_search_language, label: doc.chosen.local_search_language }]
-                  : []),
-                ...LANGUAGES,
-              ]}
-              onChange={(value) => void save({ local_search_language: value })}
-            />
-          </div>
-          <div className="setting">
-            <span>
-              Market region
-              <small>Use this market when considering regional products and differences.</small>
-            </span>
-            <Select
-              label="Market region"
-              value={doc.chosen.market_region || 'auto'}
-              options={doc.market_regions.map((region) => ({ value: region.id, label: region.label }))}
-              onChange={(value) => void save({ market_region: value })}
-            />
-          </div>
-          <div className="setting stack">
-            <span>
-              OpenAI-compatible endpoint
-              <small>Optional API root for OpenAI-compatible services. Leave blank for OpenAI or the LLM_BASE_URL environment setting.</small>
-            </span>
-            <EndpointField value={doc.chosen.llm_base_url || ''} onSave={(value) => save({ llm_base_url: value })} />
-          </div>
-          <div className="setting stack">
-            <span>
-              Completion model
-              <small>Model ID accepted by this endpoint for paid research. Leave blank to use its default.</small>
-            </span>
-            <ModelField value={doc.chosen.llm_model || ''} onSave={(value) => save({ llm_model: value })} />
-          </div>
-        </section>
-      )}
-
-      <SearchProvidersGroup />
-
-      <ProxiesGroup />
-
-      <KeysGroup />
-
-      <SharedAccessGroup />
-
-      <McpClientsGroup />
-
-      <section className="panel-group">
-        <h3>Usage caps</h3>
-        <p className="panel-note">
-          A cap is a warning, not a stop: the usage pill turns amber once a day passes one, and nothing is blocked. Leave a
-          field empty for no cap. Caps are kept on this computer.
-        </p>
-        {CAP_ORDER.map((id) => (
-          <CapField
-            key={id}
-            id={id}
-            cap={caps[id]}
-            today={usedToday(meters, id)}
-            onChange={(value) => setCap(id, value)}
-          />
-        ))}
-        {demoMeters && <p className="panel-note">Example numbers, because no engine answers.</p>}
-      </section>
-
-      {spent && (
-        <section className="panel-group">
-          <h3>Spent in {spent.days} days</h3>
-          <div className="tiles">
-            <div>
-              <strong>{spent.runs}</strong>
-              <small>runs</small>
+            <div className="setting">
+              <span>Motion</span>
+              <Segmented label="Motion" value={profile} options={PROFILES} onChange={setProfile} />
             </div>
-            <div>
-              <strong>{spent.tokens >= 1000 ? `${Math.round(spent.tokens / 1000)}k` : spent.tokens}</strong>
-              <small>tokens</small>
+            <div className="setting">
+              <span>Reduce motion</span>
+              <Switch label="Reduce motion" on={reduce} onChange={setReduce} />
             </div>
-            <div>
-              <strong>${spent.usd.toFixed(2)}</strong>
-              <small>measured spend</small>
+            <div className="setting">
+              <span>
+                Tour
+                <small>A short walk through the window.</small>
+              </span>
+              <button className="btn" onClick={startTour}>
+                Take the tour
+              </button>
             </div>
-          </div>
-          {!!spent.unpriced_runs && <p className="panel-note">{spent.unpriced_runs} runs have incomplete pricing. The amount shown is the measured portion.</p>}
-        </section>
-      )}
+          </section>
 
-      {about && (
-        <section className="panel-group">
-          <h3>About</h3>
-          <div className="setting">
-            <span>Engine</span>
-            <span className="value">{about.version || '—'}</span>
-          </div>
-          <div className="setting">
-            <span>
-              Updates
-              <small>
-                {update.phase === 'downloading'
-                  ? 'Downloading…'
-                  : update.phase === 'restarting'
-                    ? 'Starting the new engine…'
-                    : update.phase === 'installing'
-                      ? 'Installing. Kriko opens again by itself.'
-                      : update.problem ||
-                        (update.release ? `Kriko ${update.release.version} is available.` : update.checked ? 'This is the newest version.' : 'Looked for on its own while Kriko is open.')}
+          <section className="panel-group">
+            <h3>Information sensitivity</h3>
+            <div className="setting stack">
+              <span>
+                How much doubt to show
+                <small>
+                  A finding is thin when one site alone says it, its best source is low in trust, its quote only partly matches
+                  its page, or it depends on a detail your listing does not state. Each card says which. This changes what is
+                  drawn, never what is stored.
+                </small>
+              </span>
+              <Segmented
+                label="Information sensitivity"
+                value={sensitivity}
+                options={SENSITIVITY}
+                onChange={(value) => void choose(value).then(setSensitivityProblem)}
+              />
+              <small className="panel-note">
+                {sensitivity === 'all' && 'Every finding is drawn, with its indicator.'}
+                {sensitivity === 'hide_thin' && 'Findings with two or more reasons for doubt are hidden, and counted so you can show them.'}
+                {sensitivity === 'strict' && 'Only findings with no reason for doubt are drawn. The rest are counted.'}
               </small>
-            </span>
-            {update.release && (update.canInstall || update.release.engine) ? (
-              <button className="btn primary" onClick={() => void update.install()} disabled={update.phase !== 'idle'}>
-                Update now
+              {sensitivityProblem && <p className="error-note">{sensitivityProblem}</p>}
+            </div>
+          </section>
+
+          <section className="panel-group">
+            <h3>Chat</h3>
+            <div className="setting">
+              <span>
+                Chat settings
+                <small>What it remembers, and how an answer is shaped.</small>
+              </span>
+              <button className="btn ghost" onClick={() => showDrawer('chat')}>
+                Open
               </button>
-            ) : (
-              <button className="btn ghost" onClick={() => void update.check()} disabled={update.phase !== 'idle'}>
-                {update.phase === 'checking' ? 'Checking…' : 'Check now'}
+            </div>
+          </section>
+        </>
+      )}
+
+      {page === 'research' && doc && (
+        <>
+          <section className="panel-group">
+            <h3>How hard to look</h3>
+            <div className="setting">
+              <span>
+                Products at once
+                <small>Each one uses an agent.</small>
+              </span>
+              <Segmented
+                label="Products at once"
+                value={doc.chosen.run_concurrency || '4'}
+                options={PARALLEL}
+                onChange={(value) => void save({ run_concurrency: value })}
+              />
+            </div>
+            <RangeSetting
+              label="Thoroughness"
+              value={doc.research.thoroughness}
+              note="More search calls and results. Applies to Kriko Agent."
+              onSave={(value) => void save({ kriko_agent_thoroughness: String(value) })}
+            />
+            <RangeSetting
+              label="Validation sensitivity"
+              value={doc.research.validation_sensitivity}
+              note="Higher values require longer, exact quotes. Applies to Kriko Agent."
+              onSave={(value) => void save({ kriko_agent_validation_sensitivity: String(value) })}
+            />
+            <div className="setting">
+              <span>
+                Extra sources
+                <small>Pages to read for each product. 0 is the default.</small>
+              </span>
+              <Select
+                label="Extra sources"
+                value={String(doc.research.sources)}
+                options={(SOURCE_COUNTS.includes(doc.research.sources) ? SOURCE_COUNTS : [doc.research.sources, ...SOURCE_COUNTS]).map((n) => ({ value: String(n), label: String(n) }))}
+                onChange={(value) => void save({ research_sources: value })}
+              />
+            </div>
+            <div className="setting stack" data-tour="source-kinds">
+              <span>Where to look</span>
+              <div className="choices">
+                {doc.source_kinds.map((kind) => {
+                  const on = doc.research.kinds.includes(kind.id)
+                  return (
+                    <Chip
+                      key={kind.id}
+                      on={on}
+                      onChange={(next) => {
+                        const kinds = next ? [...doc.research.kinds, kind.id] : doc.research.kinds.filter((id) => id !== kind.id)
+                        // One kind has to stay, or research has nowhere to look.
+                        if (kinds.length) void save({ research_source_kinds: kinds.join(',') })
+                      }}
+                    >
+                      {KIND_NAMES[kind.id] ?? kind.id}
+                    </Chip>
+                  )
+                })}
+              </div>
+            </div>
+          </section>
+
+          <section className="panel-group">
+            <h3>Language and market</h3>
+            <div className="setting">
+              <span>
+                Response language
+                <small>Automatic follows the product request. Quotes stay in their source language.</small>
+              </span>
+              <Select
+                label="Response language"
+                value={doc.chosen.local_output_language || 'auto'}
+                options={[
+                  { value: 'auto', label: 'Automatic' },
+                  ...(doc.chosen.local_output_language && !LANGUAGES.some((one) => one.value === doc.chosen.local_output_language)
+                    ? [{ value: doc.chosen.local_output_language, label: doc.chosen.local_output_language }]
+                    : []),
+                  ...LANGUAGES,
+                ]}
+                onChange={(value) => void save({ local_output_language: value })}
+              />
+            </div>
+            <div className="setting">
+              <span>
+                Research language
+                <small>Language used to phrase web searches.</small>
+              </span>
+              <Select
+                label="Research language"
+                value={doc.chosen.local_search_language || 'en'}
+                options={[
+                  ...(doc.chosen.local_search_language && !LANGUAGES.some((one) => one.value === doc.chosen.local_search_language)
+                    ? [{ value: doc.chosen.local_search_language, label: doc.chosen.local_search_language }]
+                    : []),
+                  ...LANGUAGES,
+                ]}
+                onChange={(value) => void save({ local_search_language: value })}
+              />
+            </div>
+            <div className="setting">
+              <span>
+                Market region
+                <small>Use this market when considering regional products and differences.</small>
+              </span>
+              <Select
+                label="Market region"
+                value={doc.chosen.market_region || 'auto'}
+                options={doc.market_regions.map((region) => ({ value: region.id, label: region.label }))}
+                onChange={(value) => void save({ market_region: value })}
+              />
+            </div>
+          </section>
+
+          <section className="panel-group">
+            <h3>Model</h3>
+            <div className="setting">
+              <span>
+                Product classification
+                <small>After deterministic checks, use your selected local, coding or API agent by default. Jev is an optional alternative that uses a separate TypeSafe key.</small>
+              </span>
+              <Select
+                label="Product classification"
+                value={doc.chosen.classification_provider || 'agent'}
+                options={doc.classification_providers.map((provider) => ({
+                  value: provider.id,
+                  label: provider.ready ? provider.label : `${provider.label} (no key)`,
+                }))}
+                onChange={(value) => void save({ classification_provider: value })}
+              />
+            </div>
+            <div className="setting stack">
+              <span>
+                OpenAI-compatible endpoint
+                <small>Optional API root for OpenAI-compatible services. Leave blank for OpenAI or the LLM_BASE_URL environment setting.</small>
+              </span>
+              <EndpointField value={doc.chosen.llm_base_url || ''} onSave={(value) => save({ llm_base_url: value })} />
+            </div>
+            <div className="setting stack">
+              <span>
+                Completion model
+                <small>Model ID accepted by this endpoint for paid research. Leave blank to use its default.</small>
+              </span>
+              <ModelField value={doc.chosen.llm_model || ''} onSave={(value) => save({ llm_model: value })} />
+            </div>
+          </section>
+        </>
+      )}
+
+      {page === 'keys' && (
+        <>
+          <KeysGroup />
+          <SharedAccessGroup />
+        </>
+      )}
+
+      {page === 'connections' && (
+        <>
+          <section className="panel-group">
+            <h3>Setup</h3>
+            <div className="setting">
+              <span>
+                Set up Kriko
+                <small>Verify an agent and connect your browser.</small>
+              </span>
+              <button className="btn ghost" onClick={() => showDrawer('setup')}>
+                Open
               </button>
-            )}
-          </div>
-          <div className="setting stack">
-            <span>Your data</span>
-            <small className="panel-path">{about.folder || '—'}</small>
-          </div>
-        </section>
+            </div>
+          </section>
+
+          <SearchProvidersGroup />
+
+          <ProxiesGroup />
+
+          <McpClientsGroup />
+        </>
+      )}
+
+      {page === 'usage' && (
+        <>
+          <section className="panel-group">
+            <h3>Usage caps</h3>
+            <p className="panel-note">
+              A cap is a warning, not a stop: the usage pill turns amber once a day passes one, and nothing is blocked. Leave a
+              field empty for no cap. Caps are kept on this computer.
+            </p>
+            {CAP_ORDER.map((id) => (
+              <CapField
+                key={id}
+                id={id}
+                cap={caps[id]}
+                today={usedToday(meters, id)}
+                onChange={(value) => setCap(id, value)}
+              />
+            ))}
+            {demoMeters && <p className="panel-note">Example numbers, because no engine answers.</p>}
+          </section>
+
+          {spent && (
+            <section className="panel-group">
+              <h3>Spent in {spent.days} days</h3>
+              <div className="tiles">
+                <div>
+                  <strong>{spent.runs}</strong>
+                  <small>runs</small>
+                </div>
+                <div>
+                  <strong>{spent.tokens >= 1000 ? `${Math.round(spent.tokens / 1000)}k` : spent.tokens}</strong>
+                  <small>tokens</small>
+                </div>
+                <div>
+                  <strong>${spent.usd.toFixed(2)}</strong>
+                  <small>measured spend</small>
+                </div>
+              </div>
+              {!!spent.unpriced_runs && <p className="panel-note">{spent.unpriced_runs} runs have incomplete pricing. The amount shown is the measured portion.</p>}
+            </section>
+          )}
+
+          {about && (
+            <section className="panel-group">
+              <h3>About</h3>
+              <div className="setting">
+                <span>Engine</span>
+                <span className="value">{about.version || '—'}</span>
+              </div>
+              <div className="setting">
+                <span>
+                  Updates
+                  <small>
+                    {update.phase === 'downloading'
+                      ? 'Downloading…'
+                      : update.phase === 'restarting'
+                        ? 'Starting the new engine…'
+                        : update.phase === 'installing'
+                          ? 'Installing. Kriko opens again by itself.'
+                          : update.problem ||
+                            (update.release ? `Kriko ${update.release.version} is available.` : update.checked ? 'This is the newest version.' : 'Looked for on its own while Kriko is open.')}
+                  </small>
+                </span>
+                {update.release && (update.canInstall || update.release.engine) ? (
+                  <button className="btn primary" onClick={() => void update.install()} disabled={update.phase !== 'idle'}>
+                    Update now
+                  </button>
+                ) : (
+                  <button className="btn ghost" onClick={() => void update.check()} disabled={update.phase !== 'idle'}>
+                    {update.phase === 'checking' ? 'Checking…' : 'Check now'}
+                  </button>
+                )}
+              </div>
+              <div className="setting stack">
+                <span>Your data</span>
+                <small className="panel-path">{about.folder || '—'}</small>
+              </div>
+            </section>
+          )}
+        </>
       )}
     </div>
   )
@@ -605,9 +640,9 @@ export function SharedAccessGroup() {
         {granted
           ? ''
           : trial.available
-            ? `Free trial on this computer: ${trial.left} of ${trial.limit} Kriko Agent questions left. When they are used up, paste an access code or add your own Mercury and DeepSeek keys in Settings → Research.`
+            ? `Free trial on this computer: ${trial.left} of ${trial.limit} Kriko Agent questions left. When they are used up, paste an access code or add your own Mercury and DeepSeek keys in Settings → Keys.`
             : trial.used
-              ? `The free trial on this computer is used up (${trial.used} of ${trial.limit} questions). Paste an access code or add your own Mercury and DeepSeek keys in Settings → Research.`
+              ? `The free trial on this computer is used up (${trial.used} of ${trial.limit} questions). Paste an access code or add your own Mercury and DeepSeek keys in Settings → Keys.`
               : 'No free trial is included in this build.'}
       </p>
 
