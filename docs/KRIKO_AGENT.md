@@ -4,7 +4,7 @@ Kriko Agent is the app's fixed hosted research stack: Mercury 2.5 plans and
 writes the answer; DeepSeek Search and Fetch supply web evidence. It appears
 under **Settings → Agents** after both provider keys are available.
 
-Set these keys in **Settings → Research** or the ~/.kriko/env file:
+Set these keys in **Settings → Keys** or the ~/.kriko/env file:
 
     MERCURY_API_KEY=...
     DEEPSEEK_API_KEY=...
@@ -28,7 +28,8 @@ retrieval charge. The cache contains result text and URLs but no API keys; delet
 that SQLite file to clear it.
 
 Mercury's conversation context is capped at 48,000 serialized characters, and
-the incoming brief is clipped to 16,000 characters if needed. Tool output is
+the incoming brief is clipped to 32,000 characters if needed (the newest
+24,000 characters of the chat travel with it). Tool output is
 trimmed to fit while keeping source URLs and result metadata first. The full
 retrieved text remains in the run's grounding data, up to 8,000 characters per
 URL.

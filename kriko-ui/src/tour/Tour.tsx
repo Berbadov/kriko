@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'motion/react'
 import { useEngine } from '../engine/Engine'
 import { usePrefs } from '../prefs'
 import { showDrawer } from '../ui/drawerEvents'
+import { showSettingsPage, type SettingsPage } from '../ui/panels/settingsPages'
 
 /** A short walk through the window, once, on the first start. The reader can
  *  skip it at any step and take it again from Settings. */
@@ -14,6 +15,8 @@ interface Step {
   text: string
   /** A drawer panel to open first, because the target is inside it. */
   panel?: string
+  /** The settings page the target is on, when the panel has pages. */
+  page?: SettingsPage
 }
 
 const STEPS: Step[] = [
@@ -23,7 +26,7 @@ const STEPS: Step[] = [
   { target: 'new-chat', title: 'Chats', text: 'Start a new chat here. Your old chats stay in the list below.' },
   { target: 'nav-compare', title: 'Compare', text: 'Put up to four products side by side. Products are columns. Risks are rows.' },
   { target: 'nav-queue', title: 'Queue', text: 'Send products from your browser. Kriko checks them one by one, when you press Start.' },
-  { target: 'source-kinds', panel: 'settings', title: 'Where to look', text: 'Choose the kinds of page Kriko reads for each product: forums, reviews, recalls and more. At least one stays on.' },
+  { target: 'source-kinds', panel: 'settings', page: 'research', title: 'Where to look', text: 'Choose the kinds of page Kriko reads for each product: forums, reviews, recalls and more. At least one stays on.' },
   { target: 'more', title: 'More', text: 'Settings, agents, local models, catalogs and sites are here. You can take this tour again from Settings.' },
   { title: 'Verify your setup', panel: 'setup', text: 'Check the selected agent, get a catalog, connect the extension, and complete a real sourced check.' },
 ]
@@ -119,6 +122,7 @@ export function Tour({ onStart }: { onStart: () => void }) {
     const step = STEPS[at]
     const measure = () => setSpot(place(step))
     // A step inside a panel opens the panel, and every other step closes it.
+    if (step.page) showSettingsPage(step.page)
     showDrawer(step.panel ?? null)
     measure()
     // The panel slides in, so the spot is measured again once it has landed.

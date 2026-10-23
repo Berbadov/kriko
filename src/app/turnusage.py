@@ -168,15 +168,14 @@ def window_for(model: str, *, home=None, local_window: int | None = None) -> tup
 def history_trim(history: Sequence[dict]) -> dict:
     """How much of the saved conversation the agent is shown, by `chat.py`'s own limits.
 
-    Read-only on the same constants `chat._history_text` cuts by: replies
-    older than the last `HISTORY_MESSAGES` are not sent again, and an older
-    request is left out when it no longer fits `HISTORY_BUDGET`.
+    Read-only on the same cut `chat._history_text` makes (`chat.split_history`):
+    replies older than the newest messages that fit `HISTORY_BUDGET` are not
+    sent again, and an older request is left out when it no longer fits.
     """
     from app import chat
 
     messages = len(history)
-    recent = list(history)[-chat.HISTORY_MESSAGES:]
-    older = list(history)[:-chat.HISTORY_MESSAGES] if messages > chat.HISTORY_MESSAGES else []
+    recent, older = chat.split_history(history)
     recent_text = "\n".join(
         f"{'Reader' if one.get('role') == 'reader' else 'Agent'}: "
         f"{chat._clip(one.get('text', ''), chat.HISTORY_CHARS)}" for one in recent)
