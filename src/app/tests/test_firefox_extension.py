@@ -29,7 +29,7 @@ def test_firefox_bundle_is_separate_and_loadable(tmp_path, monkeypatch):
         manifest = json.loads((folder / "manifest.json").read_bytes())
         assert manifest["background"] == {"scripts": ["background.js"]}
         gecko = manifest["browser_specific_settings"]["gecko"]
-        assert gecko["id"] == "kriko@kriko.local"
+        assert gecko["id"] == "kriko@kriko.cc"
         assert gecko["strict_min_version"] == "140.0"
         assert gecko["data_collection_permissions"]["required"] == ["browsingActivity", "websiteContent"]
         assert "use_dynamic_url" not in manifest["web_accessible_resources"][0]

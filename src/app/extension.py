@@ -209,7 +209,7 @@ def firefox_manifest(content: bytes) -> bytes:
     manifest = json.loads(content)
     manifest["background"] = {"scripts": ["background.js"]}
     manifest["browser_specific_settings"] = {"gecko": {
-        "id": "kriko@kriko.local",
+        "id": "kriko@kriko.cc",
         "strict_min_version": "140.0",
         # Page information leaves the browser for the desktop engine, even
         # when both are on the same computer. Mozilla's definition includes it.
