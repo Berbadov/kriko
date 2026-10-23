@@ -7,12 +7,16 @@ import { AgentMark } from './AgentMark'
 import { Icon } from './Icon'
 import { PixelGlyph } from './PixelGlyph'
 
-/** What the chips offer, in the words on them. The engine acts on the name, never on the label. */
+/** What the chips offer, in the words on them. The engine acts on the name, never on the label.
+ *  `hint` says what the chip makes the answer be about, in what the reader gets back. */
 const MODES: { id: ChatMode; label: string; hint: string }[] = [
-  { id: 'alternatives', label: 'Alternatives', hint: 'Other products that do the same job' },
-  { id: 'cheapest', label: 'Cheapest', hint: 'The lowest price for this exact product' },
-  { id: 'merchants', label: 'Merchants', hint: 'Which sellers of this product to trust' },
+  { id: 'alternatives', label: 'Alternatives', hint: 'Other products that do the same job as the one you name, each with what it shares and the one thing that differs most.' },
+  { id: 'cheapest', label: 'Cheapest', hint: 'The lowest price for this exact product (same code, size and condition), lowest first, with the page each price came from. A low price from a seller nothing is known about is flagged, not recommended.' },
+  { id: 'merchants', label: 'Merchants', hint: 'Which sellers of this exact product to trust: where each sells, its price, and what its own pages show about it (rating, company identity, red flags).' },
 ]
+
+/** Shown while no chip is pressed or pointed at. */
+const MODES_INTRO = 'Optional: press one to say what you want done with the product. Point at one to read what it does.'
 
 /** The box where the reader asks. Frosted glass, so the sky shows through. */
 export function Composer({
@@ -49,6 +53,8 @@ export function Composer({
   const [menu, setMenu] = useState(false)
   /** A chip pressed again lets go, so "no mode" is one press away. */
   const [mode, setMode] = useState<ChatMode | ''>('')
+  /** The chip the pointer or the keyboard is on, so its sentence can be read before it is pressed. */
+  const [near, setNear] = useState<ChatMode | ''>('')
   const field = useRef<HTMLTextAreaElement>(null)
   const file = useRef<HTMLInputElement>(null)
   const [attachmentProblem, setAttachmentProblem] = useState('')
@@ -140,6 +146,11 @@ export function Composer({
               className="pill mode-chip"
               aria-pressed={mode === item.id}
               title={item.hint}
+              aria-describedby="mode-hint"
+              onMouseEnter={() => setNear(item.id)}
+              onMouseLeave={() => setNear('')}
+              onFocus={() => setNear(item.id)}
+              onBlur={() => setNear('')}
               onClick={() => {
                 setMode(mode === item.id ? '' : item.id)
                 field.current?.focus()
@@ -150,6 +161,11 @@ export function Composer({
             </button>
           ))}
         </div>
+      )}
+      {modes && (
+        <p id="mode-hint" className="mode-hint" role="status">
+          {MODES.find((item) => item.id === (near || mode))?.hint ?? MODES_INTRO}
+        </p>
       )}
       <textarea
         ref={field}

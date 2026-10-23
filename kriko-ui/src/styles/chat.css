@@ -37,6 +37,12 @@
   margin: 0 auto;
 }
 
+/* A conversation uses the room it is given: the reading column is wide enough
+   for a table and a product row, and it narrows only when the window does. */
+.chat[data-thread='true'] .chat-col {
+  width: min(1040px, calc(100% - 40px));
+}
+
 .chat[data-thread='false'] .chat-col {
   justify-content: center;
 }
@@ -86,6 +92,14 @@
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+}
+
+/* What the pressed or pointed-at chip does, in a sentence, so a chip is never a guess. */
+.mode-hint {
+  margin: -2px 6px 0;
+  color: var(--ink-3);
+  font-size: 12.5px;
+  line-height: 1.45;
 }
 
 /* A pressed chip is the reader's choice, so it carries the accent, not just a border. */
@@ -257,6 +271,44 @@
   background: var(--panel);
   border: 1px solid var(--edge);
   border-radius: 16px;
+}
+
+/* More than a couple of products fold into one line the reader opens. */
+.product-list {
+  background: var(--panel);
+  border: 1px solid var(--edge);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.pl-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.pl-title {
+  flex: none;
+  font-weight: 620;
+}
+
+.pl-names {
+  flex: 1;
+  min-width: 0;
+  color: var(--ink-3);
+  font-size: 12.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pl-body {
+  display: grid;
+  gap: 8px;
+  padding: 0 8px 8px;
 }
 
 .product-card > div:first-child {

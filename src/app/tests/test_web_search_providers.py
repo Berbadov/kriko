@@ -111,11 +111,14 @@ def test_the_cancel_hook_is_honoured_before_any_request(monkeypatch, service):
 
 # ── the order ────────────────────────────────────────────────────────────
 
-def test_automatic_puts_deepseek_behind_openserp_only_once_it_has_a_key(monkeypatch):
+def test_automatic_leads_with_deepseek_once_it_can_be_asked_and_never_adds_openserp(monkeypatch):
     assert websearch.order({})["effective"] == ["openserp"]
     monkeypatch.setenv("DEEPSEEK_API_KEY", SECRET)
     plan = websearch.order({})
-    assert plan["effective"] == ["openserp", "deepseek"] and plan["automatic"]
+    assert plan["primary"] == "deepseek" and plan["automatic"]
+    assert plan["effective"] == ["deepseek"]
+    # The reader's own choice of OpenSERP still keeps DeepSeek behind it.
+    assert websearch.order({prefs.SEARCH: "openserp"})["effective"] == ["openserp", "deepseek"]
 
 
 def test_shared_deepseek_grant_is_used_after_openserp_fails(
@@ -130,8 +133,12 @@ def test_shared_deepseek_grant_is_used_after_openserp_fails(
     access = sharekeys.make_access("a long test password", {"deepseek": grant_key})
     sharekeys.unlock(access, "a long test password", where=home)
 
-    assert websearch.order({}, app_state_path)["effective"] == ["openserp", "deepseek"]
-    assert websearch.order({prefs.SEARCH_FALLBACK: "none"}, app_state_path)["effective"] == [
+    # The shared access makes DeepSeek the default; OpenSERP is only asked when chosen.
+    assert websearch.order({}, app_state_path)["effective"] == ["deepseek"]
+    assert websearch.order({prefs.SEARCH: "openserp"}, app_state_path)["effective"] == [
+        "openserp", "deepseek"]
+    assert websearch.order(
+        {prefs.SEARCH: "openserp", prefs.SEARCH_FALLBACK: "none"}, app_state_path)["effective"] == [
         "openserp"]
     conn = state.connect(app_state_path)
     try:
@@ -146,7 +153,8 @@ def test_shared_deepseek_grant_is_used_after_openserp_fails(
             raise LocalSearchError("OpenSERP is down")
         return search
 
-    chain = websearch.build({}, app_state_path, log=logged.append, openserp_factory=down)
+    chain = websearch.build({prefs.SEARCH: "openserp"}, app_state_path, log=logged.append,
+                            openserp_factory=down)
     assert chain("sata ssd", 3) == [
         {"url": "https://a.example/x", "title": "A", "site": "a.example", "snippet": "s"}
     ]
@@ -185,8 +193,11 @@ def test_last_reserved_trial_question_can_build_lazy_search_after_clarify(
         return search
 
     logged = []
+    assert websearch.build(
+        {}, app_state_path, openserp_factory=down,
+        trial_reservation_id=reservation).providers == ["deepseek"]
     chain = websearch.build(
-        {}, app_state_path, openserp_factory=down, log=logged.append,
+        {prefs.SEARCH: "openserp"}, app_state_path, openserp_factory=down, log=logged.append,
         trial_reservation_id=reservation)
     assert chain.providers == ["openserp", "deepseek"]
     assert chain("sata ssd", 3)[0]["url"] == "https://a.example/x"
@@ -214,7 +225,7 @@ def test_no_hosted_provider_is_asked_unless_the_reader_put_it_in_the_order(monke
 
 def test_none_means_nothing_behind_the_first_choice(monkeypatch):
     monkeypatch.setenv("DEEPSEEK_API_KEY", SECRET)
-    plan = websearch.order({prefs.SEARCH_FALLBACK: "none"})
+    plan = websearch.order({prefs.SEARCH: "openserp", prefs.SEARCH_FALLBACK: "none"})
     assert plan["effective"] == ["openserp"] and not plan["automatic"]
 
 
@@ -265,7 +276,7 @@ def test_the_screens_document_lists_every_provider_with_its_key_state(tmp_path, 
     assert rows["openserp"]["needs_key"] is False and rows["openserp"]["key_saved"] is None
     assert rows["deepseek"]["needs_key"] and rows["deepseek"]["key_saved"] is True
     assert rows["exa"]["key_saved"] is False and rows["exa"]["ready"] is False
-    assert body["effective"] == ["openserp", "deepseek"] and body["automatic"] is True
+    assert body["effective"] == ["deepseek"] and body["primary"] == "deepseek" and body["automatic"] is True
     assert SECRET not in json.dumps(body)
 
 

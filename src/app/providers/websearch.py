@@ -1,15 +1,18 @@
 """The web search Chat and research use: one provider, others behind it.
 
 Four providers can answer "search the web": OpenSERP (a service on this
-machine, no key, the default), and DeepSeek, Exa and Tavily (hosted, one key
-each). Until now a turn used exactly one of them and took its failure as the
+machine, no key), and DeepSeek, Exa and Tavily (hosted, one key each).
+DeepSeek is the default wherever it can be asked (a saved key, a shared access
+code or the trial); OpenSERP is the default only where it cannot. Until now a
+turn used exactly one of them and took its failure as the
 end of the search. OpenSERP is the free one and also the iffy one: its own
 notes (`openserp.py`) record engines that answer with a challenge, engines that
 time out and an engine that answers empty about half the time. When that is
 the only door, a flaky engine becomes "the web has nothing on this".
 
 So the choice is an **order**, not a single pick: the provider the reader
-chose (OpenSERP when they chose none), then the providers behind it.
+chose (DeepSeek when they chose none and it can be asked, else OpenSERP), then
+the providers behind it.
 
 * A provider that **raises** or **returns nothing** hands the query to the next
   one, and the job log says which failed, why, and who is asking next.
@@ -149,7 +152,11 @@ def order(chosen: dict, app_state_path=None, *, trial_reservation_id: str = "") 
 
     primary = str(chosen.get(prefs.SEARCH) or "").strip().casefold()
     if primary not in KNOWN:
-        primary = OPENSERP
+        # The reader chose none. OpenSERP is not ready to be anyone's default, so
+        # DeepSeek leads whenever it can be asked: a saved key, a shared access
+        # code, or the trial. Only a computer with none of those starts on OpenSERP.
+        primary = "deepseek" if has_key(
+            "deepseek", app_state_path, trial_reservation_id=trial_reservation_id) else OPENSERP
     stored = parse_fallback(chosen.get(prefs.SEARCH_FALLBACK, ""))
     automatic = stored is None
     behind = list(AUTOMATIC_FALLBACK) if stored is None else stored
