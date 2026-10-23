@@ -4,6 +4,7 @@ import { followJob } from '../../engine/jobs'
 import { useEngine } from '../../engine/Engine'
 import { showDrawer } from '../drawerEvents'
 import { ExternalLink } from '../ExternalLink'
+import { SharedAccessGroup } from './Settings'
 
 type Extension = { connected: boolean; staged: boolean; path: string; ever_connected: boolean }
 
@@ -51,6 +52,11 @@ export function SetupPanel() {
   }
   return <div className="panel-body">
     <section className="panel-group"><h3>1. Choose who does the research</h3>
+      <details className="setup-dev">
+        <summary>Have an access code from a friend?</summary>
+        <p className="panel-note">Paste the code and password below. You do not need your own API keys or another agent installed.</p>
+        <SharedAccessGroup />
+      </details>
       <p>{verified ? 'Connection verified for this check.' : 'An installed agent still needs a working account and model connection.'}</p>
       <button className="btn" onClick={() => showDrawer('agents')}>Choose agent</button>{' '}
       <button className="btn" onClick={() => void verify()} disabled={working || mode !== 'live'}>Check connection</button>

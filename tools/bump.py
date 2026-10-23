@@ -182,8 +182,8 @@ def bump(version: str, reset: bool = False) -> int:
             continue
         text = full.read_text(encoding="utf-8")
         text, count = SITE_DOWNLOAD.subn(rf"\g<1>{version}\g<3>", text)
-        if count != 1:
-            raise SystemExit(f"{page} must link the installer download exactly once")
+        if count < 1:
+            raise SystemExit(f"{page} must link the installer download at least once")
         # Bytes, like the version files above: the newlines stay the file's own.
         full.write_bytes(text.encode("utf-8"))
         print(f"{page} -> {version}")

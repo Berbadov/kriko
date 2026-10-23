@@ -3,6 +3,26 @@
 Reader-visible changes for each release. Newest first. Published versions are
 immutable; a correction is a newer version.
 
+### 0.3.2
+
+- **Shared access is in setup.** Friends can paste their access code and
+  password from Set up Kriko, then choose Kriko Agent and check its connection.
+  Successful entry clears the pasted credentials from the form.
+- **Connection checks only check answering.** They no longer offer search
+  tools with a reply budget too small for a tool call.
+- **Provider connections fall back between network addresses.** One unreachable
+  address gets at most two seconds, within one connection budget, so several
+  unreachable IPv6 addresses cannot each spend the turn's full timeout.
+- **Streaming stops at its deadline, cancellation, or completion marker.**
+  Windows buffered sockets are interrupted directly, and an unresponsive
+  transport cannot hold the answering job past its own timeout.
+- **Evidence review keeps pages read by the agent.** Citation revisions and
+  reviews receive their text alongside pages fetched by the host search.
+- **The extension panel opens on request.** Background results no longer open
+  it while browsing; use the toolbar button or Alt + K. This needs extension
+  0.4.4; an older Chrome Web Store version keeps its previous behavior until
+  the extension is updated.
+
 ### 0.3.1
 
 - **Kriko Agent is experimental.** Its picker label now includes **Soon**.

@@ -84,13 +84,15 @@ test("an unknown product on a site nothing reads offers the site to be learned t
   assert.equal(verdict(known).querySelector(".lite-learn-btn"), null, "a site Kriko reads has nothing to learn");
 });
 
-test("the worker's nudge brings the panel up, and does not close one that is open", () => {
+test("a background nudge cannot open the panel, while the toolbar still can", () => {
   const p = loadPanel({ analyzeResponse: noAdapter(), workerResponse: worker() });
   assert.equal(p.shadow(), null);
   p.deliverMessage({ type: "KRIKO_SHOW_PANEL" });
-  assert.ok(p.shadow(), "the panel is on screen");
+  assert.equal(p.shadow(), null, "a stale worker's nudge must stay quiet");
+  p.deliverMessage({ type: "TOGGLE_HOVER_LITE" });
+  assert.ok(p.shadow(), "the reader can still open the panel");
   p.deliverMessage({ type: "KRIKO_SHOW_PANEL" });
-  assert.ok(p.shadow(), "a second nudge is not a toggle");
+  assert.ok(p.shadow(), "a nudge cannot close the reader's panel either");
 });
 
 // ── the worker's side: which pages may open the panel by itself ─────────
@@ -135,20 +137,22 @@ test("an unknown product on an unread site is not opened by itself either", asyn
   assert.equal(shown(h).length, 0);
 });
 
-test("a site Kriko reads opens its own panel once, however many pages are opened", async () => {
+test("background answers on a known site never open the panel, including cached answers", async () => {
   const h = loadBackground({
     routes: { "/api/adapters": READ_ADAPTER, "/api/analyze": READABLE },
     tabResponses: tab(page({ name: "Acme Roadster", typed: true })),
   });
   await h.sandbox.runAnalysisForTab(1, ELSEWHERE, { auto: true });
-  assert.equal(shown(h).length, 1);
-  assert.equal(shown(h)[0].tabId, 1);
+  assert.equal(shown(h).length, 0);
+
+  await h.sandbox.runAnalysisForTab(1, ELSEWHERE, { auto: true });
+  assert.equal(shown(h).length, 0, "a cached answer must stay quiet too");
 
   await h.sandbox.runAnalysisForTab(1, ELSEWHERE + "2", { auto: true });
-  assert.equal(shown(h).length, 1, "the same site is not opened again this session");
+  assert.equal(shown(h).length, 0);
 });
 
-test("an unknown product on a site Kriko reads opens the panel to be researched", async () => {
+test("an unknown product on a known site leaves opening the panel to the reader", async () => {
   const h = loadBackground({
     routes: {
       "/api/adapters": READ_ADAPTER,
@@ -158,7 +162,7 @@ test("an unknown product on a site Kriko reads opens the panel to be researched"
   });
   await assert.rejects(() => h.sandbox.runAnalysisForTab(1, ELSEWHERE, { auto: true }),
     (e) => e.code === "UNKNOWN_PRODUCT");
-  assert.equal(shown(h).length, 1);
+  assert.equal(shown(h).length, 0);
 });
 
 test("an ordinary page on a site Kriko reads is not opened", async () => {
