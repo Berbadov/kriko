@@ -1,4 +1,5 @@
 import { formatTokens, formatUsd, toneOf, type ThreadUsage } from '../chat/view'
+import { Icon } from './Icon'
 
 /** How much of the model's window this chat now uses, and what it has spent.
  *  Every number was reported by the plane that ran the turn. Where a plane
@@ -27,7 +28,10 @@ export function ContextBar({ usage }: { usage: ThreadUsage }) {
 
   return (
     <div className="ctx" data-tone={tone} data-state={latest.state}>
-      <span className="ctx-label">Context</span>
+      <span className="ctx-head">
+        <Icon name="gauge" size={14} />
+        <span className="ctx-label">Context</span>
+      </span>
       <span
         className="ctx-track"
         role="meter"
