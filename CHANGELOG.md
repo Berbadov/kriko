@@ -3,6 +3,34 @@
 Reader-visible changes for each release. Newest first. Published versions are
 immutable; a correction is a newer version.
 
+### 0.3.3
+
+- **Local agents can search the web.** A local model was only allowed to run
+  when an OpenSERP service was answering on the computer, and searched only
+  through it, so a friend who never started OpenSERP could not use it at all.
+  A local run now searches through the same order as chat: DeepSeek when it can
+  be asked, and it is ready whenever any web search can be reached.
+- **DeepSeek is the default web search.** With a saved key, a shared access code
+  or the trial, DeepSeek is asked first. OpenSERP is used only when nothing
+  hosted can be asked, or when you choose it in Settings → Connections.
+- **Kriko Agent keeps researching after you answer it.** A reply to its own
+  question ("Facelift (2020)") or a short correction ("it's the 1.5 diesel")
+  used to be answered from memory with the web off. It now carries on the
+  research with what you added.
+- **Kriko Agent remembers more of the chat.** It was shown only the last eight
+  messages and forgot the car you asked about after four exchanges. It now sees
+  the newest messages that fit, up to thirty, and the "Long chat" note appears
+  only when something really was left out.
+- **"Keep exploring" suggestions are things you would ask.** Suggestions that
+  asked you a question ("Do you need help comparing…?") are gone.
+- **A calmer chat.** Research and Done start folded, the conversation uses the
+  window's width, more than two products fold into one line, and Alternatives,
+  Cheapest and Merchants say what they do.
+- **Settings has five pages** (Look, Research, Keys, Connections, Usage), and the
+  context and top bars hold their layout at narrow widths.
+- **The browser extension lists Kriko Agent** even when it cannot run yet, greyed
+  out with the reason. This needs extension 0.4.5.
+
 ### 0.3.2
 
 - **Shared access is in setup.** Friends can paste their access code and

@@ -356,7 +356,7 @@ def post_sse_or_why(url: str, payload: dict, headers: dict, timeout: float,
 #: that reports one says the same thing.
 _MEANING = {
     400: " (the request was refused as malformed)",
-    401: " (the key was refused — replace it in Settings → Research)",
+    401: " (the key was refused — replace it in Settings → Keys)",
     402: " (the account is out of credit)",
     403: " (the key may not use this — check the plan it is on)",
     429: " (rate limit or quota reached — wait, or check the plan)",
