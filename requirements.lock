@@ -27,37 +27,42 @@
 # Regenerate deliberately, never as a side effect — `python
 # tools/relock.py` prints this file from the current environment, and
 # `src/app/tests/test_dependencies_are_locked.py` fails if the two disagree.
-# resolved-on: linux
-pypdf==6.21.1
-annotated-doc==0.0.4
-annotated-types==0.7.0
-anyio==4.14.1
+# resolved-on: win32
+annotated-doc==0.0.5
+annotated-types==0.8.0
+anyio==4.15.1
 attrs==26.1.0
-certifi==2026.6.17
-click==8.4.2
+certifi==2026.10.19
+cffi==2.1.1
+click==8.5.0
+cryptography==50.0.2
 exceptiongroup==1.3.1
-fastapi==0.138.1
+fastapi==0.157.0
 h11==0.16.0
 httpcore==1.0.9
 httpx==0.28.1
 httpx-sse==0.4.3
-idna==3.18
+idna==3.20
 jsonschema==4.26.0
 jsonschema-specifications==2025.9.1
-mcp==1.29.0
+mcp==1.30.0
+opentelemetry-api==1.45.1
 ptyprocess==0.7.0
-pydantic==2.13.4
-pydantic-core==2.46.4
-pydantic-settings==2.14.2
-pyjwt==2.13.0
-python-dotenv==1.2.2
+pycparser==3.11
+pydantic==2.14.1
+pydantic-settings==2.16.1
+pyjwt==2.15.1
+pypdf==6.21.2
+python-dotenv==1.2.4
 python-multipart==0.0.32
+pywin32==312
+pywinpty==3.1.0
 pyyaml==6.0.3
 referencing==0.37.0
-rpds-py==2026.6.3
-sse-starlette==3.4.6
-starlette==1.3.1
-typing-extensions==4.15.0
-typing-inspection==0.4.2
-uvicorn==0.52.1
-websockets==15.0.1
+rpds-py==2026.9.1
+sse-starlette==3.5.0
+starlette==1.9.0
+typing-extensions==4.16.0
+typing-inspection==0.4.4
+uvicorn==0.54.0
+websockets==16.1.1
