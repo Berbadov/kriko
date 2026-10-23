@@ -27,6 +27,7 @@ function loadOptions({ local = {}, hash = "", sites = [], light = false, answer 
   window.HTMLElement.prototype.scrollIntoView = function scrollIntoView() { this.dataset.scrolled = "1"; };
 
   const bag = { ...local };
+  const sent = [];
   const changeListeners = [];
   const set = (items, done) => {
     const changes = {};
@@ -40,12 +41,16 @@ function loadOptions({ local = {}, hash = "", sites = [], light = false, answer 
       lastError: null,
       getManifest: () => ({ version: "0.0.0" }),
       sendMessage(message, callback) {
+        sent.push(message);
         const custom = answer ? answer(message) : undefined;
         const reply = custom !== undefined ? custom : ({
           GET_API_BASE: { ok: true, default: "http://127.0.0.1:8787", stored: null },
           KRIKO_SITE_STATUS: { ok: true, status: { sites } },
           KRIKO_SYNC_SITES: { ok: true, status: { sites } },
           KRIKO_COMPAT: { ok: true, compat: null },
+          KRIKO_KEPT: { ok: true, kept: { answers: 0, pages: 0, intents: 0, sites: 0, muted: [] } },
+          KRIKO_CLEAR: { ok: true, kept: { answers: 0, pages: 0, intents: 0, sites: 0, muted: [] } },
+          KRIKO_SET_MUTED: { ok: true, muted: [], status: { sites } },
         }[message.type] || { ok: true });
         if (callback) callback(reply);
       },
@@ -68,7 +73,7 @@ function loadOptions({ local = {}, hash = "", sites = [], light = false, answer 
     permissions: { request() {}, contains(_, done) { if (done) done(false); } },
   };
   window.eval(fs.readFileSync(path.join(DIR, "options.js"), "utf8"));
-  return { window, document: window.document, bag, set };
+  return { window, document: window.document, bag, set, sent };
 }
 
 const settle = async () => {
