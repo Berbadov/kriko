@@ -398,6 +398,11 @@ def _climb(url: str, ladder_ends: float, *, check_cancelled=None,
     they read the page from elsewhere, and the browser after them reads it
     with a genuine fingerprint. "" from a rung leaves the page unread, never
     half-read.
+
+    The hosted rung sends the page's address to a third party, so it runs only
+    when the reader has supplied a key for that service (`pagereader.api_key`,
+    C8). Without one the ladder goes straight to the browser, which is this
+    machine's own; the courtesy rung is never load-bearing.
     """
     from app.providers import browser, pagereader  # noqa: PLC0415 — optional rungs
 

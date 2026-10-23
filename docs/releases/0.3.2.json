@@ -1,0 +1,74 @@
+{
+  "version": "0.3.2",
+  "platform": "windows-x86_64",
+  "source_fingerprint": "a16b9bc9c6f42e16524f7d7e8177a3ec42a5fd22e84e663e7b0f94f97f2c6ac0",
+  "recorded_at": "2026-10-23",
+  "note": "The maintainer requested publication after the remaining visual/browser and clean-install checks and desktop .kpack sharing limitation were disclosed. Record missing journeys honestly; release_readiness.py is expected to refuse complete stable-readiness certification.",
+  "journeys": {
+    "fresh_install": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Not installed on a clean machine; an existing Kriko installation was preserved."
+    },
+    "portable_start": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Portable archive integrity checked; native release app startup smoke passed for 25 seconds, but the extracted portable window was not walked."
+    },
+    "setup": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Fresh-profile shared-access unlock and DPAPI were exercised through the packaged local API; the setup screen and browser pairing were not visually walked."
+    },
+    "compare": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Automated coverage passed; packaged Compare was not walked live."
+    },
+    "stop": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Test processes were stopped by the smoke harness; the tray Quit journey was not walked."
+    },
+    "reconnect": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Not walked on the packaged window."
+    },
+    "upgrade_retains_data": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "No installed-version upgrade was performed on this machine."
+    },
+    "sourced_answer": {
+      "status": "passed",
+      "observed_at": "2026-10-23",
+      "evidence": "Frozen 0.3.2 engine, separate Windows profile, no personal keys or trial: official Raspberry Pi 5 specification answer with source trail completed in 12.2 seconds."
+    },
+    "follow_up": {
+      "status": "passed",
+      "observed_at": "2026-10-23",
+      "evidence": "Same packaged-engine conversation answered the power-supply follow-up with sources in 11.3 seconds without another setup question."
+    }
+  },
+  "providers": {
+    "kriko-agent": {
+      "status": "passed",
+      "model": "mercury-2.5 + DeepSeek Search/Fetch",
+      "version": "0.3.2",
+      "report": "docs/releases/0.3.2.md"
+    }
+  },
+  "observed_instead": [
+    "Fresh-profile Windows DPAPI shared grant opened and Kriko Agent became available.",
+    "Packaged connection check passed in 2.1 seconds.",
+    "Forget them removed the test grant.",
+    "Native app stayed up for 25 seconds and spawned its bundled engine.",
+    "Installer, portable, engine and extension artifact integrity and SHA-256 checks passed."
+  ],
+  "publication_checks": {
+    "full_python_run": "4546 passed, 23 skipped; one real-socket fixture exceeded its original 1-second test limit under parallel load.",
+    "targeted_retry": "8 passed after revising the regression to exercise a continuously dripping socket with scheduling headroom; no runtime code changed.",
+    "other_stages": "wheel, extension (512), UI (91), website (13), and native checks (13 Rust tests) passed."
+  }
+}

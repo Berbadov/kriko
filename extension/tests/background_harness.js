@@ -10,6 +10,26 @@ const vm = require("node:vm");
 
 const BACKGROUND_JS = path.join(__dirname, "..", "background.js");
 
+// Whether a granted match pattern covers a requested one, the way Chrome's
+// `permissions.contains` does for the cases this suite exercises: an identical
+// pattern, or a granted `scheme://host/*` with no port covering any port of
+// that host. Everything else is left to the exact comparison.
+function _patternCovers(granted, wanted) {
+  if (granted === wanted) return true;
+  const split = (one) => {
+    const hit = /^([a-z*]+):\/\/([^/]+)\/(.*)$/i.exec(String(one));
+    if (!hit) return null;
+    const [, scheme, hostport, path] = hit;
+    const [host, port] = hostport.split(":");
+    return { scheme, host, port: port || "", path };
+  };
+  const a = split(granted);
+  const b = split(wanted);
+  if (!a || !b) return false;
+  return a.scheme === b.scheme && a.path === b.path && a.host === b.host &&
+    (a.port === b.port || (a.port === "" && b.port !== ""));
+}
+
 // `offline` is the case a status-code stub cannot express: nothing is
 // listening, so `fetch` rejects before there is a response to inspect. That is
 // the ordinary state of the world for a reader who has not started the app.
@@ -34,6 +54,10 @@ function loadBackground({
   routes = {}, tabResponses = {}, offline = false, hung = false, statuses = {},
   grantedOrigins = [], responseHeaders = {}, loadedDigest = "", manifest = null, firefox = false,
   localState = {}, alarms = {},
+  // Chrome's quota, made reachable: `cacheWriteFailures` is how many of the
+  // next writes to the answer cache fail with a quota error, so the recovery
+  // path (prune, retry once, say so if it still fails) can be tested at all.
+  cacheWriteFailures = 0,
 } = {}) {
   const state = {
     session: {},
@@ -49,8 +73,12 @@ function loadBackground({
     // Origins the reader has allowed, and the content-script registrations
     // the worker holds — both live here rather than in the worker, which is
     // the point: an MV3 worker is stopped constantly and Chrome is the one
-    // remembering.
-    granted: new Set(grantedOrigins),
+    // remembering. Seeded from the packaged manifest's `host_permissions`,
+    // because those are granted at install and `permissions.contains` reports
+    // them from the first moment the worker runs.
+    granted: new Set([...(manifest ? manifest.host_permissions || [] :
+      JSON.parse(fs.readFileSync(path.join(__dirname, "..", "manifest.json"), "utf8"))
+        .host_permissions || []), ...grantedOrigins]),
     registered: [],
     alarms: { ...alarms },
     // Every `alarms.create` the worker issued, per name. Creating an alarm
@@ -71,6 +99,8 @@ function loadBackground({
     notified: [],
     // Times the worker reloaded itself (B151).
     selfReloads: 0,
+    // Answer-cache writes still to be refused (see `cacheWriteFailures`).
+    cacheWriteFailures,
   };
   const messageListeners = [];
   // Keyboard commands fire at the browser, not at a tab, so the worker
@@ -86,7 +116,7 @@ function loadBackground({
   const startupListeners = [];
   const storageListeners = [];
 
-  const area = (bucket) => ({
+  const area = (bucket, name) => ({
     async get(keys) {
       if (keys === undefined || keys === null) return { ...bucket };
       const wanted = Array.isArray(keys) ? keys : [keys];
@@ -94,8 +124,17 @@ function loadBackground({
       for (const k of wanted) if (k in bucket) out[k] = bucket[k];
       return out;
     },
-    async set(obj) { Object.assign(bucket, obj); },
-    async remove(key) { delete bucket[key]; },
+    async set(obj) {
+      if (state.cacheWriteFailures > 0 && name === "local" &&
+          Object.keys(obj).some((k) => k.startsWith("kriko_cached_result_"))) {
+        state.cacheWriteFailures -= 1;
+        throw new Error("QUOTA_BYTES quota exceeded");
+      }
+      Object.assign(bucket, obj);
+    },
+    // Chrome takes one key or an array of them, and the worker prunes by the
+    // array — `delete bucket[["a","b"]]` would remove nothing.
+    async remove(key) { for (const one of [].concat(key)) delete bucket[one]; },
     setAccessLevel: async () => {},
     onChanged: { addListener() {} },
   });
@@ -126,7 +165,7 @@ function loadBackground({
       commands: {
         onCommand: { addListener: (fn) => commandListeners.push(fn) },
       },
-      storage: { session: area(state.session), local: area(state.local),
+      storage: { session: area(state.session, "session"), local: area(state.local, "local"),
         onChanged: { addListener: (fn) => storageListeners.push(fn) } },
       tabs: {
         onUpdated: { addListener() {} },
@@ -166,8 +205,14 @@ function loadBackground({
         },
       },
       permissions: {
+        // Chrome answers `contains` from the manifest's own `host_permissions`
+        // plus anything the reader granted, and a host pattern without a port
+        // covers every port: `http://127.0.0.1/*` is what makes
+        // `http://127.0.0.1:8787` allowed. A set that only held exact strings
+        // would say "not permitted" for the app's own address, so this mirrors
+        // both halves.
         async contains({ origins = [] }) {
-          return origins.every((o) => state.granted.has(o));
+          return origins.every((one) => [...state.granted].some((have) => _patternCovers(have, one)));
         },
         request({ origins = [] }, callback) {
           state.permissionRequests.push(origins);
@@ -220,7 +265,13 @@ function loadBackground({
         url, method: (init && init.method) || "GET", body,
         headers: (init && init.headers) || {},
       });
-      const route = Object.keys(routes).find((r) => url.endsWith(r));
+      // A route key may name a query (`…/web-search?q=…`) or just a path
+      // (`…/jobs/j1/log?cursor=0`, where the cursor is the request's, not the
+      // fixture's). The full URL is tried first so the first kind keeps
+      // working, exactly as `endsWith` alone always did.
+      const path = String(url).split("?")[0];
+      const route = Object.keys(routes).find((r) => String(url).endsWith(r))
+        || Object.keys(routes).find((r) => path.endsWith(r));
       if (route === undefined) {
         return { ok: false, status: 502, async text() { return "unreachable"; } };
       }

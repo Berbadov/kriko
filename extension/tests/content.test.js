@@ -189,3 +189,56 @@ test("the auto-trigger fires promptly, not seconds after the page settled", () =
   assert.ok(s.__lastTimeoutDelay <= 300,
              `auto-trigger delay was ${s.__lastTimeoutDelay}ms, expected <=300ms`);
 });
+
+// ── one copy per page (D14) ─────────────────────────────────────────────
+//
+// `background.js:1673` injects content.js imperatively when a tab answers
+// nothing, so a page whose static block already ran it does get a second copy
+// asked for. It cannot register anything, and not by a guard written here: the
+// file declares its constants at the top level (content.js:200, 546, …), and a
+// classic script's top-level `const` lives in the global lexical scope, so the
+// second copy is a parse error before its first statement. This test is that
+// fact — the day the file is wrapped in an IIFE, or those consts become
+// properties of `window`, two GET_SCRAPE listeners and two PAGE_LOADED
+// triggers become possible and this fails.
+test("a second injection cannot register a second set of listeners", () => {
+  const s = loadContentScript(fixture("listing_classic.html"));
+  assert.equal(s.__messageListeners.length, 1, "the first copy did not register");
+  try {
+    s.__injectAgain();
+  } catch (_) {
+    // The parse error is the mechanism, not the failure.
+  }
+  assert.equal(s.__messageListeners.length, 1, "a second copy registered a listener");
+  s.__flushTimers();
+  assert.equal(s.__sent.filter((m) => m.type === "PAGE_LOADED").length, 1,
+    "one page load was announced twice");
+});
+
+test("the one copy still answers a scrape after an injection was attempted", () => {
+  const s = loadContentScript(fixture("listing_classic.html"));
+  try { s.__injectAgain(); } catch (_) { /* see above */ }
+  let payload = null;
+  s.__messageListeners[0]({ type: "GET_SCRAPE", labels: PACK_LABELS }, {}, (reply) => { payload = reply; });
+  assert.equal(payload.ok, true);
+  assert.equal(payload.payload.fields["Marka"], "Volkswagen");
+});
+
+// ── the walk does not read whole rows as labels (D15) ───────────────────
+//
+// The label scan visits every span/div/dt/td, and `textContent` on a
+// container materialises its entire subtree as a string — the expensive half
+// of the walk on a listing page. A row with two or more element children
+// cannot be a label, so it is skipped before that read.
+test("a container with several children is never read as a label candidate", () => {
+  const s = loadContentScript(
+    "<html><body><div id=wide><b>Yıl</b><span>2014</span><i>x</i></div></body></html>");
+  const wide = s.document.getElementById("wide");
+  let reads = 0;
+  Object.defineProperty(wide, "textContent", {
+    configurable: true,
+    get() { reads += 1; return "Yıl 2014 x"; },
+  });
+  s.buildScrape(PACK_LABELS);
+  assert.equal(reads, 0, "the scan materialised a whole row to look for a label in it");
+});

@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useCompare, MAX_SLOTS, type Question } from '../compare'
-import { riskRows, specRows, riskKey, type Check, type Level, type Risk } from '../compare/checks'
-import { useEngine } from '../engine/Engine'
+import { selectCompareAgent } from '../compare/research'
+import { groundingNote, findingsLabel, riskRows, specRows, riskKey, type Check, type Level, type Risk } from '../compare/checks'
+import { AgentRecovery } from '../compare/Recovery'
+import { useEngine, type Agent } from '../engine/Engine'
 import { useHistory } from '../engine/history'
 import { useSensitivity } from '../engine/sensitivity'
 import { hiddenLine, shown } from '../engine/thinness'
 import { usePrefs } from '../prefs'
 import { useQueue } from '../queue'
+import { post, seg } from '../engine/api'
 import { Composer } from '../ui/Composer'
 import { Decide } from '../ui/Decide'
 import { ClaimSources } from '../ui/ClaimChip'
@@ -29,7 +32,7 @@ const LEVEL_ORDER: Record<Level, number> = { critical: 0, high: 1, medium: 2, lo
 export function CompareScreen() {
   const { motion: m } = usePrefs()
   const { items } = useQueue()
-  const { slots, checks, questions, remove, retry, ask, stop, problem, saveAgain } = useCompare()
+  const { slots, checks, questions, remove, retry, ask, research, stop, problem, saveAgain } = useCompare()
   const [only, setOnly] = useState(false)
   const [picker, setPicker] = useState(false)
   const [specsOpen, setSpecsOpen] = useState(false)
@@ -100,11 +103,11 @@ export function CompareScreen() {
                       .filter((r) => !only || differing.has(riskKey(r)))
                       .sort((a, b) => LEVEL_ORDER[a.level] - LEVEL_ORDER[b.level])
                     return (
-                      <Column key={id} check={found.check} onRemove={() => remove(id)} transition={m.tx.spring}>
+                      <Column key={id} check={found.check} onRemove={() => remove(id)} onResearch={(agent, onJob) => research(id, agent, onJob)} transition={m.tx.spring}>
                         {list.length === 0 ? (
                           <p className="mx-none">
                             {found.check.risks.length === 0
-                              ? 'The agents found no sourced problems. That is not proof there are none.'
+                              ? groundingNote(found.check) || 'The agents found no sourced problems. That is not proof there are none.'
                               : hidden.length === found.check.risks.length
                                 ? 'Every finding here is hidden at this sensitivity.'
                                 : 'Nothing here differs from the others.'}
@@ -222,7 +225,48 @@ export function CompareScreen() {
   )
 }
 
-function Column({ check, onRemove, children, transition }: { check: Check; onRemove: () => void; children: React.ReactNode; transition: object }) {
+function Column({ check, onRemove, onResearch, children, transition }: { check: Check; onRemove: () => void; onResearch: (agent: Agent, onJob: (jobId: string) => void) => Promise<void>; children: React.ReactNode; transition: object }) {
+  const { mode, agents, agentAvailable, preferred, chooseAgent } = useEngine()
+  const [research, setResearch] = useState<{ busy: boolean; error: string }>({ busy: false, error: '' })
+  const [jobId, setJobId] = useState('')
+  const [canceling, setCanceling] = useState(false)
+  const mounted = useRef(true)
+  useEffect(() => () => { mounted.current = false }, [])
+  const selectedAgent = selectCompareAgent(agents, preferred, agentAvailable)
+  const researchWith = async (agent: Agent) => {
+    if (research.busy || mode !== 'live') return
+    // A press here is also the reader's answer to "which agent should this
+    // machine use". Storing it is what recovers the other columns and the
+    // composer, which were dead-ended by the same stored pick; the engine
+    // keeps it, so the next product starts on it too.
+    chooseAgent(agent.id)
+    setResearch({ busy: true, error: '' })
+    setJobId('')
+    setCanceling(false)
+    try {
+      await onResearch(agent, setJobId)
+      if (mounted.current) setResearch({ busy: false, error: '' })
+    } catch (error) {
+      // Whatever the engine refused with — a missing key, a trial used up, an
+      // agent not installed — is the whole message, so it is shown unwrapped.
+      if (mounted.current) setResearch({ busy: false, error: error instanceof Error ? error.message : 'Could not research this product.' })
+    }
+  }
+  const researchProduct = () => {
+    if (selectedAgent) void researchWith(selectedAgent)
+  }
+  const cancel = async () => {
+    if (!jobId || canceling) return
+    setCanceling(true)
+    try {
+      await post(`/api/jobs/${seg(jobId)}/cancel`, {})
+    } catch (error) {
+      if (mounted.current) {
+        setCanceling(false)
+        setResearch({ busy: true, error: error instanceof Error ? error.message : 'Could not stop this research.' })
+      }
+    }
+  }
   return (
     <motion.div layout className="mx-col" initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.97 }} transition={transition}>
       <div className="mx-head">
@@ -233,7 +277,14 @@ function Column({ check, onRemove, children, transition }: { check: Check; onRem
           </button>
         </div>
         <span className="muted">{check.category || 'Quick look'}</span>
-        <span className="mono muted">{check.risks.length === 1 ? '1 risk' : `${check.risks.length} risks`}</span>
+        <span className="mono muted">{findingsLabel(check)}</span>
+        {mode === 'live' && (selectedAgent ? <div className="mx-research-actions">
+          <button className="btn ghost mx-research" onClick={() => void researchProduct()} disabled={research.busy} title={`Research with ${selectedAgent.label}`}>
+            {research.busy ? <><PixelGlyph size={13} active /> {canceling ? 'Stopping' : `Researching with ${selectedAgent.label}`}</> : `Research with ${selectedAgent.label}`}
+          </button>
+          {research.busy && jobId && <button className="btn ghost" onClick={() => void cancel()} disabled={canceling}>{canceling ? 'Stopping…' : 'Stop'}</button>}
+        </div> : <AgentRecovery agents={agents} preferred={preferred} available={agentAvailable} busy={research.busy} onResearch={(agent) => void researchWith(agent)} />)}
+        {research.error && <p className="error-note" role="alert">{research.error}</p>}
       </div>
       <CheckContext check={check} />
       {children}

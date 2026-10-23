@@ -179,6 +179,7 @@ def test_research_this_product_sends_the_listing_to_all_three_passes(client, mon
 
     class FakeHarness:
         search_provider = "fixture"
+        harness = SimpleNamespace(id="fixture")
 
         def ask(self, prompt):
             if prompt.startswith("# Quick look"):

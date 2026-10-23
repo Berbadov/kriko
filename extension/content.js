@@ -63,6 +63,15 @@ function extractInfoListByLabelScan(knownLabels) {
   for (const node of document.querySelectorAll(
     "span, div, dt, th, td, strong, b, p, label"
   )) {
+    // A label is a leaf or a single wrapped leaf, and nothing else. Every
+    // container is visited by the selector above, and `textContent` on one
+    // materialises its whole subtree as a string — the expensive half of this
+    // walk on a page of several thousand elements. A row with two or more
+    // element children cannot be a label anyway: its text is the row's, which
+    // is what the length check below refuses a moment later, after paying for
+    // it. Skipped here rather than there, and no documented shape is lost —
+    // each is inside a leaf, or inside the one wrapper that leaf sits in.
+    if (node.childElementCount > 1) continue;
     const text = cleanText(node.textContent);
     if (!text || text.length > 32) continue;
     if (!wanted.has(foldLabel(text)) || details[text]) continue;

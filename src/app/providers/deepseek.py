@@ -54,13 +54,15 @@ def clipped(query: str) -> str:
     return (head if space and len(head) >= MAX_QUERY_CHARS // 2 else cut).strip()
 
 
-def searcher(api_key: str = "", base_url: str = ""):
+def searcher(api_key: str = "", base_url: str = "", *, shared_home=None,
+             trial_reservation_id: str = ""):
     """`search(query, limit) -> [{"url", "title", "site"}]`; raises `SearchFailed`.
 
     The key is read once, when the searcher is built, so a settings write that
     lands between two queries cannot change a run halfway.
     """
-    key = api_key or require("deepseek")
+    key = api_key or require("deepseek", shared_home=shared_home,
+                             reservation_id=trial_reservation_id)
     endpoint = (base_url or _base_url()).rstrip("/") + "/v1/tools/search"
 
     def search(query: str, limit: int = 5, **_ignored) -> list[dict]:

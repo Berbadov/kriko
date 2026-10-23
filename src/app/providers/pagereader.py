@@ -14,10 +14,21 @@ server-sent event.
 One hosted reader: Parallel (`https://search.parallel.ai/mcp`, tool
 `web_fetch`). Every failure is `""`, so the ladder can fall through and
 report the page unread rather than half-read.
+
+**The rung runs only with a key the reader supplied** (`KEY_ENV`). The service
+has a free anonymous tier and this module does not use it: asking an anonymous
+tier to fetch a page sends that page's address to a third party with nobody in
+the loop and nothing on the screen saying so, which is C8 — the promise table
+in `keys.py` said the opposite while every refused page's URL went out. With a
+key the request is the reader's own account, the key rides in `Authorization`,
+and the purpose sentence beside it in Settings is the disclosure. Without one
+`read` sends nothing at all, not even the DNS lookup the egress check makes
+(`providers/egress.py`), and the ladder falls through to the browser rung.
 """
 
 import json
 import logging
+import os
 import re
 import urllib.error
 import urllib.request
@@ -36,10 +47,25 @@ PROTOCOL = "2025-06-18"
 ENDPOINT = PARALLEL_ENDPOINT
 TOOL = PARALLEL_TOOL
 
+#: The reader's own key for the hosted reader, and the whole of the opt-in. The
+#: name is the one `keys.py` saves and `keys.load` copies into this process's
+#: environment, so the Settings screen's field and this gate are one thing.
+KEY_ENV = "PARALLEL_API_KEY"
+
 #: `extract` truncates to 12 000 characters, so more than this is paying a
 #: courtesy for text the run will never read.
 MAX_CHARACTERS = 20_000
 TIMEOUT = 45.0
+
+
+def api_key(environ: dict | None = None) -> str:
+    """The key the reader supplied, or "" — and "" means this rung does not run.
+
+    Read from the environment at each call rather than cached, for the same
+    reason `keys.load` writes there: a key pasted into Settings has to take
+    effect on the next page without a restart.
+    """
+    return str((environ if environ is not None else os.environ).get(KEY_ENV) or "").strip()
 
 
 def user_agent() -> str:
@@ -49,12 +75,17 @@ def user_agent() -> str:
 
 
 def _rpc(endpoint: str, body: dict, session: str = "", *,
-         timeout: float = TIMEOUT, check_cancelled=None) -> tuple[dict, str]:
+         timeout: float = TIMEOUT, check_cancelled=None, key: str = "") -> tuple[dict, str]:
     headers = {
         "Content-Type": "application/json",
         "Accept": "application/json, text/event-stream",
         "User-Agent": user_agent(),
     }
+    if key:
+        # The service's documented header for a reader's own account (higher
+        # rate limits, usage under their name rather than anonymous). Omitted
+        # entirely without a key, which is also why `read` never gets here.
+        headers["Authorization"] = f"Bearer {key}"
     if session:
         headers["mcp-session-id"] = session
     request = urllib.request.Request(
@@ -166,7 +197,7 @@ def parse_parallel(text: str, url: str) -> str:
 
 
 def _asked(target: str, tool: str, url: str, *, timeout: float = TIMEOUT,
-           check_cancelled=None) -> str:
+           check_cancelled=None, key: str = "") -> str:
     """One reader's raw text answer, "" on any failure."""
     reply, session = _rpc(
         target,
@@ -179,7 +210,7 @@ def _asked(target: str, tool: str, url: str, *, timeout: float = TIMEOUT,
                 "capabilities": {},
                 "clientInfo": {"name": "kriko", "version": "0"},
             },
-        }, timeout=timeout, check_cancelled=check_cancelled,
+        }, timeout=timeout, check_cancelled=check_cancelled, key=key,
     )
     if not session:
         return ""
@@ -196,7 +227,7 @@ def _asked(target: str, tool: str, url: str, *, timeout: float = TIMEOUT,
                 "arguments": {"urls": [url], "maxCharacters": MAX_CHARACTERS},
             },
         },
-        session, timeout=timeout, check_cancelled=check_cancelled,
+        session, timeout=timeout, check_cancelled=check_cancelled, key=key,
     )
     result = reply.get("result") or {}
     if reply.get("error") or result.get("isError"):
@@ -216,7 +247,14 @@ def read(url: str, endpoint: str = "", *, timeout: float = TIMEOUT,
     whose lifetime nobody owns.
     "" on every failure, so the ladder in `fetch.py` can simply fall
     through and report the page unread rather than half-read.
+
+    Nothing is sent for a reader who has not supplied a key: the first thing
+    this function does is look for one, before the scheme check and before the
+    DNS lookup `egress` makes. See the module docstring (C8).
     """
+    key = api_key()
+    if not key:
+        return ""
     if not url.lower().startswith(("http://", "https://")):
         return ""
     if urlsplit(url).netloc == urlsplit(PARALLEL_ENDPOINT).netloc:
@@ -233,5 +271,5 @@ def read(url: str, endpoint: str = "", *, timeout: float = TIMEOUT,
     else:
         target = PARALLEL_ENDPOINT
     page = plain(parse_parallel(_asked(target, PARALLEL_TOOL, url, timeout=timeout,
-                                       check_cancelled=check_cancelled), url))
+                                       check_cancelled=check_cancelled, key=key), url))
     return page[:MAX_CHARACTERS]

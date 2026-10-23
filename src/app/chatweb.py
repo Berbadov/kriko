@@ -16,7 +16,7 @@ import urllib.parse
 import urllib.request
 from functools import partial
 
-from app.providers import fetch, network, proxypool
+from app.providers import fetch, network, proxypool, transport
 from kriko.research import Fetched
 
 MAX_BYTES = 2_000_000
@@ -78,7 +78,7 @@ def _open_one(url: str, timeout: float, via=None):
 
     `via` is an opener that connects through a proxy (`proxypool.Router.opener`).
     """
-    opener = via or urllib.request.build_opener(_NoRedirect())
+    opener = via or transport.opener(_NoRedirect())
     request = urllib.request.Request(url, headers={"user-agent": USER_AGENT})
     try:
         return opener.open(request, timeout=timeout)

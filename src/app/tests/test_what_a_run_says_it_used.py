@@ -195,3 +195,34 @@ def test_a_log_that_does_not_exist_summarises_to_zero_rather_than_raising(tmp_pa
 
     assert observability.summarise(tmp_path / "nope.jsonl")["analyses"] == 0
 
+
+def test_the_log_is_not_reparsed_for_every_render(tmp_path, monkeypatch):
+    """D10: each render read and `json.loads`ed the whole append-only file, so
+    the cost of a screen was the length of a log nobody can see the start of.
+
+    The parse is memoised on `(size, mtime)`, so a second render of an unchanged
+    file does no file work — and a grown file is still read, which is the half
+    that would make a cheap cache wrong.
+    """
+    from app.web import observability
+
+    path = tmp_path / "a.jsonl"
+    path.write_text('{"subjects": ["s1"]}\n', encoding="utf-8")
+    observability._PARSE_CACHE.clear()
+    parsed = []
+    real = observability._parse_records
+    monkeypatch.setattr(
+        observability, "_parse_records",
+        lambda target: parsed.append(target) or real(target),
+    )
+
+    assert observability.summarise(path)["analyses"] == 1
+    assert len(parsed) == 1
+    assert observability.summarise(path)["analyses"] == 1
+    assert len(parsed) == 1, "the second render re-read the whole log"
+
+    with path.open("a", encoding="utf-8") as f:
+        f.write('{"subjects": ["s2"]}\n')
+    assert observability.summarise(path)["analyses"] == 2, "a grown log is re-read"
+    assert len(parsed) == 2
+

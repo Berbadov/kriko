@@ -135,6 +135,36 @@ def test_an_exported_variable_wins_and_is_reported_as_the_source(tmp_path, monke
     assert exa["hint"] == "…hell"
 
 
+def test_the_hosted_readers_key_is_one_this_file_may_hold(tmp_path):
+    """`pagereader` reads `PARALLEL_API_KEY` from the environment, so the row has
+    to exist here: `save` refuses an id it does not know and `load` copies only
+    the names in `PROVIDERS`, which left a reader who set the key in Settings
+    with a key nothing ever read. The `env` compared is the reader module's own
+    string, so the two cannot drift apart.
+    """
+    from app.providers import pagereader
+
+    path = tmp_path / "env"
+    assert keys.BY_ID["parallel"].env == pagereader.KEY_ENV
+    assert keys.save({"parallel": FIXTURE}, path) == ["parallel"]
+
+    environ: dict[str, str] = {}
+    assert keys.load(path, environ=environ) == [pagereader.KEY_ENV]
+    assert environ[pagereader.KEY_ENV] == FIXTURE
+
+
+def test_the_hosted_reader_is_a_choice_and_not_a_requirement(tmp_path):
+    """The paid plane needs a search key and a completion key, and nothing else.
+
+    A reader who has those and no hosted-reader key must still be ready: a
+    required row here would make every installation that was working unready
+    the day the reader was added.
+    """
+    environ = {"EXA_API_KEY": "sk-exa-1234", "OPENAI_API_KEY": "sk-openai-1234"}
+    assert keys.ready(tmp_path / "env", environ=environ) is True
+    assert keys.BY_ID["parallel"].optional is True
+
+
 def test_a_stored_key_reports_the_file_as_its_source(tmp_path, monkeypatch):
     """After `load` the file's key *is* the environment variable.
 
@@ -278,6 +308,8 @@ def test_each_provider_states_what_it_receives(tmp_path):
     body = _client(tmp_path).get("/api/keys").json()
     for item in body["providers"]:
         assert item["purpose"].strip(), f"{item['id']} says nothing about its purpose"
-        assert "Never" in item["purpose"], (
+        # The marker is the word, not its capitalisation: a row may write
+        # "never your browsing history" mid-sentence, which is the same promise.
+        assert "never" in item["purpose"].casefold(), (
             f"{item['id']} says what it receives but not what it does not"
         )

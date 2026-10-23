@@ -136,7 +136,8 @@ def test_compatible_agent_researcher_keeps_usage_incomplete(monkeypatch, tmp_pat
 def test_compatible_api_agent_is_a_selectable_preferences_row(monkeypatch, tmp_path):
     monkeypatch.setattr(harness, "available", lambda: [])
     monkeypatch.setattr(harness, "found_but_unusable", lambda: [])
-    monkeypatch.setattr(apiagent, "available", lambda path=None: [apiagent.OPENAI_COMPATIBLE])
+    monkeypatch.setattr(apiagent, "available",
+                        lambda *args, **kwargs: [apiagent.OPENAI_COMPATIBLE])
     monkeypatch.setattr(apiagent, "models_for", lambda *args: [])
     monkeypatch.setattr("app.prefs.local_agent_rows", lambda conn: ([], [], []))
     conn = state.connect(tmp_path / "app.sqlite")

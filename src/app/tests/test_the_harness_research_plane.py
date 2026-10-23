@@ -289,7 +289,7 @@ def test_the_opencode_agent_profile_denies_bash_and_edit(tmp_path, monkeypatch):
     assert "websearch: allow" in body
 
 
-def test_the_spawned_agent_is_handed_no_krikos_tools_only_a_page_reader():
+def test_the_spawned_agent_is_handed_no_krikos_tools_only_a_page_reader(monkeypatch):
     """No Kriko MCP server, anywhere, on purpose (B155 relaxed the rest).
 
     The alternative design — hand the agent Kriko's own tools — was rejected:
@@ -300,6 +300,9 @@ def test_the_spawned_agent_is_handed_no_krikos_tools_only_a_page_reader():
     one tool reads a page: no row's fixed `args` carries a config of its own,
     and the only server that config names is the reader's.
     """
+    from app.providers import pagereader
+
+    monkeypatch.setenv(pagereader.KEY_ENV, "reader-key")
     for one in harness_mod.KNOWN:
         assert "--mcp-config" not in one.args
         assert "--mcp-config" not in one.plain_args
@@ -1840,13 +1843,16 @@ def test_a_help_with_no_model_entry_names_nothing():
 def test_model_lists_are_cached_and_asked_concurrently(monkeypatch):
     """The Agents screen paid every CLI's `models` on every read and every
     save, one after another: two 3-second CLIs made a dropdown take 6s."""
-    import time as clock
+    from threading import Barrier
 
     calls = []
+    both_started = Barrier(2)
 
     def slow(one, executable):
         calls.append(one.id)
-        clock.sleep(0.3)
+        # Both calls must start before either can return. A wall-clock
+        # comparison against two sleeps failed under a busy Windows gate.
+        both_started.wait(timeout=3)
         return [f"{one.id}/x"]
 
     listing = next(h for h in harness_mod.KNOWN if h.model_source == "models")
@@ -1854,9 +1860,7 @@ def test_model_lists_are_cached_and_asked_concurrently(monkeypatch):
     monkeypatch.setattr(harness_mod, "locate", lambda one: f"/usr/bin/{one.executable}")
     monkeypatch.setattr(harness_mod, "_from_models_command", slow)
     monkeypatch.setattr(harness_mod, "_MODELS", {})
-    started = clock.monotonic()
     first = harness_mod.models_for_each(two, fresh=True)
-    assert clock.monotonic() - started < 0.3 * len(two)
     assert first == {h.id: [f"{h.id}/x"] for h in two}
     harness_mod.models_for_each(two)
     assert len(calls) == len(two), "the second read asked the CLIs again"

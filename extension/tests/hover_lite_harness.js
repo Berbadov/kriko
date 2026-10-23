@@ -28,6 +28,7 @@ function loadPanel({
   // the feed is an aside: nearly every test wants it empty, and the two that
   // do not want it to be the only thing they are about.
   operationsResponse = { ok: true, feed: { items: [] } },
+  localSettings = {},
   // The follow-up cache (#112) the panel keeps in chrome.storage.session.
   // A reload keeps the same bag, so a test can prove the exchange survives.
   sessionBag,
@@ -53,7 +54,7 @@ function loadPanel({
   // The one durable bag the panel and the options page share: the reader's
   // light/dark choice, under `kriko.theme`. A test reads it back off the
   // returned `local` to prove the choice was written down.
-  const localBag = {};
+  const localBag = { ...localSettings };
   const sandbox = {
     document: dom.window.document,
     window: dom.window,
@@ -85,7 +86,12 @@ function loadPanel({
           if (message.type === "ANALYZE") return callback(analyzeResponse);
           if (message.type === "SEARCH") return callback(searchResponse);
           if (message.type === "OPERATIONS") return callback(operationsResponse);
-          callback(typeof workerResponse === "function" ? workerResponse(message) : workerResponse);
+          const response = typeof workerResponse === "function" ? workerResponse(message) : workerResponse;
+          if (message.type === "AGENTS" && response?.ok && !Array.isArray(response.agents)) {
+            callback({ ...response, chosen: "local", agents: [{ id: "local", label: "Local agent", kind: "local" }] });
+            return;
+          }
+          callback(response);
         },
         getURL: (p) => p,
       },

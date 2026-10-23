@@ -167,6 +167,35 @@ def test_chat_builds_its_host_search_and_reader_once_per_turn(monkeypatch):
     assert host_readers[0].check_cancelled is checker
 
 
+def test_chat_web_accessor_forwards_the_turn_trial_reservation(monkeypatch):
+    seen = []
+    progress = Hooks()
+
+    def searcher(_app, _path, _progress, *, trial_reservation_id=""):
+        seen.append(trial_reservation_id)
+        return lambda query, limit: []
+
+    monkeypatch.setattr(tasks, "_chat_web_searcher", searcher)
+    monkeypatch.setattr(chatweb, "reader", lambda **_kwargs: lambda _url: "")
+    search, _read = tasks._chat_web_accessors(
+        "app", "state.sqlite", progress, trial_reservation_id="chat-job-123")
+    assert search("specifications", 5) == []
+    assert seen == ["chat-job-123"]
+
+
+def test_chat_searcher_forwards_the_turn_trial_reservation_to_websearch(monkeypatch):
+    seen = []
+    from app.providers import websearch
+
+    monkeypatch.setattr(prefs, "read", lambda _app: {"search_provider": "test"})
+    monkeypatch.setattr(websearch, "build",
+                        lambda chosen, path, **kwargs: (seen.append((chosen, path, kwargs)) or "search"))
+    result = tasks._chat_web_searcher(
+        "app", "state.sqlite", Hooks(), trial_reservation_id="chat-job-123")
+    assert result == "search"
+    assert seen[0][2]["trial_reservation_id"] == "chat-job-123"
+
+
 def test_direct_url_reads_use_the_real_chat_reader_on_a_worker(tmp_path, monkeypatch):
     conn = state.connect(tmp_path / "app.sqlite")
     owner = threading.get_ident()
@@ -268,6 +297,7 @@ def test_unset_chat_tool_policy_respects_each_harness_capability(monkeypatch, tm
     class Progress:
         def __init__(self):
             self.logs = []
+            self.job_id = "test-chat-job"
 
         def check(self):
             pass
@@ -296,7 +326,7 @@ def test_unset_chat_tool_policy_respects_each_harness_capability(monkeypatch, tm
     monkeypatch.setattr(tasks, "_cap_agent", lambda *_args: None)
     monkeypatch.setattr(tasks, "_wire_researcher_text", lambda *_args: None)
     monkeypatch.setattr(tasks, "_apply_source_options", lambda *_args: None)
-    monkeypatch.setattr("app.providers.agent_ready", lambda *_args: True)
+    monkeypatch.setattr("app.providers.agent_ready", lambda *_args, **_kwargs: True)
 
     def run(protocol, allow_tools, transport_mode="auto"):
         researcher = Researcher(protocol, transport_mode)

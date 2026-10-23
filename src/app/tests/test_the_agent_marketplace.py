@@ -163,7 +163,7 @@ def test_a_keyless_api_agent_row_says_what_it_is(tmp_path, monkeypatch):
     agent gets has to carry it: the market never guesses a kind."""
     conn = state.connect(tmp_path / "app.sqlite")
     try:
-        monkeypatch.setattr(apiagent, "available", lambda: [])
+        monkeypatch.setattr(apiagent, "available", lambda *args, **kwargs: [])
         _ready, keyless = prefs.api_agent_rows(conn)
     finally:
         conn.close()

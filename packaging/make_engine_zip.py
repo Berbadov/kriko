@@ -32,7 +32,7 @@ import zipfile
 from pathlib import Path
 
 #: The oldest desktop app offered this engine update. See the module docstring.
-MIN_SHELL = "0.3.1"
+MIN_SHELL = "0.3.2"
 
 ROOT = Path(__file__).resolve().parents[1]
 SIDECAR = "kriko-sidecar.exe"

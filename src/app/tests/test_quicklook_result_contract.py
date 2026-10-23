@@ -23,6 +23,24 @@ class _Progress:
         pass
 
 
+def test_quicklook_refuses_a_provider_factory_fallback_for_a_named_agent(
+        tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    from app import providers
+
+    settings = Settings(
+        store_path=tmp_path / "knowledge.sqlite",
+        app_state_path=tmp_path / "app.sqlite",
+        analysis_log_path=tmp_path / "analysis.jsonl",
+    )
+    fallback = SimpleNamespace(harness=SimpleNamespace(id="other-cli"))
+    monkeypatch.setattr(tasks, "_use_local_ask", lambda *_a, **_k: False)
+    monkeypatch.setattr(providers, "harness_researcher", lambda **_kwargs: fallback)
+    with pytest.raises(ValueError, match="selected research agent.*no other agent"):
+        tasks.quick_look(settings, {
+            "product": "Acme headset", "backend": "harness", "harness": "chosen-cli",
+        }, _Progress("quick-job"))
+
 @pytest.mark.parametrize(
     ("coverage", "diagnostic_code"),
     [

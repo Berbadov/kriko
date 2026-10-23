@@ -13,7 +13,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import pytest
 from fastapi.testclient import TestClient
 
-from app import keys, prefs
+from app import keys, prefs, sharekeys
 from app.providers import MissingKey, deepseek, openserp, websearch
 from app.providers._http import SearchFailed
 from app.web import state
@@ -116,6 +116,91 @@ def test_automatic_puts_deepseek_behind_openserp_only_once_it_has_a_key(monkeypa
     monkeypatch.setenv("DEEPSEEK_API_KEY", SECRET)
     plan = websearch.order({})
     assert plan["effective"] == ["openserp", "deepseek"] and plan["automatic"]
+
+
+def test_shared_deepseek_grant_is_used_after_openserp_fails(
+        monkeypatch, tmp_path, service):
+    """A shared grant in this app home enables automatic fallback and execution."""
+    home = tmp_path / "friend"
+    home.mkdir()
+    app_state_path = home / "app.sqlite"
+    monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
+    grant_key = "sk-shared-deepseek-secret-987654321"
+    monkeypatch.setenv("KRIKO_SHARE_PEPPER", "web-search-test-pepper")
+    access = sharekeys.make_access("a long test password", {"deepseek": grant_key})
+    sharekeys.unlock(access, "a long test password", where=home)
+
+    assert websearch.order({}, app_state_path)["effective"] == ["openserp", "deepseek"]
+    assert websearch.order({prefs.SEARCH_FALLBACK: "none"}, app_state_path)["effective"] == [
+        "openserp"]
+    conn = state.connect(app_state_path)
+    try:
+        rows = {row["id"]: row for row in websearch.status(conn)["providers"]}
+    finally:
+        conn.close()
+    assert rows["deepseek"]["key_saved"] and rows["deepseek"]["ready"]
+    logged = []
+
+    def down(_chosen):
+        def search(*_args, **_kwargs):
+            raise LocalSearchError("OpenSERP is down")
+        return search
+
+    chain = websearch.build({}, app_state_path, log=logged.append, openserp_factory=down)
+    assert chain("sata ssd", 3) == [
+        {"url": "https://a.example/x", "title": "A", "site": "a.example", "snippet": "s"}
+    ]
+    assert chain.providers == ["openserp", "deepseek"]
+    assert [attempt["provider"] for attempt in chain.attempts] == ["openserp", "deepseek"]
+    assert service.seen[0]["auth"] == f"Bearer {grant_key}"
+    assert grant_key not in "\n".join(logged)
+    assert grant_key not in json.dumps(chain.attempts)
+    assert grant_key not in (home / "shared.json").read_text(encoding="utf-8")
+
+
+def test_last_reserved_trial_question_can_build_lazy_search_after_clarify(
+        monkeypatch, tmp_path, service):
+    home = tmp_path / "trial-friend"
+    home.mkdir()
+    app_state_path = home / "app.sqlite"
+    monkeypatch.setenv("KRIKO_SHARE_PEPPER", "web-search-trial-test-pepper")
+    monkeypatch.setattr(sharekeys, "TRIAL_FILE", tmp_path / "trial_access.json")
+    sharekeys.write_trial(
+        sharekeys.make_trial({"deepseek": SECRET}, questions=1),
+        where=sharekeys.TRIAL_FILE)
+    # Clarification reserved the final allowance before host search is built.
+    reservation = "last-question-job-id"
+    assert sharekeys.charge(home, reservation_id=reservation) == 0
+    assert not sharekeys.allowance(home)["available"]
+    assert not websearch.has_key("deepseek", app_state_path)
+    assert not websearch.has_key(
+        "deepseek", app_state_path, trial_reservation_id="new-question")
+    assert websearch.order({}, app_state_path)["effective"] == ["openserp"]
+    with pytest.raises(MissingKey):
+        deepseek.searcher(shared_home=home)
+
+    def down(_chosen):
+        def search(*_args, **_kwargs):
+            raise LocalSearchError("OpenSERP is down")
+        return search
+
+    logged = []
+    chain = websearch.build(
+        {}, app_state_path, openserp_factory=down, log=logged.append,
+        trial_reservation_id=reservation)
+    assert chain.providers == ["openserp", "deepseek"]
+    assert chain("sata ssd", 3)[0]["url"] == "https://a.example/x"
+    assert service.seen[0]["auth"] == f"Bearer {SECRET}"
+    assert sharekeys.allowance(home)["used"] == 1
+    conn = state.connect(app_state_path)
+    try:
+        assert websearch.probe(
+            conn, app_state_path, "deepseek", trial_reservation_id=reservation)["ok"]
+        assert not websearch.probe(conn, app_state_path, "deepseek")["ok"]
+    finally:
+        conn.close()
+    assert len(service.seen) == 2
+    assert SECRET not in json.dumps(chain.attempts) + json.dumps(logged)
 
 
 def test_no_hosted_provider_is_asked_unless_the_reader_put_it_in_the_order(monkeypatch):
