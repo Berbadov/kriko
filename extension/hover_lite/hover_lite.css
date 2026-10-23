@@ -3276,7 +3276,15 @@
 .lite-buy-fit[data-tone="bad"] { background: var(--high-surface); box-shadow: 0 0 0 1px var(--high-border); }
 .lite-buy-fit[data-tone="good"] { background: var(--ok-surface); box-shadow: 0 0 0 1px var(--ok-border); }
 .lite-buy-audit { margin-top: 8px; font-size: 12.5px; }
-.lite-buy-audit summary { cursor: pointer; color: var(--fg); }
+.lite-buy-audit summary, .lite-buy-rest summary { cursor: pointer; color: var(--fg); list-style: none; display: flex; align-items: center; gap: 6px; }
+.lite-buy-audit summary::-webkit-details-marker, .lite-buy-rest summary::-webkit-details-marker { display: none; }
+/* The browser's own triangle is replaced by a chevron drawn from two borders. */
+.lite-buy-audit summary::before, .lite-buy-rest summary::before {
+  content: ""; flex: none; width: 6px; height: 6px; margin: 0 2px 2px 3px; border: solid var(--fg-muted); border-width: 0 1.5px 1.5px 0;
+  transform: rotate(-45deg); transition: transform var(--dur-quick, 140ms);
+}
+.lite-buy-audit[open] > summary::before, .lite-buy-rest[open] > summary::before { transform: rotate(45deg); }
+.lite-buy-audit summary:hover::before, .lite-buy-rest summary:hover::before { border-color: var(--fg); }
 .lite-buy-meter { color: var(--fg-muted); font-size: 11.5px; margin-left: 6px; }
 .lite-buy-actions, .lite-buy-form { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-top: 8px; }
 .lite-buy-form label { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; }
@@ -3285,6 +3293,25 @@
   background: var(--well); box-shadow: 0 0 0 1px var(--border-control); color: var(--fg); font: 13px/1 var(--font-body);
 }
 .lite-buy-form input:focus-visible { outline: 2px solid var(--ice); outline-offset: 1px; }
+/* The rule above is `all: unset`, which turned a checkbox into a 90px text field.
+   It is drawn here as Arc's checkbox: a rounded square that fills with the brand
+   and draws its tick from borders alone, so a page's own image policy cannot
+   take it away. */
+.lite-buy-form input[type="checkbox"] {
+  all: unset; box-sizing: border-box; display: inline-grid; place-content: center; flex: 0 0 auto;
+  width: 16px; height: 16px; min-width: 0; padding: 0; border-radius: 5px; cursor: pointer;
+  background: var(--well); box-shadow: 0 0 0 1px var(--border-control);
+  transition: background var(--dur-quick, 140ms), box-shadow var(--dur-quick, 140ms);
+}
+.lite-buy-form input[type="checkbox"]::after {
+  content: ""; width: 4px; height: 8px; border: solid #fff; border-width: 0 2px 2px 0;
+  transform: translateY(-1px) rotate(45deg) scale(0); transition: transform var(--dur-quick, 140ms);
+}
+.lite-buy-form input[type="checkbox"]:checked { background: var(--brand-low, #2c53e0); box-shadow: 0 0 0 1px var(--brand-low, #2c53e0); }
+.lite-buy-form input[type="checkbox"]:checked::after { transform: translateY(-1px) rotate(45deg) scale(1); }
+@media (prefers-reduced-motion: reduce) {
+  .lite-buy-form input[type="checkbox"], .lite-buy-form input[type="checkbox"]::after { transition: none; }
+}
 .lite-buy-btn {
   all: unset; box-sizing: border-box; display: inline-flex; align-items: center; height: 26px; padding: 0 11px;
   border-radius: 999px; cursor: pointer; font: 540 12.5px/1 var(--font-display);
