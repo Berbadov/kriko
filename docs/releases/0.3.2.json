@@ -1,7 +1,7 @@
 {
   "version": "0.3.2",
   "platform": "windows-x86_64",
-  "source_fingerprint": "ce157056978fb266f18df102dc6b8d08e3302732ec57fafde5bebb4cfed0d442",
+  "source_fingerprint": "4eda506abad493756c216c0a4ff89d48c9ae58631827255e6447ae152c9ebdf4",
   "recorded_at": "2026-10-23",
   "note": "The maintainer requested publication after the remaining visual/browser and clean-install checks and desktop .kpack sharing limitation were disclosed. Record missing journeys honestly; release_readiness.py is expected to refuse complete stable-readiness certification.",
   "journeys": {
