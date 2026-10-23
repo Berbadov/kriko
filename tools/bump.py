@@ -6,7 +6,8 @@
 **Why a script for a `sed`.** The app version is in four build files:
 `pyproject.toml`, `kriko-ui/src-tauri/Cargo.toml`, `kriko-ui/package.json` and
 the `kriko` entry of `kriko-ui/src-tauri/Cargo.lock`. `test_the_version_strings_agree` fails if they
-disagree. README's badge and download filenames are updated alongside them.
+disagree. README's badge and download filenames, and kriko.cc's download button,
+are updated alongside them.
 That test is the reason bumping by hand mostly works and is exactly
 the wrong shape: it tells you afterwards, once, that you missed one.
 
@@ -58,6 +59,15 @@ README_DOWNLOAD = re.compile(
     r"(kriko-)(\d+\.\d+\.\d+)"
     r"(-(?:x86_64-setup\.exe|win64-portable\.zip|macos-(?:arm64|x86_64)(?:-portable\.zip|\.dmg)))")
 
+#: The website's download button. kriko.cc hands the reader the installer file
+#: itself, not the release page it sits on, so the version is in the asset's own
+#: name and has to move with the tree the way the README's filenames do. The
+#: Turkish page is the renderer's copy of the same anchor and is checked too: a
+#: release that moved one and not the other is a dead button in one language.
+SITE_DOWNLOAD = re.compile(
+    r"(releases/latest/download/kriko-)(\d+\.\d+\.\d+)(-x86_64-setup\.exe)")
+SITE_PAGES = (Path("site/index.html"), Path("site/tr/index.html"))
+
 
 def current() -> dict[Path, str]:
     found = {}
@@ -97,6 +107,21 @@ def show(strict: bool = False) -> int:
     if not downloads or any(version != readme.group(2) for _, version, _ in downloads):
         print("README.md download filenames disagree with its version badge")
         return 1
+    # The website's button names the installer file, so it is one more place the
+    # version lives. Checked here rather than only at bump time: the gate runs
+    # `--show --strict`, and so does the release job before it publishes.
+    for page in SITE_PAGES:
+        full = ROOT / page
+        if not full.exists():
+            continue
+        link = SITE_DOWNLOAD.search(full.read_text(encoding="utf-8"))
+        if link is None:
+            print(f"{page} has no direct installer download link")
+            return 1
+        if link.group(2) != readme.group(2):
+            print(f"{page} downloads {link.group(2)} while the tree is {readme.group(2)}")
+            return 1
+        found[page] = link.group(2)
     width = max(len(str(p)) for p in found)
     for path, version in found.items():
         print(f"{str(path):<{width}}  {version}")
@@ -151,6 +176,17 @@ def bump(version: str, reset: bool = False) -> int:
     if count != 1:
         raise SystemExit("README.md must have exactly one version badge")
     readme = README_DOWNLOAD.sub(rf"\g<1>{version}\g<3>", readme)
+    for page in SITE_PAGES:
+        full = ROOT / page
+        if not full.exists():
+            continue
+        text = full.read_text(encoding="utf-8")
+        text, count = SITE_DOWNLOAD.subn(rf"\g<1>{version}\g<3>", text)
+        if count != 1:
+            raise SystemExit(f"{page} must link the installer download exactly once")
+        # Bytes, like the version files above: the newlines stay the file's own.
+        full.write_bytes(text.encode("utf-8"))
+        print(f"{page} -> {version}")
     for path, pattern in PLACES:
         full = ROOT / path
         text = full.read_text(encoding="utf-8")

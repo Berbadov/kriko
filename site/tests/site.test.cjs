@@ -52,6 +52,19 @@ test('every local file a page names exists, and nothing is loaded from another s
   }
 });
 
+test('the download button hands over the installer file, and GitHub is its own link', () => {
+  const INSTALLER = /^https:\/\/github\.com\/Berbadov\/kriko\/releases\/latest\/download\/kriko-\d+\.\d+\.\d+-x86_64-setup\.exe$/;
+  for (const page of PAGES.slice(0, 2)) {
+    const d = load(page);
+    const downloads = [...d.querySelectorAll('a[href$="-setup.exe"]')];
+    assert.equal(downloads.length, 2, `${page.file} offers the installer from the hero and from the install section`);
+    for (const link of downloads) {
+      assert.match(link.getAttribute('href'), INSTALLER, `${page.file}: ${link.getAttribute('href')} does not hand over the installer`);
+    }
+    assert.ok(d.querySelector('.actions a[href="https://github.com/Berbadov/kriko"]'), `${page.file} has no GitHub button beside the download`);
+  }
+});
+
 test('every picture has alternative text and a size, and every dark version has a light one', () => {
   for (const page of PAGES) {
     const d = load(page);

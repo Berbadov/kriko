@@ -199,6 +199,10 @@ try {
     }
     $ver = $tree
 
+    Step "Configure shared access for this build"
+    & $Python packaging/configure_share_pepper.py
+    Assert-LastExitCode "shared-access pepper configuration"
+
     # The interpreter is frozen into the sidecar, so its version is the
     # reader's. Too old fails several steps later with a resolver message; a
     # pre-release can freeze a pydantic that raises on import, and the build

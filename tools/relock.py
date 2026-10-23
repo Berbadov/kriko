@@ -1,6 +1,6 @@
 """Print `requirements.lock` from the current environment.
 
-    python tools/relock.py > requirements.lock
+    python tools/relock.py --write
 
 The closure is walked rather than taken from `pip freeze`: a freeze of a
 working checkout carries the pipeline extras, pytest, and whatever else got
@@ -148,9 +148,25 @@ def header() -> str:
 
 
 def main() -> int:
-    sys.stdout.write(header())
-    sys.stdout.write(f"# resolved-on: {sys.platform}\n")
-    sys.stdout.write("\n".join(pins()) + "\n")
+    text = header() + f"# resolved-on: {sys.platform}\n" + "\n".join(pins()) + "\n"
+    if "--write" in sys.argv[1:]:
+        # Written here rather than by the caller's shell, because the documented
+        # `tools/relock.py > requirements.lock` truncates the very file this
+        # script copies its preamble out of: the redirect is opened before the
+        # process starts, so `header()` reads nothing and the paragraphs that
+        # explain the file are silently lost. Writing it ourselves means the
+        # preamble is read first and the file is replaced second, atomically.
+        temporary = LOCK.with_suffix(".lock.tmp")
+        temporary.write_text(text, encoding="utf-8", newline="\n")
+        temporary.replace(LOCK)
+        sys.stderr.write(f"wrote {LOCK} ({len(pins())} pins)\n")
+        return 0
+    # stdout mode stays for inspecting a diff before deciding. Its encoding is
+    # forced: the preamble is prose, and on a Windows host the console codepage
+    # turns a dash into a byte that is not UTF-8, which makes the file this is
+    # redirected into unreadable to the test that compares it.
+    sys.stdout.reconfigure(encoding="utf-8")
+    sys.stdout.write(text)
     return 0
 
 
