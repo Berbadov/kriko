@@ -1,0 +1,62 @@
+{
+  "version": "0.3.1",
+  "platform": "windows-x86_64",
+  "source_fingerprint": "40934d9143d8518175b2d9163b9a34abaf359a8f14ccb7a8e7d6fa48dd231ce2",
+  "recorded_at": "2026-10-23",
+  "note": "Recorded what was actually observed, not what a release gate wants. The journeys below were not walked on the packaged build, so tools/release_readiness.py refuses this file and the release was published with that stated in the release body and docs/releases/0.3.1.md.",
+  "journeys": {
+    "fresh_install": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "The installer was built and its own smoke checks passed; it was not installed on a machine without Kriko."
+    },
+    "portable_start": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "The portable zip's engine was started and answered /api/health with 0.3.1; the portable app window itself was not opened."
+    },
+    "setup": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "No agent was connected and no browser extension was paired during this work."
+    },
+    "sourced_answer": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "No provider key was available to the engine; no answer was produced live."
+    },
+    "follow_up": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Not walked."
+    },
+    "compare": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Not walked."
+    },
+    "stop": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Not walked."
+    },
+    "reconnect": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Not walked."
+    },
+    "upgrade_retains_data": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Not walked, and no 0.3.0 to 0.3.1 upgrade was performed on this machine."
+    }
+  },
+  "providers": {},
+  "observed_instead": [
+    "tools/gate.sh: 4,445 Python tests passed, 22 skipped; wheel, 460 extension tests, 33 desktop tests, the site, and cargo check + cargo test all green.",
+    "kriko-ui/package.ps1: the sidecar froze and answered, the app was built and stayed up for 25 s with its engine spawned.",
+    "The shipped sidecar reported version 0.3.1, the per-agent search dial with own as the default, and /api/keys/shared/status bound=true with device=dpapi.",
+    "A shared access code sealed by this tree opened in the shipped sidecar; one sealed by a different pepper was refused; the stored grant contained no key in the clear.",
+    "The changed screens were read on a live engine through Chrome's DevTools protocol: the top-bar Settings gear, the drawer returning to its list, the Shared access group, and the Agents panel's Web search dial storing its value."
+  ]
+}
