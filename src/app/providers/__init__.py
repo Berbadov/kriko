@@ -560,8 +560,13 @@ def _local_parts(*, base_url: str, serving_name: str, search_base_url: str,
                  search_kind: str, timeout: float, schema, runtime_options=None,
                  temperature: float = 0.0, max_tokens: int = 1024,
                  context_tokens: int | None = None, search_language: str = "en",
-                 engine: str = ""):
-    """The sockets both local doors share: a completion and a search."""
+                 engine: str = "", web_search=None):
+    """The sockets both local doors share: a completion and a search.
+
+    `web_search` is the reader's own web-search order (`websearch.Chain`) when a
+    hosted provider leads it: it replaces OpenSERP, whose service friends'
+    machines often do not have running. Without one the search is OpenSERP's,
+    as it always was."""
     from app.providers import local_inference, openserp, searchcache, searxng
     from app.web.settings import KRIKO_HOME
 
@@ -575,6 +580,8 @@ def _local_parts(*, base_url: str, serving_name: str, search_base_url: str,
         base_url, serving_name, timeout=timeout or local_inference.DEFAULT_TIMEOUT,
         response_json_schema=schema, runtime_options=runtime_options,
         temperature=temperature, max_tokens=max_tokens, context_tokens=context_tokens)
+    if web_search is not None:
+        return complete, web_search, "hosted"
     if search_kind == "searxng":
         found = searxng.searcher(search_base_url, language=search_language)
     else:
@@ -592,7 +599,8 @@ def local_researcher(*, base_url: str = "", serving_name: str = "",
                      scheduler=None, spend=None, model: str = "",
                      search_kind: str = "openserp", timeout: float = 0.0,
                      runtime_options=None, context_tokens: int | None = None,
-                     output_language: str = "auto", search_language: str = "en"):
+                     output_language: str = "auto", search_language: str = "en",
+                     web_search=None):
     """The free plane that gathers: this machine's own sockets do the work.
 
     A local inference server completes, OpenSERP searches on this machine, the stock
@@ -618,7 +626,8 @@ def local_researcher(*, base_url: str = "", serving_name: str = "",
         base_url=base_url, serving_name=name, search_base_url=search_base_url,
         search_kind=search_kind, timeout=timeout,
         schema=local_inference.FINDINGS_SCHEMA, runtime_options=runtime_options,
-        context_tokens=context_tokens, search_language=search_language, engine=engine)
+        context_tokens=context_tokens, search_language=search_language, engine=engine,
+        web_search=web_search)
     # Ten seconds a page, as the quick look reads (8): the default 30 let one
     # slow host hold a whole run, and a page that is not there in ten is
     # replaced by the next hit rather than waited for.
@@ -633,7 +642,7 @@ def local_researcher(*, base_url: str = "", serving_name: str = "",
     researcher.model = name
     researcher.search_provider = (
         f"openserp:{engine or openserp.DEFAULT_ENGINE}" if provider == "openserp"
-        else provider)
+        else ",".join(getattr(web_search, "providers", [])) or provider)
     return researcher
 
 
@@ -642,7 +651,7 @@ def local_asker(*, base_url: str, serving_name: str, search_base_url: str = "",
                 given_queries: list[str] | None = None, runtime_options=None,
                 temperature: float = 0.0, max_tokens: int = 1024,
                 context_tokens: int | None = None, output_language: str = "auto",
-                search_language: str = "en"):
+                search_language: str = "en", web_search=None):
     """The local model as something that can `ask` (B171): the quick look, the
     pack author and the pack amend take it when no coding agent is there.
 
@@ -656,7 +665,8 @@ def local_asker(*, base_url: str, serving_name: str, search_base_url: str = "",
         search_base_url=search_base_url, search_kind=search_kind,
         timeout=timeout, schema="", runtime_options=runtime_options,
         temperature=temperature, max_tokens=max_tokens, context_tokens=context_tokens,
-        search_language=search_language, engine=openserp.LOCAL_ENGINES)
+        search_language=search_language, engine=openserp.LOCAL_ENGINES,
+        web_search=web_search)
     plan = local_inference.OpenAICompatSocket(
         base_url, serving_name,
         timeout=timeout or local_inference.DEFAULT_TIMEOUT,
@@ -664,5 +674,6 @@ def local_asker(*, base_url: str, serving_name: str, search_base_url: str = "",
         context_tokens=context_tokens)
     return local_agent.LocalAsker(
         plan, complete, search, fetch.reader(timeout=8.0), model=serving_name,
-        search_provider=provider, url=base_url, given_queries=given_queries,
+        search_provider=(",".join(getattr(web_search, "providers", [])) or provider),
+        url=base_url, given_queries=given_queries,
         output_language=output_language, search_language=search_language)

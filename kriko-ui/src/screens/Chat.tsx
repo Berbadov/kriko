@@ -15,7 +15,7 @@ import { Composer } from '../ui/Composer'
 import { ContextBar } from '../ui/ContextBar'
 import { Icon } from '../ui/Icon'
 import { DitherSky } from '../ui/DitherSky'
-import { ProductCard } from '../ui/ProductCard'
+import { ProductList } from '../ui/ProductList'
 import { Markdown } from '../ui/Markdown'
 import { showDrawer } from '../ui/drawerEvents'
 
@@ -363,9 +363,7 @@ function Thread({
                 {turn.error}
               </p>
             )}
-            {turn.products.map((product) => (
-              <ProductCard key={product.id} product={product} onOpen={onOpen} />
-            ))}
+            <ProductList products={turn.products} onOpen={onOpen} />
           </div>
         ))}
         {run.status !== 'idle' && (
@@ -409,9 +407,7 @@ function Thread({
             {run.error}
           </p>
         )}
-        <AnimatePresence>
-          {done && run.products.map((product) => <ProductCard key={product.id} product={product} onOpen={onOpen} />)}
-        </AnimatePresence>
+        {done && <ProductList products={run.products} onOpen={onOpen} />}
         {!!followups?.length && (
           <div className="followup-prompts" aria-label="Related follow-up questions">
             <p className="muted">Keep exploring</p>
