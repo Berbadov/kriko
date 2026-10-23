@@ -255,14 +255,16 @@ def post_sse_or_why(url: str, payload: dict, headers: dict, timeout: float,
     #: a line keeps such a socket alive forever.
     stream_ends = time.monotonic() + timeout
     expired = threading.Event()
+    stream_done = False
 
     def deliver() -> None:
-        nonlocal count, callback_error
+        nonlocal count, callback_error, stream_done
         if not data_lines:
             return
         raw = "\n".join(data_lines)
         data_lines.clear()
         if raw == "[DONE]":
+            stream_done = True
             return
         event = json.loads(raw)
         if isinstance(event, dict):
@@ -287,11 +289,11 @@ def post_sse_or_why(url: str, payload: dict, headers: dict, timeout: float,
             def watch() -> None:
                 while not watcher_done.wait(0.025):
                     if cancel_event is not None and cancel_event.is_set():
-                        response.close()
+                        network.abort_response(response)
                         return
                     if time.monotonic() >= stream_ends:
                         expired.set()
-                        response.close()
+                        network.abort_response(response)
                         return
 
             watcher = threading.Thread(
@@ -307,6 +309,8 @@ def post_sse_or_why(url: str, payload: dict, headers: dict, timeout: float,
                     line = raw_line.decode("utf-8", "replace").rstrip("\r\n")
                     if not line:
                         deliver()
+                        if stream_done:
+                            break
                     elif line.startswith("data:"):
                         data_lines.append(line[5:].lstrip())
                     # `event:`, `id:`, comments and retry hints do not carry

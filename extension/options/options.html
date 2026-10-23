@@ -59,7 +59,8 @@
       <section class="sites" id="sites-section" data-step="sites">
         <h2>Sites Kriko reads</h2>
         <p class="hint">
-          The packs decide what to read; this page asks permission.
+          The packs decide what to read; this page asks permission. A site you
+          stop reading is left alone, on every page, until you turn it back on.
         </p>
         <ul id="sites" class="sites-list"></ul>
         <div class="row">
@@ -67,6 +68,24 @@
           <button type="button" id="recheck" class="quiet">Check again</button>
         </div>
         <p id="sites-status" class="status" role="status" aria-live="polite"></p>
+      </section>
+
+      <section class="kept" id="kept-section">
+        <h2>What Kriko kept</h2>
+        <p class="hint">
+          Kriko remembers the last few pages it answered on, so reopening the
+          panel does not ask the app again; a page it could not read keeps an
+          id so pressing again does not start the work twice. All of it stays on
+          this computer, and none of it is needed for Kriko to work.
+        </p>
+        <p class="kept-counts" id="kept-counts"></p>
+        <div class="row">
+          <button type="button" id="clear-answers" class="quiet">Forget the saved answers</button>
+          <button type="button" id="clear-pages" class="quiet">Forget the pages</button>
+          <button type="button" id="clear-intents" class="quiet">Forget the retry ids</button>
+          <button type="button" id="clear-all" class="quiet">Forget it all</button>
+        </div>
+        <p id="kept-status" class="status" role="status" aria-live="polite"></p>
       </section>
 
       <section class="appearance">

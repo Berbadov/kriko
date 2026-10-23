@@ -97,6 +97,18 @@ def _submit(runner, kind: str, params: dict) -> dict:
 @router.post("/research")
 def start_research(body: ResearchRequest, runner=Depends(get_jobs)):
     params = body.model_dump()
+    selected = str(params.get("harness") or "").strip()
+    if (selected != prefs.LOCAL_PICK and selected
+            and str(params.get("backend") or "harness") in ("", "harness")):
+        from app import keys
+        from app.providers import apiagent, harness
+        settings = runner.settings
+        app_home = settings.app_state_path.parent
+        available = ({agent.id for agent in harness.available()}
+                     | {agent.id for agent in apiagent.available(
+                         keys.env_path(app_home), shared_home=app_home)})
+        if selected not in available:
+            raise HTTPException(503, f"The selected research agent is unavailable: {selected}")
     if params.get("harness") == prefs.LOCAL_PICK:
         # The Local model row is a plane, not a CLI: naming it as a harness
         # would fall back to whichever CLI is installed (`resolve_agent`).

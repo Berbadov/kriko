@@ -539,7 +539,7 @@ def test_queue_draft_starts_only_the_selected_installing_research_job(
             return "queue-author-job"
 
     monkeypatch.setattr(harness, "available", lambda: [SimpleNamespace(id="fixture-cli")])
-    monkeypatch.setattr(apiagent, "available", lambda: [])
+    monkeypatch.setattr(apiagent, "available", lambda *a, **k: [])
     monkeypatch.setattr(localplane, "resolve", lambda *_a, **_kw: {
         "ready": False, "reason": "not configured", "line": "not configured",
     })
@@ -590,6 +590,7 @@ def test_product_draft_reuses_author_gates_and_cancellation(
 
     class FakeHarness:
         search_provider = "fixture-harness"
+        harness = SimpleNamespace(id="fixture-harness")
 
         def ask(self, prompt):
             if prompt.startswith("# Quick look"):

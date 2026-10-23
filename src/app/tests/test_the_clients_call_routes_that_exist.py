@@ -1,11 +1,11 @@
 """Every path a client calls must be a route the engine serves.
 
-Three parties speak HTTP to the one local engine: the browser extension
-(JavaScript), the desktop window (TypeScript, `kriko-ui/src`) and the terminal
-interface (Python, `src/app/tui`). Nothing used to check that what they call
-exists on the server, so a renamed or dropped route was found by a reader
-pressing a button. This test derives both sides from source and fails on the
-forward direction:
+Four parties speak HTTP to the one local engine: the browser extension
+(JavaScript), the desktop window (TypeScript, `kriko-ui/src`), the Tauri shell
+around it (Rust, `kriko-ui/src-tauri/src`) and the terminal interface (Python,
+`src/app/tui`). Nothing used to check that what they call exists on the server,
+so a renamed or dropped route was found by a reader pressing a button. This test
+derives both sides from source and fails on the forward direction:
 
 * the server side is the OpenAPI route table of a freshly built app;
 * the client side is read from each client's source by a small lexer (JS and
@@ -20,6 +20,11 @@ the source is checked on path alone.
 
 The reverse direction, routes that no client calls, is reported as a warning
 only: the MCP server and the command line use routes the windows never touch.
+
+The warning is only worth reading if the readers are honest, and two ways they
+were not are pinned below: a JSX file whose prose has an apostrophe (the
+apostrophe used to swallow the next call — `Setup.tsx`'s reveal button), and the
+Rust shell, whose whole surface `_client_calls` never asked for.
 """
 
 from __future__ import annotations
@@ -43,13 +48,41 @@ HTTP_VERBS = {"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"}
 _CANDIDATE = re.compile(r'^(?:(GET|POST|PUT|PATCH|DELETE) )?(/api/[^\s?#\\"\':]*)')
 _PLACEHOLDER = re.compile(r"\{[^{}]*\}")
 _WILD = re.compile(r"\{[^{}]*\}|\*")
+#: Rust's test modules; see `_rust_runtime` for why they are not clients.
+_TEST_MODULE = re.compile(r"#\[cfg\(test\)\]")
 
 # JS identifiers after which a `/` starts a regex literal, not a division.
 _JS_REGEX_AFTER = {
     "return", "typeof", "instanceof", "in", "of", "new", "delete", "void",
     "throw", "case", "do", "else", "yield", "await",
 }
-_JS_REQUEST_CALLS = {"_getApp", "_postApp", "_fetchApp", "fetch"}
+#: Identifiers a string literal may open right after, glued to it: `return'x'`,
+#: `case'a':`, `import'x'`. With one of these in front, a quote is a string even
+#: though the character before it is a letter. Anything else with a letter in
+#: front of it is prose — see `_js_prose_apostrophe`.
+_JS_STRING_AFTER = _JS_REGEX_AFTER | {
+    "import", "from", "export", "default", "as", "satisfies",
+}
+#: The client helpers that open a socket, by the name a call site uses and the
+#: verb each sends. `kriko-ui/src/engine/api.ts:82-86` exports `get`, `post`,
+#: `put`, `patch` and `del` (`delete` is a reserved word), `:92`/`:110` add
+#: `postQuestion` and `uploadArtifact`, and the extension carries `_getApp` and
+#: `_postApp`. A name whose verb is only in its options maps to None, and a call
+#: through it is matched on path alone. This is the app's own way of calling the
+#: engine; reading only `_getApp`/`fetch` left the reverse check blind to it.
+_JS_HELPERS: dict[str, str | None] = {
+    "get": "GET",
+    "post": "POST",
+    "put": "PUT",
+    "patch": "PATCH",
+    "del": "DELETE",
+    "postQuestion": "POST",
+    "uploadArtifact": "POST",
+    "_getApp": "GET",
+    "_postApp": "POST",
+    "fetch": None,
+    "_fetchApp": None,
+}
 _RUST_VERB_CALLS = {"get": "GET", "post": "POST", "put": "PUT", "delete": "DELETE"}
 
 
@@ -79,6 +112,9 @@ def _normalise(raw: str) -> tuple[str | None, str] | None:
     if not match:
         return None
     method, path = match.groups()
+    if path.rstrip("/") in ("", "/api"):
+        # `path.starts_with("/api/")` is a prefix check, not a call.
+        return None
     return method, _PLACEHOLDER.sub("*", path)
 
 
@@ -128,6 +164,10 @@ def _lex_js(src: str, i: int, nl: list[int], stop_at_brace: bool = False):
             end = src.find("*/", i + 2)
             i = n if end < 0 else end + 2
         elif c in "\"'":
+            if _js_prose_apostrophe(src, i, toks):
+                toks.append(Tok("p", c, _line(nl, i)))
+                i += 1
+                continue
             j, buf = i + 1, []
             while j < n and src[j] != c and src[j] != "\n":
                 if src[j] == "\\":
@@ -195,6 +235,25 @@ def _lex_js_template(src: str, i: int, nl: list[int]) -> tuple[str, int]:
     return "".join(parts), i
 
 
+def _js_prose_apostrophe(src: str, i: int, toks: list[Tok]) -> bool:
+    """Is the quote at `i` an apostrophe inside a word, not a string opener?
+
+    JSX text carries prose, and prose has apostrophes: *"your browser's
+    Extensions page"* (`kriko-ui/src/ui/panels/Setup.tsx`). Reading that one as
+    a string opener swallowed the rest of the line and the call after it, so a
+    real `post('/api/extension/reveal', {})` was never seen and the warning
+    below reported a door the window really calls as one nobody calls. A quote
+    glued to the end of an identifier or a number — `browser's`, `readers'` — is
+    that prose; a string in this code opens after a delimiter, or after a
+    keyword an expression follows (`return 'x'`, `case'a':`).
+    """
+    before = src[i - 1:i] if i else ""
+    if not (before.isalnum() or before in "_$"):
+        return False
+    return not (toks and toks[-1].kind == "id"
+                and toks[-1].text in _JS_STRING_AFTER)
+
+
 def _js_regex_allowed(toks: list[Tok]) -> bool:
     if not toks:
         return True
@@ -202,7 +261,10 @@ def _js_regex_allowed(toks: list[Tok]) -> bool:
     if prev.kind == "id":
         return prev.text in _JS_REGEX_AFTER
     if prev.kind == "p":
-        return prev.text not in ")]}"
+        # `<` is a JSX closing tag (`</p>`), never a regex: reading it as one
+        # ate the rest of the line up to the next `/`, which can be the `/` of
+        # a `/api/...` path on the same line.
+        return prev.text not in ")]}<"
     return False
 
 
@@ -328,17 +390,50 @@ def _args_end(toks: list[Tok], k: int) -> int:
     return len(toks) - 1
 
 
+def _js_callee(toks: list[Tok], k: int) -> int | None:
+    """Index of the identifier called at `(` index `k`, past a TS generic.
+
+    `get('/api/x')` is `get` then `(`. `get<ResearchUsage>('/api/x')` is `get`,
+    `<`, `ResearchUsage`, `>`, `(` — the generic sits between the name and the
+    call, so reading `toks[k - 1]` alone sees `>` and gives up. That is exactly
+    how every newer client module calls the engine (`kriko-ui/src/engine/*.ts`).
+    """
+    i = k - 1
+    if i >= 0 and toks[i].kind == "p" and toks[i].text == ">":
+        depth = 0
+        while i >= 0:
+            token = toks[i]
+            if token.kind == "p" and token.text == ">":
+                depth += 1
+            elif token.kind == "p" and token.text == "<":
+                depth -= 1
+                if depth == 0:
+                    i -= 1
+                    break
+            i -= 1
+    return i if 0 <= i < len(toks) else None
+
+
 def _js_method(toks: list[Tok], k: int) -> str | None:
-    """The verb of a request call at `(` index `k`, or None for other calls."""
-    callee = toks[k - 1].text if k >= 1 and toks[k - 1].kind == "id" else ""
-    if callee == "_getApp":
-        return "GET"
-    if callee == "_postApp":
-        return "POST"
-    if callee not in ("fetch", "_fetchApp"):
+    """The verb of a request call at `(` index `k`, or None for other calls.
+
+    A call is one of the app's own helpers (`_JS_HELPERS`) or something else
+    entirely — a `Map.get`, a local updater named `patch` — so the name is read
+    from the source, past any TS generic, and only a helper's own name gives a
+    verb. A call whose name is unknown is still recorded, on path alone.
+    """
+    index = _js_callee(toks, k)
+    if index is None or toks[index].kind != "id":
         return None
-    for j in range(k, _args_end(toks, k)):
-        if (toks[j].kind == "id" and toks[j].text == "method"
+    name = toks[index].text
+    if name not in _JS_HELPERS:
+        return None
+    if _JS_HELPERS[name] is not None:
+        return _JS_HELPERS[name]
+    # `fetch`/`_fetchApp` write their verb in the options object, or GET.
+    end = _args_end(toks, k)
+    for j in range(k, end):
+        if (toks[j].kind == "id" and toks[j].text == "method" and j + 2 < len(toks)
                 and toks[j + 1].text == ":" and toks[j + 2].kind == "str"):
             return toks[j + 2].text.upper()
     return "GET"  # fetch's default
@@ -444,8 +539,40 @@ def _js_calls(client: str, path: Path) -> list[Call]:
     return _calls_in_tokens(client, toks, "js", _rel(path))
 
 
+def _rust_runtime(src: str) -> str:
+    """Rust source without its `#[cfg(test)]` modules, blanked not removed.
+
+    A shell unit test talks to a stub server and names fixture paths — `PATCH
+    /api/queue/qa` (`kriko-ui/src-tauri/src/lib.rs`) is one, and this engine
+    serves no such route — so a test module is not a client of this engine, the
+    same way a `tests/` directory is not for the other clients. The region is
+    blanked to spaces and its newlines kept, so a call's line number still
+    points at the line in the file.
+    """
+    kept: list[str] = []
+    cursor = 0
+    while (match := _TEST_MODULE.search(src, cursor)) is not None:
+        body = src.find("{", match.end())
+        if body < 0:
+            break
+        depth, end = 0, body
+        while end < len(src):
+            if src[end] == "{":
+                depth += 1
+            elif src[end] == "}":
+                depth -= 1
+                if depth == 0:
+                    break
+            end += 1
+        kept.append(src[cursor:match.start()])
+        kept.append(re.sub(r"[^\n]", "", src[match.start():end + 1]))
+        cursor = end + 1
+    kept.append(src[cursor:])
+    return "".join(kept)
+
+
 def _rust_calls(client: str, path: Path) -> list[Call]:
-    src = path.read_text(encoding="utf-8")
+    src = _rust_runtime(path.read_text(encoding="utf-8"))
     toks = _lex_rust(src, _newlines(src))
     return _calls_in_tokens(client, toks, "rust", _rel(path))
 
@@ -523,13 +650,20 @@ def _rel(path: Path) -> str:
 
 
 def _client_calls() -> dict[str, list[Call]]:
-    """Every call site, grouped by client. Tests and fixtures are not clients."""
+    """Every call site, grouped by client. Tests and fixtures are not clients.
+
+    That includes the shell's Rust `#[cfg(test)]` modules (`_rust_runtime`): the
+    window's own health probe and its response-size override are the shell's
+    surface, and a unit test talking to a stub server is not.
+    """
     clients: dict[str, list[Call]] = {}
     js = [p for p in (REPO / "extension").rglob("*.js")
           if not {"tests", "assets", "node_modules"} & set(p.parts)]
     clients["the browser extension"] = [c for p in sorted(js) for c in _js_calls("the browser extension", p)]
     web = sorted(p for suffix in ("*.ts", "*.tsx") for p in (REPO / "kriko-ui" / "src").rglob(suffix))
     clients["the desktop app"] = [c for p in web for c in _js_calls("the desktop app", p)]
+    shell = sorted((REPO / "kriko-ui" / "src-tauri" / "src").rglob("*.rs"))
+    clients["the desktop shell"] = [c for p in shell for c in _rust_calls("the desktop shell", p)]
     py = [p for p in (REPO / "src" / "app" / "tui").rglob("*.py")
           if "tests" not in p.parts and "__pycache__" not in p.parts]
     clients["the terminal interface"] = [c for p in sorted(py) for c in _python_calls("the terminal interface", p)]
@@ -617,7 +751,7 @@ def test_every_client_call_names_a_route_the_engine_serves(tmp_path):
     if unused:
         warnings.warn(
             f"{len(unused)} of {sum(len(m) for _, m in routes)} engine verbs are called by "
-            "no window, extension, terminal interface, tool or smoke test (MCP and the "
+            "no window, shell, extension, terminal interface, tool or smoke test (MCP and the "
             "command line call the functions, not HTTP): "
             + ", ".join(f"{method} {path}" for path, method in unused),
             stacklevel=1,
@@ -669,3 +803,104 @@ def test_the_reader_finds_split_templates_format_strings_and_methods(tmp_path):
     assert _serves(Call("c", "w", "POST", "/api/jobs/*/cancel"), cancel)
     assert _serves(Call("c", "w", None, "/api/jobs/*/cancel"), cancel)
     assert not _serves(Call("c", "w", "GET", "/api/jobs/*/cancel"), cancel)
+
+
+def test_a_call_after_a_prose_apostrophe_is_still_found():
+    """Prose has apostrophes, and one must not swallow the call after it.
+
+    `Setup.tsx` says *"your browser's Extensions page"* above a real
+    `post('/api/extension/reveal', {})`. Reading that apostrophe as a string
+    opener hid the call, and the reverse warning then reported a route the
+    window really calls as one nobody calls — which is worse than a missed
+    warning, because it sends someone to delete a live route.
+    """
+    panel = REPO / "kriko-ui" / "src" / "ui" / "panels" / "Setup.tsx"
+    specimen = [one for one in panel.read_text(encoding="utf-8").splitlines()
+                if "browser's" in one or "/api/extension/reveal" in one]
+    assert len(specimen) == 2, (
+        "the specimen moved: find the line with an apostrophe in its prose and "
+        "the call after it, and point this test at those two lines"
+    )
+    excerpt = "\n".join(specimen) + "\n"
+    toks = _lex_js(excerpt, 0, _newlines(excerpt))[0]
+    calls = {(c.method, c.path) for c in _calls_in_tokens("js", toks, "js", "Setup.tsx")}
+    assert calls == {("POST", "/api/extension/reveal")}
+
+    # And on the file as it really is, not only the two lines.
+    assert "/api/extension/reveal" in {call.path for call in _js_calls("the desktop app", panel)}
+
+
+def test_the_reader_reads_the_shells_route_strings():
+    """The Tauri shell speaks HTTP to the same engine, from Rust.
+
+    Its health probe writes the request line onto a socket (`GET /api/health
+    HTTP/1.0`) and its response-size override compares a path. `_rust_calls`
+    existed and `_client_calls` never called it, so the shell's whole surface
+    was invisible to the reverse check. A `starts_with("/api/")` guard is a
+    prefix check, not a call, and is not read as one.
+    """
+    rust = (
+        "fn probe(host: &str, port: u16, stream: &mut TcpStream, path: &str) {\n"
+        '    let _ = write!(stream, "GET /api/health HTTP/1.0\\r\\nHost: {host}:{port}\\r\\n\\r\\n");\n'
+        '    let limit = if path == "/api/backups/export" { 48 * 1024 * 1024 } else { 10 };\n'
+        '    if !path.starts_with("/api/") { return; }\n'
+        "}\n"
+    )
+    toks = _lex_rust(rust, _newlines(rust))
+    calls = {(c.method, c.path) for c in _calls_in_tokens("the desktop shell", toks, "rust", "engine.rs")}
+    assert ("GET", "/api/health") in calls
+    assert (None, "/api/backups/export") in calls
+    assert not any(path == "/api/" for _, path in calls)
+
+
+def test_the_windows_own_helpers_are_read_with_their_verbs():
+    """The app calls the engine through its own helpers, not `fetch` directly.
+
+    `kriko-ui/src/engine/api.ts:82-86` exports `get`, `post`, `put`, `patch` and
+    `del`, `:92`/`:110` add `postQuestion` and `uploadArtifact`, and every newer
+    client module uses them with a TS generic in front of the parens
+    (`get<ResearchUsage>('/api/usage')`). Reading only `_getApp`/`fetch` recorded
+    such a call with **no verb**, and a call with no verb vouches for every verb
+    on its path — so a GET hid a route's DELETE from the reverse check, exactly
+    where the app has the most call sites.
+    """
+    snippet = (
+        "await get<Foo>('/api/a');\n"
+        "await post('/api/b', {});\n"
+        "await put<Foo>(`/api/c/${seg(id)}`, {});\n"
+        "await del<Foo>('/api/d');\n"
+        "await fetch('/api/e', { method: 'PATCH' });\n"
+        "const link = engineUrl('/api/f');\n"
+    )
+    toks = _merge_js_concatenation(_lex_js(snippet, 0, _newlines(snippet))[0])
+    calls = {(c.method, c.path) for c in _calls_in_tokens("js", toks, "js", "snippet.ts")}
+    assert ("GET", "/api/a") in calls
+    assert ("POST", "/api/b") in calls
+    assert ("PUT", "/api/c/*") in calls          # a template segment is {id}
+    assert ("DELETE", "/api/d") in calls
+    assert ("PATCH", "/api/e") in calls          # fetch still reads its options
+    # `engineUrl` is not a request: it builds a link the reader may press. The
+    # reader records its path with no verb, which is the honest reading of a
+    # link the window offers — a route reachable by a link is not a dead route.
+    assert (None, "/api/f") in calls
+
+    # The specimen is the app's own spend surface, where this was found.
+    runs = {(c.method, c.path)
+            for c in _js_calls("the desktop app", REPO / "kriko-ui" / "src" / "engine" / "research.ts")}
+    assert ("GET", "/api/research-runs") in runs
+    assert ("GET", "/api/usage") in runs
+    assert ("DELETE", "/api/research-runs/*") in runs
+
+
+def test_the_shell_is_a_client_and_a_rust_test_module_is_not():
+    """The shell's runtime surface is read; its unit tests are not clients.
+
+    `PATCH /api/queue/qa` is named only inside `#[cfg(test)] mod tests` in
+    `kriko-ui/src-tauri/src/lib.rs`, and this engine serves no `/api/queue/qa`
+    at all: a fixture path for a stub server is not a call the engine must
+    answer, the same way a `tests/` directory is not for the other clients.
+    """
+    shell = {call.path for call in _client_calls()["the desktop shell"]}
+    assert "/api/health" in shell
+    assert "/api/backups/export" in shell
+    assert "/api/queue/qa" not in shell

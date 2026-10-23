@@ -58,7 +58,7 @@ export function ChatPanel(_: { onOpen?: (lookupId: string) => void }) {
 
       <section className="panel-group">
         <h3>Answers</h3>
-        <div className="setting">
+        <div className="setting product-only-setting">
           <span>
             Product-only answers
             <small>

@@ -6,10 +6,11 @@ import { inShell } from '../engine/api'
  *
  * Windows draws a system bar above the page (its own colour, its own title),
  * and the page can neither tint nor remove it. The Windows build therefore asks
- * for a window without decorations (`tauri.windows.conf.json`) and this strip
- * stands in for them: it drags the window, and holds minimise, maximise and
- * close. A window that kept its system bar (macOS, the browser, demo mode) asks
- * the window itself and draws nothing.
+ * for a window without decorations (`tauri.windows.conf.json`) and these three
+ * buttons stand in for them. They sit at the right end of the app's own top bar
+ * (the strip is exactly as wide as they are, so the row underneath keeps its
+ * presses), and the row itself drags the window. A window that kept its system
+ * bar (macOS, the browser, demo mode) asks the window itself and draws nothing.
  *
  * Close is not Quit. It reaches the shell's close handler, which hides the
  * window and leaves the engine running.
@@ -39,7 +40,7 @@ export function TitleBar() {
     }
   }, [])
 
-  // The page leaves room for the strip only while it is there.
+  // The page keeps room for the buttons in its top bar only while they are there.
   useEffect(() => {
     document.documentElement.toggleAttribute('data-titlebar', bare)
     return () => document.documentElement.removeAttribute('data-titlebar')

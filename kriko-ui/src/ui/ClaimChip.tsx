@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { Evidence, Standing } from '../compare/checks'
+import { siteHost, siteLetter, useSiteIcon } from '../engine/favicons'
 import { ExternalLink } from './ExternalLink'
 
-/** The sources behind a claim, as chips: the mark for where the source stands,
- *  and the site. The exact quote opens on hover, focus or tap. The shapes are
- *  the evidence mark's own (filled, half, ring), so colour is never the only
- *  cue. A source the engine could not place draws no mark rather than a guess.
- *  The extension panel draws the same chip (`extension/hover_lite`). */
+/** The sources behind a claim, as chips: the site's own icon (asked of the
+ *  engine, with a letter from the host as the fallback), the mark for where the
+ *  source stands, and the site. The exact quote opens on hover, focus or tap.
+ *  The shapes are the evidence mark's own (filled, half, ring), so colour is
+ *  never the only cue. A source the engine could not place draws no mark rather
+ *  than a guess. The extension panel draws the same chip
+ *  (`extension/hover_lite/claim_card.js`). */
 
 const STANDING_WORD = { trusted: 'Trusted', neutral: 'Neutral', low: 'Low' } as const
 
@@ -20,6 +23,24 @@ function TierMeter({ standing }: { standing: Standing }) {
       <i />
       <i />
       <i />
+    </span>
+  )
+}
+
+/** The site's own mark for a source row: the engine's icon over a letter
+ *  generated from the host. The letter is drawn first and kept underneath, so
+ *  the row carries a mark before the engine answers, when the engine says the
+ *  site has no icon, when the image will not load, and when there is no engine
+ *  at all. Nothing here is invented: the icon is the engine's own fetch, and
+ *  the letter is the host the row already carries. */
+export function SiteMark({ host }: { host: string }) {
+  const [src, missed] = useSiteIcon(host)
+  const letter = siteLetter(host)
+  if (!letter) return null
+  return (
+    <span className="site-mark" aria-hidden="true">
+      <span className="site-mark-letter">{letter}</span>
+      {src && <img src={src} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={missed} />}
     </span>
   )
 }
@@ -37,6 +58,7 @@ export function ClaimChip({ source, compact = false }: { source: Evidence; compa
   const [open, setOpen] = useState(false)
   const [at, setAt] = useState<{ left: number; top: number } | null>(null)
   const site = source.host || source.url
+  const mark = siteHost(source.host, source.url)
   const word = source.standing ? STANDING_WORD[source.standing] : ''
   const against = source.stance.toLowerCase() === 'refutes'
 
@@ -114,6 +136,7 @@ export function ClaimChip({ source, compact = false }: { source: Evidence; compa
         onMouseEnter={hover ? show : undefined}
         onMouseLeave={hover ? later : undefined}
       >
+        {mark && <SiteMark host={mark} />}
         {source.standing && <TierMeter standing={source.standing} />}
         {!compact && <span className="claim-site">{site}</span>}
       </button>

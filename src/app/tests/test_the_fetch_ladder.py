@@ -30,6 +30,8 @@ class Sites:
         self.refuse_status = 403
         self.reader_text = ""
         self.reader_calls = 0
+        self.reader_auth = []
+        self.reader_agents = []
         self.site_agents = []
         sites = self
 
@@ -46,6 +48,8 @@ class Sites:
         class Reader(BaseHTTPRequestHandler):
             def do_POST(self):
                 sites.reader_calls += 1
+                sites.reader_auth.append(self.headers.get("Authorization", ""))
+                sites.reader_agents.append(self.headers.get("User-Agent", ""))
                 size = int(self.headers.get("Content-Length") or 0)
                 body = json.loads(self.rfile.read(size) or b"{}")
                 if body.get("method") == "initialize":
@@ -96,10 +100,43 @@ def test_a_page_that_answers_is_read_plainly(sites, monkeypatch):
 
 def test_a_refused_page_is_read_through_the_hosted_reader(sites, monkeypatch):
     monkeypatch.setattr(pagereader, "PARALLEL_ENDPOINT", sites.reader_url)
+    monkeypatch.setenv(pagereader.KEY_ENV, "reader-key")
     sites.reader_text = _parallel_answer(sites.url, ["The page's own words."])
     page = fetch.reader()(sites.url, allow_private=True)
     assert "The page's own words." in page.text
     assert sites.reader_calls == 2
+
+
+def test_an_unconfigured_reader_sends_the_page_nowhere(sites, monkeypatch):
+    """C8: the hosted reader is a third party, and it receives the page's URL.
+
+    Nothing may leave for a reader who has not supplied a key of their own — the
+    key is the whole opt-in, and the purpose sentence beside it in Settings is
+    the disclosure. "Nothing" includes the hostname: the gate is checked before
+    the egress rule, which resolves the host, so not even a DNS lookup carries
+    the page's address out. The rung is a courtesy and never load-bearing: the
+    ladder falls through, and the page is simply unread here.
+    """
+    monkeypatch.setattr(pagereader, "PARALLEL_ENDPOINT", sites.reader_url)
+    monkeypatch.delenv(pagereader.KEY_ENV, raising=False)
+    looked_up = []
+    monkeypatch.setattr(pagereader.egress, "_addresses",
+                        lambda host: looked_up.append(host) or [])
+    sites.reader_text = _parallel_answer(sites.url, ["The page's own words."])
+    page = fetch.reader()(sites.url, allow_private=True)
+    assert page.text == ""
+    assert sites.reader_calls == 0
+    assert looked_up == []
+
+
+def test_the_hosted_reader_gets_the_readers_own_key_and_nothing_else(sites, monkeypatch):
+    """And a configured reader's key rides every call, so the request is their
+    own account rather than the anonymous tier (`pagereader.api_key`)."""
+    monkeypatch.setattr(pagereader, "PARALLEL_ENDPOINT", sites.reader_url)
+    monkeypatch.setenv(pagereader.KEY_ENV, "reader-key-123")
+    sites.reader_text = _parallel_answer(sites.url, ["The page's own words."])
+    assert "The page's own words." in fetch.reader()(sites.url, allow_private=True).text
+    assert sites.reader_auth == ["Bearer reader-key-123"] * sites.reader_calls
 
 
 def test_a_reader_that_fails_leaves_the_page_unread(sites, monkeypatch):
@@ -151,9 +188,11 @@ def test_cancellation_after_a_refusal_stops_before_hosted_reader_or_browser(monk
 
 def test_the_reader_names_itself_honestly(sites, monkeypatch):
     monkeypatch.setattr(pagereader, "PARALLEL_ENDPOINT", sites.reader_url)
+    monkeypatch.setenv(pagereader.KEY_ENV, "reader-key")
     sites.reader_text = _parallel_answer(sites.url, ["words"])
     pagereader.read(sites.url, allow_private=True)
-    assert sites.site_agents or True
+    assert sites.reader_agents
+    assert all(agent.startswith("kriko/") for agent in sites.reader_agents)
 
 
 def test_parse_takes_the_asked_page_out_of_a_batch():
@@ -174,10 +213,12 @@ def test_a_dead_reader_is_an_unread_page(sites, monkeypatch):
         one.bind(("127.0.0.1", 0))
         dead = f"http://127.0.0.1:{one.getsockname()[1]}/mcp"
     monkeypatch.setattr(pagereader, "PARALLEL_ENDPOINT", dead)
+    monkeypatch.setenv(pagereader.KEY_ENV, "reader-key")
     assert pagereader.read(sites.url) == ""
 
 
-def test_a_non_http_url_is_never_sent_to_anyone():
+def test_a_non_http_url_is_never_sent_to_anyone(monkeypatch):
+    monkeypatch.setenv(pagereader.KEY_ENV, "reader-key")
     assert pagereader.read("file:///etc/passwd") == ""
 
 
@@ -226,6 +267,7 @@ def test_the_second_reader_answers_when_the_first_is_dead(monkeypatch):
             "PARALLEL_ENDPOINT",
             f"http://127.0.0.1:{server.server_address[1]}/mcp",
         )
+        monkeypatch.setenv(pagereader.KEY_ENV, "reader-key")
         assert pagereader.read("https://page.test/x") == "parallel words"
     finally:
         server.shutdown()

@@ -455,7 +455,12 @@ def effective(conn, *, model: str = "", search: str = "", harness: str = "") -> 
     wanted = harness.strip() or stored[HARNESS]
     # The run's own resolution, not a copy of it: a screen that named one
     # agent while the run took another is the drift B117 fixed once already.
-    selected, note = resolve_agent(wanted)
+    try:
+        database = conn.execute("PRAGMA database_list").fetchone()
+        app_state_path = str(database[2] or "") if database else ""
+    except Exception:  # noqa: BLE001 — a non-SQLite connection has no home to derive
+        app_state_path = ""
+    selected, note = resolve_agent(wanted, app_state_path=app_state_path or None)
     return {
         "llm": name, "completion_provider": provider, "search": search,
         "ready": not reasons, "reason": "; ".join(reasons),
@@ -502,14 +507,28 @@ def api_agent_rows(conn) -> tuple[list[dict], list[dict]]:
     from app.providers import apiagent
     from app.web.settings import KRIKO_HOME
 
-    ready = apiagent.available()
+    # The grant is stored beside this app-state database. Derive that home
+    # from the active connection so app instances pointed at different homes
+    # discover and consume the same shared credentials.
+    try:
+        from pathlib import Path
+
+        database = conn.execute("PRAGMA database_list").fetchone()
+        database_path = str(database[2] or "") if database else ""
+        shared_home = Path(database_path).parent if database_path else None
+    except Exception:  # noqa: BLE001 — discovery still supports in-memory state
+        shared_home = None
+    ready = apiagent.available(shared_home=shared_home)
     def bills(one) -> str:
         if one.key == "openai":
             return (f"your {keys.BY_ID[one.key].label} key per token; web search uses the "
                     "selected Exa or Tavily service")
         if one.id == apiagent.KRIKO_AGENT.id:
-            return ("your Mercury key per token and DeepSeek Search key per "
-                    "successful search or fetch")
+            # Not "your key": the keys on this computer may be an access code's,
+            # and a friend reading "yours" about keys they never added is the
+            # screen telling them something untrue about who pays.
+            return ("the Mercury and DeepSeek keys on this computer, per token and "
+                    "per successful search or fetch")
         return f"your {keys.BY_ID[one.key].label} key, per token and per search"
 
     rows = [

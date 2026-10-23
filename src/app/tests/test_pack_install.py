@@ -112,3 +112,15 @@ def test_path_like_filename_is_rejected(client, artifact):
 
     assert response.status_code == 400
     assert response.json()["detail"] == "filename must be a plain file name"
+
+
+def test_an_oversize_upload_is_refused_rather_than_buffered(client, artifact,
+                                                            monkeypatch):
+    """D11: the endpoint used to buffer the whole `.kpack` into memory and only
+    then ask how big it was. The assembled length is the guarantee, because a
+    chunked request declares no `Content-Length` for the middleware to refuse."""
+    monkeypatch.setattr(packs_router, "MAX_REQUEST_BYTES", 10)
+    response = client.post("/api/packs/install", content=artifact)
+
+    assert response.status_code == 413
+    assert "larger than the" in response.json()["detail"]

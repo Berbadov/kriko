@@ -22,6 +22,7 @@ import pytest
 
 from app import quicklook
 from app.providers import harness as harness_mod
+from app.providers import pagereader
 from app.providers.harness import Harness, HarnessResearcher, PageReader
 from kriko.research.agent import REFUSED_PAGE
 
@@ -142,28 +143,45 @@ def test_the_rows_that_declare_a_reader_are_a_row_fact_not_a_name_check():
 
 def test_a_run_gets_its_own_reader_config_in_its_own_folder(monkeypatch):
     _declares(monkeypatch)
+    monkeypatch.setenv(pagereader.KEY_ENV, "reader-key")
     researcher = HarnessResearcher(_claude())
     with researcher._workspace():
         folder = Path(researcher._run_cwd)
         written = Path(researcher._reader_config)
         assert written.parent == folder
         config = json.loads(written.read_text(encoding="utf-8"))
-    assert config == {"mcpServers": {"parallel": {"type": "http", "url": "https://search.parallel.ai/mcp"}}}
+    assert config == {"mcpServers": {"parallel": {
+        "type": "http", "url": "https://search.parallel.ai/mcp",
+        "headers": {"Authorization": "Bearer reader-key"},
+    }}}
     # It goes with the folder, and the reader's own config is never the target.
     assert not folder.exists()
     assert researcher._reader_config == ""
 
 
-def test_the_config_holds_the_page_reader_and_nothing_of_krikos(monkeypatch):
+def test_the_reader_config_carries_the_readers_key_and_nothing_of_krikos(monkeypatch):
     """Kriko's own MCP tools stay out of the spawned agent (findings come back
-    on stdout, one acceptance path), and so does anything else."""
+    on stdout, one acceptance path), and so does anything else. The key is the
+    reader's own opt-in, so it is the one thing the config does carry (C8)."""
+    monkeypatch.setenv(pagereader.KEY_ENV, "reader-key")
     config = harness_mod.reader_config()
     assert list(config["mcpServers"]) == [harness_mod.READER_SERVER]
+    assert config["mcpServers"][harness_mod.READER_SERVER]["headers"] == {
+        "Authorization": "Bearer reader-key"}
     assert "kriko" not in json.dumps(config).lower()
     assert harness_mod.READER_TOOLS == ("web_fetch",)
 
 
+def test_without_a_key_the_cli_path_gets_no_reader_at_all(monkeypatch):
+    """C8 on the CLI door: the hosted reader is a third party that receives the
+    page's address, so with no key the reader supplied there is no config, no
+    server and no allowance to fetch through one."""
+    monkeypatch.delenv(pagereader.KEY_ENV, raising=False)
+    assert harness_mod.reader_config() == {"mcpServers": {}}
+
+
 def test_no_folder_gets_a_reader_config_where_the_flag_is_not_declared(monkeypatch):
+    monkeypatch.setenv(pagereader.KEY_ENV, "reader-key")
     _declares(monkeypatch, DECLARED - {"--mcp-config"})
     researcher = HarnessResearcher(_claude())
     with researcher._workspace():
@@ -173,6 +191,7 @@ def test_no_folder_gets_a_reader_config_where_the_flag_is_not_declared(monkeypat
 
 def test_only_a_row_with_a_reader_gets_a_reader_config(monkeypatch):
     """Every other CLI's per-run folder holds what it held before."""
+    monkeypatch.setenv(pagereader.KEY_ENV, "reader-key")
     monkeypatch.setattr(harness_mod, "declared", lambda _: frozenset({"--mcp-config"}))
     for one in harness_mod.KNOWN:
         if one.sandbox_home:
@@ -249,8 +268,12 @@ def _reporting_cli(tmp_path: Path, reader: PageReader | None) -> Harness:
 READER = PageReader("--mcp-config", "--allowedTools", "mcp__{server}__{tool}")
 
 
-def _ask(tmp_path, monkeypatch, reader, flags, brief=None):
+def _ask(tmp_path, monkeypatch, reader, flags, brief=None, key=True):
     monkeypatch.setattr(harness_mod, "declared", lambda _: frozenset(flags))
+    if key:
+        monkeypatch.setenv(pagereader.KEY_ENV, "reader-key")
+    else:
+        monkeypatch.delenv(pagereader.KEY_ENV, raising=False)
     one = _reporting_cli(tmp_path, reader)
     brief = brief or f"look at it\n\n{REFUSED_PAGE}\n\nreply"
     return json.loads(HarnessResearcher(one, timeout=30).ask(brief))
@@ -259,9 +282,24 @@ def _ask(tmp_path, monkeypatch, reader, flags, brief=None):
 def test_a_run_hands_the_child_the_config_the_grant_and_the_note(tmp_path, monkeypatch):
     got = _ask(tmp_path, monkeypatch, READER, {"--mcp-config"})
     argv = got["argv"]
-    assert json.loads(got["config"])["mcpServers"]["parallel"]["type"] == "http"
+    server = json.loads(got["config"])["mcpServers"]["parallel"]
+    assert server["type"] == "http"
+    assert server["headers"] == {"Authorization": "Bearer reader-key"}
     assert argv[argv.index("--allowedTools") + 1] == f"WebSearch,WebFetch,{READER_TOOL}"
     assert "The one exception" in got["prompt"]
+    assert got["prompt"].count(REFUSED_PAGE) == 1
+
+
+def test_a_run_with_no_reader_key_is_handed_no_reader_and_no_note(tmp_path, monkeypatch):
+    """C8 through the CLI door: with no key the reader supplied, nothing is sent
+    to the hosted reader, no tool is granted for it, and the brief names no
+    Parallel tool. The CLI's own fetch/browser does that work instead."""
+    got = _ask(tmp_path, monkeypatch, READER, {"--mcp-config"}, key=False)
+    assert got["config"] == ""
+    assert "--mcp-config" not in got["argv"]
+    assert got["argv"][got["argv"].index("--allowedTools") + 1] == "WebSearch,WebFetch"
+    assert "The one exception" not in got["prompt"]
+    assert "parallel" not in got["prompt"].lower()
     assert got["prompt"].count(REFUSED_PAGE) == 1
 
 
@@ -288,8 +326,20 @@ def test_a_page_read_through_the_reader_says_so_in_the_log():
         "type": "tool_use", "name": READER_TOOL,
         "input": {"urls": ["https://shop.example/review"], "maxCharacters": 12000},
     }]}}
-    line = harness_mod.narrate(event)
+    line = harness_mod.narrate(event, reader_granted=True)
     assert line == "read through the page reader https://shop.example/review"
+
+
+def test_a_reader_call_without_the_grant_is_not_named_krikos_reader():
+    """C8: with no key there is no grant, so a `web_fetch` arriving over MCP is
+    a server the reader configured themselves — never "the page reader"."""
+    event = {"type": "assistant", "message": {"content": [{
+        "type": "tool_use", "name": READER_TOOL,
+        "input": {"urls": ["https://shop.example/review"]},
+    }]}}
+    line = harness_mod.narrate(event)
+    assert "the page reader" not in line
+    assert line == READER_TOOL
 
 
 def test_an_ordinary_fetch_is_still_a_fetch_in_the_log():
@@ -314,7 +364,7 @@ def test_the_start_line_says_whether_the_reader_connected():
 # ── the real CLI, for free ───────────────────────────────────────────────────
 
 
-def test_the_real_cli_accepts_the_reader_vector(tmp_path):
+def test_the_real_cli_accepts_the_reader_vector(tmp_path, monkeypatch):
     """The empty-prompt trick `test_the_harness_command_line_is_one_the_cli_
     accepts` uses: the CLI judges the whole vector, reader flags included, and
     refuses only for the missing prompt, before any API call."""
@@ -325,6 +375,7 @@ def test_the_real_cli_accepts_the_reader_vector(tmp_path):
         pytest.skip("no Claude Code on this machine")
     if not harness_mod.reader_attachable(one):
         pytest.skip("this Claude Code does not declare --mcp-config")
+    monkeypatch.setenv(pagereader.KEY_ENV, "reader-key")
     config = tmp_path / harness_mod.READER_CONFIG_FILE
     config.write_text(json.dumps(harness_mod.reader_config()), encoding="utf-8")
     done = subprocess.run(  # noqa: S603 - fixed executable, no shell

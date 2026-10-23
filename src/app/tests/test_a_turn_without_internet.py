@@ -169,13 +169,16 @@ def test_a_search_service_that_did_not_answer_asks_the_cli_to_search_itself(
     assert researcher.on_action is None or True  # nothing to narrate to by default
 
 
-def test_a_plane_that_cannot_be_handed_a_remote_reader_is_not_handed_one():
+def test_a_plane_that_cannot_be_handed_a_remote_reader_is_not_handed_one(monkeypatch):
     """Three of the four CLIs declare no page reader at all, so no internet MCP
     server can be attached to a run of theirs however the reader configures it.
 
     The fourth (`claude-code`) attaches one only when this machine's own build
     declares the flag *and* its vector has an allowlist for the reader's tools —
     both asked of `--help`, never assumed."""
+    from app.providers import pagereader
+
+    monkeypatch.setenv(pagereader.KEY_ENV, "reader-key")
     declaring = [one.id for one in harness.KNOWN if one.reader is not None]
 
     assert declaring == ["claude-code"], declaring

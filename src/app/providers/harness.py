@@ -129,7 +129,8 @@ _CODEX_SUPPORT: dict[tuple[str, float], bool] = {}
 _CODEX_SUPPORT_LOCK = threading.Lock()
 
 #: The page reader (B155): Parallel's hosted MCP reader. Only its fetch tool is
-#: granted; searches go through the CLI's normal WebSearch tool.
+#: granted; searches go through the CLI's normal WebSearch tool. Attached only
+#: with a key the reader supplied (`reader_config`, C8).
 READER_SERVER = "parallel"
 READER_URL = "https://search.parallel.ai/mcp"
 READER_TOOLS = ("web_fetch",)
@@ -1490,8 +1491,32 @@ def with_refused_page(prompt: str) -> str:
 
 
 def reader_config() -> dict:
-    """The per-run MCP config that names the page reader and nothing else."""
-    return {"mcpServers": {READER_SERVER: {"type": "http", "url": READER_URL}}}
+    """The per-run MCP config that names the page reader — only with a key.
+
+    The reader is a third party that receives the page's address, and the
+    engine's own rung is gated on the same key (`pagereader.api_key`, C8). With
+    one, the key rides the request as `Authorization: Bearer` and the run reads
+    on the reader's own account; without one this is an empty config,
+    `_place_reader` writes no file, and no part of this path — config, allowlist
+    or brief — names a Parallel tool. The CLI's own fetch/browser then reads a
+    refused page, exactly as the engine's ladder falls through to
+    `providers/browser.py`. The sentence that discloses all this lives beside
+    the key in `keys.py`, never here.
+    """
+    from app.providers import pagereader
+
+    key = pagereader.api_key()
+    if not key:
+        return {"mcpServers": {}}
+    return {
+        "mcpServers": {
+            READER_SERVER: {
+                "type": "http",
+                "url": READER_URL,
+                "headers": {"Authorization": f"Bearer {key}"},
+            }
+        }
+    }
 
 
 def reader_tools(one: Harness) -> list[str]:
@@ -2336,7 +2361,7 @@ def _short(text: str, limit: int = 160) -> str:
     return flat if len(flat) <= limit else flat[: limit - 1] + "…"
 
 
-def _tool_line(name: str, args: dict | None) -> str:
+def _tool_line(name: str, args: dict | None, *, reader_granted: bool = False) -> str:
     """What one tool call was, in the reader's words rather than the API's.
 
     `SEARCH_TOOLS` is the whole grant, so there are two shapes worth naming
@@ -2352,7 +2377,12 @@ def _tool_line(name: str, args: dict | None) -> str:
     # is, because "read through the page reader" is the line that shows a
     # refused page was not fetched a second time. Only the MCP-qualified
     # spelling counts: a CLI's own `web_fetch` is an ordinary fetch.
-    if any(name.startswith("mcp__") and name.endswith("__" + tool) for tool in READER_TOOLS):
+    #
+    # And only when this run was granted one (`reader_granted`, C8): with no key
+    # there is no grant, and an MCP `web_fetch` that still arrives — a server the
+    # reader configured in their own CLI — is theirs, not Kriko's page reader.
+    if reader_granted and any(
+            name.startswith("mcp__") and name.endswith("__" + tool) for tool in READER_TOOLS):
         urls = args.get("urls")
         urls = [str(one) for one in urls] if isinstance(urls, list) else [str(url or "")]
         return f"read through the page reader {_short(', '.join(u for u in urls if u), 120)}".strip()
@@ -2469,7 +2499,7 @@ def _narrate_vibe(event: dict) -> str:
     return ""
 
 
-def _narrate_copilot(event: dict) -> str:
+def _narrate_copilot(event: dict, *, reader_granted: bool = False) -> str:
     """One GitHub Copilot CLI event, as a job-log line — or `""`.
 
     Its stream is `{"type": "<noun>.<verb>", "data": {...}}`, and almost all
@@ -2489,7 +2519,8 @@ def _narrate_copilot(event: dict) -> str:
     data = data if isinstance(data, dict) else {}
     if kind == "assistant.message":
         lines = [
-            _tool_line(str(request.get("name") or ""), request.get("arguments"))
+            _tool_line(str(request.get("name") or ""), request.get("arguments"),
+                       reader_granted=reader_granted)
             for request in data.get("toolRequests") or ()
             if isinstance(request, dict)
         ]
@@ -2511,7 +2542,7 @@ def _narrate_copilot(event: dict) -> str:
     return ""
 
 
-def narrate(event: dict) -> str:
+def narrate(event: dict, *, reader_granted: bool = False) -> str:
     """One stream event, as a line for the job log — or `""` for machinery.
 
     This is the whole of B121's answer to *"that shell is supposed to show the
@@ -2521,6 +2552,9 @@ def narrate(event: dict) -> str:
     transport is the job log, which already streams to both the app and
     `kriko tui` — a run's actions do not need a second channel, they needed a
     sender.
+
+    `reader_granted` is this run's own fact, passed by `_narrate`: a page read
+    is only called one when the run was handed a reader (C8).
     """
     if not isinstance(event, dict):
         return ""
@@ -2538,7 +2572,7 @@ def narrate(event: dict) -> str:
     # one type it shares with Claude Code's stream, and that one carries no
     # `data`, so it falls through to the branch below that already reads it.
     if isinstance(event.get("type"), str) and "." in event["type"] and "data" in event:
-        return _narrate_copilot(event)
+        return _narrate_copilot(event, reader_granted=reader_granted)
     kind = event.get("type")
     if kind == "item.completed":
         item = event.get("item")
@@ -2573,7 +2607,8 @@ def narrate(event: dict) -> str:
             if not isinstance(block, dict):
                 continue
             if block.get("type") == "tool_use":
-                lines.append(_tool_line(str(block.get("name") or ""), block.get("input")))
+                lines.append(_tool_line(str(block.get("name") or ""), block.get("input"),
+                                        reader_granted=reader_granted))
             elif block.get("type") == "text" and str(block.get("text") or "").strip():
                 lines.append(_short(block["text"]))
         return "; ".join(one for one in lines if one)
@@ -2725,6 +2760,11 @@ class HarnessResearcher(AgentResearcher):
         self._run_cwd: str | None = None
         #: The path of this run's page-reader config while a run has one (B155).
         self._reader_config = ""
+        #: Whether this run was actually granted the hosted reader. The config
+        #: path is cleared before the stream in `_run_resident`, so narration
+        #: reads this instead (C8): a call is only named as the page reader when
+        #: a reader was granted to make it.
+        self._reader_granted = False
         #: Milliseconds from spawning the child to its first output line, for the
         #: run that is in flight. Read into `telemetry["run"]` (`_note_run`).
         self._ready_ms: float | None = None
@@ -3847,6 +3887,7 @@ class HarnessResearcher(AgentResearcher):
         written for a CLI that cannot take it.
         """
         self._reader_config = ""
+        self._reader_granted = False
         if self.harness.reader is None or self.harness.unusable:
             return
         # The config grants a remote tool access to this run. Do not even
@@ -3856,8 +3897,16 @@ class HarnessResearcher(AgentResearcher):
         supported = declared(locate(self.harness) or self.harness.executable)
         if not reader_attachable(self.harness, supported):
             return
+        config = reader_config()
+        if not config["mcpServers"]:
+            # No key the reader supplied, so nothing may be sent to the hosted
+            # reader and there is no grant to write — and no note either, since
+            # both prompt sites key off `_reader_config` (C8). The run keeps the
+            # CLI's own fetch/browser rung, which is this machine's own work.
+            return
+        self._reader_granted = True
         path = folder / READER_CONFIG_FILE
-        path.write_text(json.dumps(reader_config()), encoding="utf-8")
+        path.write_text(json.dumps(config), encoding="utf-8")
         self._reader_config = str(path)
 
     @contextmanager
@@ -4847,7 +4896,7 @@ class HarnessResearcher(AgentResearcher):
         if not isinstance(event, dict):
             return ""
         event = self._without_streamed_text(event)
-        return self._say(event, narrate(event))
+        return self._say(event, narrate(event, reader_granted=self._reader_granted))
 
     def _draft_from_event(self, event: dict) -> None:
         """Take only assistant text deltas and publish bounded prose snapshots."""

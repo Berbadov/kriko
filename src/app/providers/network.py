@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ipaddress
+import socket
 import threading
 import urllib.request
 import weakref
@@ -29,6 +30,37 @@ _DEFAULT_URLOPEN = urllib.request.urlopen
 #: `OpenerDirector` carries no per-request state and is documented as reusable;
 #: `urllib.request.urlopen` reuses a module-level one for exactly this reason.
 _LOOPBACK_OPENER: urllib.request.OpenerDirector | None = None
+_REMOTE_OPENER: urllib.request.OpenerDirector | None = None
+
+
+def abort_response(response: Any) -> None:
+    """Interrupt a socket read without waiting for the buffered reader's lock."""
+    raw = getattr(response, "_response", response)
+    fp = getattr(raw, "fp", None)
+    sock = getattr(getattr(fp, "raw", None), "_sock", None)
+    if sock is not None:
+        try:
+            sock.shutdown(socket.SHUT_RDWR)
+        except OSError:
+            pass
+        try:
+            # urllib closes its socket facade after making the buffered file.
+            # close() then defers closesocket until that file is closed, which
+            # is exactly what a blocked Windows recv prevents. Transfer the
+            # handle so no later destructor can close a reused handle.
+            handle = sock.detach()
+            if handle != -1:
+                socket.close(handle)
+        except OSError:
+            pass
+    abort = getattr(response, "abort", None)
+    if callable(abort):
+        abort()
+    elif sock is None:
+        # In-memory/custom transports have no socket to interrupt.
+        close = getattr(response, "close", None)
+        if callable(close):
+            close()
 
 #: Seconds a request waits for its network permit when the caller gave no
 #: deadline of its own. Long enough for a queue of ordinary reads to drain,
@@ -229,6 +261,13 @@ def urlopen(url: Any, data: Any = None, timeout: float | None = None,
             from app.providers import egress  # noqa: PLC0415 - egress is the policy, this is the plumbing
 
             response = egress.guarded_opener().open(url, data=data, timeout=timeout)
+        elif urllib.request.urlopen is _DEFAULT_URLOPEN:
+            from app.providers import transport
+
+            global _REMOTE_OPENER
+            if _REMOTE_OPENER is None:
+                _REMOTE_OPENER = transport.opener()
+            response = _REMOTE_OPENER.open(url, data=data, timeout=timeout)
         else:
             response = (urllib.request.urlopen(url, timeout=timeout) if data is None
                         else urllib.request.urlopen(url, data=data, timeout=timeout))

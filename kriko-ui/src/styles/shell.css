@@ -1,29 +1,39 @@
 /* The frame: rail, stage, drawer, queue card, and the small controls. */
 
+/* One gutter and one row carry the chrome. `--topbar-h` is the row that holds
+   the agent pick, the tabs and the status cluster; where the system's own bar is
+   not drawn (Windows, see ui/TitleBar.tsx) the window's three buttons ride in
+   that same row, so no band is spent above it. `--caption-w` is the room they
+   take at its right end: three times `.titlebar-btn`'s width, and the two move
+   together. `--drawer-top` is the row's lower edge, so a panel can never open
+   under the window's strip and lose its first card. */
+:root {
+  --app-pad: 6px;
+  --topbar-h: 38px;
+  --caption-w: 138px;
+  --drawer-top: calc(var(--app-pad) + var(--topbar-h) + var(--app-pad));
+}
+
 .app {
   display: flex;
   flex-direction: column;
   height: 100%;
-  padding: 10px;
-  gap: 10px;
+  padding: var(--app-pad);
+  gap: var(--app-pad);
 }
 
-/* The window's own bar, where the system one is not drawn (see ui/TitleBar.tsx).
-   It has the page's ground, so the rail and the stage sit on one surface with
-   the controls and nothing reads as a bar. The page below gives up its height. */
-:root {
-  --titlebar-h: 34px;
-}
-
+/* The window's own three buttons, in the top bar's row. The strip is only as
+   wide as they are, so the row underneath keeps its own presses and only the
+   empty ground of the row drags the window. */
 .titlebar {
   position: fixed;
-  inset: 0 0 auto 0;
+  top: var(--app-pad);
+  right: var(--app-pad);
   z-index: 2000;
-  height: var(--titlebar-h);
+  height: var(--topbar-h);
   display: flex;
-  justify-content: flex-end;
   align-items: stretch;
-  background: var(--ground);
+  background: transparent;
   user-select: none;
 }
 
@@ -68,11 +78,6 @@
   outline-offset: -2px;
 }
 
-:root[data-titlebar] #root {
-  box-sizing: border-box;
-  padding-top: var(--titlebar-h);
-}
-
 .brand {
   display: flex;
   align-items: center;
@@ -87,7 +92,9 @@
 
 /* ---- the top bar ----
    The logo and the agent on the left, the places in a pill in the middle, the
-   queue and More on the right. The window below takes the whole width. */
+   queue and More on the right. The window below takes the whole width. On
+   Windows this row is also the window's caption (ui/TitleBar.tsx): a press on
+   its empty ground drags the window, and every button in it stays a button. */
 
 .topbar {
   position: relative;
@@ -97,8 +104,8 @@
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
   gap: 12px;
-  height: 52px;
-  padding: 0 6px 0 8px;
+  height: var(--topbar-h);
+  padding: 0 var(--app-pad) 0 8px;
 }
 
 .engine-notice {
@@ -127,6 +134,15 @@
 
 .topbar-right {
   justify-content: flex-end;
+}
+
+/* The window's three buttons sit over the right end of this row. The room comes
+   out of the right column's own padding, never out of the grid: the tabs stay
+   centred on the window, and every control keeps its distance from the system
+   buttons (the closing X of a window is the one press that must never be a
+   mis-press). */
+:root[data-titlebar] .topbar-right {
+  padding-right: calc(var(--caption-w) + var(--app-pad));
 }
 
 .topbar-slash {
@@ -160,14 +176,17 @@
   white-space: nowrap;
 }
 
+/* The pill of places is the bar's own height: tab 30 + its padding 3 + its
+   border 1, twice over, is `--topbar-h` exactly. A taller pill used to spill
+   below the row and read as a clipped control. */
 .topbar-nav {
   display: flex;
   align-items: center;
   gap: 2px;
-  padding: 4px;
+  padding: 3px;
   background: var(--inset);
   border: 1px solid var(--edge);
-  border-radius: 18px;
+  border-radius: 16px;
   box-shadow: inset 0 1px 2px var(--sunk);
 }
 
@@ -176,9 +195,9 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  height: 38px;
-  padding: 0 14px;
-  border-radius: 14px;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 11px;
   color: var(--ink-2);
   font-size: 13.5px;
   font-weight: 520;
@@ -211,7 +230,7 @@
   inset: 0;
   background: var(--panel-2);
   border: 1px solid var(--edge-strong);
-  border-radius: 14px;
+  border-radius: 11px;
   box-shadow: inset 0 1px 0 color-mix(in srgb, var(--ink) 8%, transparent), var(--shadow-1);
 }
 
@@ -298,8 +317,10 @@
     display: none;
   }
 
+  /* Only the icons are left, so the tabs give their sides back: a narrow window
+     also has the window's own buttons in this row. */
   .topbar-tab {
-    padding: 0 12px;
+    padding: 0 9px;
   }
 
   .topbar-new .topbar-label {
@@ -508,13 +529,14 @@
 
 .switch i {
   position: absolute;
-  top: 3px;
+  top: 50%;
   left: 3px;
   width: 19px;
   height: 19px;
   border-radius: 50%;
   background: #fff;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  transform: translateY(-50%);
   transition: transform calc(220ms * var(--tm)) var(--ease-out);
 }
 
@@ -523,7 +545,7 @@
 }
 
 .switch[data-on='true'] i {
-  transform: translateX(17px);
+  transform: translate(17px, -50%);
 }
 
 /* ---- the pixel signature ---- */
@@ -800,13 +822,15 @@
 
 .drawer {
   position: fixed;
-  top: 10px;
-  bottom: 10px;
+  top: var(--drawer-top);
+  bottom: var(--app-pad);
   z-index: 50;
   width: 390px;
   max-width: calc(100% - 20px);
+  display: flex;
+  flex-direction: column;
   padding: 20px;
-  overflow: auto;
+  overflow: hidden;
   background: var(--panel);
   border: 1px solid var(--edge-strong);
   border-radius: var(--r-xl);
@@ -898,6 +922,29 @@
   width: 21px;
   height: 21px;
   stroke-width: 1.75;
+}
+
+/* The title and its buttons end above the scroll region, they never lie over
+   it: a head over the body is what hides the first card of a panel. It is a
+   sibling of the scroller for that reason — `sticky` here would have been inert
+   anyway, because the drawer itself does not scroll. */
+.drawer-head {
+  flex: none;
+  padding: 2px 0 8px;
+  border-bottom: 1px solid var(--edge);
+}
+
+/* The panel's own scroll region, named rather than found by position. While it
+   was `.drawer > div:last-child` any change to what the drawer renders — one
+   more element, another wrapper — silently took the scroll away, and
+   `.drawer { overflow: hidden }` then clipped the last card of every panel with
+   no way to reach it. */
+.drawer-body {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 
 .setting {

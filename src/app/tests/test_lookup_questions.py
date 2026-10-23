@@ -133,7 +133,7 @@ def test_followup_names_the_resolved_agent_not_the_requested_one(check, monkeypa
 
     researcher.ask = ask
     monkeypatch.setattr(tasks, "_use_local_ask", lambda *a: False)
-    monkeypatch.setattr(providers, "agent_ready", lambda *a: True)
+    monkeypatch.setattr(providers, "agent_ready", lambda *a, **kw: True)
     monkeypatch.setattr(providers, "harness_researcher", lambda **kw: researcher)
     try:
         result = tasks.lookup_ask(settings, {"lookup_id": lookup_id,
