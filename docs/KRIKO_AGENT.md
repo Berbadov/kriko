@@ -4,7 +4,7 @@ Kriko Agent is the app's fixed hosted research stack: Mercury 2.5 plans and
 writes the answer; DeepSeek Search and Fetch supply web evidence. It appears
 under **Settings → Agents** after both provider keys are available.
 
-Set these keys in **Settings → Research** or the ~/.kriko/env file:
+Set these keys in **Settings → Keys** or the ~/.kriko/env file:
 
     MERCURY_API_KEY=...
     DEEPSEEK_API_KEY=...

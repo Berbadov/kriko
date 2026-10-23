@@ -1,6 +1,6 @@
 # Kriko
 
-[![version](https://img.shields.io/badge/version-0.3.2-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
+[![version](https://img.shields.io/badge/version-0.3.3-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
 
 Kriko answers one question about the product you are looking at: *what is known
 to go wrong with this exact one*. It runs on your computer — a Windows desktop
@@ -8,7 +8,7 @@ app and a browser extension — and keeps the source beside every finding.
 Installed catalog lookups work offline. Research uses the agent or model you
 choose, and a paid provider bills your own account.
 
-**[Download the Windows installer](https://github.com/Berbadov/kriko/releases/latest/download/kriko-0.3.2-x86_64-setup.exe)** ·
+**[Download the Windows installer](https://github.com/Berbadov/kriko/releases/latest/download/kriko-0.3.3-x86_64-setup.exe)** ·
 [Browser extension](https://chromewebstore.google.com/detail/kriko/bdifnaggafjokndlpjgmlfappcoehdjb) ·
 [Website](https://kriko.cc)
 
@@ -19,8 +19,8 @@ panel opens on request; the [changelog](CHANGELOG.md) has the rest.
 
 | Artifact | Use |
 |---|---|
-| `kriko-0.3.2-x86_64-setup.exe` | Per-user Windows installer; no administrator rights required. |
-| `kriko-0.3.2-win64-portable.zip` | Extract the whole archive and open `kriko.exe`. |
+| `kriko-0.3.3-x86_64-setup.exe` | Per-user Windows installer; no administrator rights required. |
+| `kriko-0.3.3-win64-portable.zip` | Extract the whole archive and open `kriko.exe`. |
 
 1. Open Kriko, choose an agent in **More → Agents** and press **Check connection**.
 2. Open **Catalogs → Find release catalogs** and install one, or import a

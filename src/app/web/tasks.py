@@ -87,7 +87,7 @@ DEFAULT_BUDGET_USD = 0.20
 #: it is the door a reader without a CLI has, and it runs only once picked.
 NO_AGENT = ("No agent to run: no coding-agent CLI on PATH, and the Mistral API "
             "agent is not picked (Settings → Agents; it needs a Mistral key in "
-            "Settings → Research), so")
+            "Settings → Keys), so")
 
 
 def default_backend(app_state_path=None) -> str:
@@ -613,7 +613,7 @@ EMPTY_RUN = {
     ),
     "api": (
         "the searches returned nothing this plane could read. Check the "
-        "queries above, and Settings → Research for the search key."
+        "queries above, and Settings → Keys for the search key."
     ),
     "local": (
         "the local model read nothing usable. The lines above say whether the "

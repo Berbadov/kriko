@@ -108,7 +108,7 @@ MISTRAL = ApiAgent(
         "and opened more pages. Every search or page opened costs $0.03 on "
         "top of the tokens."
     ),
-    install_hint="Add a Mistral key in Settings → Research.",
+    install_hint="Add a Mistral key in Settings → Keys.",
     # Checked 2026-09-29: answers, behind Mistral's login.
     key_url="https://console.mistral.ai/api-keys",
 )
@@ -155,7 +155,7 @@ KRIKO_AGENT = ApiAgent(
         "own, or ones an access code opened; no Kriko credentials are included."
     ),
     install_hint=(
-        "Add a Mercury and a DeepSeek key in Settings → Research, or paste an "
+        "Add a Mercury and a DeepSeek key in Settings → Keys, or paste an "
         "access code in Settings → Shared access."
     ),
     key_url="https://platform.inceptionlabs.ai/",
