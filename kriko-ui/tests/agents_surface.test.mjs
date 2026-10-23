@@ -131,6 +131,11 @@ async function panel() {
         // The panel sits in `src/ui/panels`, so these are its own siblings.
         if (request === '../Icon') return { Icon: () => React.createElement('svg') }
         if (request === '../controls') return { Select: () => React.createElement('select') }
+        // The fold-away detail is Arc's accordion in the app; a plain details
+        // element here keeps what the screen says readable in static markup.
+        if (request === '../Disclosure') {
+          return { Disclosure: ({ title, children }) => React.createElement('details', null, React.createElement('summary', null, title), children) }
+        }
         if (request === '../ExternalLink') {
           return { ExternalLink: (props) => React.createElement('a', { href: props.href, className: props.className }, props.children) }
         }

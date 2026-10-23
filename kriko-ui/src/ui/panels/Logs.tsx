@@ -1,3 +1,4 @@
+import { Checkbox } from '../../arc/checkbox/checkbox'
 import { useMemo, useState } from 'react'
 import { useEngine } from '../../engine/Engine'
 import {
@@ -124,10 +125,7 @@ export function LogsPanel() {
           </div>
           <div className="logs-actions">
             {filtered && <button className="btn ghost" onClick={() => set({ levels: [], sources: [], q: '' })}>Clear filters</button>}
-            <label className="logs-check">
-              <input type="checkbox" checked={bodies} onChange={(event) => setBodies(event.target.checked)} />
-              Include prompts and replies
-            </label>
+            <Checkbox checked={bodies} onCheckedChange={(next) => setBodies(next === true)} label="Include prompts and replies" />
             <button className="btn" onClick={() => void save()}>
               Export as text
             </button>
