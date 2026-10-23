@@ -101,7 +101,10 @@
   z-index: 30;
   display: grid;
   flex: none;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  /* The right column never shrinks below what it holds. Its controls used to
+     spill left over the tabs at mid widths (the usage pill across "New chat");
+     now the tabs stay whole and the row narrows at its far left instead. */
+  grid-template-columns: minmax(0, 1fr) auto minmax(min-content, 1fr);
   align-items: center;
   gap: 12px;
   height: var(--topbar-h);
