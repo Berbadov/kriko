@@ -178,6 +178,22 @@ def test_explicit_purchase_still_wins_over_an_information_target():
     assert chat._buying_request("Find a router to buy and check its official specifications")
 
 
+def test_asking_what_a_source_recommends_does_not_restart_product_setup(ctx):
+    question = "What power supply does that page recommend?"
+    history = [{"role": "reader", "text": "Read https://maker.example/product"},
+               {"role": "agent", "text": "The product specifications.",
+                "sources": ["https://maker.example/product"]}]
+    asked = []
+    ctx.web_search = lambda *_a: []
+    ctx.web_read = lambda _url: ""
+    assert chat.route_message(question, history) == "web"
+    result = chat.run_turn(question, history=history, ctx=ctx,
+                           clarify=lambda prompt: asked.append(prompt) or '{"ask":"Which page?","options":["A","B"]}',
+                           ask=lambda _p: "The source recommends its standard supply.")
+    assert asked == []
+    assert result["answer"]
+
+
 def test_web_brief_keeps_the_question_recent_followup_and_bounded_excerpts():
     history = [
         {"role": "reader", "text": "Initial request " + ("old " * 1000)},
@@ -778,6 +794,33 @@ def test_a_page_the_agents_own_tools_read_is_evidence_the_turn_already_has(ctx):
     reads = [one for one in out["activity"] if one["kind"] == "read"]
     assert [one["url"] for one in reads] == [url]
     assert reads[0]["title"] == "forum.example"
+
+
+def test_native_page_text_survives_citation_revision_and_evidence_review(ctx):
+    ctx.web_search = lambda query, limit: []
+    ctx.web_read = lambda url: ""
+    url = "https://maker.example/manual"
+    evidence = "The exact model has a two year warranty."
+    pages = {}
+
+    def native_stream(_prompt, _on_text):
+        pages[url] = {"url": url, "page_excerpt": evidence, "page_read": True}
+        return f"Two years. [Manual]({url}) [Extra](https://unread.example/page)"
+
+    def revision(prompt, _on_text):
+        assert evidence in prompt
+        return f"Two years. [Manual]({url})"
+
+    def verify(_answer, rows):
+        assert any(row.get("page_excerpt") == evidence and row.get("page_read") for row in rows)
+        return {"supported": True, "issues": [], "citations": [{"url": url, "quote": evidence}]}
+
+    result = chat.run_turn("Find the model warranty specification", ask=lambda _p: "unused",
+                           ask_stream=native_stream, ask_grounded_stream=revision,
+                           ctx=ctx, agent_pages=pages, verify_answer=verify)
+    assert result["answer"] == f"Two years. [Manual]({url})"
+    assert url in result["sources"]
+    assert result["verification"]["claim_support"]["status"] == "supported"
 
 
 def test_a_turn_that_is_out_of_time_says_so_instead_of_asking_the_agent(ctx):

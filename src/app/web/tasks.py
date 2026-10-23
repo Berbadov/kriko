@@ -4478,7 +4478,7 @@ def chat_ask(settings, params: dict, progress: Progress) -> dict:
                         # opens it: the turn counts these as pages Kriko has
                         # read, so an answer that cites one is not sent back for
                         # a citation revision, and a follow-up reuses them.
-                        if use_tools:
+                        if use_tools is not False:
                             for page in pages or []:
                                 url = str((page or {}).get("url") or "")
                                 if url:
@@ -4956,7 +4956,15 @@ def _ask_about_checks(settings, params: dict, progress: Progress, brief: str, *,
         # evidence before it calls an answer's links unsupported, and keeps them
         # in the thread so the next question does not pay to read them again.
         _, cited = followup.split(reply)
-        return reply, followup.sources_of(researcher, cited)
+        pages = followup.sources_of(researcher, cited)
+        read = getattr(researcher, "sources", {})
+        if isinstance(read, dict):
+            for page in pages:
+                text = read.get(page["url"])
+                if isinstance(text, str) and text.strip():
+                    page.update(page_read=True, read_attempted=True,
+                                page_excerpt=text[:8000])
+        return reply, pages
     answer, cited = followup.split(reply)
     return answer, followup.sources_of(researcher, cited)
 
@@ -5429,9 +5437,11 @@ def ollama_start(settings, params: dict, progress: Progress) -> dict:
 def agent_check(settings, params: dict, progress: Progress) -> dict:
     """An explicit, bounded connection test of the selected answering agent."""
     identity: dict = {}
-    reply, _ = _ask_about_checks(settings, {"max_tokens": 64, "budget_usd": 0.05}, progress,
+    # This checks answering only. Offering research tools makes Mercury spend
+    # the tiny reply budget on a search call instead of the acknowledgement.
+    reply, _ = _ask_about_checks(settings, {"max_tokens": 256, "budget_usd": 0.05}, progress,
                                 "Reply exactly: Kriko connection verified. Do not search or open pages.",
-                                on_agent=identity.update, timeout=30.0)
+                                on_agent=identity.update, timeout=30.0, allow_tools=False)
     if "Kriko connection verified" not in reply:
         raise ValueError("The agent answered, but did not complete the connection check: " + reply[:200])
     progress.set(1.0, "Connection verified")

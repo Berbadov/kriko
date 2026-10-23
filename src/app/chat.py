@@ -903,6 +903,9 @@ _INFORMATION_TARGET = re.compile(
     r"documentation|specifications?|technical specs?|user manual|research paper|"
     r"study|definition|meaning|history of|when (?:was|did)|how (?:does|do))\b|"
     r"\b(?:cikis tarihi|yayin tarihi|resmi kaynak|kilavuz|teknik ozellik)\w*", re.I)
+_SOURCE_STATEMENT = re.compile(
+    r"\b(?:page|manual|documentation|source)\b.{0,32}"
+    r"\b(?:say|says|recommend|recommends|state|states|specify|specifies)\b", re.I)
 _EXPLICIT_COMMERCE = re.compile(
     r"\b(?:buy|buying|purchase|shop|shopping|seller|retailer|supplier|dealer|"
     r"in stock|for sale|cheapest|cheaper|satin al\w*|satici\w*|stokta)\b", re.I)
@@ -911,7 +914,7 @@ _EXPLICIT_COMMERCE = re.compile(
 def _information_request(message: str) -> bool:
     """An explicit fact/document target outranks weak 'find' shopping signals."""
     folded = _folded(message)
-    return bool(_INFORMATION_TARGET.search(folded)
+    return bool((_INFORMATION_TARGET.search(folded) or _SOURCE_STATEMENT.search(folded))
                 and not _EXPLICIT_COMMERCE.search(folded))
 
 
@@ -1811,6 +1814,21 @@ def run_turn(message: str, *, ask: Ask, ctx: chatdata.Context,
             rows = list({row["url"]: row for row in rows + out["rows"]}.values())
             live_products = (listing_cards(rows) if buying else []) + products_from(trail)
             hooks.partial(snapshot())
+        # The agent's tool loop can read pages after the host search failed.
+        # Keep that text in the revision and review, as well as its URLs: a
+        # reviewer handed only failed host reads would erase a grounded answer.
+        by_url = {row["url"]: row for row in rows}
+        for url, page in agent_pages.items():
+            excerpt = str(page.get("page_excerpt") or "")
+            if excerpt and not by_url.get(url, {}).get("page_read"):
+                by_url[url] = {**page, "url": url, "page_read": True,
+                               "page_excerpt": excerpt, "read_attempted": True}
+        rows = list(by_url.values())
+        brief = web_answer_brief(message, history, rows, out["note"],
+                                 catalogue=catalogue, buying=buying,
+                                 identifiers=out.get("identifiers"),
+                                 product_only=product_only and buying,
+                                 mode=mode, host_grounded=True)
         cited_urls = list(dict.fromkeys(row["url"] for row in rows if row.get("page_read")))
         # A page the agent's own tools opened is evidence this turn has read,
         # exactly as a page Kriko fetched is: the answer may cite it without

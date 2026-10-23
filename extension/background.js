@@ -1966,31 +1966,8 @@ function _looksLearnable(scrape) {
   return Boolean(product.name) && labels.length >= LEARNABLE_MIN_FIELDS;
 }
 
-// Bring the panel up on a page Kriko already reads, once per site per browser
-// session. The reader's report: "the web extension pops up in every page, not
-// only learned hosts." It used to open by itself on a page worth *learning*,
-// on a site nothing read — so every shop with a labelled product page put a
-// panel over it, while the sites Kriko does read stayed quiet. It is the other
-// way round now: a site Kriko knows opens its own answer; an unknown site is
-// opened from the toolbar (every site is registered for exactly that), where
-// the Learn card is waiting.
-const SHOWN_KEY = "kriko_panel_shown";
-
-async function _nudgePanel(tabId, url) {
-  const host = _hostOf(url);
-  if (!tabId || !host) return;
-  try {
-    const got = await extensionApi.storage.session.get(SHOWN_KEY);
-    const seen = new Set((got && got[SHOWN_KEY]) || []);
-    if (seen.has(host)) return;
-    seen.add(host);
-    await extensionApi.storage.session.set({ [SHOWN_KEY]: [...seen].slice(-200) });
-    await extensionApi.tabs.sendMessage(tabId, { type: "KRIKO_SHOW_PANEL" });
-  } catch (_) {
-    // No panel script on this tab, or no session storage: the toolbar button
-    // still opens the same panel.
-  }
-}
+// Background analysis updates the badge and cached answer. Only the reader's
+// toolbar click or Alt+K opens the panel, including on a known listing site.
 
 async function _runAnalysisForTab(tabId, url, storageKey, { fresh = false, auto = false } = {}) {
   const timings = {};
@@ -2001,15 +1978,11 @@ async function _runAnalysisForTab(tabId, url, storageKey, { fresh = false, auto 
   // damage panel come from the scrape, not from the analysis, so they should
   // still render when the analysis itself fails.
   let scrape = null;
-  // Whether an installed pack reads this host at all. Hoisted for the same
-  // reason: whether the panel may open by itself is decided in the catch too.
-  let hostRead = false;
 
   try {
     await _stage(url, "adapters", "");
     const adapters = await fetchAdapters();
     const adapter = adapterFor(url, adapters);
-    hostRead = Boolean(adapter) || hostHasAnyAdapter(url, adapters);
     // Not an error the reader can act on — most pages are not listings —
     // but not something to answer with an empty result either, which would
     // read as "nothing is known about this car". Coded so the panel can
@@ -2087,7 +2060,6 @@ async function _runAnalysisForTab(tabId, url, storageKey, { fresh = false, auto 
       await _stage(url, "cached", "");
       await extensionApi.storage.session.set({ [storageKey]: cachedEntry });
       await _updateBadgeForResult(cachedEntry.result, tabId);
-      if (auto && hostRead) await _nudgePanel(tabId, url);
       return cachedEntry.result;
     }
 
@@ -2133,7 +2105,6 @@ async function _runAnalysisForTab(tabId, url, storageKey, { fresh = false, auto 
     await _pruneSessionLedger();
     await _writeCachedAnalysis(url, entry);
     await _updateBadgeForResult(result, tabId);
-    if (auto && hostRead) await _nudgePanel(tabId, url);
     timings.total_ms = _elapsed(totalStartedAt);
     return result;
   } catch (error) {
@@ -2171,7 +2142,6 @@ async function _runAnalysisForTab(tabId, url, storageKey, { fresh = false, auto 
       // click from being researched. A question, not an alarm.
       await extensionApi.action.setBadgeText({ text: "?", tabId });
       await extensionApi.action.setBadgeBackgroundColor({ color: "#5b6472", tabId });
-      if (auto && hostRead) await _nudgePanel(tabId, url);
     } else {
       await extensionApi.action.setBadgeText({ text: "!", tabId });
       await extensionApi.action.setBadgeBackgroundColor({ color: "#b5392f", tabId });

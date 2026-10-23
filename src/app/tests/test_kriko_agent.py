@@ -546,6 +546,38 @@ def test_chat_subcall_limits_reach_mercury_through_public_factory(
     assert 0 < timeout <= 15
 
 
+def test_setup_connection_check_disables_research_and_reasoning(monkeypatch, tmp_path):
+    from types import SimpleNamespace
+    from app import prefs
+    from app.web import state, tasks
+
+    conn = state.connect(tmp_path / "app.sqlite")
+    prefs.write(conn, {prefs.HARNESS: apiagent.KRIKO_AGENT.id})
+    conn.close()
+    monkeypatch.setattr(apiagent, "available", lambda *a, **kw: [apiagent.KRIKO_AGENT])
+    monkeypatch.setattr(keys, "require", lambda provider, **kw: f"fixture-{provider}")
+    monkeypatch.setattr(tasks, "_with_profile", lambda _settings, text: text)
+    monkeypatch.setattr(tasks, "_wire_researcher_text", lambda *a: None)
+    seen = []
+
+    def stream(_url, payload, _headers, timeout, on_event, **_kwargs):
+        seen.append(payload)
+        assert "tools" not in payload
+        assert payload["reasoning_effort"] == "instant"
+        assert 128 <= payload["max_tokens"] <= 512
+        assert timeout <= 15
+        _emit_text(on_event, "Kriko connection verified.")
+        return 1, ""
+
+    monkeypatch.setattr(kriko_agent, "post_sse_or_why", stream)
+    progress = SimpleNamespace(job_id="connection-check", log=lambda *_a: None,
+                               check=lambda: None, set=lambda *_a: None)
+    result = tasks.agent_check(SimpleNamespace(app_state_path=tmp_path / "app.sqlite"), {}, progress)
+    assert result["answer"] == "Kriko connection verified."
+    assert result["agent"]["id"] == apiagent.KRIKO_AGENT.id
+    assert len(seen) == 1
+
+
 @pytest.mark.parametrize("partial", ["An unfinished answer", "{\"decision\":"])
 def test_token_limited_reply_is_rejected_instead_of_returned_as_success(monkeypatch, partial):
     monkeypatch.setattr(keys, "require", lambda provider, **kw: f"fixture-{provider}")

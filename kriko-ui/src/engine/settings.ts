@@ -344,14 +344,16 @@ export function useSharedAccess() {
       setProblem('')
       if (mode !== 'live') {
         setDoc({ ...structuredClone(DEMO_SHARED), grant: { present: true, label, providers: ['mercury', 'deepseek'], state: 'shared' } })
-        return
+        return true
       }
       try {
         await post('/api/keys/shared/unlock', { code: accessCode, password, label })
         await read()
         notifyAgentsChanged()
+        return true
       } catch (error) {
         setProblem(error instanceof Error ? error.message : 'That code did not open.')
+        return false
       }
     },
     [mode, read],
