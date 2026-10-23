@@ -31,6 +31,7 @@ import threading
 from collections.abc import Callable
 from collections import deque
 import time
+import uuid
 from dataclasses import dataclass, replace
 from pathlib import Path
 
@@ -81,6 +82,10 @@ class ApiAgent:
     search_tool: str
     #: Where it runs, shown where a CLI row shows its path.
     host: str
+    #: Every *other* provider key a turn on this agent needs. A Kriko Agent
+    #: answer searches the web, so it needs DeepSeek beside Mercury: listing it
+    #: with half the pair would offer an agent whose researched turn refuses.
+    also_needs: tuple[str, ...] = ()
     contract_note: str = ""
     model_hint: str = ""
     #: What the Settings row says when the key is absent.
@@ -123,8 +128,9 @@ OPENAI_COMPATIBLE = ApiAgent(
 
 KRIKO_AGENT = ApiAgent(
     id="kriko-agent",
-    label="Kriko Agent · Soon",
+    label="Kriko Agent",
     key="mercury",
+    also_needs=("deepseek",),
     default_model="mercury-2.5",
     search_tool="deepseek_search",
     host="api.inceptionlabs.ai + api.deepseek.com",
@@ -145,11 +151,12 @@ KRIKO_AGENT = ApiAgent(
     ),
     model_hint=(
         "Experimental preview: Mercury 2.5 for research and DeepSeek Search/Fetch "
-        "for retrieval. Uses your own provider keys on this computer; "
-        "no shared Kriko credentials are included."
+        "for retrieval. Uses the Mercury and DeepSeek keys on this computer — your "
+        "own, or ones an access code opened; no Kriko credentials are included."
     ),
     install_hint=(
-        "Add both MERCURY_API_KEY and DEEPSEEK_API_KEY in Settings → Research."
+        "Add a Mercury and a DeepSeek key in Settings → Research, or paste an "
+        "access code in Settings → Shared access."
     ),
     key_url="https://platform.inceptionlabs.ai/",
 )
@@ -160,20 +167,67 @@ KNOWN: tuple[ApiAgent, ...] = (MISTRAL, OPENAI_COMPATIBLE, KRIKO_AGENT)
 BY_ID = {one.id: one for one in KNOWN}
 
 
-def available(path: Path | None = None) -> list[ApiAgent]:
-    """The agents whose key this installation has. Never raises: a broken
-    env file is "none ready", not a crashed settings page."""
-    from app import keys
+def available(path: Path | None = None, *, shared_home: Path | None = None,
+              trial_reservation_id: str = "") -> list[ApiAgent]:
+    """The agents whose keys this installation has. Never raises: a broken
+    env file is "none ready", not a crashed settings page.
 
+    An agent is listed only when **every key its turn needs** resolves here, and
+    through the same resolver the provider call will use. Kriko Agent answers a
+    reader's question with a web search, so it needs Mercury *and* DeepSeek
+    (`kriko_agent.converse`); half the pair would put a row on the screen that
+    refuses the researched answer the row promised. A picker, a gate and a run
+    ask this one function, so they cannot disagree.
+    """
+    from app import keys, sharekeys
+
+    if path is None and shared_home is not None:
+        path = keys.env_path(shared_home)
     try:
         present = {one["id"] for one in keys.status(path) if one["present"]}
     except Exception:  # noqa: BLE001 — see the docstring
         return []
+    # The ordinary key status intentionally never opens a shared grant. Agent
+    # discovery must ask the same resolver the provider call will use, and it
+    # must use the home belonging to this app instance. A grant and a trial
+    # carry `SHARED_PROVIDERS` and nothing else, so those are what is probed.
+    for provider in sharekeys.SHARED_PROVIDERS:
+        if provider in present:
+            continue
+        try:
+            # `shared_home` stays None for a caller with no app-state path: the
+            # resolver then uses this process's own home, which is what that
+            # caller means by "here".
+            keys.require(provider, shared_home=shared_home,
+                         reservation_id=trial_reservation_id)
+        except Exception:  # noqa: BLE001 — an unavailable key is a missing row
+            continue
+        present.add(provider)
     return [
         one for one in KNOWN
-        if one.key in present
-        and (one.id != KRIKO_AGENT.id or "deepseek" in present)
+        if all(name in present for name in (one.key, *one.also_needs))
     ]
+
+
+def why_unavailable(agent: ApiAgent, *, shared_home: Path | None = None,
+                    trial_reservation_id: str = "") -> str:
+    """Why `available()` does not list this agent, in the resolver's own words.
+
+    A stored pick that cannot run is a dead end unless the reason travels with
+    the roster, and the reason already exists: it is the sentence `keys.require`
+    raises, which is sharekeys-aware, so a key never saved and a used-up trial
+    stay different answers. Empty only when every key resolves — that is,
+    when the caller asked about an agent that *is* available.
+    """
+    from app import keys
+
+    for provider in (agent.key, *agent.also_needs):
+        try:
+            keys.require(provider, shared_home=shared_home,
+                         reservation_id=trial_reservation_id)
+        except Exception as error:  # noqa: BLE001 — the sentence is the answer
+            return str(error)
+    return ""
 
 
 def models_for(agent: ApiAgent, home: Path | None = None) -> list[str]:
@@ -355,12 +409,16 @@ class ApiAgentResearcher(harness.HarnessResearcher):
 
     def __init__(self, agent: ApiAgent, *, model: str = "",
                  timeout: float = mistral.TIMEOUT_SECONDS, converse=None,
-                 home: Path | None = None, app_state_path=None):
+                 home: Path | None = None, app_state_path=None,
+                 trial_reservation_id: str = "", max_tokens: int | None = None,
+                 effort: str = ""):
         # An `ApiAgent` where a `Harness` is annotated: the parent reads only
         # `id`, `label` and `contract_note` off it on the paths this class
         # keeps, and `_run` — the one that spawns — is overridden.
         super().__init__(agent, timeout=timeout, model=model)  # type: ignore[arg-type]
         self.agent = agent
+        self.max_tokens = max_tokens
+        self.reasoning_effort = effort.strip()
         #: The model that runs, not the agent's id. The CLI plane names the
         #: harness here because it cannot know the model; this plane can.
         self.model = model.strip() or agent.default_model
@@ -369,6 +427,9 @@ class ApiAgentResearcher(harness.HarnessResearcher):
         self.thoroughness = 50
         self.validation_sensitivity = 50
         self._cache_path = None
+        # One selected API-researcher instance represents one reader question;
+        # all clarification/final/review calls through it reuse this id.
+        self.trial_reservation_id = str(trial_reservation_id or uuid.uuid4().hex)
         if converse is not None:
             self._converse = converse
         elif agent.key == "openai":
@@ -408,7 +469,12 @@ class ApiAgentResearcher(harness.HarnessResearcher):
                 prompt, max_tool_calls=self._calls_allowed(),
                 thoroughness=self.thoroughness,
                 validation_sensitivity=self.validation_sensitivity,
-                cache_path=self._cache_path, **kw))
+                cache_path=self._cache_path,
+                shared_home=(Path(app_state_path).parent if app_state_path is not None else None),
+                trial_reservation_id=self.trial_reservation_id,
+                max_tokens=self.max_tokens,
+                reasoning_effort=self.reasoning_effort,
+                **kw))
         else:
             self._stream_converse = (mistral.converse_stream
                                      if converse is None and agent.key == "mistral" else None)
@@ -476,8 +542,14 @@ class ApiAgentResearcher(harness.HarnessResearcher):
         boundary.
         """
         if allow_tools:
+            # Kriko Agent has its own search/fetch protocol. Appending the
+            # generic API-agent contract tells Mercury to call a web_search
+            # tool that does not exist and contradicts the actual evidence
+            # sources it receives.
+            instructions = (self.agent.contract_note if self.agent.id == KRIKO_AGENT.id
+                            else TOOLS)
             return self._run(
-                prompt + "\n" + TOOLS + self._ceiling(), search=True)
+                prompt + "\n" + instructions + self._ceiling(), search=True)
         return self._run(prompt, search=False)
 
     # ── one request ─────────────────────────────────────────────────────────
@@ -620,12 +692,21 @@ class ApiAgentResearcher(harness.HarnessResearcher):
                               if isinstance(reply.retrieval_requests, int)
                               and not isinstance(reply.retrieval_requests, bool)
                               else billed_calls)
+        self.transcript = (reply.text or reply.error)[-harness.TRANSCRIPT_TAIL:]
+        if reply.error:
+            # The last word about a turn that failed is the failure. The summary
+            # below is shaped like an answer, and a refusal read
+            # "<label> answered in 3 s: 0 retrieval request(s), 0 billable,
+            # 0 result(s), 0 cached, $0.00" arrives as an answer that came back
+            # empty rather than as a turn that refused. The sibling research
+            # stack says `no research was run: <reason>` for the same reason
+            # (`kriko_agent.converse`), and this is the line that still lied.
+            self._echo(f"{self.agent.label} did not answer in "
+                       f"{time.monotonic() - started:.0f} s: {reply.error}")
+            raise RuntimeError(f"{self.agent.label}: {reply.error}")
         self._echo(f"{self.agent.label} answered in {time.monotonic() - started:.0f} s: "
                    f"{retrieval_requests} retrieval request(s), {billed_calls} billable, "
                    f"{len(reply.sources)} result(s), {reply.cache_hits} cached, {cost}")
-        self.transcript = (reply.text or reply.error)[-harness.TRANSCRIPT_TAIL:]
-        if reply.error:
-            raise RuntimeError(f"{self.agent.label}: {reply.error}")
         return reply.text
 
     def _account(self, reply) -> None:

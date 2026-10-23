@@ -69,6 +69,12 @@ not there is simply absent. `TRIAL_QUESTIONS` (10 by default, settable with
 `--questions`) is counted in `shared.json` on the reader's own machine, and one
 Kriko Agent question costs one, counted before the model is asked.
 
+Two rules hold at freeze time. A bundle sealed by an older pepper is **refused**
+rather than shipped, because it would open for nobody (`verify_trial_bundle.py`,
+called by the spec, which prints which case the build is in). And a build that
+bakes no bundle offers no trial at all: the screen says so and draws no count,
+because a number the engine did not report is worse than no number.
+
 **The count is a courtesy, not a wall.** A reader who deletes their own
 `shared.json` starts again, and the bundle is in the download. What actually
 bounds the loss is the owner's own doing, and the order matters:

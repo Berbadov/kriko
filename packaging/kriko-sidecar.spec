@@ -58,6 +58,7 @@ from pathlib import Path
 
 sys.path.insert(0, SPECPATH)
 from freeze_imports import CONSOLE_MODULES, FROZEN_EXCLUDES, kriko_submodules, mcp_submodules
+from verify_trial_bundle import reason as trial_bundle_problem
 from PyInstaller.utils.hooks import copy_metadata
 
 ROOT = Path(SPECPATH).parent
@@ -87,6 +88,30 @@ if not (EXTENSION / "manifest.json").exists():
         "extension/manifest.json is missing — the app ships the browser "
         "extension and cannot install one it does not carry"
     )
+
+# Shared access imports a gitignored module generated from the stable
+# KRIKO_SHARE_PEPPER build secret. Require it and name both dynamic imports so
+# the grant implementation and its app-binding value are in every sidecar.
+SHARE_PEPPER = ROOT / "src" / "app" / "sharekeys_pepper.py"
+if not SHARE_PEPPER.is_file():
+    raise SystemExit(
+        "shared access is not app-bound: configure KRIKO_SHARE_PEPPER or "
+        "run packaging/configure_share_pepper.py before freezing"
+    )
+
+# The free-trial bundle is sealed with the pepper of the build that made it, and
+# a stale one — left behind when the pepper was rotated, or made by another
+# checkout — would be frozen into the sidecar and then open nothing: the app
+# would count questions from a trial it cannot spend. The freeze refuses one
+# instead (`packaging/verify_trial_bundle.py`). No bundle at all is a valid
+# build, and the log says so; the screen says "No free trial is included in this
+# build" for the reader.
+TRIAL_BUNDLE = ROOT / "src" / "app" / "trial_access.json"
+PROBLEM = trial_bundle_problem()
+if PROBLEM:
+    raise SystemExit(PROBLEM)
+print("trial bundle: " + (TRIAL_BUNDLE.name if TRIAL_BUNDLE.is_file()
+                          else "none — this build offers no free trial"))
 
 # See the `winpty-agent.exe` note above `datas` for why this is a `binaries`
 # entry rather than something PyInstaller finds on its own. Only Windows
@@ -127,6 +152,9 @@ a = Analysis(
         *copy_metadata("kriko"),
     ],
     hiddenimports=[
+        "app.sharekeys",
+        "app.sharekeys_pepper",
+        "cryptography.hazmat.primitives.ciphers.aead",
         "uvicorn.logging",
         "uvicorn.loops.auto",
         "uvicorn.loops.asyncio",

@@ -12,7 +12,7 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
-from app import extension, followup, keys, sites
+from app import extension, keys, sites
 from app.web import state
 from app.web.deps import get_app_state, get_jobs, get_store
 from app.web.routers.research import resolve_research_subject
@@ -322,7 +322,9 @@ def start_research_plane(
         installed = harness.available()
         stored = (prefs.read(conn).get(prefs.HARNESS) or "") if conn is not None else ""
         requested = body.harness.strip()
-        api_ids = {one.id for one in apiagent.available()}
+        app_home = request.app.state.settings.app_state_path.parent
+        api_ids = {one.id for one in apiagent.available(
+            keys.env_path(app_home), shared_home=app_home)}
         installed_ids = {one.id for one in installed}
         if requested and requested != prefs.LOCAL_PICK and requested not in api_ids | installed_ids:
             raise HTTPException(503, f"The selected research agent is not available: {requested}") from exc
@@ -575,67 +577,6 @@ def _running_version(sightings: list[dict]) -> str:
     return ""
 
 
-class QuickAskRequest(RequestIdentity):
-    q: str = Field(min_length=1, max_length=500)
-
-
-@router.post("/quick-look/{job_id}/ask")
-def ask_quick_look(
-    job_id: str, body: QuickAskRequest,
-    conn=Depends(get_app_state), runner=Depends(get_jobs),
-) -> dict:
-    """A follow-up question about a finished quick look, as a job (#112).
-
-    The plane is the quick look's own, carried from its stored params. The
-    follow-up uses that plane's web tools to answer against current pages and
-    keeps the listing and Quick Look evidence as context.
-    """
-    row = state.get_job(conn, job_id)
-    if row is None or row.get("kind") != "quick_look":
-        raise HTTPException(404, f"no quick look {job_id}")
-    if row.get("state") != state.SUCCEEDED:
-        raise HTTPException(409, "the quick look must succeed before it can be asked about")
-    quick = row.get("params") or {}
-    params = {
-        "quick_job_id": job_id,
-        "q": body.q.strip(),
-        "backend": str(quick.get("backend") or ""),
-        "harness": str(quick.get("harness") or ""),
-        "model": str(quick.get("model") or ""),
-        "budget_usd": 0.0,
-        "max_tokens": followup.MAX_TOKENS,
-    }
-    job = _identified_submit(runner, "quick_ask", params, body.client_request_id)
-    return {"job_id": job, "kind": "quick_ask", "quick_job_id": job_id}
-
-
-@router.get("/quick-look/{job_id}/asks")
-def quick_look_asks(job_id: str, conn=Depends(get_app_state)) -> dict:
-    """The follow-up exchange of one quick look, oldest first.
-
-    Read on panel open, so a reload puts the conversation back the way it was
-    \u2014 the asks are durable rows, this is only their order.
-    """
-    asks = []
-    for row in reversed(state.list_jobs(conn, 200)):
-        if row.get("kind") != "quick_ask":
-            continue
-        if str((row.get("params") or {}).get("quick_job_id") or "") != job_id:
-            continue
-        result = row.get("result") or {}
-        asks.append({
-            "job_id": row["job_id"],
-            "q": str((row.get("params") or {}).get("q") or ""),
-            # The reply so far while it is being written, the whole of it once done.
-            "answer": str(result.get("answer") or ""),
-            "sources": result.get("sources") or [],
-            "state": row.get("state") or "",
-            "done": bool(row.get("done")),
-            "message": str(row.get("message") or "") if row.get("done") else "",
-        })
-    return {"asks": asks}
-
-
 @router.post("/stage")
 def stage(request: Request) -> dict:
     """Put a loadable copy of the extension on disk and say where.
@@ -697,131 +638,3 @@ def reveal(request: Request, spawn: bool = True) -> dict:
     if not target.is_dir():
         raise HTTPException(status_code=409, detail="nothing staged yet — add it first")
     return {"path": str(target), "error": extension.reveal(target) if spawn else ""}
-
-
-def _landing(store, app_conn, base_url: str) -> str:
-    """Where the launched browser should open.
-
-    A site this installation can actually read, so the extension has
-    something to do the moment the window appears. This used to be *this
-    app's own* extension page, and the reader's report of it was exact: "it
-    just opens the app interface in the web browser, an exact copy of the
-    standalone app. I originally meant the hovering web extension." They were
-    right — the one place the extension is invisible is a page it does not
-    match.
-
-    The site is read off `sites.registered`, never named here: which listing
-    sites exist is pack data plus whatever this reader taught their own copy
-    (`test_the_landing_page_is_pack_data`), and a reader whose only readable
-    site is one they just registered locally deserves the same one-click
-    landing as one who installed a pack that ships an adapter — a launch that
-    only ever knew about pack sites would silently regress the moment
-    `/api/sites/{host}/register` did its job. Superseded local rows are
-    skipped: they duplicate a pack entry that is already in the list.
-    With nothing readable at all there is no such page, and the app's own
-    screen is the honest fallback — it is at least the screen that says what
-    to do next.
-    """
-    for row in sites.registered(store, app_conn):
-        if row.get("superseded"):
-            continue
-        site = str(row.get("site") or "").strip().strip("/")
-        if site:
-            return site if "://" in site else f"https://{site}/"
-    return f"{base_url.rstrip('/')}/#/extension"
-
-
-@router.post("/launch")
-def launch(
-    request: Request, store=Depends(get_store), app_state=Depends(get_app_state)
-) -> dict:
-    """Stage the extension and open a browser that already has it loaded.
-
-    The one click. One request rather than two because a reader's single press
-    must not be able to half-succeed: `/stage` then `/launch` can leave files
-    written and no window opened, which reads as "the button did nothing".
-
-    Never an error status. Both ways this can fall short — no Chromium on the
-    machine, or a browser that refuses to start — are things to *tell* the
-    reader on a page that already carries the manual steps, and a 500 would
-    replace those steps with a red banner. The files are staged either way,
-    because that is what the manual path needs and this reader has already
-    asked for the extension.
-
-    Success is not claimed here. A Chrome build that ignores `--load-extension`
-    opens an ordinary window and says nothing; the extension's own call to
-    `/api/adapters` is the only proof, the status endpoint above already
-    reports it, and the page keeps watching until it lands.
-    """
-    source = extension.source_dir()
-    if source is None:
-        raise HTTPException(
-            status_code=501,
-            detail=(
-                "this build does not carry the browser extension — it is added "
-                "to the bundle by packaging/kriko-sidecar.spec"
-            ),
-        )
-
-    target = _target(request)
-    try:
-        extension.stage(source, target)
-    except OSError as cause:
-        raise HTTPException(status_code=500, detail=f"could not write {target}: {cause}")
-    request.app.state.extension_staged_digest = extension.content_digest(target)
-
-    home = extension.home_of(request.app.state.settings.store_path)
-    profile = extension.profile_dir(home)
-    note = (
-        "The window is a separate browser profile — it has to be, because a "
-        "browser that is already running ignores an extension handed to it on "
-        "the command line. Your bookmarks and logins are not in it. Recent "
-        "Chrome releases refuse to load an extension this way; if Status "
-        "stays waiting, the steps below are the install."
-    )
-
-    browser = extension.find_chromium()
-    if browser is None:
-        return {
-            "launched": False,
-            "browser": "",
-            "path": str(target),
-            "profile": str(profile),
-            "landing": "",
-            "note": note,
-            "error": (
-                "No Chrome, Chromium, Brave or Edge found on this machine. "
-                "Firefox cannot be handed an extension this way — the steps "
-                "below are the install for it."
-            ),
-        }
-
-    # A page the extension matches, not a second copy of this app — see
-    # `_landing`. The confirmation the reader was previously sent to the
-    # browser to see is on *this* screen too, and this screen is already in
-    # front of them: the status card polls, so it turns green here while they
-    # are looking at the listing over there.
-    landing = _landing(store, app_state, str(request.base_url))
-    # A browser that has checked in already has Kriko, loaded from `target`
-    # and refreshed by the `stage` above — so the listing opens *there*. The
-    # separate profile is only for a reader who has never installed it, and
-    # current Chrome refuses to load an extension into it (see
-    # `launch_with_extension`), which is why the manual steps stay on screen.
-    own = bool(state.extension_sightings(app_state))
-    if own:
-        note = (
-            "Opened in the browser Kriko already lives in — its files were "
-            "refreshed just now, so the listing gets this version."
-        )
-    error = extension.launch_with_extension(
-        browser, target, profile, landing=landing, own_profile=own
-    )
-    return {
-        "launched": not error,
-        "browser": browser,
-        "path": str(target),
-        "profile": "" if own else str(profile),
-        "landing": landing,
-        "note": note,
-        "error": error,
-    }

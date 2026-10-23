@@ -30,6 +30,9 @@ dependencies = [
     "pyyaml>=6.0.1",
     "pypdf>=6.21.1,<7",
     "mcp>=1.0,<2.0",
+    # Shared access seals grants with AES-GCM and scrypt; it is imported by the
+    # desktop runtime even when no shared grant has been configured.
+    "cryptography>=45.0",
     # The PTY behind `kriko tui`'s shell pass-through. The in-app terminal
     # panel that also used it is gone (§2.9), the operator console is not.
     "ptyprocess>=0.7; sys_platform != 'win32'",

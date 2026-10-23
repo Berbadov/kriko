@@ -49,21 +49,32 @@ def history(
         row["pack_id"]: row["name"]
         for row in store.execute("SELECT pack_id, name FROM packs")
     }
+    # Collect every subject_id that needs a pack_id resolved, then resolve
+    # them all in one query — a per-item query is an N+1 that costs up to
+    # `limit` round-trips on a page that already waited for its own query.
+    all_subject_ids: list[str] = []
+    for item in items:
+        ids = item["pack_ids"]
+        subject_ids = item["subject_ids"]
+        if not ids and subject_ids:
+            all_subject_ids.extend(subject_ids)
+    pack_of_subject: dict[str, str] = {}
+    if all_subject_ids:
+        unique = list(dict.fromkeys(all_subject_ids))
+        marks = ",".join("?" * len(unique))
+        for row in store.execute(
+            "SELECT subject_id, pack_id FROM subjects"
+            f" WHERE subject_id IN ({marks})",
+            unique,
+        ):
+            pack_of_subject[row["subject_id"]] = row["pack_id"]
     for item in items:
         ids = item.pop("pack_ids")
         subject_ids = item.pop("subject_ids")
         if not ids and subject_ids:
             # A check that matched a product but found no risk names no pack
             # in its claims; the product it matched still belongs to one.
-            marks = ",".join("?" * len(subject_ids))
-            ids = [
-                row["pack_id"]
-                for row in store.execute(
-                    "SELECT DISTINCT pack_id FROM subjects"
-                    f" WHERE subject_id IN ({marks}) ORDER BY pack_id",
-                    subject_ids,
-                )
-            ]
+            ids = sorted({pack_of_subject[s] for s in subject_ids if s in pack_of_subject})
         item["packs"] = [{"pack_id": i, "name": names[i]} for i in ids if i in names]
         item["category"] = item["packs"][0]["name"] if item["packs"] else ""
     return {"items": items, "offset": offset, "has_more": len(items) == limit}

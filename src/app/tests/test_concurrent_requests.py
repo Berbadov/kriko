@@ -36,7 +36,7 @@ from app.web.settings import Settings
 #: so an endpoint left out of this list is an endpoint nobody is checking.
 READS = [
     "/api/health",
-    "/api/status",
+    "/api/usage/meters",
     "/api/packs",
     "/api/subjects",
     "/api/history",
@@ -117,7 +117,7 @@ def test_no_view_fails_when_its_requests_arrive_together(running_app):
 def test_a_single_view_s_opening_burst_is_enough(running_app):
     """Overview's own six, fired the way the frontend fires them."""
     paths = [
-        "/api/status",
+        "/api/usage/meters",
         "/api/packs",
         "/api/packs/updates",
         "/api/jobs",

@@ -171,33 +171,6 @@ def test_health_reports_which_store_it_is_looking_at(client):
     assert body["store"].endswith("store.sqlite")
 
 
-def test_status_is_the_control_plane_snapshot(client):
-    status = client.get("/api/status").json()
-    assert status["ok"] is True
-    assert status["counts"]["packs"] == 1
-
-
-def test_status_counts_enabled_drop_a_disabled_packs_rows(client):
-    """knowledge-36: disabling a pack must not still count its claims.
-
-    A disabled pack's claims never reach a lookup, so a header that quotes the
-    same subjects/claims total whether the pack is on or off overstates what
-    the reader can actually get an answer about right now.
-    """
-    before = client.get("/api/status").json()["counts_enabled"]
-    assert before["claims"] > 0
-
-    (pack,) = client.get("/api/packs").json()
-    client.post(f"/api/packs/{pack['pack_id']}/enabled", params={"enabled": False})
-
-    after = client.get("/api/status").json()["counts_enabled"]
-    assert after["claims"] == 0
-    assert after["subjects"] == 0
-    # The raw, all-packs totals are unchanged — this is a second, narrower
-    # count, not a replacement for the first.
-    assert client.get("/api/status").json()["counts"]["claims"] == before["claims"]
-
-
 # ── packs ────────────────────────────────────────────────────────────────
 
 
@@ -279,6 +252,24 @@ def test_an_unstated_context_value_still_returns_the_claim(client):
     ).json()
     (claim,) = body["claims"]
     assert any("usage_hours not stated" in reason for reason in claim["why"])
+
+
+def test_a_limit_outside_its_bound_is_refused_or_clamped(client):
+    """D12: every one of these limits reaches the SQL behind it, and a negative
+    limit is SQLite's "no limit" — so an unclamped caller could ask for a whole
+    catalog. The ask endpoints carry the bound on the model; the list views
+    clamp in the handler."""
+    assert client.post("/api/lookup", json={"limit": -1}).status_code == 422
+    assert client.post("/api/lookup", json={"limit": 5000}).status_code == 422
+    assert client.post(
+        "/api/analyze", json={"url": "https://a.test/x", "limit": -1}
+    ).status_code == 422
+    assert client.get(
+        "/api/packs/tools/gaps", params={"limit": -1}
+    ).json() == client.get("/api/packs/tools/gaps", params={"limit": 1}).json()
+    assert client.get(
+        "/api/health/weakest", params={"limit": -1}
+    ).json()["claims"] == []
 
 
 # ── browsing ─────────────────────────────────────────────────────────────

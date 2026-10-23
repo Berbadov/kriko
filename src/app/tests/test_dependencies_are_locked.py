@@ -104,7 +104,7 @@ def test_the_lock_matches_what_the_suite_ran_against(locked):
 
     A pin that no longer matches the installed version means the tests are
     green against one closure and the installer ships another. Regenerate with
-    `python tools/relock.py > requirements.lock` and read the diff — a version
+    `python tools/relock.py --write` and read the diff — a version
     moving is a fact worth one line in a commit message.
     """
     drifted = {}
@@ -120,7 +120,7 @@ def test_the_lock_matches_what_the_suite_ran_against(locked):
             drifted[name] = (pinned, installed)
     assert drifted == {}, (
         "requirements.lock disagrees with this environment (pinned, installed): "
-        f"{drifted}. Run `python tools/relock.py > requirements.lock`."
+        f"{drifted}. Run `python tools/relock.py --write`."
     )
 
 

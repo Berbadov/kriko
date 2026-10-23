@@ -1400,6 +1400,7 @@ name = "kriko"
 version = "0.3.1"
 source = { editable = "." }
 dependencies = [
+    { name = "cryptography" },
     { name = "fastapi" },
     { name = "mcp" },
     { name = "ptyprocess", marker = "sys_platform != 'win32'" },
@@ -1438,6 +1439,7 @@ searchbench = [
 [package.metadata]
 requires-dist = [
     { name = "anthropic", marker = "extra == 'pipeline'" },
+    { name = "cryptography", specifier = ">=45.0" },
     { name = "exa-py", marker = "extra == 'pipeline'", specifier = ">=2.14.0" },
     { name = "fastapi", specifier = ">=0.110" },
     { name = "httpx", marker = "extra == 'pipeline'", specifier = ">=0.27.0" },
