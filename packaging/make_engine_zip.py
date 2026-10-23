@@ -15,11 +15,12 @@ app, the window and OpenSERP are not in it and an engine update never touches
 them.
 
 `min_shell` is the oldest desktop app this engine update is offered to. It
-also gates releases with substantial UI or startup changes: those need the full
-installer so readers do not update only the engine and keep the previous
-window. Raise it with such a release; older desktop apps are offered the
-installer, not an engine-only update. A runtime protocol addition the older app
-cannot use needs the same floor.
+defaults to the release's own version, so every release is installed whole: an
+engine-only update leaves the reader's window as it was, and a release that
+changed the interface then looks like an update that did nothing (0.3.3 shipped
+that way, with the floor left at 0.3.2). A release that changed nothing the
+window draws or starts may open the engine-only path with
+`--engine-only-from <oldest desktop app>`; saying so is the only way to get it.
 """
 
 from __future__ import annotations
@@ -31,9 +32,6 @@ import tomllib
 import zipfile
 from pathlib import Path
 
-#: The oldest desktop app offered this engine update. See the module docstring.
-MIN_SHELL = "0.3.2"
-
 ROOT = Path(__file__).resolve().parents[1]
 SIDECAR = "kriko-sidecar.exe"
 _VERSION = re.compile(r"^[0-9][0-9A-Za-z.\-]*$")
@@ -43,10 +41,17 @@ def tree_version() -> str:
     return tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
 
 
-def pack(engine: Path, out: Path, version: str, *, min_shell: str = MIN_SHELL) -> Path:
-    """Write the zip and `engine.json`; return the zip's path."""
+def pack(engine: Path, out: Path, version: str, *, min_shell: str = "") -> Path:
+    """Write the zip and `engine.json`; return the zip's path.
+
+    `min_shell` is the oldest desktop app offered the engine alone; left empty it
+    is `version` itself, which sends every installed app to the installer.
+    """
     if not _VERSION.match(version):
         raise SystemExit(f"{version!r} is not a version")
+    min_shell = min_shell or version
+    if not _VERSION.match(min_shell):
+        raise SystemExit(f"{min_shell!r} is not a version")
     program = engine / SIDECAR
     internal = engine / "_internal"
     if not program.is_file() or not internal.is_dir():
@@ -70,12 +75,19 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--engine", required=True, type=Path, help="the frozen folder (dist/kriko-engine)")
     parser.add_argument("--out", required=True, type=Path)
     parser.add_argument("--version", default="", help="checked against pyproject.toml; defaults to it")
+    parser.add_argument(
+        "--engine-only-from",
+        default="",
+        metavar="VERSION",
+        help="the oldest desktop app that may take this engine without the installer; "
+        "default: this release, so the installer is always the way in",
+    )
     args = parser.parse_args(argv)
     tree = tree_version()
     version = (args.version or tree).removeprefix("v")
     if version != tree:
         raise SystemExit(f"asked for {version} and this tree is {tree}: the zip's name and contents come from the tree")
-    made = pack(args.engine, args.out, version)
+    made = pack(args.engine, args.out, version, min_shell=args.engine_only_from)
     print(f"{made}  {made.stat().st_size / 1e6:.1f} MB")
     return 0
 
