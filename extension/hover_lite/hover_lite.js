@@ -135,6 +135,9 @@
     // picked here ("" until the reader changes it), and "Learn this page":
     // whether it is running, what it said while it ran, and what it taught.
     agents: null,
+    // Agents the app has but cannot run now (Kriko Agent without keys or an
+    // access code): listed greyed out, so a missing option has a reason.
+    agentsUnavailable: [],
     agentsRequested: false,
     // Whether the app has *answered* the roster question. An empty list from a
     // called-through `AGENTS` is "nothing can run now" and is worth blocking
@@ -924,6 +927,7 @@
     const ask = () => chrome.runtime.sendMessage({ type: "AGENTS" }, (response) => {
       if (chrome.runtime.lastError || !response || !response.ok) return;
       state.agents = Array.isArray(response.agents) ? response.agents : [];
+      state.agentsUnavailable = Array.isArray(response.unavailable) ? response.unavailable : [];
       state.agentsKnown = true;
       state.agentChosen = String(response.chosen || "");
       renderResearch();
@@ -971,7 +975,14 @@
     return `<label class="lite-agent-row"><span>Page-learning agent</span>
       <select class="lite-agent-select lite-learn-agent-select" aria-label="Page-learning agent" ${busy || state.learning ? "disabled" : ""}>
         ${list.map((one) => `<option value="${escapeHtml(one.id)}"${one.id === now ? " selected" : ""}>${escapeHtml(one.label)}</option>`).join("")}
+        ${unavailableOptions(list).join("")}
       </select></label>`;
+  }
+
+  function unavailableOptions(list) {
+    return (state.agentsUnavailable || [])
+      .filter((one) => !list.some((ready) => ready.id === one.id))
+      .map((one) => `<option value="" disabled title="${escapeHtml(one.detail)}">${escapeHtml(one.label)} (not set up in Kriko)</option>`);
   }
 
   function quickAgentRowMarkup(busy) {
@@ -987,6 +998,7 @@
       `<option value=""${selected ? "" : " selected"}>Choose an available agent</option>`,
       ...(stale ? [`<option value="${escapeHtml(state.quickAgentPick)}" selected>Unavailable: ${escapeHtml(state.quickAgentPick)}</option>`] : []),
       ...list.map((one) => `<option value="${escapeHtml(one.id)}"${one.id === selected ? " selected" : ""}>${escapeHtml(one.label)}</option>`),
+      ...unavailableOptions(list),
     ].join("");
     const note = stale
       ? "The saved agent is unavailable. Choose another to continue."

@@ -8,9 +8,10 @@ import { PixelGlyph } from '../ui/PixelGlyph'
 import { Elapsed, Fold, Shimmer, WordStream, count, formatSeconds } from '../ui/text'
 import type { Row, Run } from './run'
 
-/** The live record of one run. A run opens it and it stays open when the run
- *  ends, so the answer does not move under the reader at the moment it is
- *  finished. The reader folds it, or a turn from the thread starts folded. */
+/** The live record of one run. It is folded to its one-line head from the
+ *  start, running or done: the log is a detail the reader opens if they want it,
+ *  and the head already says what it is doing and for how long. The reader's own
+ *  press wins over the default. */
 
 function useOpen(auto: boolean) {
   const [chosen, setChosen] = useState<boolean | null>(null)
@@ -19,7 +20,7 @@ function useOpen(auto: boolean) {
 
 export function Timeline({ run, historical = false }: { run: Run; historical?: boolean }) {
   const running = run.status === 'running'
-  const [open, toggle] = useOpen(!historical)
+  const [open, toggle] = useOpen(false)
   const label = running ? 'Research' : run.status === 'done' ? 'Done' : run.status === 'failed' ? 'Failed' : 'Stopped'
   const total = (run.endedAt ?? run.startedAt) - run.startedAt
   const measured = run.rows.flatMap((row) => (row.kind === 'event' || row.kind === 'tool') && row.counts?.pagesRead !== undefined ? [row.counts] : [])

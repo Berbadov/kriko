@@ -143,11 +143,29 @@ def test_a_short_chat_is_sent_whole():
                                      "dropped_replies": 0, "omitted_requests": 0}
 
 
-def test_older_replies_are_dropped_after_the_last_eight_messages():
-    history = [say("reader" if i % 2 == 0 else "agent", f"m{i}") for i in range(14)]
+def test_a_chat_of_ordinary_length_is_sent_whole():
+    """Eight messages was the whole memory once: the agent forgot the car after
+    four exchanges with a window that was nearly empty."""
+    history = [say("reader" if i % 2 == 0 else "agent", f"m{i}") for i in range(chat.HISTORY_MESSAGES)]
+    assert history_trim(history)["trimmed"] is False
+    assert "m0" in chat._history_text(history)
+
+
+def test_older_replies_are_dropped_after_the_newest_messages_that_fit():
+    history = [say("reader" if i % 2 == 0 else "agent", f"m{i}")
+               for i in range(chat.HISTORY_MESSAGES + 6)]
     trimmed = history_trim(history)
     assert trimmed["trimmed"] and trimmed["dropped_replies"] == 3  # of the six older, the agent's
     assert "omitted for the context limit" not in chat._history_text(history)
+
+
+def test_long_messages_are_cut_by_the_budget_not_the_count():
+    long = "x" * chat.HISTORY_CHARS
+    history = [say("agent" if i % 2 else "reader", long) for i in range(chat.HISTORY_MESSAGES)]
+    recent, older = chat.split_history(history)
+    assert older and len(recent) < len(history)
+    assert sum(len(one["text"]) + 9 for one in recent) <= chat.HISTORY_BUDGET
+    assert history_trim(history)["trimmed"]
 
 
 def test_it_agrees_with_what_chat_actually_omits():
@@ -233,7 +251,8 @@ def test_a_plane_that_counts_only_a_total_says_not_reported(paths, monkeypatch):
 
 
 def test_a_long_chat_says_its_history_was_trimmed(paths, monkeypatch):
-    earlier = [("reader" if i % 2 == 0 else "agent", f"message {i}") for i in range(14)]
+    earlier = [("reader" if i % 2 == 0 else "agent", f"message {i}")
+               for i in range(chat.HISTORY_MESSAGES + 6)]
     result, _thread, _partial = ask(paths, monkeypatch, Counting(), history=earlier)
     assert result["context"]["history"]["trimmed"] is True
 
