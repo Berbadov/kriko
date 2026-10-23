@@ -2711,6 +2711,13 @@ extensionApi.runtime.onMessage.addListener((request, sender, sendResponse) => {
           .filter((one) => one && one.id && one.state === "ready" && one.action === "use")
           .map((one) => ({ id: String(one.id), label: String(one.label || one.id), kind: String(one.kind || ""),
             local: Boolean(one.local) })),
+        // Kriko Agent is the app's own agent, so a panel that hides it when it
+        // cannot run says nothing about why. It is named here, with the app's
+        // reason, and the panel shows it greyed out.
+        unavailable: (market.agents || [])
+          .filter((one) => one && one.id === "kriko-agent" && !(one.state === "ready" && one.action === "use"))
+          .map((one) => ({ id: String(one.id), label: String(one.label || one.id),
+            detail: String(one.detail || "").slice(0, 200) })),
       }))
       .catch((error) => sendResponse({ ok: false, code: error.code, error: error.message }));
     return true;

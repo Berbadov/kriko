@@ -110,8 +110,15 @@ def _flaky(query):
 
 
 def _build(tmp_path, log):
+    """The chain for a reader who put OpenSERP first, unless the test chose already.
+
+    With nothing chosen DeepSeek leads wherever it has a key, so the fall-back
+    from an unreliable SERP is exercised by the reader who asked for the SERP.
+    """
     conn = state.connect(tmp_path / "app.sqlite")
     try:
+        if not prefs.read(conn).get(prefs.SEARCH):
+            prefs.write(conn, {prefs.SEARCH: "openserp"})
         return tasks._chat_web_searcher(conn, tmp_path / "app.sqlite", log)
     finally:
         conn.close()
@@ -189,6 +196,17 @@ def test_cancelling_is_not_a_failure_to_fall_back_from(tmp_path, monkeypatch, de
     with pytest.raises(jobs.Cancelled):
         search("anything", 5)
     assert deepseek.calls == []
+
+
+def test_deepseek_leads_by_default_and_openserp_is_not_asked(tmp_path, monkeypatch, deepseek):
+    seen = _stand_in_serp(monkeypatch, _flaky)
+    conn = state.connect(tmp_path / "app.sqlite")
+    try:
+        search = tasks._chat_web_searcher(conn, tmp_path / "app.sqlite", _Log())
+    finally:
+        conn.close()
+    assert search("a fine query", 3)[0]["url"].startswith("https://forum.example")
+    assert seen == []
 
 
 def test_deepseek_as_the_chosen_provider_with_openserp_behind_it(tmp_path, monkeypatch, deepseek):

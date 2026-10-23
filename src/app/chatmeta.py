@@ -9,6 +9,21 @@ import re
 from collections.abc import Callable
 
 
+#: A suggestion is a message the reader would send *to* the agent. One that
+#: asks the reader something ("Do you need help...", "Did you find...", "Should
+#: we...") is the agent talking, and pressing it would put the agent's question
+#: in the reader's mouth. Small closed set of English and Turkish openers.
+_ADDRESSES_THE_READER = re.compile(
+    r"^\W*(?:(?:did|have|has|are|were)\s+you\b"
+    r"|do\s+you\s+(?:need|want|have|own|drive|prefer|know|plan|already)\b"
+    r"|(?:would|will|could)\s+you\s+(?:like|prefer|want|need)\b"
+    r"|(?:is|are|was)\s+your\b|should\s+(?:we|i)\b|shall\s+we\b|want\s+me\b|need\s+help\b"
+    r"|how\s+can\s+i\s+help\b|what\s+(?:is|are)\s+your\b|which\s+(?:is|are)\s+your\b)"
+    r"|\b(?:ister\s+misin(?:iz)?|yard[\u0131i]m\s+ister\s+misin(?:iz)?|bulabildin\s+mi|bulabildiniz\s+mi)\b",
+    re.I,
+)
+
+
 def parse(reply: str) -> dict:
     """Accept only bounded plain-text labels and questions from a JSON object."""
     body = re.sub(r"<think\b[^>]*>.*?</think\s*>", "", str(reply or ""),
@@ -36,6 +51,8 @@ def parse(reply: str) -> dict:
     questions: list[str] = []
     for value in raw[:6] if isinstance(raw, list) else []:
         question = plain(value, 180)
+        if question and _ADDRESSES_THE_READER.search(question):
+            continue
         if question and question.casefold() not in {one.casefold() for one in questions}:
             questions.append(question)
     out = {"title": title, "followups": questions[:3]}
@@ -54,7 +71,13 @@ def generate(ask: Callable[[str], str], question: str, answer: str, *,
         "units, variants and markets; latest corrections override older ones; do not turn agent claims "
         "into reader requirements), title (a clear topic title, 3–8 words) "
         "and followups (up to 3 short, useful questions the reader could ask next). "
-        "Questions must relate to this exchange, explore unresolved details, and "
+        "Each followup is written in the READER's voice: the next message the reader would "
+        "send to the agent, as a request or a question about the product (for example "
+        "\"Compare the two cheapest options on service cost\" or \"What does the warranty "
+        "exclude?\"). Never write one that asks the reader something (not \"Do you need...\", "
+        "\"Did you find...\", \"Should we...\", \"Is your car...\"): the reader cannot answer "
+        "the agent from a suggestion button. Followups must relate to this exchange, explore "
+        "unresolved details, and "
         "must not presuppose facts the answer did not establish. Use the answer's "
         f"language unless the preferred output language is set: {language}. "
         + ("This is the first turn; name its topic. " if first_turn else

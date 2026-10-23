@@ -329,24 +329,36 @@
 
 /* ---- the context bar ---- */
 
+/* A grid, so the bar keeps its place as the window narrows: the head, the track
+   and the reading share one row, and the spend and the trim note each take a
+   full row of their own rather than wrapping into the bar's columns. */
 .ctx {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: auto minmax(56px, 150px) minmax(0, 1fr);
   align-items: center;
-  align-self: center;
-  gap: 3px 10px;
+  align-self: stretch;
+  gap: 4px 10px;
+  width: 100%;
   max-width: 100%;
   margin: 0 8px 8px;
   color: var(--ink-2);
   font-size: 12px;
 }
 
+.ctx-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink-3);
+}
+
 .ctx-label {
   font-weight: 560;
+  color: var(--ink-2);
 }
 
 .ctx-track {
-  flex: 0 0 150px;
+  min-width: 0;
   height: 8px;
   background: var(--inset);
   border: 1px solid var(--edge);
@@ -388,13 +400,21 @@
   background: transparent;
 }
 
-.ctx-text,
+.ctx-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 11.5px;
+}
+
 .ctx-spent {
+  grid-column: 1 / -1;
+  min-width: 0;
+  overflow-wrap: anywhere;
   font-size: 11.5px;
 }
 
 .ctx-trim {
-  flex-basis: 100%;
+  grid-column: 1 / -1;
   color: var(--warn);
   font-size: 11.5px;
 }

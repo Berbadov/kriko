@@ -51,10 +51,10 @@ const NOW = () => Math.round(Date.now() / 1000)
 
 function demoDoc(): SearchProvidersDoc {
   return {
-    primary: 'openserp',
-    fallback: ['deepseek'],
+    primary: 'deepseek',
+    fallback: [],
     automatic: true,
-    effective: ['openserp', 'deepseek'],
+    effective: ['deepseek'],
     providers: [
       {
         id: 'openserp',
@@ -112,10 +112,10 @@ export function useSearchProviders() {
       setProblem('')
       if (mode !== 'live') {
         const now = demo.current
-        if (patch.search_provider !== undefined) now.primary = patch.search_provider || 'openserp'
+        if (patch.search_provider !== undefined) now.primary = patch.search_provider || 'deepseek'
         if (patch.search_fallback !== undefined) {
           now.automatic = patch.search_fallback === ''
-          now.fallback = now.automatic ? ['deepseek'] : patch.search_fallback === 'none' ? [] : patch.search_fallback.split(',')
+          now.fallback = now.automatic ? [] : patch.search_fallback === 'none' ? [] : patch.search_fallback.split(',')
         }
         now.fallback = now.fallback.filter((id) => id !== now.primary)
         now.effective = [now.primary, ...now.fallback.filter((id) => now.providers.find((p) => p.id === id)?.ready)]

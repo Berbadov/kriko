@@ -216,3 +216,19 @@ def the_readers_registry_path_is_not_a_test_input(monkeypatch):
     from app import loginpath
 
     monkeypatch.setattr(loginpath, "_registry_path_values", lambda: [])
+
+
+@pytest.fixture(autouse=True)
+def no_test_finds_the_readers_hosted_search(monkeypatch):
+    """A test may not find the hosted web search the developer has keys for.
+
+    The local plane searches through DeepSeek (or Exa, Tavily) whenever the
+    reader's settings put one first and its key, shared access code or trial
+    can be used (`localplane.hosted_search`). A developer with a saved key
+    would see every local-plane test search the live web instead of the
+    loopback stub it set up. Nothing is hosted under test; a test that wants it
+    patches `hosted_search` itself and hands the run a chain of its own.
+    """
+    from app import localplane
+
+    monkeypatch.setattr(localplane, "hosted_search", lambda app_state_path=None: False)

@@ -54,13 +54,13 @@ export function SearchProvidersGroup() {
       <div className="setting">
         <span>
           First choice
-          <small>{doc.primary === 'openserp' ? 'Runs on this computer. The default.' : `${label(doc.primary)} is asked first.`}</small>
+          <small>{doc.primary === 'openserp' ? 'Runs on this computer. Used when no hosted search has a key.' : `${label(doc.primary)} is asked first${doc.automatic && doc.primary === 'deepseek' ? ', by default' : ''}.`}</small>
         </span>
         <Select
           label="First search provider"
           value={doc.primary}
           options={doc.providers.map((row) => ({ value: row.id, label: row.needs_key && !row.key_saved ? `${row.label} (no key)` : row.label }))}
-          onChange={(value) => void save({ search_provider: value === 'openserp' ? '' : value })}
+          onChange={(value) => void save({ search_provider: value })}
         />
       </div>
 
@@ -69,7 +69,7 @@ export function SearchProvidersGroup() {
           If that fails or finds nothing
           <small>
             {doc.automatic
-              ? 'Automatic: DeepSeek is asked next once it has a key. No other provider is asked unless you add it.'
+              ? 'Automatic: nothing else is asked unless you add it. OpenSERP is never added on its own.'
               : doc.fallback.length
                 ? 'Asked in this order.'
                 : 'Nothing is asked after the first choice.'}
