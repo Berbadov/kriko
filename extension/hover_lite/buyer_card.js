@@ -208,7 +208,7 @@
       ${(result.gave_up || []).length ? `<p class="lite-buy-note">It costs you:</p><ul>${list(result.gave_up)}</ul>` : ""}
       ${(result.switch_if || []).length ? `<p class="lite-buy-note">Switch if:</p><ul>${list(result.switch_if)}</ul>` : ""}
       ${(result.check_first || []).length ? `<p class="lite-buy-note">Check first:</p><ul>${list(result.check_first)}</ul>` : ""}
-      ${others ? `<details><summary>The rest</summary><ul>${others}</ul></details>` : ""}
+      ${others ? `<details class="lite-buy-rest"><summary>The rest</summary><ul>${others}</ul></details>` : ""}
       <div class="lite-buy-actions">${modes}</div>${answer}</section>`;
   }
 

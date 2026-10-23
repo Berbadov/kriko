@@ -1,3 +1,4 @@
+import { Disclosure } from '../Disclosure'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { effortKey, modelKey, searchKey, usePrefsDoc, type AgentRow } from '../../engine/settings'
@@ -432,10 +433,9 @@ export function VerifyReport({ answer }: { answer: VerifyAnswer }) {
         <p className="panel-note">{answer.tools?.length} tool(s): {(answer.tools ?? []).join(', ')}</p>
       )}
       {answer.log && (
-        <details>
-          <summary>Show the log</summary>
+        <Disclosure title="Show the log">
           <pre className="press-log">{answer.log}</pre>
-        </details>
+        </Disclosure>
       )}
     </div>
   )
@@ -458,10 +458,9 @@ export function SkillReport({ doc }: { doc: SkillDoc }) {
       )}
       {doc.body
         ? (
-            <details>
-              <summary>Show the document</summary>
+            <Disclosure title="Show the document">
               <pre className="press-log">{doc.body}</pre>
-            </details>
+            </Disclosure>
           )
         : <p className="panel-note">The engine rendered no document.</p>}
     </div>

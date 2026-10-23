@@ -1,6 +1,8 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { post, uploadArtifact, inShell } from '../../engine/api'
 import { useEngine } from '../../engine/Engine'
+import { FileUpload } from '../../arc/file-upload/file-upload'
+import type { FileUploadItem } from '../../arc/file-upload/file-upload'
 
 export function BackupsPanel() {
   const { mode, retry } = useEngine()
@@ -8,7 +10,7 @@ export function BackupsPanel() {
   const [working, setWorking] = useState(false)
   const [staged, setStaged] = useState(false)
   const [status, setStatus] = useState('')
-  const input = useRef<HTMLInputElement>(null)
+  const [picked, setPicked] = useState<FileUploadItem[]>([])
   const save = async () => {
     setWorking(true)
     try {
@@ -31,8 +33,16 @@ export function BackupsPanel() {
   return <div className="panel-body">
     <section className="panel-group"><h3>Save a snapshot</h3><p>Includes saved checks, conversations, settings, catalog revisions and data-only drafts. Provider key files are excluded. Stop active research first.</p><button className="btn" onClick={() => void save()} disabled={working || mode !== 'live'}>Export snapshot</button></section>
     <section className="panel-group"><h3>Restore a snapshot</h3>
-      <input ref={input} type="file" accept=".zip" onChange={(event) => { setFile(event.target.files?.[0] ?? null); setStaged(false) }} />
-      {file && !staged && <><p>Restore <strong>{file.name}</strong>? On restart, this replaces the current saved work and settings with the snapshot. Kriko keeps the previous databases beside the restored files. Provider keys stay unchanged.</p><button className="btn" disabled={working || mode !== 'live'} onClick={() => void restore()}>Restore this snapshot after restart</button><button className="btn ghost" onClick={() => { setFile(null); if (input.current) input.current.value = '' }}>Keep current data</button></>}
+      <FileUpload
+        accept=".zip"
+        multiple={false}
+        disabled={working}
+        label="Choose a snapshot"
+        description="Drop a snapshot ZIP here, or browse for one."
+        value={picked}
+        onChange={(items) => { setPicked(items); setFile(items.find((item) => !item.error)?.file ?? null); setStaged(false) }}
+      />
+      {file && !staged && <><p>Restore <strong>{file.name}</strong>? On restart, this replaces the current saved work and settings with the snapshot. Kriko keeps the previous databases beside the restored files. Provider keys stay unchanged.</p><button className="btn" disabled={working || mode !== 'live'} onClick={() => void restore()}>Restore this snapshot after restart</button><button className="btn ghost" onClick={() => { setFile(null); setPicked([]) }}>Keep current data</button></>}
       {staged && (inShell() ? <button className="btn primary" onClick={retry}>Restart and restore</button> : <p>Stop the local engine and start it again to apply the restore.</p>)}
     </section>
     {status && <p role="status">{status}</p>}

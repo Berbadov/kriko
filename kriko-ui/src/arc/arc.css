@@ -1,0 +1,64 @@
+/* The names Arc components read, answered from Kriko's own tokens.
+
+   Arc ships a foundation stylesheet that sets these on `:root` itself, keyed on
+   its own `data-theme`. It is not used here: it would also set a global focus
+   outline with `!important` and carry eight accents Kriko does not have. These
+   few lines are the part of it the copied components need, and every value is a
+   Kriko token, so the light and dark themes (`tokens.css`) reach them with no
+   second switch. Sizes are Kriko's compact scale, not Arc's roomy one. */
+
+:root {
+  --background: var(--ground);
+  --surface: var(--panel);
+  --surface-raised: var(--panel-2);
+  --surface-muted: var(--panel-2);
+  --foreground: var(--ink);
+  --text-secondary: var(--ink-2);
+  --text-muted: var(--ink-3);
+  --border: var(--edge);
+  --border-subtle: var(--edge);
+  --border-strong: var(--edge-strong);
+  --accent-strong: var(--accent-hi);
+  --accent-subtle: var(--accent-soft);
+  --accent-foreground: var(--accent-ink);
+  --success: var(--ok);
+  --warning: var(--warn);
+  --danger: var(--risk);
+
+  --control-on: var(--accent);
+  --control-glyph: var(--accent-ink);
+  --focus-ring: color-mix(in srgb, var(--accent-hi) 38%, transparent);
+
+  --shadow-resting: var(--shadow-1);
+  --shadow-raised: var(--shadow-2);
+  --shadow-floating: var(--shadow-2);
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+
+  --radius-control: var(--r-m);
+  --radius-panel: var(--r-l);
+  --radius-surface: var(--r-xl);
+  --radius-pill: 999px;
+  --control-height-sm: 30px;
+  --control-height-md: 34px;
+  --control-height-lg: 40px;
+
+  --font-body: var(--font);
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.9375rem;
+  --leading-body: 1.4;
+
+  --ease-enter: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: var(--ease-out);
+  --duration-instant: calc(120ms * var(--tm));
+  --duration-fast: calc(160ms * var(--tm));
+  --duration-standard: calc(240ms * var(--tm));
+  --duration-spring: calc(580ms * var(--tm));
+}
