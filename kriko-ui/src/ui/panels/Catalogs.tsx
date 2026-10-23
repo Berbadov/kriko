@@ -1,3 +1,5 @@
+import { Disclosure } from '../Disclosure'
+import { Textarea } from '../../arc/textarea/textarea'
 import { useRef, useState } from 'react'
 import { engineUrl, get, inShell, post, uploadArtifact, seg } from '../../engine/api'
 import { followJob } from '../../engine/jobs'
@@ -141,7 +143,7 @@ export function CatalogsPanel() {
       <section className="panel-group">
         <h3>Create a catalog draft</h3>
         <p>Describe the category and research you need. The selected agent researches a draft; you review it before installing.</p>
-        <textarea aria-label="Catalog to research" value={category} onChange={(event) => setCategory(event.target.value)} maxLength={500} placeholder="For example: cordless drills sold in my market" />
+        <Textarea label="Catalog to research" value={category} onChange={(event) => setCategory(event.target.value)} maxLength={500} rows={3} placeholder="For example: cordless drills sold in my market" />
         <button className="btn" disabled={working || mode !== 'live' || !category.trim()} onClick={() => void job('/api/packs/author', {category, harness: preferred})}>Research draft</button>
       </section>
 
@@ -391,7 +393,7 @@ function DraftRow({
         <small>{row.error || (row.version ? `v${row.version}` : 'Draft')}</small>
         <button className="btn ghost" onClick={() => void inspect()}>Review draft</button>
         {previewProblem && <span className="error-note" role="alert">{previewProblem}</span>}
-        {preview && <details open><summary>{preview.subjects.length} products · {preview.claims} sourced problems</summary><p>{preview.principle}</p><ul>{preview.subjects.map((name) => <li key={name}>{name}</li>)}</ul>{preview.uncovered.length > 0 && <p>{preview.uncovered.length} coverage gaps remain.</p>}</details>}
+        {preview && <Disclosure open title={`${preview.subjects.length} products · ${preview.claims} sourced problems`}><p>{preview.principle}</p><ul>{preview.subjects.map((name) => <li key={name}>{name}</li>)}</ul>{preview.uncovered.length > 0 && <p>{preview.uncovered.length} coverage gaps remain.</p>}</Disclosure>}
       </span>
       {asking ? (
         <span className="past-ask">
