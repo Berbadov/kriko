@@ -1,0 +1,69 @@
+{
+  "version": "0.3.3",
+  "platform": "windows-x86_64",
+  "source_fingerprint": "a864949082870af347ea5d0a0530e92fb567601687537d4b0b434e4594fee443",
+  "recorded_at": "2026-10-24",
+  "note": "The maintainer asked for this release after friends' feedback, knowing the packaged-window, clean-install and live-provider journeys below were not walked on this build. Missing journeys are recorded as not_observed; release_readiness.py is expected to refuse complete stable-readiness certification.",
+  "journeys": {
+    "fresh_install": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Installer not run: this machine has Kriko installed and the installer's hook would stop it and rewrite its registration. The installer was extracted with 7-Zip instead: it holds the app, the engine and OpenSERP and no catalogs."
+    },
+    "portable_start": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Portable archive built and hashed; the extracted portable window was not walked."
+    },
+    "setup": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Not walked on the packaged window."
+    },
+    "compare": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Automated coverage passed; packaged Compare was not walked live."
+    },
+    "stop": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Tray Quit was not walked."
+    },
+    "reconnect": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Not walked on the packaged window."
+    },
+    "upgrade_retains_data": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "No installed-version upgrade was performed."
+    },
+    "sourced_answer": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "No live research was run against the 0.3.3 frozen engine; the new local-agent hosted search and the Kriko Agent continuation are covered by automated tests only."
+    },
+    "follow_up": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Follow-up routing (an answer to the agent's own question keeps the web route) is covered by automated tests only."
+    }
+  },
+  "providers": {
+    "kriko-agent": {
+      "status": "not_observed",
+      "model": "mercury-2.5 + DeepSeek Search/Fetch",
+      "version": "0.3.3",
+      "report": "docs/releases/0.3.3.md"
+    }
+  },
+  "observed_instead": [
+    "Frozen 0.3.3 engine passed the standard smoke: health, settings, empty store, lookup, failing-job, MCP and terminal checks.",
+    "Native release app stayed up for 25 seconds, did not panic and spawned its bundled engine.",
+    "In the web interface's demo mode (dev server): the chip explanation line, the folded run timeline and the wider thread column were observed in Chrome. Product cards and follow-up suggestions did not appear in demo mode, so the folding product list was not seen on screen.",
+    "Extracted installer: its engine started in 2.4 seconds on a throwaway profile and answered /api/health.",
+    "Installer, portable, engine and extension artifact SHA-256 checks passed."
+  ]
+}
