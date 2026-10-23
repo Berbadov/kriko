@@ -64,19 +64,40 @@
   overflow-wrap: anywhere;
 }
 
+/* A setting is one row: the name and its note take the room, the control at the
+   other end keeps the size it was given. Said here, once, because a note that
+   runs out of its card and a switch squeezed by a long one are the same defect
+   wherever a setting carries a paragraph. `1 1 auto` rather than `1`: a stacked
+   setting lays the same span out in a column, where a zero basis would be a
+   height. */
 .setting > span:first-child {
   display: grid;
+  flex: 1 1 auto;
+  min-width: 0;
   gap: 2px;
 }
 
 .setting > span:first-child small {
   color: var(--ink-3);
   font-size: 12px;
+  overflow-wrap: anywhere;
 }
 
 .setting.stack {
   flex-direction: column;
   align-items: flex-start;
+}
+
+/* The one setting whose note wraps to several lines beside a switch: the switch
+   rides at the top of the note instead of floating in the middle of it. The room
+   `flex: none` keeps, and the note's right to shrink, come from `.setting`. */
+.setting.product-only-setting {
+  align-items: flex-start;
+  padding: 12px 0;
+}
+
+.product-only-setting .switch {
+  margin-top: 2px;
 }
 
 .setting .value {
@@ -1121,4 +1142,190 @@
 
 .setup-dev .btn {
   margin-top: 4px;
+}
+
+/* ---- the other half of a setting's row ----
+   `.setting > span:first-child` above takes the room with `flex: 1 1 auto`; this
+   is the control at the other end, which must not shrink to make it. Kept as its
+   own rule at the end of the shared file so the two halves cannot collide with
+   another change in the middle. */
+.setting > :last-child {
+  flex: none;
+}
+
+/* ---- the agent-integration presses ---- */
+/* One press says what it is doing, what it did, or what the engine refused.
+   Four states with four tones, so a failure is never read as a wait. */
+
+.press {
+  display: grid;
+  gap: 1px;
+  margin: 0;
+  font-size: 13px;
+}
+
+.press[data-state='working'] {
+  color: var(--ink-3);
+}
+
+.press[data-state='done'] {
+  color: var(--ok);
+}
+
+.press[data-state='failed'] {
+  padding: 8px 10px;
+  background: color-mix(in srgb, var(--risk) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--risk) 35%, transparent);
+  border-radius: 12px;
+  color: var(--ink);
+}
+
+.press-report {
+  display: grid;
+  gap: 8px;
+}
+
+.press-log {
+  overflow: auto;
+  max-height: 240px;
+  margin: 6px 0 0;
+  padding: 10px 12px;
+  background: var(--panel-2);
+  border: 1px solid var(--edge);
+  border-radius: 12px;
+  color: var(--ink-2);
+  font-family: var(--mono);
+  font-size: 11.5px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* ---- the four doors ---- */
+/* What a harvest produced, what the reader said about a catalog's claims, the
+   saved looks still needing a catalog, and a research run's undo. Appended as
+   one block so none of it reaches back into a rule above. */
+
+.share-list {
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.share-list strong {
+  font-weight: 560;
+}
+
+.share-list a.share-link {
+  color: var(--accent-hi);
+  text-decoration: underline;
+  overflow-wrap: anywhere;
+}
+
+.share-list a.share-link:hover {
+  color: var(--ink);
+}
+
+.mark-summary {
+  margin-bottom: 6px;
+}
+
+/* One claim's mark under the catalog that carries it: the word first, because
+   the tone is an addition and never the only cue. */
+.mark-list {
+  display: grid;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.mark-row {
+  display: grid;
+  gap: 1px;
+  padding: 5px 9px;
+  background: var(--panel-2);
+  border-radius: 9px;
+}
+
+.mark-verdict {
+  color: var(--ink-3);
+  font-size: 11.5px;
+  letter-spacing: 0.02em;
+}
+
+.mark-row[data-verdict='wrong'] .mark-verdict {
+  color: var(--risk);
+}
+
+.mark-row[data-verdict='useful'] .mark-verdict {
+  color: var(--ok);
+}
+
+.mark-title {
+  color: var(--ink-2);
+  font-size: 12.5px;
+}
+
+/* A mark's note is the reader's own sentence, written free-form: it wraps,
+   where every other `small` in a past row is a one-line note. */
+.past-main .mark-note {
+  overflow: visible;
+  color: var(--ink-3);
+  font-size: 12px;
+  white-space: normal;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
+}
+
+/* A saved look with no catalog: the engine's open question, then the engine's
+   own catalog list and the two presses. */
+.past-main .look-question {
+  overflow: visible;
+  color: var(--ink-2);
+  font-size: 12.5px;
+  white-space: normal;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
+}
+
+.look-choose {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-top: 5px;
+}
+
+.look-choose > .btn {
+  height: 30px;
+}
+
+.past-main .look-note {
+  overflow: visible;
+  font-size: 12px;
+  white-space: normal;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
+}
+
+/* A run's undo: quiet until it is pressed, then the confirm wraps above its
+   two buttons rather than squeezing them off the row. */
+.run-undo {
+  justify-self: start;
+  padding: 0;
+  color: var(--ink-3);
+  font-size: 12.5px;
+}
+
+.run-undo:hover {
+  color: var(--risk);
+  text-decoration: underline;
+}
+
+.run-ask {
+  flex-wrap: wrap;
+  align-items: flex-start;
+  padding-right: 0;
+}
+
+.run-ask > span {
+  flex: 1 1 100%;
+  line-height: 1.45;
 }

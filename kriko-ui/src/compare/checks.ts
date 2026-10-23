@@ -176,6 +176,29 @@ export function riskRows(columns: Check[]): RiskRow[] {
 
 export const riskKey = (risk: Risk) => risk.key || risk.title.trim().toLowerCase().replace(/\s+/g, ' ')
 
+/** What the engine said about a check it could not ground, or "" when it kept
+ *  findings or said nothing. The sentence is already on the row
+ *  (`response.diagnostic.message`), so this reads it rather than writing a
+ *  second one: the reasons — no page matched the product, quotes failed the
+ *  evidence checks, stages were incomplete — are the engine's to name. */
+export function groundingNote(check: Check): string {
+  return check.risks.length === 0 ? (check.diagnostic || '').trim() : ''
+}
+
+/** The count, only when there is one.
+ *
+ *  A column with nothing kept used to print "0 risks", which reads as "this
+ *  product has no risks" — the one claim the engine's own coverage refuses to
+ *  make. It says what the engine said instead: a diagnostic means nothing was
+ *  grounded, and its sentence is shown in full by `CheckContext`; no
+ *  diagnostic at all is a row that recorded no findings, which is all this
+ *  count ever measured. */
+export function findingsLabel(check: Check): string {
+  if (check.risks.length === 1) return '1 risk'
+  if (check.risks.length > 1) return `${check.risks.length} risks`
+  return check.diagnostic ? 'No grounded findings' : 'No findings stored'
+}
+
 /** One row for each label that any column states. */
 export function specRows(columns: Check[]): SpecRow[] {
   const labels: string[] = []

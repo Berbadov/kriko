@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { RECENTS } from '../mock/data'
 import { del, get, post, seg, type ApiHistoryItem } from './api'
 import { useEngine } from './Engine'
+import { savedLooks, type SavedCatalog, type SavedLook } from './looks'
 
 /** Every saved check, for the History panel. The welcome page shows only the latest few. */
 
@@ -167,4 +168,65 @@ export function useHistory(query = '') {
   )
 
   return { items, problem, remove, restore, hasMore, loadMore: () => setOffset((n) => n + 200), retry: () => void load() }
+}
+
+/** The saved quick looks a catalog has not claimed, and the catalogs a reader
+ *  may choose from.
+ *
+ *  `/api/history/records` is the surface that carries a look's `job_id` and its
+ *  `categorization` together with `categorization_catalogs`; the plain history
+ *  route below has neither. `looks.ts` maps it and keeps the engine's
+ *  abstention an open question. Like every other client, demo mode draws
+ *  nothing rather than a stand-in: a filed-for-you row would be an assignment
+ *  nobody made. */
+export function useSavedLooks() {
+  const { mode } = useEngine()
+  const [looks, setLooks] = useState<SavedLook[] | null>(null)
+  const [catalogs, setCatalogs] = useState<SavedCatalog[]>([])
+  const [problem, setProblem] = useState('')
+  const alive = useRef(true)
+
+  useEffect(() => {
+    alive.current = true
+    return () => {
+      alive.current = false
+    }
+  }, [])
+
+  const load = useCallback(async () => {
+    if (mode !== 'live') {
+      setLooks(null)
+      setProblem('')
+      return
+    }
+    try {
+      const reply = await get<unknown>('/api/history/records?limit=200')
+      if (!alive.current) return
+      const found = savedLooks(reply)
+      setLooks(found.looks)
+      setCatalogs(found.catalogs)
+      setProblem('')
+    } catch (error) {
+      if (alive.current) setProblem(error instanceof Error ? error.message : 'Could not read the saved quick looks.')
+    }
+  }, [mode])
+
+  useEffect(() => {
+    void load()
+  }, [load])
+
+  return { looks, catalogs, problem, reload: load }
+}
+
+/** Save the reader's catalog choice for one saved look.
+ *  The engine validates it against the installed catalogs it listed. */
+export async function assignSavedLook(jobId: string, packId: string) {
+  return post<{ status?: string; pack_name?: string; message?: string }>(
+    `/api/quick-looks/${seg(jobId)}/category`, { pack_id: packId })
+}
+
+/** Ask the configured agent to name the catalog, as a job the screen follows.
+ *  Spending an agent is the reader's press, which is why it is a separate one. */
+export async function askAgentToCategorizeLook(jobId: string) {
+  return post<{ job_id: string }>(`/api/quick-looks/${seg(jobId)}/categorize`)
 }

@@ -57,6 +57,12 @@ interface Place {
   card: { top?: number; left?: number; bottom?: number }
 }
 
+/** A card is put inside the window, never past its top or left edge: `h - 260`
+ *  and `w - CARD_W - 16` are the room a card needs, and in a window smaller than
+ *  that they go negative. A card placed above the window is the clipped card the
+ *  reader saw, because the spotlight paints over its own edge. */
+const inside = (value: number, room: number) => Math.max(16, Math.min(value, room))
+
 function place(step: Step): Place {
   const el = step.target ? document.querySelector<HTMLElement>(`[data-tour="${step.target}"]`) : null
   if (!el) return { rect: null, card: {} }
@@ -66,9 +72,9 @@ function place(step: Step): Place {
   const h = window.innerHeight
   // Beside it when it sits at the left edge, above it when it sits low, below it otherwise.
   // Beside a thing in a panel, to the right of the panel.
-  if (step.panel) return { rect, card: { left: Math.min(box.right + PAD + 24, w - CARD_W - 16), top: Math.min(Math.max(box.top - 8, 16), h - 260) } }
-  if (box.right < 360) return { rect, card: { left: box.right + PAD + 16, top: Math.min(Math.max(box.top - 8, 16), h - 260) } }
-  const left = Math.min(Math.max(box.left + box.width / 2 - CARD_W / 2, 16), w - CARD_W - 16)
+  if (step.panel) return { rect, card: { left: inside(box.right + PAD + 24, w - CARD_W - 16), top: inside(box.top - 8, h - 260) } }
+  if (box.right < 360) return { rect, card: { left: inside(box.right + PAD + 16, w - CARD_W - 16), top: inside(box.top - 8, h - 260) } }
+  const left = inside(box.left + box.width / 2 - CARD_W / 2, w - CARD_W - 16)
   if (box.top > h / 2) return { rect, card: { left, bottom: h - box.top + PAD + 16 } }
   return { rect, card: { left, top: box.bottom + PAD + 16 } }
 }

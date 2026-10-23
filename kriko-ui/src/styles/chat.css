@@ -223,7 +223,7 @@
 .thread-inner {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 12px;
 }
 
 .you {
@@ -243,13 +243,17 @@
   line-height: 1.7;
 }
 
+/* A card for a product an answer named. It is a row of a list, not a panel: the
+   name and its note on two tight lines, the actions beside them, and the height
+   of the row is then what fits more products on one screen. Every field stays —
+   the name, the note, and all three presses. */
 .product-card {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 14px;
-  padding: 14px 16px;
+  gap: 6px 10px;
+  padding: 6px 10px;
   background: var(--panel);
   border: 1px solid var(--edge);
   border-radius: 16px;
@@ -258,16 +262,32 @@
 .product-card > div:first-child {
   display: grid;
   min-width: 0;
+  gap: 1px;
 }
 
 .product-card strong {
+  line-height: 1.35;
   overflow-wrap: anywhere;
 }
 
 .product-card span {
   color: var(--ink-3);
-  font-size: 12px;
+  font-size: 11.5px;
+  line-height: 1.35;
   overflow-wrap: anywhere;
+}
+
+/* The presses of a product card are not sentences: they take the compact height
+   so the words, not the buttons, decide how tall the card is. Scoped to the card
+   because `.card-actions` is the Compare screen's too. */
+.product-card .card-actions {
+  gap: 6px;
+}
+
+.product-card .card-actions .btn {
+  height: 28px;
+  padding: 0 11px;
+  font-size: 12.5px;
 }
 
 .listing-product-card {
@@ -275,9 +295,9 @@
 }
 
 .listing-image {
-  width: 88px;
-  height: 88px;
-  flex: 0 0 88px;
+  width: 62px;
+  height: 62px;
+  flex: 0 0 62px;
   display: grid;
   place-items: center;
   overflow: hidden;
