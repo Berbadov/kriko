@@ -1,7 +1,7 @@
 {
   "version": "0.3.2",
   "platform": "windows-x86_64",
-  "source_fingerprint": "4eda506abad493756c216c0a4ff89d48c9ae58631827255e6447ae152c9ebdf4",
+  "source_fingerprint": "a16b9bc9c6f42e16524f7d7e8177a3ec42a5fd22e84e663e7b0f94f97f2c6ac0",
   "recorded_at": "2026-10-23",
   "note": "The maintainer requested publication after the remaining visual/browser and clean-install checks and desktop .kpack sharing limitation were disclosed. Record missing journeys honestly; release_readiness.py is expected to refuse complete stable-readiness certification.",
   "journeys": {
@@ -65,5 +65,10 @@
     "Forget them removed the test grant.",
     "Native app stayed up for 25 seconds and spawned its bundled engine.",
     "Installer, portable, engine and extension artifact integrity and SHA-256 checks passed."
-  ]
+  ],
+  "publication_checks": {
+    "full_python_run": "4546 passed, 23 skipped; one real-socket fixture exceeded its original 1-second test limit under parallel load.",
+    "targeted_retry": "8 passed after revising the regression to exercise a continuously dripping socket with scheduling headroom; no runtime code changed.",
+    "other_stages": "wheel, extension (512), UI (91), website (13), and native checks (13 Rust tests) passed."
+  }
 }
