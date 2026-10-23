@@ -507,6 +507,15 @@ function SharedAccessGroup() {
   if (!doc) return null
   const trial = doc.trial
   const granted = doc.grant.present
+  // Whether Kriko Agent is answering on somebody else's keys here. Every number
+  // below is the engine's own (`/api/keys/shared/status`); the grant and the
+  // trial are the only two states, so one sentence says which one is in use.
+  const fromWhom = doc.grant.label ? `${doc.grant.label}'s keys` : 'shared keys'
+  const sharing = granted
+    ? `Sharing is on — Kriko Agent can use ${fromWhom}`
+    : trial.available
+      ? 'Sharing is on — Kriko Agent can use this build’s free trial'
+      : 'Sharing is off — Kriko Agent uses the keys saved on this computer'
 
   return (
     <section className="panel-group" data-tour="shared-access">
@@ -525,54 +534,67 @@ function SharedAccessGroup() {
         </p>
       )}
 
-      {granted ? (
-        <div className="setting">
-          <span>
-            {doc.grant.label ? `${doc.grant.label}'s keys` : 'Shared keys'}
-            <small>
-              Mercury and DeepSeek, from an access code, kept sealed on this computer
-              {doc.device === 'dpapi' ? ' and bound to this Windows account' : ''}.
-            </small>
-          </span>
-          <button className="btn ghost" onClick={() => void forget()}>
-            Forget them
-          </button>
-        </div>
-      ) : (
-        <>
-          <div className="setting stack">
-            <span>
-              Access code
-              <small>The whole line, from whoever is sharing their keys.</small>
-            </span>
-            <textarea className="key-field" rows={3} value={pasted} spellCheck={false} placeholder="Paste the code" onChange={(event) => setPasted(event.target.value)} />
-          </div>
-          <div className="setting stack">
-            <span>
-              Password
-              <small>Sent separately from the code. It is not stored.</small>
-            </span>
-            <input className="key-field" type="password" autoComplete="off" value={password} onChange={(event) => setPassword(event.target.value)} />
-          </div>
-          <div className="setting stack">
-            <span>
-              Whose keys
-              <small>Optional: a name, so you know what is in use.</small>
-            </span>
-            <input className="key-field" type="text" value={label} onChange={(event) => setLabel(event.target.value)} />
-          </div>
+      <div className="setting">
+        <span>
+          {sharing}
+          <small>
+            {granted
+              ? `Mercury and DeepSeek, from an access code, kept sealed on this computer${
+                  doc.device === 'dpapi' ? ' and bound to this Windows account' : ''
+                }.`
+              : trial.available
+                ? 'Questions are counted on this computer, on the keys the build carries.'
+                : 'Nothing here is shared with anyone: these are the keys you added yourself.'}
+          </small>
+        </span>
+      </div>
+
+      <div className="setting stack">
+        <span>
+          Access code
+          <small>The whole line, from whoever is sharing their keys.</small>
+        </span>
+        <textarea className="key-field" rows={3} value={pasted} spellCheck={false} placeholder="Paste the code" onChange={(event) => setPasted(event.target.value)} />
+      </div>
+      <div className="setting stack">
+        <span>
+          Password
+          <small>Sent separately from the code. It is not stored.</small>
+        </span>
+        <input className="key-field" type="password" autoComplete="off" value={password} onChange={(event) => setPassword(event.target.value)} />
+      </div>
+      <div className="setting stack">
+        <span>
+          Whose keys
+          <small>Optional: a name, so you know what is in use.</small>
+        </span>
+        <input className="key-field" type="text" value={label} onChange={(event) => setLabel(event.target.value)} />
+      </div>
+      <div className="setting">
+        <span>
+          Use the keys this code carries
+          <small>{granted ? 'Saving replaces the keys in use here.' : 'Saving keeps them sealed on this computer.'}</small>
+        </span>
+        <span className="key-actions">
           <button className="btn" disabled={!pasted.trim() || !password} onClick={() => void unlock(pasted, password, label)}>
             Use these keys
           </button>
-        </>
-      )}
+          {granted && (
+            <button className="btn ghost" onClick={() => void forget()}>
+              Forget them
+            </button>
+          )}
+        </span>
+      </div>
 
       <p className="panel-note">
-        {trial.available
-          ? `Free trial on this computer: ${trial.left} of ${trial.limit} Kriko Agent questions left.`
-          : trial.used
-            ? `The free trial on this computer is used up (${trial.used} of ${trial.limit} questions).`
-            : 'No free trial is included in this build.'}
+        {granted
+          ? ''
+          : trial.available
+            ? `Free trial on this computer: ${trial.left} of ${trial.limit} Kriko Agent questions left. When they are used up, paste an access code or add your own Mercury and DeepSeek keys in Settings → Research.`
+            : trial.used
+              ? `The free trial on this computer is used up (${trial.used} of ${trial.limit} questions). Paste an access code or add your own Mercury and DeepSeek keys in Settings → Research.`
+              : 'No free trial is included in this build.'}
       </p>
 
       <details className="panel-details">
@@ -580,7 +602,9 @@ function SharedAccessGroup() {
         <p className="panel-note">
           Make a code here, then send the code and the password to your friend in two separate
           messages. Anyone with both can use your keys in their Kriko; nothing else can, and a code
-          made by a different build will not open in the build they have.
+          made by a different build will not open in the build they have. To stop a code working,
+          replace your Mercury and DeepSeek keys at the providers: nothing here can reach into a
+          friend&apos;s computer and take a code back.
         </p>
         <div className="setting stack">
           <span>

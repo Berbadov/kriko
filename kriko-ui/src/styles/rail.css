@@ -134,10 +134,15 @@
   font-size: 12.5px;
 }
 
+/* A source page or a product, as one row: what it is on the left, what can be
+   done with it at the right. The link used to take a line of its own under the
+   words, which made every source as tall as two; side by side, and wrapping only
+   when the column is genuinely too narrow, the column holds twice as many. */
 .cr-item {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 4px;
   border: 1px solid transparent;
   border-radius: var(--r-m);
   transition:
@@ -156,11 +161,12 @@
 
 .cr-main {
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
   align-items: flex-start;
-  gap: 4px;
-  width: 100%;
-  padding: 9px 10px 4px;
+  gap: 2px;
+  min-width: 0;
+  padding: 7px 10px;
   background: none;
   border: 0;
   border-radius: var(--r-m);
@@ -175,6 +181,20 @@
   font-weight: 560;
   line-height: 1.35;
   overflow-wrap: anywhere;
+}
+
+/* The site's icon and the row's title on one line. The icon is the engine's
+   own fetch; the title is what the row already said. */
+.cr-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.cr-title strong {
+  min-width: 0;
 }
 
 .cr-meta {
@@ -217,7 +237,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  padding: 0 10px 9px;
+  padding: 0 9px 0 0;
 }
 
 .cr-actions .btn {
@@ -561,19 +581,22 @@
   --tone: var(--warn);
 }
 
+/* The sources of one claim, as a tight block: a chip per page, and the block is
+   what a list of findings is measured in, so its gaps are the size of the chips
+   and not more. */
 .claim-sources {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 8px;
+  gap: 4px;
+  margin-top: 6px;
 }
 
 .claim-chip {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 6px;
   max-width: 100%;
-  padding: 4px 10px 4px 7px;
+  padding: 3px 9px 3px 6px;
   background: linear-gradient(180deg, color-mix(in srgb, var(--ink) 7%, var(--panel-2)), var(--panel-2));
   border: 1px solid var(--edge);
   border-radius: 999px;
@@ -620,6 +643,41 @@
   white-space: nowrap;
 }
 
+/* ---- the site's own mark, in a source row and on a claim chip ----
+   The engine's icon, drawn over a letter generated from the host. The letter
+   is under the image rather than replaced by it: a row has a mark before the
+   engine answers, when the site declares no icon, when the image fails, and
+   when the window runs with no engine at all. A transparent icon therefore
+   shows the letter through instead of leaving an empty square. The fixed box
+   means the row does not resize when the image arrives. */
+.site-mark {
+  position: relative;
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  overflow: hidden;
+  background: var(--panel-2);
+  border: 1px solid var(--edge);
+  border-radius: 5px;
+  color: var(--ink-2);
+}
+
+.site-mark-letter {
+  font-size: 9.5px;
+  font-weight: 650;
+  line-height: 1;
+}
+
+.site-mark img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
 /* The tier meter: three bars that rise like a signal. Trusted lights all three,
    neutral two, low one. Flat on purpose, so it can never read as an emoji. */
 .claim-meter {
@@ -654,15 +712,17 @@
   background: linear-gradient(180deg, color-mix(in srgb, var(--tone) 78%, white), var(--tone));
 }
 
+/* The card behind a chip. It opens over the answer, so it is measured like one:
+   the quote keeps its room, the frame around it gives some back. */
 .claim-card {
   position: fixed;
   z-index: 60;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   overflow: hidden;
   width: min(340px, calc(100vw - 24px));
-  padding: 15px 14px 12px;
+  padding: 12px 12px 10px;
   background:
     radial-gradient(120% 90px at 0% 0%, color-mix(in srgb, var(--tone) 14%, transparent), transparent 70%),
     color-mix(in srgb, var(--panel) 96%, transparent);
@@ -717,7 +777,7 @@
   border-left: 2px solid transparent;
   border-image: linear-gradient(180deg, var(--tone), color-mix(in srgb, var(--tone) 10%, transparent)) 1;
   font-size: 13.5px;
-  line-height: 1.55;
+  line-height: 1.45;
 }
 
 .claim-card-none,
@@ -734,7 +794,7 @@
 
 .claim-card-acts a,
 .claim-card-acts button {
-  padding: 6px 11px;
+  padding: 5px 10px;
   background: linear-gradient(180deg, color-mix(in srgb, var(--ink) 7%, var(--panel-2)), var(--panel-2));
   border: 1px solid var(--edge-strong);
   border-radius: var(--r-s);
