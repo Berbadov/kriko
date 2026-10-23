@@ -498,12 +498,21 @@ function KeysGroup() {
 }
 
 /** Use someone else's keys for Kriko Agent, or hand a friend a password for yours. */
-function SharedAccessGroup() {
+export function SharedAccessGroup() {
   const { doc, problem, code, unlock, forget, make } = useSharedAccess()
   const [pasted, setPasted] = useState('')
   const [password, setPassword] = useState('')
   const [label, setLabel] = useState('')
   const [madeWith, setMadeWith] = useState('')
+  const [saving, setSaving] = useState(false)
+  const unlockCode = async () => {
+    setSaving(true)
+    try {
+      if (await unlock(pasted, password, label)) {
+        setPassword(''); setPasted('')
+      }
+    } finally { setSaving(false) }
+  }
   if (!doc) return null
   const trial = doc.trial
   const granted = doc.grant.present
@@ -554,21 +563,21 @@ function SharedAccessGroup() {
           Access code
           <small>The whole line, from whoever is sharing their keys.</small>
         </span>
-        <textarea className="key-field" rows={3} value={pasted} spellCheck={false} placeholder="Paste the code" onChange={(event) => setPasted(event.target.value)} />
+        <textarea aria-label="Access code" className="key-field" rows={3} value={pasted} spellCheck={false} placeholder="Paste the code" onChange={(event) => setPasted(event.target.value)} />
       </div>
       <div className="setting stack">
         <span>
           Password
           <small>Sent separately from the code. It is not stored.</small>
         </span>
-        <input className="key-field" type="password" autoComplete="off" value={password} onChange={(event) => setPassword(event.target.value)} />
+        <input aria-label="Shared access password" className="key-field" type="password" autoComplete="off" value={password} onChange={(event) => setPassword(event.target.value)} />
       </div>
       <div className="setting stack">
         <span>
           Whose keys
           <small>Optional: a name, so you know what is in use.</small>
         </span>
-        <input className="key-field" type="text" value={label} onChange={(event) => setLabel(event.target.value)} />
+        <input aria-label="Whose keys" className="key-field" type="text" value={label} onChange={(event) => setLabel(event.target.value)} />
       </div>
       <div className="setting">
         <span>
@@ -576,8 +585,8 @@ function SharedAccessGroup() {
           <small>{granted ? 'Saving replaces the keys in use here.' : 'Saving keeps them sealed on this computer.'}</small>
         </span>
         <span className="key-actions">
-          <button className="btn" disabled={!pasted.trim() || !password} onClick={() => void unlock(pasted, password, label)}>
-            Use these keys
+          <button className="btn" disabled={saving || !pasted.trim() || !password} onClick={() => void unlockCode()}>
+            {saving ? 'Opening code…' : 'Use these keys'}
           </button>
           {granted && (
             <button className="btn ghost" onClick={() => void forget()}>
@@ -586,6 +595,11 @@ function SharedAccessGroup() {
           )}
         </span>
       </div>
+
+      {granted && <p className="panel-note">
+        Access is ready. Choose <strong>Kriko Agent</strong> in Agents, then use <strong>Check connection</strong> in Set up Kriko.
+        {' '}<button className="btn" onClick={() => showDrawer('agents')}>Choose agent</button>
+      </p>}
 
       <p className="panel-note">
         {granted

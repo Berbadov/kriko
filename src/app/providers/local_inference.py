@@ -288,21 +288,7 @@ class _ReaderStopped(Exception):
 
 def _abort_response_read(response) -> None:
     """Abort the underlying socket without closing its buffered reader cross-thread."""
-    raw = getattr(response, "_response", response)
-    fp = getattr(raw, "fp", None)
-    sock = getattr(getattr(fp, "raw", None), "_sock", None)
-    if sock is not None:
-        try:
-            sock.shutdown(socket.SHUT_RDWR)
-        except OSError:
-            pass
-        try:
-            sock.close()
-        except OSError:
-            pass
-    abort = getattr(response, "abort", None)
-    if callable(abort):
-        abort()
+    network.abort_response(response)
 
 
 class OpenAICompatSocket:

@@ -18,6 +18,12 @@ Open the app. Its navigation contains **Chat**, **Compare** and **Queue**. Open
 
 ## Connect an agent
 
+If a friend gave you an access code, open **More → Set up Kriko → Have an
+access code from a friend?** Paste the whole code and its password, then press
+**Use these keys**. Choose **Kriko Agent** in Agents and return to setup to
+press **Check connection**. You do not need Python, another agent, or your own
+API keys. Use the same release as the person who made your code.
+
 Choose a coding agent, local model, or API agent in **More → Agents**. API keys
 are managed in **More → Settings**; local model setup is in **More → Local model**.
 Return to setup and press **Check connection**. This sends a short request to
@@ -37,6 +43,8 @@ Install it from the Chrome Web Store:
 <https://chromewebstore.google.com/detail/kriko/bdifnaggafjokndlpjgmlfappcoehdjb>.
 Then open a product listing and return to **More → Set up Kriko** to check the
 browser connection. The store package updates with the browser.
+The panel opens when you press the toolbar button or **Alt + K**; it does not
+open by itself as you browse.
 
 A checkout can load the folder instead. In **More → Set up Kriko**, open
 **Installing from a checkout instead** and press **Prepare extension folder**.

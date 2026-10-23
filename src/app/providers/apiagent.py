@@ -652,6 +652,10 @@ class ApiAgentResearcher(harness.HarnessResearcher):
                 publish_deltas()
                 publish_steps()
                 now = time.monotonic()
+                if worker.is_alive() and now - started >= self.timeout:
+                    stop_deltas.set()
+                    raise TimeoutError(
+                        f"{self.agent.label} did not finish within {self.timeout:g}s")
                 if (worker.is_alive() and self.check_cancelled is not None
                         and now - last_cancel_check >= self._cancel_tick):
                     self.check_cancelled()

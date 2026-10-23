@@ -21,6 +21,25 @@ from app.web import state
 from app.web.jobs import Progress
 
 
+def test_api_agent_stops_waiting_for_a_transport_that_ignores_its_timeout(tmp_path):
+    from app.providers import apiagent, mistral
+
+    release = threading.Event()
+    researcher = apiagent.ApiAgentResearcher(apiagent.MISTRAL, home=tmp_path, timeout=0.15)
+
+    def stalled(*_args, **_kwargs):
+        release.wait(3)
+        return mistral.Reply(text="too late")
+
+    researcher._stream_converse = stalled
+    started = time.monotonic()
+    try:
+        with pytest.raises(TimeoutError, match="did not finish"):
+            researcher.ask("A bounded request")
+        assert time.monotonic() - started < 0.8
+    finally:
+        release.set()
+
 def _row(one_id: str = "antigravity-cli") -> harness.Harness:
     from app.tests.harness_fixtures import row
 

@@ -2092,13 +2092,8 @@
     }
     if (request && request.type === "SHOW_GUARD") showGuard(request.result);
     if (request && request.type === "KRIKO_DUE_NUDGE") showDueNudge(request.purchase);
-    // The worker opens the panel by itself only on a site Kriko already reads,
-    // once per site per session, when it has an answer or a product to offer
-    // to research. An unknown site is opened from the toolbar instead: a
-    // panel over every shop the reader visits is what this replaced.
-    if (request && request.type === "KRIKO_SHOW_PANEL" && !state.mounted) {
-      openPanel();
-    }
+    // Background results warm the cache; they never open the panel. Only
+    // TOGGLE_HOVER_LITE from a toolbar click or Alt+K changes visibility.
   });
 
   // runtime.sendMessage broadcasts only reach extension UI surfaces, not

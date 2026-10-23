@@ -104,4 +104,6 @@ def guarded_opener() -> urllib.request.OpenerDirector:
     `302 Location: http://127.0.0.1:8787/api/...` would otherwise be followed
     straight to the sidecar's own API. Proxy and CA settings stay as urllib's.
     """
-    return urllib.request.build_opener(_RefuseUnsafeRedirects)
+    from app.providers import transport
+
+    return transport.opener(_RefuseUnsafeRedirects)
