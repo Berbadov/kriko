@@ -15,6 +15,7 @@ import re
 import secrets
 import sqlite3
 from collections.abc import Sequence
+from contextlib import nullcontext
 from datetime import UTC, datetime
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -769,22 +770,6 @@ CREATE TABLE IF NOT EXISTS compare_questions (
   answered_at TEXT NOT NULL DEFAULT '',
   PRIMARY KEY (draft_id, question_id)
 );
-
--- One comparison's board: the reader's free marks over the table (B194),
--- pen strokes and typed notes, saved as one JSON document per draft. A
--- single row rather than a stroke table: a mark is not a record anyone
--- queries, it is one drawing, and a normal-form split of it would cost a
--- write per pixel for nothing. Cleared, not kept, when the draft is saved
--- over: the board belongs to the comparison as it is now lined up, and a
--- mark over a column that is gone is a mark about nothing. App state for
--- the same reason every other comparison row is: never knowledge, and a
--- pack update or uninstall must not erase it.
-CREATE TABLE IF NOT EXISTS compare_boards (
-  draft_id  TEXT PRIMARY KEY,
-  board     TEXT NOT NULL DEFAULT '{}',
-  updated_at TEXT NOT NULL DEFAULT ''
-);
-
 -- The research queue: products the reader lined up from the browser
 -- extension's panel for an agent to research one after another, then compare.
 -- App state, never knowledge: it is the reader's to-do list, and a pack
@@ -1059,9 +1044,8 @@ def declared_columns(sql: str = SCHEMA) -> dict[str, dict[str, str]]:
     # The closing paren does not have to be on a line of its own. It was `\n\);`
     # for as long as every table in here happened to close that way, which is
     # not a property of the format: `compare_questions` ends on
-    # `PRIMARY KEY (draft_id, question_id));` and `compare_boards` on
-    # `updated_at TEXT NOT NULL DEFAULT '');`, so both were skipped and the
-    # migration layer never saw a column either declares.
+    # `PRIMARY KEY (draft_id, question_id));`, so it was skipped and the
+    # migration layer never saw a column it declares.
     #
     # `\n\);` alone would still miss them, and the shorter `\);` matches a
     # paren pair *inside* a column — `DEFAULT (datetime('now'))` would end the
@@ -2109,72 +2093,6 @@ def answer_compare_question(
         (draft_id, question_id)).fetchone())
 
 
-#: The most one saved board may hold as JSON. A stroke is a list of points
-#: and a note is a short paragraph, so a whole board lives comfortably in a
-#: few kilobytes; this is the runaway guard, not a quota to design against.
-BOARD_MAX_CHARS = 200000
-
-
-def compare_board(conn: sqlite3.Connection, draft_id: str) -> dict:
-    """One comparison's board, or an empty one rather than a missing one.
-
-    A draft with no marks yet is the ordinary case, and the screen must not
-    have to tell "no board" from "board not loaded".
-    """
-    row = conn.execute(
-        "SELECT board, updated_at FROM compare_boards WHERE draft_id = ?",
-        (draft_id,),
-    ).fetchone()
-    if not row:
-        return {"draft_id": draft_id, "strokes": [], "notes": [],
-                "updated_at": ""}
-    try:
-        board = json.loads(row["board"] or "{}")
-    except (TypeError, ValueError):
-        # A document this app cannot read is still the reader's work: hand
-        # back an empty board rather than raising, and let the save below
-        # replace what was unreadable.
-        board = {}
-    return {
-        "draft_id": draft_id,
-        "strokes": board.get("strokes") or [],
-        "notes": board.get("notes") or [],
-        "updated_at": row["updated_at"],
-    }
-
-
-def save_compare_board(
-    conn: sqlite3.Connection, draft_id: str, board: dict,
-) -> dict:
-    """Replace the board, wholesale. The board is one drawing (B194).
-
-    The whole document is written per save rather than merged stroke by
-    stroke: a mark the reader has just erased is a mark they want gone, and
-    a merge would bring it back. The document is only shape-checked (strokes
-    are lists, notes are dicts) because what a stroke means is the screen's
-    business; this layer names no product category and no drawing feature.
-    """
-    strokes = board.get("strokes")
-    notes = board.get("notes")
-    if strokes is None:
-        strokes = []
-    if notes is None:
-        notes = []
-    if not isinstance(strokes, list) or not isinstance(notes, list):
-        raise ValueError("a board is {strokes: [...], notes: [...]}")
-    document = {"strokes": strokes, "notes": notes}
-    text = json.dumps(document, default=str)
-    if len(text) > BOARD_MAX_CHARS:
-        raise ValueError("this board is too large to keep")
-    conn.execute(
-        "INSERT INTO compare_boards (draft_id, board, updated_at) VALUES (?,?,?)"
-        " ON CONFLICT(draft_id) DO UPDATE SET"
-        "   board = excluded.board, updated_at = excluded.updated_at",
-        (draft_id, text, _now()))
-    conn.commit()
-    return compare_board(conn, draft_id)
-
-
 #: One page sample, bounded. A prompt is not a database dump: 120 labelled
 #: facts of 200 characters is already more than any adapter needs.
 SITE_SAMPLE_MAX_CHARS = 40_000
@@ -2826,8 +2744,10 @@ def finish_job(
     *,
     result: dict | None = None,
     message: str = "",
+    commit: bool = True,
 ) -> None:
-    with conn:
+    """Finish a job; with commit=False the caller owns commit and rollback."""
+    with conn if commit else nullcontext():
         ended = conn.execute(
             "UPDATE jobs SET state = ?, finished_at = ?, progress = ?,"
             "       message = COALESCE(NULLIF(?, ''), message), result_json = ?"

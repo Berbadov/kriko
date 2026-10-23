@@ -169,3 +169,20 @@ def test_it_runs_before_anything_else_can_act_on_the_request(client):
     record an extension sighting, open app.sqlite, or reach a router."""
     names = [m.kwargs["dispatch"].__name__ for m in client.app.user_middleware]
     assert names[0] == "only_from_here"
+
+
+def test_extension_sightings_are_bounded(client):
+    """D13: the dict is keyed by an `Origin` the caller chooses, so anything
+    that can set a header could add one unique origin at a time for the life of
+    the process. The oldest go first, and the newest is still recorded — the
+    bound must not silently stop counting."""
+    from app.web.app import EXTENSION_SIGHTINGS_MAX
+
+    for index in range(EXTENSION_SIGHTINGS_MAX + 8):
+        client.get("/api/health",
+                   headers={"Origin": f"chrome-extension://origin{index:03d}"})
+
+    loaded = client.app.state.extension_digests
+    assert len(loaded) == EXTENSION_SIGHTINGS_MAX
+    newest = f"chrome-extension://origin{EXTENSION_SIGHTINGS_MAX + 7:03d}"
+    assert newest in loaded

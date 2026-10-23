@@ -200,8 +200,72 @@ def test_busy_discovery_does_not_fail_the_local_plane_screen(monkeypatch, tmp_pa
 def test_the_configured_address_is_probed_first_and_the_defaults_follow(machine, stub):
     stub.models = ["m"]
     rows = local_discovery.discover(stub.url)
-    assert rows[0]["url"] == stub.url and rows[0]["name"] == "configured"
-    assert {row["name"] for row in rows[1:]} == {n for n, _ in local_discovery.CANDIDATES}
+    configured_runtime = next(
+        (name for name, url in local_discovery.CANDIDATES
+         if url == local_discovery.base_of(stub.url)),
+        "configured",
+    )
+    expected_defaults = {
+        name for name, url in local_discovery.CANDIDATES
+        if url != local_discovery.base_of(stub.url)
+    }
+    assert rows[0]["url"] == stub.url and rows[0]["name"] == configured_runtime
+    assert {row["name"] for row in rows[1:]} == expected_defaults
+
+
+def test_a_probe_started_before_refresh_cannot_refill_the_discovery_cache(
+        machine, monkeypatch):
+    """A refresh invalidates both completed and currently running probes."""
+    import threading
+
+    entered = threading.Event()
+    finish = threading.Event()
+    calls = []
+
+    def probed(configured, timeout):
+        calls.append(configured)
+        if len(calls) == 1:
+            entered.set()
+            assert finish.wait(2)
+            model = "before-refresh"
+        else:
+            model = "after-refresh"
+        return [{"name": "configured", "url": configured,
+                 "up": True, "models": [model]}]
+
+    monkeypatch.setattr(local_discovery, "_probed", probed)
+    local_discovery.forget_discovery()
+    result = []
+    worker = threading.Thread(
+        target=lambda: result.append(local_discovery.discover("http://example.test:9")))
+    worker.start()
+    assert entered.wait(2)
+    local_discovery.forget_discovery()
+    finish.set()
+    worker.join(2)
+    assert not worker.is_alive()
+    assert result[0][0]["models"] == ["before-refresh"]
+
+    refreshed = local_discovery.discover("http://example.test:9")
+    assert refreshed[0]["models"] == ["after-refresh"]
+    assert len(calls) == 2
+
+
+def test_an_unavailable_search_service_stays_unavailable_when_cached(machine, monkeypatch):
+    """A remembered negative health check must not become a positive one."""
+    calls = []
+
+    def unavailable(base, timeout):
+        calls.append((base, timeout))
+        return False
+
+    monkeypatch.setattr(local_discovery, "_search_answers", unavailable)
+    local_discovery.forget_discovery()
+    url = "http://search-cache-regression.invalid:7000"
+
+    assert local_discovery.search_answers(url) is False
+    assert local_discovery.search_answers(url) is False
+    assert len(calls) == 1
 
 
 def test_vllm_default_endpoint_is_discovered_as_a_first_class_runtime(machine, monkeypatch, stub):

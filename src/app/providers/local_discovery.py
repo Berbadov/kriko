@@ -18,6 +18,7 @@ which is the normal state of a machine that has not started one yet.
 
 import json
 import socket
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -97,6 +98,8 @@ def _listening(url: str) -> bool:
 #: Keyed on everything that changes the answer, including `CANDIDATES` itself,
 #: so a test that points discovery at stubs of its own is asked afresh.
 _ANSWERS: dict[tuple, tuple[float, list]] = {}
+_CACHE_LOCK = threading.Lock()
+_CACHE_GENERATION = 0
 
 
 def forget_discovery() -> None:
@@ -106,14 +109,19 @@ def forget_discovery() -> None:
     check, a model pull, a settings write — because the cache exists only to
     stop one turn asking the same question three times.
     """
-    _ANSWERS.clear()
+    global _CACHE_GENERATION
+    with _CACHE_LOCK:
+        _CACHE_GENERATION += 1
+        _ANSWERS.clear()
 
 
-def _fresh(key: tuple) -> list | None:
-    hit = _ANSWERS.get(key)
-    if hit is not None and time.monotonic() - hit[0] < DISCOVERY_TTL_S:
-        return hit[1]
-    return None
+def _fresh(key: tuple) -> tuple[list | None, int]:
+    """The cached answer and its invalidation generation, read atomically."""
+    with _CACHE_LOCK:
+        hit = _ANSWERS.get(key)
+        if hit is not None and time.monotonic() - hit[0] < DISCOVERY_TTL_S:
+            return hit[1], _CACHE_GENERATION
+        return None, _CACHE_GENERATION
 
 
 def _get(url: str, timeout: float, *, health: bool = False):
@@ -197,15 +205,18 @@ def discover(configured: str = "", timeout: float = PROBE_TIMEOUT) -> list[dict]
     edit is a row the next caller reads wrong.
     """
     key = ("discover", tuple(CANDIDATES), base_of(configured), timeout)
-    remembered = _fresh(key)
+    remembered, generation = _fresh(key)
     if remembered is not None:
         return [dict(row) for row in remembered]
     rows = _probed(configured, timeout)
     if not any(row.get("busy") for row in rows):
         # A busy probe did not test the address, so it is not an answer about
         # it: remembering it would turn one contended moment into a plane that
-        # claims to be down for the next second and a half.
-        _ANSWERS[key] = (time.monotonic(), rows)
+        # claims to be down for the next second and a half. Likewise, a refresh
+        # while this probe was running makes its answer older than the refresh.
+        with _CACHE_LOCK:
+            if generation == _CACHE_GENERATION:
+                _ANSWERS[key] = (time.monotonic(), rows)
     return rows
 
 
@@ -230,11 +241,13 @@ def search_answers(url: str = "", timeout: float = PROBE_TIMEOUT) -> bool:
     """
     base = base_of(url) or SEARCH_DEFAULT_URL
     key = ("search", base, timeout)
-    remembered = _fresh(key)
+    remembered, generation = _fresh(key)
     if remembered is not None:
-        return bool(remembered)
+        return bool(remembered[0])
     answer = _search_answers(base, timeout)
-    _ANSWERS[key] = (time.monotonic(), [answer])
+    with _CACHE_LOCK:
+        if generation == _CACHE_GENERATION:
+            _ANSWERS[key] = (time.monotonic(), [answer])
     return answer
 
 

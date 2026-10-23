@@ -81,13 +81,32 @@ def needs_key(provider: str) -> bool:
     return provider != OPENSERP
 
 
-def has_key(provider: str) -> bool:
+def _shared_home(app_state_path=None):
+    """The app folder holding shared grants for this search configuration."""
+    if app_state_path is None:
+        return None
+    from pathlib import Path
+
+    return Path(app_state_path).parent
+
+
+def has_key(provider: str, app_state_path=None, *, trial_reservation_id: str = "") -> bool:
     """Whether this provider could be asked now: OpenSERP always, others with a key."""
     if not needs_key(provider):
         return True
     from app import keys
+    from app.providers import MissingKey
 
-    return provider in keys.search_providers()
+    if provider in keys.search_providers():
+        return True
+    try:
+        # `search_providers` is the personal-key inventory. `require` also
+        # checks an unlocked shared grant when given this app's home.
+        keys.require(provider, shared_home=_shared_home(app_state_path),
+                     reservation_id=trial_reservation_id)
+    except MissingKey:
+        return False
+    return True
 
 
 def scrub(text: object) -> str:
@@ -119,7 +138,7 @@ def parse_fallback(value: str) -> list[str] | None:
     return out
 
 
-def order(chosen: dict) -> dict:
+def order(chosen: dict, app_state_path=None, *, trial_reservation_id: str = "") -> dict:
     """`{primary, fallback, automatic, effective}` for the stored choices.
 
     `effective` is what a search will try, in order: the first choice, then
@@ -135,7 +154,8 @@ def order(chosen: dict) -> dict:
     automatic = stored is None
     behind = list(AUTOMATIC_FALLBACK) if stored is None else stored
     fallback = [name for name in behind if name != primary]
-    effective = [primary] + [name for name in fallback if has_key(name)]
+    effective = [primary] + [name for name in fallback if has_key(
+        name, app_state_path, trial_reservation_id=trial_reservation_id)]
     return {"primary": primary, "fallback": fallback, "automatic": automatic,
             "effective": effective}
 
@@ -440,12 +460,14 @@ class Chain:
 
 # ── building ─────────────────────────────────────────────────────────────
 
-def _hosted_factory(provider: str, app_state_path) -> Callable[[], Callable[..., list]]:
+def _hosted_factory(provider: str, app_state_path, *,
+                    trial_reservation_id: str = "") -> Callable[[], Callable[..., list]]:
     def build():
         if provider == "deepseek":
             from app.providers import deepseek
 
-            return deepseek.searcher()
+            return deepseek.searcher(shared_home=_shared_home(app_state_path),
+                                     trial_reservation_id=trial_reservation_id)
         from app import providers
 
         return providers._searcher(app_state_path, provider)[0]
@@ -465,7 +487,8 @@ def openserp_for_chat(chosen: dict) -> Callable[..., list]:
 
 
 def build(chosen: dict, app_state_path, *, log=None, check=None,
-          openserp_factory: Callable[[dict], Callable[..., list]] = openserp_for_chat
+          openserp_factory: Callable[[dict], Callable[..., list]] = openserp_for_chat,
+          trial_reservation_id: str = ""
           ) -> Chain:
     """The chain for the reader's saved choices.
 
@@ -473,17 +496,21 @@ def build(chosen: dict, app_state_path, *, log=None, check=None,
     without its key) raises `MissingKey`, as it always did: they asked for
     something specific and are told it is not there. Providers behind it that
     cannot be asked are left out (`order`).
+
+    `trial_reservation_id` is the question/job reservation, reused for both
+    readiness and lazy adapter construction after its last allowance is spent.
     """
     from app import prefs
 
-    plan = order(chosen)
+    plan = order(chosen, app_state_path, trial_reservation_id=trial_reservation_id)
     language = str(chosen.get(prefs.LOCAL_SEARCH_LANGUAGE) or "en")
     members: list[tuple[str, Callable[[], Callable[..., list]]]] = []
     for provider in plan["effective"]:
         if provider == OPENSERP:
             members.append((provider, lambda: openserp_factory(chosen)))
         else:
-            members.append((provider, _hosted_factory(provider, app_state_path)))
+            members.append((provider, _hosted_factory(
+                provider, app_state_path, trial_reservation_id=trial_reservation_id)))
     chain = Chain(members, log=log, app_state_path=app_state_path, language=language)
     if check is not None:
         chain.check_cancelled = check
@@ -495,14 +522,16 @@ def status(conn) -> dict:
     from app import keys, prefs
 
     chosen = prefs.read(conn)
-    plan = order(chosen)
+    row = conn.execute("PRAGMA database_list").fetchone()
+    app_state_path = row[2] if row and len(row) > 2 else None
+    plan = order(chosen, app_state_path)
     seen = health(conn)
     present = set(keys.search_providers())
     return {
         "providers": [
             {"id": one, "label": label(one), "needs_key": needs_key(one),
-             "key_saved": (one in present) if needs_key(one) else None,
-             "ready": has_key(one), "note": NOTES[one], "health": seen[one]}
+             "key_saved": (one in present or has_key(one, app_state_path)) if needs_key(one) else None,
+             "ready": has_key(one, app_state_path), "note": NOTES[one], "health": seen[one]}
             for one in KNOWN
         ],
         "primary": plan["primary"],
@@ -512,7 +541,8 @@ def status(conn) -> dict:
     }
 
 
-def probe(conn, app_state_path, provider: str, query: str = "") -> dict:
+def probe(conn, app_state_path, provider: str, query: str = "", *,
+          trial_reservation_id: str = "") -> dict:
     """Run one query through one provider alone, and say what came back.
 
     The reader's own press, so it is allowed to cost the one query. It counts
@@ -527,7 +557,7 @@ def probe(conn, app_state_path, provider: str, query: str = "") -> dict:
     if provider not in KNOWN:
         out["error"] = "unknown search provider"
         return out
-    if not has_key(provider):
+    if not has_key(provider, app_state_path, trial_reservation_id=trial_reservation_id):
         out["error"] = f"{label(provider)} needs a key. Add it under Keys."
         return out
     try:
@@ -535,7 +565,8 @@ def probe(conn, app_state_path, provider: str, query: str = "") -> dict:
         if provider == OPENSERP:
             search = openserp_for_chat(chosen)
         else:
-            search = _hosted_factory(provider, app_state_path)()
+            search = _hosted_factory(
+                provider, app_state_path, trial_reservation_id=trial_reservation_id)()
         found = search(text, 5)
     except Exception as error:  # noqa: BLE001 - the answer is the reason
         out["error"] = scrub(error) or type(error).__name__
