@@ -45,8 +45,11 @@ class TurnOutOfTime(RuntimeError):
 MAX_SEARCH_ROUNDS = 2
 #: Records one round may ask for; the rest are dropped with a note.
 MAX_CALLS_PER_ROUND = 6
-#: Earlier messages the agent is shown, and how much of each.
-HISTORY_MESSAGES = 8
+#: Earlier messages the agent is shown, and how much of each. The newest
+#: messages that fit `HISTORY_BUDGET` are sent, up to `HISTORY_MESSAGES`: a fixed
+#: count of eight made the agent forget the car it was asked about after four
+#: exchanges, while the window it runs in was nearly empty.
+HISTORY_MESSAGES = 30
 HISTORY_CHARS = 2000
 HISTORY_BUDGET = 24000
 #: A plan reply is parsed from at most this much text.
@@ -163,8 +166,27 @@ def _sources_text() -> str:
     return "\n".join(lines)
 
 
+def split_history(history: Sequence[dict]) -> tuple[list[dict], list[dict]]:
+    """`(recent, older)`: the newest messages that fit the budget, and the rest.
+
+    The one place the cut is made, so the text the agent is shown and the
+    "long chat" note the reader is shown (`turnusage.history_trim`) cannot
+    disagree about what was left out.
+    """
+    items = list(history)
+    kept = 0
+    used = 0
+    for one in reversed(items[-HISTORY_MESSAGES:]):
+        size = len(_clip(one.get("text", ""), HISTORY_CHARS)) + 9  # "Reader: " and a newline
+        if kept and used + size > HISTORY_BUDGET:
+            break
+        used += size
+        kept += 1
+    return items[len(items) - kept:], items[:len(items) - kept]
+
+
 def _history_text(history: Sequence[dict]) -> str:
-    recent = list(history)[-HISTORY_MESSAGES:]
+    recent, older_messages = split_history(history)
     if not recent:
         return "(this is the first message)"
     recent_text = "\n".join(
@@ -173,8 +195,7 @@ def _history_text(history: Sequence[dict]) -> str:
         for one in recent)
     # User requirements outlive the recent exchange. Keep the original request
     # and later corrections, in order; never substitute assistant guesses.
-    older = [one for one in list(history)[:-HISTORY_MESSAGES]
-             if one.get("role") == "reader"]
+    older = [one for one in older_messages if one.get("role") == "reader"]
     budget = max(0, HISTORY_BUDGET - len(recent_text))
     earlier = []
     omitted = 0
@@ -355,6 +376,10 @@ def chat_brief(message: str, history: Sequence[dict]) -> str:
         ADVISE_RULE,
         response_length_guidance(message),
         guidance,
+        "If the reader is answering a question you asked, or correcting an assumption",
+        "your earlier answer made, and the question is one the web settles (a",
+        "specification, a part code, a service interval), do not answer from memory",
+        "or from the manual you do not have: search with the full detail now.",
         "Kriko can search the web for you. If the question needs facts that may",
         "have changed or that you cannot know without the internet (news, prices,",
         "availability, releases, schedules, a specific current spec), do not guess",
@@ -959,6 +984,48 @@ def _folded(text: str) -> str:
     return "".join(c for c in folded if not unicodedata.combining(c))
 
 
+#: How a reader corrects or completes what they said before ("it's just the
+#: 1.5 diesel", "actually 2020"), as opposed to starting a new topic.
+_CORRECTION_OPENER = re.compile(
+    r"^\W*(?:it'?s|its|it is|no\b|actually|just|only|i mean|i meant|sorry|correction|not\b)", re.I)
+#: A correction is a few words. A paragraph is a new question.
+CORRECTION_WORDS = 14
+
+
+def _continued_route(message: str, history: Sequence[dict]) -> str:
+    """The route of the research this message carries on, or "" for a new topic.
+
+    The reader's report: asked which oil a Megane takes, the Kriko Agent asked
+    which Megane, was told "Facelift (2020)", and answered from memory ("unknown
+    without the manual") with web tools off. Nothing in "Facelift (2020)" says
+    *search*, and the turn before it left no sources to be a follow-up of: the
+    question it asked is what made it a research turn. So an answer to the
+    agent's own question, and a short correction that adds a detail ("its just
+    1.5 blue dCi diesel 2020") after a request the web answers, carry that
+    request's route instead of falling to plain chat.
+    """
+    if not history or _URL_IN_MESSAGE.search(message):
+        return ""
+    requests = [str(one.get("text") or "") for one in history if one.get("role") == "reader"]
+    if not requests:
+        return ""
+    last = history[-1]
+    # The nearest earlier request that was research, each judged alone: an empty
+    # history cannot continue anything, so this does not recurse. A correction
+    # that itself reads as chat ("its just the diesel") is skipped to find it.
+    base = next((route for text in reversed(requests[-4:])
+                 if (route := route_message(text)) in ("web", "catalogue")), "chat")
+    if last.get("role") == "agent" and last.get("questions"):
+        return base if base in ("web", "catalogue") else "web"
+    if (len(message.split()) <= CORRECTION_WORDS
+            and (re.search(r"\d", message) or _CORRECTION_OPENER.search(message))):
+        if base in ("web", "catalogue"):
+            return base
+        # The answer it corrects rested on pages, so the correction is more of the same.
+        return "web" if _has_web_sources(_last_sources(history)) else ""
+    return ""
+
+
 def route_message(message: str, history: Sequence[dict] = ()) -> str:
     """Choose direct chat, internet research, or installed-record research.
 
@@ -990,6 +1057,9 @@ def route_message(message: str, history: Sequence[dict] = ()) -> str:
         return "web"
     if _bare_product_request(message, folded):
         return "web"
+    carried = _continued_route(message, history)
+    if carried:
+        return carried
     if _DEPENDENT_QUESTION.search(message) and len(message.split()) <= 24:
         previous = _last_sources(history)
         if _has_web_sources(previous):
@@ -1263,6 +1333,11 @@ def query_brief(message: str, history: Sequence[dict]) -> str:
 
 def _web_query(message: str, history: Sequence[dict]) -> str:
     """Resolve short web follow-ups against the recent conversation."""
+    if _continued_route(message, history):
+        # The search is the original request with what the reader added: a
+        # lone "Facelift (2020)" names nothing to look for.
+        earlier = [str(one.get("text") or "") for one in history if one.get("role") == "reader"]
+        return _clip(" ".join([*earlier[-3:], message]), 300)
     if not _has_web_sources(_last_sources(history)) or not _FOLLOW_UP.search(message):
         if _URL_IN_MESSAGE.search(message):
             return message

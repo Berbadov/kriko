@@ -61,6 +61,27 @@ def stored(app_state_path=None) -> dict:
         conn.close()
 
 
+def hosted_search(app_state_path=None) -> bool:
+    """Whether the web search the reader's settings put first is a hosted one
+    that can be asked now (`providers.websearch.order`): the same decision the
+    chat makes, so a local run and a chat turn search through the same door."""
+    if app_state_path is None:
+        return False
+    from app.providers import websearch
+    from app.web import state
+
+    try:
+        conn = state.connect(app_state_path)
+        try:
+            chosen = prefs.read(conn)
+        finally:
+            conn.close()
+        plan = websearch.order(chosen, app_state_path)
+    except Exception:  # noqa: BLE001 - a readiness probe answers no rather than crashing
+        return False
+    return any(websearch.needs_key(one) for one in plan["effective"])
+
+
 def timeout_of(value: str) -> float:
     try:
         seconds = float(value)
@@ -163,12 +184,18 @@ def resolve(
             if chosen:
                 break
 
+    # A hosted search (DeepSeek by a saved key, a shared access code or the
+    # trial; Exa or Tavily if the reader put them in the order) is as good a
+    # door as OpenSERP. Friends who never installed or started OpenSERP were
+    # told "no local search service" and could not run a local model at all.
+    hosted = with_search and hosted_search(app_state_path)
     search = {
-        "search_kind": "openserp" if searching else "",
+        "search_kind": "openserp" if searching else ("hosted" if hosted else ""),
         "search_url": discovery.base_of(want_search) or discovery.SEARCH_DEFAULT_URL,
         "search_label": (
             "the search service on this machine"
             if searching
+            else "the hosted web search" if hosted
             else "no local search service"
         ),
     }
@@ -278,11 +305,13 @@ def resolve(
         if out["runtime"]["supported"]
         else {}
     )
-    if out["ready"] and with_search and not searching:
+    if out["ready"] and with_search and not searching and not hosted:
         out["ready"] = False
         out["reason"] = (
-            f"No local search service is answering at {search['search_url']}. "
-            "Start OpenSERP or change the address in Settings, Local machine."
+            f"No web search is available: nothing is answering at {search['search_url']} "
+            "and no hosted search has a key. Start OpenSERP, change the address in "
+            "Settings, Local machine, or add a DeepSeek key (or an access code) in "
+            "Settings, Keys."
         )
     if not with_search:
         # Not asked, so not claimed: a readiness check that skipped the

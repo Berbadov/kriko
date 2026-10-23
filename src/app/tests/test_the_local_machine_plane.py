@@ -894,3 +894,37 @@ PARALLEL_TEXT = json.dumps({
         {"url": "https://two.test/b", "title": "Second page",
          "excerpts": ["more"]},
     ]})
+
+
+# —— a hosted search in place of OpenSERP ———————————————————————————
+
+def test_a_machine_with_no_openserp_runs_a_local_model_on_a_hosted_search(
+        ready, tmp_path, monkeypatch):
+    """The friends' report: local agents could not search the web. The local plane
+    was only ready when an OpenSERP service answered, and searched only through it."""
+    path = _path(tmp_path, **{prefs.LOCAL_URL: ready.url})  # no search address given
+    monkeypatch.setattr(local_discovery, "search_answers", lambda url="", timeout=1.0: False)
+    assert localplane.resolve(path)["ready"] is False  # nothing to search with
+
+    monkeypatch.setattr(localplane, "hosted_search", lambda app_state_path=None: True)
+    plan = localplane.resolve(path)
+    assert plan["ready"] and plan["search_kind"] == "hosted"
+    assert "hosted web search" in plan["line"]
+
+
+def test_a_local_run_searches_through_the_readers_web_search_order(
+        ready, tmp_path, monkeypatch):
+    path = _path(tmp_path, **{prefs.LOCAL_URL: ready.url, prefs.LOCAL_SEARCH_URL: ready.url})
+    seen = []
+
+    class Chain:
+        providers = ["deepseek"]
+
+        def __call__(self, query, limit=5, **options):
+            seen.append(query)
+            return []
+
+    monkeypatch.setattr(tasks, "_local_web_search", lambda app_state_path, **kw: Chain())
+    plane = tasks._researcher({"backend": "local", "app_state_path": path})
+    assert plane.search_provider == "deepseek"
+    assert plane._search.__class__ is Chain

@@ -1085,6 +1085,31 @@ test("AGENTS offers only what the app can run now", async () => {
   assert.deepEqual(reply.agents.map((one) => one.id), ["local", "claude"]);
 });
 
+test("AGENTS names Kriko Agent, with the app's reason, when it cannot run yet", async () => {
+  const h = loadBackground({ routes: { "/api/agent-market": {
+    chosen: "kriko-agent",
+    agents: [
+      { id: "claude", label: "Claude Code", kind: "cli", state: "ready", action: "use" },
+      { id: "kriko-agent", label: "Kriko Agent", kind: "api", state: "not_installed", action: "setup",
+        detail: "Bills the Mercury and DeepSeek keys on this computer" },
+    ],
+  } } });
+  const reply = await send(h, { type: "AGENTS" });
+  assert.deepEqual(reply.agents.map((one) => one.id), ["claude"], "it cannot be picked while it cannot run");
+  assert.deepEqual(reply.unavailable.map((one) => one.id), ["kriko-agent"]);
+  assert.match(reply.unavailable[0].detail, /Mercury/);
+});
+
+test("AGENTS lists Kriko Agent as usable, not as unavailable, once it is ready", async () => {
+  const h = loadBackground({ routes: { "/api/agent-market": {
+    chosen: "kriko-agent",
+    agents: [{ id: "kriko-agent", label: "Kriko Agent", kind: "api", state: "ready", action: "use" }],
+  } } });
+  const reply = await send(h, { type: "AGENTS" });
+  assert.deepEqual(reply.agents.map((one) => one.id), ["kriko-agent"]);
+  assert.deepEqual(reply.unavailable, []);
+});
+
 test("RESEARCH_PRODUCT carries the agent picked in the panel, and nothing else about it", async () => {
   const h = loadBackground({ routes: { "/api/extension/research-plane": { job_id: "j" } } });
   await send(h, { type: "RESEARCH_PRODUCT", payload: {

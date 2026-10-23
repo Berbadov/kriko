@@ -79,7 +79,7 @@ def test_free_chat_search_uses_saved_address_language_and_bounded_sockets(tmp_pa
 
     conn = state.connect(tmp_path / "app.sqlite")
     try:
-        prefs.write(conn, {prefs.LOCAL_SEARCH_URL: "http://127.0.0.1:7111",
+        prefs.write(conn, {prefs.SEARCH: "openserp", prefs.LOCAL_SEARCH_URL: "http://127.0.0.1:7111",
                            prefs.LOCAL_SEARCH_LANGUAGE: "tr"})
         seen = {}
 

@@ -249,12 +249,39 @@ def _use_local_ask(settings, params: dict) -> bool:
     return localplane.is_ready(path)
 
 
+def _local_web_search(app_state_path, *, log=None, check=None):
+    """The reader's web-search order for a local run, or `None` for OpenSERP's own.
+
+    A local model has no web tools, so what it reads comes from this search. It
+    is the chat's search (`websearch.build`): DeepSeek leads wherever it can be
+    asked, OpenSERP only where it cannot, and a hosted provider behind a failing
+    OpenSERP is tried instead of ending the run. Only a hosted search is used
+    here; where none can be asked the local plane keeps OpenSERP's own engines
+    and pacing.
+    """
+    if app_state_path is None:
+        return None
+    from app import localplane, prefs
+    from app.providers import websearch
+
+    if not localplane.hosted_search(app_state_path):
+        return None
+    conn = state.connect(app_state_path)
+    try:
+        chosen = prefs.read(conn)
+    finally:
+        conn.close()
+    return websearch.build(chosen, app_state_path, log=log, check=check)
+
+
 def _local_asker(settings, params: dict, progress: Progress):
     """The local model as the job's researcher, wired like a harness one."""
     from app.providers import local_agent, local_asker
 
     plan = _local_plan({**params, "app_state_path": settings.app_state_path}, progress=progress)
     researcher = local_asker(
+        web_search=_local_web_search(settings.app_state_path, log=progress.log,
+                                     check=progress.check),
         base_url=plan["url"], serving_name=plan["model"],
         search_base_url=plan["search_url"], search_kind=plan["search_kind"],
         timeout=plan["timeout"],
@@ -389,6 +416,7 @@ def _researcher(params: dict):
             context_tokens=plan.get("context_tokens"),
             output_language=plan.get("output_language", "auto"),
             search_language=plan.get("search_language", "en"),
+            web_search=_local_web_search(params.get("app_state_path")),
             # All of them, not the first: asking only the first made every
             # research run depend on one engine, and that one is the flaky
             # one (`openserp.LOCAL_ENGINES`).

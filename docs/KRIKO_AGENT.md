@@ -28,7 +28,8 @@ retrieval charge. The cache contains result text and URLs but no API keys; delet
 that SQLite file to clear it.
 
 Mercury's conversation context is capped at 48,000 serialized characters, and
-the incoming brief is clipped to 16,000 characters if needed. Tool output is
+the incoming brief is clipped to 32,000 characters if needed (the newest
+24,000 characters of the chat travel with it). Tool output is
 trimmed to fit while keeping source URLs and result metadata first. The full
 retrieved text remains in the run's grounding data, up to 8,000 characters per
 URL.

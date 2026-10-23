@@ -38,7 +38,10 @@ MAX_TOOL_CALLS = 8
 MAX_RESULTS = 5
 MAX_SOURCE_CHARS = 8000
 MAX_CONTEXT_CHARS = 48_000
-MAX_PROMPT_CHARS = 16_000
+# Room for the chat history the agent is shown (`chat.HISTORY_BUDGET`, 24,000
+# characters) and the brief around it: at 16,000 the recent exchange sat in the
+# clipped middle and the agent lost what it had just been told.
+MAX_PROMPT_CHARS = 32_000
 CONTEXT_TOOL_RESERVE_CHARS = 8_000
 MAX_PARALLEL_RETRIEVALS = 4
 MIN_RETRIEVAL_INTERVAL_SECONDS = 0.21
