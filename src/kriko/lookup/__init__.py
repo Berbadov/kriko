@@ -145,11 +145,26 @@ def lookup(conn, query: Query) -> LookupResult:
     # not ambiguity, it is two answers to one question, and intersecting them
     # would mean installing a second pack could only ever *reduce* what you see.
     reached: dict[str, str] = {}
-    for pack_id in pack_ids:
-        in_pack = [sid for sid in resolution.subject_ids
-                   if _subject_pack(conn, sid) == pack_id]
-        if not in_pack:
-            continue
+    # One query for every subject's pack, not one per subject per pack:
+    # a lookup that resolves to several subjects across several packs would
+    # otherwise pay O(subjects × packs) round-trips here.
+    smarks = ",".join("?" * len(resolution.subject_ids))
+    subject_pack: dict[str, str] = {
+        row["subject_id"]: row["pack_id"]
+        for row in conn.execute(
+            f"SELECT subject_id, pack_id FROM subjects"
+            f" WHERE subject_id IN ({smarks})",
+            resolution.subject_ids,
+        )
+    }
+    # Group subjects by their pack, so the per-subject expand calls run
+    # only within one pack's subjects — not once per subject per pack.
+    by_pack: dict[str, list[str]] = {}
+    for sid in resolution.subject_ids:
+        pack = subject_pack.get(sid)
+        if pack:
+            by_pack.setdefault(pack, []).append(sid)
+    for pack_id, in_pack in by_pack.items():
         expansions = [expand(conn, (sid,), (pack_id,)) for sid in in_pack]
         common = set.intersection(*(set(e) | {sid}
                                     for e, sid in zip(expansions, in_pack)))
@@ -179,7 +194,7 @@ def lookup(conn, query: Query) -> LookupResult:
 
     smarks = ",".join("?" * len(reached))
     pmarks = ",".join("?" * len(pack_ids))
-    rows = conn.execute(
+    rows = list(conn.execute(
         f"SELECT c.*, s.label AS subject_label,"
         f"       COALESCE(t.title, '') AS title,"
         f"       COALESCE(t.body, '') AS body,"
@@ -189,11 +204,49 @@ def lookup(conn, query: Query) -> LookupResult:
         f" LEFT JOIN claim_text t"
         f"   ON t.claim_id = c.claim_id AND t.pack_id = c.pack_id AND t.lang = ?"
         f" WHERE c.subject_id IN ({smarks}) AND c.pack_id IN ({pmarks})",
-        (query.lang, *reached.keys(), *pack_ids))
+        (query.lang, *reached.keys(), *pack_ids)))
+
+    # Batch-fetch conditions and evidence for every claim at once, rather
+    # than one query per claim inside the loop below. A lookup that reaches
+    # many subjects returns many claims, and a per-claim query is an N+1
+    # that costs one round-trip per claim.
+    claim_keys = [(row["claim_id"], row["pack_id"]) for row in rows]
+    conditions_by_claim: dict[tuple[str, str], list[Condition]] = {}
+    evidence_by_claim: dict[tuple[str, str], list] = {}
+    if claim_keys:
+        # SQLite has no (a, b) IN ((?, ?), …) row-value syntax, so the
+        # pair filter is spelled as OR-ed equality clauses.
+        def _pair_where(col_a: str, col_b: str) -> str:
+            return " OR ".join(f"({col_a} = ? AND {col_b} = ?)" for _ in claim_keys)
+
+        ckey_args = [v for pair in claim_keys for v in pair]
+        for row in conn.execute(
+            f"SELECT claim_id, pack_id, key, op, value_num, value_text,"
+            f"       on_missing, weight, seq"
+            f" FROM claim_conditions"
+            f" WHERE {_pair_where('claim_id', 'pack_id')}"
+            f" ORDER BY claim_id, pack_id, seq",
+            ckey_args,
+        ):
+            cond = Condition(key=row["key"], op=row["op"], value_num=row["value_num"],
+                             value_text=row["value_text"], on_missing=row["on_missing"],
+                             weight=float(row["weight"]))
+            conditions_by_claim.setdefault(
+                (row["claim_id"], row["pack_id"]), []).append(cond)
+        for row in conn.execute(
+            f"SELECT e.claim_id, e.pack_id, e.quote, e.stance, e.independent,"
+            f"       e.source_id, s.url, s.domain"
+            f" FROM evidence e JOIN sources s USING (source_id, pack_id)"
+            f" WHERE {_pair_where('e.claim_id', 'e.pack_id')}",
+            ckey_args,
+        ):
+            evidence_by_claim.setdefault(
+                (row["claim_id"], row["pack_id"]), []).append(row)
 
     claims = []
     for row in rows:
-        conditions = _conditions_for(conn, row["claim_id"], row["pack_id"])
+        ckey = (row["claim_id"], row["pack_id"])
+        conditions = conditions_by_claim.get(ckey, [])
         served, condition_weight, outcomes = evaluate_all(conditions, context)
         if not served:
             continue
@@ -206,11 +259,7 @@ def lookup(conn, query: Query) -> LookupResult:
                 evaluate_all(conditions, one)[0] for one in candidates):
             continue
 
-        evidence = conn.execute(
-            "SELECT e.quote, e.stance, e.independent, e.source_id, s.url, s.domain"
-            " FROM evidence e JOIN sources s USING (source_id, pack_id)"
-            " WHERE e.claim_id = ? AND e.pack_id = ?",
-            (row["claim_id"], row["pack_id"])).fetchall()
+        evidence = evidence_by_claim.get(ckey, [])
         # A claim is served with the page and the quote it came from, or not
         # at all. Enforced here, whatever builder made the pack: a claim with
         # nothing behind it is a gap, not an answer.

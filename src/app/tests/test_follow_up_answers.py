@@ -5,13 +5,11 @@ import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import pytest
-from fastapi.testclient import TestClient
 
 from app import followup, quicklook
 from app.providers import local_agent
 from app.providers.local_inference import OpenAICompatSocket
 from app.web import state, tasks
-from app.web.app import create_app
 from app.web.settings import Settings
 
 
@@ -340,14 +338,20 @@ def test_a_listing_follow_up_keeps_its_agent_while_it_streams_and_names_its_sour
 
 
 def test_the_panel_reads_a_follow_up_while_it_is_being_written(settings):
+    """The reply so far is on the job row while the job is still running.
+
+    That row is what the job thread draws, and it is all the retired extension
+    asks feed ever read; keeping the assertion here keeps the "written while it
+    is given" behaviour covered without the deleted route.
+    """
     conn = state.connect(settings.app_state_path)
     quick = state.create_job(conn, "quick_look", {"product": "Acme"})
     state.finish_job(conn, quick, state.SUCCEEDED, result={"risks": [], "specs": []})
     asking = state.create_job(conn, "quick_ask", {"quick_job_id": quick, "q": "Is it quiet?"})
     state.start_job(conn, asking)
     state.save_partial(conn, asking, {"answer": "It is qui"})
+    row = state.get_job(conn, asking)
     conn.close()
-    asks = TestClient(create_app(settings)).get(
-        f"/api/extension/quick-look/{quick}/asks").json()["asks"]
-    assert asks == [{"job_id": asking, "q": "Is it quiet?", "answer": "It is qui",
-                     "sources": [], "state": "running", "done": False, "message": ""}]
+    assert row["state"] == "running"
+    assert row["done"] is False
+    assert row["result"] == {"answer": "It is qui"}

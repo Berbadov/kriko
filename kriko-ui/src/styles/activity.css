@@ -12,7 +12,7 @@
   align-items: center;
   gap: 10px;
   width: 100%;
-  padding: 12px 14px;
+  padding: 8px 12px;
   text-align: left;
 }
 
@@ -195,8 +195,8 @@
   flex-wrap: wrap;
   align-items: baseline;
   gap: 3px 9px;
-  margin-left: 28px;
-  padding: 3px 0 5px;
+  margin-left: 24px;
+  padding: 2px 0 3px;
   color: var(--ink-2);
   font-size: 12.5px;
   line-height: 1.45;

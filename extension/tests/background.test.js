@@ -509,10 +509,38 @@ test("the options page is told the default and what was actually stored", async 
 test("a saved address is normalised once, by the code that consumes it", async () => {
   const h = loadBackground({ routes: { "/api/health": { version: "0.3.3" } } });
   const reply = await send(h,
-    { type: "SET_API_BASE", payload: { url: " 192.168.1.9:8787/ " } });
+    { type: "SET_API_BASE", payload: { url: " 127.0.0.1:9999/ " } });
   assert.equal(reply.ok, true);
-  assert.equal(reply.base, "http://192.168.1.9:8787");
-  assert.equal(h.state.local.krikoApiBaseUrl, "http://192.168.1.9:8787");
+  assert.equal(reply.base, "http://127.0.0.1:9999");
+  assert.equal(h.state.local.krikoApiBaseUrl, "http://127.0.0.1:9999");
+});
+
+// `_normalizeBaseUrl` answers "is this a URL". Chrome answers "may this
+// extension call it", and the manifest covers loopback only — so storing
+// another host would be storing a setting that can never work, and every
+// request to it was reported as the app being down.
+test("an address the extension may not call is refused rather than saved", async () => {
+  const h = loadBackground({ routes: { "/api/health": { version: "0.3.3" } } });
+  const reply = await send(h,
+    { type: "SET_API_BASE", payload: { url: " 192.168.1.9:8787/ " } });
+  assert.equal(reply.ok, false);
+  assert.match(reply.error, /192\.168\.1\.9/);
+  assert.match(reply.error, /127\.0\.0\.1 or localhost/);
+  assert.equal("krikoApiBaseUrl" in h.state.local, false,
+    "an address that cannot be reached must not be remembered as a choice");
+});
+
+test("an address Chrome blocks is diagnosed as a permission, not as an app that is down", async () => {
+  const h = loadBackground({
+    offline: true, localState: { krikoApiBaseUrl: "http://192.168.1.9:8787" },
+  });
+  const base = await send(h, { type: "GET_API_BASE" });
+  assert.equal(base.permitted, false);
+  assert.match(base.detail, /192\.168\.1\.9/);
+  const reply = await send(h, { type: "AGENTS" });
+  assert.equal(reply.ok, false);
+  assert.equal(reply.code, "APP_HOST_NOT_PERMITTED");
+  assert.doesNotMatch(reply.error, /not running/i);
 });
 
 test("saving reports whether anything answered there, without refusing the save", async () => {
@@ -537,7 +565,7 @@ test("a reachable app answers with its version", async () => {
 
 test("emptying the field forgets the address rather than storing nothing", async () => {
   const h = loadBackground({ routes: { "/api/health": { version: "0.3.3" } } });
-  await send(h, { type: "SET_API_BASE", payload: { url: "http://elsewhere:1" } });
+  await send(h, { type: "SET_API_BASE", payload: { url: "http://127.0.0.1:9999" } });
   const reply = await send(h, { type: "SET_API_BASE", payload: { url: "  " } });
   assert.equal("krikoApiBaseUrl" in h.state.local, false);
   assert.equal(reply.base, "http://127.0.0.1:8787");
@@ -906,7 +934,15 @@ test("uncertain research retries retain one durable id and confirmed receipt cle
   assert.ok(h.state.requests.every((row) => row.body.client_request_id === firstId));
   const pending = h.state.local.krikoResearchIntentsV1;
   assert.equal(pending.length, 1);
-  assert.equal(pending[0].body.client_request_id, firstId);
+  assert.equal(pending[0].client_request_id, firstId);
+  // The ledger keeps an id, not the request. The body it used to keep held
+  // the listing's address, its name and its facts for seven days — in
+  // `storage.local`, where any extension page can read it — and the app
+  // dedupes on `client_request_id`, so none of it was ever needed.
+  assert.deepEqual(Object.keys(pending[0]).sort(),
+    ["client_request_id", "created_at", "key", "path"]);
+  assert.equal(JSON.stringify(pending).includes("Example device"), false);
+  assert.equal(JSON.stringify(pending).includes("url"), false);
 
   // Restart the worker while preserving Chrome's durable local storage.
   const restarted = loadBackground({ localState: h.state.local, routes: {
@@ -923,6 +959,22 @@ test("uncertain research retries retain one durable id and confirmed receipt cle
   await send(restarted, { type: "RESEARCH_PRODUCT", payload });
   assert.notEqual(restarted.state.requests[1].body.client_request_id, firstId,
     "a deliberate new click after a receipt starts a fresh intent");
+});
+
+// A refusal is terminal: the app answered, and answering the same id again
+// will not change its mind. Keeping the row would leave an id — and, before
+// this, the whole request body with the listing's address — on disk for a
+// week, for a retry that can never be made.
+test("a refused research request leaves no id behind", async () => {
+  const h = loadBackground({
+    routes: { "/api/extension/research-plane": {} },
+    statuses: { "/api/extension/research-plane": 422 },
+  });
+  const reply = await send(h, { type: "RESEARCH_PRODUCT", payload: {
+    q: "Example device", allow_draft: true, url: "https://shop.example/p/1",
+  } });
+  assert.equal(reply.ok, false);
+  assert.deepEqual(h.state.local.krikoResearchIntentsV1, []);
 });
 
 test("changed research input gets a different client request id", async () => {
@@ -1035,6 +1087,176 @@ test("AGENTS offers only what the app can run now", async () => {
 
 test("RESEARCH_PRODUCT carries the agent picked in the panel, and nothing else about it", async () => {
   const h = loadBackground({ routes: { "/api/extension/research-plane": { job_id: "j" } } });
-  await send(h, { type: "RESEARCH_PRODUCT", payload: { q: "Acme", allow_draft: true, harness: "claude" } });
+  await send(h, { type: "RESEARCH_PRODUCT", payload: {
+    q: "Acme", allow_draft: true, harness: "claude",
+  } });
   assert.equal(h.state.requests[0].body.harness, "claude");
+  // The id is the whole choice. A `backend` sent beside it would be a second
+  // copy of the decision the engine makes from the id (`tasks._picked_local`),
+  // and `ExtensionResearchRequest` does not even declare the field — it was
+  // accepted and dropped, so a panel that sent it changed nothing.
+  assert.equal("backend" in h.state.requests[0].body, false);
+});
+
+test("RESEARCH_PRODUCT leaves the agent unnamed when the panel has none", async () => {
+  const h = loadBackground({ routes: { "/api/extension/research-plane": { job_id: "j" } } });
+  await send(h, { type: "RESEARCH_PRODUCT", payload: { q: "Acme", allow_draft: true } });
+  assert.equal("harness" in h.state.requests[0].body, false,
+    "an unnamed run is the engine's own preferred agent, not an empty choice");
+});
+
+// ── what Kriko keeps, and for how long (C7, D7) ─────────────────────────
+//
+// Every per-page row is a record of something the reader looked at. The
+// panel needs the last few; nobody needs an hour of them, and the sweep found
+// nothing removing either half — the session area grew by up to three keys
+// per page (a result, a stage and a facts row, each naming the address), and
+// the answer cache grew until a write hit Chrome's quota.
+
+test("the per-page ledger keeps the newest pages and lets the oldest addresses go", async () => {
+  const h = loadBackground({ routes: routes(), tabResponses: withTab() });
+  const page = (n) => `https://www.listing.example/ilan/${n}`;
+  for (let n = 0; n < 60; n += 1) {
+    await h.sandbox.runAnalysisForTab(1, page(n));
+  }
+  const keys = Object.keys(h.state.session);
+  const perPage = keys.filter((k) => k.startsWith("kriko_result_"));
+  assert.ok(perPage.length <= 40, `kept ${perPage.length} per-page answers`);
+  assert.equal(keys.includes(`kriko_result_${page(0)}`), false,
+    "the first page the reader opened is still named in storage");
+  assert.ok(keys.includes(`kriko_result_${page(59)}`),
+    "the newest answer was pruned instead of the oldest");
+});
+
+test("the answer cache is bounded as well as expired", async () => {
+  const h = loadBackground({ routes: routes(), tabResponses: withTab() });
+  for (let n = 0; n < 210; n += 1) {
+    await h.sandbox.runAnalysisForTab(1, `https://www.listing.example/ilan/q${n}`);
+  }
+  const cache = Object.keys(h.state.local).filter((k) => k.startsWith("kriko_cached_result_"));
+  assert.ok(cache.length <= 201, `the answer cache grew to ${cache.length} rows`);
+});
+
+test("a cache write that fails once is retried after the stale half goes", async () => {
+  const h = loadBackground({
+    routes: routes(), tabResponses: withTab(), cacheWriteFailures: 1,
+  });
+  await h.sandbox.runAnalysisForTab(1, SCRAPE.url);
+  const cache = Object.keys(h.state.local).filter((k) => k.startsWith("kriko_cached_result_"));
+  assert.equal(cache.length, 1, "the answer is remembered after the retry");
+  assert.equal("krikoCacheTrouble" in h.state.local, false,
+    "a recovered write is not a problem the reader has to hear about");
+});
+
+test("a cache that cannot be written says so instead of stopping in silence", async () => {
+  const h = loadBackground({
+    routes: routes(), tabResponses: withTab(), cacheWriteFailures: 9,
+  });
+  const result = await h.sandbox.runAnalysisForTab(1, SCRAPE.url);
+  assert.ok(result, "the answer still reaches the panel");
+  assert.ok(h.state.local.krikoCacheTrouble, "nothing recorded that caching stopped");
+  assert.match(h.state.local.krikoCacheTrouble.detail, /quota/i);
+});
+
+// ── a run's own log, a cursor at a time (phase 3) ───────────────────────
+//
+// `docs/DESIGN.md:245-248`: "The browser extension reads its stage from the
+// run's own log". It read that log inside the job row, which carries up to
+// `state.JOB_LOG_CHARS` (64 KB) of it and is re-sent whole every second. The
+// route exists for this and its contract is a cursor, so the panel asks from
+// where it got to and the page size is decided here — one place knows the
+// route's ceiling (`agent_runtime.log`: 1..16000).
+
+const LOG_PAGE = { text: "read: https://a.example/1\n", next_cursor: 26,
+                   total_chars: 26, eof: false, done: false };
+
+test("JOB_PROGRESS reads the run's log from the cursor it was given", async () => {
+  const h = loadBackground({ routes: { "/api/jobs/j1/log": LOG_PAGE } });
+  const reply = await send(h, { type: "JOB_PROGRESS", payload: { job_id: "j1", cursor: 0 } });
+  assert.equal(reply.ok, true);
+  assert.equal(reply.page.next_cursor, 26);
+  assert.match(h.state.requests[0].url, /\/api\/jobs\/j1\/log\?cursor=0&limit=16000$/);
+});
+
+test("a later tick asks for the few lines that appeared, not the whole log", async () => {
+  const h = loadBackground({ routes: { "/api/jobs/j1/log": LOG_PAGE } });
+  await send(h, { type: "JOB_PROGRESS", payload: { job_id: "j1", cursor: 5000 } });
+  assert.match(h.state.requests[0].url, /cursor=5000&limit=2000$/);
+});
+
+test("a page size past the route's ceiling is clamped, not forwarded", async () => {
+  const h = loadBackground({ routes: { "/api/jobs/j1/log": LOG_PAGE } });
+  await send(h, { type: "JOB_PROGRESS", payload: { job_id: "j1", cursor: 0, limit: 99999 } });
+  assert.match(h.state.requests[0].url, /limit=16000$/);
+});
+
+test("an engine that is not running is named as such, not as a missing job", async () => {
+  const h = loadBackground({ offline: true });
+  const reply = await send(h, { type: "JOB_PROGRESS", payload: { job_id: "j1", cursor: 0 } });
+  assert.equal(reply.ok, false);
+  assert.equal(reply.code, "APP_NOT_RUNNING");
+  assert.match(reply.error, /not running/i);
+});
+
+// ── the diagnose door: why the page matched what it matched (phase 4) ───
+//
+// `POST /api/diagnose/identity` (`analyze.py:610-671`) runs the same
+// adapt-then-lookup call `/api/analyze` answered through and returns the trace
+// instead of the claims. It is asked for on a press only, and it is given the
+// scrape the answer was computed from — a diagnostic that describes a
+// different reading than the answer it explains is worse than none.
+
+const DIAGNOSIS = { adapter: { id: "listing", site: "listing.example", source: "pack" },
+                    page: { identity: { make: "volkswagen" }, unmapped_labels: ["Takasa Uygun"] },
+                    outcome: { method: "narrowed", verdict: "probably", score: 0.66 },
+                    considered: [], next_step: { action: "confirm", say: "Is that the same one?" } };
+
+test("the diagnose press reuses the scrape the answer was computed from", async () => {
+  const h = loadBackground({
+    routes: { ...routes(), "/api/diagnose/identity": DIAGNOSIS },
+    tabResponses: withTab(),
+  });
+  await h.sandbox.runAnalysisForTab(1, SCRAPE.url);
+  const scrapes = () => h.state.tabMessages.filter((m) => m.message?.type === "GET_SCRAPE").length;
+  assert.equal(scrapes(), 1, "the analysis did not read the page once");
+  h.state.requests.length = 0;
+
+  const reply = await send(h, { type: "DIAGNOSE_IDENTITY", payload: { url: SCRAPE.url } });
+  assert.equal(reply.ok, true);
+  assert.equal(reply.diagnosis.adapter.id, "listing");
+  assert.equal(scrapes(), 1, "the press read the page again instead of explaining the answer");
+  const post = h.state.requests.find((r) => r.url.endsWith("/api/diagnose/identity"));
+  assert.equal(post.body.url, SCRAPE.url);
+  assert.deepEqual(post.body.fields, SCRAPE.fields);
+  assert.equal(post.body.origin, "extension");
+  // The same body the analysis posted, because it is the same reading.
+  const analysis = loadBackground({ routes: routes(), tabResponses: withTab() });
+  await analysis.sandbox.runAnalysisForTab(1, SCRAPE.url);
+  const analyzeBody = analysis.state.requests.find((r) => r.url.endsWith("/api/analyze")).body;
+  assert.deepEqual(post.body, analyzeBody);
+});
+
+test("a page whose reading is not the one on screen is read again", async () => {
+  const h = loadBackground({
+    routes: { ...routes(), "/api/diagnose/identity": DIAGNOSIS },
+    tabResponses: withTab(),
+  });
+  await h.sandbox.runAnalysisForTab(1, SCRAPE.url);
+  const scrapes = () => h.state.tabMessages.filter((m) => m.message?.type === "GET_SCRAPE").length;
+  await send(h, { type: "DIAGNOSE_IDENTITY", payload: { url: "https://www.listing.example/ilan/other" } });
+  assert.equal(scrapes(), 2, "a different page was explained from the old page's scrape");
+});
+
+test("a diagnose press without a page is refused rather than guessed at", async () => {
+  const h = loadBackground({});
+  const reply = await send(h, { type: "DIAGNOSE_IDENTITY", payload: {} });
+  assert.equal(reply.ok, false);
+  assert.match(reply.error, /Missing URL/);
+});
+
+test("an app that is not running is named as such on a diagnose press", async () => {
+  const h = loadBackground({ offline: true, tabResponses: withTab() });
+  const reply = await send(h, { type: "DIAGNOSE_IDENTITY", payload: { url: SCRAPE.url } });
+  assert.equal(reply.ok, false);
+  assert.equal(reply.code, "APP_NOT_RUNNING");
 });

@@ -120,14 +120,29 @@ const DEMO_PREFS: PrefsDoc = {
   ],
 }
 
+/** The engine's key providers, as `app/keys.py` declares them in its `PROVIDERS`
+ *  tuple: the same ids in the same order, because the Keys panel draws whatever
+ *  list it is handed and demo mode hands it this one. A provider missing here is
+ *  a row the reader cannot see and cannot set while the window says demo — this
+ *  list had drifted, with no anthropic, mistral or mercury, and the hosted page
+ *  reader's `parallel` arrived to the engine only.
+ *
+ *  Demo mode has no engine to ask, so the rows themselves stay static; the
+ *  contract they copy is the ids, and `tests/demo_engine_lists.test.mjs` reads
+ *  that tuple and fails while the two disagree. Adding a provider to the engine
+ *  is one entry here, and the test is what remembers it. */
 const DEMO_KEYS: KeysDoc = {
   ready: true,
   providers: [
     { id: 'exa', label: 'Exa', purpose: 'Search words only. Never a page you visited.', present: false, hint: '', source: '' },
     { id: 'tavily', label: 'Tavily', purpose: 'Search words only. Never a page you visited.', present: true, hint: 'a1b2', source: 'file' },
     { id: 'deepseek', label: 'DeepSeek', purpose: 'Searches when OpenSERP fails or finds nothing. Receives only the words searched.', present: true, hint: 'c3d4', source: 'file' },
-    { id: 'proxy', label: 'Proxy login', purpose: 'The user:password your proxies ask for, if they ask. Sent only to the proxies you list.', present: false, hint: '', source: '' },
+    { id: 'parallel', label: 'Parallel (hosted page reader)', purpose: 'Reads a page the plain fetcher was refused, on your own account. Set it and the fallback runs; leave it empty and no page address leaves this machine.', present: false, hint: '', source: '' },
     { id: 'openai', label: 'OpenAI', purpose: 'Reads the pages that research fetched.', present: false, hint: '', source: '' },
+    { id: 'anthropic', label: 'Anthropic', purpose: 'The other completion provider. Reads the pages that research fetched.', present: false, hint: '', source: '' },
+    { id: 'mistral', label: 'Mistral', purpose: 'Runs a Mistral API agent for the run, and can complete for the paid plane.', present: false, hint: '', source: '' },
+    { id: 'mercury', label: 'Mercury', purpose: 'Runs the Mercury API model Kriko Agent uses, and can complete for the paid plane.', present: false, hint: '', source: '' },
+    { id: 'proxy', label: 'Proxy login', purpose: 'The user:password your proxies ask for, if they ask. Sent only to the proxies you list.', present: false, hint: '', source: '' },
     { id: 'typesafe', label: 'TypeSafe (Jev)', purpose: 'Used for product classification when selected.', present: false, hint: '', source: '' },
   ],
 }
@@ -329,14 +344,16 @@ export function useSharedAccess() {
       setProblem('')
       if (mode !== 'live') {
         setDoc({ ...structuredClone(DEMO_SHARED), grant: { present: true, label, providers: ['mercury', 'deepseek'], state: 'shared' } })
-        return
+        return true
       }
       try {
         await post('/api/keys/shared/unlock', { code: accessCode, password, label })
         await read()
         notifyAgentsChanged()
+        return true
       } catch (error) {
         setProblem(error instanceof Error ? error.message : 'That code did not open.')
+        return false
       }
     },
     [mode, read],

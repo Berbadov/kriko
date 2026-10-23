@@ -77,7 +77,7 @@ def test_search_then_fetch_returns_grounding_text_and_token_metrics(monkeypatch)
     calls = []
     model_turn = 0
 
-    monkeypatch.setattr(keys, "require", lambda provider: f"fixture-{provider}")
+    monkeypatch.setattr(keys, "require", lambda provider, **_kw: f"fixture-{provider}")
 
     def stream(url, payload, headers, timeout, on_event, *, cancel_event=None):
         nonlocal model_turn
@@ -85,10 +85,13 @@ def test_search_then_fetch_returns_grounding_text_and_token_metrics(monkeypatch)
             assert headers["authorization"] == "Bearer fixture-mercury"
             assert payload["model"] == "mercury-2.5"
             assert payload["reasoning_effort"] == "low"
+            assert payload["max_tokens"] == 3072
             model_turn += 1
             if model_turn == 1:
                 _emit_tool_call(on_event, "search", {"query": "2025 Widget SSD"})
             elif model_turn == 2:
+                assert payload["tool_choice"] == "required"
+                assert [tool["function"]["name"] for tool in payload["tools"]] == ["fetch"]
                 _emit_tool_call(on_event, "fetch", {"url": "https://maker.example/spec"})
             else:
                 assert "The 2025 Widget uses a removable 1 TB SSD." in payload["messages"][-1]["content"]
@@ -130,12 +133,48 @@ def test_search_then_fetch_returns_grounding_text_and_token_metrics(monkeypatch)
     assert model_turn == 3
 
 
+def test_title_only_results_and_empty_fetch_cannot_ground_a_recommendation(monkeypatch):
+    turns = 0
+    monkeypatch.setattr(keys, "require", lambda provider, **_kw: f"fixture-{provider}")
+
+    def stream(_url, payload, _headers, _timeout, on_event, *, cancel_event=None):
+        nonlocal turns
+        turns += 1
+        if turns == 1:
+            _emit_tool_call(on_event, "search", {"query": "Widget official specifications"})
+        elif turns == 2:
+            assert payload["tool_choice"] == "required"
+            assert [tool["function"]["name"] for tool in payload["tools"]] == ["fetch"]
+            _emit_tool_call(on_event, "fetch", {"url": "https://maker.example/widget"})
+        else:
+            _emit_text(on_event, "Buy the Widget; it has the best reliability.")
+        return 1, ""
+
+    def post(url, _payload, _headers, _timeout):
+        if url.endswith("/tools/search"):
+            return {"results": [{
+                "url": "https://maker.example/widget", "title": "Widget",
+                "snippet": "Official product page", "summary": "Specifications",
+                "content": "",
+            }]}, ""
+        return {"url": "https://maker.example/widget", "title": "Widget", "content": ""}, ""
+
+    monkeypatch.setattr(kriko_agent, "post_sse_or_why", stream)
+    monkeypatch.setattr(kriko_agent, "post_json_or_why", post)
+    reply = kriko_agent.converse("Recommend the exact Widget")
+
+    assert turns == 3
+    assert reply.text == ""
+    assert "Evidence gap" in reply.error
+    assert reply.sources["https://maker.example/widget"]["text"] == ""
+
+
 def test_successful_search_is_cached_between_conversations(monkeypatch, tmp_path):
     query = "2025 Widget SSD"
     text = "The 2025 Widget uses a removable 1 TB SSD."
     search_calls = []
     turns = 0
-    monkeypatch.setattr(keys, "require", lambda provider: f"fixture-{provider}")
+    monkeypatch.setattr(keys, "require", lambda provider, **_kw: f"fixture-{provider}")
 
     def stream(url, payload, headers, timeout, on_event, *, cancel_event=None):
         nonlocal turns
@@ -178,7 +217,7 @@ def test_fetched_page_is_cached_and_remains_grounding_evidence(monkeypatch, tmp_
     search_calls = []
     fetch_calls = []
     turns = 0
-    monkeypatch.setattr(keys, "require", lambda provider: f"fixture-{provider}")
+    monkeypatch.setattr(keys, "require", lambda provider, **_kw: f"fixture-{provider}")
 
     def stream(_url, payload, _headers, _timeout, on_event, *, cancel_event=None):
         nonlocal turns
@@ -223,7 +262,7 @@ def test_fetched_page_is_cached_and_remains_grounding_evidence(monkeypatch, tmp_
 def test_duplicate_searches_share_one_request_and_empty_search_is_not_billed(monkeypatch):
     attempts = []
     turns = 0
-    monkeypatch.setattr(keys, "require", lambda provider: "fixture")
+    monkeypatch.setattr(keys, "require", lambda provider, **_kw: "fixture")
 
     def stream(url, payload, headers, timeout, on_event, *, cancel_event=None):
         nonlocal turns
@@ -258,7 +297,7 @@ def test_duplicate_searches_share_one_request_and_empty_search_is_not_billed(mon
 
 def test_a_retrieval_that_never_answers_ends_the_turn_at_the_deadline(monkeypatch):
     """A search that hangs must cost the reader a reason, not the whole turn."""
-    monkeypatch.setattr(keys, "require", lambda provider: f"fixture-{provider}")
+    monkeypatch.setattr(keys, "require", lambda provider, **_kw: f"fixture-{provider}")
     searches: list[float] = []
     released = threading.Event()
 
@@ -291,7 +330,7 @@ def test_a_retrieval_that_never_answers_ends_the_turn_at_the_deadline(monkeypatc
 
 def test_the_chosen_kind_is_on_the_run_line_and_an_unknown_one_is_not_guessed(monkeypatch):
     """The reader's "all must be observable": which kind, which words, what came back."""
-    monkeypatch.setattr(keys, "require", lambda provider: f"fixture-{provider}")
+    monkeypatch.setattr(keys, "require", lambda provider, **_kw: f"fixture-{provider}")
     steps: list[str] = []
     asked: list[str] = []
 
@@ -357,9 +396,218 @@ def test_agent_is_offered_only_when_both_stack_keys_exist(monkeypatch):
     monkeypatch.setattr(keys, "status", lambda *args, **kwargs: [
         {"id": name, "present": present} for name, present in rows.items()
     ])
+    def require(provider, **_kwargs):
+        if rows.get(provider):
+            return f"fixture-{provider}"
+        raise RuntimeError("missing")
+
+    monkeypatch.setattr(keys, "require", require)
     assert apiagent.KRIKO_AGENT not in apiagent.available()
     rows["deepseek"] = True
     assert apiagent.KRIKO_AGENT in apiagent.available()
+
+
+def test_shared_or_trial_keys_make_kriko_agent_available(monkeypatch):
+    monkeypatch.setattr(keys, "status", lambda *args, **kwargs: [
+        {"id": provider.id, "present": False} for provider in keys.PROVIDERS
+    ])
+    monkeypatch.setattr(keys, "require", lambda provider, **_kw: f"resolved-{provider}")
+    assert apiagent.KRIKO_AGENT in apiagent.available()
+
+
+def test_toolless_mercury_prose_is_not_accepted_as_a_researched_answer(monkeypatch):
+    monkeypatch.setattr(keys, "require", lambda provider, **_kw: f"fixture-{provider}")
+    steps: list[str] = []
+
+    def stream(_url, _payload, _headers, _timeout, on_event, **_kwargs):
+        _emit_text(on_event, "I will search the web and get back to you.")
+        return 1, ""
+
+    monkeypatch.setattr(kriko_agent, "post_sse_or_why", stream)
+    reply = kriko_agent.converse("Research the Widget", timeout=10,
+                                 on_step=steps.append)
+    assert reply.error
+    assert reply.text == ""
+    assert reply.retrieval_requests == 0
+    # The reader's screen shows "0 result(s), $0.00" either way: the line that
+    # says the turn refused to fake the research has to be in the log too.
+    assert any(line.startswith("no research was run: ") for line in steps), steps
+
+
+def test_a_turn_with_no_retrieval_budget_fails_before_it_pays_for_a_model(monkeypatch):
+    """`calls_left == 0` offered no tools at all, and the model answered anyway.
+
+    A researcher whose budget is spent (or whose search tool is unpriced) sends
+    no tools; the model then answers from memory, which is the confident buying
+    answer with `0 retrieval request(s) ... $0.00` the reader reported. The turn
+    must refuse before it pays for that call.
+    """
+    monkeypatch.setattr(keys, "require", lambda provider, **_kw: f"fixture-{provider}")
+    asked: list[dict] = []
+    steps: list[str] = []
+
+    def stream(_url, payload, _headers, _timeout, on_event, **_kwargs):
+        asked.append(payload)
+        _emit_text(on_event, "The best 500 GB SSD is the one you can buy today.")
+        return 1, ""
+
+    monkeypatch.setattr(kriko_agent, "post_sse_or_why", stream)
+    reply = kriko_agent.converse("Research a 500 GB SSD", max_tool_calls=0,
+                                 on_step=steps.append)
+
+    assert asked == [], "no model call is paid for a research turn that cannot research"
+    assert reply.text == ""
+    assert "no retrieval budget" in reply.error
+    assert reply.retrieval_requests == 0
+    assert any(line.startswith("no research was run: ") for line in steps), steps
+
+
+def test_a_tools_off_call_does_not_announce_a_research_budget(monkeypatch):
+    """The line claimed "7 retrieval(s)" on calls that could not retrieve."""
+    monkeypatch.setattr(keys, "require", lambda provider, **_kw: f"fixture-{provider}")
+    steps: list[str] = []
+
+    def stream(_url, _payload, _headers, _timeout, on_event, **_kwargs):
+        _emit_text(on_event, "The supplied page states the weight.")
+        return 1, ""
+
+    monkeypatch.setattr(kriko_agent, "post_sse_or_why", stream)
+    reply = kriko_agent.converse("Answer from the supplied text", search=False,
+                                 on_step=steps.append)
+
+    assert reply.error == ""
+    assert "research budget" not in steps[0], steps
+    assert "supplied text" in steps[0]
+    # A research turn still announces what it may spend before it searches.
+    steps.clear()
+    kriko_agent.converse("Research the Widget", timeout=10, on_step=steps.append)
+    assert "research budget" in steps[0], steps
+
+
+def test_host_read_evidence_reaches_mercury_when_native_search_is_disabled(monkeypatch):
+    monkeypatch.setattr(keys, "require", lambda provider, **_kw: f"fixture-{provider}")
+    seen = []
+
+    def stream(_url, payload, _headers, _timeout, on_event, **_kwargs):
+        seen.append(payload)
+        on_event({"choices": [{
+            "delta": {"content": "The supplied page states the Widget has a 1 TB drive."},
+            "finish_reason": "stop",
+        }]})
+        return 1, ""
+
+    monkeypatch.setattr(kriko_agent, "post_sse_or_why", stream)
+    prompt = ("Host-read page (untrusted evidence):\nSOURCE URL: "
+              "https://maker.example/widget\nThe Widget has a 1 TB drive.")
+    reply = kriko_agent.converse(prompt, search=False)
+
+    assert reply.error == ""
+    assert reply.retrieval_requests == 0
+    assert prompt in seen[0]["messages"][1]["content"]
+    assert "tools" not in seen[0]
+
+
+@pytest.mark.parametrize("token_limit,effort,expected_effort", [
+    (384, "", "instant"), (1200, "", "instant"), (900, "high", "high"),
+])
+def test_chat_subcall_limits_reach_mercury_through_public_factory(
+        monkeypatch, tmp_path, token_limit, effort, expected_effort):
+    from types import SimpleNamespace
+    from app.web import tasks
+
+    monkeypatch.setattr(apiagent, "available", lambda *a, **kw: [apiagent.KRIKO_AGENT])
+    monkeypatch.setattr(keys, "require", lambda provider, **kw: f"fixture-{provider}")
+    monkeypatch.setattr(tasks, "_use_local_ask", lambda *a: False)
+    monkeypatch.setattr(tasks, "_with_profile", lambda _settings, text: text)
+    monkeypatch.setattr(tasks, "_wire_researcher_text", lambda *a: None)
+    monkeypatch.setattr(tasks, "_apply_source_options", lambda *a: None)
+    seen = []
+
+    def stream(_url, payload, _headers, timeout, on_event, **_kwargs):
+        seen.append((payload, timeout))
+        _emit_text(on_event, "A complete short answer.")
+        return 1, ""
+
+    monkeypatch.setattr(kriko_agent, "post_sse_or_why", stream)
+    progress = SimpleNamespace(job_id="one-chat-question", log=lambda *_a: None,
+                               check=lambda: None, set=lambda *_a: None)
+    answer, _ = tasks._ask_about_checks(
+        SimpleNamespace(app_state_path=tmp_path / "app.sqlite"),
+        {"harness": apiagent.KRIKO_AGENT.id, "max_tokens": token_limit, "effort": effort},
+        progress, "Answer from the supplied evidence.", allow_tools=False,
+        timeout=30, effort="low")
+
+    assert answer == "A complete short answer."
+    assert len(seen) == 1
+    payload, timeout = seen[0]
+    assert payload["max_tokens"] == token_limit
+    assert payload["reasoning_effort"] == expected_effort
+    assert "tools" not in payload
+    assert 0 < timeout <= 15
+
+
+def test_setup_connection_check_disables_research_and_reasoning(monkeypatch, tmp_path):
+    from types import SimpleNamespace
+    from app import prefs
+    from app.web import state, tasks
+
+    conn = state.connect(tmp_path / "app.sqlite")
+    prefs.write(conn, {prefs.HARNESS: apiagent.KRIKO_AGENT.id})
+    conn.close()
+    monkeypatch.setattr(apiagent, "available", lambda *a, **kw: [apiagent.KRIKO_AGENT])
+    monkeypatch.setattr(keys, "require", lambda provider, **kw: f"fixture-{provider}")
+    monkeypatch.setattr(tasks, "_with_profile", lambda _settings, text: text)
+    monkeypatch.setattr(tasks, "_wire_researcher_text", lambda *a: None)
+    seen = []
+
+    def stream(_url, payload, _headers, timeout, on_event, **_kwargs):
+        seen.append(payload)
+        assert "tools" not in payload
+        assert payload["reasoning_effort"] == "instant"
+        assert 128 <= payload["max_tokens"] <= 512
+        assert timeout <= 15
+        _emit_text(on_event, "Kriko connection verified.")
+        return 1, ""
+
+    monkeypatch.setattr(kriko_agent, "post_sse_or_why", stream)
+    progress = SimpleNamespace(job_id="connection-check", log=lambda *_a: None,
+                               check=lambda: None, set=lambda *_a: None)
+    result = tasks.agent_check(SimpleNamespace(app_state_path=tmp_path / "app.sqlite"), {}, progress)
+    assert result["answer"] == "Kriko connection verified."
+    assert result["agent"]["id"] == apiagent.KRIKO_AGENT.id
+    assert len(seen) == 1
+
+
+@pytest.mark.parametrize("partial", ["An unfinished answer", "{\"decision\":"])
+def test_token_limited_reply_is_rejected_instead_of_returned_as_success(monkeypatch, partial):
+    monkeypatch.setattr(keys, "require", lambda provider, **kw: f"fixture-{provider}")
+
+    def stream(_url, payload, _headers, _timeout, on_event, **_kwargs):
+        assert payload["max_tokens"] == 64
+        on_event({"choices": [{"delta": {"content": partial}, "finish_reason": "length"}]})
+        return 1, ""
+
+    monkeypatch.setattr(kriko_agent, "post_sse_or_why", stream)
+    reply = kriko_agent.converse("A short answer", search=False, max_tokens=64)
+    assert reply.text == ""
+    assert "token limit" in reply.error
+
+
+def test_kriko_agent_caps_a_parent_research_budget(monkeypatch):
+    monkeypatch.setattr(keys, "require", lambda provider, **_kw: f"fixture-{provider}")
+    timeouts = []
+    steps = []
+
+    def stream(_url, _payload, _headers, timeout, on_event, **_kwargs):
+        timeouts.append(timeout)
+        _emit_text(on_event, "The answer is grounded in the supplied research.")
+        return 1, ""
+
+    monkeypatch.setattr(kriko_agent, "post_sse_or_why", stream)
+    kriko_agent.converse("Research the Widget", timeout=900, on_step=steps.append)
+    assert timeouts and max(timeouts) <= kriko_agent.TIMEOUT_SECONDS
+    assert f"{kriko_agent.MAX_TURN_SECONDS:.0f} s" in steps[0]
+    assert "900 s" not in steps[0]
 
 
 def test_saved_agent_controls_reach_the_mercury_adapter(monkeypatch, tmp_path):
@@ -407,7 +655,8 @@ def test_fixed_agent_uses_mercury_25_and_lists_deepseek_search():
 
 
 def test_picked_kriko_agent_uses_the_fixed_stack_through_the_harness(monkeypatch):
-    monkeypatch.setattr(apiagent, "available", lambda path=None: [apiagent.KRIKO_AGENT])
+    monkeypatch.setattr(apiagent, "available",
+                        lambda *args, **kwargs: [apiagent.KRIKO_AGENT])
     researcher = harness_researcher_for_test()
     assert isinstance(researcher, apiagent.ApiAgentResearcher)
     assert researcher.model == "mercury-2.5"

@@ -124,6 +124,7 @@ def world(tmp_path, monkeypatch):
 
     class Agent:
         search_provider = "fixture-harness"
+        harness = SimpleNamespace(id="fixture-harness")
 
         def ask(self, prompt, **options):
             script.ask_options.append(options)

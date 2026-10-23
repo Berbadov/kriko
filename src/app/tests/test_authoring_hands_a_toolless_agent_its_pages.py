@@ -96,6 +96,7 @@ def _wire(client, monkeypatch, pages, transport):
 
     handed = []
     researcher = harness.HarnessResearcher(row("mistral-vibe"))
+    monkeypatch.setattr(harness, "available", lambda: [researcher.harness])
     researcher.transport_mode = transport
     monkeypatch.setattr(researcher, "_read_web_pages", pages)
 

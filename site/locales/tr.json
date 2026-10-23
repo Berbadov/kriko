@@ -15,7 +15,7 @@
   "Product research on your own computer": "Kendi bilgisayarında ürün araştırması",
   "The listing tells half the story.": "İlan, hikâyenin yarısını anlatır.",
   "Kriko shows what is known to go wrong with the exact product you are looking at, with the source beside every finding. It works on any listing site and keeps its research on your machine.": "Kriko, tam olarak baktığın ürünle ilgili bilinen sorunları, her bulgunun yanında kaynağıyla gösterir. Her ilan sitesinde çalışır ve araştırmasını senin bilgisayarında tutar.",
-  "Get Kriko for Windows": "Kriko'yu Windows için indir",
+  "Download Kriko for Windows": "Kriko'yu Windows için indir",
   "See how it works": "Nasıl çalıştığına bak",
   "Free and open source · No account · Windows": "Ücretsiz ve açık kaynak · Hesap gerekmez · Windows",
   "An invented example. The product, listing and findings are made up; the panel is the real extension.": "Kurgusal bir örnek. Ürün, ilan ve bulgular gerçek değildir; panel ise gerçek uzantının kendisidir.",
@@ -54,8 +54,8 @@
   "Add Kriko to your browser.": "Kriko'yu tarayıcına ekle.",
   "Open a listing.": "Bir ilan aç.",
   "Kriko for Windows": "Windows için Kriko",
-  "Get the Windows installer": "Windows yükleyicisini indir",
-  "Choose the setup .exe file on the latest release page. The installer is not code-signed yet, so Windows may show a SmartScreen warning.": "Son sürüm sayfasında kurulum .exe dosyasını seç. Yükleyici henüz kod imzalı değil; bu yüzden Windows bir SmartScreen uyarısı gösterebilir.",
+  "Download the installer": "Yükleyiciyi indir",
+  "The installer is not code-signed yet, so Windows may show a SmartScreen warning. Choose More info, then Run anyway.": "Yükleyici henüz kod imzalı değil; bu yüzden Windows bir SmartScreen uyarısı gösterebilir. More info, ardından Run anyway seç.",
   "Prefer a portable version? Choose the .zip.": "Taşınabilir sürümü mü tercih ediyorsun? .zip dosyasını seç.",
   "Good to know.": "Bilmekte fayda var.",
   "Where does my research live?": "Araştırmalarım nerede saklanıyor?",
@@ -119,5 +119,6 @@
   "Get the browser extension": "Tarayıcı uzantısını yükle",
   "Install <a href=\"https://chromewebstore.google.com/detail/kriko/bdifnaggafjokndlpjgmlfappcoehdjb\">Kriko from the Chrome Web Store</a> in Chrome, Edge or Brave. The store handles updates. Keep the desktop app running; the extension needs it to work.": "Chrome, Edge ya da Brave için <a href=\"https://chromewebstore.google.com/detail/kriko/bdifnaggafjokndlpjgmlfappcoehdjb\">Kriko’yu Chrome Web Mağazası’ndan yükle</a>. Güncellemeleri mağaza yapar. Masaüstü uygulamasını açık tut; uzantının çalışması için gereklidir.",
   "On macOS or Linux? <a href=\"https://github.com/Berbadov/kriko#build-and-verify\">See the source build options.</a>": "macOS ya da Linux mu kullanıyorsun? <a href=\"https://github.com/Berbadov/kriko#build-and-verify\">Kaynaktan derleme seçeneklerine bak.</a>",
-  "Version 0.3.1 for 64-bit Windows. Install the desktop app, then add the browser extension from the Chrome Web Store.": "64 bit Windows için 0.3.1 sürümü. Masaüstü uygulamasını kur, ardından tarayıcı uzantısını Chrome Web Mağazası’ndan ekle."
+  "For 64-bit Windows. It installs for the current user and needs no administrator rights.": "64 bit Windows için. Geçerli kullanıcı için kurulur ve yönetici yetkisi gerekmez.",
+  "Read the source on <a href=\"https://github.com/Berbadov/kriko\">GitHub</a>.": "Kaynak kodu <a href=\"https://github.com/Berbadov/kriko\">GitHub</a>'da oku."
 }

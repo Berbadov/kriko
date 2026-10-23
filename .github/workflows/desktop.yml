@@ -88,6 +88,11 @@ jobs:
                   fi
                   echo "VERSION=$tree" >> "$GITHUB_ENV"
 
+            - name: Configure app-bound shared access
+              env:
+                  KRIKO_SHARE_PEPPER: ${{ secrets.KRIKO_SHARE_PEPPER }}
+              run: python packaging/configure_share_pepper.py
+
             - name: Install Python side
               run: |
                   python -m pip install --upgrade pip

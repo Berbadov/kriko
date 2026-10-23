@@ -1716,6 +1716,82 @@
 }
 .lite-weighed-key[data-how="exact"] .lite-weighed-how { color: var(--low-ink); }
 
+/* What the engine actually compared, after a press on a doubtful verdict.
+   Not collapsed: the reader asked for it, and it is the one place these values
+   exist. Tokens, the same type scale and the same key chips as `.lite-weighed`,
+   because it is the same kind of statement — just the whole of it. */
+.lite-diagnosis {
+  margin-top: 9px;
+  padding-top: 9px;
+  border-top: 1px solid var(--border-soft);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.lite-diagnosis-line {
+  margin: 0 0 5px;
+  color: var(--fg-body);
+  overflow-wrap: anywhere;
+}
+.lite-diagnosis-line[data-state="error"] { color: var(--high-ink); }
+.lite-diagnosis-label {
+  margin-right: 6px;
+  font-family: var(--font-body);
+  font-size: 10.5px;
+  letter-spacing: 0.5px;
+  color: var(--fg-muted);
+}
+.lite-diagnosis-candidate {
+  margin-top: 9px;
+  padding-top: 9px;
+  border-top: 1px solid var(--border-soft);
+}
+.lite-diagnosis-candidate-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 6px;
+  color: var(--fg-body);
+}
+.lite-diagnosis-score {
+  font-family: var(--font-mono);
+  color: var(--fg-muted);
+  font-variant-numeric: tabular-nums;
+}
+.lite-diagnosis-keys {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.lite-diagnosis-keys li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  align-items: baseline;
+  padding: 3px 6px;
+  border: 1px solid var(--border-soft);
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--fg-body);
+}
+.lite-diagnosis-keys li[data-how="conflict"] {
+  border-color: var(--high-border);
+  background: var(--high-surface);
+  color: var(--high-ink);
+}
+.lite-diagnosis-keys li[data-how="exact"] { border-color: var(--low-border); color: var(--low-ink); }
+.lite-diagnosis-key { color: var(--fg-muted); }
+.lite-diagnosis-pair { color: inherit; }
+.lite-diagnosis-how,
+.lite-diagnosis-why {
+  color: var(--fg-muted);
+  font-family: var(--font-body);
+}
+.lite-diagnosis-why { flex-basis: 100%; }
+.lite-diagnosis-btn { margin-top: 8px; }
+
 /* ─────────────────────────────────────────────
    Search — typing the name
    ───────────────────────────────────────────── */
@@ -3131,6 +3207,24 @@
 
 .lite-learn { display: flex; flex-direction: column; gap: 6px; margin: 10px 0 4px; padding: 10px 12px; border: 1px dashed var(--border); border-radius: 14px; }
 .lite-learn-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.lite-learn-btn {
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 14px;
+  border: 1px solid var(--border-control);
+  border-radius: 999px;
+  background: var(--brand);
+  color: var(--on-brand);
+  font: 560 12.5px/1 var(--font-display);
+  cursor: pointer;
+  transition: background var(--dur-quick) var(--ease-out), transform var(--dur-fast) var(--ease-out), opacity var(--dur-quick);
+}
+.lite-learn-btn:hover:not(:disabled) { background: var(--brand-hover); }
+.lite-learn-btn:active:not(:disabled) { transform: scale(.97); }
+.lite-learn-btn:focus-visible { outline: 2px solid var(--ice); outline-offset: 3px; }
+.lite-learn-btn:disabled { opacity: .58; cursor: progress; }
 .lite-learn-row small { font-size: 11px; line-height: 1.4; color: var(--fg-muted); }
 .lite-learn-status { margin: 0; font-size: 12px; line-height: 1.45; color: var(--fg-body); }
 .lite-learn-status:empty { display: none; }
@@ -3142,6 +3236,9 @@
 
 .lite-research label.lite-agent-row { display: flex; flex-direction: row; align-items: center; margin: 0 0 8px; }
 .lite-research .lite-agent-select { width: auto; min-width: 150px; }
+.lite-quick-agent-note { margin: -3px 0 8px; color: var(--fg-muted); font-size: 11px; line-height: 1.4; }
+.lite-quick-agent-note:empty { display: none; }
+.lite-quick-agent-row .lite-quick-agent-select { max-width: 66%; }
 .lite-learn-row small:empty { display: none; }
 
 /* the reader as a buyer (buyer_card.js): the page as a purchase, a question

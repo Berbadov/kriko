@@ -1,7 +1,10 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { demoCheck, loadCheck, type Loaded } from './compare/checks'
+import { researchCompareSlot, type CompareDraft } from './compare/research'
+import { ResearchSaves } from './compare/researchSaves'
 import { useEngine, type Agent } from './engine/Engine'
 import { EngineError, get, post, postQuestion, put, seg, type ApiJob } from './engine/api'
+import { followJob } from './engine/jobs'
 import { useQueue } from './queue'
 
 /** What the Compare screen holds: up to four saved checks as columns, kept as
@@ -28,6 +31,7 @@ interface Compare {
   add: (lookupId: string) => boolean
   remove: (lookupId: string) => void
   ask: (text: string, agent: Agent) => void
+  research: (lookupId: string, agent: Agent, onJob: (jobId: string) => void) => Promise<void>
   /** Read a column again after it failed. */
   retry: (lookupId: string) => void
   stop: () => void
@@ -72,6 +76,9 @@ export function CompareProvider({ children }: { children: ReactNode }) {
   const alive = useRef(true)
   const loaded = useRef(false)
   const unsaved = useRef(false)
+  const researchSaves = useRef(new ResearchSaves())
+  const boardRevision = useRef(0)
+  const refreshQueue = useRef(Promise.resolve())
 
   useEffect(() => {
     alive.current = true
@@ -148,7 +155,10 @@ export function CompareProvider({ children }: { children: ReactNode }) {
     saving.current = saving.current.then(async () => {
       try {
         setProblem('')
-        const body = { name: 'Compare', lookup_ids: ids }
+        const body = {
+          name: 'Compare',
+          lookup_ids: await researchSaves.current.prepare(ids),
+        }
         const saved = draft.current
           ? await put<ApiDraft>(`/api/compare-drafts/${seg(draft.current)}`, body)
           : await post<ApiDraft>('/api/compare-drafts', body)
@@ -215,6 +225,8 @@ export function CompareProvider({ children }: { children: ReactNode }) {
     (lookupId: string) => {
       if (!lookupId || slots.includes(lookupId)) return true
       if (slots.length >= MAX_SLOTS) return false
+      boardRevision.current += 1
+      researchSaves.current.forget(lookupId)
       const next = [...slots, lookupId]
       setSlots(next)
       if (live) save(next)
@@ -225,6 +237,8 @@ export function CompareProvider({ children }: { children: ReactNode }) {
 
   const remove = useCallback(
     (lookupId: string) => {
+      boardRevision.current += 1
+      researchSaves.current.forget(lookupId)
       const next = slots.filter((id) => id !== lookupId)
       setSlots(next)
       if (live) save(next)
@@ -300,6 +314,85 @@ export function CompareProvider({ children }: { children: ReactNode }) {
     [live, slots, follow, patchQuestion, save],
   )
 
+  /** Research one saved column with the selected agent. The backend replaces
+   *  that draft slot when the durable quick-look job succeeds. */
+  const research = useCallback(async (lookupId: string, agent: Agent, onJob: (jobId: string) => void) => {
+    if (!live) throw new EngineError(0, 'Connect to Kriko before researching a product.')
+    const draftId = await (async () => {
+      await saving.current
+      if (unsaved.current) {
+        save(slots)
+        await saving.current
+        if (unsaved.current) throw new EngineError(409, 'The comparison could not be saved, so research has not started. Retry saving first.')
+      }
+      if (!draft.current) {
+        const saved = await post<ApiDraft>('/api/compare-drafts', { name: 'Compare', lookup_ids: slots })
+        draft.current = saved.draft_id
+      }
+      return draft.current
+    })()
+    if (unsaved.current) {
+      throw new EngineError(409, 'The comparison could not be saved, so research has not started. Retry saving first.')
+    }
+    // Hold queued saves until the worker finishes; pending and failed job IDs
+    // must never replace a readable saved check.
+    let beforeResearch: Promise<void>
+    do {
+      beforeResearch = saving.current
+      await beforeResearch
+    } while (beforeResearch !== saving.current)
+    if (unsaved.current) throw new EngineError(409, 'Save the comparison before starting research.')
+    const release = researchSaves.current.begin()
+    let current
+    try {
+      current = await researchCompareSlot(draftId, lookupId, agent, {
+        start: postQuestion,
+        follow: async (jobId, stillWanted) => {
+          try {
+            const ended = await followJob(jobId, () => undefined, stillWanted)
+            if (ended?.state === 'succeeded' && stillWanted()) {
+              const reply = await get<{ items: CompareDraft[] }>('/api/compare-drafts')
+              const durable = reply.items.find((item) => item.draft_id === draftId)
+              researchSaves.current.confirm(lookupId, jobId, ended.state, durable?.lookup_ids ?? [])
+            }
+            return ended
+          } finally { release() }
+        },
+        drafts: () => get<{ items: CompareDraft[] }>('/api/compare-drafts'),
+        waitForSaves: async () => {
+          let pending: Promise<void>
+          do {
+            pending = saving.current
+            await pending
+          } while (pending !== saving.current)
+        },
+        pause: () => new Promise((resolve) => window.setTimeout(resolve, 250)),
+      }, () => alive.current && draft.current === draftId, onJob)
+    } finally { release() }
+    if (!current || !alive.current || draft.current !== draftId) return
+    const sync = refreshQueue.current.catch(() => undefined).then(async () => {
+      if (!alive.current || draft.current !== draftId) return
+      let pending: Promise<void>
+      do {
+        pending = saving.current
+        await pending
+      } while (pending !== saving.current)
+      const revision = boardRevision.current
+      const reply = await get<{ items: CompareDraft[] }>('/api/compare-drafts')
+      if (!alive.current || draft.current !== draftId || revision !== boardRevision.current) return
+      const latest = reply.items.find((item) => item.draft_id === draftId)
+      if (!latest) return
+      setSlots(latest.lookup_ids.slice(0, MAX_SLOTS))
+      setChecks((previous) => {
+        const next = { ...previous }
+        delete next[lookupId]
+        return next
+      })
+    })
+    refreshQueue.current = sync
+    await sync
+  }, [live, save, slots])
+
   const stop = useCallback(() => {
     stopRequested.current = true
     for (const [id, job] of jobOf.current) void post(`/api/jobs/${seg(job)}/cancel`, {})
@@ -308,7 +401,7 @@ export function CompareProvider({ children }: { children: ReactNode }) {
   }, [patchQuestion])
 
   const value = useMemo<Compare>(
-    () => ({ slots, checks, questions, add, remove, ask: (t, a) => void ask(t, a), retry, stop, problem,
+    () => ({ slots, checks, questions, add, remove, ask: (t, a) => void ask(t, a), research, retry, stop, problem,
       saveAgain: () => {
         if (problem.startsWith('Could not load')) {
           void get<{items: ApiDraft[]}>('/api/compare-drafts').then((reply) => {
@@ -318,7 +411,7 @@ export function CompareProvider({ children }: { children: ReactNode }) {
           }).catch((error) => setProblem(`Could not load the saved comparison. ${reasonOf(error)}`))
         } else save(slots)
       } }),
-    [slots, checks, questions, add, remove, ask, retry, stop, problem, save, loadQuestions],
+    [slots, checks, questions, add, remove, ask, research, retry, stop, problem, save, loadQuestions],
   )
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }

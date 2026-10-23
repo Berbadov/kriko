@@ -38,6 +38,8 @@ import json
 import os
 import secrets
 import sys
+import threading
+import time
 from pathlib import Path
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
@@ -198,7 +200,13 @@ def _scrypt_key(password: str, salt: bytes) -> bytes:
 
 
 def _pepper_key(purpose: bytes) -> bytes:
-    """A key that needs the build and nothing else — what the trial uses."""
+    """A key that needs the build and nothing else — what the trial uses.
+
+    `make_trial` refuses to seal a bundle without a pepper, so the fallback
+    below only ever *opens* one: a build carrying no pepper can still read a
+    bundle baked before that guard existed, and nothing new can be sealed that
+    way.
+    """
     return hashlib.scrypt(pepper() or b"kriko-without-a-pepper", salt=purpose,
                           n=2**14, r=8, p=1, dklen=32, maxmem=_SCRYPT_MAXMEM)
 
@@ -288,7 +296,18 @@ def make_trial(values: dict[str, str], questions: int = TRIAL_QUESTIONS) -> str:
     spend limit the owner puts on the key it carries. `questions` is the owner's
     number and travels in the bundle, so a build can be stingier than the
     default without a code change.
+
+    A build with no pepper is refused here rather than at `make_trial`'s call
+    site: `_pepper_key` has a constant fallback, so a bundle baked without one
+    would be a bundle any pepperless build can open, which is the opposite of
+    what this file promises. `tools/make_trial_access.py` says the same thing
+    before it gets this far.
     """
+    if not bound():
+        raise ShareError(
+            "This build has no share pepper, so a trial bundle sealed here would "
+            "open in any other build. Run tools/make_share_pepper.py first."
+        )
     carried = _keys_of(values)
     if not carried:
         raise ShareError("A trial bundle needs the keys it carries.")
@@ -300,13 +319,9 @@ def open_trial(code: str) -> dict[str, str]:
     return _keys_of(_open(code, _pepper_key(TRIAL_AAD), TRIAL_AAD))
 
 
-def trial_limit(code: str) -> int:
+def trial_limit(code: str = "") -> int:
     """How many questions the baked bundle allows. The owner's number, or ours."""
-    try:
-        carried = _open(code, _pepper_key(TRIAL_AAD), TRIAL_AAD)
-        return max(1, int(carried.get("questions") or TRIAL_QUESTIONS))
-    except (ShareError, TypeError, ValueError):
-        return TRIAL_QUESTIONS
+    return _trial_limit({}, _opened_trial(code))
 
 
 # ── what is kept on this machine ────────────────────────────────────────
@@ -330,6 +345,57 @@ def _baked_trial() -> str:
     return str((data or {}).get("bundle") or "") if isinstance(data, dict) else ""
 
 
+#: Opened bundles, keyed by `(bundle, pepper)`. The derivation is `scrypt` on
+#: purpose, and both the screen's count and every provider lookup ask this while
+#: the app is open; keying on the pepper as well means a rotated pepper or a
+#: re-baked bundle is never an old answer.
+_trial_cache: dict[tuple[str, bytes], dict] = {}
+_trial_lock = threading.Lock()
+
+
+def _opened_trial(bundle: str = "") -> dict:
+    """The baked bundle's own payload, or {} when this build cannot open it.
+
+    A bundle sealed with another pepper — one left behind when the pepper was
+    rotated — opens nothing here, and {} is how every reader of this knows that.
+    """
+    code = bundle or _baked_trial()
+    if not code:
+        return {}
+    key = (code, pepper())
+    with _trial_lock:
+        if key in _trial_cache:
+            return _trial_cache[key]
+    try:
+        opened = _open(code, _pepper_key(TRIAL_AAD), TRIAL_AAD)
+    except ShareError:
+        opened = {}
+    with _trial_lock:
+        _trial_cache[key] = opened
+    return opened
+
+
+def trial_keys(bundle: str = "") -> dict[str, str]:
+    """The keys the baked trial bundle carries, or {} when it does not open here.
+
+    The build-time check in `packaging/kriko-sidecar.spec` asks this before it
+    freezes a sidecar, and the count below asks it before it tells the reader
+    how many questions are left: a bundle nobody can open is not a trial, and a
+    screen that counted one would be inventing questions the reader cannot ask.
+    """
+    return _keys_of(_opened_trial(bundle))
+
+
+def _trial_limit(trial: dict, opened: dict) -> int:
+    """The owner's number from the bundle, the stored one, or the default."""
+    for value in (trial.get("limit"), opened.get("questions")):
+        try:
+            return max(1, int(str(value)))
+        except (TypeError, ValueError):
+            continue
+    return TRIAL_QUESTIONS
+
+
 def write_trial(bundle: str, *, where: Path | None = None) -> Path:
     """Keep a baked bundle where this module looks for it."""
     path = where or TRIAL_FILE
@@ -346,10 +412,85 @@ def read_state(where: Path | None = None) -> dict:
 
 
 def write_state(state: dict, where: Path | None = None) -> None:
+    with _state_lock(where):
+        _write_state(state, where)
+
+
+def _write_state(state: dict, where: Path | None) -> None:
     path = state_path(where)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(state, sort_keys=True, indent=2), encoding="utf-8")
+    temp = path.with_name(path.name + f".{os.getpid()}.{threading.get_ident()}.tmp")
+    fd = os.open(temp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as stream:
+        stream.write(json.dumps(state, sort_keys=True, indent=2) + "\n")
+        stream.flush()
+        os.fsync(stream.fileno())
+    os.replace(temp, path)
     _private(path)
+
+
+class _StateLock:
+    """Cross-process lock for the shared grant and its trial allowance."""
+
+    def __init__(self, where: Path | None):
+        self.path = state_path(where).with_suffix(".lock")
+        self.stream = None
+
+    def __enter__(self):
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.stream = self.path.open("a+b")
+        _private(self.path)
+        deadline = time.monotonic() + 5.0
+        try:
+            if os.name == "nt":
+                import msvcrt
+
+                self.stream.seek(0, os.SEEK_END)
+                if self.stream.tell() == 0:
+                    self.stream.write(b"\0")
+                    self.stream.flush()
+                while True:
+                    try:
+                        self.stream.seek(0)
+                        msvcrt.locking(self.stream.fileno(), msvcrt.LK_NBLCK, 1)
+                        break
+                    except OSError:
+                        if time.monotonic() >= deadline:
+                            raise TimeoutError("shared access state stayed locked")
+                        time.sleep(0.025)
+            else:
+                import fcntl
+
+                while True:
+                    try:
+                        fcntl.flock(self.stream.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                        break
+                    except BlockingIOError:
+                        if time.monotonic() >= deadline:
+                            raise TimeoutError("shared access state stayed locked")
+                        time.sleep(0.025)
+        except Exception:
+            self.stream.close()
+            self.stream = None
+            raise
+        return self
+
+    def __exit__(self, *_exc):
+        assert self.stream is not None
+        if os.name == "nt":
+            import msvcrt
+
+            self.stream.seek(0)
+            msvcrt.locking(self.stream.fileno(), msvcrt.LK_UNLCK, 1)
+        else:
+            import fcntl
+
+            fcntl.flock(self.stream.fileno(), fcntl.LOCK_UN)
+        self.stream.close()
+
+
+def _state_lock(where: Path | None):
+    return _StateLock(where)
 
 
 def _wrap(values: dict[str, str], where: Path | None) -> str:
@@ -375,21 +516,23 @@ def unlock(code: str, password: str, *, label: str = "", where: Path | None = No
     values = open_access(code, password)
     if not values:
         raise ShareError("That code carries no keys.")
-    state = read_state(where)
-    state["grant"] = {
-        "label": str(label or "")[:80],
-        "sealed": _wrap(values, where),
-        "providers": sorted(values),
-    }
-    state.pop("refused", None)
-    write_state(state, where)
+    with _state_lock(where):
+        state = read_state(where)
+        state["grant"] = {
+            "label": str(label or "")[:80],
+            "sealed": _wrap(values, where),
+            "providers": sorted(values),
+        }
+        state.pop("refused", None)
+        _write_state(state, where)
     return {"providers": sorted(values), "label": state["grant"]["label"]}
 
 
 def forget(where: Path | None = None) -> None:
-    state = read_state(where)
-    state.pop("grant", None)
-    write_state(state, where)
+    with _state_lock(where):
+        state = read_state(where)
+        state.pop("grant", None)
+        _write_state(state, where)
 
 
 def _trial_state(state: dict) -> dict:
@@ -398,17 +541,22 @@ def _trial_state(state: dict) -> dict:
 
 
 def allowance(where: Path | None = None) -> dict:
-    """The trial's count, for the screen: how many questions are left, if any."""
+    """The trial's count, for the screen: how many questions are left, if any.
+
+    `available` is false when this build cannot open the bundle it carries, so a
+    stale bundle from a rotated pepper is "no trial here", never a count of
+    questions nobody can ask.
+    """
     state = read_state(where)
     trial = _trial_state(state)
-    bundle = _baked_trial()
-    limit = int(trial.get("limit") or trial_limit(bundle) or TRIAL_QUESTIONS)
+    opened = _opened_trial()
+    limit = _trial_limit(trial, opened)
     used = int(trial.get("used") or 0)
     return {"limit": limit, "used": used, "left": max(0, limit - used),
-            "available": bool(bundle) and limit > used}
+            "available": bool(_keys_of(opened)) and limit > used}
 
 
-def _granted_values(where: Path | None) -> tuple[dict[str, str], str]:
+def _granted_values(where: Path | None, reservation_id: str = "") -> tuple[dict[str, str], str]:
     """`(keys, source)` — the password grant first, then the trial."""
     state = read_state(where)
     grant = state.get("grant")
@@ -416,24 +564,28 @@ def _granted_values(where: Path | None) -> tuple[dict[str, str], str]:
         values = _unwrap(str(grant["sealed"]), where)
         if values:
             return values, "shared"
-    if allowance(where)["available"]:
-        try:
-            return open_trial(_baked_trial()), "trial"
-        except ShareError:
-            return {}, ""
+    trial = allowance(where)
+    reservations = _trial_state(state).get("reservations") or {}
+    reserved = bool(reservation_id and reservation_id in reservations)
+    if trial["available"] or reserved:
+        values = trial_keys()
+        if values:
+            return values, "trial"
     return {}, ""
 
 
-def granted(provider: str, *, where: Path | None = None) -> str:
+def granted(provider: str, *, where: Path | None = None,
+            reservation_id: str = "") -> str:
     """The shared key for this provider, or "" when there is none to use."""
-    values, _source = _granted_values(where)
+    values, _source = _granted_values(where, reservation_id)
     return str(values.get(provider) or "")
 
 
-def origin(provider: str, *, where: Path | None = None) -> str:
+def origin(provider: str, *, where: Path | None = None,
+           reservation_id: str = "") -> str:
     """`"shared"` or `"trial"` when this provider's key comes from an access
     code, else "". Both are the owner's keys; only the trial is counted."""
-    values, source = _granted_values(where)
+    values, source = _granted_values(where, reservation_id)
     return source if values.get(provider) else ""
 
 
@@ -453,15 +605,29 @@ def refusal(provider: str, *, where: Path | None = None) -> str:
     return ""
 
 
-def charge(where: Path | None = None) -> int:
-    """Count one answered question against the trial. Returns how many are left."""
-    state = read_state(where)
-    trial = dict(_trial_state(state))
-    trial["limit"] = int(trial.get("limit") or TRIAL_QUESTIONS)
-    trial["used"] = int(trial.get("used") or 0) + 1
-    state["trial"] = trial
-    write_state(state, where)
-    return max(0, trial["limit"] - trial["used"])
+def charge(where: Path | None = None, *, reservation_id: str = "") -> int:
+    """Reserve one trial question once; retries with the same id are free."""
+    with _state_lock(where):
+        state = read_state(where)
+        trial = dict(_trial_state(state))
+        trial["limit"] = _trial_limit(trial, _opened_trial())
+        trial["used"] = int(trial.get("used") or 0)
+        reservations = dict(trial.get("reservations") or {})
+        reservation_id = str(reservation_id or secrets.token_hex(16))[:128]
+        if reservation_id in reservations:
+            return max(0, trial["limit"] - trial["used"])
+        if trial["used"] >= trial["limit"]:
+            raise ShareError(
+                f"The free Kriko Agent trial for this computer is used up "
+                f"({trial['used']} of {trial['limit']} questions). Paste an access code "
+                "and password, or add your own Mercury and DeepSeek keys in Settings."
+            )
+        trial["used"] += 1
+        reservations[reservation_id] = True
+        trial["reservations"] = reservations
+        state["trial"] = trial
+        _write_state(state, where)
+        return max(0, trial["limit"] - trial["used"])
 
 
 def status(where: Path | None = None) -> dict:

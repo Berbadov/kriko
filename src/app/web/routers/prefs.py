@@ -61,6 +61,27 @@ def read_prefs(fresh: bool = False, conn=Depends(get_app_state)) -> dict:
     return prefs.choices(conn, fresh=fresh)
 
 
+def _chosen_note(pick: str) -> str:
+    """Why the stored agent is not in this roster, in the engine's own words.
+
+    The shell keeps `preferred_harness` verbatim and the roster may omit it —
+    an uninstalled CLI, a key never saved, a trial used up — so without this the
+    reader's own pick is a dead end with no sentence on it. Nothing is written
+    here: the answers are the ones the engine already gives, `keys.require`'s
+    refusal for an API agent (sharekeys-aware, so a missing key and an exhausted
+    trial stay distinct) and the CLI's own `install_hint`.
+    """
+    from app.providers import apiagent, harness
+
+    api = apiagent.BY_ID.get(pick)
+    if api is not None:
+        return apiagent.why_unavailable(api)
+    cli = next((one for one in harness.KNOWN if one.id == pick), None)
+    if cli is not None:
+        return cli.install_hint
+    return f"{pick!r} is not an agent this installation knows"
+
+
 @router.get("/agent-availability")
 def agent_availability(conn=Depends(get_app_state)) -> dict:
     """The small agent roster needed by the shell while the app starts.
@@ -70,6 +91,9 @@ def agent_availability(conn=Depends(get_app_state)) -> dict:
     provider probes, so startup uses this filesystem/key-only view instead.
     Detailed model and capability discovery stays behind `/api/prefs`, which
     the reader opens from Settings.
+
+    `chosen_note` is empty for a pick that is in the roster: an agent that can
+    run needs no excuse, and a client draws nothing the engine did not report.
     """
     from app.providers import apiagent, harness
 
@@ -87,9 +111,12 @@ def agent_availability(conn=Depends(get_app_state)) -> dict:
     if (chosen.get(prefs.HARNESS) == prefs.LOCAL_PICK
             or chosen.get(prefs.LOCAL_URL) or chosen.get(prefs.LOCAL_MODEL)):
         rows.append({"id": prefs.LOCAL_PICK, "label": "Local agent", "local": True})
+    picked = str(chosen.get(prefs.HARNESS) or "").strip()
+    present = {row["id"] for row in rows}
     return {
         "harnesses": rows,
         "chosen": {prefs.HARNESS: chosen.get(prefs.HARNESS, "")},
+        "chosen_note": "" if not picked or picked in present else _chosen_note(picked),
     }
 
 

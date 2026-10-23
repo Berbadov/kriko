@@ -136,3 +136,10 @@ server/*.key
 # that makes the release, and never committed.
 src/app/sharekeys_pepper.py
 src/app/trial_access.json
+
+# Local scratch and artifacts that are not part of the product.
+.dsh-tmp/
+.vscode/
+kriko-gpui/
+logs.txt
+pytest-run.log

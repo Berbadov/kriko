@@ -235,7 +235,8 @@ def _preferred_model(app_state_path) -> str:
 
 def harness_researcher(*, preferred: str = "", timeout: float = 0.0,
                        app_state_path=None, model: str = "", effort: str = "",
-                       default_effort: str = "", api: bool = True):
+                       default_effort: str = "", api: bool = True,
+                       trial_reservation_id: str = "", max_tokens: int | None = None):
     """The $0 plane that actually runs, wired to whichever CLI is installed.
 
     `effort` is the run's own choice and wins; then the level the reader set
@@ -256,14 +257,20 @@ def harness_researcher(*, preferred: str = "", timeout: float = 0.0,
     """
     if not preferred and app_state_path is not None:
         preferred = _stored_pick(app_state_path)
-    found, note = resolve_agent(preferred, api=api)
+    found, note = resolve_agent(preferred, api=api,
+                                app_state_path=app_state_path,
+                                trial_reservation_id=trial_reservation_id)
     if found is None:
         names = ", ".join(h.executable for h in harness.KNOWN)
         raise harness.NoHarness(
-            f"no coding-agent CLI on PATH (looked for: {names})" + _api_hint(api))
+            f"no coding-agent CLI on PATH (looked for: {names})"
+            + _api_hint(api, app_state_path, trial_reservation_id))
     if _is_api_agent(found):
         researcher = _api_agent(found, timeout=timeout, model=model,
-                                app_state_path=app_state_path)
+                                app_state_path=app_state_path,
+                                trial_reservation_id=trial_reservation_id,
+                                max_tokens=max_tokens,
+                                effort=effort.strip() or default_effort.strip())
         if note:
             researcher.note = note
         return researcher
@@ -382,7 +389,26 @@ def harness_researcher(*, preferred: str = "", timeout: float = 0.0,
     return researcher
 
 
-def resolve_agent(preferred: str = "", *, api: bool = True):
+def _api_agents_for_home(app_state_path=None, trial_reservation_id: str = ""):
+    from app.providers import apiagent
+
+    # Named, not a `**dict`: `available` takes `path` positionally-or-by-keyword
+    # and the rest keyword-only, so a string-keyed mapping could in principle
+    # bind `path` to a reservation id. mypy cannot see through that, and neither
+    # could a reader.
+    if app_state_path is None:
+        return apiagent.available(trial_reservation_id=trial_reservation_id)
+    from pathlib import Path
+    from app import keys
+
+    home = Path(app_state_path).parent
+    return apiagent.available(
+        keys.env_path(home), shared_home=home,
+        trial_reservation_id=trial_reservation_id)
+
+
+def resolve_agent(preferred: str = "", *, api: bool = True,
+                  app_state_path=None, trial_reservation_id: str = ""):
     """`(agent, note)`: what a run asking for `preferred` gets, and why if it
     is not that. `(None, "")` when nothing can run.
 
@@ -397,10 +423,10 @@ def resolve_agent(preferred: str = "", *, api: bool = True):
     the paid plane, and this plane must not bring it back.
     """
     from app.providers import apiagent
-
+    available = _api_agents_for_home(app_state_path, trial_reservation_id)
     picked = apiagent.BY_ID.get(preferred)
     if picked is not None and api:
-        if picked in apiagent.available():
+        if picked in available:
             return picked, ""
         found = harness.chosen("")
         if found is not None:
@@ -422,28 +448,31 @@ def resolve_agent(preferred: str = "", *, api: bool = True):
     return found, note
 
 
-def _api_hint(api: bool) -> str:
+def _api_hint(api: bool, app_state_path=None,
+              trial_reservation_id: str = "") -> str:
     """What to do when the only agent that could run is one nobody picked."""
-    from app.providers import apiagent
-
-    ready = apiagent.available() if api else []
+    ready = (_api_agents_for_home(app_state_path, trial_reservation_id)
+             if api else [])
     if ready:
         return (f"; {ready[0].label} has a key but bills per token, so it runs "
                 "only when picked — choose it under Settings → Agents")
     return ", and no API-provider key for the API agent" if api else ""
 
 
-def agent_ready(app_state_path=None, preferred: str = "") -> bool:
+def agent_ready(app_state_path=None, preferred: str = "",
+                trial_reservation_id: str = "") -> bool:
     """Whether a harness-plane run here would find an agent to run."""
     if not preferred and app_state_path is not None:
         preferred = _stored_pick(app_state_path)
     try:
-        return resolve_agent(preferred)[0] is not None
+        return resolve_agent(preferred, app_state_path=app_state_path,
+                             trial_reservation_id=trial_reservation_id)[0] is not None
     except Exception:  # noqa: BLE001 — a gate answers no rather than crashing
         return False
 
 
-def bills_per_token(app_state_path=None, preferred: str = "") -> bool:
+def bills_per_token(app_state_path=None, preferred: str = "",
+                    trial_reservation_id: str = "") -> bool:
     """Whether a harness-plane run here would be billed per token.
 
     Asked by whatever sets a ceiling: a run billed per token gets the paid
@@ -451,7 +480,8 @@ def bills_per_token(app_state_path=None, preferred: str = "") -> bool:
     """
     if not preferred and app_state_path is not None:
         preferred = _stored_pick(app_state_path)
-    found, _ = resolve_agent(preferred)
+    found, _ = resolve_agent(preferred, app_state_path=app_state_path,
+                             trial_reservation_id=trial_reservation_id)
     return _is_api_agent(found)
 
 
@@ -475,7 +505,7 @@ def _stored_pick(app_state_path) -> str:
         conn.close()
 
 
-def agents_available() -> list:
+def agents_available(app_state_path=None, trial_reservation_id: str = "") -> list:
     """Every agent that could take a run here: installed CLIs, then API
     agents with a key. Each has `id` and `label`, which is all a gate or a
     picker reads.
@@ -483,12 +513,13 @@ def agents_available() -> list:
     What a picker lists. A gate asks `agent_ready` instead: an API agent
     listed here still runs only once picked.
     """
-    from app.providers import apiagent
+    return [*harness.available(),
+            *_api_agents_for_home(app_state_path, trial_reservation_id)]
 
-    return [*harness.available(), *apiagent.available()]
 
-
-def _api_agent(agent, *, timeout: float, model: str, app_state_path):
+def _api_agent(agent, *, timeout: float, model: str, app_state_path,
+               trial_reservation_id: str = "", max_tokens: int | None = None,
+               effort: str = ""):
     from app import modelcatalogue
     from app.providers import apiagent, mistral
     from app.web.settings import KRIKO_HOME
@@ -520,6 +551,8 @@ def _api_agent(agent, *, timeout: float, model: str, app_state_path):
         agent, model=model.strip(), home=KRIKO_HOME,
         timeout=timeout or mistral.TIMEOUT_SECONDS,
         app_state_path=app_state_path,
+        trial_reservation_id=trial_reservation_id,
+        max_tokens=max_tokens, effort=effort,
     )
 
 

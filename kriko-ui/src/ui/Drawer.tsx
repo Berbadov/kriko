@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ComponentType } from 'react'
+import { createPortal } from 'react-dom'
 import { AnimatePresence, motion } from 'motion/react'
 import { useEngine } from '../engine/Engine'
 import { DRAWER } from '../mock/data'
@@ -33,7 +34,14 @@ const PANELS: Record<string, ComponentType<{ onOpen: (lookupId: string) => void 
 }
 
 /** Settings and the places that are not Chat, Compare or Queue. It opens at the
- *  left, beside the rail, and `offset` is the width the rail has now. */
+ *  left, beside the rail, and `offset` is the width the rail has now.
+ *
+ *  The head is a sibling of the body, never over it, and the body carries the
+ *  class the stylesheet scrolls (`.drawer-body`). Both are load-bearing: a head
+ *  over the scroll region hides the first card of a panel, and a scroll region
+ *  found by position (`.drawer > div:last-child`) gives the scroll up to any
+ *  extra element the drawer renders, after which the drawer's own clipping cuts
+ *  the last card instead. */
 export function Drawer({ open, panel: asked, onClose, offset, onOpen }: { open: boolean; panel?: string | null; onClose: () => void; offset: number; onOpen: (lookupId: string) => void }) {
   const { motion: m } = usePrefs()
   const panel = useRef<HTMLDivElement>(null)
@@ -70,7 +78,7 @@ export function Drawer({ open, panel: asked, onClose, offset, onOpen }: { open: 
   const item = DRAWER.find((entry) => entry.id === inside)
   const Body = inside ? PANELS[inside] : undefined
 
-  return (
+  return createPortal((
     <AnimatePresence>
       {open && (
         <>
@@ -106,6 +114,7 @@ export function Drawer({ open, panel: asked, onClose, offset, onOpen }: { open: 
               {Body ? (
                 <motion.div
                   key={inside}
+                  className="drawer-body"
                   initial={{ opacity: 0, x: m.d(24) }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: m.d(24) }}
@@ -114,7 +123,7 @@ export function Drawer({ open, panel: asked, onClose, offset, onOpen }: { open: 
                   <Body onOpen={onOpen} />
                 </motion.div>
               ) : (
-                <motion.div key="list" initial={{ opacity: 0, x: -m.d(24) }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -m.d(24) }} transition={m.tx.soft}>
+                <motion.div key="list" className="drawer-body" initial={{ opacity: 0, x: -m.d(24) }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -m.d(24) }} transition={m.tx.soft}>
                   <p className="engine-line" data-mode={engine.mode}>
                     <i />
                     {engine.mode === 'live' ? 'Engine connected' : engine.mode === 'checking' ? 'Looking for the engine' : 'Demo data. No engine answers.'}
@@ -153,5 +162,5 @@ export function Drawer({ open, panel: asked, onClose, offset, onOpen }: { open: 
         </>
       )}
     </AnimatePresence>
-  )
+  ), document.body)
 }

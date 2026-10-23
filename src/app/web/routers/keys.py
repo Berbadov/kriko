@@ -494,6 +494,14 @@ def _run_provider_test(provider_id: str, app_state_path=None) -> dict:
         if provider_id == "proxy":
             return _refused(provider_id, 0, "unsupported",
                             "the login is tried by Check in the Proxies section of Settings")
+        if provider_id == "parallel":
+            # A fetch-shaped service has nothing to answer without a page, and
+            # the reader's own pages are the only ones this app has any business
+            # sending. Said as itself rather than as "no self-test for parallel",
+            # which reads like a gap rather than a choice.
+            return _refused(provider_id, 0, "unsupported",
+                            "the hosted reader is tried on a page that refused Kriko's "
+                            "own fetcher; there is nothing to test until one does")
         return _refused(provider_id, 0, "unsupported", f"no self-test for {provider_id}")
     except Exception as exc:
         return _refused(provider_id, 0, "error", f"{type(exc).__name__}: {exc}")

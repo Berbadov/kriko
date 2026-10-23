@@ -266,6 +266,22 @@ def test_research_over_http_returns_an_id_and_then_a_status(client):
     assert [item["job_id"] for item in listed] == [job_id]
 
 
+def test_research_refuses_to_fall_back_from_an_unavailable_named_agent(client, monkeypatch):
+    from types import SimpleNamespace
+    from app.providers import apiagent, harness
+
+    other = SimpleNamespace(id="other-cli")
+    monkeypatch.setattr(harness, "available", lambda: [other])
+    monkeypatch.setattr(apiagent, "available", lambda *a, **k: [])
+    submitted = []
+    monkeypatch.setattr(client.app.state.jobs, "submit",
+                        lambda *a, **k: submitted.append((a, k)) or "should-not-queue")
+    response = client.post("/api/research",
+                           json={"subject_id": "subject-1", "harness": "missing-agent"})
+    assert response.status_code == 503
+    assert "missing-agent" in response.json()["detail"]
+    assert submitted == []
+
 def test_an_unknown_job_is_a_404(client):
     assert client.get("/api/jobs/missing").status_code == 404
     assert client.post("/api/jobs/missing/cancel").status_code == 404

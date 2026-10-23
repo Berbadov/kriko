@@ -59,6 +59,12 @@
     unrecognised: "Not recognised",
   };
 
+  /* The verdicts that are somebody's doubt, and so the ones worth a "why".
+   * A plain `recognised` is the answer the reader asked for; offering to
+   * explain it would put a debug affordance on the ordinary case, which is
+   * how a reader learns to ignore it. */
+  const DIAGNOSABLE = new Set(["probably", "several", "unrecognised"]);
+
   // ─── State ────────────────────────────────────────────────────────────
   const state = {
     mounted: false,            // panel currently in DOM
@@ -130,8 +136,14 @@
     // whether it is running, what it said while it ran, and what it taught.
     agents: null,
     agentsRequested: false,
+    // Whether the app has *answered* the roster question. An empty list from a
+    // called-through `AGENTS` is "nothing can run now" and is worth blocking
+    // on; `false` is "no answer yet" (an app too old for the market route, a
+    // failed call) and must not disable a run the engine can still make.
+    agentsKnown: false,
     agentChosen: "",
     agentPick: "",
+    quickAgentPick: "",
     learning: false,
     learnMessage: "",
     lesson: null,
@@ -162,6 +174,10 @@
     // When the followed run started, for the elapsed time beside its stage.
     researchStartedAt: 0,
     researchState: "",
+    // The run's own log, accumulated a cursor at a time (see `researchLogOf`):
+    // the stage the stepper shows comes from it, and the job row is fetched
+    // once, at the end, for how the run turned out.
+    researchLog: null,
     cancelling: false,
     /* Which step the run in flight has reached.
      *
@@ -195,6 +211,12 @@
     /* A run that kept nothing has a card of its own. null means none; the
      * object is `{ title, note, coverage, evidence_pages, outcome }`. */
     researchEmpty: null,
+    /* The engine's own comparison of this page against what it holds, asked
+     * for by a press on a doubtful verdict (`/api/diagnose/identity`), never
+     * on mount and never on a poll. `null` is "not asked"; otherwise
+     * `{ loading, error, value }`. Cleared whenever a new answer arrives, so a
+     * comparison can never be shown beside a verdict it did not explain. */
+    diagnosis: null,
   };
 
   // ─── Element refs (populated in mount) ────────────────────────────────
@@ -696,6 +718,7 @@
       state.unknownProduct = "";
       state.errorCode = null;
       state.result = entry.result;
+      state.diagnosis = null;
       state.errorMsg = null;
       setPipeline("result");
       // The setting may have moved in the app since the last answer.
@@ -893,6 +916,7 @@
    * reader can use one agent for lookups in the browser and another in the app
    * without touching Settings. */
   const AGENT_KEY = "kriko.panelAgent";
+  const QUICK_LOOK_AGENT_KEY = "kriko.quickLookAgent";
 
   function requestAgents() {
     if (state.agentsRequested) return;
@@ -900,15 +924,16 @@
     const ask = () => chrome.runtime.sendMessage({ type: "AGENTS" }, (response) => {
       if (chrome.runtime.lastError || !response || !response.ok) return;
       state.agents = Array.isArray(response.agents) ? response.agents : [];
+      state.agentsKnown = true;
       state.agentChosen = String(response.chosen || "");
-      if (state.agentPick && !state.agents.some((one) => one.id === state.agentPick)) state.agentPick = "";
       renderResearch();
       renderVerdict();
     });
     try {
-      chrome.storage?.local?.get?.([AGENT_KEY], (bag) => {
+      chrome.storage?.local?.get?.([AGENT_KEY, QUICK_LOOK_AGENT_KEY], (bag) => {
         void chrome.runtime.lastError;
         state.agentPick = typeof bag?.[AGENT_KEY] === "string" ? bag[AGENT_KEY] : "";
+        state.quickAgentPick = typeof bag?.[QUICK_LOOK_AGENT_KEY] === "string" ? bag[QUICK_LOOK_AGENT_KEY] : "";
         ask();
       });
     } catch (_) {
@@ -927,14 +952,70 @@
     return (state.agents || []).find((one) => one.id === currentAgent()) || null;
   }
 
-  function agentRowMarkup(busy) {
+  function currentQuickAgent() {
     const list = state.agents || [];
-    if (list.length < 2) return "";   // nothing to choose between
+    if (state.quickAgentPick) {
+      return list.some((one) => one.id === state.quickAgentPick) ? state.quickAgentPick : "";
+    }
+    return list.some((one) => one.id === state.agentChosen) ? state.agentChosen : "";
+  }
+
+  function quickPickedAgent() {
+    return (state.agents || []).find((one) => one.id === currentQuickAgent()) || null;
+  }
+
+  function learnAgentRowMarkup(busy) {
+    const list = state.agents || [];
+    if (!list.length) return "";
     const now = currentAgent();
-    return `<label class="lite-agent-row"><span>Agent</span>
-      <select class="lite-agent-select" aria-label="Agent for this panel" ${busy || state.learning ? "disabled" : ""}>
+    return `<label class="lite-agent-row"><span>Page-learning agent</span>
+      <select class="lite-agent-select lite-learn-agent-select" aria-label="Page-learning agent" ${busy || state.learning ? "disabled" : ""}>
         ${list.map((one) => `<option value="${escapeHtml(one.id)}"${one.id === now ? " selected" : ""}>${escapeHtml(one.label)}</option>`).join("")}
       </select></label>`;
+  }
+
+  function quickAgentRowMarkup(busy) {
+    const list = state.agents || [];
+    // Nothing to choose from and nothing to warn about: the engine's own
+    // stored pick is what an unnamed run uses, and the panel showing an empty
+    // box would be the panel claiming a choice it does not have.
+    if (!state.agentsKnown) return "";
+    const current = currentQuickAgent();
+    const stale = Boolean(state.quickAgentPick && !current);
+    const selected = stale ? state.quickAgentPick : current;
+    const options = [
+      `<option value=""${selected ? "" : " selected"}>Choose an available agent</option>`,
+      ...(stale ? [`<option value="${escapeHtml(state.quickAgentPick)}" selected>Unavailable: ${escapeHtml(state.quickAgentPick)}</option>`] : []),
+      ...list.map((one) => `<option value="${escapeHtml(one.id)}"${one.id === selected ? " selected" : ""}>${escapeHtml(one.label)}</option>`),
+    ].join("");
+    const note = stale
+      ? "The saved agent is unavailable. Choose another to continue."
+      : !list.length ? "No research agent is available. Connect or install one in Kriko."
+        : !current ? "Choose an agent before starting Quick Look." : "";
+    return `<label class="lite-agent-row lite-quick-agent-row"><span>Quick Look agent</span>
+      <select class="lite-agent-select lite-quick-agent-select" aria-label="Agent for Quick Look" ${busy ? "disabled" : ""}>${options}</select></label>
+      <p class="lite-quick-agent-note" role="status">${escapeHtml(note)}</p>`;
+  }
+
+  /* Whether a press can start a quick look. A roster the app never answered is
+   * not a refusal: the engine keeps its own preferred agent, so the run goes to
+   * that one unnamed (`harness` omitted) exactly as it did before this panel
+   * had a picker. Only an *answered* roster with nothing in it, or a saved pick
+   * that is gone, stops the reader — and then the note says why. */
+  function quickLookReady() {
+    return Boolean(quickPickedAgent()) || !state.agentsKnown;
+  }
+
+  /* The agent id a run carries, or "" to let the engine use what it has stored.
+   *
+   * A roster that never arrived does not take the reader's saved choice away:
+   * naming it is still their instruction, and the engine checks it — a pick
+   * that is gone comes back as the engine's own refusal rather than as some
+   * other agent quietly answering under the reader's saved setting. */
+  function quickAgentId() {
+    const agent = quickPickedAgent();
+    if (agent) return agent.id;
+    return state.agentsKnown ? "" : state.quickAgentPick;
   }
 
   /* What the card's head does not already say: the cost is there, the wait is not. */
@@ -981,10 +1062,18 @@
    * built, because both cards are rebuilt whenever the panel is painted. */
   function wireLearn(root) {
     root.querySelector(".lite-learn-btn")?.addEventListener("click", learnPage);
-    root.querySelector(".lite-agent-select")?.addEventListener("change", (event) => {
+    root.querySelector(".lite-learn-agent-select")?.addEventListener("change", (event) => {
       state.agentPick = event.target.value;
       try { chrome.storage?.local?.set?.({ [AGENT_KEY]: state.agentPick }, () => void chrome.runtime.lastError); } catch (_) {}
       renderLearnSurfaces();
+    });
+  }
+
+  function wireQuickAgent(root) {
+    root.querySelector(".lite-quick-agent-select")?.addEventListener("change", (event) => {
+      state.quickAgentPick = event.target.value;
+      try { chrome.storage?.local?.set?.({ [QUICK_LOOK_AGENT_KEY]: state.quickAgentPick }, () => void chrome.runtime.lastError); } catch (_) {}
+      renderResearch();
     });
   }
 
@@ -1029,7 +1118,7 @@
       if (chrome.runtime.lastError || !response?.ok || !response.job) {
         state.learnMessage = "Cannot check progress. Open the app to follow it.";
         renderLearnSurfaces();
-        setTimeout(() => pollLearnJob(lesson), 3000);
+        pollLater("learn", () => pollLearnJob(lesson), 3000);
         return;
       }
       const job = response.job;
@@ -1037,7 +1126,7 @@
       if (!done) {
         state.learnMessage = `${job.message || "Reading the page"} · ${elapsedWords(state.learnStartedAt)}`;
         paintLearn(bodyEl);
-        setTimeout(() => pollLearnJob(lesson), 1500);
+        pollLater("learn", () => pollLearnJob(lesson), 1500);
         return;
       }
       const learned = job.state === "succeeded";
@@ -1092,7 +1181,7 @@
   function costLine() {
     const plane = state.researchPlane;
     if (!plane) return "";
-    const picked = pickedAgent();
+    const picked = quickPickedAgent();
     if (picked?.kind === "local") return "Free · on this computer";
     if (picked?.kind === "cli") return "Free · your coding agent";
     if (picked?.kind === "api") {
@@ -1147,6 +1236,14 @@
    * buttons whose difference they had no way to know. */
   function startResearch() {
     if (state.researching || !state.researchPlane) return;
+    if (!quickLookReady()) {
+      state.researchMessage = state.quickAgentPick
+        ? "The saved Quick Look agent is unavailable. Choose an available agent."
+        : "Choose an available agent before starting Quick Look.";
+      renderResearch();
+      return;
+    }
+    const agentId = quickAgentId();
     const subject_id = state.researchTarget?.subject_id;
     const q = [state.researchName.trim(), state.researchContext.trim()].filter(Boolean).join(" · ");
     if (!subject_id && !q) return;
@@ -1168,7 +1265,10 @@
     renderResearch();
     chrome.runtime.sendMessage({ type: "RESEARCH_PRODUCT", payload: {
       ...(subject_id ? { subject_id } : { q, allow_draft: true, url: location.href }),
-      ...(state.agentPick && currentAgent() === state.agentPick ? { harness: state.agentPick } : {}),
+      // `harness` is the engine's one input for which agent runs; it keeps a
+      // preferred agent of its own, so a run the panel cannot name one for is
+      // left unnamed rather than sent a second, competing answer.
+      ...(agentId ? { harness: agentId } : {}),
       ...(cap > 0 ? { cap } : {}),
     } }, (response) => {
       if (chrome.runtime.lastError || !response?.ok || !response.job?.job_id) {
@@ -1389,7 +1489,7 @@
           <strong>Research</strong>
           <span class="lite-gap-cost">${escapeHtml(cost || state.researchPlaneError || "Checking costs…")}</span>
         </div>
-        ${agentRowMarkup(busy)}
+        ${quickAgentRowMarkup(busy)}
         ${target ? `<p class="lite-research-target">${escapeHtml(target.label || target.subject_id)}</p>` : `
           <input class="lite-research-name" maxlength="350" placeholder="Product name" aria-label="Product name" ${busy ? "disabled" : ""} />
           <div class="lite-fold"><div class="lite-fold-in">
@@ -1434,7 +1534,7 @@
         </div>` : ""}
         ${learnMarkup()}
         <div class="lite-research-actions">
-          ${!busy ? `<button type="button" class="lite-research-start" ${!state.researchPlane ? "disabled" : ""}>${state.researchJob ? "Run again" : "Research this product"}</button>` : ""}
+          ${!busy ? `<button type="button" class="lite-research-start" ${!state.researchPlane || !quickLookReady() ? "disabled" : ""}>${state.researchJob ? "Run again" : "Research this product"}</button>` : ""}
           ${!busy && state.researchQuickJob ? `<button type="button" class="lite-research-pack">Add to a pack</button>` : ""}
           ${busy && state.researchJob ? `<button type="button" class="lite-research-cancel" ${state.cancelling ? "disabled" : ""}>${state.cancelling ? "Cancelling…" : "Cancel"}</button>` : ""}
           ${state.researchJob ? `<button type="button" class="lite-research-output">Open in Kriko</button>` : ""}
@@ -1484,6 +1584,7 @@
     }
     paintLearn(slot);
     wireLearn(slot);
+    wireQuickAgent(slot);
     renderTaskLog(slot.querySelector(".lite-task-log-slot"), state.researchJob);
     slot.querySelector(".lite-research").dataset.state = state.researchState;
     slot.querySelector(".lite-research-status").textContent = state.researchMessage;
@@ -1761,14 +1862,84 @@
     return `No data found that shows an issue (${what}); not proof that there is no issue.`;
   }
 
-  function pollResearchJob(jobId) {
+  /* A run's own log, accumulated across ticks.
+   *
+   * The stage is the furthest step the log has reached, so what the panel
+   * needs is the text since the beginning of what it has seen — not a window
+   * onto the end, which can show "read:" lines after the extraction the run is
+   * really on and put the stepper a step behind. Keyed by job id because a
+   * quick look hands over to the deeper run it started, and those are two
+   * different logs. */
+  function researchLogOf(jobId) {
+    if (!state.researchLog || state.researchLog.job_id !== jobId) {
+      state.researchLog = { job_id: jobId, cursor: 0, text: "", viaRow: false };
+    }
+    return state.researchLog;
+  }
+
+  /** Take one page of `/log` into the accumulator, or start again when the
+   *  stored tail was truncated under the cursor. */
+  function absorbRunLog(seen, page) {
+    const total = Number(page.total_chars) || 0;
+    const text = String(page.text || "");
+    const next = Number(page.next_cursor);
+    if (total < seen.cursor) {
+      seen.text = text;
+      seen.cursor = Number.isFinite(next) ? next : text.length;
+      return;
+    }
+    seen.text += text;
+    seen.cursor = Number.isFinite(next) ? next : seen.cursor + text.length;
+  }
+
+  /* One tick of a run, read from the run's own log (`docs/DESIGN.md`: "the
+   * browser extension reads its stage from the run's own log"), a cursor at a
+   * time rather than the whole thing.
+   *
+   * `viaRow` is the fallback: an app older than the log route, or a bad answer
+   * from it, is followed through the job row exactly as before — the row
+   * carries the same log, so the stepper is no worse off, only wider on the
+   * wire. It is remembered on the accumulator so a route that is not there is
+   * not asked for again on every tick. */
+  function pollResearchJob(jobId, viaRow = false) {
+    if (state.researchJob?.job_id !== jobId || !state.researching) return;
+    const seen = researchLogOf(jobId);
+    if (viaRow || seen.viaRow) { pollResearchRow(jobId); return; }
+    chrome.runtime.sendMessage({ type: "JOB_PROGRESS", payload: {
+      job_id: jobId, cursor: seen.cursor,
+    } }, (response) => {
+      if (state.researchJob?.job_id !== jobId || !state.researching) return;
+      if (chrome.runtime.lastError || !response?.ok || !response.page) {
+        seen.viaRow = true;
+        pollResearchRow(jobId);
+        return;
+      }
+      const page = response.page;
+      absorbRunLog(seen, page);
+      state.researchRun = describeRun({ kind: state.researchJob?.kind, log: seen.text });
+      state.researchState = page.done ? state.researchState : "running";
+      state.researchMessage = `${state.researchRun.headline} \u00b7 ${elapsedWords(state.researchStartedAt)}`;
+      renderResearch();
+      if (page.done) {
+        // The log says the run is over; the row is what says how it ended and
+        // what it produced, so it is fetched once, here.
+        pollResearchRow(jobId);
+        return;
+      }
+      pollLater("research", () => pollResearchJob(jobId), 1000);
+    });
+  }
+
+  /* The job row: state, result, and — for a run on an app without the log
+   * route — the log itself. */
+  function pollResearchRow(jobId) {
     if (state.researchJob?.job_id !== jobId || !state.researching) return;
     chrome.runtime.sendMessage({ type: "JOB_STATUS", payload: { job_id: jobId } }, (response) => {
       if (state.researchJob?.job_id !== jobId || !state.researching) return;
       if (chrome.runtime.lastError || !response?.ok || !response.job) {
         state.researchMessage = "Cannot check progress. Open its output below or cancel.";
         renderResearch();
-        setTimeout(() => pollResearchJob(jobId), 3000);
+        pollLater("research", () => pollResearchJob(jobId), 3000);
         return;
       }
       const job = response.job;
@@ -1782,7 +1953,7 @@
         state.researchRun = describeRun(job);
         state.researchMessage = `${state.researchRun.headline} \u00b7 ${elapsedWords(state.researchStartedAt)}`;
         renderResearch();
-        setTimeout(() => pollResearchJob(jobId), 1000);
+        pollLater("research", () => pollResearchJob(jobId), 1000);
         return;
       }
       if (state.researchJob.kind === "quick_look" && job.state !== "cancelled") {
@@ -1921,13 +2092,8 @@
     }
     if (request && request.type === "SHOW_GUARD") showGuard(request.result);
     if (request && request.type === "KRIKO_DUE_NUDGE") showDueNudge(request.purchase);
-    // The worker opens the panel by itself only on a site Kriko already reads,
-    // once per site per session, when it has an answer or a product to offer
-    // to research. An unknown site is opened from the toolbar instead: a
-    // panel over every shop the reader visits is what this replaced.
-    if (request && request.type === "KRIKO_SHOW_PANEL" && !state.mounted) {
-      openPanel();
-    }
+    // Background results warm the cache; they never open the panel. Only
+    // TOGGLE_HOVER_LITE from a toolbar click or Alt+K changes visibility.
   });
 
   // runtime.sendMessage broadcasts only reach extension UI surfaces, not
@@ -2228,6 +2394,7 @@
     tourEl = null;
     if (!hostEl) return;
     stopLive();
+    stopPolls();
     try { hostEl.remove(); } catch (_) {}
     hostEl = shadow = panel = null;
     countsEl = bodyEl = statusEl = ctaBtn = null;
@@ -2240,6 +2407,9 @@
     state.closing = false;
     if (!state.mounted) mount();
     state.visible = true;
+    // A run that was being followed when the panel closed is picked up again
+    // rather than left half-reported: the poll was parked, not abandoned.
+    resumePolls();
   }
   function closePanel() {
     if (!state.mounted || state.closing) return;
@@ -2669,7 +2839,7 @@
         state.buyerUi.advice = { ...advice, state: "failed",
           error: job.error || job.message || "The agent did not finish. Try again." };
       } else {
-        setTimeout(() => pollAdvice(jobId), 1200);
+        pollLater("advice", () => pollAdvice(jobId), 1200);
       }
       renderDecide();
     });
@@ -3175,10 +3345,57 @@
     state.liveTimer = null;
   }
 
-  // The resume half of the `document.hidden` stop in `pollLive`: the tab
-  // coming back into view asks again at once instead of waiting for Analyze.
+  /* ── polls that stop when nobody is looking ────────────────────────────
+   *
+   * `pollLive` had this from the start and the others each grew without it: a
+   * research run rescheduled every second whether the panel was open or the
+   * tab was hidden, and `unmount` closed the panel without ending the loop, so
+   * a closed panel kept waking the worker for the life of the tab — a request
+   * a second, for a reader who is not there. A hidden tab is not an abandoned
+   * run either, so a poll that waits here is re-armed when the panel comes
+   * back rather than being forgotten.
+   */
+  const pendingPolls = new Map();
+  const pollTimers = new Map();
+
+  function watching() {
+    return Boolean(state.mounted && state.visible && !document.hidden);
+  }
+
+  /** Wait `delay` and run `fn`, unless nobody is looking — in which case keep
+   *  it for the moment they are. */
+  function pollLater(name, fn, delay) {
+    pendingPolls.set(name, fn);
+    if (!watching()) return;
+    const timer = setTimeout(() => {
+      pollTimers.delete(name);
+      if (!watching()) return;   // it stays in `pendingPolls`
+      pendingPolls.delete(name);
+      fn();
+    }, delay);
+    pollTimers.set(name, timer);
+  }
+
+  function stopPolls() {
+    for (const timer of pollTimers.values()) clearTimeout(timer);
+    pollTimers.clear();
+  }
+
+  function resumePolls() {
+    if (!watching()) return;
+    for (const [name, fn] of [...pendingPolls]) {
+      pendingPolls.delete(name);
+      fn();
+    }
+  }
+
+  // The resume half of the `document.hidden` stop in `pollLive`, and now of
+  // every other poll: the tab coming back into view asks again at once instead
+  // of waiting for Analyze.
   document.addEventListener("visibilitychange", () => {
-    if (!document.hidden && state.visible && !state.liveTimer) pollLive();
+    if (document.hidden) return;
+    if (state.visible && !state.liveTimer) pollLive();
+    resumePolls();
   });
 
   function renderStatus() {
@@ -3489,7 +3706,7 @@
       if (state.learnable && !state.researchOpen) {
         requestAgents();
         const learn = document.createElement("div");
-        learn.innerHTML = `${agentRowMarkup(false)}${learnMarkup()}`;
+        learn.innerHTML = `${learnAgentRowMarkup(false)}${learnMarkup()}`;
         wireLearn(learn);
         paintLearn(learn);
         card.appendChild(learn);
@@ -3528,7 +3745,7 @@
         </div>
         <p class="lite-verdict-say">Nothing installed knows how to read this
           site yet. Kriko can learn it from this page.</p>
-        ${agentRowMarkup(false)}
+        ${learnAgentRowMarkup(false)}
         ${learnMarkup()}
       `;
       wireLearn(card);
@@ -3627,6 +3844,24 @@
       card.appendChild(button);
     }
 
+    // "Why did Kriko say that?" — where the verdict is somebody's doubt only,
+    // under the thing to do about it, and only on a press: the comparison is a
+    // POST, and this panel adds no request to a page load. A failed comparison
+    // keeps the press, because a reader who cannot retry is at a dead end.
+    if (DIAGNOSABLE.has(verdict)) {
+      const asked = state.diagnosis;
+      if (!asked || asked.error) {
+        const why = document.createElement("button");
+        why.type = "button";
+        why.className = "lite-verdict-btn lite-diagnosis-btn";
+        why.textContent = asked ? "Try again" : "What was compared";
+        why.title = "The adapter, the keys it read, and what each candidate agreed on.";
+        why.addEventListener("click", diagnoseIdentity);
+        card.appendChild(why);
+      }
+      if (asked) card.appendChild(renderDiagnosis(asked));
+    }
+
     slot.appendChild(card);
   }
 
@@ -3670,8 +3905,144 @@
     return box;
   }
 
-  function takeNextStep(action, step, button) {
-    if (action === "research") {
+  /* Ask the engine to explain the verdict on screen.
+   *
+   * `POST /api/diagnose/identity` runs the same adapt-then-lookup call the
+   * answer came from and returns its trace instead of its claims; it writes no
+   * history, no analysis log, and runs no model, which is what makes it honest
+   * to offer. The worker sends the scrape the answer was computed from, so what
+   * the reader is shown is the comparison they were actually given. */
+  function diagnoseIdentity() {
+    if (state.diagnosis && !state.diagnosis.error) return;
+    state.diagnosis = { loading: true, error: "", value: null };
+    renderVerdict();
+    chrome.runtime.sendMessage(
+      { type: "DIAGNOSE_IDENTITY", payload: { url: location.href } },
+      (response) => {
+        if (chrome.runtime.lastError || !response?.ok || !response.diagnosis) {
+          state.diagnosis = { loading: false, value: null,
+            error: response?.error
+              || "Could not read what Kriko compared. Open the Kriko app and try again." };
+        } else {
+          state.diagnosis = { loading: false, error: "", value: response.diagnosis };
+        }
+        renderVerdict();
+      });
+  }
+
+  /* The comparison, in the panel's own words.
+   *
+   * Every line is a value the response carried, and a line with nothing under
+   * it says so rather than being written for it: a "why" the engine did not
+   * give is exactly the kind of sentence this feature exists to replace. The
+   * engine's own phrases (the method, a key's `how` and `why`, the next step)
+   * are quoted as they are, because they are the answer. */
+  function renderDiagnosis(asked) {
+    const box = document.createElement("div");
+    box.className = "lite-diagnosis";
+    box.dataset.state = asked.error ? "error" : asked.value ? "done" : "asking";
+
+    const say = (label, text, title) => {
+      if (!text) return null;
+      const row = document.createElement("p");
+      row.className = "lite-diagnosis-line";
+      const name = document.createElement("span");
+      name.className = "lite-diagnosis-label";
+      name.textContent = label;
+      row.append(name, document.createTextNode(text));
+      if (title) row.title = title;
+      box.appendChild(row);
+      return row;
+    };
+
+    if (asked.loading) {
+      say("Compared", "Asking Kriko what it compared\u2026");
+      return box;
+    }
+    if (asked.error) {
+      const failed = say("Compared", asked.error);
+      if (failed) failed.dataset.state = "error";
+      return box;
+    }
+
+    const traced = asked.value || {};
+    const adapter = traced.adapter || null;
+    const page = traced.page || {};
+    const outcome = traced.outcome || {};
+
+    say("Read by", adapter
+      ? [adapter.id, adapter.site,
+         adapter.source === "local" ? "learned on this machine" : "from an installed pack"]
+        .filter(Boolean).join(" \u00b7 ")
+      : "nothing installed");
+    const identity = Object.entries(page.identity || {})
+      .slice(0, 8).map(([key, value]) => `${key} ${value}`).join(" \u00b7 ");
+    say("From the page", identity);
+    const unmapped = (page.unmapped_labels || []).slice(0, 6);
+    say("No rule claimed", unmapped.join(", "),
+      unmapped.length < (page.unmapped_labels || []).length
+        ? `and ${(page.unmapped_labels || []).length - unmapped.length} more` : "");
+    say("Method", [outcome.method, outcome.notes].filter(Boolean).join(" \u00b7 "));
+
+    const considered = (traced.considered || []).slice(0, 3);
+    if (!considered.length) {
+      // The honest empty case, and a common one: no subject was weighed at all
+      // (a site nothing reads, or an identity too thin to compare).
+      say("Weighed", "nothing: the engine had no candidate to compare");
+    }
+    for (const one of considered) {
+      const candidate = document.createElement("div");
+      candidate.className = "lite-diagnosis-candidate";
+      const head = document.createElement("p");
+      head.className = "lite-diagnosis-candidate-head";
+      const name = document.createElement("span");
+      name.textContent = one.label || one.subject_id || "";
+      const score = document.createElement("span");
+      score.className = "lite-diagnosis-score";
+      score.textContent = `${((one.score || 0) * 100).toFixed(0)}%`;
+      head.append(name, score);
+      candidate.appendChild(head);
+
+      const keys = document.createElement("ul");
+      keys.className = "lite-diagnosis-keys";
+      for (const key of (one.keys || []).slice(0, 6)) {
+        const item = document.createElement("li");
+        item.dataset.how = key.how || "";
+        const supplied = key.supplied === undefined || key.supplied === null || key.supplied === ""
+          ? "" : String(key.supplied);
+        const held = key.held === undefined || key.held === null || key.held === ""
+          ? "" : String(key.held);
+        const pair = document.createElement("span");
+        pair.className = "lite-diagnosis-pair";
+        // "what the page said → what the engine holds". One side missing is
+        // said, not guessed: a key the page never carried is the adapter's
+        // problem, a key the pack never holds is the pack's.
+        pair.textContent = `${supplied || "not on the page"} \u2192 ${held || "not in the pack"}`;
+        const label = document.createElement("span");
+        label.className = "lite-diagnosis-key";
+        label.textContent = key.key || "";
+        const how = document.createElement("span");
+        how.className = "lite-diagnosis-how";
+        how.textContent = key.how || "";
+        item.append(label, pair, how);
+        if (key.why) {
+          const why = document.createElement("span");
+          why.className = "lite-diagnosis-why";
+          why.textContent = key.why;
+          item.appendChild(why);
+        }
+        keys.appendChild(item);
+      }
+      candidate.appendChild(keys);
+      box.appendChild(candidate);
+    }
+
+    const step = traced.next_step || null;
+    say("Next", step && step.say ? step.say : "");
+    return box;
+  }
+
+  function takeNextStep(action, step, button) {    if (action === "research") {
       const subject = (state.result.subjects || [])
         .find((one) => one.subject_id === step?.subject_id);
       return researchSubject(subject || (step?.subject_id ? step : null));
@@ -3867,7 +4238,7 @@
         requestAgents();
         const learn = document.createElement("div");
         learn.className = "lite-error-learn";
-        learn.innerHTML = `${agentRowMarkup(false)}${learnMarkup()}`;
+        learn.innerHTML = `${learnAgentRowMarkup(false)}${learnMarkup()}`;
         wireLearn(learn);
         paintLearn(learn);
         claimsListEl.appendChild(learn);

@@ -24,7 +24,13 @@ const ITEMS: { id: Screen; label: string; icon: IconName }[] = [
 
 /** The bar across the top. It holds the three places, the chats the reader has
  *  had, a new chat, the agent doing the work and the queue's state. Everything
- *  else opens in the drawer. The window below gets the whole width. */
+ *  else opens in the drawer. The window below gets the whole width.
+ *
+ *  Where the system draws no title bar (Windows, see `ui/TitleBar.tsx`) this row
+ *  *is* the window's caption: the three window buttons sit in it and the row
+ *  drags the window. Tauri drags only from a press whose target carries
+ *  `data-tauri-drag-region`, so the row and its two ends carry it while every
+ *  button inside stays a button — the ground between the controls is the handle. */
 export function TopBar({
   screen,
   onNavigate,
@@ -69,8 +75,8 @@ export function TopBar({
   }, [history])
 
   return (
-    <header className="topbar">
-      <div className="topbar-left">
+    <header className="topbar" data-tauri-drag-region>
+      <div className="topbar-left" data-tauri-drag-region>
         <div className="brand" aria-label="Kriko">
           <span className="logo-word" dangerouslySetInnerHTML={{ __html: ink(wordSvg) }} />
         </div>
@@ -117,7 +123,7 @@ export function TopBar({
         </button>
       </nav>
 
-      <div className="topbar-right">
+      <div className="topbar-right" data-tauri-drag-region>
         <UsagePill />
         {items.length > 0 && (
           <button className="topbar-queue" onClick={() => onNavigate('queue')} aria-label={`Queue, ${done} of ${items.length} done`} title="Queue">

@@ -58,7 +58,7 @@ def test_the_narrators_own_lines_are_classified():
         _tool_line("WebSearch", {"query": "e-bike motor faults"}),
         _tool_line("WebFetch", {"url": "https://example.test/a"}),
         _tool_line("mcp__reader__" + harness_mod.READER_TOOLS[0],
-                   {"urls": ["https://example.test/b"]}),
+                   {"urls": ["https://example.test/b"]}, reader_granted=True),
         "kept “Motor cuts out” as c-1",
         "refused “Vague”: no page",
         "a tool call failed: timeout",

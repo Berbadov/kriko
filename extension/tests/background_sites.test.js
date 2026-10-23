@@ -461,3 +461,129 @@ test("a report the app never receives does not undo a registration", async () =>
     "the app being closed is the ordinary state of a browser",
   );
 });
+
+// ── "stop reading this site" (E7) ───────────────────────────────────────
+//
+// The grant to read pages covers the whole web and was all-or-nothing: a
+// reader who wanted one shop left alone had to give up the extension. A mute
+// is written down, and every door that reads a page consults it — the site's
+// own registration, the every-site block's exclusions, and the automatic
+// analysis.
+
+// Enough of a page and its answer for the automatic run to complete, so the
+// counts below are counts of something the worker really wrote. Copied in shape
+// from `background.test.js`; the host is this file's invented one.
+const PAGE_URL = `https://${NEW_SITE}/p/1`;
+const PAGE_ROUTES = {
+  [ADAPTERS]: [adapter(NEW_SITE)],
+  "/api/analyze": { lookup_id: "x", claims: [], subjects: [], packs: [], coverage: "MATCHED_NO_DATA" },
+};
+const PAGE_TAB = { GET_SCRAPE: { ok: true, payload: {
+  url: PAGE_URL, title: "Example", description: "", fields: { Marka: "Example" },
+  product: { name: "Example", typed: true },
+  listing: { damage_info: { changed: [] }, equipment: {} },
+} } };
+
+const mute = (h, site, muted = true) =>
+  send(h, { type: "KRIKO_SET_MUTED", payload: { site, muted } });
+
+// `send` hands the listener no sender; a page's own message always carries the
+// tab it came from, and this door refuses without one.
+const fromTab = (h, tabId, message) =>
+  new Promise((resolve) => {
+    for (const fn of h.messageListeners) {
+      const handled = fn(message, { tab: { id: tabId } }, resolve);
+      if (handled === true || handled === false) return;
+    }
+  });
+
+test("a muted site is registered nowhere, and says so in the list", async () => {
+  const h = loadBackground({
+    routes: { [ADAPTERS]: [adapter(NEW_SITE)] },
+    grantedOrigins: [NEW_ORIGIN, "https://*/*"],
+  });
+  await sync(h);
+  assert.ok(h.state.registered.some((s) => s.id === NEW_ID), "the site was not registered to begin with");
+
+  const reply = await mute(h, NEW_SITE);
+  assert.equal(reply.ok, true);
+  assert.deepEqual(reply.muted, [NEW_SITE]);
+  assert.equal(h.state.registered.some((s) => s.id === NEW_ID), false,
+    "the registration survived the mute");
+  const row = reply.status.sites.find((s) => s.site === NEW_SITE);
+  assert.equal(row.state, "muted");
+});
+
+test("the every-site block skips a muted host", async () => {
+  const h = loadBackground({
+    routes: { [ADAPTERS]: [] },
+    grantedOrigins: ["https://*/*"],
+  });
+  await settle();
+  await sync(h);
+  const all = () => h.state.registered.find((s) => s.id === "kriko-anysite");
+  assert.ok(all(), "the every-site block was not registered");
+  assert.deepEqual(all().excludeMatches, []);
+  await mute(h, NEW_SITE);
+  assert.deepEqual(all().excludeMatches, [`https://*.${NEW_SITE}/*`],
+    "a muted site is still covered by the every-site block");
+});
+
+test("an automatic run on a muted page reads nothing", async () => {
+  const h = loadBackground({
+    routes: PAGE_ROUTES, grantedOrigins: ["https://*/*"], tabResponses: PAGE_TAB,
+  });
+  await mute(h, NEW_SITE);
+  h.state.requests.length = 0;
+  const result = await fromTab(h, 1, { type: "PAGE_LOADED", payload: { url: PAGE_URL, host: NEW_SITE } });
+  assert.equal(result.ok, true);
+  await settle();
+  assert.equal(h.state.requests.some((r) => r.url.endsWith("/api/analyze")), false,
+    "a muted page was read anyway");
+  assert.equal(h.state.tabMessages.some((m) => m.message?.type === "GET_SCRAPE"), false,
+    "a muted page was scraped anyway");
+});
+
+test("a page the reader muted and one they did not are told apart", async () => {
+  const h = loadBackground({ routes: { [ADAPTERS]: [] }, grantedOrigins: ["https://*/*"] });
+  await mute(h, NEW_SITE);
+  const kept = await send(h, { type: "KRIKO_KEPT" });
+  assert.deepEqual(kept.kept.muted, [NEW_SITE]);
+  const off = await mute(h, NEW_SITE, false);
+  assert.deepEqual(off.muted, []);
+});
+
+// ── the privacy surface: see it, clear it (E7) ──────────────────────────
+
+test("what Kriko kept is counted, and clearing it empties the count", async () => {
+  const h = loadBackground({ routes: PAGE_ROUTES, tabResponses: PAGE_TAB });
+  await h.sandbox.runAnalysisForTab(1, PAGE_URL);
+  const before = await send(h, { type: "KRIKO_KEPT" });
+  assert.ok(before.kept.answers >= 1, "the answer cache was not counted");
+  assert.ok(before.kept.pages >= 1, "the session ledger was not counted");
+  const cleared = await send(h, { type: "KRIKO_CLEAR", payload: { what: "all" } });
+  assert.equal(cleared.kept.answers, 0);
+  assert.equal(cleared.kept.pages, 0);
+  assert.equal(cleared.kept.intents, 0);
+  assert.equal(cleared.kept.sites, 0);
+  for (const key of Object.keys(h.state.local)) {
+    assert.equal(key.startsWith("kriko_cached_result_"), false, `${key} survived the clear`);
+  }
+});
+
+test("clearing one store leaves the others alone", async () => {
+  const h = loadBackground({ routes: PAGE_ROUTES, tabResponses: PAGE_TAB });
+  await h.sandbox.runAnalysisForTab(1, PAGE_URL);
+  await send(h, { type: "RESEARCH_PRODUCT", payload: { q: "Example", allow_draft: true } });
+  const cleared = await send(h, { type: "KRIKO_CLEAR", payload: { what: "answers" } });
+  assert.equal(cleared.kept.answers, 0);
+  assert.ok(cleared.kept.pages >= 1, "clearing answers took the session ledger with it");
+  assert.ok(cleared.kept.intents >= 1, "clearing answers took the retry ledger with it");
+});
+
+test("a mute is a decision, not a record, and clearing does not undo it", async () => {
+  const h = loadBackground({ routes: { [ADAPTERS]: [] }, grantedOrigins: ["https://*/*"] });
+  await mute(h, NEW_SITE);
+  const cleared = await send(h, { type: "KRIKO_CLEAR", payload: { what: "all" } });
+  assert.deepEqual(cleared.kept.muted, [NEW_SITE]);
+});

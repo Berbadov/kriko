@@ -274,7 +274,7 @@ def machine(monkeypatch):
         next((one for one in here.clis if one.id == preferred), None) if preferred
         else (here.clis[0] if here.clis else None)))
     monkeypatch.setattr(harness, "available", lambda: list(here.clis))
-    monkeypatch.setattr(apiagent, "available", lambda path=None: list(here.keyed))
+    monkeypatch.setattr(apiagent, "available", lambda *args, **kwargs: list(here.keyed))
     return here
 
 
