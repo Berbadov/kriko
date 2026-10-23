@@ -80,6 +80,13 @@ def tool():
 #: Overridden by tests so they never touch the real ~/.kriko store.
 STORE_PATH = None
 
+#: The most subjects one `list_subjects` answer returns, and the least. The same
+#: 200 the web router clamps to (`routers/subjects.py`), for the same reason:
+#: `limit` goes straight into `LIMIT ?`, where SQLite reads a negative value as
+#: "no limit" — so `limit=-1` was a way for an agent to be handed every subject
+#: in the store in one answer (C11).
+LIST_SUBJECTS_MAX = 200
+
 
 def _store_path():
     """The store file this process is working against.
@@ -247,7 +254,13 @@ def store_status() -> dict:
 
 @tool()
 def list_subjects(pack_id: str = "", kind: str = "", limit: int = 50) -> list[dict]:
-    """Subjects, newest packs first. Replaces the old `list_parts`."""
+    """Subjects, newest packs first. Replaces the old `list_parts`.
+
+    `limit` is clamped to `1..LIST_SUBJECTS_MAX`: it reaches `LIMIT ?`, and a
+    negative limit is SQLite's "no limit", so an unclamped caller could ask for
+    the whole store (C11). Every neighbouring endpoint clamps the same way.
+    """
+    limit = max(1, min(int(limit), LIST_SUBJECTS_MAX))
     clauses, args = ["p.enabled = 1"], []
     if pack_id:
         clauses.append("s.pack_id = ?")
@@ -715,11 +728,47 @@ def amend_draft(draft: str, note: str = "") -> dict:
     }
 
 
+def _installable(path: str) -> Path:
+    """The pack file an agent named, or a refusal saying why it may not be read.
+
+    Confined to the store's own directory (`~/.kriko`), because that is where
+    everything a pack install may legitimately read is written:
+    `packdraft.build_artifact` puts one beside its draft, and the pack index's
+    download lands in `downloads/`. Anywhere else is refused, and the reason is
+    the store rather than taste: `packstore.install` ATTACHes this file as a
+    SQLite database, so an unconfined path is an arbitrary file read through a
+    SQLite parser, chosen by an agent rather than by the reader (C11). `resolve`
+    runs first so a symlink inside the directory pointing outside it is refused
+    too. The suffix is the artifact's own: a `.kpack` is what both writers make.
+    """
+    candidate = Path(path).expanduser()
+    if not candidate.exists():
+        raise FileNotFoundError(candidate)
+    root = _store_path().expanduser().parent
+    resolved = candidate.resolve()
+    if not resolved.is_relative_to(root.resolve()):
+        raise ValueError(
+            f"{path!r} is outside {root}; a pack is installed from the artifact "
+            "the engine built (`build_draft`) or downloaded, not from an "
+            "arbitrary file on this machine"
+        )
+    if not resolved.is_file() or resolved.suffix != ".kpack":
+        raise ValueError(f"{path!r} is not a .kpack file")
+    return resolved
+
+
 @tool()
 def install_pack(path: str) -> dict:
-    """Install a pack file that is already on disk."""
+    """Install a pack file the engine built or downloaded, from its own directory.
+
+    `path` has to be inside the store's directory (`~/.kriko`) — a draft's built
+    artifact or an index download — and end in `.kpack`. An agent does not get
+    to name a file elsewhere on this machine: the store opens the file as a
+    database, so the confinement is the store's own directory rather than a
+    filename list (C11).
+    """
     with _store() as conn:
-        return {"pack_id": packstore.install(conn, path)}
+        return {"pack_id": packstore.install(conn, _installable(path))}
 
 
 @tool()

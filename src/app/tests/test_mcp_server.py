@@ -187,6 +187,15 @@ def test_list_subjects_orders_by_how_much_is_known(store):
     assert subjects[0]["claims"] == 1
 
 
+def test_list_subjects_clamps_a_negative_limit(store):
+    """C11: `-1` reached SQLite as `LIMIT -1`, i.e. "no limit", so an agent
+    asking for -1 was handed every subject in the store. Clamped to the same
+    1..200 the web router uses, a negative limit is the smallest answer."""
+    assert mcp_server.list_subjects(limit=-1) == mcp_server.list_subjects(limit=1)
+    assert len(mcp_server.list_subjects(limit=-1)) == 1
+    assert len(mcp_server.list_subjects(limit=10**9)) == 2
+
+
 def test_get_subject_returns_its_attributes_and_claims(store):
     got = mcp_server.get_subject(_subject())
     assert got["attributes"]["brand"] == "makita"
@@ -499,3 +508,38 @@ def test_the_weakest_tool_ranks_worst_first(store):
 
 def test_an_unknown_subject_is_an_empty_tree_over_mcp(store):
     assert mcp_server.subject_health(subject_id="nope")["claims"] == []
+
+
+# ── installing is confined to the store's own directory (C11) ─────────────
+
+
+def test_install_pack_installs_the_artifact_the_engine_built(store, tmp_path):
+    """The path the authoring loop actually produces: `build_draft` writes the
+    `.kpack` beside the draft, under the store's own directory."""
+    assert mcp_server.install_pack(str(tmp_path / "p.kpack"))["pack_id"] == "tools"
+
+
+def test_install_pack_refuses_a_path_outside_the_stores_own_directory(store, tmp_path):
+    """C11: `packstore.install` ATTACHes this file as a SQLite database, so an
+    unconfined path is an agent-chosen file read through a SQLite parser. The
+    confinement is the directory the engine writes its own artifacts into."""
+    import shutil
+
+    outside = tmp_path.parent / "elsewhere.kpack"
+    shutil.copyfile(tmp_path / "p.kpack", outside)
+    with pytest.raises(ValueError, match="outside"):
+        mcp_server.install_pack(str(outside))
+
+
+def test_install_pack_refuses_a_file_that_is_not_a_pack(store, tmp_path):
+    """Inside the directory is not enough: the suffix is the artifact's own, so
+    an unrelated file (a log, a database, a key) is never handed to the store."""
+    (tmp_path / "notes.txt").write_text("not a pack", encoding="utf-8")
+    with pytest.raises(ValueError, match=r"not a \.kpack"):
+        mcp_server.install_pack(str(tmp_path / "notes.txt"))
+
+
+def test_install_pack_still_reports_a_missing_file_as_missing(store, tmp_path):
+    """The confinement must not swallow the shape a caller already handles."""
+    with pytest.raises(FileNotFoundError):
+        mcp_server.install_pack(str(tmp_path / "absent.kpack"))

@@ -103,6 +103,9 @@ def _wire(monkeypatch, fake):
 def test_a_refused_page_the_readers_miss_is_read_by_the_browser(page, tmp_path,
                                                                 monkeypatch):
     from app.providers import pagereader
+    # No key: the hosted rung sends nothing at all (C8), misses by definition,
+    # and the browser — this machine's own client — is what reads the page.
+    monkeypatch.delenv(pagereader.KEY_ENV, raising=False)
     monkeypatch.setattr(pagereader, "PARALLEL_ENDPOINT", "http://127.0.0.1:1/mcp")
     fake = FakeBrowser(tmp_path, dom="<html><body>browser words</body></html>")
     _wire(monkeypatch, fake)

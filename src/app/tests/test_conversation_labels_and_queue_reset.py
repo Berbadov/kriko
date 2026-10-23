@@ -81,7 +81,7 @@ def test_chat_uses_selected_model_for_title_and_saves_answer_before_labels(tmp_p
 
     monkeypatch.setattr(tasks, "_use_local_ask", lambda *_: True)
     monkeypatch.setattr(tasks, "_local_structured_completer", lambda *_: complete)
-    monkeypatch.setattr(tasks, "_chat_web_accessors", lambda *_: (None, None))
+    monkeypatch.setattr(tasks, "_chat_web_accessors", lambda *_, **__: (None, None))
     progress = SimpleNamespace(job_id="job-1", check=lambda: None, set=lambda *_: None,
                                log=lambda *_: None, partial=lambda *_: None)
     result = tasks.chat_ask(settings, {"thread_id": thread["thread_id"], "message_id": message["message_id"], "text": "Hello"}, progress)

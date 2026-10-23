@@ -259,7 +259,7 @@ def test_agent_availability_skips_model_and_local_server_discovery(
         conn.close()
 
     monkeypatch.setattr(harness, "available", lambda: [harness.KNOWN[0]])
-    monkeypatch.setattr(apiagent, "available", lambda: [apiagent.MISTRAL])
+    monkeypatch.setattr(apiagent, "available", lambda *args, **kwargs: [apiagent.MISTRAL])
     monkeypatch.setattr(harness, "_ask", lambda *a, **k: pytest.fail("CLI probe"))
     monkeypatch.setattr(harness, "models_for_each", lambda *a, **k: pytest.fail("CLI model probe"))
     monkeypatch.setattr(harness, "efforts_for_each", lambda *a, **k: pytest.fail("CLI help probe"))

@@ -82,3 +82,19 @@ def test_a_cancelling_job_is_never_pruned(conn, monkeypatch):
     state.finish_job(conn, "j-02", state.SUCCEEDED)
     assert conn.execute(
         "SELECT COUNT(*) FROM jobs WHERE job_id = 'j-stop'").fetchone()[0] == 1
+
+
+def test_the_log_column_keeps_only_its_tail(conn, monkeypatch):
+    """D8: `log = log || ?` grew with every phase of every run, in the reader's
+    own `app.sqlite`, and nothing pruned it. The tail is what anyone reads —
+    `/api/jobs/{id}/log` serves a cursor into it — and the whole history is
+    appended to the log file on disk."""
+    monkeypatch.setattr(state, "JOB_LOG_CHARS", 20)
+    _job(conn, "j-1", state.RUNNING, "2026-01-01T00:00:00")
+    state.update_job(conn, "j-1", line="a" * 15)
+    state.update_job(conn, "j-1", line="b" * 15)
+
+    kept = conn.execute("SELECT log FROM jobs WHERE job_id = 'j-1'").fetchone()[0]
+    assert len(kept) == 20
+    assert kept.endswith("b" * 15 + "\n")
+    assert "a" * 15 not in kept, "the oldest line is the one to drop"

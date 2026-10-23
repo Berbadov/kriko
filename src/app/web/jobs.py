@@ -51,14 +51,16 @@ job is asked to stop, never made to.
 
 import hashlib
 import functools
+import json
 import logging
 import sqlite3
 import threading
 import time
 import traceback
+from datetime import UTC, datetime
 from collections.abc import Callable, Mapping
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -314,9 +316,24 @@ class Progress:
     _draft_last_write: float = 0.0
     ledger: Ledger | None = None
     run_id: str = ""
+    #: Keys already said through `say_once`, so a fact two layers of one turn can
+    #: each discover is written to the log once.
+    _said: set[str] = field(default_factory=set)
 
     def log(self, line: str) -> None:
         state.update_job(self._conn, self.job_id, line=line)
+
+    def say_once(self, key: str, line: str) -> None:
+        """Log a line once per job, for a fact more than one layer can find.
+
+        A chat turn and the plane it runs on can both work out that a call which
+        wanted no web tools ran with them; the reader reading the same sentence
+        twice learns nothing the second time.
+        """
+        if key in self._said:
+            return
+        self._said.add(key)
+        self.log(line)
 
     def watch(self, researcher) -> bool:
         """Log every call `researcher` makes to an agent as a step of this job (#261).
@@ -437,6 +454,42 @@ class _Waiting:
     #: reason does not write it again on every pass.
     said: str = ""
 
+
+def _replace_compare_lookup(conn: sqlite3.Connection, draft_id: str, source_id: str,
+                            replacement_id: str) -> bool:
+    """Replace in the latest draft within the caller's job transaction."""
+    if not (draft_id and source_id and replacement_id):
+        return False
+    for _ in range(8):
+        row = conn.execute(
+            "SELECT lookup_ids FROM compare_drafts WHERE draft_id = ?",
+            (draft_id,)).fetchone()
+        if row is None:
+            return False
+        original = str(row["lookup_ids"] or "[]")
+        try:
+            ids = [str(value) for value in json.loads(original)]
+        except (TypeError, ValueError):
+            return False
+        if source_id not in ids:
+            return False
+        updated = []
+        inserted = False
+        for value in ids:
+            if value == source_id:
+                if not inserted:
+                    updated.append(replacement_id)
+                    inserted = True
+            elif value != replacement_id:
+                updated.append(value)
+        changed = conn.execute(
+            "UPDATE compare_drafts SET lookup_ids = ?, updated_at = ?"
+            " WHERE draft_id = ? AND lookup_ids = ?",
+            (json.dumps(updated), datetime.now(UTC).isoformat(timespec="seconds"),
+             draft_id, original))
+        if changed.rowcount:
+            return True
+    return False
 
 class JobRunner:
     def __init__(self, settings, handlers: Mapping[str, Handler],
@@ -720,8 +773,17 @@ class JobRunner:
             # how the research job came to look like a button that did nothing:
             # it succeeded, produced a brief, and reported a word carrying no
             # information at all.
-            state.finish_job(conn, job_id, state.SUCCEEDED, result=result)
-            self._save_product_checks(kind, result)
+            # Publish the result and its Compare slot together. A reader who
+            # sees SUCCEEDED must already see the replacement in the draft.
+            with conn:
+                state.finish_job(conn, job_id, state.SUCCEEDED, result=result, commit=False)
+                succeeded = (state.get_job(conn, job_id) or {}).get("state") == state.SUCCEEDED
+                if succeeded and kind == "quick_look":
+                    _replace_compare_lookup(
+                        conn, str(params.get("compare_draft_id") or ""),
+                        str(params.get("compare_lookup_id") or ""), job_id)
+            if succeeded:
+                self._save_product_checks(kind, result)
             if run_id:
                 usd, tokens = operations.metered(result)
                 final = state.get_job(conn, job_id) or {}
@@ -773,6 +835,8 @@ class JobRunner:
         """
         from app.web import productchecks
 
+        if kind not in productchecks.FILING_KINDS:
+            return
         try:
             store = connect(self.settings.store_path, read_only=True)
             app_conn = self._connect()

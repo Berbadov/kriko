@@ -28,9 +28,11 @@ many jobs or none. "Agent" already means four things
 
 **The terminal is for you; the app is for the operations.** A harness running
 in Kriko's own terminal is a feature. The app shows operations as they happen,
-whatever the door they came through, including your own: `GET /api/operations`
-and `GET /api/operations/stream`, one row opened before the work and closed
-after it, so a call in flight reads `running` and a hung one says so.
+whatever the door they came through, including your own:
+`GET /api/operations`, polled with its `after_id` cursor, one row opened before
+the work and closed after it, so a call in flight reads `running` and a hung one
+says so. The SSE duplicate (`GET /api/operations/stream`) was retired; one
+polled feed is the surface.
 
 ## 3. Protocols, the thing that had no name yet
 

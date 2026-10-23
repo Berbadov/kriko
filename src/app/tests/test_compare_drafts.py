@@ -5,6 +5,8 @@ choose"*. The drafts are app state in `app.sqlite`, not knowledge.
 """
 
 import pytest
+import threading
+import time
 from fastapi.testclient import TestClient
 
 from app.web import state
@@ -89,6 +91,9 @@ def test_a_follow_up_question_is_stored_listed_and_refused_for_a_gone_draft(clie
 
 def test_compare_can_explicitly_choose_the_local_model(client, monkeypatch):
     http, _ = client
+    from app import localplane
+    monkeypatch.setattr(localplane, "resolve", lambda *a, **k: {
+        "ready": True, "reason": "", "model": "gemma4:e2b"})
     made = http.post("/api/compare-drafts",
                      json={"name": "Two", "lookup_ids": ["a", "b"]}).json()
     submitted = []
@@ -102,6 +107,71 @@ def test_compare_can_explicitly_choose_the_local_model(client, monkeypatch):
     assert submitted[0][1]["backend"] == "local"
     assert http.post(f"/api/compare-drafts/{made['draft_id']}/questions",
                      json={"question": "x", "backend": "invalid"}).status_code == 422
+
+
+def test_compare_refuses_a_missing_agent_when_another_cli_is_installed(client, monkeypatch):
+    http, _ = client
+    from app.providers import apiagent, harness
+    from app.providers.harness import KNOWN
+    monkeypatch.setattr(apiagent, "available", lambda *a, **k: [])
+    other = next(agent for agent in KNOWN if agent.id != "missing-agent")
+    monkeypatch.setattr(harness, "available", lambda: [other])
+    made = http.post("/api/compare-drafts",
+                     json={"name": "Two", "lookup_ids": ["a", "b"]}).json()
+    submitted = []
+    monkeypatch.setattr(http.app.state.jobs, "submit",
+                        lambda *a, **k: submitted.append((a, k)) or "should-not-queue")
+    response = http.post(
+        f"/api/compare-drafts/{made['draft_id']}/questions",
+        json={"question": "Which is better?", "harness": "missing-agent"})
+    assert response.status_code == 503
+    assert "missing-agent" in response.json()["detail"]
+    assert submitted == []
+
+
+def test_compare_explicit_local_agent_needs_a_model_but_not_search(client, monkeypatch):
+    http, _ = client
+    from app import localplane
+    made = http.post("/api/compare-drafts",
+                     json={"name": "Two", "lookup_ids": ["a", "b"]}).json()
+    submitted = []
+    calls = []
+    monkeypatch.setattr(localplane, "resolve", lambda *a, **k: (
+        calls.append(k) or {"ready": False, "reason": "no model"}))
+    monkeypatch.setattr(http.app.state.jobs, "submit",
+                        lambda *a, **k: submitted.append((a, k)) or "should-not-queue")
+    response = http.post(
+        f"/api/compare-drafts/{made['draft_id']}/questions",
+        json={"question": "Which is better?", "backend": "local", "harness": "local"})
+    assert response.status_code == 503
+    assert calls == [{"with_search": False}]
+    assert submitted == []
+
+def test_compare_replay_returns_job_after_selected_agent_disappears(client, monkeypatch):
+    http, _ = client
+    from app.providers import apiagent, harness
+    from app.providers.harness import KNOWN
+    selected = next(agent for agent in KNOWN if agent.id == "codex")
+    monkeypatch.setattr(apiagent, "available", lambda *a, **k: [])
+    monkeypatch.setattr(harness, "available", lambda: [selected])
+    made = http.post("/api/compare-drafts",
+                     json={"name": "Two", "lookup_ids": ["a", "b"]}).json()
+    submitted = []
+    def submit(kind, params, **kwargs):
+        submitted.append((kind, params, kwargs))
+        return "job-existing"
+    monkeypatch.setattr(http.app.state.jobs, "submit", submit)
+    payload = {"question": "Which is better?", "harness": selected.id,
+               "client_request_id": "retry-1"}
+    first = http.post(f"/api/compare-drafts/{made['draft_id']}/questions",
+                      json=payload)
+    assert first.status_code == 200
+    monkeypatch.setattr(harness, "available", lambda: [])
+    replay = http.post(f"/api/compare-drafts/{made['draft_id']}/questions",
+                       json=payload)
+    assert replay.status_code == 200
+    assert replay.json()["job_id"] == "job-existing"
+    assert len(submitted) == 1
 
 
 def _one_lookup(settings, label, response) -> str:
@@ -216,6 +286,434 @@ def test_the_job_handler_searches_with_quicklook_product_context_and_persists_so
     assert stored[0]["job_id"] == "job-1"
 
 
+def test_compare_research_runs_a_quick_look_for_saved_products(client, monkeypatch):
+    http, settings = client
+    from app.providers import apiagent, harness
+    from app.providers.harness import KNOWN
+    selected = next(agent for agent in KNOWN if agent.id == "codex")
+    monkeypatch.setattr(apiagent, "available", lambda *a, **k: [])
+    monkeypatch.setattr(harness, "available", lambda: [selected])
+    lookup_id = _one_lookup(settings, "Acme headset", {
+        "claims": [], "context": {}, "listing": {
+            "url": "https://shop.example/item", "facts": {"brand": "Acme"},
+            "description": "Wireless headset"}})
+    conn = state.connect(settings.app_state_path)
+    try:
+        draft = state.save_compare_draft(conn, "Headset", [lookup_id])
+    finally:
+        conn.close()
+    submitted = []
+    monkeypatch.setattr(
+        http.app.state.jobs, "submit",
+        lambda kind, params, **kwargs: submitted.append((kind, params, kwargs)) or "quick-job")
+    response = http.post(
+        f"/api/compare-drafts/{draft['draft_id']}/research",
+        json={"lookup_id": lookup_id, "harness": selected.id,
+              "client_request_id": "headset-research"})
+    assert response.status_code == 200
+    payload = response.json()
+    assert (payload["job_id"], payload["kind"], payload["lookup_id"]) == (
+        "quick-job", "quick_look", lookup_id)
+    kind, params, options = submitted[0]
+    assert kind == "quick_look"
+    assert params["product"] == "Acme headset"
+    assert params["backend"] == "harness" and params["harness"] == selected.id
+    assert params["compare_lookup_id"] == lookup_id
+    assert params["page_url"] == "https://shop.example/item"
+    assert params["page"]["facts"] == {"brand": "Acme"}
+    assert options["client_request_id"] == "compare-product:headset-research"
+
+
+def test_compare_research_replaces_only_a_still_present_source(client):
+    from app.web import jobs
+
+    _, settings = client
+    conn = state.connect(settings.app_state_path)
+    try:
+        draft = state.save_compare_draft(conn, "Two", ["old", "keep"])
+        params = {"compare_draft_id": draft["draft_id"], "compare_lookup_id": "old"}
+        job_id = state.create_job(conn, "quick_look", params)
+        assert state.start_job(conn, job_id)
+        with conn:
+            state.finish_job(conn, job_id, state.SUCCEEDED, result={}, commit=False)
+            assert jobs._replace_compare_lookup(conn, draft["draft_id"], "old", job_id)
+    finally:
+        conn.close()
+    conn = state.connect(settings.app_state_path)
+    try:
+        current = state.get_compare_draft(conn, draft["draft_id"])
+        assert current["lookup_ids"] == [job_id, "keep"]
+        state.save_compare_draft(conn, "Renamed while researching",
+                                 ["keep", "another"], draft["draft_id"])
+    finally:
+        conn.close()
+    conn = state.connect(settings.app_state_path)
+    try:
+        with conn:
+            assert not jobs._replace_compare_lookup(conn, draft["draft_id"], "old", "stale")
+        current = state.get_compare_draft(conn, draft["draft_id"])
+        assert current["name"] == "Renamed while researching"
+        assert current["lookup_ids"] == ["keep", "another"]
+        state.delete_compare_draft(conn, draft["draft_id"])
+    finally:
+        conn.close()
+    conn = state.connect(settings.app_state_path)
+    try:
+        with conn:
+            assert not jobs._replace_compare_lookup(conn, draft["draft_id"], "old", "orphan")
+    finally:
+        conn.close()
+
+@pytest.mark.parametrize(
+    ("outcome", "expected"),
+    [("success", state.SUCCEEDED), ("failure", state.FAILED),
+     ("cancel", state.CANCELLED)],
+)
+def test_compare_research_replaces_its_column_only_after_success(
+        client, outcome, expected):
+    from app.web.jobs import Cancelled, JobRunner
+
+    _, settings = client
+    conn = state.connect(settings.app_state_path)
+    try:
+        draft = state.save_compare_draft(conn, "Two", ["old", "keep"])
+    finally:
+        conn.close()
+    started = threading.Event()
+    release = threading.Event()
+
+    def finish(_settings, _params, _progress):
+        started.set()
+        assert release.wait(5)
+        if outcome == "failure":
+            raise RuntimeError("research failed")
+        if outcome == "cancel":
+            raise Cancelled()
+        return {"risks": []}
+
+    runner = JobRunner(settings, {"quick_look": finish})
+    params = {"compare_draft_id": draft["draft_id"], "compare_lookup_id": "old"}
+    try:
+        job_id = runner.submit("quick_look", params)
+        assert started.wait(5)
+        conn = state.connect(settings.app_state_path)
+        try:
+            assert state.get_compare_draft(conn, draft["draft_id"])["lookup_ids"] == [
+                "old", "keep"]
+        finally:
+            conn.close()
+        release.set()
+        for _ in range(500):
+            conn = state.connect(settings.app_state_path)
+            try:
+                job = state.get_job(conn, job_id)
+            finally:
+                conn.close()
+            if job and job["done"]:
+                break
+            time.sleep(0.01)
+        assert job["state"] == expected
+        conn = state.connect(settings.app_state_path)
+        try:
+            ids = state.get_compare_draft(conn, draft["draft_id"])["lookup_ids"]
+        finally:
+            conn.close()
+        assert ids == ([job_id, "keep"] if outcome == "success" else ["old", "keep"])
+    finally:
+        release.set()
+        runner.shutdown(wait=True)
+
+
+def test_compare_success_and_replacement_become_visible_together(client, monkeypatch):
+    from app.web import jobs
+
+    _, settings = client
+    observer = state.connect(settings.app_state_path)
+    draft = state.save_compare_draft(observer, "Two", ["old", "keep"])
+    entered = threading.Event()
+    allow_replace = threading.Event()
+    replaced = threading.Event()
+    allow_commit = threading.Event()
+    saving_checks = threading.Event()
+    finish_checks = threading.Event()
+    original = jobs._replace_compare_lookup
+
+    def paused_replace(conn, draft_id, source_id, replacement_id):
+        assert conn.in_transaction
+        entered.set()
+        assert allow_replace.wait(10)
+        changed = original(conn, draft_id, source_id, replacement_id)
+        replaced.set()
+        assert allow_commit.wait(10)
+        return changed
+
+    def slow_checks(_kind, _result):
+        saving_checks.set()
+        assert finish_checks.wait(10)
+
+    monkeypatch.setattr(jobs, "_replace_compare_lookup", paused_replace)
+    runner = jobs.JobRunner(settings, {"quick_look": lambda *_: {"risks": []}})
+    monkeypatch.setattr(runner, "_save_product_checks", slow_checks)
+    try:
+        job_id = runner.submit("quick_look", {
+            "compare_draft_id": draft["draft_id"], "compare_lookup_id": "old"})
+        assert entered.wait(10)
+        assert state.get_job(observer, job_id)["state"] == state.RUNNING
+        assert state.get_compare_draft(observer, draft["draft_id"])["lookup_ids"] == ["old", "keep"]
+        allow_replace.set()
+        assert replaced.wait(10)
+        # Even after both writes, another connection sees neither until commit.
+        assert state.get_job(observer, job_id)["state"] == state.RUNNING
+        assert state.get_compare_draft(observer, draft["draft_id"])["lookup_ids"] == ["old", "keep"]
+        allow_commit.set()
+        assert saving_checks.wait(10)
+        job = state.get_job(observer, job_id)
+        assert job["state"] == state.SUCCEEDED
+        assert job["result"] == {"risks": []}
+        assert state.get_compare_draft(observer, draft["draft_id"])["lookup_ids"] == [job_id, "keep"]
+        assert state.saved_answer(observer, job_id) is not None
+        # The expensive catalog work does not retain the SQLite write lock.
+        observer.execute("BEGIN IMMEDIATE")
+        observer.rollback()
+    finally:
+        allow_replace.set()
+        allow_commit.set()
+        finish_checks.set()
+        runner.shutdown(wait=True)
+        observer.close()
+
+
+@pytest.mark.parametrize("edit", ["reorder", "remove", "delete"])
+def test_compare_research_preserves_draft_edits_made_while_running(client, edit):
+    from app.web.jobs import JobRunner
+
+    _, settings = client
+    conn = state.connect(settings.app_state_path)
+    try:
+        draft = state.save_compare_draft(conn, "Two", ["old", "keep"])
+    finally:
+        conn.close()
+    started = threading.Event()
+    release = threading.Event()
+
+    def finish(_settings, _params, _progress):
+        started.set()
+        assert release.wait(5)
+        return {"risks": []}
+
+    runner = JobRunner(settings, {"quick_look": finish})
+    params = {"compare_draft_id": draft["draft_id"], "compare_lookup_id": "old"}
+    try:
+        job_id = runner.submit("quick_look", params)
+        assert started.wait(5)
+        conn = state.connect(settings.app_state_path)
+        try:
+            if edit == "delete":
+                assert state.delete_compare_draft(conn, draft["draft_id"])
+            else:
+                changed = (["keep", "old", "new"] if edit == "reorder"
+                           else ["keep", "new"])
+                state.save_compare_draft(conn, "Edited while researching", changed,
+                                         draft["draft_id"])
+        finally:
+            conn.close()
+        release.set()
+        for _ in range(500):
+            conn = state.connect(settings.app_state_path)
+            try:
+                job = state.get_job(conn, job_id)
+            finally:
+                conn.close()
+            if job and job["done"]:
+                break
+            time.sleep(0.01)
+        assert job["state"] == state.SUCCEEDED
+        conn = state.connect(settings.app_state_path)
+        try:
+            current = state.get_compare_draft(conn, draft["draft_id"])
+            if edit == "delete":
+                assert current is None
+            elif edit == "reorder":
+                assert current["name"] == "Edited while researching"
+                assert current["lookup_ids"] == ["keep", job_id, "new"]
+            else:
+                assert current["name"] == "Edited while researching"
+                assert current["lookup_ids"] == ["keep", "new"]
+        finally:
+            conn.close()
+    finally:
+        release.set()
+        runner.shutdown(wait=True)
+
+def test_compare_research_refuses_products_outside_the_draft(client, monkeypatch):
+    http, settings = client
+    from app.providers import apiagent, harness
+    from app.providers.harness import KNOWN
+    selected = next(agent for agent in KNOWN if agent.id == "codex")
+    monkeypatch.setattr(apiagent, "available", lambda *a, **k: [])
+    monkeypatch.setattr(harness, "available", lambda: [selected])
+    conn = state.connect(settings.app_state_path)
+    try:
+        draft = state.save_compare_draft(conn, "Headset", [])
+    finally:
+        conn.close()
+    submitted = []
+    monkeypatch.setattr(http.app.state.jobs, "submit",
+                        lambda *a, **k: submitted.append((a, k)) or "should-not-queue")
+    response = http.post(
+        f"/api/compare-drafts/{draft['draft_id']}/research",
+        json={"lookup_id": "other", "harness": selected.id})
+    assert response.status_code == 404
+    assert submitted == []
+
+
+def test_compare_research_refuses_a_product_with_no_completed_saved_check(client, monkeypatch):
+    """A column with nothing saved has no page and no name to research, so the
+    press must say that rather than queue a job that cannot be built."""
+    http, settings = client
+    from app.providers import apiagent, harness
+    from app.providers.harness import KNOWN
+    selected = next(agent for agent in KNOWN if agent.id == "codex")
+    monkeypatch.setattr(apiagent, "available", lambda *a, **k: [])
+    monkeypatch.setattr(harness, "available", lambda: [selected])
+    conn = state.connect(settings.app_state_path)
+    try:
+        draft = state.save_compare_draft(conn, "Headset", ["never-answered"])
+    finally:
+        conn.close()
+    submitted = []
+    monkeypatch.setattr(http.app.state.jobs, "submit",
+                        lambda *a, **k: submitted.append((a, k)) or "should-not-queue")
+    response = http.post(
+        f"/api/compare-drafts/{draft['draft_id']}/research",
+        json={"lookup_id": "never-answered", "harness": selected.id})
+    assert response.status_code == 409
+    assert "no completed saved check" in response.json()["detail"]
+    assert submitted == []
+
+
+def test_compare_research_refuses_an_agent_this_machine_does_not_offer(client, monkeypatch):
+    """The reader pressed an agent the engine had listed; a race took it away.
+    The refusal names the agent, what is missing and how to get it, because the
+    reader is standing on Compare and an id alone is not an answer."""
+    http, settings = client
+    from app.providers import apiagent, harness
+    from app.providers.harness import KNOWN
+    monkeypatch.setattr(apiagent, "available", lambda *a, **k: [])
+    other = next(agent for agent in KNOWN if agent.id != "codex")
+    monkeypatch.setattr(harness, "available", lambda: [other])
+    lookup_id = _one_lookup(settings, "Acme headset", {"claims": [], "context": {}})
+    conn = state.connect(settings.app_state_path)
+    try:
+        draft = state.save_compare_draft(conn, "Headset", [lookup_id])
+    finally:
+        conn.close()
+    submitted = []
+    monkeypatch.setattr(http.app.state.jobs, "submit",
+                        lambda *a, **k: submitted.append((a, k)) or "should-not-queue")
+    response = http.post(
+        f"/api/compare-drafts/{draft['draft_id']}/research",
+        json={"lookup_id": lookup_id, "harness": "codex"})
+    assert response.status_code == 503
+    detail = response.json()["detail"]
+    assert "Codex" in detail and "not installed here" in detail
+    assert "codex" in detail
+    assert submitted == []
+
+
+def test_compare_research_says_the_key_or_the_trial_an_api_agent_is_missing(
+        client, monkeypatch):
+    """The sentence is the key resolver's own. A missing key and a spent trial
+    are different problems with different ways out, and a second copy of that
+    vocabulary here would drift from the one the rest of the app shows."""
+    from app import keys
+    from app.providers import MissingKey, apiagent, harness
+    from app.providers.harness import KNOWN
+
+    http, settings = client
+    monkeypatch.setattr(apiagent, "available", lambda *a, **k: [])
+    selected = next(agent for agent in KNOWN if agent.id == "codex")
+    monkeypatch.setattr(harness, "available", lambda: [selected])
+    monkeypatch.setattr(keys, "require", lambda provider, **kwargs: (_ for _ in ()).throw(
+        MissingKey("The free Kriko Agent trial for this computer is used up (10 of 10 questions). "
+                   "Paste an access code and password, or add your own Mercury and DeepSeek keys "
+                   "in Settings.")))
+    lookup_id = _one_lookup(settings, "Acme headset", {"claims": [], "context": {}})
+    conn = state.connect(settings.app_state_path)
+    try:
+        draft = state.save_compare_draft(conn, "Headset", [lookup_id])
+    finally:
+        conn.close()
+    submitted = []
+    monkeypatch.setattr(http.app.state.jobs, "submit",
+                        lambda *a, **k: submitted.append((a, k)) or "should-not-queue")
+    response = http.post(
+        f"/api/compare-drafts/{draft['draft_id']}/research",
+        json={"lookup_id": lookup_id, "harness": "kriko-agent"})
+    assert response.status_code == 503
+    detail = response.json()["detail"]
+    assert "Kriko Agent cannot run here" in detail
+    assert "trial" in detail and "used up" in detail
+    assert submitted == []
+
+
+def test_compare_research_accepts_the_engines_own_choice(client, monkeypatch):
+    """A column whose stored agent is not on this machine offers a press that
+    asks the engine to resolve one. The empty id has to reach the job: that is
+    where `harness_researcher` falls back visibly or says what is missing."""
+    http, settings = client
+    from app.providers import apiagent, harness
+    from app.providers.harness import KNOWN
+    selected = next(agent for agent in KNOWN if agent.id == "codex")
+    monkeypatch.setattr(apiagent, "available", lambda *a, **k: [])
+    monkeypatch.setattr(harness, "available", lambda: [selected])
+    lookup_id = _one_lookup(settings, "Acme headset", {"claims": [], "context": {}})
+    conn = state.connect(settings.app_state_path)
+    try:
+        draft = state.save_compare_draft(conn, "Headset", [lookup_id])
+    finally:
+        conn.close()
+    submitted = []
+    monkeypatch.setattr(http.app.state.jobs, "submit",
+                        lambda kind, params, **kwargs:
+                        submitted.append((kind, params, kwargs)) or "quick-job")
+    response = http.post(
+        f"/api/compare-drafts/{draft['draft_id']}/research",
+        json={"lookup_id": lookup_id})
+    assert response.status_code == 200
+    assert response.json()["harness"] == ""
+    kind, params, _ = submitted[0]
+    assert kind == "quick_look" and params["harness"] == ""
+    assert params["backend"] == "harness"
+
+
+def test_compare_research_refuses_an_explicit_local_agent_with_no_model(client, monkeypatch):
+    """The availability list carries the local row from a stored preference
+    without probing the model server, so this press can be the one that
+    refuses. Its reason and its `with_search=False` probe are the engine's."""
+    http, settings = client
+    from app import localplane
+    lookup_id = _one_lookup(settings, "Acme headset", {"claims": [], "context": {}})
+    conn = state.connect(settings.app_state_path)
+    try:
+        draft = state.save_compare_draft(conn, "Headset", [lookup_id])
+    finally:
+        conn.close()
+    calls = []
+    submitted = []
+    monkeypatch.setattr(localplane, "resolve", lambda *a, **k: (
+        calls.append(k) or {"ready": False, "reason": "no model downloaded"}))
+    monkeypatch.setattr(http.app.state.jobs, "submit",
+                        lambda *a, **k: submitted.append((a, k)) or "should-not-queue")
+    response = http.post(
+        f"/api/compare-drafts/{draft['draft_id']}/research",
+        json={"lookup_id": lookup_id, "harness": "local", "backend": "local"})
+    assert response.status_code == 503
+    detail = response.json()["detail"]
+    assert "local agent is unavailable" in detail and "no model downloaded" in detail
+    assert calls == [{"with_search": False}]
+    assert submitted == []
+
 def test_small_compare_brief_keeps_each_product_and_names_omissions():
     from app.web.tasks import _compare_brief
 
@@ -306,43 +804,6 @@ def test_the_brief_carries_the_table_and_refuses_to_invent():
     assert "none recorded" in brief
     assert "mileage: 120000 km" in brief
     assert "Do not invent risks" in brief
-
-
-def test_a_board_is_saved_read_back_and_refused_for_a_gone_draft(client):
-    http, _ = client
-    made = http.post("/api/compare-drafts",
-                     json={"name": "Shortlist", "lookup_ids": ["a", "b"]}).json()
-    # An unmarked draft reads as an empty board, not a missing one.
-    empty = http.get(f"/api/compare-drafts/{made['draft_id']}/board").json()
-    assert empty == {"draft_id": made["draft_id"], "strokes": [],
-                     "notes": [], "updated_at": ""}
-    saved = http.put(
-        f"/api/compare-drafts/{made['draft_id']}/board",
-        json={"strokes": [[{"x": 1, "y": 2}, {"x": 3, "y": 4}]],
-              "notes": [{"x": 10, "y": 20, "text": "this one"}]}).json()
-    assert len(saved["strokes"]) == 1 and saved["notes"][0]["text"] == "this one"
-    assert saved["updated_at"]
-    back = http.get(f"/api/compare-drafts/{made['draft_id']}/board").json()
-    assert back["strokes"] == saved["strokes"]
-    assert back["notes"] == saved["notes"]
-    assert http.get("/api/compare-drafts/nope/board").status_code == 404
-    assert http.put("/api/compare-drafts/nope/board",
-                    json={}).status_code == 404
-
-
-def test_saving_a_board_replaces_it_wholesale(client):
-    """Erasing is the point of a board: a stroke merged back by the save
-    would resurrect what the reader just rubbed out."""
-    http, _ = client
-    made = http.post("/api/compare-drafts",
-                     json={"name": "Shortlist", "lookup_ids": ["a", "b"]}).json()
-    http.put(f"/api/compare-drafts/{made['draft_id']}/board",
-             json={"strokes": [[{"x": 1}], [{"x": 2}]], "notes": [
-                 {"x": 0, "y": 0, "text": "gone"}]})
-    http.put(f"/api/compare-drafts/{made['draft_id']}/board",
-             json={"strokes": [], "notes": []})
-    back = http.get(f"/api/compare-drafts/{made['draft_id']}/board").json()
-    assert back["strokes"] == [] and back["notes"] == []
 
 
 def test_the_brief_carries_each_claims_sources():

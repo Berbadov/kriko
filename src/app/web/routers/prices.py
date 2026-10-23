@@ -5,7 +5,7 @@ App state in `app.sqlite`, never knowledge (`app/pricewatch.py`,
 looked, or a day a watch re-read the page; nothing is converted or invented.
 """
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from app import checkout, cloud, pricewatch
@@ -13,18 +13,6 @@ from app.web import state
 from app.web.deps import get_app_state
 
 router = APIRouter(prefix="/api/prices", tags=["prices"])
-
-
-@router.get("/page")
-def page(url: str = Query(max_length=2000), name: str = Query(default="", max_length=300),
-         conn=Depends(get_app_state)) -> dict:
-    """What Kriko remembers about one page: its price line, its watch, and the same product elsewhere."""
-    series = pricewatch.series(conn, url)
-    latest = series[-1] if series else None
-    elsewhere = pricewatch.elsewhere(conn, name, url, (latest or {}).get("currency", "")) if name else []
-    return {"series": series, "watch": pricewatch.watch_for(conn, url),
-            "elsewhere": [{"host": one["host"], "url": one["url"], "price": one["price"],
-                           "currency": one["currency"], "seen_at": one["seen_at"]} for one in elsewhere[:5]]}
 
 
 class WatchRequest(BaseModel):

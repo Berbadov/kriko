@@ -289,7 +289,7 @@ def test_the_opencode_agent_profile_denies_bash_and_edit(tmp_path, monkeypatch):
     assert "websearch: allow" in body
 
 
-def test_the_spawned_agent_is_handed_no_krikos_tools_only_a_page_reader():
+def test_the_spawned_agent_is_handed_no_krikos_tools_only_a_page_reader(monkeypatch):
     """No Kriko MCP server, anywhere, on purpose (B155 relaxed the rest).
 
     The alternative design — hand the agent Kriko's own tools — was rejected:
@@ -300,6 +300,9 @@ def test_the_spawned_agent_is_handed_no_krikos_tools_only_a_page_reader():
     one tool reads a page: no row's fixed `args` carries a config of its own,
     and the only server that config names is the reader's.
     """
+    from app.providers import pagereader
+
+    monkeypatch.setenv(pagereader.KEY_ENV, "reader-key")
     for one in harness_mod.KNOWN:
         assert "--mcp-config" not in one.args
         assert "--mcp-config" not in one.plain_args

@@ -99,6 +99,17 @@ PROVIDERS = (
         optional=True,
     ),
     Provider(
+        id="parallel",
+        label="Parallel (hosted page reader)",
+        env="PARALLEL_API_KEY",
+        purpose="The fallback reader for a page that refused Kriko's own "
+        "fetcher: it receives that page's URL, and only the page it is asked "
+        "to read — never your browsing history and never a search query. Set "
+        "this and the fallback runs on your own account; leave it empty and "
+        "no page address leaves this machine at all.",
+        optional=True,
+    ),
+    Provider(
         id="openai",
         label="OpenAI (or any OpenAI-compatible endpoint)",
         env="OPENAI_API_KEY",
@@ -387,7 +398,8 @@ def _write(path: Path, values: dict[str, str]) -> None:
         pass  # Windows has no mode bits to set; the ACL is the account's own
 
 
-def require(provider_id: str) -> str:
+def require(provider_id: str, *, shared_home: Path | None = None,
+            reservation_id: str = "") -> str:
     """The key for one provider, or refuse to build a plane without it.
 
     The one function that returns a key, and it returns it to a provider
@@ -410,12 +422,20 @@ def require(provider_id: str) -> str:
     if not value:
         from app import sharekeys
 
-        if str(provider_id).strip().lower() in sharekeys.SHARED_PROVIDERS:
-            value = sharekeys.granted(provider.id)
+        if provider.id in sharekeys.SHARED_PROVIDERS:
+            value = sharekeys.granted(provider.id, where=shared_home,
+                                      reservation_id=reservation_id)
             if not value:
-                why = sharekeys.refusal(provider.id)
+                why = sharekeys.refusal(provider.id, where=shared_home)
                 if why:
                     raise MissingKey(why)
+                # The two keys Kriko Agent runs on are also the two a friend can
+                # be given, so the way out of this sentence is not only the
+                # reader's own paste: they may not have opened Shared access yet.
+                raise MissingKey(
+                    f"{provider.label} needs a key — add your own in Settings → "
+                    "Research, or paste an access code in Settings → Shared access"
+                )
     if not value:
         raise MissingKey(
             f"{provider.label} needs a key — set one in Settings → Research "
@@ -424,7 +444,8 @@ def require(provider_id: str) -> str:
     return value
 
 
-def origin(provider_id: str) -> str:
+def origin(provider_id: str, *, shared_home: Path | None = None,
+           reservation_id: str = "") -> str:
     """Where this provider's key comes from: `environment`, `file`, `shared`,
     `trial`, or "" when there is none.
 
@@ -442,5 +463,6 @@ def origin(provider_id: str) -> str:
     from app import sharekeys
 
     if provider.id in sharekeys.SHARED_PROVIDERS:
-        return sharekeys.origin(provider.id)
+        return sharekeys.origin(provider.id, where=shared_home,
+                                reservation_id=reservation_id)
     return ""

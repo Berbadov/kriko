@@ -287,7 +287,7 @@ def test_each_page_read_carries_the_kind_of_site_the_engine_classifies(paths, mo
             return "The page lists a CADR of 300."
 
     monkeypatch.setattr(tasks, "_chat_web_accessors",
-                        lambda *a: (lambda query, limit: [{"title": "Shop", "url": url, "site": retailer}],
+                        lambda *a, **kw: (lambda query, limit: [{"title": "Shop", "url": url, "site": retailer}],
                                     lambda address: "CADR 300 m3/h"))
     result, thread_id, _partial = ask(paths, monkeypatch, Reader(),
                                       text="Find a quiet air purifier for a small bedroom")
