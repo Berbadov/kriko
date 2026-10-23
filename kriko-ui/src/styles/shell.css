@@ -315,7 +315,12 @@
   position: relative;
 }
 
-@media (max-width: 1000px) {
+/* The row is the logo, the agent, five tabs, the usage and queue pills, Settings
+   and More, and on Windows the window's own buttons. Named in full they need
+   about 1250px; the tabs and Settings drop their words first, because their
+   icons say the same and the logo and the agent are what a narrower row used to
+   lose (the tabs were drawn over them). */
+@media (max-width: 1250px) {
   .topbar-label {
     display: none;
   }
@@ -331,7 +336,7 @@
   }
 }
 
-@media (max-width: 760px) {
+@media (max-width: 860px) {
   .topbar {
     grid-template-columns: auto minmax(0, 1fr) auto;
   }
