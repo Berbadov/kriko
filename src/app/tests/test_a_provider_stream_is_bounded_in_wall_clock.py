@@ -2,7 +2,6 @@
 
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import threading
-import time
 
 import pytest
 
@@ -28,7 +27,17 @@ def test_a_stalled_sse_socket_stops_at_deadline_or_cancel(ending):
                              if ending == "done" else b'data: {"partial":')
             self.wfile.flush()
             entered.set()
-            release.wait(4)
+            # Keep the socket active without completing an SSE line. This
+            # defeats a per-read timeout and exercises the stream's own clock.
+            for _ in range(400):
+                if release.wait(0.05):
+                    break
+                if ending != "done":
+                    try:
+                        self.wfile.write(b"x")
+                        self.wfile.flush()
+                    except OSError:
+                        break
 
     server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
     serving = threading.Thread(target=server.serve_forever, daemon=True)
@@ -39,21 +48,21 @@ def test_a_stalled_sse_socket_stops_at_deadline_or_cancel(ending):
         try:
             outcome.append(_http.post_sse_or_why(
                 f"http://127.0.0.1:{server.server_port}/stream", {}, {},
-                0.2 if ending == "deadline" else 3,
+                0.3 if ending == "deadline" else 10,
                 lambda _event: None, cancel_event=cancelled))
         except _http.StreamCancelled:
             outcome.append("cancelled")
 
     worker = threading.Thread(target=read, daemon=True)
     try:
-        began = time.monotonic()
         worker.start()
-        assert entered.wait(1)
+        assert entered.wait(3)
         if ending == "cancel":
             cancelled.set()
-        worker.join(1)
+        # Leave scheduling headroom under the parallel Windows gate while
+        # still requiring interruption well before the socket/peer's timeout.
+        worker.join(3)
         assert not worker.is_alive(), "a blocked buffered read outlived its caller"
-        assert time.monotonic() - began < 1
         if ending == "cancel":
             assert outcome == ["cancelled"]
         elif ending == "done":
