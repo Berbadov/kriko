@@ -1,3 +1,4 @@
+import { Disclosure } from '../Disclosure'
 import { useMemo, useState } from 'react'
 import { usePrefsDoc } from '../../engine/settings'
 import { useLocal, type Library, type Model, type VllmPlan, type VllmServer } from '../../engine/local'
@@ -172,9 +173,8 @@ function VllmCard({ plan, server, checking, onCheck }: { plan: VllmPlan; server:
             {plan.summary}
           </p>
           {plan.ready && (
-            <details className="steps">
-              <summary>Show the steps</summary>
-              <ol>
+            <Disclosure title="Show the steps">
+              <ol className="steps">
                 {plan.steps.map((step) => (
                   <li key={step.command}>
                     <span>
@@ -195,7 +195,7 @@ function VllmCard({ plan, server, checking, onCheck }: { plan: VllmPlan; server:
                   {note}
                 </small>
               ))}
-            </details>
+            </Disclosure>
           )}
           <button className="btn ghost" onClick={onCheck} disabled={checking}>
             {checking ? 'Checking…' : 'Check again'}

@@ -514,14 +514,54 @@ label.check {
   color: var(--fg-body);
   cursor: pointer;
 }
+/* The tick box and the round choice are drawn here, not by the browser, in the
+   look of Arc's checkbox: a rounded square that fills with the brand and draws
+   its tick, a ring that fills its centre. Drawn from borders alone, no image. */
 input[type="checkbox"],
 input[type="radio"] {
+  -webkit-appearance: none;
+  appearance: none;
+  display: inline-grid;
+  place-content: center;
   flex: 0 0 auto;
   width: 20px;
   height: 20px;
   padding: 0;
   margin: 0;
-  accent-color: var(--brand);
+  border: 1px solid var(--border-control);
+  background: var(--well);
+  cursor: pointer;
+  transition: background var(--dur-quick), border-color var(--dur-quick);
+}
+input[type="checkbox"] { border-radius: 6px; }
+input[type="radio"] { border-radius: 50%; }
+input[type="checkbox"]::after {
+  content: "";
+  width: 5px;
+  height: 10px;
+  border: solid var(--on-brand);
+  border-width: 0 2px 2px 0;
+  transform: translateY(-1px) rotate(45deg) scale(0);
+  transition: transform var(--dur-quick);
+}
+input[type="radio"]::after {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--on-brand);
+  transform: scale(0);
+  transition: transform var(--dur-quick);
+}
+input[type="checkbox"]:checked,
+input[type="radio"]:checked { background: var(--brand); border-color: var(--brand); }
+input[type="checkbox"]:checked::after { transform: translateY(-1px) rotate(45deg) scale(1); }
+input[type="radio"]:checked::after { transform: scale(1); }
+input[type="checkbox"]:hover:not(:checked),
+input[type="radio"]:hover:not(:checked) { border-color: var(--fg-muted); }
+@media (prefers-reduced-motion: reduce) {
+  input[type="checkbox"], input[type="radio"],
+  input[type="checkbox"]::after, input[type="radio"]::after { transition: none; }
 }
 /* A colour change on a hairline border is a state, not an indicator: at 1px
    and this little contrast it is easy to miss on a bright screen, and a
