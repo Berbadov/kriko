@@ -90,7 +90,7 @@ class MissingKey(RuntimeError):
     """The paid plane was asked for and there is no key to pay with.
 
     A distinct type because the answer is a screen, not a stack trace: the
-    caller turns this into "set a key in Settings → Research" rather than
+    caller turns this into "set a key in Settings → Keys" rather than
     reporting a failed run.
     """
 
@@ -132,7 +132,7 @@ def _searcher(app_state_path, preferred: str = ""):
     else:
         raise MissingKey(
             "no search key is set. The paid plane searches and reads: add an "
-            "Exa, Tavily or DeepSeek key in Settings → Research."
+            "Exa, Tavily or DeepSeek key in Settings → Keys."
         )
     if picked == "tavily":
         from app.providers import tavily

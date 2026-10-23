@@ -120,7 +120,7 @@ Does not hold, and cannot:
 
 Owner:
 
-1. Settings → Research: the Mercury and DeepSeek keys are saved on this computer.
+1. Settings → Keys: the Mercury and DeepSeek keys are saved on this computer.
 2. Settings → Shared access → *Sharing your own keys with a friend*: type a
    password of at least 8 characters, press *Make an access code*, copy the code.
 3. Send the code and the password in **two separate messages**. Anyone with both

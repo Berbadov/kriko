@@ -438,7 +438,7 @@ def require(provider_id: str, *, shared_home: Path | None = None,
                 )
     if not value:
         raise MissingKey(
-            f"{provider.label} needs a key — set one in Settings → Research "
+            f"{provider.label} needs a key — set one in Settings → Keys "
             f"(or export {provider.env})"
         )
     return value
