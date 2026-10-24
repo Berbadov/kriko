@@ -101,6 +101,15 @@ def test_the_app_is_started_before_it_is_shipped(recipe):
     assert recipe.index("smoke_app.py") < recipe.index("hdiutil create")
 
 
+def test_the_bundle_names_its_own_executable(recipe):
+    # Tauri writes the crate's name (`kriko`) into CFBundleExecutable, while the
+    # bundle is `Kriko.app`. Asking for `Contents/MacOS/Kriko` only resolves on
+    # a case-insensitive volume, which is not every Mac.
+    assert "CFBundleExecutable" in recipe
+    assert '"$app/Contents/MacOS/$app_exe"' in recipe
+    assert "Contents/MacOS/Kriko" not in recipe
+
+
 def test_the_disk_image_is_a_dmg_with_the_app_and_an_applications_link(recipe):
     assert "hdiutil create" in recipe
     assert "-format UDZO" in recipe
