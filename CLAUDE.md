@@ -48,14 +48,19 @@ to green. So:
 2. **A behaviour change updates its tests in the same commit.** A test that
    asserts retired behaviour is rewritten to assert the new intent, or deleted
    with the code it guarded. It is never left failing for someone else.
-3. **`desktop.yml` is the desktop release recipe, hand-dispatched.** It builds
-   Windows x64 and native macOS packages for Apple Silicon (`arm64`) and Intel
-   (`x86_64`); the macOS jobs must run on matching hosts. Dispatch it on the
-   reviewed source branch first, verify and download the artifacts, then tag
-   that exact source SHA and upload those artifacts to a new draft release.
-   Dispatching on a tag runs the native builds again and creates a draft; use
-   that path only when a second build is intended. See
-   `kriko-ui/README.md`. Do not trim the workflow.
+3. **`desktop.yml` is the desktop release recipe, hand-dispatched.** Its
+   `bundle` job builds the Windows x64 installer and portable ZIP; its
+   `bundle-macos` job builds the Apple Silicon (`arm64`) disk image by running
+   `kriko-ui/package-macos.sh` on a `macos-14` runner. Tauri and PyInstaller do
+   not cross-compile, so a macOS package is assembled on a Mac of its own
+   architecture; Intel is not built. The macOS job uploads a workflow artifact
+   and publishes no release asset yet, because `tools/release_readiness.py`
+   records a Windows platform only; a macOS row has to exist before the disk
+   image joins a release. Dispatch it on the reviewed source branch first,
+   verify and download the artifacts, then tag that exact source SHA and upload
+   those artifacts to a new draft release. Dispatching on a tag runs the native
+   builds again and creates a draft; use that path only when a second build is
+   intended. See `kriko-ui/README.md`. Do not trim the workflow.
 4. **Ship to the reader, not the branch.** A fix is not done until its package
    has been built and observed on the target platform. Windows and each native
    Mac architecture need their own packaging and smoke evidence.
@@ -230,7 +235,9 @@ engine owns no socket). The app checks the latest release through
 Kriko — the corner notice offers it (`kriko-ui/src/ui/UpdateNotice.tsx`, the
 shell's `app_install_update`). It does
 not update portable archives
-or Mac app bundles; there is no Mac package yet. Checking is a
+or the macOS app: the Mac package is installed from a disk image and updated by
+downloading the next one, and `app/appupdate.py` matches the Windows installer
+name only, so a Mac build offers no update. Checking is a
 request; the weekly pass is `app/packautoupdate.py`, which at startup submits
 a `pack_update` job for already-installed packs only when a week has passed
 since the last success. There is no pack-updates block in the UI.
@@ -261,6 +268,7 @@ A need from the wrong layer means moving the module (drivers to
 | `docs/HOW_IT_WORKS.md` | matching, catalog lifecycle, a run, layering | current |
 | `docs/STYLE.md` | how these documents are written | current |
 | `docs/INSTALL_WINDOWS.md` | Windows install including the extension permission | current |
+| `docs/INSTALL_MACOS.md` | macOS install on Apple Silicon: the disk image, Gatekeeper, building it | current |
 | `docs/PACK_CONTRACT.md` | what a catalog contains, must and may | current |
 | `docs/KRIKO_AGENT.md` | the built-in research stack: its bounds, its search dial, what a buying answer owes | current |
 | `docs/security/shared-access.md` | the password-and-code protocol, the trial, and what neither protects | current |
