@@ -2092,6 +2092,12 @@
 .lite-quick { display: grid; gap: 8px; margin: 10px 0; }
 .lite-quick-assumed { margin: 0; color: var(--fg-muted); font-size: 12px; }
 .lite-quick-cards { display: grid; gap: 8px; }
+/* The product info: a reference the reader opens, under a one-line summary. */
+.lite-quick-info { min-width: 0; }
+.lite-quick-info > summary { cursor: pointer; font: 10.5px var(--font-mono); color: var(--fg-muted); }
+.lite-quick-info > summary:focus-visible { outline: 2px solid var(--low-ink); outline-offset: 2px; }
+.lite-quick-info .lite-quick-specs { margin-top: 6px; }
+.lite-quick-info .lite-quick-specs p { overflow-wrap: anywhere; }
 
 /* ═════════════════════════════════════════════
    The Kriko design system, worn by the panel
@@ -3034,7 +3040,7 @@
   border: 1px solid var(--border-soft);
 }
 .lite-noissue-stats b { color: var(--fg-body); font-weight: 600; }
-.lite-noissue .lite-quick-specs { margin: 10px 0 0; }
+.lite-noissue .lite-quick-info { margin: 10px 0 0; }
 .lite-noissue .lite-quick-specs p { margin: 2px 0; font-size: 12px; color: var(--fg-body); }
 .lite-noissue .lite-quick-sources { margin-top: 10px; }
 .lite-noissue .lite-quick-sources summary {
