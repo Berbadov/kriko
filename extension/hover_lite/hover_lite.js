@@ -174,6 +174,9 @@
     researchQuickJob: null,
     taskLogs: new Map(),
     quickSourcesOpen: false,
+    // The product info (the listing's facts and the quick look's specs) is a
+    // reference, closed until the reader asks for it.
+    specsOpen: false,
     // When the followed run started, for the elapsed time beside its stage.
     researchStartedAt: 0,
     researchState: "",
@@ -1434,6 +1437,24 @@
     return [pages, ...rest].join(" \u00b7 ");
   }
 
+  /* A label or value as the page wrote it. Sites put the separator inside the
+   * text ("Ekran Boyutu: : 27 inç", "Anti-Glare: :"), so the colons at the edges
+   * belong to neither; a row with nothing left in it is not a fact. */
+  function factText(value) {
+    const text = typeof value === "object" && value !== null ? JSON.stringify(value) : String(value ?? "");
+    return text.replace(/^[\s:]+|[\s:]+$/g, "");
+  }
+
+  /* The product info: what the listing and the quick look say about the
+   * product, as rows. Closed by default, because a full spec sheet is what a
+   * reader looks up, not what the card is for. The count is written once the
+   * rows are in, and a card with no rows has no product info at all. */
+  function productInfoMarkup() {
+    return `<details class="lite-quick-info" ${state.specsOpen ? "open" : ""}>
+        <summary>Product info</summary><div class="lite-quick-specs"></div>
+      </details>`;
+  }
+
   function noIssueCardMarkup(empty) {
     const stats = coverageWords(empty.coverage);
     const statChips = stats
@@ -1452,7 +1473,7 @@
         </div>
       </div>
       ${statChips}
-      <div class="lite-quick-specs"></div>
+      ${productInfoMarkup()}
       <details class="lite-quick-sources" ${state.quickSourcesOpen ? "open" : ""}>
         <summary>Pages read</summary>
         <div class="lite-quick-source-list"></div>
@@ -1522,7 +1543,7 @@
         ${state.researchQuick && !quickIsEmpty ? `<div class="lite-quick">
           ${state.researchQuick.assumed ? `<p class="lite-quick-assumed">Taken as: ${renderRichText(state.researchQuick.assumed)}</p>` : ""}
           <div class="lite-quick-cards"></div>
-          <div class="lite-quick-specs"></div>
+          ${productInfoMarkup()}
           <details class="lite-quick-sources" ${state.quickSourcesOpen ? "open" : ""}>
             <summary>Sources</summary><div class="lite-quick-source-list"></div>
           </details>
@@ -1618,14 +1639,21 @@
     const sources = new Map();
     const specsSlot = slot.querySelector(".lite-quick-specs");
     for (const spec of state.researchQuick?.specs || []) {
+      const name = factText(spec.name);
+      const value = factText(spec.value);
+      if (!name || !value) continue;
       const item = document.createElement("p");
-      item.innerHTML = `${renderRichText(spec.name)}: ${renderRichText(spec.value)}`;
+      item.innerHTML = `${renderRichText(name)}: ${renderRichText(value)}`;
       specsSlot?.appendChild(item);
     }
     const listing = state.researchQuick?.listing || {};
-    for (const [name, value] of Object.entries(listing.facts || {}).slice(0, 20)) {
+    const facts = Object.entries(listing.facts || {})
+      .map(([name, value]) => [factText(name), factText(value)])
+      .filter(([name, value]) => name && value)
+      .slice(0, 20);
+    for (const [name, value] of facts) {
       const item = document.createElement("p");
-      item.textContent = `${name}: ${typeof value === "object" ? JSON.stringify(value) : value}`;
+      item.textContent = `${name}: ${value}`;
       specsSlot?.appendChild(item);
     }
     if (listing.description) {
@@ -1633,6 +1661,14 @@
       item.textContent = String(listing.description).slice(0, 1200);
       specsSlot?.appendChild(item);
     }
+    // Each product-info block says how many rows it holds, opens onto them
+    // when the reader asks, and is left out entirely when it has none.
+    slot.querySelectorAll(".lite-quick-info").forEach((info) => {
+      const rows = info.querySelectorAll(".lite-quick-specs > *").length;
+      if (!rows) { info.remove(); return; }
+      info.querySelector("summary").textContent = `Product info · ${rows}`;
+      info.addEventListener("toggle", () => { state.specsOpen = info.open; });
+    });
     for (const page of state.researchQuick?.evidence_pages || []) {
       if (/^https?:\/\//i.test(page.url || "")) sources.set(page.url, page);
     }
