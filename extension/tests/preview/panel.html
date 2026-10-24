@@ -110,6 +110,11 @@
           message: "No sourced issues kept.",
           result: {
             risks: [], specs: [],
+            // Listing facts, some of them empty as sites print them: the
+            // product info is closed, and only the rows with a value count.
+            listing: { url: "https://example.org/listing", facts: {
+              "Anti-Glare": ":", "Ekran Boyutu": ": 27 inç", "HDMI Sayısı": "1",
+              "Görüntü Teknolojisi": "LED", "Flicker-Free": "" } },
             diagnostic: { code: "no_issues_found", message: "No supported issues found in the pages checked." },
             coverage: { pages_read: 4, pages_relevant: 2, pages_extracted: 2,
               publishers_read: 2, sources_cited: 1, status: "no_supported_findings" },
