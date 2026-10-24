@@ -20,7 +20,7 @@
   const { renderClaimCard, updateClaimCard, markClaimCard, factClaimCard, renderRichText } =
     window.__KrikoPanelClaimCard;
   const { filterByEvidence, normaliseSensitivity, hiddenWords } = window.__KrikoPanelClaimCard;
-  const { describeRun, coverageSummary } = window.__KrikoRunProgress;
+  const { describeRun, coverageSummary, reportsPages } = window.__KrikoRunProgress;
 
   const HOST_TAG = "kriko-panel-host";
 
@@ -1434,7 +1434,7 @@
     // The run's own tally, as `run_progress.js` words it: pages read out of
     // pages tried first, then what came of them.
     const { pages, rest } = coverageSummary(coverage);
-    return [pages, ...rest].join(" \u00b7 ");
+    return [pages, ...rest].filter(Boolean).join(" \u00b7 ");
   }
 
   /* A label or value as the page wrote it. Sites put the separator inside the
@@ -1511,7 +1511,9 @@
       ? {
         kind: "quick",
         title: "No sourced issues kept",
-        note: "Nothing found in the pages read. Not proof there is no issue.",
+        note: reportsPages(quickCoverage)
+          ? "Nothing found in the pages read. Not proof there is no issue."
+          : "Nothing found. The agent did not say which pages it read. Not proof there is no issue.",
         coverage: quickCoverage,
         outcome: state.researchQuick?.diagnostic?.message || "",
       }
