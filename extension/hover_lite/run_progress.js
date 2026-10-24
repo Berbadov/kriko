@@ -169,15 +169,25 @@
   function coverageSummary(coverage) {
     const c = coverage && typeof coverage === "object" ? coverage : null;
     if (!c) return { pages: "", rest: [] };
-    const read = number(c.pages_read);
-    const attempted = read + number(c.pages_unreadable) + number(c.pages_timed_out);
     const rest = [];
     const add = (value, text) => { if (value !== undefined && value !== null) rest.push(text(number(value))); };
     add(c.pages_relevant, (n) => `${n} about this product`);
     add(c.pages_extracted, (n) => `${n} checked`);
     add(c.sources_cited, (n) => `${n} cited`);
+    // A look the agent searched for itself reports no pages at all. "0 pages
+    // read" would claim a reading that never happened, so the pages part is
+    // left out, and only a run that did report its pages is given a count.
+    if (!reportsPages(c)) return { pages: "", rest };
+    const read = number(c.pages_read);
+    const attempted = read + number(c.pages_unreadable) + number(c.pages_timed_out);
     return { pages: pagesText(read, attempted || read) || "0 pages read", rest };
   }
 
-  window.__KrikoRunProgress = { STAGES, describeRun, coverageSummary, readLog, pagesText };
+  /* Whether a run said which pages it read. A zero it reported counts; a
+   * run that reported no pages at all does not, and is not a zero. */
+  function reportsPages(coverage) {
+    return Boolean(coverage && typeof coverage === "object" && coverage.pages_read !== undefined);
+  }
+
+  window.__KrikoRunProgress = { STAGES, describeRun, coverageSummary, reportsPages, readLog, pagesText };
 })();
