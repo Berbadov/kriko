@@ -101,7 +101,34 @@ engine holds its own program file (`src-tauri/windows/hooks.nsh`).
 
 The Windows installer is unsigned. Windows can show a SmartScreen warning.
 
-A macOS package is not built yet.
+## Build the macOS package
+
+Build the Apple Silicon disk image on an Apple Silicon Mac:
+
+```
+kriko-ui/package-macos.sh --arch arm64
+```
+
+It needs a Rust toolchain, Node.js and Python 3.13 on the machine, and makes its
+own `.venv` when there is none. It writes to `kriko-ui/builds/`:
+
+| File | Contents |
+|---|---|
+| `kriko-<version>-arm64.dmg` | `Kriko.app` and an `Applications` link. |
+| `SHA256SUMS-macos.txt` | The digest of the disk image. |
+
+Tauri and PyInstaller cannot cross-compile, so the recipe refuses a Mac whose
+architecture is not the one asked for. The engine ships as one file on macOS, so
+there is no `_internal` folder to place: `kriko-sidecar` and `openserp` sit in
+`Kriko.app/Contents/MacOS`, where the app looks for them. The bundle is ad-hoc
+signed unless `KRIKO_MACOS_SIGN_IDENTITY` names a Developer ID identity, and it
+is not notarized, so a downloaded copy needs **right-click → Open** the first
+time (`docs/INSTALL_MACOS.md`).
+
+The `macos-arm64` job in `desktop.yml` runs this same script on a macOS runner
+and uploads the `.dmg` as a workflow artifact. It publishes no release asset:
+the release job's evidence (`tools/release_readiness.py`) records a Windows
+platform only.
 
 ## The look and the motion
 
