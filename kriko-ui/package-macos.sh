@@ -186,11 +186,16 @@ echo "=== Build the app"
 
 app="$target/release/bundle/macos/Kriko.app"
 [ -d "$app" ] || die "tauri build reported success and made no app at $app"
-for name in Kriko kriko-sidecar openserp; do
+# The executable inside is named by the bundle's own Info.plist, not by the
+# product name: Tauri writes the crate's name (`kriko`). Asking for `Kriko`
+# happened to work on the runner's case-insensitive volume and nowhere else.
+app_exe="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$app/Contents/Info.plist")"
+[ -n "$app_exe" ] || die "the bundle names no executable in its Info.plist."
+for name in "$app_exe" kriko-sidecar openserp; do
     [ -x "$app/Contents/MacOS/$name" ] || die "$name is not executable inside $app/Contents/MacOS, so the app cannot start it."
 done
 [ -f "$app/Contents/Resources/OpenSERP-LICENSE.txt" ] || die "the OpenSERP license is missing from the bundle."
-for name in Kriko kriko-sidecar openserp; do
+for name in "$app_exe" kriko-sidecar openserp; do
     built="$(lipo -archs "$app/Contents/MacOS/$name")"
     [ "$built" = "$arch" ] || die "$name is built for '$built' and this package is $arch."
 done
@@ -205,7 +210,7 @@ codesign --verify --deep --strict --verbose=2 "$app"
 # it is still up.
 echo ""
 echo "=== The app opens"
-"$python" packaging/smoke_app.py "$app/Contents/MacOS/Kriko"
+"$python" packaging/smoke_app.py "$app/Contents/MacOS/$app_exe"
 
 echo ""
 echo "=== The disk image"
