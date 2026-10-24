@@ -1,0 +1,139 @@
+/** Keeps the Android scanner connected to the research queue while other apps are visible. */
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+
+import {
+  isOverlayActive, overlayAvailable, startOverlaySession, stopOverlaySession,
+  subscribeOverlayAction, subscribeOverlayScan, subscribeOverlaySession,
+  updateOverlayJobs, type OverlayJob, type OverlayScan,
+} from '../engine/overlay';
+import { readingTitle } from '../engine/prompt';
+import { useStore } from '../engine/store';
+
+interface Session {
+  active: boolean;
+  available: boolean;
+  start: () => Promise<void>;
+  stop: () => Promise<void>;
+}
+
+const Context = createContext<Session | null>(null);
+
+export function OverlaySessionProvider({ children }: { children: React.ReactNode }) {
+  const { queueJobs, readShot, enqueueScan, cancelQueue } = useStore();
+  const [active, setActive] = useState(false);
+  const [readings, setReadings] = useState<OverlayJob[]>([]);
+  const current = useRef({ queueJobs, readShot, enqueueScan, cancelQueue });
+  useEffect(() => {
+    current.current = { queueJobs, readShot, enqueueScan, cancelQueue };
+  }, [queueJobs, readShot, enqueueScan, cancelQueue]);
+  const waiting = useRef<(OverlayScan & { id: string })[]>([]);
+  const processing = useRef(false);
+  const mounted = useRef(true);
+  const cancelled = useRef(new Set<string>());
+  const readingAbort = useRef<{ id: string; controller: AbortController } | null>(null);
+
+  const drain = useCallback(async () => {
+    if (processing.current) return;
+    processing.current = true;
+    try {
+      while (waiting.current.length && mounted.current) {
+        const shot = waiting.current.shift()!;
+        if (cancelled.current.delete(shot.id)) continue;
+        const controller = new AbortController();
+        readingAbort.current = { id: shot.id, controller };
+        setReadings((items) => items.map((item) => item.id === shot.id
+          ? { ...item, status: 'reading', text: 'Reading the product name and model…' } : item));
+        try {
+          const reading = await current.current.readShot(shot.base64, shot.mime, controller.signal);
+          if (!mounted.current) break;
+          if (!cancelled.current.delete(shot.id)) {
+            current.current.enqueueScan(reading, shot.uri || undefined, undefined, {
+              researchMode: shot.mode ?? 'research', reviewSite: shot.reviewSite,
+            });
+          }
+          setReadings((items) => items.filter((item) => item.id !== shot.id));
+        } catch (error) {
+          if (!mounted.current) break;
+          if (cancelled.current.delete(shot.id)) continue;
+          setReadings((items) => items.map((item) => item.id === shot.id
+            ? { ...item, status: 'error', error: error instanceof Error ? error.message : 'The page could not be read.' }
+            : item));
+        } finally {
+          readingAbort.current = null;
+        }
+      }
+    } finally {
+      processing.current = false;
+    }
+  }, []);
+
+  useEffect(() => {
+    mounted.current = true;
+    void isOverlayActive().then((value) => { if (mounted.current) setActive(value); }).catch(() => {});
+    const offScan = subscribeOverlayScan((shot) => {
+      if (waiting.current.length + (readingAbort.current ? 1 : 0) + current.current.queueJobs.filter((job) =>
+        job.status === 'queued' || job.status === 'running').length >= 10) {
+        setReadings((items) => [...items.filter((item) => item.id !== 'queue-full'), {
+          id: 'queue-full', title: 'Queue is full', status: 'error',
+          error: 'Wait for a product to finish, or cancel a queued scan.',
+        }]);
+        return;
+      }
+      const id = `read-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      waiting.current.push({ ...shot, id });
+      setReadings((items) => [...items.slice(-9), { id, title: 'New product scan', status: 'queued' }]);
+      void drain();
+    });
+    const offSession = subscribeOverlaySession(({ active: running }) => setActive(running));
+    const offAction = subscribeOverlayAction(({ action, id }) => {
+      if (action !== 'cancel') return;
+      if (id.startsWith('read-') || id === 'queue-full') {
+        cancelled.current.add(id);
+        if (readingAbort.current?.id === id) readingAbort.current.controller.abort();
+        waiting.current = waiting.current.filter((item) => item.id !== id);
+        setReadings((items) => items.filter((item) => item.id !== id));
+      } else {
+        current.current.cancelQueue(id);
+      }
+    });
+    return () => {
+      mounted.current = false;
+      waiting.current = [];
+      readingAbort.current?.controller.abort();
+      offScan(); offSession(); offAction();
+      void stopOverlaySession().catch(() => {});
+    };
+  }, [drain]);
+
+  useEffect(() => {
+    updateOverlayJobs([
+      ...readings,
+      ...[...queueJobs].reverse().sort((a, b) =>
+        Number(b.status === 'running' || b.status === 'queued') -
+        Number(a.status === 'running' || a.status === 'queued')).map((job) => ({
+        id: job.id,
+        title: `${readingTitle(job.reading) || job.reading.model || 'Product scan'}${job.researchMode === 'site_reviews' ? ' · site comments' : ''}`,
+        status: job.status, text: job.text, error: job.error, sources: job.sources, steps: job.steps,
+      })),
+    ]);
+  }, [queueJobs, readings, active]);
+
+  const start = useCallback(async () => {
+    await startOverlaySession();
+    setActive(true);
+  }, []);
+  const stop = useCallback(async () => {
+    await stopOverlaySession();
+    setActive(false);
+  }, []);
+
+  return <Context.Provider value={{ active, available: overlayAvailable(), start, stop }}>
+    {children}
+  </Context.Provider>;
+}
+
+export function useOverlaySession(): Session {
+  const value = useContext(Context);
+  if (!value) throw new Error('OverlaySessionProvider is missing');
+  return value;
+}

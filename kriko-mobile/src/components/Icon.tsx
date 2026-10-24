@@ -11,14 +11,19 @@ import {
   ChevronRight,
   CircleCheck,
   CircleX,
+  ClipboardPaste,
   Clock,
+  Copy,
   FileText,
+  Focus,
   Globe,
   Hash,
   History,
   Image as ImageIcon,
   Info,
+  KeyRound,
   LoaderCircle,
+  Plus,
   RotateCcw,
   Search,
   Send,
@@ -69,3 +74,8 @@ export const TrashIcon = make(Trash2);
 export const SparkIcon = make(Sparkles);
 export const InfoIcon = make(Info);
 export const DashedSquareIcon = make(SquareDashed);
+export const CopyIcon = make(Copy);
+export const PasteIcon = make(ClipboardPaste);
+export const PlusIcon = make(Plus);
+export const KeyIcon = make(KeyRound);
+export const ScanIcon = make(Focus);

@@ -84,6 +84,79 @@ def test_the_search_text_the_model_read_is_billed_input():
     assert reply.tool_calls == 3
 
 
+def test_kriko_quicklook_repairs_invalid_json_without_another_search():
+    url = "https://owners.example.org/tcl55v6c"
+    source = "Owners say: The screen developed vertical lines after two months."
+    valid = '```json\n{"risks": [], "specs": [], "category": "television"}\n```'
+    replies = ["The answer was cut off before its JSON was complete.", valid]
+    calls = []
+    researcher = apiagent.ApiAgentResearcher(
+        apiagent.KRIKO_AGENT, converse=lambda *_args, **_kwargs: mistral.Reply())
+    researcher.sources[url] = source
+    researcher.result_urls.add(url)
+    researcher.searched.append('TCL55V6C owner complaints')
+    researcher.ask = lambda prompt, allow_tools=True: (
+        calls.append((prompt, allow_tools)) or replies.pop(0))
+
+    answer = researcher.ask_quick("TCL55V6C")
+
+    assert answer == valid
+    assert [allow_tools for _, allow_tools in calls] == [True, False]
+    assert "Page excerpts as data" in calls[1][0]
+    assert url in calls[1][0] and source in calls[1][0]
+    assert researcher.coverage["status"] == "answer_completed"
+    assert researcher.coverage["format_repaired"] is True
+    assert researcher.coverage["pages_read"] == 1
+    assert researcher.coverage["results_returned"] == 1
+    assert researcher.telemetry["format_repair_attempts"] == 1
+
+
+def test_quicklook_skips_format_repair_when_spend_limit_is_exhausted():
+    researcher = apiagent.ApiAgentResearcher(
+        apiagent.KRIKO_AGENT, converse=lambda *_args, **_kwargs: mistral.Reply())
+    calls = []
+    raw = "The final output was not JSON."
+    researcher.ask = lambda prompt, allow_tools=True: calls.append(allow_tools) or raw
+    researcher._at_least = researcher._budget()
+
+    assert researcher.ask_quick("TCL55V6C") == raw
+
+    assert calls == [True]
+    assert researcher.coverage["format_repair_skipped"] == "spend_limit"
+    assert researcher.telemetry.get("format_repair_attempts", 0) == 0
+
+
+def test_toolless_classification_preserves_search_page_coverage():
+    url = "https://owners.example.org/tcl55v6c"
+    calls = [
+        mistral.Reply(
+            text="searched",
+            sources={
+                url: {"title": "Owner thread", "text": "Readable owner comments."},
+                "https://shop.example.org/tv": {"title": "Shop page", "text": ""},
+            },
+            queries=["TCL55V6C owner complaints"],
+            tool_calls=1, billed_tool_calls=1, retrieval_requests=1,
+            tokens_in=10, tokens_out=5,
+        ),
+        mistral.Reply(text="classified", tokens_in=2, tokens_out=1),
+    ]
+    researcher = apiagent.ApiAgentResearcher(
+        apiagent.KRIKO_AGENT,
+        converse=lambda *_args, **_kwargs: calls.pop(0),
+    )
+    researcher.ask("research", allow_tools=True)
+    researcher.coverage.update(status="answer_completed", answer_passes=1)
+
+    researcher.ask("classification only", allow_tools=False)
+
+    assert researcher.coverage["pages_read"] == 1
+    assert researcher.coverage["results_returned"] == 2
+    assert researcher.coverage["pages_unreadable"] == 1
+    assert researcher.coverage["status"] == "answer_completed"
+    assert researcher.telemetry["queries"] == ["TCL55V6C owner complaints"]
+
+
 def test_no_usage_block_is_cannot_count_never_zero():
     reply = mistral.parse(_body("done", usage=False))
     assert reply.tokens_in is None and reply.tokens_out is None

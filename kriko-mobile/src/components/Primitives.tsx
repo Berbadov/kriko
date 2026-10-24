@@ -1,10 +1,4 @@
-/**
- * The primitives every screen draws with.
- *
- * Sizes come from the captures: cards are a 358 px wide surface with a 20 px
- * corner and a 16 px inset, actions are 48 px tall, and the toggle is the 45 px
- * square with the knob that overhangs its right edge.
- */
+/** Shared paper surfaces, controls, and restrained motion. */
 
 import * as Haptics from 'expo-haptics';
 import { useEffect, useState, type ReactNode } from 'react';
@@ -12,6 +6,7 @@ import { Animated, Easing, Pressable, StyleSheet, View, type TextStyle, type Vie
 
 import { color, gap, radius } from '../theme/tokens';
 import { Txt } from '../theme/Txt';
+import { MotionPressable, useReducedMotion } from './Motion';
 
 /* ------------------------------------------------------------------ card -- */
 
@@ -55,27 +50,25 @@ export function Button({ label, onPress, icon, variant = 'primary', disabled, st
     onPress?.();
   };
   return (
-    <Pressable
+    <MotionPressable
       onPress={press}
       disabled={disabled}
       accessibilityRole="button"
       accessibilityState={{ disabled: !!disabled }}
       accessibilityLabel={label}
-      style={({ pressed }) => [
+      style={[
         styles.button,
         variant === 'primary' && styles.buttonPrimary,
         isDisabled && styles.buttonPrimaryOff,
         variant === 'ghost' && styles.buttonGhost,
         variant === 'quiet' && styles.buttonQuiet,
         variant === 'danger' && styles.buttonDanger,
-        pressed && !disabled && styles.buttonPressed,
         style,
       ]}
     >
       {icon}
       <Txt
         variant="action"
-        caps
         tone={
           variant === 'ghost' || variant === 'quiet'
             ? 'ink'
@@ -88,7 +81,7 @@ export function Button({ label, onPress, icon, variant = 'primary', disabled, st
       >
         {label}
       </Txt>
-    </Pressable>
+    </MotionPressable>
   );
 }
 
@@ -133,6 +126,43 @@ export function Row({
   );
 }
 
+/** A row of mutually exclusive choices: one track, one raised selection. */
+export function Segmented<T extends string>({
+  options,
+  value,
+  onChange,
+}: {
+  options: { value: T; label: string }[];
+  value: T;
+  onChange: (value: T) => void;
+}) {
+  return (
+    <View style={styles.segmented}>
+      {options.map((option) => {
+        const active = option.value === value;
+        return (
+          <Pressable
+            key={option.value}
+            onPress={() => onChange(option.value)}
+            accessibilityRole="button"
+            accessibilityState={{ selected: active }}
+            accessibilityLabel={option.label}
+            style={({ pressed }) => [
+              styles.segment,
+              active && styles.segmentOn,
+              pressed && styles.rowPressed,
+            ]}
+          >
+            <Txt variant="actionSmall" tone={active ? 'ink' : 'ink3'} numberOfLines={1}>
+              {option.label}
+            </Txt>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
 /* ----------------------------------------------------------------- chips -- */
 
 export function Chip({
@@ -159,7 +189,6 @@ export function Chip({
       {icon}
       <Txt
         variant="chip"
-        caps
         tone={tone === 'accent' ? '#FFFFFF' : tone === 'risk' ? 'risk' : tone === 'ok' ? 'ok' : 'ink'}
       >
         {label}
@@ -183,25 +212,26 @@ export function Toggle({ value, onChange }: { value: boolean; onChange: () => vo
   // Lazy state, not a ref: an Animated value is read while rendering, and a ref
   // would hide that from the React compiler.
   const [anim] = useState(() => new Animated.Value(value ? 1 : 0));
+  const reduced = useReducedMotion();
 
   useEffect(() => {
     Animated.timing(anim, {
       toValue: value ? 1 : 0,
-      duration: 180,
+      duration: reduced ? 0 : 180,
       easing: Easing.out(Easing.cubic),
       useNativeDriver: false,
     }).start();
-  }, [anim, value]);
+  }, [anim, value, reduced]);
 
   const knobStyle = {
     transform: [
       {
-        translateX: anim.interpolate({ inputRange: [0, 1], outputRange: [-17, 0] }),
+        translateX: anim.interpolate({ inputRange: [0, 1], outputRange: [0, 22] }),
       },
     ],
     backgroundColor: anim.interpolate({
       inputRange: [0, 1],
-      outputRange: ['#151C33', '#1E2A4C'],
+        outputRange: [color.surface, color.surface],
     }),
   };
 
@@ -227,15 +257,16 @@ export function Toggle({ value, onChange }: { value: boolean; onChange: () => vo
 
 export function ProgressBar({ value, height = 6 }: { value: number; height?: number }) {
   const [anim] = useState(() => new Animated.Value(value));
+  const reduced = useReducedMotion();
 
   useEffect(() => {
     Animated.timing(anim, {
       toValue: Math.max(0, Math.min(1, value)),
-      duration: 180,
+      duration: reduced ? 0 : 180,
       easing: Easing.out(Easing.quad),
       useNativeDriver: false,
     }).start();
-  }, [anim, value]);
+  }, [anim, value, reduced]);
 
   return (
     <View style={[styles.trackBar, { height, borderRadius: height / 2 }]}>
@@ -265,10 +296,9 @@ export function SectionLabel({ children, style }: { children: string; style?: Te
 const styles = StyleSheet.create({
   card: {
     backgroundColor: color.surface,
-    borderRadius: radius.xl,
-    borderWidth: 1,
-    borderColor: color.edge,
-    padding: 16,
+    borderRadius: radius.l,
+    borderWidth: 0,
+    padding: 18,
   },
   cardInset: { backgroundColor: color.inset },
   tile: {
@@ -279,8 +309,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   button: {
-    height: 48,
-    borderRadius: radius.l,
+    minHeight: 52,
+    borderRadius: radius.m,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
@@ -289,7 +319,7 @@ const styles = StyleSheet.create({
   },
   buttonPrimary: { backgroundColor: color.accent },
   buttonPrimaryOff: { backgroundColor: color.accentDim },
-  buttonGhost: { borderWidth: 1, borderColor: color.edge, backgroundColor: 'transparent' },
+  buttonGhost: { borderWidth: 1, borderColor: color.edge, backgroundColor: color.surface },
   buttonQuiet: { backgroundColor: color.raise },
   buttonDanger: { backgroundColor: color.riskWash },
   buttonPressed: { opacity: 0.82 },
@@ -311,34 +341,56 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: color.edge,
   },
+  segmented: {
+    flexDirection: 'row',
+    backgroundColor: color.inset,
+    borderRadius: radius.m,
+    borderWidth: 1,
+    borderColor: color.edge,
+    padding: 3,
+    gap: 3,
+  },
+  segment: {
+    flex: 1,
+    minHeight: 34,
+    borderRadius: radius.s,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  segmentOn: {
+    backgroundColor: color.raise,
+    borderWidth: 1,
+    borderColor: color.edgeStrong,
+  },
   chipSm: { paddingHorizontal: 7, paddingVertical: 3 },
   chipAccent: { backgroundColor: color.accent, borderColor: color.accent },
   chipRisk: { backgroundColor: color.riskWash, borderColor: 'rgba(255,111,99,0.35)' },
   chipOk: { backgroundColor: 'rgba(61,220,151,0.12)', borderColor: 'rgba(61,220,151,0.3)' },
   track: {
-    width: 45,
-    height: 45,
-    borderRadius: 14,
-    borderWidth: 1.5,
+    width: 52,
+    height: 30,
+    borderRadius: 15,
+    borderWidth: 1,
     borderColor: color.edgeStrong,
     backgroundColor: color.inset,
     justifyContent: 'center',
-    alignItems: 'flex-end',
+    alignItems: 'flex-start',
+    paddingHorizontal: 2,
   },
-  trackOn: { borderColor: '#A9C0FF', backgroundColor: '#14224A' },
+  trackOn: { borderColor: color.accent, backgroundColor: color.accent },
   knob: {
-    width: 31,
-    height: 31,
-    borderRadius: 31,
-    marginRight: -6,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.45)',
+    borderColor: color.edgeSoft,
     shadowColor: '#000',
-    shadowOpacity: 0.45,
+    shadowOpacity: 0.10,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
     elevation: 4,
   },
-  trackBar: { backgroundColor: '#050C1C', overflow: 'hidden', width: '100%' },
+  trackBar: { backgroundColor: color.inset, overflow: 'hidden', width: '100%' },
   fill: { backgroundColor: color.fill },
 });

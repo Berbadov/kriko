@@ -48,6 +48,30 @@ def test_private_record_intent_takes_priority_over_buying_intent(message):
     assert chat.route_message(message) == "catalogue"
 
 
+@pytest.mark.parametrize("message", [
+    "What goes wrong with the 2020 Golf?",
+    "What usually fails on a Bosch GBH 2-26?",
+    "Common problems with the Dell XPS 13",
+    "Is the 2021 model known to fail?",
+])
+def test_a_failure_question_reads_the_records_not_general_chat(message):
+    assert chat.route_message(message) == "catalogue"
+
+
+def test_a_failure_question_without_packs_reads_the_web():
+    searched = []
+
+    def search(query, limit):
+        searched.append(query)
+        return []
+
+    ctx = chatdata.Context(store=None, web_search=search, web_read=lambda _url: "")
+    out = chat.run_turn("What goes wrong with the 2020 Golf?", ctx=ctx,
+                        ask=lambda _prompt: "No page was fetched, so nothing is verified.")
+    assert searched
+    assert out["search_rounds"] == 1
+
+
 def test_budget_need_actually_reads_sources_before_answering():
     searched = []
     read = []

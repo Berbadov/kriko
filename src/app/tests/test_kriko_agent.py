@@ -1,4 +1,4 @@
-"""The fixed Mercury 2.5 + DeepSeek stack, exercised without network access."""
+"""The fixed Mercury 3 + DeepSeek stack, exercised without network access."""
 
 import json
 import threading
@@ -83,9 +83,10 @@ def test_search_then_fetch_returns_grounding_text_and_token_metrics(monkeypatch)
         nonlocal model_turn
         if url.endswith("/chat/completions"):
             assert headers["authorization"] == "Bearer fixture-mercury"
-            assert payload["model"] == "mercury-2.5"
+            assert payload["model"] == "mercury-3"
             assert payload["reasoning_effort"] == "low"
-            assert payload["max_tokens"] == 3072
+            assert payload["max_tokens"] == 8192
+            assert 0.5 <= payload["temperature"] <= 1.0
             model_turn += 1
             if model_turn == 1:
                 _emit_tool_call(on_event, "search", {"query": "2025 Widget SSD"})
@@ -386,7 +387,7 @@ def test_successful_call_accounting_does_not_bill_an_empty_search(tmp_path):
 
     assert researcher.tool_calls == 0
     assert researcher.retrieval_requests == 1
-    assert researcher.spent == pytest.approx(0.20)
+    assert researcher.spent == pytest.approx(0.10)
     assert modelcatalogue.tool_price("mercury", "deepseek_search", tmp_path) == 0.00075
 
 
@@ -644,14 +645,29 @@ def test_saved_agent_controls_reach_the_mercury_adapter(monkeypatch, tmp_path):
     )
 
 
-def test_fixed_agent_uses_mercury_25_and_lists_deepseek_search():
+def test_fixed_agent_uses_mercury_3_and_lists_deepseek_search():
     researcher = apiagent.ApiAgentResearcher(
         apiagent.KRIKO_AGENT,
         converse=lambda *_args, **_kwargs: mistral.Reply(),
     )
-    assert researcher.model == "mercury-2.5"
+    assert researcher.model == "mercury-3"
     assert researcher.search_provider == "DeepSeek Search"
-    assert apiagent.models_for(apiagent.KRIKO_AGENT)[0] == "mercury-2.5"
+    assert apiagent.models_for(apiagent.KRIKO_AGENT)[0] == "mercury-3"
+
+
+def test_mercury_3_envelope_is_within_the_models_limits(monkeypatch):
+    assert kriko_agent.MODEL == "mercury-3"
+    # The provider's documented range, not a preference: 0.1 was a Mercury 2.5
+    # value and Mercury 3 refuses it.
+    assert 0.5 <= kriko_agent.TEMPERATURE <= 1.0
+    assert kriko_agent.MAX_OUTPUT_TOKENS == 131_072
+
+    monkeypatch.setattr(keys, "require", lambda provider, **_kw: f"fixture-{provider}")
+    too_many = kriko_agent.converse(
+        "Research the Widget", search=False,
+        max_tokens=kriko_agent.MAX_OUTPUT_TOKENS + 1,
+    )
+    assert "131072" in too_many.error
 
 
 def test_picked_kriko_agent_uses_the_fixed_stack_through_the_harness(monkeypatch):
@@ -659,7 +675,7 @@ def test_picked_kriko_agent_uses_the_fixed_stack_through_the_harness(monkeypatch
                         lambda *args, **kwargs: [apiagent.KRIKO_AGENT])
     researcher = harness_researcher_for_test()
     assert isinstance(researcher, apiagent.ApiAgentResearcher)
-    assert researcher.model == "mercury-2.5"
+    assert researcher.model == "mercury-3"
     assert researcher.search_provider == "DeepSeek Search"
 
 
@@ -699,6 +715,24 @@ def test_tool_context_is_bounded_and_keeps_source_urls():
     assert packed["results"][0]["url"] == url
     assert packed["results"][0]["page_text"]
     assert len(packed["results"][0]["page_text"]) < len(result["results"][0]["page_text"])
+
+
+def test_tool_view_clips_page_text_without_mutating_the_grounding_copy():
+    long_text = "evidence " * 900
+    payload = {"results": [{"url": "https://maker.example/spec", "page_text": long_text}]}
+    view = kriko_agent._tool_view(payload)
+
+    assert len(view["results"][0]["page_text"]) == kriko_agent.MAX_TOOL_TEXT_CHARS
+    assert payload["results"][0]["page_text"] == long_text
+    assert kriko_agent.MAX_SOURCE_CHARS > kriko_agent.MAX_TOOL_TEXT_CHARS
+
+
+def test_catalogue_prices_mercury_3_at_its_published_rates():
+    row = modelcatalogue.load()["mercury-3"]
+    assert row["provider"] == "mercury"
+    assert row["context"] == 1_000_000
+    assert row["usd_in"] == pytest.approx(0.10)
+    assert row["usd_out"] == pytest.approx(0.35)
 
 
 def test_validation_sensitivity_requires_longer_and_then_exact_quotes():

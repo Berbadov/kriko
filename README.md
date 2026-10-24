@@ -1,26 +1,29 @@
 # Kriko
 
-[![version](https://img.shields.io/badge/version-0.3.3-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
+[![version](https://img.shields.io/badge/version-0.3.5-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
 
 Kriko answers one question about the product you are looking at: *what is known
-to go wrong with this exact one*. It runs on your computer — a Windows desktop
-app and a browser extension — and keeps the source beside every finding.
+to go wrong with this exact one*. It runs on your computer — a desktop app for
+Windows, with an Apple Silicon macOS build made from source, and a browser
+extension — and keeps the source beside every finding.
 Installed catalog lookups work offline. Research uses the agent or model you
 choose, and a paid provider bills your own account.
 
-**[Download the Windows installer](https://github.com/Berbadov/kriko/releases/latest/download/kriko-0.3.3-x86_64-setup.exe)** ·
+**[Download the Windows installer](https://github.com/Berbadov/kriko/releases/latest/download/kriko-0.3.5-x86_64-setup.exe)** ·
 [Browser extension](https://chromewebstore.google.com/detail/kriko/bdifnaggafjokndlpjgmlfappcoehdjb) ·
 [Website](https://kriko.cc)
 
-0.3.2 improves shared-access setup and connection reliability. The extension
-panel opens on request; the [changelog](CHANGELOG.md) has the rest.
+0.3.5 improves grounded Quick Look responses and research coverage reporting.
+The companion extension 0.4.8 has a more compact panel, and mobile 0.8.0 brings
+a warm paper interface, on-demand scanning and animated progress. See the
+[changelog](CHANGELOG.md) for the release scope.
 
 ## Install
 
 | Artifact | Use |
 |---|---|
-| `kriko-0.3.3-x86_64-setup.exe` | Per-user Windows installer; no administrator rights required. |
-| `kriko-0.3.3-win64-portable.zip` | Extract the whole archive and open `kriko.exe`. |
+| `kriko-0.3.5-x86_64-setup.exe` | Per-user Windows installer; no administrator rights required. |
+| `kriko-0.3.5-win64-portable.zip` | Extract the whole archive and open `kriko.exe`. |
 
 1. Open Kriko, choose an agent in **More → Agents** and press **Check connection**.
 2. Open **Catalogs → Find release catalogs** and install one, or import a
@@ -29,9 +32,11 @@ panel opens on request; the [changelog](CHANGELOG.md) has the rest.
    keep the desktop app running, and press the toolbar button or **Alt + K** on a
    product listing.
 
-The installer is unsigned, so Windows may warn before it runs. The published
-desktop scope is Windows x86_64; the source builds elsewhere. Details:
-[Windows installation](docs/INSTALL_WINDOWS.md).
+The installer is unsigned, so Windows may warn before it runs. Published desktop
+artifacts are Windows x86_64. A native Apple Silicon build is made from source
+by the desktop recipe — `kriko-ui/package-macos.sh` — and is not a release
+download yet. Details: [Windows installation](docs/INSTALL_WINDOWS.md),
+[macOS installation](docs/INSTALL_MACOS.md).
 
 ## What it does
 
