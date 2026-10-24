@@ -1084,6 +1084,55 @@ test("an unknown product gets one button: quick cards now, then the deeper run (
   assert.match(slot.querySelector(".lite-research-status").textContent, /reading/);
 });
 
+test("product info is closed by default, counts its rows, and leaves out empty ones", () => {
+  const p = loadPanel({ workerResponse: (message) => {
+    if (message.type === "RESEARCH_PLANE") return { ok: true, plane: { backend: "harness", budget_usd: 0 } };
+    if (message.type === "RESEARCH_PRODUCT") return { ok: true, job: { job_id: "q2", kind: "quick_look" } };
+    if (message.type === "JOB_STATUS") {
+      return { ok: true, job: { state: "succeeded", done: true, result: {
+        risks: [], specs: [], dropped: 0,
+        listing: { url: "https://example.test/listing", facts: {
+          "Anti-Glare": ":", "Ekran Boyutu": ": 27 inç", "HDMI Sayısı": "1" } } } } };
+    }
+    return { ok: true };
+  } });
+  p.openPanel();
+  p.deliverEntry({ ...GAP_ENTRY, result: { ...GAP_ENTRY.result, subjects: [] } });
+  p.click(".lite-research-product");
+  p.type(".lite-research-name", "Gamepower Kaze T20");
+  p.click(".lite-research-start");
+
+  const info = p.shadow().querySelector(".lite-research .lite-quick-info");
+  assert.ok(info, "the product info is shown");
+  assert.equal(info.hasAttribute("open"), false, "closed until the reader asks");
+  assert.equal(info.querySelector("summary").textContent, "Product info · 2");
+  assert.deepEqual([...info.querySelectorAll(".lite-quick-specs p")].map((row) => row.textContent),
+    ["Ekran Boyutu: 27 inç", "HDMI Sayısı: 1"]);
+});
+
+test("a quick look that reported no pages is not said to have read none", () => {
+  const p = loadPanel({ workerResponse: (message) => {
+    if (message.type === "RESEARCH_PLANE") return { ok: true, plane: { backend: "harness", budget_usd: 0 } };
+    if (message.type === "RESEARCH_PRODUCT") return { ok: true, job: { job_id: "q4", kind: "quick_look" } };
+    if (message.type === "JOB_STATUS") {
+      // The agent searched for itself, so the run has no page figures at all.
+      return { ok: true, job: { state: "succeeded", done: true,
+        result: { risks: [], specs: [], dropped: 0, coverage: {} } } };
+    }
+    return { ok: true };
+  } });
+  p.openPanel();
+  p.deliverEntry({ ...GAP_ENTRY, result: { ...GAP_ENTRY.result, subjects: [] } });
+  p.click(".lite-research-product");
+  p.type(".lite-research-name", "Gamepower Kaze T20");
+  p.click(".lite-research-start");
+
+  const card = p.shadow().querySelector(".lite-research .lite-noissue");
+  assert.ok(card, "the no-issue card is shown");
+  assert.doesNotMatch(card.textContent, /0 pages read/);
+  assert.match(card.querySelector(".lite-noissue-note").textContent, /did not say which pages it read/);
+});
+
 test("a deep run that installed its pack refreshes the listing (B148)", () => {
   const p = loadPanel({ workerResponse: (message) => {
     if (message.type === "RESEARCH_PLANE") return { ok: true, plane: { backend: "harness", budget_usd: 0 } };
