@@ -3,6 +3,25 @@
 Reader-visible changes for each release. Newest first. Published versions are
 immutable; a correction is a newer version.
 
+### 0.3.4
+
+- **"Update now" installs the new version.** Apps on 0.3.2 were offered an
+  update that replaced only the engine and then did nothing the reader could
+  see. Every installed app is now sent to the installer unless a release says
+  an engine-only update is safe for it.
+- **The top bar keeps clear of the logo.** Between about 1000 and 1250 pixels
+  wide the tabs ran over the logo and the agent pill. The tabs fold to icons
+  sooner and the agent pill hides sooner.
+- **Fewer browser-looking controls.** The catalog request box, the snapshot
+  file picker, the tick boxes in Logs and the model store, and the fold-away
+  sections in Setup, Local model, Agents and Catalogs are drawn in Kriko's own
+  style, with motion that follows Reduce motion.
+- **The settings icon is a clean gear.** It was a hand-drawn jagged shape.
+- **The browser extension's controls match.** The tick boxes and round choices
+  on its settings page are drawn in the same style, and the "Also watch while
+  my computer is off" box in the buyer card is a box again instead of a wide
+  text field. This is extension 0.4.6.
+
 ### 0.3.3
 
 - **Local agents can search the web.** A local model was only allowed to run
