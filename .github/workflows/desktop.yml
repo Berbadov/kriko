@@ -18,9 +18,14 @@ name: desktop
 # `test_the_installer_can_be_built_by_hand.py` holds them to it. The smoke steps
 # are the checks that would have caught v0.2.4: CLAUDE.md's app-first rule 3.
 #
-# There is no macOS job. The desktop app is Tauri now, which can build a macOS
-# bundle, but that recipe is not written or run yet, and a job that nobody has
-# seen go green is not a release step.
+# The Apple Silicon job builds the native arm64 package. It exists because the
+# recipe it runs (`kriko-ui/package-macos.sh`) does, and because a macOS bundle
+# is assembled on macOS: Tauri and PyInstaller both refuse to cross-compile, and
+# a bundle produced under emulation would not be evidence for the machine the
+# reader runs. The job uploads a `.dmg` as an artifact and does not touch the
+# release: publishing macOS assets needs an observation record for that
+# platform, which `tools/release_readiness.py` still refuses (its evidence is
+# Windows-only).
 on:
     workflow_dispatch:
 
@@ -200,6 +205,63 @@ jobs:
                       kriko-ui/builds/*.zip
                       kriko-ui/builds/engine.json
                       kriko-ui/builds/SHA256SUMS.txt
+                  if-no-files-found: error
+
+    # One command, because there is one recipe: `kriko-ui/package-macos.sh`
+    # is the by-hand build on a Mac too, and it holds its own preflight,
+    # freeze, smoke, signature and disk image. Repeating those steps here
+    # would be a second recipe to keep in step with the first, which is the
+    # failure `test_the_macos_package_is_built_by_hand.py` exists to prevent.
+    bundle-macos:
+        name: macos-arm64
+        runs-on: macos-14
+        defaults:
+            run:
+                shell: bash
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-python@v5
+              with:
+                  # 3.13: the same interpreter the suite runs on, and the one
+                  # the frozen engine carries. See the note on the Windows job.
+                  python-version: "3.13"
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: "22"
+                  cache: npm
+                  cache-dependency-path: kriko-ui/package-lock.json
+
+            - uses: dtolnay/rust-toolchain@stable
+
+            - name: The version is the tree's
+              run: |
+                  python tools/bump.py --show
+                  tree=$(python -c "import tomllib;print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
+                  if [ "${{ github.ref_type }}" = "tag" ] && [ "${GITHUB_REF_NAME#v}" != "$tree" ]; then
+                      echo "tag ${GITHUB_REF_NAME} is not the tree ($tree)"
+                      exit 1
+                  fi
+                  echo "VERSION=$tree" >> "$GITHUB_ENV"
+
+            # The frozen engine is signed with the build identity when the
+            # secret is set, and ad-hoc signed when it is not; unsigned would
+            # not start on Apple Silicon at all.
+            - name: Build the app, the bundle and the disk image
+              env:
+                  KRIKO_SHARE_PEPPER: ${{ secrets.KRIKO_SHARE_PEPPER }}
+                  KRIKO_MACOS_SIGN_IDENTITY: ${{ secrets.KRIKO_MACOS_SIGN_IDENTITY }}
+              run: |
+                  chmod +x kriko-ui/package-macos.sh
+                  kriko-ui/package-macos.sh --arch arm64 --version "$VERSION" --python "$(command -v python)"
+
+            - uses: actions/upload-artifact@v4
+              with:
+                  name: kriko-macos
+                  path: |
+                      kriko-ui/builds/*.dmg
+                      kriko-ui/builds/SHA256SUMS-macos.txt
                   if-no-files-found: error
 
     # The knowledge, built once and published beside the installers. Packs are

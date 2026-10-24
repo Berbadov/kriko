@@ -1,0 +1,17 @@
+{
+  "bundle": {
+    "targets": [
+      "app"
+    ],
+    "externalBin": [
+      "binaries/kriko-sidecar",
+      "binaries/openserp"
+    ],
+    "resources": {
+      "third-party/OpenSERP-LICENSE.txt": "OpenSERP-LICENSE.txt"
+    },
+    "macOS": {
+      "minimumSystemVersion": "11.0"
+    }
+  }
+}
