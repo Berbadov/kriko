@@ -29,6 +29,7 @@ import { Landing } from './Landing';
 import { ScreenShareSheet } from '../components/ScreenShareSheet';
 import { useOverlaySession } from '../components/OverlaySession';
 import { ScreenshotSheet, type Shot } from '../components/ScreenshotSheet';
+import { moveAppToBack } from '../engine/overlay';
 import { AccessError, useStore } from '../engine/store';
 import { tr } from '../i18n';
 import type { AppAction, Message, Reading } from '../engine/types';
@@ -185,6 +186,12 @@ export function ChatScreen() {
   const readScreen = () => {
     if (!canAsk) {
       openAccess();
+      return;
+    }
+    // With the scanner already on, "Scan a product" means "take me to the page":
+    // step aside so the K floats over it, instead of explaining the setup again.
+    if (overlay.active) {
+      void moveAppToBack();
       return;
     }
     setScreenOpen(true);

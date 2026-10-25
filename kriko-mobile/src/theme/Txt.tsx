@@ -1,6 +1,8 @@
 import { Text, type TextProps, type TextStyle } from 'react-native';
 
-import { tr, useLanguage } from '../i18n';
+import type { ReactNode } from 'react';
+
+import { tr, upper, useLanguage } from '../i18n';
 import type { Colors } from './palettes';
 import type { TypeToken } from './tokens';
 import { useTheme } from './theme';
@@ -20,6 +22,13 @@ type Props = TextProps & {
   translate?: boolean;
   style?: TextStyle | TextStyle[];
 };
+
+/** Apply `change` to every string in a run, leaving elements and numbers alone. */
+function mapStrings(node: ReactNode, change: (value: string) => string): ReactNode {
+  if (typeof node === 'string') return change(node);
+  if (Array.isArray(node)) return node.map((part) => mapStrings(part, change));
+  return node;
+}
 
 /**
  * All text goes through here so a token decides the family, size, line height
@@ -42,17 +51,21 @@ export function Txt({
   // Only one string can be swapped. An array or an element is a composed run —
   // a value interpolated into a sentence — and its owner translates that, not
   // this component.
-  const text =
+  const translated =
     translate && language === 'tr' && typeof children === 'string'
       ? tr(children, language)
       : children;
+  // Capitals are made here, not by `textTransform`: the native transform follows
+  // the phone's locale, which turns Turkish "geçmiş" into "GEÇMIŞ".
+  const text = caps
+    ? mapStrings(translated, (value) => upper(value, language))
+    : translated;
   return (
     <Text
       {...rest}
       style={[
         theme.type[variant] as TextStyle,
         { color: tint },
-        caps ? { textTransform: 'uppercase' } : null,
         style,
       ]}
     >

@@ -15,7 +15,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import ts from 'typescript';
 
-import { hasTranslation } from '../src/i18n';
+import { hasTranslation, tr, upper } from '../src/i18n';
 
 const ROOT = process.env.KRIKO_MOBILE_ROOT ?? join(__dirname, '..');
 const SRC = join(ROOT, 'src');
@@ -130,7 +130,28 @@ function exempt(text: string): boolean {
   return false;
 }
 
+/**
+ * Capitals follow the app's language, not the phone's. A native
+ * `textTransform: 'uppercase'` uses the device locale, so an English-locale
+ * phone drew Turkish "geçmiş" as "GEÇMIŞ" (dotless I where İ belongs).
+ */
+function checkTurkishCapitals(): void {
+  assert.equal(upper('geçmiş', 'tr'), 'GEÇMİŞ');
+  assert.equal(upper('ışık ve iş', 'tr'), 'IŞIK VE İŞ');
+  assert.equal(upper('ücretsiz', 'tr'), 'ÜCRETSİZ');
+  assert.equal(upper('history', 'en'), 'HISTORY');
+  assert.equal(tr('history', 'tr'), 'geçmiş');
+  for (const file of filesUnder(SRC)) {
+    const source = readFileSync(file, 'utf8');
+    assert.ok(
+      !/textTransform:\s*['"]uppercase['"]/.test(source),
+      `${relative(ROOT, file)} sets textTransform: 'uppercase'; use <Txt caps> so Turkish capitals are right.`,
+    );
+  }
+}
+
 function main(): void {
+  checkTurkishCapitals();
   const candidates = collect();
   const missing = candidates.filter((item) => !exempt(item.text) && !hasTranslation(item.text));
   if (missing.length) {

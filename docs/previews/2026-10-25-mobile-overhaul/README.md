@@ -20,9 +20,10 @@ What the captures show:
 - the new settings: theme, text size, motion, haptics, language, answer length
   and research depth.
 
-Not shown: the Android floating scan capsule and its panel. Those are native
-Android views and need an installed build; the web preview cannot draw them.
-They were restyled and themed in this change but are not visually verified here.
+Not shown here: the Android floating scan capsule and its panel. Those are
+native Android views and need an installed build; the web preview cannot draw
+them. They were redrawn afterwards and captured on an emulator, in
+[2026-10-25-floating-scanner](../2026-10-25-floating-scanner/README.md).
 
 The two problems these captures caught and the change fixed: the haptics
 description ran under its switch at 390 px, and the saved-conversation counter
