@@ -22,10 +22,13 @@ import {
   useReducer,
   useRef,
 } from 'react';
+import { AppState } from 'react-native';
 
+import { startsFreshChat } from './freshchat';
 import { runTurn, readListing } from './providers';
 import { readingTitle, SCREENSHOT_QUESTION, type AnswerStyle } from './prompt';
 import { normalizeReading } from './reading';
+import { pruneThumbnails } from './thumbs';
 import { prepareVisionImage } from './visionimage';
 import { hasTrialBundle, openAccess, openTrial, type TrialAccess } from './sharekeys';
 import { setLanguage, type Language } from '../i18n';
@@ -34,6 +37,8 @@ import {
   isAppearance,
   isMotionPreference,
   isTextSize,
+  normalizePuckOpacity,
+  PUCK_OPACITY_DEFAULT,
   type Appearance,
   type MotionPreference,
   type TextSize,
@@ -177,6 +182,8 @@ interface Prefs {
   textSize: TextSize;
   motion: MotionPreference;
   haptics: boolean;
+  /** Percent. How opaque the floating K is while it waits. */
+  puckOpacity: number;
 }
 
 const INITIAL_PREFS: Prefs = {
@@ -187,6 +194,7 @@ const INITIAL_PREFS: Prefs = {
   textSize: 'default',
   motion: 'system',
   haptics: true,
+  puckOpacity: PUCK_OPACITY_DEFAULT,
 };
 
 interface State extends Prefs {
@@ -457,6 +465,7 @@ interface Store extends State {
   setTextSize: (value: TextSize) => void;
   setMotion: (value: MotionPreference) => void;
   setHaptics: (value: boolean) => void;
+  setPuckOpacity: (value: number) => void;
   resetPreferences: () => void;
 }
 
@@ -522,7 +531,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     let alive = true;
     (async () => {
       let threads: Thread[] = [];
-      let activeId: string | null = null;
       let trialUsed = 0;
       let queueJobs: QueueJob[] = [];
       let access: AccessState = EMPTY_ACCESS;
@@ -551,6 +559,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
               textSize: isTextSize(stored.textSize) ? stored.textSize : 'default',
               motion: isMotionPreference(stored.motion) ? stored.motion : 'system',
               haptics: stored.haptics !== false,
+              puckOpacity: normalizePuckOpacity(stored.puckOpacity),
             };
           } catch {
             prefs = INITIAL_PREFS;
@@ -583,19 +592,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         setLanguage(prefs.language);
         if (saved) {
           try {
-            const parsed = JSON.parse(saved) as {
-              threads?: unknown[];
-              activeId?: string | null;
-            };
+            const parsed = JSON.parse(saved) as { threads?: unknown[] };
             if (Array.isArray(parsed.threads)) {
               threads = parsed.threads
                 .map(normalizeThread)
                 .filter((thread): thread is Thread => thread !== null);
             }
-            if (typeof parsed.activeId === 'string') activeId = parsed.activeId;
           } catch {
             threads = [];
-            activeId = null;
           }
         }
         if (used) {
@@ -693,11 +697,18 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (!alive) return;
+      const kept = capThreads(threads);
+      // Pictures no chat or scan refers to any more are dropped once per launch.
+      void pruneThumbnails([
+        ...kept.flatMap((thread) => thread.messages.map((message) => message.imageUri)),
+        ...queueJobs.map((job) => job.imageUri),
+      ]);
       dispatch({
         type: 'hydrate',
         access,
-        threads: capThreads(threads),
-        activeId: threads.some((thread) => thread.id === activeId) ? activeId : null,
+        threads: kept,
+        // Every launch opens on a blank chat; the last one is in History.
+        activeId: null,
         trialUsed,
         prefs,
         queueJobs,
@@ -710,12 +721,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!state.hydrated) return;
-    const payload = JSON.stringify({
-      threads: capThreads(state.threads),
-      activeId: state.activeId,
-    });
+    // Which chat is open is not saved: the next launch starts on a blank one.
+    const payload = JSON.stringify({ threads: capThreads(state.threads) });
     persistLatest(threadWrite, THREADS_KEY, payload);
-  }, [state.threads, state.activeId, state.hydrated]);
+  }, [state.threads, state.hydrated]);
 
   useEffect(() => {
     if (!state.hydrated) return;
@@ -737,6 +746,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       textSize: state.textSize,
       motion: state.motion,
       haptics: state.haptics,
+      puckOpacity: state.puckOpacity,
     };
     AsyncStorage.setItem(PREFS_KEY, JSON.stringify(prefs)).catch(() => {});
   }, [
@@ -747,8 +757,33 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     state.textSize,
     state.motion,
     state.haptics,
+    state.puckOpacity,
     state.hydrated,
   ]);
+
+  // Coming back after a real absence opens a blank chat, like a launch does.
+  // A short trip to another app keeps the conversation, and a turn that is
+  // still being written is never replaced.
+  useEffect(() => {
+    let leftAt: number | null = null;
+    const subscription = AppState.addEventListener('change', (next) => {
+      if (next !== 'active') {
+        if (leftAt === null) leftAt = Date.now();
+        return;
+      }
+      const awayMs = leftAt === null ? 0 : Date.now() - leftAt;
+      leftAt = null;
+      const current = stateRef.current;
+      if (startsFreshChat({
+        awayMs,
+        streaming: current.streamingId !== null,
+        hasActiveChat: current.activeId !== null,
+      })) {
+        dispatch({ type: 'active/set', id: null });
+      }
+    });
+    return () => subscription.remove();
+  }, []);
 
   useEffect(() => {
     setHapticsEnabled(state.haptics);
@@ -1252,6 +1287,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     (value: boolean) => dispatch({ type: 'prefs/patch', patch: { haptics: value } }),
     [],
   );
+  const setPuckOpacity = useCallback(
+    (value: number) => dispatch({ type: 'prefs/patch', patch: { puckOpacity: normalizePuckOpacity(value) } }),
+    [],
+  );
   const resetPreferences = useCallback(() => {
     setLanguage(INITIAL_PREFS.language);
     dispatch({
@@ -1264,6 +1303,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         textSize: INITIAL_PREFS.textSize,
         motion: INITIAL_PREFS.motion,
         haptics: INITIAL_PREFS.haptics,
+        puckOpacity: INITIAL_PREFS.puckOpacity,
       },
     });
   }, []);
@@ -1332,6 +1372,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       setTextSize,
       setMotion,
       setHaptics,
+      setPuckOpacity,
       resetPreferences,
     }),
     [
@@ -1358,6 +1399,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       setTextSize,
       setMotion,
       setHaptics,
+      setPuckOpacity,
       resetPreferences,
     ],
   );

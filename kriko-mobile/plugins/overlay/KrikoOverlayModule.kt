@@ -1,6 +1,7 @@
 package __PACKAGE__.overlay
 
 import android.app.Activity
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -31,6 +32,12 @@ class KrikoOverlayModule(private val appContext: ReactApplicationContext) :
     @Volatile private var headlessTaskId: Int? = null
     /** The last palette and labels JS sent, kept so a session starts already themed. */
     @Volatile private var uiJson: String? = null
+    /**
+     * Whether Kriko's screen is mounted and listening for scans. The scanner
+     * outlives the screen; when nobody is listening it opens the app with the
+     * picture instead of emitting an event no one would hear.
+     */
+    @Volatile var jsReady: Boolean = false
 
     fun emit(name: String, body: com.facebook.react.bridge.WritableMap) {
       val context = reactContextRef?.get() ?: return
@@ -44,6 +51,12 @@ class KrikoOverlayModule(private val appContext: ReactApplicationContext) :
       emit("onSession", body)
       startHeadlessSession()
       startPromise?.resolve(true)
+      startPromise = null
+    }
+
+    /** A re-grant for a session that already exists failed; the session itself carries on. */
+    fun startRejected(message: String) {
+      startPromise?.reject("PROJECTION_START_FAILED", message)
       startPromise = null
     }
 
@@ -84,7 +97,9 @@ class KrikoOverlayModule(private val appContext: ReactApplicationContext) :
 
   @ReactMethod
   fun startSession(promise: Promise) {
-    if (KrikoOverlayService.isActive) {
+    // A session whose capture was ended by the system is still "active"; asking
+    // to start it again is how the reader grants capture again from Settings.
+    if (KrikoOverlayService.isActive && KrikoOverlayService.captureLive) {
       promise.resolve(true)
       return
     }
@@ -150,8 +165,53 @@ class KrikoOverlayModule(private val appContext: ReactApplicationContext) :
   override fun invalidate() {
     startPromise?.reject("MODULE_RELOADED", "The screen scan permission flow was interrupted. Start the session again.")
     startPromise = null
+    jsReady = false
     finishHeadlessSession()
     super.invalidate()
+  }
+
+  /** Called by the session provider as it mounts (true) and unmounts (false). */
+  @ReactMethod
+  fun setUiReady(ready: Boolean) {
+    jsReady = ready
+  }
+
+  /** Whether Kriko is the phone's chosen digital assistant right now. */
+  @ReactMethod
+  fun isDefaultAssistant(promise: Promise) {
+    promise.resolve(try {
+      val resolver = appContext.contentResolver
+      val chosen = Settings.Secure.getString(resolver, "assistant")
+        ?: Settings.Secure.getString(resolver, "voice_interaction_service")
+      val component = chosen?.let { ComponentName.unflattenFromString(it) }
+      component?.packageName == appContext.packageName
+    } catch (_: Exception) {
+      false
+    })
+  }
+
+  /**
+   * Open the phone's own page for choosing the digital assistant. Android does
+   * not let an app pick itself, so the reader makes the choice there.
+   */
+  @ReactMethod
+  fun openAssistantSettings(promise: Promise) {
+    val candidates = listOf(
+      Intent(Settings.ACTION_VOICE_INPUT_SETTINGS),
+      Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS),
+      Intent(Settings.ACTION_SETTINGS),
+    )
+    for (candidate in candidates) {
+      try {
+        candidate.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        appContext.startActivity(candidate)
+        promise.resolve(true)
+        return
+      } catch (_: Exception) {
+        // Try the next, broader screen.
+      }
+    }
+    promise.resolve(false)
   }
 
   @ReactMethod
@@ -223,6 +283,8 @@ class KrikoOverlayModule(private val appContext: ReactApplicationContext) :
   @ReactMethod
   fun updateUi(json: String) {
     uiJson = json
+    // Also kept on disk: the assistant starts without this module being awake.
+    KrikoUi(appContext).save(json)
     if (!KrikoOverlayService.isActive) return
     appContext.startService(Intent(appContext, KrikoOverlayService::class.java).apply {
       action = KrikoOverlayService.ACTION_UI

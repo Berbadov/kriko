@@ -8,6 +8,8 @@ export type OverlayJob = {
   error?: string;
   sources?: { n: number; url: string; title?: string }[];
   steps?: { kind: string; text: string }[];
+  /** A picture of the scanned page (a local file), shown beside the title. */
+  image?: string;
 };
 
 export type OverlayScan = {
@@ -17,7 +19,8 @@ export type OverlayScan = {
   mode?: "research" | "site_reviews";
   reviewSite?: string;
 };
-export type OverlaySession = { active: boolean };
+/** `paused` means the session stands but Android ended screen capture (the phone locked). */
+export type OverlaySession = { active: boolean; paused?: boolean };
 export type OverlayAction = { action: "select" | "cancel"; id: string };
 
 /** The resolved palette the native bubble and panel should draw in. */
@@ -65,9 +68,22 @@ export type OverlayLabels = {
   answerEmpty: string;
   captureFailed: string;
   sourceFailed: string;
+  copy: string;
+  copied: string;
+  scannedPage: string;
+  /** The grey page: capture ended, the next Scan asks for it again. */
+  paused: string;
+  notificationPausedText: string;
+  resumeFailed: string;
+  /** The phone-assistant card: shown at once, then while the app opens. */
+  openingKriko: string;
+  assistScanning: string;
+  assistNoShot: string;
+  assistTitle: string;
 };
 
-export type OverlayUi = { theme: OverlayTheme; labels: OverlayLabels };
+/** `puckOpacity` is a percentage: how solid the floating K rests, 20 to 100. */
+export type OverlayUi = { theme: OverlayTheme; labels: OverlayLabels; puckOpacity: number };
 
 type KrikoOverlayNative = {
   startSession(): Promise<void>;
@@ -76,6 +92,9 @@ type KrikoOverlayNative = {
   ensureHeadlessSession(): void;
   moveToBack(): Promise<boolean>;
   setAppForeground(foreground: boolean): void;
+  setUiReady(ready: boolean): void;
+  isDefaultAssistant(): Promise<boolean>;
+  openAssistantSettings(): Promise<boolean>;
   updateJobs(json: string): void;
   updateUi(json: string): void;
   addListener(eventName: string): void;
@@ -168,6 +187,26 @@ export function setOverlayAppForeground(foreground: boolean): void {
 export function moveAppToBack(): Promise<boolean> {
   if (!overlayAvailable()) return Promise.resolve(false);
   return native!.moveToBack().catch(() => false);
+}
+
+/**
+ * Tell the scanner whether Kriko's screen is mounted and listening. The scanner
+ * outlives the screen; while nobody listens it opens the app with the picture.
+ */
+export function setOverlayUiReady(ready: boolean): void {
+  if (overlayAvailable()) native!.setUiReady(ready);
+}
+
+/** Whether Kriko is the phone's chosen digital assistant (power or home long-press). */
+export function isDefaultAssistant(): Promise<boolean> {
+  if (!overlayAvailable()) return Promise.resolve(false);
+  return native!.isDefaultAssistant().catch(() => false);
+}
+
+/** Open the phone's own page for choosing the digital assistant. */
+export function openAssistantSettings(): Promise<boolean> {
+  if (!overlayAvailable()) return Promise.resolve(false);
+  return native!.openAssistantSettings().catch(() => false);
 }
 
 export function updateOverlayJobs(jobs: OverlayJob[]): void {

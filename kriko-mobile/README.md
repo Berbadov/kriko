@@ -17,7 +17,8 @@ code.
 | **Watch it work** | Every search and every page read is shown while it happens. |
 | **Check the sources** | The numbered pages sit under the answer and have their own page. |
 | **Open a screen** | Ask to see your history or settings and the answer offers an Open button. Nothing navigates without your press. |
-| **Scan over the page** | Drag the blue K to place the floating scanner. Scan, open the queue, or stop sharing from its controls. |
+| **Scan over the page** | Drag the floating K, a small page you can see through, to place the scanner. Scan, open the results, or stop sharing from its controls. Its transparency is a setting. |
+| **Scan with a long press** | Make Kriko your phone's digital assistant, then hold the power or home button: Kriko answers at once and opens a fresh chat that reads your screen. |
 | **Queue products** | Follow live scan steps, formatted answers and clickable sources in the floating panel or app. |
 | **Recover scans** | Scan results appear in History; waiting jobs resume after reopening and interrupted jobs are marked for another scan. |
 | **Turkish or English** | The whole interface switches in Settings, in place. A coverage test keeps every screen string translated. |
@@ -74,6 +75,10 @@ can actually honour:
 - **Motion**: System, Reduced or Full. System follows Android's remove-animations
   setting.
 - **Haptics**: one switch for every tap, press and completion.
+- **Floating scanner**: how solid the floating K is while it waits (Faint, Soft,
+  Strong, Solid). A touch, a scan or an answer brings it to full strength.
+- **Phone assistant**: whether Kriko is the phone's digital assistant, and a
+  button to the system screen where it is chosen.
 - **Access**: trial count, access code, forget the shared keys.
 - **Conversations**: every chat, scan results, clear all, History and About pages.
 - **Privacy**: the exact list of what leaves the phone.
@@ -81,6 +86,29 @@ can actually honour:
   leaving keys, chats and scans alone.
 
 ## Floating scanner and product queue
+
+The floating **K** is a page with a folded corner, not a circle, and it is
+translucent: the reader sets how much in Settings. It sweeps a band of light
+while research runs and turns over when an answer is ready. The scan result
+hangs from the top of the screen, under the status bar, with the picture of the
+scanned page beside its title; the answer is set as a lead sentence, headings,
+bullets and numbered sources, with a Copy button. The scanner ends only when the
+reader presses Stop: closing Kriko's screen no longer ends it, and when Android
+ends screen capture (it does when the phone locks) the K stays, turns grey, and
+the next **Scan** asks for capture again over the reader's own page.
+
+### The phone assistant
+
+Kriko declares itself as a digital assistant, so it appears under Settings →
+Apps → Default apps → Digital assistant app (the path differs by phone).
+**Settings → Phone assistant → Set as assistant** opens that screen. Once chosen,
+holding the power or home button shows a small scanning card at once, saves the
+screenshot Android hands over and opens Kriko on a **new chat** that reads it.
+Android sends the screenshot only when the assistant's **Use screenshot** switch
+is on; if it is off the card says so. Android keeps one assistant at a time:
+choosing another one hands the long press back to it.
+
+Screenshots of these screens are in `docs/screens/0.11/`.
 
 The Android build keeps a draggable Kriko bubble over a shopping page. Drag its
 blue **K** handle to move it. The bubble has **Scan**, **Queue** (with an active
@@ -172,7 +200,7 @@ as bullets before it is shown.
 ## Build it
 
 Requires Node 24, JDK 17, the Android SDK (platform 36+), and an Android signing
-configuration. The current app version is **0.10.0** (Android version code **10**).
+configuration. The current app version is **0.11.0** (Android version code **11**).
 This build uses the debug keystore, so the APK installs and
 updates locally but is not a Play Store artifact.
 

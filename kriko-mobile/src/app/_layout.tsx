@@ -83,6 +83,7 @@ function AppStack() {
           }}
         >
           <Stack.Screen name="index" />
+          <Stack.Screen name="assist" />
           <Stack.Screen name="history" />
           <Stack.Screen name="queue" />
           <Stack.Screen name="sources/[id]" />

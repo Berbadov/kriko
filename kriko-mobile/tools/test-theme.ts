@@ -13,6 +13,10 @@ import {
   isAppearance,
   isMotionPreference,
   isTextSize,
+  nearestPuckOpacityStep,
+  normalizePuckOpacity,
+  PUCK_OPACITY_DEFAULT,
+  PUCK_OPACITY_STEPS,
   resolvePalette,
   TEXT_SCALE,
 } from '../src/theme/preferences';
@@ -37,5 +41,25 @@ assert.equal(isMotionPreference('reduced'), true);
 assert.equal(isMotionPreference('none'), false);
 assert.equal(TEXT_SCALE.default, 1);
 assert.ok(TEXT_SCALE.small < 1 && TEXT_SCALE.large > 1);
+
+// The floating K's opacity: every offered step survives a round trip, a stored
+// value outside the range is pulled back into it, and junk is the default, so a
+// damaged preferences file can never make the scanner invisible.
+for (const step of PUCK_OPACITY_STEPS) assert.equal(normalizePuckOpacity(step), step);
+assert.ok(PUCK_OPACITY_STEPS.includes(PUCK_OPACITY_DEFAULT), 'the default is one of the offered steps');
+assert.equal(normalizePuckOpacity(0), 20, 'fully invisible is not a choice');
+assert.equal(normalizePuckOpacity(-40), 20);
+assert.equal(normalizePuckOpacity(250), 100);
+assert.equal(normalizePuckOpacity('75'), 75);
+assert.equal(normalizePuckOpacity(Number.NaN), PUCK_OPACITY_DEFAULT);
+assert.equal(normalizePuckOpacity(undefined), PUCK_OPACITY_DEFAULT);
+assert.equal(normalizePuckOpacity(null), PUCK_OPACITY_DEFAULT);
+assert.equal(normalizePuckOpacity(''), PUCK_OPACITY_DEFAULT);
+assert.equal(normalizePuckOpacity(true), PUCK_OPACITY_DEFAULT);
+assert.equal(normalizePuckOpacity('very'), PUCK_OPACITY_DEFAULT);
+assert.equal(nearestPuckOpacityStep(60), 55);
+assert.equal(nearestPuckOpacityStep(90), 100);
+assert.equal(nearestPuckOpacityStep(20), 35);
+for (const step of PUCK_OPACITY_STEPS) assert.equal(nearestPuckOpacityStep(step), step);
 
 process.stdout.write('theme checks passed.\n');

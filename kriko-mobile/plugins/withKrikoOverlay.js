@@ -11,7 +11,28 @@ const TEMPLATE_FILES = [
   'KrikoOverlayModule.kt',
   'KrikoOverlayPackage.kt',
   'KrikoOverlayService.kt',
+  'KrikoTheme.kt',
+  'KrikoWidgets.kt',
+  'KrikoPuckView.kt',
+  'KrikoMarkdown.kt',
+  'KrikoAssist.kt',
 ];
+
+/**
+ * The file Android reads to learn that Kriko is a digital assistant. Both the
+ * session service and a recognition service are required by the platform; the
+ * names are written out in full because Android does not expand a leading dot
+ * in this file the way it does in the manifest.
+ */
+function voiceInteractionXml(appPackage) {
+  return `<?xml version="1.0" encoding="utf-8"?>
+<voice-interaction-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:sessionService="${appPackage}.overlay.KrikoAssistSessionService"
+    android:recognitionService="${appPackage}.overlay.KrikoRecognitionService"
+    android:supportsAssist="true"
+    android:supportsLaunchVoiceAssistFromKeyguard="true" />
+`;
+}
 
 async function syncNativeSources(projectRoot, platformProjectRoot, appPackage) {
   if (!/^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)+$/.test(appPackage)) {
@@ -32,6 +53,13 @@ async function syncNativeSources(projectRoot, platformProjectRoot, appPackage) {
       'utf8',
     );
   }
+  const xmlDirectory = path.join(platformProjectRoot, 'app', 'src', 'main', 'res', 'xml');
+  await fs.promises.mkdir(xmlDirectory, { recursive: true });
+  await fs.promises.writeFile(
+    path.join(xmlDirectory, 'kriko_voice_interaction.xml'),
+    voiceInteractionXml(appPackage),
+    'utf8',
+  );
   const fontDirectory = path.join(platformProjectRoot, 'app', 'src', 'main', 'assets', 'fonts');
   await fs.promises.mkdir(fontDirectory, { recursive: true });
   for (const [weight, face] of [['400Regular', 'Regular'], ['500Medium', 'Medium'], ['600SemiBold', 'SemiBold']]) {
@@ -60,6 +88,54 @@ function withKrikoOverlay(config) {
       'android:stopWithTask': 'false',
     };
     if (!service) application.service.push(entry);
+
+    // Kriko as a digital assistant: listed under Default apps → Digital assistant,
+    // started by a long press of the power or home button.
+    const upsertService = (name, attributes, extras = {}) => {
+      const full = `${appPackage}.overlay.${name}`;
+      const existing = application.service.find((row) => row.$?.['android:name'] === full);
+      const row = existing || { $: { 'android:name': full } };
+      row.$ = { ...row.$, ...attributes };
+      Object.assign(row, extras);
+      if (!existing) application.service.push(row);
+    };
+    upsertService('KrikoAssistService', {
+      'android:permission': 'android.permission.BIND_VOICE_INTERACTION',
+      'android:exported': 'true',
+    }, {
+      'meta-data': [{ $: {
+        'android:name': 'android.voice_interaction',
+        'android:resource': '@xml/kriko_voice_interaction',
+      } }],
+      'intent-filter': [{ action: [{ $: { 'android:name': 'android.service.voice.VoiceInteractionService' } }] }],
+    });
+    upsertService('KrikoAssistSessionService', {
+      'android:permission': 'android.permission.BIND_VOICE_INTERACTION',
+      'android:exported': 'true',
+    });
+    upsertService('KrikoRecognitionService', {
+      'android:exported': 'true',
+    }, {
+      'intent-filter': [{
+        action: [{ $: { 'android:name': 'android.speech.RecognitionService' } }],
+        category: [{ $: { 'android:name': 'android.intent.category.DEFAULT' } }],
+      }],
+    });
+
+    // The see-through screen that asks for screen capture again when Scan is
+    // pressed after the system ended the previous grant.
+    application.activity = application.activity || [];
+    const captureName = `${appPackage}.overlay.KrikoCaptureActivity`;
+    const capture = application.activity.find((row) => row.$?.['android:name'] === captureName);
+    const captureEntry = capture || { $: { 'android:name': captureName } };
+    captureEntry.$ = {
+      ...captureEntry.$,
+      'android:exported': 'false',
+      'android:theme': '@android:style/Theme.Translucent.NoTitleBar',
+      'android:excludeFromRecents': 'true',
+      'android:taskAffinity': '',
+    };
+    if (!capture) application.activity.push(captureEntry);
     return mod;
   });
 

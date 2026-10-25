@@ -43,6 +43,8 @@ const ALLOW_EXACT = new Set([
   'Kriko&apos;s read',
   'mercury_…',
   'sk-…',
+  // The brand's letter, drawn on the floating K's preview.
+  'K',
   // A format hint, not a sentence to translate.
   'The long line that starts with S1NB…',
   // Developer invariants; a reader never sees them.

@@ -154,8 +154,6 @@ export const translations: Record<string, string> = {
 
   /* --------------------------------------------------------- welcome -- */
   'What do you want to check?': 'Neyi kontrol etmek istiyorsun?',
-  'What do owners report about the Bosch GSB 600?':
-    'Sahipler Bosch GSB 600 hakkında ne bildiriyor?',
   'A careful researcher for the product in front of you. It searches the web, reads the pages, and answers with what it found — or says what it could not.':
     'Önündeki ürün için dikkatli bir araştırmacı. Webde arar, sayfaları okur ve bulduklarıyla yanıtlar — bulamadığını da söyler.',
   'No keys on this phone yet': 'Bu telefonda henüz anahtar yok',
@@ -257,8 +255,6 @@ export const translations: Record<string, string> = {
     'Bir ürün hakkında sor ya da önündeki ekranı oku.',
   'Searched, read and cited. It says what it could not find instead of filling the gap.':
     'Arandı, okundu, kaynak gösterildi. Boşluğu doldurmak yerine bulamadığını söyler.',
-  'What goes wrong with a Bosch GSB 600 drill?': 'Bosch GSB 600 matkapta ne ters gidebilir?',
-  'Are used Galaxy Buds2 Pro worth $90?': 'Kullanılmış Galaxy Buds2 Pro 90 dolara değer mi?',
   'Trial used': 'Deneme bitti',
   Shared: 'Paylaşılan',
   'Own keys': 'Kendi anahtarlarım',
@@ -570,8 +566,8 @@ export const translations: Record<string, string> = {
   'Drag Kriko, or tap it to open the scan panel':
     'Kriko’yu sürükle veya tarama panelini açmak için dokun',
   'Kriko screen scan is active': 'Kriko ekran taraması açık',
-  'Tap the floating bubble to scan one screen when you choose.':
-    'İstediğinde tek bir ekranı taramak için yüzen balona dokun.',
+  'Tap the floating K to scan one screen when you choose.':
+    'İstediğinde tek bir ekranı taramak için yüzen K’ye dokun.',
   'Scan a product page. Each scan joins the queue here.':
     'Bir ürün sayfası tara. Her tarama burada sıraya girer.',
   'Scan a product page to see its answer and sources here.':
@@ -642,7 +638,6 @@ export const translations: Record<string, string> = {
     'Bir ilanı tara ya da soru sor. Kriko ayrıntıları bağımsız kaynaklarla karşılaştırır.',
   'Read the page open on your phone': 'Telefonunda açık olan sayfayı oku',
   'Choose a screenshot instead': 'Bunun yerine ekran görüntüsü seç',
-  'Or start with a question': 'Ya da bir soruyla başla',
   'Recently scanned': 'Son tarananlar',
   'Open the saved scan': 'Kaydedilen taramayı aç',
   'Your recent product scans': 'Son ürün taramaların',
@@ -671,6 +666,51 @@ export const translations: Record<string, string> = {
     'görüntü okuyucu kullanılabilir ürün ayrıntıları vermeden kesildi',
   'The image reader replied in prose, so these details are observations, not a confirmed identity.':
     'Görüntü okuyucu düz metin yanıt verdi; bu ayrıntılar gözlemdir, doğrulanmış bir kimlik değildir.',
+
+  /* ------------------------------------------------- the scanned picture -- */
+  'Scanned page': 'Taranan sayfa',
+  'Open the scanned picture': 'Taranan resmi aç',
+  'Close the picture': 'Resmi kapat',
+  'Checking this page': 'Bu sayfa kontrol ediliyor',
+
+  /* ------------------------------------- the floating K and the assistant -- */
+  'Screen capture paused': 'Ekran yakalama duraklatıldı',
+  'Screen capture stopped. Tap Scan on the floating K to start it again.':
+    'Ekran yakalama durdu. Yeniden başlatmak için yüzen K’deki Tara’ya dokun.',
+  'Open Kriko and start the scanner again.': 'Kriko’yu açıp tarayıcıyı yeniden başlat.',
+  'Opening Kriko…': 'Kriko açılıyor…',
+  'Scanning this screen': 'Bu ekran taranıyor',
+  'Kriko could not see your screen. In your phone’s assistant settings, turn on “Use screenshot”.':
+    'Kriko ekranını göremedi. Telefonunun asistan ayarlarında “Ekran görüntüsünü kullan” seçeneğini aç.',
+  'Floating scanner': 'Yüzen tarayıcı',
+  Transparency: 'Saydamlık',
+  'How solid the floating K is while it waits. A touch, a scan or an answer brings it to full strength.':
+    'Yüzen K beklerken ne kadar belirgin olsun. Dokunuş, tarama veya yanıt onu tam belirginliğe getirir.',
+  Faint: 'Silik',
+  Soft: 'Yumuşak',
+  Strong: 'Güçlü',
+  Solid: 'Tam',
+  'Phone assistant': 'Telefon asistanı',
+  'Kriko is your phone’s assistant. Hold the power or home button to scan the screen at once.':
+    'Kriko telefonunun asistanı. Ekranı hemen taramak için güç veya ana ekran düğmesini basılı tut.',
+  'Make Kriko your phone’s assistant, then hold the power or home button to scan the screen at once.':
+    'Kriko’yu telefonunun asistanı yap, sonra ekranı hemen taramak için güç veya ana ekran düğmesini basılı tut.',
+  'Reading your screen': 'Ekranın okunuyor',
+  'Kriko could not finish': 'Kriko bitiremedi',
+  'Kriko is checking the page you were on. The answer opens in a new chat.':
+    'Kriko bulunduğun sayfayı kontrol ediyor. Yanıt yeni bir sohbette açılır.',
+  'Back to chat': 'Sohbete dön',
+  'Scan with a long press': 'Uzun basarak tara',
+  'Set as assistant': 'Asistan olarak ayarla',
+  'Assistant settings': 'Asistan ayarları',
+  'Active': 'Açık',
+  'Not set': 'Ayarlı değil',
+  'In the list, choose Kriko under Digital assistant app, and keep “Use screenshot” on.':
+    'Listede Dijital asistan uygulaması altında Kriko’yu seç ve “Ekran görüntüsünü kullan” seçeneğini açık tut.',
+  'Kriko could not read the screenshot your phone sent. Try again.':
+    'Kriko telefonunun gönderdiği ekran görüntüsünü okuyamadı. Tekrar dene.',
+  'Kriko did not receive a screenshot. In your phone’s assistant settings, turn on “Use screenshot”.':
+    'Kriko bir ekran görüntüsü almadı. Telefonunun asistan ayarlarında “Ekran görüntüsünü kullan” seçeneğini aç.',
 };
 
 /**
