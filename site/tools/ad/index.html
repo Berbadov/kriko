@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Kriko ad</title>
+<style>
+@font-face { font-family: "Barlow Condensed"; font-weight: 700; src: url("/site/assets/fonts/barlow-condensed-latin-700-normal.woff2") format("woff2"); }
+@font-face { font-family: "Barlow Condensed"; font-weight: 600; src: url("/site/assets/fonts/barlow-condensed-latin-600-normal.woff2") format("woff2"); }
+@font-face { font-family: "Atkinson Hyperlegible Next"; font-weight: 200 800; src: url("/site/assets/fonts/atkinson-hyperlegible-next-latin-wght-normal.woff2") format("woff2"); }
+:root { --bg:#fcfbf8; --soft:#f3efe7; --ink:#0b1020; --muted:#4a5167; --line:#ddd6c8; --accent:#2447e6;
+  --good:#1c8458; --mid:#b7791f; --bad:#c23b32;
+  --display:"Barlow Condensed","Arial Narrow",sans-serif; --sans:"Atkinson Hyperlegible Next","Segoe UI",sans-serif; }
+html, body { margin:0; background:#000; }
+#stage { position:relative; width:1920px; height:1080px; overflow:hidden; background:var(--bg); color:var(--ink); font-family:var(--sans); -webkit-font-smoothing:antialiased; }
+.abs { position:absolute; }
+img { display:block; }
+#sky { left:0; top:0; width:1920px; height:1080px; background:url("/site/assets/sky/stage-dark.webp") center / cover; image-rendering:pixelated; opacity:0; }
+#wordmark { left:72px; top:48px; height:44px; opacity:0; }
+#fine { left:72px; bottom:36px; font-size:24px; color:var(--muted); opacity:0; }
+
+/* 1 — the listing */
+#listing { left:510px; top:190px; width:900px; height:640px; background:#fff; border:2px solid var(--line); border-radius:32px; box-shadow:0 40px 90px -34px rgba(11,16,32,.35), 0 3px 10px rgba(11,16,32,.08); }
+#listing svg { position:absolute; left:170px; top:40px; width:560px; height:300px; overflow:visible; }
+#listing .t { position:absolute; left:54px; top:372px; font:700 64px/1 var(--display); }
+#listing .s { position:absolute; left:54px; top:452px; font-size:32px; color:var(--muted); }
+#listing .p { position:absolute; right:54px; top:366px; font:700 76px/1 var(--display); color:var(--accent); }
+#listing .chips { position:absolute; left:54px; top:530px; display:flex; gap:14px; }
+#listing .chip { font-size:25px; padding:8px 20px; border:2px solid var(--line); border-radius:999px; background:var(--soft); }
+#cap1 { left:0; width:1920px; top:880px; text-align:center; font:700 78px/1 var(--display); }
+
+/* 2 — the headline */
+#headline { left:0; width:1920px; text-align:center; top:290px; font:700 218px/.96 var(--display); letter-spacing:-.005em; }
+#headline .line { display:block; overflow:hidden; padding-bottom:14px; margin-bottom:-14px; }
+#headline .w { display:inline-block; margin-right:.2em; transform:translateY(112%); }
+#headline .acc { color:var(--accent); }
+#bar { left:680px; top:790px; height:16px; width:0; background:var(--accent); }
+
+/* 3,4,5 — the steps */
+.step { left:130px; top:250px; width:800px; opacity:0; }
+.step .num { display:flex; align-items:center; gap:18px; font:700 40px/1 var(--display); color:var(--accent); letter-spacing:.06em; }
+.step .num::after { content:""; width:84px; height:3px; background:var(--accent); }
+.step h2 { margin:26px 0 0; font:700 128px/.94 var(--display); }
+.step p { margin:34px 0 0; font-size:41px; line-height:1.42; color:var(--muted); }
+.step .find { margin-top:38px; font:700 64px/1 var(--display); color:var(--accent); opacity:0; }
+#step3 { top:56px; width:1000px; }
+#step3 h2 { font-size:104px; margin-top:18px; }
+#panelA, #panelB { left:1250px; top:60px; width:500px; height:960px; filter:drop-shadow(0 34px 50px rgba(11,16,32,.28)); }
+#panelB { opacity:0; }
+.ring { border:5px solid var(--accent); border-radius:16px; box-shadow:0 0 0 7px rgba(36,71,230,.18); opacity:0; }
+#win { left:0; top:0; width:1440px; height:900px; transform-origin:0 0; perspective:2400px; opacity:0; }
+#tilt { position:absolute; left:0; top:0; width:1440px; height:900px; transform-origin:50% 100%; }
+#tilt img { width:1440px; height:900px; border-radius:16px; border:2px solid var(--line); box-sizing:border-box; box-shadow:0 44px 100px -34px rgba(11,16,32,.45), 0 3px 12px rgba(11,16,32,.1); }
+#cmpcap { left:1080px; top:68px; width:740px; font-size:38px; line-height:1.34; color:var(--muted); opacity:0; }
+#cmpcap b { color:var(--ink); font-weight:700; }
+
+/* 6 — solid, partial, thin */
+.row { left:317px; display:flex; align-items:flex-end; gap:56px; opacity:0; }
+.row .word { font:700 196px/.9 var(--display); }
+.why { font-size:44px; color:var(--muted); padding-bottom:26px; }
+.bars { display:flex; align-items:flex-end; gap:12px; height:150px; padding-bottom:14px; }
+.bars i { display:block; width:38px; border-radius:6px; background:#d6d0c2; }
+#wordsub { left:317px; top:812px; font:600 60px/1.1 var(--display); color:var(--muted); opacity:0; letter-spacing:.01em; }
+
+/* 7 — promises */
+.promise { left:130px; display:flex; align-items:center; gap:36px; opacity:0; font:700 108px/1 var(--display); }
+.promise .tick { width:84px; height:84px; border-radius:50%; background:var(--accent); display:grid; place-items:center; flex:none; }
+.promise .tick svg { width:46px; height:46px; }
+
+/* 8 — end */
+#end { left:0; top:0; width:1920px; height:1080px; opacity:0; color:#fff; text-align:center; }
+#end img { position:absolute; left:660px; top:250px; width:600px; }
+#end .tag { position:absolute; left:0; width:1920px; top:470px; font:700 110px/1 var(--display); text-shadow:0 4px 30px rgba(10,15,54,.35); }
+#end .cta { position:absolute; left:0; width:1920px; top:640px; display:flex; justify-content:center; gap:26px; }
+#end .btn { font:700 44px/1 var(--display); letter-spacing:.02em; padding:26px 48px; border-radius:14px; }
+#end .btn.main { background:#fff; color:var(--ink); }
+#end .btn.ghost { border:3px solid #fff; color:#fff; }
+#end .fine { position:absolute; left:0; width:1920px; top:800px; font-size:32px; opacity:.95; text-shadow:0 2px 16px rgba(10,15,54,.4); }
+#fade { left:0; top:0; width:1920px; height:1080px; background:#0b1020; opacity:0; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="sky" class="abs"></div>
+  <img id="wordmark" class="abs" src="/site/assets/kriko-wordmark.svg" alt="">
+  <div id="fine" class="abs">Invented products and findings.</div>
+
+  <!-- 1 -->
+  <div id="listing" class="abs">
+    <svg viewBox="0 0 560 300" fill="none" stroke="#0b1020" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+      <circle class="d" cx="120" cy="205" r="84" pathLength="1"/>
+      <circle class="d" cx="440" cy="205" r="84" pathLength="1"/>
+      <path class="d" d="M120 205 L225 112 L392 108" pathLength="1"/>
+      <path class="d" d="M120 205 L258 205 L225 112" pathLength="1"/>
+      <path class="d" d="M258 205 L392 108" pathLength="1"/>
+      <path class="d" d="M392 108 L440 205" pathLength="1"/>
+      <path class="d" d="M372 84 L420 76 M392 108 L384 84" pathLength="1"/>
+      <path class="d" d="M196 100 L250 100" pathLength="1"/>
+      <rect class="f" x="262" y="150" width="86" height="26" rx="8" fill="#dfe6ff" stroke="#2447e6" transform="rotate(-42 262 150)" pathLength="1"/>
+      <circle class="f" cx="258" cy="205" r="17" fill="#2447e6" stroke="none"/>
+    </svg>
+    <div class="t">E-bike M · 2022</div>
+    <div class="s">Like new. Barely used.</div>
+    <div class="p">€1,450</div>
+    <div class="chips"><span class="chip">Free delivery</span><span class="chip">4.9 ★ seller</span></div>
+  </div>
+  <div id="cap1" class="abs">You found one you like.</div>
+
+  <!-- 2 -->
+  <div id="headline" class="abs">
+    <span class="line"><span class="w">The</span><span class="w">listing</span><span class="w">tells</span></span>
+    <span class="line acc"><span class="w">half</span><span class="w">the</span><span class="w">story.</span></span>
+  </div>
+  <div id="bar" class="abs"></div>
+
+  <!-- 3, 4 -->
+  <div id="step1" class="step abs"><div class="num">01</div><h2>Open a product page.</h2><p>Kriko reads the page on your computer and looks that exact product up.</p><div class="find">Four things to check.</div></div>
+  <div id="step2" class="step abs"><div class="num">02</div><h2>Every finding keeps its source.</h2><p>Open one to read the quote, the page it came from and what to ask the seller.</p></div>
+  <img id="panelA" class="abs" src="/site/assets/examples/ebike-light.webp" alt="">
+  <img id="panelB" class="abs" src="/site/assets/examples/claim-open-light.webp" alt="">
+  <div id="ringCounts" class="ring abs"></div>
+  <div id="ringFind" class="ring abs"></div>
+  <div id="ringSource" class="ring abs"></div>
+  <div id="ringAsk" class="ring abs"></div>
+
+  <!-- 5 -->
+  <div id="step3" class="step abs"><div class="num">03</div><h2>Compare, then decide.</h2></div>
+  <div id="win" class="abs"><div id="tilt"><img src="/site/assets/desktop/compare-light.webp" alt="">
+    <div id="rEv1" class="ring abs" style="left:42px;top:452px;width:434px;height:196px"></div>
+    <div id="rEv2" class="ring abs" style="left:501px;top:452px;width:434px;height:180px"></div>
+    <div id="rSh1" class="ring abs" style="left:100px;top:456px;width:124px;height:24px;border-radius:12px"></div>
+    <div id="rSh2" class="ring abs" style="left:560px;top:456px;width:124px;height:24px;border-radius:12px"></div>
+    <div id="rSh3" class="ring abs" style="left:1040px;top:456px;width:124px;height:24px;border-radius:12px"></div>
+  </div></div>
+  <div id="cmpcap" class="abs"></div>
+
+  <!-- 6 -->
+  <div id="row1" class="row abs" style="top:110px"><span class="word" style="color:var(--good)">Solid.</span><span class="bars"><i style="height:44px;background:var(--good)"></i><i style="height:86px;background:var(--good)"></i><i style="height:128px;background:var(--good)"></i></span><span class="why">No gaps in the evidence.</span></div>
+  <div id="row2" class="row abs" style="top:330px"><span class="word" style="color:var(--mid)">Partial.</span><span class="bars"><i style="height:44px;background:var(--mid)"></i><i style="height:86px;background:var(--mid)"></i><i style="height:128px"></i></span><span class="why">Some gaps. Worth checking.</span></div>
+  <div id="row3" class="row abs" style="top:550px"><span class="word" style="color:var(--bad)">Thin.</span><span class="bars"><i style="height:44px;background:var(--bad)"></i><i style="height:86px"></i><i style="height:128px"></i></span><span class="why">Little to stand on. Check it yourself.</span></div>
+  <div id="wordsub" class="abs">Hide the thin ones, or keep them. Your call.</div>
+
+  <!-- 7 -->
+  <div id="pr1" class="promise abs" style="top:250px"><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><span>A source beside every finding</span></div>
+  <div id="pr2" class="promise abs" style="top:450px"><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><span>Your research stays on your computer</span></div>
+  <div id="pr3" class="promise abs" style="top:650px"><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><span>Free and open source</span></div>
+
+  <!-- 8 -->
+  <div id="end" class="abs">
+    <img src="/site/assets/kriko-wordmark-white.svg" alt="">
+    <div class="tag">Know what is known to go wrong.</div>
+    <div class="cta"><span class="btn main">Download for Windows</span><span class="btn ghost">kriko.cc</span></div>
+    <div class="fine">Free · Open source · No account</div>
+  </div>
+  <div id="fade" class="abs"></div>
+</div>
+<script src="/scenes.js"></script>
+</body>
+</html>
