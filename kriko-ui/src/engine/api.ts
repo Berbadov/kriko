@@ -203,8 +203,35 @@ export interface ApiQuestion {
   why?: string
 }
 
+/** One named change the turn made or proposed in the app. `status` is the
+ *  engine's word: `done` happened, `proposed` waits for a press. */
+export interface ApiAction {
+  id: string
+  kind: 'open' | 'remember' | string
+  status: 'done' | 'proposed' | 'failed' | string
+  title: string
+  detail: string
+  params?: Record<string, unknown>
+}
+
+/** What a turn's research did: the searches, the pages and the kinds of source.
+ *  `on_product` and `off_product` are absent when the question named no product to check pages against. */
+export interface ApiRecord {
+  searches?: number
+  pages?: number
+  unreadable?: number
+  cached?: number
+  retrieved?: number
+  kinds?: string[]
+  /** Kinds of source the question asked for that no search went to. */
+  missing?: string[]
+  on_product?: number
+  off_product?: number
+}
+
 /** What a turn spent and how full the model's window is. A field a plane did not report is null. */
 export interface ApiUsage {
+  record?: ApiRecord
   spent_usd?: number | null
   tokens?: number | null
   tokens_in?: number | null
@@ -230,6 +257,8 @@ export interface ApiTurn extends ApiUsage {
   followups?: string[]
   /** The one question a turn asked instead of answering. */
   questions?: ApiQuestion[]
+  /** When the agent changed something in the app, or proposed it. */
+  actions?: ApiAction[]
   /** The answer is final although the job may still be naming follow-ups. */
   answer_final?: boolean
 }

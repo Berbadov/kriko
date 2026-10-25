@@ -850,6 +850,9 @@ CREATE TABLE IF NOT EXISTS chat_messages (
   -- The question a turn asked instead of answering: one object with its ask,
   -- the options the reader can click, and why it asked. Empty for an answer.
   questions_json TEXT NOT NULL DEFAULT '[]',
+  -- Named app changes the turn made or proposed (app/agentactions.py): the
+  -- objects the screen draws, so a saved preference is a row and not prose.
+  actions_json TEXT NOT NULL DEFAULT '[]',
   job_id       TEXT NOT NULL DEFAULT '',
   created_at   TEXT NOT NULL DEFAULT '',
   -- Which agent wrote the answer: {"id", "label", "model"}. A message from
@@ -3437,6 +3440,8 @@ def _chat_message(row: sqlite3.Row) -> dict:
         "followups": json.loads((row["followups_json"] if "followups_json" in row.keys() else "") or "[]"),
         # A message from before this column existed asked nothing.
         "questions": json.loads((row["questions_json"] if "questions_json" in row.keys() else "") or "[]"),
+        # A message from before this column existed changed nothing.
+        "actions": json.loads((row["actions_json"] if "actions_json" in row.keys() else "") or "[]"),
         "job_id": row["job_id"],
         "created_at": row["created_at"],
         "agent": json.loads((row["agent_json"] if "agent_json" in row.keys() else "") or "{}"),
@@ -3542,6 +3547,7 @@ def add_chat_message(
     products: list | None = None, activity: list | None = None, job_id: str = "", agent: dict | None = None,
     followups: list[str] | None = None,
     questions: list[dict] | None = None,
+    actions: list[dict] | None = None,
     message_id: str = "",
 ) -> dict:
     """Store one message and move its thread to the top of the list."""
@@ -3553,14 +3559,15 @@ def add_chat_message(
     conn.execute(
         "INSERT OR IGNORE INTO chat_messages (message_id, thread_id, role, text, steps_json,"
         " sources_json, products_json, activity_json, job_id, created_at, agent_json, followups_json,"
-        " questions_json)"
-        " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        " questions_json, actions_json)"
+        " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
         (message_id, thread_id, role, text, json.dumps(steps or [], default=str),
          json.dumps(sources or [], default=str),
          json.dumps(products or [], default=str), json.dumps(activity or [], default=str), job_id, now,
          json.dumps({k: str(v) for k, v in (agent or {}).items()
                      if k in ("id", "label", "model")}), json.dumps(followups or []),
-         json.dumps(questions or [], default=str)))
+         json.dumps(questions or [], default=str),
+         json.dumps(actions or [], default=str)))
     conn.execute("UPDATE chat_threads SET updated_at = ? WHERE thread_id = ?",
                  (now, thread_id))
     conn.commit()

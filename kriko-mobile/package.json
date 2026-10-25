@@ -5,26 +5,35 @@
   "dependencies": {
     "@expo-google-fonts/geist": "^0.4.2",
     "@expo-google-fonts/geist-mono": "^0.4.3",
+    "@expo/metro-runtime": "~58.0.15",
+    "@noble/ciphers": "^2.4.0",
+    "@noble/hashes": "^2.4.0",
     "@react-native-async-storage/async-storage": "2.2.0",
     "expo": "~58.0.14",
     "expo-blur": "~58.0.4",
+    "expo-clipboard": "~58.0.4",
     "expo-constants": "~58.0.12",
+    "expo-file-system": "~58.0.11",
     "expo-font": "~58.0.8",
     "expo-haptics": "~58.0.7",
     "expo-image": "~58.0.15",
+    "expo-image-manipulator": "~58.0.15",
     "expo-image-picker": "~58.0.10",
     "expo-linear-gradient": "~58.0.3",
     "expo-linking": "~58.0.13",
     "expo-router": "~58.0.23",
+    "expo-secure-store": "~58.0.2",
     "expo-splash-screen": "~58.0.10",
     "expo-status-bar": "~58.0.3",
     "lucide-react-native": "^1.59.0",
     "react": "19.3.0",
     "react-native": "0.88.0",
+    "react-native-frame-capture": "^1.2.1",
     "react-native-gesture-handler": "~3.3.0",
     "react-native-safe-area-context": "~5.10.1",
     "react-native-screens": "~4.30.0",
-    "react-native-svg": "15.16.0"
+    "react-native-svg": "15.16.0",
+    "react-native-web": "^0.21.4"
   },
   "devDependencies": {
     "@types/react": "~19.3.0",
@@ -34,11 +43,12 @@
   },
   "scripts": {
     "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:offline": "node tools/run-offline-tests.cjs"
   },
   "overrides": {
     "react-dom": "19.3.0"

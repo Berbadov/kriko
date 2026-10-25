@@ -1,9 +1,15 @@
-"""Kriko Agent: Mercury 2.5 with DeepSeek Search and Fetch.
+"""Kriko Agent: Mercury 3 with DeepSeek Search and Fetch.
 
 This adapter runs in the existing API-agent harness plane. Mercury receives
 the research brief and decides when to search or fetch; Kriko executes only
 those read-only provider API calls and returns the exact retrieved text for
 the harness's quote-grounding check.
+
+Mercury 3 is the paid plane's model: 1M-token context, 131,072-token output,
+reasoning efforts `instant`/`low`/`medium`/`high`, and a temperature range of
+0.5 to 1.0. Those numbers are not cosmetic. `TEMPERATURE` sits at the floor
+because the provider refuses anything below it, and the output ceiling is the
+model's own ceiling rather than the older 65,536.
 """
 
 from __future__ import annotations
@@ -14,12 +20,13 @@ import json
 import secrets
 import threading
 import time
+from collections.abc import Callable
 from pathlib import Path
 from typing import Literal
 from urllib.parse import urlsplit, urlunsplit
 
 from app import keys
-from app.providers import local_search_plan, mistral
+from app.providers import agentplan, local_search_plan, mistral
 from app.providers._http import StreamCancelled, post_json_or_why, post_sse_or_why
 from app.providers.kriko_agent_cache import (
     FETCH_TTL_SECONDS,
@@ -28,16 +35,30 @@ from app.providers.kriko_agent_cache import (
 )
 from kriko.extract.grounding import loose_span
 
-MODEL = "mercury-2.5"
+MODEL = "mercury-3"
 MERCURY_BASE_URL = "https://api.inceptionlabs.ai/v1"
 DEEPSEEK_BASE_URL = "https://api.deepseek.com"
+#: Mercury 3 accepts 0.5-1.0. The floor is the least random, and the older 0.1
+#: this adapter used for Mercury 2.5 is a 400, not a cheaper answer.
+TEMPERATURE = 0.5
+#: The model's own output ceiling. `max_tokens` above it is refused by the
+#: provider; below it is the caller's choice.
+MAX_OUTPUT_TOKENS = 131_072
+#: One answer's default allowance. A truncated final answer is an error, not a
+#: shorter answer, so the old 3,072 turned a long buying answer into no answer.
+DEFAULT_MAX_TOKENS = 8_192
 TIMEOUT_SECONDS = 120.0
 MAX_TURN_SECONDS = TIMEOUT_SECONDS
 MAX_TOOL_ROUNDS = 4
 MAX_TOOL_CALLS = 8
 MAX_RESULTS = 5
-MAX_SOURCE_CHARS = 8000
-MAX_CONTEXT_CHARS = 48_000
+MAX_SOURCE_CHARS = 8_000
+#: Page text shown to the model in a tool result. The full `MAX_SOURCE_CHARS`
+#: stays in `reply.sources` for the grounding check; sending all of it back on
+#: every round was most of a turn's input bill, and a quote rarely needs more
+#: than the first thousand words of a page.
+MAX_TOOL_TEXT_CHARS = 4_000
+MAX_CONTEXT_CHARS = 96_000
 # Room for the chat history the agent is shown (`chat.HISTORY_BUDGET`, 24,000
 # characters) and the brief around it: at 16,000 the recent exchange sat in the
 # clipped middle and the agent lost what it had just been told.
@@ -244,12 +265,51 @@ def _bound_tool_calls(message: dict) -> dict:
                 safe["kind"] = kind
         elif name == "fetch":
             safe = {"url": str(args.get("url") or "")[:2048]}
+        elif name == "remember":
+            safe = {"fact": str(args.get("fact") or "")[:160]}
+            listing = str(args.get("list") or "").strip().casefold()
+            if listing in {"must", "avoid", "prefer", "distrust", "about"}:
+                safe["list"] = listing
+        elif name == "open":
+            safe = {"screen": str(args.get("screen") or "")[:40]}
+            item = str(args.get("item") or "")[:200]
+            if item:
+                safe["item"] = item
+        elif name == "start_quick_look":
+            safe = {"product": str(args.get("product") or "")[:200]}
+            url = str(args.get("page_url") or "")[:2048]
+            if url:
+                safe["page_url"] = url
         else:
             safe = {}
         function["name"] = name
         function["arguments"] = json.dumps(safe, ensure_ascii=False,
                                             separators=(",", ":"))
     return bounded
+
+
+def _tool_view(payload: dict) -> dict:
+    """The same evidence with page text clipped to what the model needs.
+
+    `reply.sources` keeps the full `MAX_SOURCE_CHARS` for the deterministic
+    grounding check; only the copy placed in the conversation is shortened.
+    The cache also keeps the full copy, so a later turn can still quote it.
+    """
+    if not isinstance(payload, dict):
+        return payload
+    if isinstance(payload.get("results"), list):
+        return {
+            **payload,
+            "results": [
+                ({**row, "page_text": str(row.get("page_text") or "")[:MAX_TOOL_TEXT_CHARS]}
+                 if isinstance(row, dict) else row)
+                for row in payload["results"]
+            ],
+        }
+    if "page_text" in payload:
+        return {**payload,
+                "page_text": str(payload.get("page_text") or "")[:MAX_TOOL_TEXT_CHARS]}
+    return payload
 
 
 def _fit_tool_message(result: dict, call_id: str, budget: int) -> str:
@@ -369,14 +429,14 @@ def _repack_tool_context(messages: list[dict], records: list[tuple[int, str, dic
 
 def _completion(*, model: str, timeout: float, api_key: str,
                 messages: list[dict], tools: list[dict], cancel_event=None,
-                on_text=None, tool_choice: str = "auto", max_tokens: int = 3072,
+                on_text=None, tool_choice: str = "auto", max_tokens: int = DEFAULT_MAX_TOKENS,
                 reasoning_effort: str = "low") -> tuple[dict, str]:
     payload = {
         "model": model or MODEL,
         "messages": messages,
         "stream": True,
         "stream_options": {"include_usage": True},
-        "temperature": 0.1,
+        "temperature": TEMPERATURE,
         "max_tokens": max_tokens,
         "reasoning_effort": reasoning_effort,
     }
@@ -483,20 +543,35 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
              cache_path: str | None = None, on_step=None,
              shared_home: Path | None = None,
              trial_reservation_id: str = "", max_tokens: int | None = None,
-             reasoning_effort: str = "") -> mistral.Reply:
+             reasoning_effort: str = "",
+             app_action: Callable[[str, dict], dict] | None = None,
+             question: str = "") -> mistral.Reply:
     """Run one grounded Mercury turn, executing DeepSeek calls through APIs.
+
+    `question` is the reader's own words, apart from the brief around them. With
+    it the turn is planned (`agentplan.make_plan`): the kinds of source it asks
+    for, a retrieval budget sized to that question, and the product's own words
+    to check each page against. Without it the turn runs exactly as before, on
+    the dial alone, and `reply.record` still says what it did.
 
     `on_step` is called with one short line per retrieval, as it happens, so a
     turn whose search is slow says so instead of holding one frozen step. It is
     called from this thread: the caller publishes it (see
     `apiagent.ApiAgentResearcher._run`), because the job's progress connection
     belongs to the job thread.
+
+    `app_action` is the host's named-action executor (`app/agentactions.py`).
+    When it is supplied the model is offered those tools beside search and
+    fetch; every action it takes is returned on `reply.actions` and is visible
+    to the screen. No action is inferred from prose.
     """
     reply = mistral.Reply()
     if max_tokens is None:
-        max_tokens = 3072
-    if isinstance(max_tokens, bool) or not isinstance(max_tokens, int) or not 1 <= max_tokens <= 65536:
-        reply.error = "Mercury response token limit must be an integer from 1 to 65536"
+        max_tokens = DEFAULT_MAX_TOKENS
+    if (isinstance(max_tokens, bool) or not isinstance(max_tokens, int)
+            or not 1 <= max_tokens <= MAX_OUTPUT_TOKENS):
+        reply.error = (
+            f"Mercury response token limit must be an integer from 1 to {MAX_OUTPUT_TOKENS}")
         return reply
     reasoning_effort = str(reasoning_effort or ("low" if search else "instant")).strip().lower()
     if reasoning_effort not in {"instant", "low", "medium", "high"}:
@@ -570,6 +645,22 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
         messages[0]["content"] += (
             f" Keep exact source quotes at least {min_quote_chars} characters long."
         )
+    app_tools: list[dict] = []
+    app_tool_names: set[str] = set()
+    if app_action is not None and search:
+        from app import agentactions
+
+        app_tools = agentactions.describe()
+        app_tool_names = agentactions.tool_names()
+        messages[0]["content"] += (
+            "\n\nYou can make a small, named change in Kriko for the reader. Use "
+            "`remember` only for a lasting need they state (a hard requirement, a "
+            "brand to avoid, a preference) — it is saved in For you immediately, "
+            "and say that it is saved. Use `open` only when the reader asked to be "
+            "taken to a screen; it is proposed, not performed, so say it is ready "
+            "rather than that it happened. Never claim an action you did not take; "
+            "the tool's result is the only proof an action happened."
+        )
     source_lock = threading.Lock()
     memo_lock = threading.Lock()
     memos: dict[tuple[str, ...], concurrent.futures.Future] = {}
@@ -577,16 +668,35 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
     attempted = 0
     billable = 0
     cache_hits = 0
+    actions: list[dict] = []
     requested_calls, max_results_per_search = thoroughness_limits(thoroughness)
     try:
         budget_calls = int(max_tool_calls)
     except (TypeError, ValueError):
         budget_calls = MAX_TOOL_CALLS
-    calls_left = max(0, min(MAX_TOOL_CALLS, requested_calls, budget_calls))
+    question = str(question or "").strip()
+    plan = (agentplan.make_plan(question, ceiling=requested_calls)
+            if search and question else None)
+    calls_left = max(0, min(MAX_TOOL_CALLS,
+                            plan.calls if plan is not None else requested_calls,
+                            budget_calls))
+    #: Kinds of source this turn actually searched, and how many searches it made
+    #: (a cached or empty search counts: the reader asked where it looked).
+    searched_kinds: dict[str, int] = {}
+    searches_made = 0
     deadline = time.monotonic() + turn_timeout
+    if plan is not None and plan.identity:
+        messages[0]["content"] += (
+            "\n\nEach search result and fetched page carries `about_product`. When it "
+            "is false, the page's text does not carry this product's own name or model: "
+            "do not make a claim about the product from it, and say so if it is all "
+            "you found."
+        )
     if search:
         step(f"Kriko Agent: research budget {calls_left} retrieval(s), "
              f"{turn_timeout:.0f} s")
+        if plan is not None and plan.kinds:
+            step(f"plan: {local_search_plan.kinds_line(plan.kinds)}")
     else:
         # No tools were offered, so there is no research budget to announce. The
         # line claimed "7 retrieval(s)" on calls that could not retrieve
@@ -647,6 +757,34 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
             if query not in reply.queries:
                 reply.queries.append(query)
 
+    def about_product(title: object, *texts: object) -> bool | None:
+        """Whether a page carries the product's own words; `None` when unplanned."""
+        if plan is None or not plan.identity:
+            return None
+        return agentplan.mentions(plan.identity, " ".join(
+            str(part or "") for part in (title, *texts)))
+
+    def annotate(payload: dict) -> dict:
+        """The payload with `about_product` on each page the model is shown.
+
+        Applied after the cache, never stored in it: the cached row belongs to a
+        query, and the next question may be about a different product.
+        """
+        if plan is None or not plan.identity or not isinstance(payload, dict):
+            return payload
+        if isinstance(payload.get("results"), list):
+            return {**payload, "results": [
+                ({**row, "about_product": about_product(
+                    row.get("title"), row.get("snippet"), row.get("summary"),
+                    row.get("page_text"))}
+                 if isinstance(row, dict) else row)
+                for row in payload["results"]
+            ]}
+        if "page_text" in payload:
+            return {**payload, "about_product": about_product(
+                payload.get("title"), payload.get("page_text"))}
+        return payload
+
     def run_search(query: str, count: int = MAX_RESULTS, kind: str = "") -> dict:
         nonlocal attempted, billable, cache_hits
         query = str(query or "").strip()
@@ -667,10 +805,17 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
         normalized_query = " ".join(query.split()).casefold()
         key = ("search", normalized_query, str(count))
         cache_key = f"{normalized_query}|{count}"
+        # The agent's label, else the kind its own words ask for. The label is
+        # what the log prints; this is what coverage and freshness count.
+        searched_for = kind or local_search_plan.kind_of(query)
 
         def request():
-            nonlocal attempted, billable, cache_hits
+            nonlocal attempted, billable, cache_hits, searches_made
             check_cancelled()
+            with meter_lock:
+                searches_made += 1
+                if searched_for:
+                    searched_kinds[searched_for] = searched_kinds.get(searched_for, 0) + 1
             cached_result = cached("search", cache_key)
             if cached_result is not None and isinstance(cached_result.get("results"), list):
                 record_query(query)
@@ -682,7 +827,7 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
                         merge_source(str(item.get("url") or ""),
                                      str(item.get("title") or ""),
                                      str(item.get("page_text") or ""))
-                return cached_result
+                return _tool_view(annotate(cached_result))
             _pace("search")
             with meter_lock:
                 attempted += 1
@@ -740,8 +885,9 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
                                                  "DeepSeek Search returned nothing"))
             response = {"results": out}
             if out:
-                remember("search", cache_key, response, SEARCH_TTL_SECONDS)
-            return response
+                remember("search", cache_key, response,
+                         agentplan.search_ttl(searched_for, SEARCH_TTL_SECONDS))
+            return _tool_view(annotate(response))
 
         try:
             return memoized(key, request)
@@ -770,8 +916,9 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
                     url, str(cached_result.get("title") or ""),
                     str(cached_result.get("page_text") or ""),
                 )
-                return {"url": url, "title": source["title"],
-                        "page_text": str(cached_result.get("page_text") or "")}
+                return _tool_view(annotate({
+                    "url": url, "title": source["title"],
+                    "page_text": str(cached_result.get("page_text") or "")}))
             _pace("fetch")
             with meter_lock:
                 attempted += 1
@@ -800,7 +947,7 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
                 billable += 1
             response = {"url": url, "title": source["title"], "page_text": content}
             remember("fetch", url, response, FETCH_TTL_SECONDS)
-            return response
+            return _tool_view(annotate(response))
 
         try:
             return memoized(key, request)
@@ -813,8 +960,10 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
                 thread_name_prefix="kriko-deepseek") as current_pool:
             for round_number in range(MAX_TOOL_ROUNDS + 1):
                 check_cancelled()
-                has_tools = bool(search) and round_number < MAX_TOOL_ROUNDS and calls_left > 0
-                if search and round_number == 0 and not has_tools and not calls_left:
+                has_tools = (bool(search) and round_number < MAX_TOOL_ROUNDS
+                             and (calls_left > 0 or bool(app_tools)))
+                if (search and round_number == 0 and not has_tools and not calls_left
+                        and not app_tools):
                     # A turn asked to research with no retrieval budget at all
                     # cannot research, and paying a model call to watch it answer
                     # from memory is how a $0.00 confident answer reached the
@@ -841,7 +990,7 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
                         "summaries are not evidence. If the fetch has no readable text, report "
                         "that evidence gap without making product claims."
                     )
-                offered_tools = ([TOOLS[1]] if fetch_only else TOOLS)
+                offered_tools = ([TOOLS[1]] if fetch_only else TOOLS) + app_tools
                 result, why = _completion(
                     model=model or MODEL,
                     timeout=request_timeout(),
@@ -850,7 +999,11 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
                     tools=offered_tools if has_tools else [],
                     cancel_event=cancel_event,
                     on_text=on_text,
-                    tool_choice=("required" if round_number == 0 or fetch_only else "auto"),
+                    tool_choice=(
+                        "required"
+                        if (round_number == 0 and calls_left > 0) or fetch_only
+                        else "auto"
+                    ),
                     max_tokens=max_tokens,
                     reasoning_effort=reasoning_effort,
                 )
@@ -871,7 +1024,11 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
                     reply.text = str(message.get("content") or "").strip()
                     if not reply.text:
                         reply.error = "Mercury answered with no text"
-                    elif search and not readable_source:
+                    elif search and not readable_source and not actions:
+                        # A turn that changed something in the app is a
+                        # different task from a research turn: "Saved to For
+                        # you" owes no web page. The refusal below is for an
+                        # answer that would otherwise sound researched.
                         reply.text = ""
                         reply.error = (
                             "Evidence gap: no readable page text was retrieved; "
@@ -899,8 +1056,12 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
                     messages, tool_records,
                     before_tool_turn - _message_size(message),
                 )
-                allowed_calls = min(len(calls), calls_left)
-                calls_left -= allowed_calls
+                before_tool_turn = MAX_CONTEXT_CHARS - CONTEXT_TOOL_RESERVE_CHARS
+                _repack_tool_context(
+                    messages, tool_records,
+                    before_tool_turn - _message_size(message),
+                )
+                budget_left = calls_left
                 messages.append(message)
                 futures = []
                 for call_index, call in enumerate(calls):
@@ -913,19 +1074,31 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
                         args = {}
                     if not isinstance(args, dict):
                         args = {}
-                    if call_index >= allowed_calls:
-                        future = None
+                    if name in app_tool_names and app_action is not None:
+                        # A named app change is local and free, so it does not
+                        # spend the web-retrieval budget. The model still gets
+                        # one tool round for it.
+                        future = current_pool.submit(app_action, name, args)
                     elif name == "search":
-                        query_value = str(args.get("query") or "")
-                        count_value = args.get("count", 3)
-                        count = count_value if isinstance(count_value, int) and not isinstance(count_value, bool) else 3
-                        future = current_pool.submit(run_search, query_value, count,
-                                                     str(args.get("kind") or ""))
+                        if budget_left <= 0:
+                            future = None
+                        else:
+                            budget_left -= 1
+                            query_value = str(args.get("query") or "")
+                            count_value = args.get("count", 3)
+                            count = count_value if isinstance(count_value, int) and not isinstance(count_value, bool) else 3
+                            future = current_pool.submit(run_search, query_value, count,
+                                                         str(args.get("kind") or ""))
                     elif name == "fetch":
-                        future = current_pool.submit(fetch, str(args.get("url") or ""))
+                        if budget_left <= 0:
+                            future = None
+                        else:
+                            budget_left -= 1
+                            future = current_pool.submit(fetch, str(args.get("url") or ""))
                     else:
                         future = current_pool.submit(lambda: {"error": "Unsupported tool"})
                     futures.append((call_id, future))
+                calls_left = max(0, budget_left)
                 for call_id, future in futures:
                     if future is None:
                         tool_result = {"error": "Tool budget exhausted"}
@@ -955,6 +1128,10 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
                             raise
                         except Exception as error:
                             tool_result = {"error": type(error).__name__}
+                    if isinstance(tool_result, dict):
+                        action = tool_result.get("action")
+                        if isinstance(action, dict):
+                            actions.append(action)
                     tool_message = {
                         "role": "tool", "tool_call_id": call_id,
                         "content": "",
@@ -962,6 +1139,18 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
                     message_index = len(messages)
                     messages.append(tool_message)
                     tool_records.append((message_index, call_id, tool_result))
+                if plan is not None and tool_records:
+                    with meter_lock:
+                        covered = set(searched_kinds)
+                    hint = agentplan.coverage_hint(plan, covered, calls_left)
+                    last_index, last_id, last_result = tool_records[-1]
+                    if hint and isinstance(last_result, dict) and "error" not in last_result:
+                        # Beside the evidence, where the agent reads it before it
+                        # decides to answer (see `agentplan.coverage_hint`).
+                        tool_records[-1] = (last_index, last_id,
+                                            {**last_result, "coverage": hint})
+                        step("coverage: not yet searched: " + ", ".join(
+                            row["kind"] for row in hint["still_asked"]))
                 _repack_tool_context(
                     messages, tool_records,
                     MAX_CONTEXT_CHARS - CONTEXT_TOOL_RESERVE_CHARS,
@@ -977,4 +1166,32 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
     reply.billed_tool_calls = billable
     reply.retrieval_requests = attempted
     reply.cache_hits = cache_hits
+    reply.actions = actions
+    if search:
+        reply.record = _record_of(reply, plan, searched_kinds, searches_made,
+                                  attempted, cache_hits)
+        if plan is not None:
+            step(agentplan.record_line(reply.record))
     return reply
+
+
+def _record_of(reply: mistral.Reply, plan: agentplan.Plan | None,
+               searched_kinds: dict[str, int], searches: int, attempted: int,
+               cache_hits: int) -> dict:
+    """What the turn did, from what it actually retrieved, for the screen."""
+    readable = {url: row for url, row in reply.sources.items()
+                if str(row.get("text") or "").strip()}
+    on_product = off_product = None
+    if plan is not None and plan.identity:
+        on_product = sum(
+            1 for row in readable.values()
+            if agentplan.mentions(plan.identity,
+                                  f"{row.get('title') or ''} {row.get('text') or ''}"))
+        off_product = len(readable) - on_product
+    return agentplan.build_record(
+        searches=searches, kinds=searched_kinds,
+        missing=agentplan.missing_kinds(plan, searched_kinds) if plan is not None else (),
+        pages=len(readable), unreadable=len(reply.sources) - len(readable),
+        cached=cache_hits, retrieved=attempted,
+        on_product=on_product, off_product=off_product,
+    )

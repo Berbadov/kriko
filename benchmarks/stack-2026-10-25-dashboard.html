@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: #f6f7fb; }
+  body {
+    width: 1200px;
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    color: #141a2a;
+  }
+  .wrap { padding: 34px 38px 28px; }
+  h1 { margin: 0; font-size: 25px; letter-spacing: -0.4px; }
+  .sub { margin: 5px 0 22px; color: #667089; font-size: 13px; }
+  .grid { display: grid; grid-template-columns: 1fr 1.15fr 1.05fr; gap: 16px; }
+  .card {
+    background: #fff; border: 1px solid #e1e6f0; border-radius: 14px;
+    padding: 17px 18px 16px; min-height: 286px;
+  }
+  .card h2 {
+    margin: 0 0 3px; font-size: 11px; letter-spacing: 1.1px;
+    text-transform: uppercase; color: #667089;
+  }
+  .card .note { margin: 0 0 15px; color: #8a93a8; font-size: 11.5px; line-height: 1.35; }
+  .metric { margin: 0 0 14px; }
+  .metric-name { display: flex; justify-content: space-between; font-size: 12.5px; font-weight: 600; margin-bottom: 6px; }
+  .metric-name span:last-child { color: #667089; font-weight: 500; }
+  .row { display: grid; grid-template-columns: 44px 1fr 48px; align-items: center; gap: 7px; margin: 4px 0; }
+  .row .tag { font-size: 10.5px; color: #8a93a8; }
+  .row .val { font-size: 11px; color: #3b4459; text-align: right; font-variant-numeric: tabular-nums; }
+  .track { height: 12px; background: #eef1f7; border-radius: 4px; overflow: hidden; }
+  .fill { height: 100%; border-radius: 4px; }
+  .old { background: #aab1c2; }
+  .new { background: #3d6bff; }
+  .cost-row { display: grid; grid-template-columns: 112px 1fr 54px; gap: 8px; align-items: center; margin: 5px 0; }
+  .cost-row .name { font-size: 10.5px; color: #4a5368; line-height: 1.2; }
+  .cost-row .val { font-size: 10.5px; text-align: right; color: #3b4459; font-variant-numeric: tabular-nums; }
+  .cost-row .track { height: 11px; }
+  .m25 { background: #aab1c2; }
+  .m3 { background: #3d6bff; }
+  .divider { border-top: 1px solid #eef1f7; margin: 12px 0 10px; }
+  .legend { display: flex; gap: 14px; margin-top: 8px; font-size: 10.5px; color: #667089; }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; }
+  .foot { margin-top: 18px; color: #8a93a8; font-size: 10.5px; line-height: 1.45; }
+  .big { font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Kriko stack — measured, 25 Oct 2026</h1>
+  <p class="sub">Old <code>main</code> at <code>6b3e1c64</code> against the current tree. Routing and extraction are graded on hand-written cases; the search harness is 20 live runs.</p>
+
+  <div class="grid">
+    <section class="card">
+      <h2>Correct on the matrix</h2>
+      <p class="note">Routing: 42 messages. Extraction: 8 documents with a known expected claim set.</p>
+
+      <div class="metric">
+        <div class="metric-name"><span>Routing</span><span>33 → 42 of 42</span></div>
+        <div class="row"><span class="tag">before</span><div class="track"><div class="fill old" style="width:78.6%"></div></div><span class="val">78.6%</span></div>
+        <div class="row"><span class="tag">current</span><div class="track"><div class="fill new" style="width:100%"></div></div><span class="val">100%</span></div>
+      </div>
+
+      <div class="metric" style="margin-bottom:0">
+        <div class="metric-name"><span>Claim extraction</span><span>5 → 8 of 8</span></div>
+        <div class="row"><span class="tag">before</span><div class="track"><div class="fill old" style="width:62.5%"></div></div><span class="val">62.5%</span></div>
+        <div class="row"><span class="tag">current</span><div class="track"><div class="fill new" style="width:100%"></div></div><span class="val">100%</span></div>
+      </div>
+
+      <div class="legend"><span><i class="dot" style="background:#aab1c2"></i>before</span><span><i class="dot" style="background:#3d6bff"></i>current</span></div>
+    </section>
+
+    <section class="card">
+      <h2>What a turn costs</h2>
+      <p class="note">One live Kriko Agent turn, then the product-search harness averaged over five cases each.</p>
+
+      <div class="cost-row"><span class="name">Live turn · current</span><div class="track"><div class="fill m3" style="width:56.1%"></div></div><span class="val">$0.0060</span></div>
+      <div class="cost-row"><span class="name">Live turn · 2.5 rates</span><div class="track"><div class="fill m25" style="width:100%"></div></div><span class="val">$0.0107</span></div>
+
+      <div class="divider"></div>
+      <div class="cost-row"><span class="name">2.5 · eager</span><div class="track"><div class="fill m25" style="width:57.1%"></div></div><span class="val">$0.0061</span></div>
+      <div class="cost-row"><span class="name">3 · eager</span><div class="track"><div class="fill m3" style="width:70.7%"></div></div><span class="val">$0.0076</span></div>
+      <div class="cost-row"><span class="name">2.5 · parallel</span><div class="track"><div class="fill m25" style="width:95.6%"></div></div><span class="val">$0.0103</span></div>
+      <div class="cost-row"><span class="name">3 · parallel</span><div class="track"><div class="fill m3" style="width:68.7%"></div></div><span class="val">$0.0074</span></div>
+      <div class="legend"><span><i class="dot" style="background:#aab1c2"></i>Mercury 2.5</span><span><i class="dot" style="background:#3d6bff"></i>Mercury 3</span></div>
+    </section>
+
+    <section class="card">
+      <h2>Retrieval appetite</h2>
+      <p class="note">Mercury 3 can erase its price advantage by choosing more searches; this is the honest counterweight.</p>
+
+      <div class="metric"><div class="metric-name"><span>2.5 · eager</span><span>11 searches · 8.2 pages</span></div>
+        <div class="row"><span class="tag">search</span><div class="track"><div class="fill m25" style="width:47.8%"></div></div><span class="val">11</span></div>
+        <div class="row"><span class="tag">pages</span><div class="track"><div class="fill m25" style="width:35.7%"></div></div><span class="val">8.2</span></div>
+      </div>
+      <div class="metric"><div class="metric-name"><span>3 · eager</span><span>23 searches · 14.6 pages</span></div>
+        <div class="row"><span class="tag">search</span><div class="track"><div class="fill m3" style="width:100%"></div></div><span class="val">23</span></div>
+        <div class="row"><span class="tag">pages</span><div class="track"><div class="fill m3" style="width:63.5%"></div></div><span class="val">14.6</span></div>
+      </div>
+      <div class="metric" style="margin-bottom:0"><div class="metric-name"><span>3 · parallel</span><span>19 searches · 12.8 pages</span></div>
+        <div class="row"><span class="tag">search</span><div class="track"><div class="fill m3" style="width:82.6%"></div></div><span class="val">19</span></div>
+        <div class="row"><span class="tag">pages</span><div class="track"><div class="fill m3" style="width:55.7%"></div></div><span class="val">12.8</span></div>
+      </div>
+    </section>
+  </div>
+
+  <p class="foot">Routing and extraction are hand-written cases, not a quality distribution. Search-harness costs are dated estimates from reported usage, not invoices; quality there is unscored. The live turn used 31,610 input and 3,901 output tokens, 2 billable DeepSeek calls and 2 cache hits. Full method: <code>benchmarks/stack-2026-10-25.md</code>.</p>
+</div>
+</body>
+</html>

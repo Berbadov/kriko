@@ -5,6 +5,7 @@
     chevronDown:  '<path d="M6 9l6 6 6-6" />',
     plus:         '<path d="M12 5v14" /><path d="M5 12h14" />',
     minus:        '<path d="M5 12h14" />',
+    check:        '<path d="M5 12.5l4.5 4.5L19 7" />',
     x:            '<path d="M18 6 6 18" /><path d="M6 6l12 12" />',
     refresh:      '<path d="M3 12a9 9 0 0 1 15-6.7L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-15 6.7L3 16" /><path d="M3 21v-5h5" />',
     scan:         '<path d="M3 7V5a2 2 0 0 1 2-2h2" /><path d="M17 3h2a2 2 0 0 1 2 2v2" /><path d="M21 17v2a2 2 0 0 1-2 2h-2" /><path d="M7 21H5a2 2 0 0 1-2-2v-2" /><path d="M7 12h10" />',

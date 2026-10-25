@@ -2273,6 +2273,8 @@ def quick_look(settings, params: dict, progress: Progress) -> dict:
     # nothing, and `None` tells the parser there is nothing to check against.
     found = quicklook.parse(reply, getattr(researcher, "sources", None),
                             page=params.get("page") if isinstance(params.get("page"), dict) else None)
+    answer_readable = (quicklook.answer_payload(reply) is not None
+                       or bool(found.get("risks") or found.get("specs")))
     found = quicklook.without_listing_echo(found, str(params.get("page_url") or ""))
     if found.get("echoed"):
         progress.log(f"left out {found['echoed']} specification(s) that only repeat "
@@ -2290,7 +2292,11 @@ def quick_look(settings, params: dict, progress: Progress) -> dict:
 
     # Clear installed-category matches need no model. Otherwise the selected
     # classifier checks saved facts; unsupported decisions stay uncertain.
-    assignment = _classify_catalog(settings, params, progress, product, found, profiles)
+    assignment = (_classify_catalog(settings, params, progress, product, found, profiles)
+                  if answer_readable else {
+                      "status": "uncertain", "method": "unreadable_answer", "pack_id": "",
+                      "message": "The research answer could not be read; classification was skipped.",
+                  })
     if catalog_context_error and assignment["status"] != "assigned":
         assignment["message"] = (
             f"The saved category is uncertain. {catalog_context_error}"
@@ -2314,7 +2320,12 @@ def quick_look(settings, params: dict, progress: Progress) -> dict:
             coverage["status"] = "no_supported_findings"
     no_issues_found = _quicklook_has_coverage_for_no_issues(coverage)
     coverage_message = _quicklook_coverage_message(coverage)
-    if kept:
+    if not answer_readable:
+        diagnostic = {
+            "code": "unreadable_answer",
+            "message": "The agent did not return a readable research answer. Retry research; no conclusion about this product was made.",
+        }
+    elif kept:
         diagnostic = {"code": "issues_found", "message": ""}
     elif no_issues_found:
         relevant = int(coverage.get("pages_relevant") or 0)
@@ -4383,6 +4394,18 @@ def chat_ask(settings, params: dict, progress: Progress) -> dict:
         #: the order `_ask_about_checks` reported it. Filled as the turn runs, so
         #: the finished answer is judged against the pages it actually read.
         agent_pages: dict[str, dict] = {}
+        #: Named app changes the agent made or proposed this turn, in order.
+        #: The screen draws these; the answer's words never create one.
+        actions: list[dict] = []
+        #: What the turn's research did, merged across its calls: the searches,
+        #: the pages, the kinds of source. Carried with the usage fields so the
+        #: saved message reads it back from the job (`routers/chat.USAGE_FIELDS`).
+        turn_record: dict = {}
+
+        def take_record(record: dict) -> None:
+            from app.providers import agentplan
+
+            turn_record.update(agentplan.merge_records(turn_record, record))
 
         def usage_fields() -> dict:
             """What the turn has spent so far and how full the model's window is,
@@ -4395,7 +4418,8 @@ def chat_ask(settings, params: dict, progress: Progress) -> dict:
                 window = 0
             return {**meter.snapshot(),
                     "context": meter.context(str(agent.get("model") or ""), history=history,
-                                             home=KRIKO_HOME, local_window=window or None)}
+                                             home=KRIKO_HOME, local_window=window or None),
+                    **({"record": dict(turn_record)} if turn_record else {})}
         #: Whether this turn's plane can answer with its web tools off, and the
         #: label to name in the log. The local model always can (the same
         #: completer answers with a smaller budget); the paid branch settles it
@@ -4501,7 +4525,9 @@ def chat_ask(settings, params: dict, progress: Progress) -> dict:
                             # interactive default. The backend enforces the
                             # whole-job deadline and cancellation separately.
                             timeout=timeout, effort="low" if quick else "",
-                            on_usage=meter.record)
+                            on_usage=meter.record,
+                            on_action=None if quick else actions.append,
+                            on_record=None if quick else take_record)
                         # What the agent's own tools opened this turn, as it
                         # opens it: the turn counts these as pages Kriko has
                         # read, so an answer that cites one is not sent back for
@@ -4618,7 +4644,12 @@ def chat_ask(settings, params: dict, progress: Progress) -> dict:
                           "Do not browse. Return only JSON: {\"supported\":true|false,\"issues\":[\"...\"],"
                           "\"citations\":[{\"url\":\"...\",\"quote\":\"exact supporting passage\"}]}. "
                           "Mark unsupported claims false; do not excuse a contradiction as uncertainty.\n"
-                          + json.dumps({"question": text, "conversation": history,
+                          # The review needs the question and enough exchange to resolve
+                          # "it"/"that one"; it does not need the whole transcript again.
+                          # The compact six-message history is a few hundred tokens,
+                          # where the raw list could be most of the turn's input.
+                          + json.dumps({"question": text,
+                                        "conversation": chat._web_history_text(history),
                                         "answer": answer, "pages": pages}, ensure_ascii=False))
                 raw = contextual_grounded(prompt).strip()
                 raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw)
@@ -4655,6 +4686,7 @@ def chat_ask(settings, params: dict, progress: Progress) -> dict:
         # The kind of site behind each page read is kept with the turn, so a
         # saved chat reopens with the same tiers and the screen holds no list.
         result["activity"] = evidence.tier_pages(result.get("activity"), text)
+        result["actions"] = actions
         questions = result.get("questions") or []
         if questions:
             # A question is the turn. Its answer is the reader's next message,
@@ -4663,19 +4695,21 @@ def chat_ask(settings, params: dict, progress: Progress) -> dict:
             progress.check()
             stored = state.add_chat_message(
                 app_state, thread_id, role="agent", text=questions[0]["ask"],
-                questions=questions, job_id=progress.job_id, agent=dict(agent))
+                questions=questions, job_id=progress.job_id, agent=dict(agent),
+                actions=actions)
             progress.partial({
                 "thread_id": thread_id, "message_id": stored["message_id"],
                 "agent": dict(agent), "answer": "", "questions": questions,
                 "steps": [], "sources": [], "products": [], "followups": [],
-                "activity": [], "answer_final": True,
+                "activity": [], "actions": actions, "answer_final": True,
             })
             progress.set(1.0, "asked one question")
             return {
                 "thread_id": thread_id, "message_id": stored["message_id"],
                 "reader_message_id": message_id, "answer": "",
                 "questions": questions, "steps": [], "sources": [],
-                "products": [], "activity": [], "followups": [], "agent": agent,
+                "products": [], "activity": [], "actions": actions,
+                "followups": [], "agent": agent,
                 "answer_final": True, "agent_calls": result.get("agent_calls", 0),
                 "search_rounds": 0, "fallback": False, **usage_fields(),
             }
@@ -4688,7 +4722,8 @@ def chat_ask(settings, params: dict, progress: Progress) -> dict:
             app_state, thread_id, role="agent", text=result["answer"],
             steps=result["steps"], sources=result["sources"],
             products=result.get("products") or [], activity=result.get("activity") or [],
-            job_id=progress.job_id, agent=dict(agent), followups=fallback_followups)
+            job_id=progress.job_id, agent=dict(agent), followups=fallback_followups,
+            actions=result["actions"])
         # The answer is complete even though the job goes on to name the topic
         # and suggest follow-ups. Say so now, so the screen stops drawing the
         # answer as still being written: its last words stop fading, and its
@@ -4699,6 +4734,7 @@ def chat_ask(settings, params: dict, progress: Progress) -> dict:
             "steps": result["steps"], "sources": result["sources"],
             "products": result.get("products") or [],
             "activity": result.get("activity") or [],
+            "actions": actions,
             "followups": fallback_followups, "questions": [], "answer_final": True,
             **usage_fields(),
         })
@@ -4742,6 +4778,7 @@ def chat_ask(settings, params: dict, progress: Progress) -> dict:
                       "products": result.get("products") or [],
                       "followups": result.get("followups") or [],
                       "activity": result.get("activity") or [],
+                      "actions": result.get("actions") or [],
                       "questions": [], "answer_final": True, **usage_fields()})
     progress.set(1.0, "answered")
     return {
@@ -4750,6 +4787,7 @@ def chat_ask(settings, params: dict, progress: Progress) -> dict:
         "steps": result["steps"], "sources": result["sources"],
         "products": result.get("products") or [], "agent": agent,
         "activity": result.get("activity") or [],
+        "actions": result.get("actions") or [],
         "followups": result.get("followups") or [],
         "questions": [], "answer_final": True,
         "agent_calls": result["agent_calls"], "search_rounds": result["search_rounds"],
@@ -4813,7 +4851,9 @@ def _ask_about_checks(settings, params: dict, progress: Progress, brief: str, *,
                       allow_tools: bool | None = True,
                       follow_up: bool = False, product: str = "",
                       question: str = "", fallback_brief: str = "",
-                      on_usage: Callable[[dict], None] | None = None) -> tuple[str, list[dict]]:
+                      on_usage: Callable[[dict], None] | None = None,
+                      on_action: Callable[[dict], None] | None = None,
+                      on_record: Callable[[dict], None] | None = None) -> tuple[str, list[dict]]:
     """The reader's plane answers one brief. Returns the reply and the pages behind it.
 
     A `follow_up` answer is written into the job as the agent writes it
@@ -4876,6 +4916,11 @@ def _ask_about_checks(settings, params: dict, progress: Progress, brief: str, *,
         _wire_researcher_text(researcher, progress)
         researcher.check_cancelled = progress.check
         _apply_source_options(researcher, params, settings.app_state_path)
+        if hasattr(researcher, "agent_record"):
+            # The reader's own words, apart from the brief: the built-in stack
+            # plans its searches and checks each page against the product from
+            # them (`app/providers/agentplan.py`).
+            researcher.question = str(params.get("question") or question or "")
     # Read the resolved researcher: a requested CLI can fall back to a
     # different one. CLI `model` is its id, whereas API/local `model`
     # names the model; only show the CLI's explicitly selected model.
@@ -4954,6 +4999,17 @@ def _ask_about_checks(settings, params: dict, progress: Progress, brief: str, *,
         from app.turnusage import usage_of
 
         on_usage(usage_of(researcher))
+    if on_action is not None:
+        # The named app changes this one call made (or proposed). They are
+        # already on the researcher, because the adapter recorded what the tool
+        # actually returned rather than parsing the answer's prose.
+        for action in getattr(researcher, "agent_actions", []) or []:
+            if isinstance(action, dict):
+                on_action(action)
+    if on_record is not None:
+        record = getattr(researcher, "agent_record", None)
+        if isinstance(record, dict) and record:
+            on_record(dict(record))
     if follow_up:
         from app.workcontract import empty_offer, repair_prompt
         if empty_offer(reply):

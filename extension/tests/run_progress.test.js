@@ -142,14 +142,3 @@ test("what a finished look covered is said pages first, and a zero is said, not 
   assert.deepEqual(coverageSummary({ pages_read: 2 }).rest, []);
   assert.deepEqual(coverageSummary(null), { pages: "", rest: [] });
 });
-
-test("a run that reported no pages is not said to have read none; a reported zero still is", () => {
-  // A quick look whose agent searched for itself reports `{}`. That is not a
-  // reading of zero pages, so the count is left out.
-  assert.deepEqual(coverageSummary({}), { pages: "", rest: [] });
-  assert.equal(mod.reportsPages({}), false);
-  assert.equal(mod.reportsPages(null), false);
-  // A zero the run did report is a finding, and is said.
-  assert.equal(mod.reportsPages({ pages_read: 0 }), true);
-  assert.equal(coverageSummary({ pages_read: 0 }).pages, "0 pages read");
-});

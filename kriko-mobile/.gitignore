@@ -39,3 +39,7 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# generated mobile secrets (the share pepper, the sealed trial, a friend's code)
+src/engine/secrets.ts
+.friend-access.txt

@@ -50,5 +50,7 @@ def test_the_panel_and_the_page_keep_one_palette_with_the_app():
     app = (EXT.parent / "kriko-ui" / "src" / "styles" / "tokens.css").read_text(encoding="utf-8").lower()
     for sheet in (EXT / "hover_lite" / "hover_lite.css", EXT / "options" / "options.css"):
         text = sheet.read_text(encoding="utf-8").lower()
-        for colour in ("#090b11", "#3d6bff", "#2f5bff", "#ff6b7a", "#3ddc97"):
+        # Keep the shared dark base, brand and severity inks. The panel's
+        # redesigned flat actions no longer use the app's gradient endpoint.
+        for colour in ("#090b11", "#3d6bff", "#ff6b7a", "#3ddc97"):
             assert colour in app and colour in text, f"{sheet.name} lacks {colour}"

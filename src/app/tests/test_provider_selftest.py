@@ -349,7 +349,9 @@ def test_mercury_key_test_never_uses_the_openai_endpoint_or_model(isolated, monk
     assert response.json()["ok"] is True
     assert len(requests) == 1
     assert requests[0].full_url == "https://api.inceptionlabs.ai/v1/chat/completions"
-    assert json.loads(requests[0].data)["model"] == "mercury-2.5"
+    sent = json.loads(requests[0].data)
+    assert sent["model"] == "mercury-3"
+    assert 0.5 <= sent["temperature"] <= 1.0
     assert requests[0].get_header("Authorization") == f"Bearer {SECRET}"
     assert SECRET not in response.text
 

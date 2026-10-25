@@ -59,8 +59,11 @@ def parse(text: str) -> dict[str, str]:
         line = line.strip()
         if not line or line.startswith("#"):
             continue
-        name, _, version = line.partition("==")
-        pins[name] = version
+        name, _, rest = line.partition("==")
+        # A marker says where the pin applies, not which version it is: the
+        # Windows-only members carry `; sys_platform == 'win32'` so the same
+        # file installs on macOS and Linux.
+        pins[name] = rest.split(";", 1)[0].strip()
     return pins
 
 

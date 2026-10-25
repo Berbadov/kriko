@@ -426,6 +426,17 @@
   font-size: 11.5px;
 }
 
+/* What the research looked at: sits before the usage, which keeps the right edge. */
+.act-record {
+  align-self: center;
+  margin-left: auto;
+  color: var(--ink-3);
+  font-size: 11.5px;
+}
+.act-record + .act-usage {
+  margin-left: 12px;
+}
+
 /* ---- the evidence indicator ---- */
 
 .ev-mark {

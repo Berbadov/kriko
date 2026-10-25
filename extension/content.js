@@ -220,13 +220,15 @@ function extractOwnLabels(knownLabels) {
 
   for (const dt of document.querySelectorAll("dl dt")) {
     const dd = dt.nextElementSibling;
-    if (dd && dd.tagName === "DD" && keep(dt.textContent, dd.textContent)) return found;
+    if (dd && dd.tagName === "DD") keep(dt.textContent, dd.textContent);
+    if (Object.keys(found).length >= EXPLORE_LABELS_MAX) return found;
   }
 
   for (const row of document.querySelectorAll("table tr")) {
     const cells = [...row.children].filter(
       (cell) => cell.tagName === "TH" || cell.tagName === "TD");
-    if (cells.length === 2 && keep(cells[0].textContent, cells[1].textContent)) return found;
+    if (cells.length === 2) keep(cells[0].textContent, cells[1].textContent);
+    if (Object.keys(found).length >= EXPLORE_LABELS_MAX) return found;
   }
 
   for (const item of document.querySelectorAll("li")) {
@@ -235,7 +237,8 @@ function extractOwnLabels(knownLabels) {
       || (node.classList && node.classList.contains("label")));
     if (!strong) continue;
     const rest = cleanText(item.textContent.replace(strong.textContent, ""));
-    if (keep(strong.textContent, rest)) return found;
+    keep(strong.textContent, rest);
+    if (Object.keys(found).length >= EXPLORE_LABELS_MAX) return found;
   }
 
   for (const block of document.querySelectorAll(
@@ -243,8 +246,8 @@ function extractOwnLabels(knownLabels) {
     + "[class*='detail'], [class*='Detail'], [class*='attribute'], [class*='Attribute'],"
     + "[class*='info'], [class*='Info']")) {
     const children = [...block.children].filter((node) => cleanText(node.textContent));
-    if (children.length === 2
-        && keep(children[0].textContent, children[1].textContent)) return found;
+    if (children.length === 2) keep(children[0].textContent, children[1].textContent);
+    if (Object.keys(found).length >= EXPLORE_LABELS_MAX) return found;
   }
   return found;
 }
