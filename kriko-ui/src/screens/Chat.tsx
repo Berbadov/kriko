@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from 'motion/react'
 import { StepPill, Timeline } from '../activity/Timeline'
 import { FocusProvider } from '../chat/focus'
 import { groupsOf, threadUsage, turnLine } from '../chat/view'
-import type { AgentRef, Question, Run, Turn, Usage } from '../activity/run'
+import type { AgentRef, AppAction, Question, Run, Turn, Usage } from '../activity/run'
 import { useChat } from '../chat'
 import { useEngine, type Agent } from '../engine/Engine'
 import { useRecents } from '../engine/recents'
@@ -17,11 +17,15 @@ import { Icon } from '../ui/Icon'
 import { DitherSky } from '../ui/DitherSky'
 import { ProductList } from '../ui/ProductList'
 import { Markdown } from '../ui/Markdown'
+import { Fold } from '../ui/text'
 import { showDrawer } from '../ui/drawerEvents'
 
 /** Chat is the first page. Before a question it is a sky, a box and recent work.
  *  After a question the box drops to the bottom and the run fills the page. */
-export function ChatScreen({ onOpen }: { onOpen: (lookupId: string) => void }) {
+export function ChatScreen({ onOpen, onAction }: {
+  onOpen: (lookupId: string) => void
+  onAction: (action: AppAction) => void
+}) {
   const { motion: m } = usePrefs()
   const engine = useEngine()
   const { run, turns, start, stop } = useChat()
@@ -87,6 +91,7 @@ export function ChatScreen({ onOpen }: { onOpen: (lookupId: string) => void }) {
                 onSuggest={(text) => setDraft({ text, at: Date.now() })}
                 onAnswer={(text, agent) => start(text, agentOf(agent))}
                 onOwn={focusComposer}
+                onAction={onAction}
               />
             </motion.div>
           )}
@@ -185,10 +190,58 @@ function AnswerActions({ text, onRetry, usage }: { text: string; onRetry?: () =>
   )
 }
 
+/** What the agent changed in the app, or asks permission to change. A card is
+ *  the record and the control at once: a saved preference is already done, a
+ *  navigation is one press away. */
+function ActionCards({ actions, onAction }: {
+  actions?: AppAction[]
+  onAction: (action: AppAction) => void
+}) {
+  // A press is the consent, so it must not be repeatable while the job starts.
+  const [started, setStarted] = useState<Set<string>>(() => new Set())
+  if (!actions?.length) return null
+  const start = (action: AppAction) => {
+    if (started.has(action.id)) return
+    setStarted((current) => new Set(current).add(action.id))
+    onAction(action)
+  }
+  return (
+    <div className="action-cards" aria-label="Changes Kriko Agent made or can make">
+      {actions.map((action) => (
+        <article key={action.id} className="agent-action" data-status={action.status}>
+          <div className="agent-action-text">
+            <strong>{action.title}</strong>
+            {action.detail && <p>{action.detail}</p>}
+          </div>
+          {action.kind === 'open' && action.status !== 'failed' ? (
+            <button className="btn" onClick={() => onAction(action)}>Open</button>
+          ) : action.kind === 'start_quick_look' && action.status === 'proposed' ? (
+            <button className="btn" disabled={started.has(action.id)} onClick={() => start(action)}>
+              {started.has(action.id) ? 'Started' : 'Start'}
+            </button>
+          ) : action.status === 'done' ? (
+            <span className="agent-action-done">Saved</span>
+          ) : action.status === 'proposed' ? (
+            <span className="agent-action-done">Needs a press</span>
+          ) : (
+            <span className="agent-action-done">Not done</span>
+          )}
+        </article>
+      ))}
+    </div>
+  )
+}
+
 /** The one detail the agent could not settle, as buttons the reader presses.
  *  Pressing one asks it as their next message, so the thread keeps the answer
- *  and the agent sees it as something the reader said. */
-function AskCard({
+ *  and the agent sees it as something the reader said.
+ *
+ *  The question is the card's one line, not a heading over another block: it is
+ *  what the reader reads. While the answer is still open the options sit under
+ *  it; once it is answered the card folds to that line, because a question that
+ *  can no longer be pressed is a record, not a control. The reader opens it if
+ *  they want the options they saw. */
+export function AskCard({
   question,
   agent,
   busy,
@@ -201,21 +254,44 @@ function AskCard({
   onAnswer: (text: string) => void
   onOwn: () => void
 }) {
+  const [chosen, setChosen] = useState<boolean | null>(null)
+  // An answered question starts folded; the reader's own press wins after that.
+  const open = chosen ?? !busy
+  const head = (
+    <>
+      {agent && <AgentMark id={agent.id} size={20} state={busy ? 'idle' : 'waiting'} />}
+      <span className="ask-title">{question.ask}</span>
+      {busy && (
+        <span className="tl-chev" data-open={open}>
+          <Icon name="chevron" size={15} />
+        </span>
+      )}
+    </>
+  )
   return (
-    <article className="answer ask-card rise">
-      <AnswerHead agent={agent} />
-      <p className="ask-question">{question.ask}</p>
-      <div className="ask-options" role="group" aria-label="Answers you can press">
-        {question.options.map((option) => (
-          <button key={option} className="ask-option" disabled={busy} onClick={() => onAnswer(option)}>
-            {option}
-          </button>
-        ))}
-        <button className="ask-option is-own" disabled={busy} onClick={onOwn}>
-          Something else…
+    <article className="answer ask-card rise" data-answered={busy || undefined} data-open={open}>
+      {busy ? (
+        <button className="ask-head" onClick={() => setChosen(!open)} aria-expanded={open} title={agent?.label ? `${agent.label} asked` : 'The question the agent asked'}>
+          {head}
         </button>
-      </div>
-      {question.why && <p className="ask-why">{question.why}</p>}
+      ) : (
+        <div className="ask-head">{head}</div>
+      )}
+      <Fold open={open}>
+        <div className="ask-body">
+          <div className="ask-options" role="group" aria-label="Answers you can press">
+            {question.options.map((option) => (
+              <button key={option} className="ask-option" disabled={busy} onClick={() => onAnswer(option)}>
+                {option}
+              </button>
+            ))}
+            <button className="ask-option is-own" disabled={busy} onClick={onOwn}>
+              Something else…
+            </button>
+          </div>
+          {question.why && <p className="ask-why">{question.why}</p>}
+        </div>
+      </Fold>
     </article>
   )
 }
@@ -235,6 +311,7 @@ function Thread({
   onSuggest,
   onAnswer,
   onOwn,
+  onAction,
 }: {
   run: Run
   turns: Turn[]
@@ -244,6 +321,7 @@ function Thread({
   onSuggest: (text: string) => void
   onAnswer: (text: string, agent?: AgentRef) => void
   onOwn: () => void
+  onAction: (action: AppAction) => void
 }) {
   const { motion: m } = usePrefs()
   const scroller = useRef<HTMLDivElement>(null)
@@ -351,12 +429,15 @@ function Thread({
             {turn.questions?.length ? (
               <AskCard question={turn.questions[0]} agent={turn.agent} busy={newest !== turn} onAnswer={(text) => onAnswer(text, turn.agent)} onOwn={onOwn} />
             ) : turn.answer && (
-              <article className="answer">
-                {turn.rows?.some((row) => row.id === 'activity-citation-warning' || row.id === 'activity-evidence-warning') && <p className="error-note" role="alert">Some claims or references could not be verified against the supplied evidence. Check the sources before relying on this answer.</p>}
-                <AnswerHead agent={turn.agent} />
-                <Markdown text={turn.answer} live={false} />
-                <AnswerActions text={turn.answer} onRetry={newest === turn ? () => onRetry(turn) : undefined} usage={turn.usage} />
-              </article>
+              <>
+                <article className="answer">
+                  {turn.rows?.some((row) => row.id === 'activity-citation-warning' || row.id === 'activity-evidence-warning') && <p className="error-note" role="alert">Some claims or references could not be verified against the supplied evidence. Check the sources before relying on this answer.</p>}
+                  <AnswerHead agent={turn.agent} />
+                  <Markdown text={turn.answer} live={false} />
+                  <AnswerActions text={turn.answer} onRetry={newest === turn ? () => onRetry(turn) : undefined} usage={turn.usage} />
+                </article>
+                <ActionCards actions={turn.actions} onAction={onAction} />
+              </>
             )}
             {turn.error && (
               <p className="error-note" role="alert">
@@ -407,6 +488,7 @@ function Thread({
             {run.error}
           </p>
         )}
+        {settled && <ActionCards actions={run.actions} onAction={onAction} />}
         {done && <ProductList products={run.products} onOpen={onOpen} />}
         {!!followups?.length && (
           <div className="followup-prompts" aria-label="Related follow-up questions">

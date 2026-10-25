@@ -844,14 +844,15 @@ def test_a_follow_up_keeps_the_thread_and_does_not_read_the_same_page_twice(
         paths, monkeypatch):
     """The reader's "Ask a follow-up" must continue the thread it followed.
 
-    The proof is in what the second turn costs: the same search comes back from
-    the turn's own retrieval cache, so the provider is asked once across both
-    turns, and the second turn is not slower than the first.
+    The second turn reuses the first turn's retrieval cache: no search or page
+    fetch request crosses the provider boundary again.
     """
     from app import keys as appkeys
     from app.providers import apiagent, kriko_agent
 
     searches: list[dict] = []
+    retrieval_requests: list[list[tuple[str, object]]] = [[], []]
+    active_turn = 0
     briefs: list[str] = []
     page = "Owners report the 850 EVO firmware issue was fixed in 2016."
     first_question = "Which 500 GB SATA SSD should I buy?"
@@ -888,6 +889,7 @@ def test_a_follow_up_keeps_the_thread_and_does_not_read_the_same_page_twice(
         return 1, ""
 
     def post(url, payload, _headers, _timeout):
+        retrieval_requests[active_turn].append((url, payload))
         if url.endswith("/tools/search"):
             searches.append(payload)
             return {"results": [{"url": "https://forum.example/evo",
@@ -902,22 +904,25 @@ def test_a_follow_up_keeps_the_thread_and_does_not_read_the_same_page_twice(
     thread = state.create_chat_thread(conn)
     logs = []
     try:
-        for text in (first_question, follow_up):
+        for turn_index, text in enumerate((first_question, follow_up)):
+            active_turn = turn_index
             reader = state.add_chat_message(conn, thread["thread_id"], role="reader", text=text)
             job = state.create_job(conn, "chat_ask", {})
-            started = time.monotonic()
             result = tasks.chat_ask(paths, {"thread_id": thread["thread_id"],
                                             "message_id": reader["message_id"],
                                             "text": text, "harness": "kriko-agent"},
                                     Progress(job, conn))
-            logs.append((time.monotonic() - started, result,
+            logs.append((result,
                          (state.get_job(conn, job) or {}).get("log", "")))
     finally:
         conn.close()
 
-    (first_seconds, first, first_log), (second_seconds, second, second_log) = logs
-    # One search, once: the second turn found the page the first turn read.
+    (first, first_log), (second, second_log) = logs
+    # All retrieval POSTs are captured at the fake provider boundary, including
+    # both search and page-fetch endpoints. The second turn makes no request.
     assert len(searches) == 1, searches
+    assert retrieval_requests[0], "the first turn performs retrieval"
+    assert retrieval_requests[1] == [], retrieval_requests[1]
     assert "1 billable" in first_log
     assert "0 billable" in second_log and "1 cached" in second_log, second_log
     assert "https://forum.example/evo" in second["sources"]
@@ -926,4 +931,3 @@ def test_a_follow_up_keeps_the_thread_and_does_not_read_the_same_page_twice(
     follow_up_briefs = [brief for brief in briefs if follow_up in brief]
     assert any(first_question in brief and "850 EVO is the pick" in brief
                for brief in follow_up_briefs), "the follow-up continues the thread"
-    assert second_seconds <= first_seconds + 0.5, (first_seconds, second_seconds)

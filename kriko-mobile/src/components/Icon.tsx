@@ -11,14 +11,19 @@ import {
   ChevronRight,
   CircleCheck,
   CircleX,
+  ClipboardPaste,
   Clock,
+  Copy,
   FileText,
+  Focus,
   Globe,
   Hash,
   History,
   Image as ImageIcon,
   Info,
+  KeyRound,
   LoaderCircle,
+  Plus,
   RotateCcw,
   Search,
   Send,
@@ -32,7 +37,7 @@ import {
   type LucideIcon,
 } from 'lucide-react-native';
 
-import { color } from '../theme/tokens';
+import { useColors } from '../theme/theme';
 
 export type IconProps = {
   size?: number;
@@ -41,8 +46,9 @@ export type IconProps = {
 };
 
 function make(Component: LucideIcon, defaults: Partial<IconProps> = {}) {
-  return function Icon({ size = 18, color: tint = color.ink2, strokeWidth = 1.6 }: IconProps) {
-    return <Component size={size} color={tint} strokeWidth={strokeWidth} {...defaults} />;
+  return function Icon({ size = 18, color: tint, strokeWidth = 1.6 }: IconProps) {
+    const color = useColors();
+    return <Component size={size} color={tint ?? color.ink2} strokeWidth={strokeWidth} {...defaults} />;
   };
 }
 
@@ -69,3 +75,8 @@ export const TrashIcon = make(Trash2);
 export const SparkIcon = make(Sparkles);
 export const InfoIcon = make(Info);
 export const DashedSquareIcon = make(SquareDashed);
+export const CopyIcon = make(Copy);
+export const PasteIcon = make(ClipboardPaste);
+export const PlusIcon = make(Plus);
+export const KeyIcon = make(KeyRound);
+export const ScanIcon = make(Focus);

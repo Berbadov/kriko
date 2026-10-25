@@ -36,3 +36,11 @@ def test_the_default_lexicon_is_category_neutral():
 
 def test_filler_is_not_signal():
     assert not chunk_has_signal("today we unbox the new infotainment")
+
+
+def test_a_symptom_without_the_word_failure_is_signal():
+    """These were skipped before 2026-10-25; the words were missing."""
+    assert chunk_has_signal("the housing is cracking")
+    assert chunk_has_signal("there is coolant seepage at the seam")
+    assert chunk_has_signal("the engine overheats on the motorway")
+    assert chunk_has_signal("the head gasket warped after the recall")

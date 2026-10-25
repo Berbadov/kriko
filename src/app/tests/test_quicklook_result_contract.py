@@ -41,6 +41,35 @@ def test_quicklook_refuses_a_provider_factory_fallback_for_a_named_agent(
             "product": "Acme headset", "backend": "harness", "harness": "chosen-cli",
         }, _Progress("quick-job"))
 
+
+def test_malformed_answer_is_not_reported_as_no_findings_or_sent_for_classification(
+        tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    from app import categorizer
+
+    settings = Settings(store_path=tmp_path / "knowledge.sqlite",
+                        app_state_path=tmp_path / "app.sqlite",
+                        analysis_log_path=tmp_path / "analysis.jsonl")
+    conn = state.connect(settings.app_state_path)
+    job_id = state.create_job(conn, "quick_look", {"product": "TCL 55V6C"})
+    conn.close()
+    researcher = SimpleNamespace(
+        ask_quick=lambda *_a, **_k: 'Here is a prose answer without the required findings.',
+        sources={"https://manufacturer.example/product": "A retrieved product page."},
+        coverage={"search_results": 12, "pages_read": 1}, metrics=[],
+        cost_basis="per_token", spent=0.01, model="test", harness=SimpleNamespace(id="kriko-agent"),
+    )
+    monkeypatch.setattr(tasks, "_use_local_ask", lambda *_a, **_k: True)
+    monkeypatch.setattr(tasks, "_local_asker", lambda *_a, **_k: researcher)
+    monkeypatch.setattr(categorizer, "installed_catalogs", lambda *_a: [])
+    def refuse_classification(*_a, **_k):
+        pytest.fail("An unreadable research answer must not spend another classification call")
+    monkeypatch.setattr(tasks, "_classify_catalog", refuse_classification)
+    result = tasks.quick_look(settings, {"product": "TCL 55V6C"}, _Progress(job_id))
+    assert result["diagnostic"]["code"] == "unreadable_answer"
+    assert result["coverage"]["search_results"] == 12
+    assert result["categorization"]["method"] == "unreadable_answer"
+
 @pytest.mark.parametrize(
     ("coverage", "diagnostic_code"),
     [
