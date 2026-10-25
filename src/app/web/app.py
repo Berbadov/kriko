@@ -36,6 +36,7 @@ from app.web.knowledge_clock import KnowledgeClock
 from app.web.routers import (
     agenda,
     agent,
+    agent_actions,
     agent_runtime,
     analyze,
     appupdate,
@@ -341,6 +342,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     for router in (
         backup_routes.router,
+        agent_actions.router,
         agenda.router,
         agent.router,
         agent_runtime.router,

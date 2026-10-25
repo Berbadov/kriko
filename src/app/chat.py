@@ -747,6 +747,26 @@ _LOCAL_INTENT = re.compile(
     r"\b(?:catalog(?:ue)?|saved checks?|quick looks?|compare drafts?|research runs?|"
     r"known issues?|known risks?|reported problems?)\b",
     re.I)
+# Kriko's core question, in the words a reader uses for it. It is not a buying
+# request and it is not small talk: with packs installed it reads the records,
+# and on a fresh install it goes to the web rather than answering from memory.
+_FAILURE_QUESTION = re.compile(
+    r"\b(?:what (?:goes wrong|fails|breaks|wears out)|"
+    r"known to (?:fail|go wrong)|common (?:faults?|failures?|problems?)|"
+    r"failure modes?|what (?:usually|commonly) (?:fails|breaks))\b|"
+    r"\b(?:ne(?:yi)?|neler) bozulur\b|"
+    r"\b(?:sık|sik) görülen (?:arıza|ariza)\w*|"
+    r"\bbilinen (?:arıza|ariza)\w*|"
+    r"\bkronik (?:arıza|ariza)\w*",
+    re.I)
+# A reader who names the web means the web, even when a catalogue could also
+# answer. This has to be decided before the private-record branch, or
+# "search the web for what goes wrong with X" silently becomes a catalogue
+# question (found by the 2026-10-25 routing bench).
+_EXPLICIT_WEB = re.compile(
+    r"\b(?:search|look up|browse|check)\b.{0,40}\b(?:web|internet|online)\b|"
+    r"\bonline\b",
+    re.I)
 _LOCAL_PRODUCT_LIST = re.compile(
     r"\bdo you have\b.{0,40}\bproducts?\b|"
     r"\b(?:which|what|list|show)\b.{0,40}\bproducts?\b.{0,30}\b(?:catalog(?:ue)?|installed|saved)\b",
@@ -1035,10 +1055,13 @@ def route_message(message: str, history: Sequence[dict] = ()) -> str:
     """
     if _URL_IN_MESSAGE.search(message):
         return "web"
+    if _EXPLICIT_WEB.search(message):
+        return "web"
     # Normalize accents only for intent recognition. Preserve the original
     # message verbatim in the query and model prompt.
     folded = _folded(message)
-    if (_LOCAL_INTENT.search(message) or _LOCAL_PRODUCT_LIST.search(message)
+    if (_LOCAL_INTENT.search(message) or _FAILURE_QUESTION.search(message)
+            or _LOCAL_PRODUCT_LIST.search(message)
             or _LOCAL_RECORDS_TR.search(folded)):
         return "catalogue"
     # A request to choose or find something to buy needs pages to link, whichever
@@ -2037,6 +2060,15 @@ def run_turn(message: str, *, ask: Ask, ctx: chatdata.Context,
             "fallback": False, "mode": mode, "need": {},
         }
 
+    if route == "catalogue" and _FAILURE_QUESTION.search(message):
+        # "What goes wrong with this?" is Kriko's own question, but a fresh
+        # installation has no records to read. Sending it to the catalogue route
+        # would answer "nothing is recorded" as if that were a finding; read the
+        # web instead, which is where the question's evidence lives until the
+        # reader installs a catalog.
+        if not _packs_installed(ctx.store):
+            return web_turn(search_words(_web_query(message, history)))
+
     if route == "web":
         return web_turn(search_words(_web_query(message, history)))
 
@@ -2086,6 +2118,22 @@ def run_turn(message: str, *, ask: Ask, ctx: chatdata.Context,
         if nxt is None or not nxt["calls"]:
             break
         plan = nxt
+
+    record_sources = {"product_match", "catalogue_search", "subject_detail",
+                      "saved_checks", "quick_looks", "research_runs"}
+    if (_FAILURE_QUESTION.search(message)
+            and not any(
+                result.get("rows")
+                for entry in trail
+                for call, result in zip(entry.get("calls") or [], entry.get("results") or [])
+                if call.get("source") in record_sources
+            ) and not spent_out(0.0)):
+        # The catalogues were tried and had nothing for this question. That is
+        # not the same answer as "nothing goes wrong"; a reader with a product
+        # outside the installed knowledge still deserves the web.
+        hooks.log("no installed record matched; reading the web instead")
+        hooks.set(0.35, "no record matched, searching the web")
+        return web_turn(search_words(_web_query(message, history)))
 
     detailed = bool(re.search(r"\b(detail|details|explain|in depth|everything)\b", message, re.I))
     hooks.set(0.9, "writing the answer")

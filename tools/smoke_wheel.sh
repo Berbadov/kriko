@@ -93,8 +93,39 @@ mkdir -p "$WORK"
 # still supplying it. A gate that cannot fail is the thing `CLAUDE.md` warns is
 # worse than no gate.
 say "clearing what a previous build left behind"
-rm -rf build src/*.egg-info
-echo "  build/ and src/*.egg-info"
+"$PYTHON" - <<'PY'
+from pathlib import Path
+import shutil
+
+root = Path.cwd().resolve(strict=True)
+
+def clean_generated(parent: Path, patterns: tuple[str, ...]) -> None:
+    # Refuse redirected roots and ensure every deletion remains an immediate
+    # child of the expected checkout directory. This also makes the cleanup
+    # safe on Windows, where a junction or symlink can redirect a build path.
+    if parent.is_symlink():
+        raise SystemExit(f"refusing to clean through symlink: {parent}")
+    if not parent.exists():
+        return
+    resolved_parent = parent.resolve(strict=True)
+    if resolved_parent.parent != root:
+        raise SystemExit(f"refusing to clean outside the checkout: {parent}")
+    for pattern in patterns:
+        for candidate in resolved_parent.glob(pattern):
+            if candidate.parent != resolved_parent:
+                raise SystemExit(f"refusing unexpected cleanup path: {candidate}")
+            if candidate.is_symlink() or candidate.is_file():
+                candidate.unlink()
+            elif candidate.is_dir():
+                shutil.rmtree(candidate)
+
+# Setuptools reuses these wheel staging directories, so stale package copies
+# here can mask a broken wheel configuration. Keep other build artifacts and
+# logs intact: only wheel staging output and generated source metadata go.
+clean_generated(root / "build", ("lib", "bdist.*", "temp.*"))
+clean_generated(root / "src", ("*.egg-info",))
+PY
+echo "  build/lib, build/bdist.*, build/temp.*, and src/*.egg-info"
 
 say "building the wheel"
 if [ "$BUILDER" = uv ]; then

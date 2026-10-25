@@ -1,9 +1,9 @@
 """packs.cars.pipeline.extract.extract_claims() — converts packs.cars.pipeline.langextract_client's
-raw grounded-extraction dicts into CandidateClaim objects, skipping any
-malformed one without sinking the whole batch. Mocks extract_grounded so this
-runs with no API access (langextract's own wiring is covered by manual
-smoke-testing against the real Mistral endpoint, same convention as
-packs/cars/pipeline/judge.py's LLM gates).
+raw grounded-extraction dicts into CandidateClaim objects, reads the whole
+document in overlapping chunks, and skips any malformed claim without sinking
+the whole batch. Mocks extract_grounded so this runs with no API access
+(langextract's own wiring is covered by manual smoke-testing against the real
+endpoint, same convention as packs/cars/pipeline/judge.py's LLM gates).
 """
 
 from unittest.mock import patch
@@ -36,14 +36,50 @@ def test_extract_claims_converts_grounded_dicts(mock_extract):
 
 
 @patch("packs.cars.pipeline.extract.extract_grounded")
-def test_extract_claims_passes_only_first_6000_chars(mock_extract):
+def test_the_tail_of_a_long_document_is_read(mock_extract):
+    """The old 6,000-character cap silently lost this claim."""
     mock_extract.return_value = []
-    long_doc = Document(text="x" * 10000, url="https://x", site_or_channel="site")
+    tail = " After 120,000 km the water pump bearing failed and the engine overheated."
+    long_doc = Document(text=("The owner is happy with the car. " * 220) + tail,
+                        url="https://x", site_or_channel="site")
 
     extract_claims(long_doc)
 
-    (passed_text,), _ = mock_extract.call_args
-    assert len(passed_text) == 6000
+    passed = [call.args[0] for call in mock_extract.call_args_list]
+    assert any("water pump bearing failed" in text for text in passed)
+
+
+@patch("packs.cars.pipeline.extract.extract_grounded")
+def test_a_signal_free_middle_chunk_is_not_paid_for(mock_extract):
+    mock_extract.return_value = []
+    long_doc = Document(text="x" * 12_000, url="https://x", site_or_channel="site")
+
+    extract_claims(long_doc)
+
+    # Opening and closing chunks are always read; the two middle chunks carry
+    # no failure signal and are skipped.
+    assert len(mock_extract.call_args_list) == 2
+
+
+@patch("packs.cars.pipeline.extract.extract_grounded")
+def test_a_claim_repeated_by_the_chunk_overlap_is_one_claim(mock_extract):
+    claim = {
+        "title": "Water pump bearing failure (K9K)",
+        "domain": "cooling",
+        "severity": "high",
+        "rationale": "The bearing fails and the engine overheats.",
+        "inspection_advice": "Listen for bearing noise and check for coolant loss.",
+        "quote": "the water pump bearing failed",
+        "quote_grounded": True,
+    }
+    mock_extract.return_value = [claim]
+    # Two chunks, with 'fail' as the signal in the second one.
+    long_doc = Document(text=("x" * 4_000) + " the water pump bearing failed " + ("x" * 1_000),
+                        url="https://x", site_or_channel="site")
+
+    claims = extract_claims(long_doc)
+
+    assert len(claims) == 1
 
 
 @patch("packs.cars.pipeline.extract.extract_grounded")

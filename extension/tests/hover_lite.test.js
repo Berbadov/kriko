@@ -1073,8 +1073,10 @@ test("an unknown product gets one button: quick cards now, then the deeper run (
   assert.equal(asked.payload.url, p.dom.window.location.href);
   const slot = p.shadow().querySelector(".lite-research");
   assert.match(slot.textContent, /Gearbox judder/);
-  assert.match(slot.textContent, /Taken as: the 1\.6 diesel/);
+  assert.match(slot.textContent, /Product match: the 1\.6 diesel/);
   assert.equal(slot.querySelector(".lite-quick-assumed strong").textContent, "1.6");
+  assert.equal(slot.querySelector(".lite-quick-details").open, false,
+    "identity detail stays quiet below the result unless opened");
   assert.equal(slot.querySelector(".lite-quick-specs strong").textContent, "250 Nm");
   assert.doesNotMatch(slot.textContent, /\*\*/);
   assert.match(slot.querySelector(".lite-rc-src blockquote").textContent, /it judders/);

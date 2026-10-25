@@ -93,6 +93,16 @@ export interface Question {
   why?: string
 }
 
+/** One named change the turn made or proposed in the app. */
+export interface AppAction {
+  id: string
+  kind: 'open' | 'remember' | string
+  status: 'done' | 'proposed' | 'failed' | string
+  title: string
+  detail: string
+  params?: Record<string, unknown>
+}
+
 export interface Run {
   status: 'idle' | 'running' | 'done' | 'stopped' | 'failed'
   startedAt: number
@@ -104,6 +114,8 @@ export interface Run {
   followups?: string[]
   /** The one question this turn asked, when it asked instead of answering. */
   questions?: Question[]
+  /** Changes the turn made in the app, or proposed for a press. */
+  actions?: AppAction[]
   /** The pages this turn read or cited, drawn once from its own `activity` and `sources`. */
   pages?: SourcePage[]
   usage?: Usage
@@ -125,6 +137,7 @@ export interface Turn {
   rows?: Row[]
   followups?: string[]
   questions?: Question[]
+  actions?: AppAction[]
   pages?: SourcePage[]
   usage?: Usage
   /** Why the turn failed, when it did. */
@@ -154,7 +167,7 @@ export interface RunApi {
 export const turnOf = (run: Run): Turn | null =>
   run.status === 'idle' || run.status === 'running' || !run.prompt
     ? null
-    : { id: String(run.startedAt), prompt: run.prompt, answer: run.answer, products: run.products, rows: run.rows, followups: run.followups, questions: run.questions, pages: run.pages, usage: run.usage, error: run.error, agent: run.agent }
+    : { id: String(run.startedAt), prompt: run.prompt, answer: run.answer, products: run.products, rows: run.rows, followups: run.followups, questions: run.questions, actions: run.actions, pages: run.pages, usage: run.usage, error: run.error, agent: run.agent }
 
 export type Action =
   | { type: 'start'; prompt: string; now: number }

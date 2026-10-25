@@ -420,6 +420,7 @@ def _test_completion(provider_id: str, key: str, app_state_path=None) -> dict:
         # Mistral's own default, not `LLM_MODEL`: that names the OpenAI-shaped
         # endpoint's model, and a Mistral key tested against `gpt-4o-mini`
         # would fail for a reason that has nothing to do with the key.
+        temperature = 0.0
         if provider_id == "mistral":
             from app.providers import mistral
 
@@ -428,13 +429,17 @@ def _test_completion(provider_id: str, key: str, app_state_path=None) -> dict:
             from app.providers import kriko_agent
 
             name = kriko_agent.MODEL
+            # Mercury 3 refuses a temperature below 0.5. The test sends the
+            # same value the research turn does, so a working key is not
+            # reported broken by the test's own payload.
+            temperature = kriko_agent.TEMPERATURE
         else:
             name = llm_provider.model_name()
         url = _completion_base(provider_id, app_state_path) + "/chat/completions"
         payload = {
             "model": name,
             "messages": [{"role": "user", "content": "Reply with the word ok."}],
-            "temperature": 0.0,
+            "temperature": temperature,
             "max_tokens": 8,
         }
         headers = {"authorization": f"Bearer {key}"}

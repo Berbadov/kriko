@@ -257,7 +257,8 @@ def brief(product: str, principle: str = "", page: dict | None = None,
         "Price: give the listing's own asking price in `price` when it states "
         "one; otherwise a price you read on a page, with that page's exact URL "
         "and a verbatim quote. Never estimate, convert or average a price, and "
-        "never carry one over from a similar product. "
+        "never carry one over from a similar product. Only current asking offers "
+        "qualify; a past buyer's payment in a review or complaint is not today's price. "
     )
     compatibility_rule = COMPATIBILITY_GUIDANCE
     if compact:
@@ -322,8 +323,10 @@ it was read from (`url`) and a verbatim quote (`quote`). Leave out any figure yo
 
 Record the offer in `price`. Use the listing's own asking price when it states
 one; when it does not, use a price you actually read on a page, with that
-page's exact URL and a verbatim quote — the same rule as a risk. Give the
-amount and its currency, the seller's own name when a page names one, and
+page's exact URL and a verbatim quote — the same rule as a risk. Only record a
+current asking offer. Never use a past buyer's historical payment from
+a review or complaint as the current price. Leave `price` empty instead.
+Give the amount, currency, seller's name when stated, and
 whether the page says it is in stock. **Never estimate, convert or average a
 price**, and never carry one over from a similar product. An unknown price is
 an empty `price` object, not a guess.
@@ -477,6 +480,30 @@ def parse(reply: str, sources: dict[str, str] | None = None,
     }
 
 
+def answer_payload(reply: str) -> dict | None:
+    """Return a complete Quick Look answer object, or None if the format failed.
+
+    A dictionary with only one of the two required arrays is often the model's
+    explanatory JSON or a cut-off response. `parse()` remains tolerant for
+    legacy callers; orchestration uses this stricter check before treating an
+    answer as completed or running downstream classification.
+    """
+    from app.packauthor import _payload
+
+    found: dict | None = _payload(reply or "")
+    valid_shape = (
+        isinstance(found, dict)
+        and isinstance(found.get("risks"), list)
+        and isinstance(found.get("specs"), list)
+    )
+    if not valid_shape:
+        found = closed(reply or "")
+    if (not isinstance(found, dict) or not isinstance(found.get("risks"), list)
+            or not isinstance(found.get("specs"), list)):
+        return None
+    return found
+
+
 def _plain_url(url: str) -> str:
     """A page's address without its scheme, query, fragment or trailing slash."""
     parts = urlparse(str(url or "").strip())
@@ -505,7 +532,7 @@ def without_listing_echo(found: dict, listing_url: str) -> dict:
 
 
 def _offer(raw, sources: dict[str, str] | None, page: dict | None) -> dict:
-    """The one offer this answer rests on: the reply's, else the listing's own.
+    """The listing's own current offer takes precedence over a researched price.
 
     A reply's price is kept only when it carries a figure or a grounded page —
     the same bar a risk is held to. The listing's own facts are the fallback,
@@ -515,6 +542,11 @@ def _offer(raw, sources: dict[str, str] | None, page: dict | None) -> dict:
     from kriko.extract.grounding import loose_span
 
     listed = listing_offer(page)
+    if listed["number"] is not None:
+        return {"amount": listed["number"], "text": listed["amount"],
+                "currency": listed["currency"], "seller": listed["seller"],
+                "availability": listed["availability"], "url": "", "domain": "",
+                "quote": "", "source": "listing"}
     stated: dict = {}
     if isinstance(raw, dict):
         text = _line(raw.get("amount"))
