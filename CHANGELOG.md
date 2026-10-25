@@ -3,6 +3,13 @@
 Reader-visible changes for each release. Newest first. Published versions are
 immutable; a correction is a newer version.
 
+### 0.3.7
+
+- **A Quick Look finds the faults across the whole product, not three of them.** A car you checked had more known problems than the three it reported, and they were all one gearbox. Before it searches, the Kriko Agent now takes one short look at the product and works out how complex it is and which parts need their own evidence: the engine, the gearbox, the cooling, the electrics and so on. A watch keeps the usual budget; a car gets up to twelve retrievals and room for up to ten findings, most serious first. Each finding is tagged with its part, and the run log says which parts came back with a sourced finding. If that first look cannot be made, the search runs as it did before.
+- **A finding is no longer lost because the agent mistyped the page address.** Most findings a Quick Look dropped had a quote that was word for word on a page it had read, filed under an address it had retyped slightly wrong. The quote is now found on the page that really carries it. A quote that is not on any page it read is still refused, and so is a quote cited to a page that does not contain it.
+- **"Mercury reached the response token limit" no longer throws the answer away.** The limit counts the model's hidden reasoning, so an answer of two thousand visible tokens could still be cut off, and everything it had written was discarded. The ceiling is doubled (and four times as high when the agent writes a whole catalog), and a Quick Look or catalog job that is still cut off keeps what was written. A cut-off catalog that used to fail is now repaired and read; before, the repair could never run.
+- The saved record of a Quick Look gains a `scope` block: the complexity, the parts, and the findings found for each.
+
 ### 0.3.6
 
 - **The Kriko Agent plans its research and shows what it did.** Before it searches, it works out which kinds of source your question needs, checks each page against the product you named, and counts what it covered and how fresh it is. Every answer in the desktop chat now carries a record: the searches it ran, the pages it read and the kinds of source behind the answer. The plan comes from your question and the catalog's own data; the engine still decides nothing about what is worth surfacing in a category.

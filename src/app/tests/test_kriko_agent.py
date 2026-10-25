@@ -85,7 +85,7 @@ def test_search_then_fetch_returns_grounding_text_and_token_metrics(monkeypatch)
             assert headers["authorization"] == "Bearer fixture-mercury"
             assert payload["model"] == "mercury-3"
             assert payload["reasoning_effort"] == "low"
-            assert payload["max_tokens"] == 8192
+            assert payload["max_tokens"] == kriko_agent.DEFAULT_MAX_TOKENS
             assert 0.5 <= payload["temperature"] <= 1.0
             model_turn += 1
             if model_turn == 1:
@@ -592,6 +592,67 @@ def test_token_limited_reply_is_rejected_instead_of_returned_as_success(monkeypa
     reply = kriko_agent.converse("A short answer", search=False, max_tokens=64)
     assert reply.text == ""
     assert "token limit" in reply.error
+
+
+def test_a_cut_off_answer_is_kept_for_a_caller_that_can_repair_it(monkeypatch):
+    """The Golf catalog that was paid for and thrown away at the response limit."""
+    monkeypatch.setattr(keys, "require", lambda provider, **kw: f"fixture-{provider}")
+    partial = '{"claims": [{"title": "one"}, {"title": "two"}, {"title": "thr'
+
+    def stream(_url, _payload, _headers, _timeout, on_event, **_kwargs):
+        on_event({"choices": [{"delta": {"content": partial}, "finish_reason": "length"}]})
+        return 1, ""
+
+    monkeypatch.setattr(kriko_agent, "post_sse_or_why", stream)
+    reply = kriko_agent.converse("Author the catalog", search=False, keep_partial=True)
+    assert reply.error == ""
+    assert reply.text == partial
+    assert reply.truncated is True
+    # The caller's own repair closes it at the last whole entry.
+    from app import packauthor
+    payload, note = packauthor.read_payload(reply.text)
+    assert [claim["title"] for claim in payload["claims"]] == ["one", "two"]
+    assert "stopped mid-object" in note
+
+
+def test_a_cut_off_tool_call_is_never_kept(monkeypatch):
+    monkeypatch.setattr(keys, "require", lambda provider, **kw: f"fixture-{provider}")
+
+    def stream(_url, _payload, _headers, _timeout, on_event, **_kwargs):
+        on_event({"choices": [{"delta": {"tool_calls": [{
+            "index": 0, "id": "call-0",
+            "function": {"name": "search", "arguments": '{"query": "an unfin'}}]},
+            "finish_reason": "length"}]})
+        return 1, ""
+
+    monkeypatch.setattr(kriko_agent, "post_sse_or_why", stream)
+    reply = kriko_agent.converse("Research the Widget", keep_partial=True)
+    assert reply.text == ""
+    assert reply.truncated is False
+    assert "token limit" in reply.error
+
+
+def test_authoring_is_given_a_ceiling_for_a_whole_catalog_and_keeps_a_cut_off_reply():
+    from types import SimpleNamespace
+
+    from app.web import tasks
+
+    api = SimpleNamespace(keep_partial=False, max_tokens=None)
+    tasks._for_authoring(api)
+    assert api.keep_partial is True
+    assert api.max_tokens == kriko_agent.AUTHORING_MAX_TOKENS
+    assert kriko_agent.AUTHORING_MAX_TOKENS > kriko_agent.DEFAULT_MAX_TOKENS
+    assert kriko_agent.AUTHORING_MAX_TOKENS <= kriko_agent.MAX_OUTPUT_TOKENS
+
+    # A ceiling the caller already chose stays theirs.
+    chosen = SimpleNamespace(keep_partial=False, max_tokens=4096)
+    tasks._for_authoring(chosen)
+    assert chosen.max_tokens == 4096
+
+    # A CLI or a local model has neither setting: nothing is added to it.
+    cli = SimpleNamespace()
+    tasks._for_authoring(cli)
+    assert vars(cli) == {}
 
 
 def test_kriko_agent_caps_a_parent_research_budget(monkeypatch):
