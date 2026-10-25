@@ -7,7 +7,7 @@ import time
 import pytest
 
 from app import keys, modelcatalogue
-from app.providers import apiagent, kriko_agent, mistral
+from app.providers import agentplan, apiagent, kriko_agent, mistral
 from app.providers.kriko_agent_cache import RetrievalCache
 
 
@@ -751,3 +751,211 @@ def harness_researcher_for_test():
         preferred="kriko-agent",
         model="mistral-large-latest",
     )
+
+
+# ── the plan, the identity flag, freshness and the record ────────────────────
+
+def _scripted_stack(monkeypatch, turns, results_for):
+    """Mercury says `turns[i]` on its i-th call; DeepSeek answers `results_for(query)`.
+
+    Returns the list of payloads Mercury was sent, so a test can read exactly
+    what the model was shown between rounds.
+    """
+    monkeypatch.setattr(keys, "require", lambda provider, **_kw: f"fixture-{provider}")
+    sent: list[dict] = []
+
+    def stream(url, payload, headers, timeout, on_event, *, cancel_event=None):
+        sent.append(json.loads(json.dumps(payload)))
+        turn = turns[min(len(sent), len(turns)) - 1]
+        if turn[0] == "search":
+            _emit_tool_call(on_event, "search", turn[1])
+        else:
+            _emit_text(on_event, turn[1])
+        return 1, ""
+
+    def post(url, payload, headers, timeout):
+        return {"results": results_for(payload["query"])}, ""
+
+    monkeypatch.setattr(kriko_agent, "post_sse_or_why", stream)
+    monkeypatch.setattr(kriko_agent, "post_json_or_why", post)
+    return sent
+
+
+def _row(url, title, content):
+    return {"url": url, "title": title, "content": content, "summary": "", "snippet": ""}
+
+
+def test_a_lookup_question_is_planned_with_a_smaller_budget(monkeypatch):
+    monkeypatch.setattr(keys, "require", lambda provider, **_kw: f"fixture-{provider}")
+    monkeypatch.setattr(kriko_agent, "post_sse_or_why",
+                        lambda *a, **k: (0, "stop here"))
+
+    def budget(question):
+        steps: list[str] = []
+        kriko_agent.converse("brief", question=question, thoroughness=100,
+                             on_step=steps.append)
+        return steps
+
+    lookup = budget("What are the specs of the Widget X100?")
+    assert "Kriko Agent: research budget 4 retrieval(s), 120 s" in lookup
+    assert "plan: searching kinds: manufacturer" in lookup
+
+    hunt = budget("Any known problems or recall notices for the Widget X100?")
+    assert "Kriko Agent: research budget 8 retrieval(s), 120 s" in hunt
+    assert "plan: searching kinds: forums, recalls" in hunt
+
+    # No question handed in: the turn runs on the dial alone, as it always did.
+    steps: list[str] = []
+    kriko_agent.converse("brief", thoroughness=100, on_step=steps.append)
+    assert "Kriko Agent: research budget 8 retrieval(s), 120 s" in steps
+    assert not any(line.startswith("plan:") for line in steps)
+
+
+def test_pages_are_flagged_by_whether_they_carry_the_products_own_words(monkeypatch):
+    sent = _scripted_stack(
+        monkeypatch,
+        [("search", {"query": "widget x100 problems", "kind": "forums"}),
+         ("text", "{\"findings\": []}")],
+        lambda _query: [
+            _row("https://forum.example/a", "Widget X100 thread",
+                 "Owners of the Widget X100 report the seal fails."),
+            _row("https://forum.example/b", "Gadget Y200 thread",
+                 "Owners of the Gadget Y200 report the hinge cracks."),
+        ],
+    )
+    steps: list[str] = []
+    reply = kriko_agent.converse(
+        "brief", question="Any known problems with the Widget X100?", on_step=steps.append)
+
+    assert reply.error == ""
+    shown = json.loads(sent[1]["messages"][-1]["content"])["results"]
+    assert [row["about_product"] for row in shown] == [True, False]
+    assert "about_product" in sent[0]["messages"][0]["content"]
+    assert reply.record["pages"] == 2
+    assert reply.record["on_product"] == 1 and reply.record["off_product"] == 1
+    assert reply.record["kinds"] == ["forums"] and reply.record["missing"] == []
+    assert any(line.startswith("record: 1 search(es)") for line in steps), steps
+
+
+def test_the_flag_is_computed_for_each_question_and_never_stored_in_the_cache(monkeypatch):
+    rows = [
+        _row("https://forum.example/a", "Widget X100 thread", "The Widget X100 seal fails."),
+        _row("https://forum.example/b", "Gadget Y200 thread", "The Gadget Y200 hinge cracks."),
+    ]
+    script = [("search", {"query": "owner reports", "kind": "forums"}),
+              ("text", "{\"findings\": []}")]
+
+    def shown_flags(question):
+        sent = _scripted_stack(monkeypatch, script, lambda _query: rows)
+        reply = kriko_agent.converse("brief", question=question)
+        assert reply.error == ""
+        return [row["about_product"]
+                for row in json.loads(sent[1]["messages"][-1]["content"])["results"]]
+
+    assert shown_flags("Any known problems with the Widget X100?") == [True, False]
+    # The second turn is answered from the cache, about the other product.
+    assert shown_flags("Any known problems with the Gadget Y200?") == [False, True]
+
+
+def test_the_coverage_note_rides_beside_the_evidence_until_the_kind_is_searched(monkeypatch):
+    sent = _scripted_stack(
+        monkeypatch,
+        [("search", {"query": "widget x100 seal failure", "kind": "forums"}),
+         ("search", {"query": "widget x100 recall notice", "kind": "recalls"}),
+         ("text", "{\"findings\": []}")],
+        lambda _query: [_row("https://example.org/page", "Widget X100",
+                             "The Widget X100 seal and recall notice.")],
+    )
+    steps: list[str] = []
+    reply = kriko_agent.converse(
+        "brief", question="Any known problems or recall notices for the Widget X100?",
+        on_step=steps.append)
+
+    assert reply.error == ""
+    after_forums = json.loads(sent[1]["messages"][-1]["content"])
+    assert [row["kind"] for row in after_forums["coverage"]["still_asked"]] == ["recalls"]
+    assert "coverage: not yet searched: recalls" in steps
+    after_recalls = json.loads(sent[2]["messages"][-1]["content"])
+    assert "coverage" not in after_recalls
+    assert reply.record["kinds"] == ["forums", "recalls"]
+    assert reply.record["missing"] == []
+
+
+def test_a_kind_asked_for_and_never_searched_is_reported_as_missing(monkeypatch):
+    _scripted_stack(
+        monkeypatch,
+        [("search", {"query": "widget x100 seal failure", "kind": "forums"}),
+         ("text", "{\"findings\": []}")],
+        lambda _query: [_row("https://forum.example/a", "Widget X100",
+                             "The Widget X100 seal fails.")],
+    )
+    reply = kriko_agent.converse(
+        "brief", question="Any known problems or recall notices for the Widget X100?")
+    assert reply.record["kinds"] == ["forums"]
+    assert reply.record["missing"] == ["recalls"]
+
+
+def test_the_record_counts_an_unlabelled_search_by_the_kind_its_words_ask_for(monkeypatch):
+    _scripted_stack(
+        monkeypatch,
+        [("search", {"query": "widget x100 owners forum"}),
+         ("text", "{\"findings\": []}")],
+        lambda _query: [_row("https://forum.example/a", "Widget X100",
+                             "The Widget X100 seal fails.")],
+    )
+    steps: list[str] = []
+    reply = kriko_agent.converse("brief", on_step=steps.append)
+    assert reply.record["kinds"] == ["forums"]
+    # No question, no plan, and so no plan line: the log keeps its old shape.
+    assert not any(line.startswith(("plan:", "record:")) for line in steps)
+    assert "on_product" not in reply.record
+
+
+def test_search_freshness_follows_the_kind_of_source(monkeypatch):
+    stored: list[tuple[str, int]] = []
+
+    class Recorder:
+        def get(self, *_args, **_kwargs):
+            return None
+
+        def put(self, lane, key, payload, *, ttl_seconds, now=None):
+            stored.append((key, ttl_seconds))
+
+    monkeypatch.setattr(kriko_agent, "RetrievalCache", lambda supplied=None: Recorder())
+    for query, kind in (("widget x100 notice", "recalls"),
+                        ("widget x100 manual", ""),
+                        ("widget x100 anything", "")):
+        _scripted_stack(
+            monkeypatch,
+            [("search", {"query": query, **({"kind": kind} if kind else {})}),
+             ("text", "{\"findings\": []}")],
+            lambda _query: [_row("https://example.org/p", "Widget", "The Widget X100.")],
+        )
+        assert kriko_agent.converse("brief").error == ""
+
+    ttl = {key.split("|")[0]: seconds for key, seconds in stored}
+    assert ttl["widget x100 notice"] == agentplan.FRESHNESS_SECONDS["recalls"]
+    # Unlabelled: the kind its own words ask for ("manual" asks for the maker's).
+    assert ttl["widget x100 manual"] == agentplan.FRESHNESS_SECONDS["manufacturer"]
+    # Asks for no kind: the standing default.
+    assert ttl["widget x100 anything"] == kriko_agent.SEARCH_TTL_SECONDS
+
+
+def test_the_researcher_merges_each_calls_record_across_the_turn(tmp_path):
+    researcher = apiagent.ApiAgentResearcher(
+        apiagent.KRIKO_AGENT, model=kriko_agent.MODEL, home=tmp_path,
+        converse=lambda *_args, **_kwargs: mistral.Reply(),
+    )
+    researcher._account(mistral.Reply(record=agentplan.build_record(
+        searches=2, kinds=["forums"], missing=["recalls"], pages=3, unreadable=0,
+        cached=0, retrieved=3)))
+    researcher._account(mistral.Reply(record=agentplan.build_record(
+        searches=1, kinds=["recalls"], missing=[], pages=1, unreadable=1,
+        cached=1, retrieved=1)))
+    # A reply from an adapter that keeps no record changes nothing.
+    researcher._account(mistral.Reply())
+
+    assert researcher.agent_record["searches"] == 3
+    assert researcher.agent_record["pages"] == 4
+    assert researcher.agent_record["kinds"] == ["forums", "recalls"]
+    assert researcher.agent_record["missing"] == []

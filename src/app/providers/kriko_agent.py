@@ -26,7 +26,7 @@ from typing import Literal
 from urllib.parse import urlsplit, urlunsplit
 
 from app import keys
-from app.providers import local_search_plan, mistral
+from app.providers import agentplan, local_search_plan, mistral
 from app.providers._http import StreamCancelled, post_json_or_why, post_sse_or_why
 from app.providers.kriko_agent_cache import (
     FETCH_TTL_SECONDS,
@@ -544,8 +544,15 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
              shared_home: Path | None = None,
              trial_reservation_id: str = "", max_tokens: int | None = None,
              reasoning_effort: str = "",
-             app_action: Callable[[str, dict], dict] | None = None) -> mistral.Reply:
+             app_action: Callable[[str, dict], dict] | None = None,
+             question: str = "") -> mistral.Reply:
     """Run one grounded Mercury turn, executing DeepSeek calls through APIs.
+
+    `question` is the reader's own words, apart from the brief around them. With
+    it the turn is planned (`agentplan.make_plan`): the kinds of source it asks
+    for, a retrieval budget sized to that question, and the product's own words
+    to check each page against. Without it the turn runs exactly as before, on
+    the dial alone, and `reply.record` still says what it did.
 
     `on_step` is called with one short line per retrieval, as it happens, so a
     turn whose search is slow says so instead of holding one frozen step. It is
@@ -667,11 +674,29 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
         budget_calls = int(max_tool_calls)
     except (TypeError, ValueError):
         budget_calls = MAX_TOOL_CALLS
-    calls_left = max(0, min(MAX_TOOL_CALLS, requested_calls, budget_calls))
+    question = str(question or "").strip()
+    plan = (agentplan.make_plan(question, ceiling=requested_calls)
+            if search and question else None)
+    calls_left = max(0, min(MAX_TOOL_CALLS,
+                            plan.calls if plan is not None else requested_calls,
+                            budget_calls))
+    #: Kinds of source this turn actually searched, and how many searches it made
+    #: (a cached or empty search counts: the reader asked where it looked).
+    searched_kinds: dict[str, int] = {}
+    searches_made = 0
     deadline = time.monotonic() + turn_timeout
+    if plan is not None and plan.identity:
+        messages[0]["content"] += (
+            "\n\nEach search result and fetched page carries `about_product`. When it "
+            "is false, the page's text does not carry this product's own name or model: "
+            "do not make a claim about the product from it, and say so if it is all "
+            "you found."
+        )
     if search:
         step(f"Kriko Agent: research budget {calls_left} retrieval(s), "
              f"{turn_timeout:.0f} s")
+        if plan is not None and plan.kinds:
+            step(f"plan: {local_search_plan.kinds_line(plan.kinds)}")
     else:
         # No tools were offered, so there is no research budget to announce. The
         # line claimed "7 retrieval(s)" on calls that could not retrieve
@@ -732,6 +757,34 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
             if query not in reply.queries:
                 reply.queries.append(query)
 
+    def about_product(title: object, *texts: object) -> bool | None:
+        """Whether a page carries the product's own words; `None` when unplanned."""
+        if plan is None or not plan.identity:
+            return None
+        return agentplan.mentions(plan.identity, " ".join(
+            str(part or "") for part in (title, *texts)))
+
+    def annotate(payload: dict) -> dict:
+        """The payload with `about_product` on each page the model is shown.
+
+        Applied after the cache, never stored in it: the cached row belongs to a
+        query, and the next question may be about a different product.
+        """
+        if plan is None or not plan.identity or not isinstance(payload, dict):
+            return payload
+        if isinstance(payload.get("results"), list):
+            return {**payload, "results": [
+                ({**row, "about_product": about_product(
+                    row.get("title"), row.get("snippet"), row.get("summary"),
+                    row.get("page_text"))}
+                 if isinstance(row, dict) else row)
+                for row in payload["results"]
+            ]}
+        if "page_text" in payload:
+            return {**payload, "about_product": about_product(
+                payload.get("title"), payload.get("page_text"))}
+        return payload
+
     def run_search(query: str, count: int = MAX_RESULTS, kind: str = "") -> dict:
         nonlocal attempted, billable, cache_hits
         query = str(query or "").strip()
@@ -752,10 +805,17 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
         normalized_query = " ".join(query.split()).casefold()
         key = ("search", normalized_query, str(count))
         cache_key = f"{normalized_query}|{count}"
+        # The agent's label, else the kind its own words ask for. The label is
+        # what the log prints; this is what coverage and freshness count.
+        searched_for = kind or local_search_plan.kind_of(query)
 
         def request():
-            nonlocal attempted, billable, cache_hits
+            nonlocal attempted, billable, cache_hits, searches_made
             check_cancelled()
+            with meter_lock:
+                searches_made += 1
+                if searched_for:
+                    searched_kinds[searched_for] = searched_kinds.get(searched_for, 0) + 1
             cached_result = cached("search", cache_key)
             if cached_result is not None and isinstance(cached_result.get("results"), list):
                 record_query(query)
@@ -767,7 +827,7 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
                         merge_source(str(item.get("url") or ""),
                                      str(item.get("title") or ""),
                                      str(item.get("page_text") or ""))
-                return _tool_view(cached_result)
+                return _tool_view(annotate(cached_result))
             _pace("search")
             with meter_lock:
                 attempted += 1
@@ -825,8 +885,9 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
                                                  "DeepSeek Search returned nothing"))
             response = {"results": out}
             if out:
-                remember("search", cache_key, response, SEARCH_TTL_SECONDS)
-            return _tool_view(response)
+                remember("search", cache_key, response,
+                         agentplan.search_ttl(searched_for, SEARCH_TTL_SECONDS))
+            return _tool_view(annotate(response))
 
         try:
             return memoized(key, request)
@@ -855,8 +916,9 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
                     url, str(cached_result.get("title") or ""),
                     str(cached_result.get("page_text") or ""),
                 )
-                return _tool_view({"url": url, "title": source["title"],
-                                   "page_text": str(cached_result.get("page_text") or "")})
+                return _tool_view(annotate({
+                    "url": url, "title": source["title"],
+                    "page_text": str(cached_result.get("page_text") or "")}))
             _pace("fetch")
             with meter_lock:
                 attempted += 1
@@ -885,7 +947,7 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
                 billable += 1
             response = {"url": url, "title": source["title"], "page_text": content}
             remember("fetch", url, response, FETCH_TTL_SECONDS)
-            return _tool_view(response)
+            return _tool_view(annotate(response))
 
         try:
             return memoized(key, request)
@@ -1077,6 +1139,18 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
                     message_index = len(messages)
                     messages.append(tool_message)
                     tool_records.append((message_index, call_id, tool_result))
+                if plan is not None and tool_records:
+                    with meter_lock:
+                        covered = set(searched_kinds)
+                    hint = agentplan.coverage_hint(plan, covered, calls_left)
+                    last_index, last_id, last_result = tool_records[-1]
+                    if hint and isinstance(last_result, dict) and "error" not in last_result:
+                        # Beside the evidence, where the agent reads it before it
+                        # decides to answer (see `agentplan.coverage_hint`).
+                        tool_records[-1] = (last_index, last_id,
+                                            {**last_result, "coverage": hint})
+                        step("coverage: not yet searched: " + ", ".join(
+                            row["kind"] for row in hint["still_asked"]))
                 _repack_tool_context(
                     messages, tool_records,
                     MAX_CONTEXT_CHARS - CONTEXT_TOOL_RESERVE_CHARS,
@@ -1093,4 +1167,31 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
     reply.retrieval_requests = attempted
     reply.cache_hits = cache_hits
     reply.actions = actions
+    if search:
+        reply.record = _record_of(reply, plan, searched_kinds, searches_made,
+                                  attempted, cache_hits)
+        if plan is not None:
+            step(agentplan.record_line(reply.record))
     return reply
+
+
+def _record_of(reply: mistral.Reply, plan: agentplan.Plan | None,
+               searched_kinds: dict[str, int], searches: int, attempted: int,
+               cache_hits: int) -> dict:
+    """What the turn did, from what it actually retrieved, for the screen."""
+    readable = {url: row for url, row in reply.sources.items()
+                if str(row.get("text") or "").strip()}
+    on_product = off_product = None
+    if plan is not None and plan.identity:
+        on_product = sum(
+            1 for row in readable.values()
+            if agentplan.mentions(plan.identity,
+                                  f"{row.get('title') or ''} {row.get('text') or ''}"))
+        off_product = len(readable) - on_product
+    return agentplan.build_record(
+        searches=searches, kinds=searched_kinds,
+        missing=agentplan.missing_kinds(plan, searched_kinds) if plan is not None else (),
+        pages=len(readable), unreadable=len(reply.sources) - len(readable),
+        cached=cache_hits, retrieved=attempted,
+        on_product=on_product, off_product=off_product,
+    )

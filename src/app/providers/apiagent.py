@@ -36,7 +36,7 @@ import uuid
 from dataclasses import dataclass, replace
 from pathlib import Path
 
-from app.providers import harness, mistral
+from app.providers import agentplan, harness, mistral
 from app.providers._http import StreamCancelled
 from kriko.extract.grounding import loose_span
 from kriko.research import BudgetExceeded
@@ -434,6 +434,12 @@ class ApiAgentResearcher(harness.HarnessResearcher):
         #: Named app changes this researcher made or proposed, across every
         #: call in the turn. `app/agentactions.py` owns the vocabulary.
         self.agent_actions: list[dict] = []
+        #: What this researcher's calls did, merged across the turn
+        #: (`agentplan.merge_records`): searches, pages, kinds of source covered.
+        self.agent_record: dict = {}
+        #: The reader's own words, apart from the brief around them. The caller
+        #: sets it before asking; the built-in stack plans the turn from it.
+        self.question = ""
         self._app_action: Callable[[str, dict], dict] | None = None
         if agent.id == KRIKO_AGENT.id and app_state_path is not None:
             from app import agentactions
@@ -489,6 +495,7 @@ class ApiAgentResearcher(harness.HarnessResearcher):
                 max_tokens=self.max_tokens,
                 reasoning_effort=self.reasoning_effort,
                 app_action=self._app_action,
+                question=self.question,
                 **kw))
         else:
             self._stream_converse = (mistral.converse_stream
@@ -869,6 +876,8 @@ class ApiAgentResearcher(harness.HarnessResearcher):
         for action in getattr(reply, "actions", []) or []:
             if isinstance(action, dict) and action not in self.agent_actions:
                 self.agent_actions.append(action)
+        self.agent_record = agentplan.merge_records(
+            self.agent_record, getattr(reply, "record", None))
         requests = (reply.retrieval_requests
                     if isinstance(reply.retrieval_requests, int)
                     and not isinstance(reply.retrieval_requests, bool)

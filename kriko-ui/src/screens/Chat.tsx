@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type CSSProperties, type UIEvent } from 'r
 import { AnimatePresence, motion } from 'motion/react'
 import { StepPill, Timeline } from '../activity/Timeline'
 import { FocusProvider } from '../chat/focus'
-import { groupsOf, threadUsage, turnLine } from '../chat/view'
+import { groupsOf, recordLine, recordNote, threadUsage, turnLine } from '../chat/view'
 import type { AgentRef, AppAction, Question, Run, Turn, Usage } from '../activity/run'
 import { useChat } from '../chat'
 import { useEngine, type Agent } from '../engine/Engine'
@@ -180,6 +180,11 @@ function AnswerActions({ text, onRetry, usage }: { text: string; onRetry?: () =>
           <Icon name="retry" size={15} />
           <span>Retry</span>
         </button>
+      )}
+      {usage?.record && recordLine(usage.record) && (
+        <span className="act-record mono" title={recordNote(usage.record) || 'What this answer looked at'}>
+          {recordLine(usage.record)}
+        </span>
       )}
       {usage && (
         <span className="act-usage mono" title={usage.used !== null ? `Largest prompt this turn: ${usage.used.toLocaleString('en-GB')} tokens` : 'This agent did not say how large its prompts were'}>
