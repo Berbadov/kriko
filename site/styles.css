@@ -114,6 +114,8 @@ h2 { font-size: clamp(2.5rem, 5.4vw, 4.2rem); max-width: 14em; }
 .two h2 { font-size: clamp(2.1rem, 4vw, 3.1rem); }
 .two p:not(.label) { margin-top: 18px; max-width: 32em; color: var(--muted); }
 .two strong, .setup strong { color: var(--ink); font-weight: 700; }
+.split { align-items: center; }
+.split-copy > div + div { margin-top: clamp(48px, 6vw, 80px); }
 
 /* How it works */
 .steps { list-style: none; margin: clamp(36px, 5vw, 60px) 0 0; padding: 0; border-top: 1px solid var(--line); }

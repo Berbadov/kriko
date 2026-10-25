@@ -2504,6 +2504,46 @@ async function _getApp(path) {
   return response.json();
 }
 
+/** The write door for a removal: one row of the shortlist, by its id. */
+async function _deleteApp(path) {
+  const response = await _fetchApp(`${await apiBase()}${path}`, { method: "DELETE" });
+  if (!response.ok) {
+    // A refused delete is not a removed row: the panel must not draw it as gone.
+    const refusal = new Error(`Kriko refused that (${response.status}).`);
+    refusal.status = response.status;
+    throw refusal;
+  }
+  return response.json();
+}
+
+/** The shortlist with what is known about each product on it.
+ *
+ * The queue's rows come first; each row that has a stored check then gets that
+ * check's risk severities, fetched side by side. A check that cannot be read
+ * (deleted, or the app restarted under it) leaves that row "not checked yet"
+ * instead of failing the list: the shortlist is still the reader's.
+ */
+async function _compareList() {
+  const queue = await _getApp("/api/queue");
+  const rows = Array.isArray(queue.items) ? queue.items.slice(0, 16) : [];
+  const items = await Promise.all(rows.map(async (row) => {
+    const item = {
+      queue_id: row.queue_id, url: row.url, name: row.name, state: row.state,
+      severities: null,
+    };
+    if (!row.lookup_id) return item;
+    try {
+      const stored = await _getApp(`/api/lookup/${encodeURIComponent(row.lookup_id)}`);
+      const claims = stored && stored.response && stored.response.claims;
+      if (Array.isArray(claims)) item.severities = claims.map((claim) => String(claim.severity || ""));
+    } catch (_) {
+      // Not checked yet, as far as the panel can tell.
+    }
+    return item;
+  }));
+  return { items, max: queue.max };
+}
+
 // The last checkout look for a page, for the panel opened after the banner was dismissed.
 async function _getGuard(url) {
   const got = await extensionApi.storage.session.get(GUARD_KEY_PREFIX + url);
@@ -2860,6 +2900,31 @@ extensionApi.runtime.onMessage.addListener((request, sender, sendResponse) => {
       .then((reply) => sendResponse({ ok: true, ...reply }))
       .catch((error) => sendResponse({
         ok: false, status: error.status, code: error.code, error: error.message }));
+    return true;
+  }
+
+  // Compare, drawn inside the panel: the research queue is the shortlist, and
+  // each row carries the severity of every risk in the check stored for it, so
+  // the panel can set the products side by side without opening the app. Look
+  // only; the worker forwards what the app stored and counts nothing.
+  if (request.type === "COMPARE_LIST") {
+    _compareList()
+      .then((reply) => sendResponse({ ok: true, ...reply }))
+      .catch((error) => sendResponse({
+        ok: false, status: error.status, error: error.message }));
+    return true;
+  }
+
+  if (request.type === "COMPARE_REMOVE") {
+    const queueId = String(request.payload?.queue_id || "");
+    if (!queueId) {
+      sendResponse({ ok: false, error: "Missing queue_id" });
+      return false;
+    }
+    _deleteApp(`/api/queue/${encodeURIComponent(queueId)}`)
+      .then((reply) => sendResponse({ ok: true, ...reply }))
+      .catch((error) => sendResponse({
+        ok: false, status: error.status, error: error.message }));
     return true;
   }
 

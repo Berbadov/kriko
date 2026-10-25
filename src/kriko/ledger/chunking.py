@@ -49,6 +49,22 @@ FAILURE_LEXICON: frozenset[str] = frozenset(
         "repair",
         "chronic",
         "stretch",
+        # 2026-10-25, from a live extractor run: a passage whose only symptom
+        # was "the thermostat housing is cracking" and "coolant seepage" was
+        # skipped before the model saw it. These are generic engineering
+        # failure words, not a category's vocabulary.
+        "crack",
+        "seep",
+        "overheat",
+        "warp",
+        "squeal",
+        "grind",
+        "seize",
+        "corrod",
+        "sludge",
+        "whine",
+        "clunk",
+        "squeak",
     }
 )
 

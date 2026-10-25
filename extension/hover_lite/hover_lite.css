@@ -100,69 +100,69 @@
 
   /* Light palette. Applied by the media query and the explicit override
      after this rule; every key here has a dark twin above. */
-  --light-bg-base:     #f2f3f7;
-  --light-bg-panel:    #ffffff;
-  --light-bg-header:   #ffffff;
-  --light-bg-surface:  #f6f7fa;
-  --light-bg-item:     #eef0f5;
-  --light-border:      rgba(12,18,40,0.10);
-  --light-border-soft: rgba(12,18,40,0.06);
+  --light-bg-base:     #f4f0e6;
+  --light-bg-panel:    #fffdf7;
+  --light-bg-header:   #fffdf7;
+  --light-bg-surface:  #f8f5ee;
+  --light-bg-item:     #f4f0e6;
+  --light-border:      rgba(83,72,50,0.16);
+  --light-border-soft: rgba(83,72,50,0.10);
 
-  --light-fg:          #0d1220;
-  --light-fg-body:     #2a3147;
-  --light-fg-muted:    #515a72;
+  --light-fg:          #24231f;
+  --light-fg-body:     #3e3a33;
+  --light-fg-muted:    #69655e;
 
-  --light-high-surface: rgba(179,38,30,0.08);
-  --light-high-border:  rgba(179,38,30,0.30);
-  --light-high-ink:     #b3261e;
+  --light-high-surface: rgba(166,61,52,0.08);
+  --light-high-border:  rgba(166,61,52,0.25);
+  --light-high-ink:     #a63d34;
   --light-med-surface:  rgba(138,90,0,0.10);
   --light-med-border:   rgba(138,90,0,0.30);
   --light-med-ink:      #8a5a00;
   --light-low-surface:  rgba(15,122,82,0.10);
   --light-low-border:   rgba(15,122,82,0.30);
-  --light-low-ink:      #0f7a52;
+  --light-low-ink:      #277345;
 
-  --light-brand:        #2f5bff;
-  --light-brand-hover:  #4670ff;
-  --light-brand-low:    #2448d6;
-  --light-brand-bright: #2448d6;
+  --light-brand:        #2e5bef;
+  --light-brand-hover:  #244bcf;
+  --light-brand-low:    #2448c2;
+  --light-brand-bright: #2e5bef;
   --light-on-brand:     #ffffff;
-  --light-ice:          #2448d6;
-  --light-led-off:      #d3d8e6;
-  --light-led-dim:      #8c94ad;
-  --light-bezel-hi:     #ffffff;
-  --light-bezel-lo:     #f6f7fa;
-  --light-bezel-edge:   rgba(12,18,40,0.10);
-  --light-glass-1:      rgba(16, 20, 40, 0.03);
-  --light-glass-2:      rgba(16, 20, 40, 0.06);
-  --light-glass-3:      rgba(16, 20, 40, 0.10);
-  --light-well:         #f2f3f7;
-  --light-border-control: rgba(12,18,40,0.17);
-  --light-bg-panel-rgb: 242, 243, 247;
-  --light-glass-panel-alpha: 0.88;
-  --light-glass-backdrop: blur(16px) saturate(1.6);
-  --light-accent:       #2448d6;
+  --light-ice:          #2e5bef;
+  --light-led-off:      #ded8cc;
+  --light-led-dim:      #aaa397;
+  --light-bezel-hi:     #fffdf7;
+  --light-bezel-lo:     #f8f5ee;
+  --light-bezel-edge:   rgba(83,72,50,0.10);
+  --light-glass-1:      rgba(83,72,50,0.025);
+  --light-glass-2:      rgba(83,72,50,0.05);
+  --light-glass-3:      rgba(83,72,50,0.08);
+  --light-well:         #f4f0e6;
+  --light-border-control: rgba(83,72,50,0.2);
+  --light-bg-panel-rgb: 244, 240, 230;
+  --light-glass-panel-alpha: 0.96;
+  --light-glass-backdrop: blur(12px) saturate(1.05);
+  --light-accent:       #2e5bef;
 
-  --light-hover-face:  #e9ecf4;
-  --light-hover-edge:  rgba(12,18,40,0.17);
-  --light-row-face:    #f3f4f8;
-  --light-scroll-track: #eef0f5;
-  --light-skeleton-a:  #e9edf5;
-  --light-skeleton-b:  #f7f9fd;
-  --light-alert-ink:   #6e2a2c;
-  --light-ok-ink:      #0f6b45;
-  --light-ok-surface:  rgba(15, 107, 69, 0.10);
-  --light-ok-border:   rgba(15, 107, 69, 0.28);
+  --light-hover-face:  #f0eadf;
+  --light-hover-edge:  rgba(83,72,50,0.24);
+  --light-row-face:    #fffdf7;
+  --light-scroll-track: #f4f0e6;
+  --light-skeleton-a:  #ebe5d9;
+  --light-skeleton-b:  #f8f5ee;
+  --light-alert-ink:   #71372f;
+  --light-ok-ink:      #286342;
+  --light-ok-surface:  rgba(39, 115, 69, 0.08);
+  --light-ok-border:   rgba(39, 115, 69, 0.24);
   --light-warn-ink:    #7a5000;
   --light-warn-surface: rgba(122, 80, 0, 0.10);
   --light-warn-border: rgba(122, 80, 0, 0.28);
   --light-key-edge:    #9db0ee;
   --light-sky-base:    #2c53e0;
   --light-sunken-face: rgba(16, 20, 40, 0.04);
-  --light-shadow-panel: 0 18px 50px -16px rgba(30,45,90,0.28), 0 2px 6px rgba(30,45,90,0.08);
-  --light-tour-scrim: rgba(12, 18, 40, 0.5);
-  --light-shadow-card:  0 1px 2px rgba(20,30,60,0.08);
-  --light-well-shadow:  inset 0 1px 2px rgba(20,28,60,0.06);
+  --light-shadow-panel: 0 18px 50px -18px rgba(54,45,28,0.28), 0 2px 6px rgba(54,45,28,0.10);
+  --light-tour-scrim: rgba(36, 35, 31, 0.48);
+  --light-shadow-card:  0 1px 3px rgba(54,45,28,0.08);
+  --light-well-shadow:  inset 0 1px 2px rgba(54,45,28,0.05);
 
   /* Motion profile — Calm · Standard · Vivid. These are the Standard
      values; the [data-motion] selectors after this rule remap them, so one
@@ -559,14 +559,6 @@
   letter-spacing: 0.3px;
   line-height: 1;
   color: var(--fg);
-}
-.lite-subtitle {
-  margin: 5px 0 0;
-  font-family: var(--font-body);
-  font-size: 10.5px;
-  color: var(--fg-muted);
-  letter-spacing: 0.2px;
-  line-height: 1;
 }
 
 /* Header icon buttons. The flat skin below restates their faces; what is
@@ -1043,7 +1035,6 @@
   color: var(--fg-muted);
   letter-spacing: 1px;
 }
-.lite-chip-group { display: flex; gap: 6px; }
 .lite-chip {
   all: unset;
   cursor: pointer;
@@ -2092,12 +2083,6 @@
 .lite-quick { display: grid; gap: 8px; margin: 10px 0; }
 .lite-quick-assumed { margin: 0; color: var(--fg-muted); font-size: 12px; }
 .lite-quick-cards { display: grid; gap: 8px; }
-/* The product info: a reference the reader opens, under a one-line summary. */
-.lite-quick-info { min-width: 0; }
-.lite-quick-info > summary { cursor: pointer; font: 10.5px var(--font-mono); color: var(--fg-muted); }
-.lite-quick-info > summary:focus-visible { outline: 2px solid var(--low-ink); outline-offset: 2px; }
-.lite-quick-info .lite-quick-specs { margin-top: 6px; }
-.lite-quick-info .lite-quick-specs p { overflow-wrap: anywhere; }
 
 /* ═════════════════════════════════════════════
    The Kriko design system, worn by the panel
@@ -2134,13 +2119,6 @@
   height: 20px;
   width: auto;
   color: var(--on-brand);
-}
-.lite-subtitle {
-  margin-top: 7px;
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  letter-spacing: 0.02em;
-  color: rgba(240,243,255,0.82);
 }
 /* Geometry, face and hover for these live in the flat skin below; the one
    state that skin leaves alone keeps its ice outline here. */
@@ -2552,70 +2530,6 @@
 .lite-rc-mark-label,
 .lite-rc-factverdict { font-family: var(--font-body); font-size: 11.5px; }
 
-/* queue mode: the listing's product joins the app's research queue.
-   A bezel plate, not the brand key: Analyze is this panel's one key. */
-.lite-queue-row {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px 10px;
-  margin-top: 10px;
-}
-.lite-queue {
-  all: unset;
-  box-sizing: border-box;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  height: 30px;
-  padding: 0 13px;
-  border-radius: 999px;
-  cursor: pointer;
-  font: 540 13px/1 var(--font-display);
-  color: var(--fg-body);
-  background: var(--bg-item);
-  box-shadow: 0 0 0 1px var(--bezel-edge);
-}
-.lite-queue::before {
-  content: "";
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--led-off);
-}
-.lite-queue:hover:not(:disabled) { color: var(--fg); filter: brightness(1.1); }
-.lite-queue:focus-visible { outline: 2px solid var(--ice); outline-offset: 2px; }
-.lite-queue:disabled { cursor: default; }
-.lite-queue-row[data-phase="busy"] .lite-queue::before { background: var(--fg); }
-.lite-queue[aria-pressed="true"] { color: var(--ice); box-shadow: 0 0 0 1px var(--ice); }
-.lite-queue[aria-pressed="true"]::before { background: var(--ice); }
-.lite-queue-note { font: 12px/1.4 var(--font-body); color: var(--fg-muted); }
-.lite-queue-help {
-  all: unset;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border: 1px solid var(--border);
-  border-radius: 50%;
-  font: 12px var(--font-body);
-  color: var(--fg-muted);
-  cursor: pointer;
-}
-.lite-queue-help:hover, .lite-queue-help[aria-expanded="true"] { color: var(--ice); border-color: var(--ice); }
-.lite-queue-help:focus-visible { outline: 2px solid var(--ice); outline-offset: 2px; }
-.lite-queue-guide {
-  margin-top: 8px;
-  padding: 10px;
-  border: 1px solid var(--border);
-  background: var(--bg-item);
-  color: var(--fg-muted);
-  font: 12px/1.5 var(--font-body);
-}
-.lite-queue-guide[hidden] { display: none; }
-.lite-queue-guide strong, .lite-queue-guide b { color: var(--fg); }
-.lite-queue-guide p { margin: 6px 0 0; }
 /* Pack and agent prose (renderRichText): the same emphasis wherever it lands. */
 .lite-rc-text strong, .lite-rc-insp-body strong, .lite-quick-specs strong, .lite-quick-assumed strong,
 .lite-asked-q strong, .lite-chip strong { color: var(--fg); font-weight: 700; }
@@ -2625,7 +2539,6 @@
 .lite-question-form label { flex: 1; display: flex; flex-direction: column; gap: 4px; }
 .lite-question-input { min-width: 0; width: 100%; box-sizing: border-box; padding: 7px; font: inherit; color: var(--fg); background: var(--bg-base); border: 1px solid var(--border); }
 .lite-question-input:focus-visible { outline: 2px solid var(--ice); outline-offset: 2px; }
-.lite-queue-row[data-phase="error"] .lite-queue-note { color: var(--high-ink); }
 
 /* Bound research cards to the same viewport as the knowledge cards. */
 .lite-body { overflow-x: hidden; }
@@ -2707,15 +2620,6 @@
 }
 .lite-titlebox { display: flex; align-items: baseline; gap: 9px; min-width: 0; }
 .lite-wordmark { height: 15px; }
-.lite-subtitle {
-  margin: 0;
-  font-family: var(--font-body);
-  font-size: 12px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: rgba(240,243,255,0.78);
-}
 .lite-iconbtn,
 .lite-iconbtn.lite-btn-close {
   width: 28px;
@@ -2750,7 +2654,6 @@
 }
 .lite-listing-meta { margin-top: 6px; font-size: 12.5px; }
 .lite-listing-engine { margin-top: 5px; font-size: 12.5px; }
-.lite-queue-row { margin-top: 8px; gap: 6px 8px; }
 
 /* keys: flat faces. The one key wears the sky; the rest are glass. */
 .lite-cta-wrap { gap: 4px; }
@@ -2784,7 +2687,6 @@
 .lite-gap-btn,
 .lite-verdict-btn,
 .lite-research button:not(.lite-research-start):not(.lite-more),
-.lite-queue,
 .lite-chip,
 .lite-rc-toggle,
 .lite-rc-factbtn,
@@ -2808,13 +2710,11 @@
   font-size: 12.5px;
   line-height: 1;
 }
-.lite-queue { height: 28px; padding: 0 12px; font-size: 12.5px; gap: 7px; }
 .lite-product-actions button:hover,
 .lite-search-research:hover,
 .lite-research button:hover:not(:disabled):not(.lite-research-start):not(.lite-more),
 .lite-gap-btn:hover,
 .lite-verdict-btn:hover,
-.lite-queue:hover:not(:disabled),
 .lite-chip:hover,
 .lite-rc-toggle:hover,
 .lite-rc-factbtn:hover:not(:disabled),
@@ -2827,16 +2727,10 @@
 .lite-product-actions button:active,
 .lite-search-research:active,
 .lite-research button:active:not(:disabled):not(.lite-research-start):not(.lite-more),
-.lite-queue:active:not(:disabled),
 .lite-chip:active,
 .lite-gap-btn:active,
 .lite-verdict-btn:active { transform: scale(0.97); box-shadow: none; }
-.lite-queue[aria-pressed="true"],
 .lite-rc-markbtn[aria-pressed="true"] { color: var(--ice); border-color: rgba(165,195,255,0.5); box-shadow: none; }
-.lite-queue-help { width: 22px; height: 22px; font-size: 11px; transition: color var(--dur-quick), border-color var(--dur-quick), transform var(--dur-fast); }
-.lite-queue-help:active { transform: scale(0.9); }
-.lite-queue-note { font-size: 12px; }
-.lite-queue-guide { animation: liteDrop var(--dur-med) var(--ease-out) both; border-radius: 14px; }
 
 /* the research form: one compact card, opens with a drop, context on demand */
 .lite-research {
@@ -2979,7 +2873,7 @@
 @media (prefers-reduced-motion: reduce) {
   .lite-header { animation: none; }
   .lite-body, .lite-task-log-text { scroll-behavior: auto; }
-  .lite-body > *, .lite-research[data-enter="1"], .lite-tl-body, .lite-queue-guide { animation: none; }
+  .lite-body > *, .lite-research[data-enter="1"], .lite-tl-body { animation: none; }
   .lite-fold, .lite-tl-chev { transition: none; }
 }
 
@@ -2993,8 +2887,8 @@
    two places it can appear. */
 
 .lite-noissue {
-  margin: 10px 0;
-  padding: 12px 12px 10px;
+  margin: 7px 0;
+  padding: 9px 10px 8px;
   border: 1px solid var(--border);
   border-radius: 16px;
   background: var(--glass-1);
@@ -3004,8 +2898,8 @@
 .lite-noissue-head { display: flex; gap: 10px; align-items: flex-start; }
 .lite-noissue-icon {
   flex: 0 0 auto;
-  width: 34px;
-  height: 34px;
+  width: 28px;
+  height: 28px;
   border-radius: 9px;
   display: inline-flex;
   align-items: center;
@@ -3027,7 +2921,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 4px 6px;
-  margin: 10px 0 0;
+  margin: 7px 0 0;
   padding: 0;
   list-style: none;
 }
@@ -3040,9 +2934,11 @@
   border: 1px solid var(--border-soft);
 }
 .lite-noissue-stats b { color: var(--fg-body); font-weight: 600; }
-.lite-noissue .lite-quick-info { margin: 10px 0 0; }
-.lite-noissue .lite-quick-specs p { margin: 2px 0; font-size: 12px; color: var(--fg-body); }
-.lite-noissue .lite-quick-sources { margin-top: 10px; }
+.lite-quick-details { margin: 8px 0 0; }
+.lite-quick-details summary { cursor: pointer; font: 10.5px var(--font-mono); color: var(--fg-muted); }
+.lite-quick-specs { margin: 6px 0 0; max-height: 220px; overflow: auto; }
+.lite-quick-specs p { margin: 3px 0; font-size: 11px; line-height: 1.35; color: var(--fg-body); overflow-wrap: anywhere; }
+.lite-noissue .lite-quick-sources { margin-top: 7px; }
 .lite-noissue .lite-quick-sources summary {
   cursor: pointer;
   font: 10.5px var(--font-mono);
@@ -3339,4 +3235,371 @@
    text over an unblurred page is the thing the blur exists to prevent. */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .lite-panel { background: radial-gradient(120% 60% at 100% 0%, rgba(44,83,224,0.10), transparent 60%), var(--bg-base); }
+}
+
+/* Warm paper / ink pass: calm surfaces, one blue action, readable sources. */
+.lite-panel {
+  width: min(400px, calc(100vw - 20px));
+  max-width: calc(100vw - 20px);
+  background: rgba(var(--bg-panel-rgb), var(--glass-panel-alpha));
+  border-color: var(--border);
+  border-radius: 18px;
+  box-shadow: var(--shadow-panel);
+}
+.lite-header {
+  padding: 10px 12px;
+  gap: 8px;
+  color: var(--fg);
+  background: var(--bg-header);
+  background-image: none;
+  box-shadow: inset 0 -1px 0 var(--border-soft);
+  animation: none;
+}
+.lite-wordmark { color: var(--fg); }
+.lite-titlebox { gap: 8px; }
+.lite-iconbtn,
+.lite-iconbtn.lite-btn-close {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-soft);
+  color: var(--fg-muted);
+}
+.lite-iconbtn:hover { background: var(--hover-face); border-color: var(--border); color: var(--fg); }
+.lite-iconbtn.lite-btn-close:hover { background: var(--high-surface); color: var(--high-ink); }
+.lite-body { padding: 12px 14px 16px; gap: 9px; }
+.lite-listing-title { font-size: 18px; line-height: 1.25; text-transform: none; }
+.lite-count { border-radius: 8px; background: var(--bg-surface); border-color: var(--border-soft); }
+.lite-cta,
+.lite-product-actions button,
+.lite-research button:not(.lite-research-start):not(.lite-more),
+.lite-search-research,
+.lite-gap-btn,
+.lite-verdict-btn,
+.lite-learn-btn,
+.lite-buy-btn,
+.lite-agent-select,
+.lite-chip,
+.lite-rc-toggle,
+.lite-rc-factbtn,
+.lite-rc-markbtn {
+  border-radius: 9px;
+}
+.lite-cta { height: 34px; border-radius: 10px; }
+.lite-product-actions { gap: 6px; }
+.lite-product-actions button { min-height: 30px; padding: 0 10px; }
+.lite-research {
+  padding: 10px;
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  background: var(--bg-surface);
+}
+.lite-research-head { margin-bottom: 6px; }
+.lite-research-head strong { font-size: 14px; }
+.lite-research-target { color: var(--fg); font-size: 13px; font-weight: 600; }
+.lite-research input,
+.lite-research textarea {
+  padding: 7px 9px;
+  border-radius: 8px;
+  border-color: var(--border);
+  background: var(--bg-panel);
+}
+.lite-research input:focus,
+.lite-research textarea:focus { box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand) 22%, transparent); }
+.lite-research-actions { gap: 6px; margin-top: 8px; }
+.lite-research-actions button { height: 30px; padding: 0 10px; font-size: 12px; }
+.lite-research-actions .lite-research-start { flex: 1 1 100%; border-radius: 9px; }
+.lite-research .lite-agent-select { max-width: 62%; height: 28px; background: var(--bg-panel); }
+.lite-quick { gap: 7px; margin: 8px 0; }
+.lite-quick-assumed { color: var(--fg-body); font-size: 12px; }
+.lite-quick-cards { gap: 7px; }
+.lite-quick-details { padding-top: 2px; border-top: 1px solid var(--border-soft); }
+.lite-quick-details summary { color: var(--fg-muted); font: 12px/1.4 var(--font-body); }
+.lite-quick-specs { max-height: 180px; }
+.lite-quick-specs p { font-size: 12px; }
+.lite-noissue { border-color: var(--border-soft); border-radius: 12px; background: var(--bg-surface); }
+.lite-noissue-stats li { border-radius: 6px; border-color: var(--border-soft); background: var(--bg-panel); }
+.lite-noissue .lite-quick-sources summary { font: 12px/1.4 var(--font-body); }
+.lite-quick-sources a { color: var(--accent); }
+.lite-run { margin: 7px 0 2px; }
+.lite-run-bar { padding-top: 8px; }
+.lite-run-seg:nth-child(n) { --seg: var(--brand); }
+.lite-run-seg:not(:first-child)::before { height: 2px; margin-top: 9px; }
+.lite-run-seg::after { width: 18px; height: 18px; border-radius: 50%; clip-path: none; }
+.lite-run-facts { color: var(--fg-body); }
+.lite-rc {
+  border-radius: 11px;
+  background: var(--bg-panel);
+  font-family: var(--font-body);
+}
+.lite-claims > .lite-rc,
+.lite-claims > .lite-claim-anim > .lite-rc {
+  border: 1px solid var(--border-soft);
+  background: var(--bg-panel);
+}
+.lite-rc[data-open="1"] { background: var(--bg-panel); box-shadow: var(--shadow-card); }
+.lite-rc-head { padding: 9px 8px; gap: 6px; }
+.lite-rc-domain,
+.lite-rc[data-sev="high"] .lite-rc-domain,
+.lite-rc[data-sev="medium"] .lite-rc-domain,
+.lite-rc[data-sev="low"] .lite-rc-domain {
+  flex-basis: 28px;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 7px;
+}
+.lite-rc-titlebox { padding: 0 4px; }
+.lite-rc-title { color: var(--fg); font-size: 14px; line-height: 1.35; }
+.lite-rc-meta { margin-top: 5px; color: var(--fg-muted); font-size: 11px; letter-spacing: 0; }
+.lite-rc-strength,
+.lite-rc-strength[data-strength="confirmed"],
+.lite-rc-strength[data-strength="reported"] { border: 0; border-radius: 5px; background: transparent; padding: 0; }
+.lite-rc-strength[data-strength="confirmed"] { color: var(--ok-ink); }
+.lite-rc-strength[data-strength="reported"] { color: var(--warn-ink); }
+.lite-rc-toggle { border: 0; border-radius: 7px; background: var(--bg-surface); box-shadow: none; }
+.lite-rc-toggle:hover { background: var(--hover-face); }
+.lite-rc-body { padding: 0 12px 12px; }
+.lite-rc-text { padding-top: 10px; color: var(--fg-body); font-size: 14px; line-height: 1.6; }
+.lite-rc-peek { color: var(--fg-body); font-size: 12.5px; line-height: 1.5; }
+.lite-rc-src { border-left-color: var(--border); }
+.lite-rc-src blockquote { color: var(--fg-body); font-size: 12.5px; line-height: 1.55; }
+.lite-rc-src figcaption { color: var(--fg-muted); }
+.lite-chip { background: var(--bg-surface); box-shadow: none; color: var(--fg-body); }
+.lite-chip { border-radius: 6px; }
+.lite-chip:hover, .lite-chip[aria-expanded="true"] { background: var(--hover-face); box-shadow: none; color: var(--fg); }
+.lite-quick-sources a,
+.lite-rc-src figcaption a,
+.lite-buy-elsewhere a { color: var(--brand-low); }
+.lite-learn { border-style: solid; border-color: var(--border-soft); border-radius: 11px; background: var(--bg-surface); }
+.lite-learn-btn { border: 0; border-radius: 9px; }
+.lite-task-log { border-color: var(--border-soft); border-radius: 10px; background: var(--bg-surface); }
+.lite-tl-msg { color: var(--fg-body); }
+.lite-tl-chip { border: 0; border-radius: 5px; background: var(--bg-panel); }
+.lite-search-hit { border-color: var(--border-soft); border-radius: 10px; background: var(--bg-panel); }
+.lite-search-hit:hover { border-color: var(--brand); }
+.lite-claims > .lite-rc,
+.lite-claims > .lite-claim-anim > .lite-rc {
+  border: 0;
+  border-bottom: 1px solid var(--border-soft);
+  border-radius: 0;
+  background: transparent;
+}
+.lite-domain-group { border: 0; border-radius: 0; background: transparent; }
+.lite-domain-head { padding: 8px 2px; border-bottom: 1px solid var(--border-soft); }
+.lite-domain-body { border-top: 0; }
+.lite-domain-body .lite-rc + .lite-rc { border-top: 0; border-bottom: 1px solid var(--border-soft); }
+.lite-noissue-stats li { border: 0; border-radius: 0; background: transparent; padding: 0; }
+.lite-noissue-stats li + li::before { content: "·"; margin-right: 7px; color: var(--fg-muted); }
+.lite-open-app { border-radius: 9px; }
+.lite-product-actions button:hover,
+.lite-research button:hover:not(:disabled):not(.lite-research-start):not(.lite-more),
+.lite-search-research:hover,
+.lite-gap-btn:hover,
+.lite-verdict-btn:hover,
+.lite-chip:hover,
+.lite-rc-toggle:hover,
+.lite-rc-factbtn:hover:not(:disabled),
+.lite-rc-markbtn:hover {
+  background: color-mix(in srgb, var(--brand) 8%, var(--bg-panel));
+  border-color: var(--border-control);
+  color: var(--fg);
+  filter: none;
+}
+
+/* ═════════════════════════════════════════════
+   Quiet panel
+   ═════════════════════════════════════════════
+   The last word, and a subtraction. The header is the wordmark and four small
+   keys; the severity counts are one line of numbers instead of three pills;
+   Compare is a bar and a tray in the panel, not a row of explanations; the
+   footer says who answered and offers the app as text. Only tokens from the
+   palette above, so the light theme needs nothing of its own. */
+
+.lite-header { padding: 8px 8px 8px 14px; }
+.lite-wordmark { height: 14px; }
+.lite-iconbtn,
+.lite-iconbtn.lite-btn-close { width: 28px; height: 28px; border: 0; background: transparent; }
+.lite-iconbtn:hover { background: var(--hover-face); }
+
+/* the listing: its title and one line, no rule above it */
+.lite-listing { border-top: 0; padding-top: 0; }
+
+/* severity counts: a line of numbers */
+.lite-counts { gap: 16px; padding: 0 1px; animation: none; }
+.lite-count,
+.lite-count[data-sev="high"],
+.lite-count[data-sev="medium"],
+.lite-count[data-sev="low"] {
+  padding: 0;
+  gap: 6px;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  font-size: 12.5px;
+}
+.lite-count .num { font-size: 13px; }
+.lite-count .lbl { letter-spacing: 0; }
+
+/* the risks heading: the count and one quiet toggle */
+.lite-claims-label { letter-spacing: 0; }
+.lite-claims-head .lite-chip {
+  padding: 4px 8px;
+  border: 0;
+  background: transparent;
+  color: var(--fg-muted);
+  font-size: 12px;
+  letter-spacing: 0;
+}
+.lite-claims-head .lite-chip:hover { background: var(--hover-face); color: var(--fg); }
+
+/* research is for a product nothing knows: a small key, not a row of its own */
+.lite-product-actions button { flex: 0 0 auto; height: 30px; padding: 0 14px; }
+
+/* Compare: an add key and a count that opens the shortlist beside it */
+.lite-compare { display: flex; flex-direction: column; gap: 6px; }
+.lite-compare-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.lite-compare-add {
+  all: unset;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 9px;
+  cursor: pointer;
+  font: 540 12.5px/1 var(--font-display);
+  color: var(--fg-body);
+  background: var(--bg-surface);
+  box-shadow: 0 0 0 1px var(--border-soft);
+  transition: background var(--dur-quick) var(--ease-out), color var(--dur-quick);
+}
+.lite-compare-add:hover:not(:disabled) { background: var(--hover-face); color: var(--fg); }
+.lite-compare-add:focus-visible,
+.lite-compare-toggle:focus-visible,
+.lite-cmp-open:focus-visible,
+.lite-cmp-remove:focus-visible { outline: 2px solid var(--ice); outline-offset: 2px; }
+.lite-compare-add:disabled { cursor: default; }
+.lite-compare-add[aria-pressed="true"] { color: var(--ice); }
+.lite-compare-bar[data-phase="busy"] .lite-compare-add { opacity: .7; }
+.lite-compare-toggle {
+  all: unset;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 6px 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font: 540 12.5px/1 var(--font-display);
+  color: var(--fg-muted);
+}
+.lite-compare-toggle:hover { color: var(--fg); background: var(--hover-face); }
+.lite-compare-toggle .chev {
+  width: 6px;
+  height: 6px;
+  border: solid currentColor;
+  border-width: 0 1.6px 1.6px 0;
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform var(--dur-quick) var(--ease-out);
+}
+.lite-compare[data-open="1"] .lite-compare-toggle .chev { transform: translateY(1px) rotate(-135deg); }
+.lite-compare-note { margin: 0; font: 12px/1.4 var(--font-body); color: var(--fg-muted); }
+.lite-compare-note[data-tone="bad"] { color: var(--high-ink); }
+
+.lite-compare-tray {
+  padding: 2px 12px 10px;
+  border-radius: 11px;
+  background: var(--bg-surface);
+  box-shadow: 0 0 0 1px var(--border-soft);
+  animation: liteDrop var(--dur-med) var(--ease-out) both;
+}
+.lite-compare-tray[hidden] { display: none; }
+.lite-cmp-list { margin: 0; padding: 0; list-style: none; }
+.lite-cmp-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 22px;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+.lite-cmp-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 540 13px/1.3 var(--font-display);
+  color: var(--fg);
+}
+.lite-cmp-here {
+  margin-left: 8px;
+  padding: 1px 6px;
+  border-radius: 5px;
+  font: 11px/1.4 var(--font-body);
+  color: var(--ice);
+  background: color-mix(in srgb, var(--brand) 14%, transparent);
+}
+.lite-cmp-counts { display: inline-flex; align-items: center; gap: 11px; }
+.lite-cmp-n {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font: 600 12.5px/1 var(--font-display);
+  font-variant-numeric: tabular-nums;
+}
+.lite-cmp-n .dot { width: 6px; height: 6px; border-radius: 50%; }
+.lite-cmp-n[data-sev="high"] { color: var(--high-ink); }
+.lite-cmp-n[data-sev="medium"] { color: var(--med-ink); }
+.lite-cmp-n[data-sev="low"] { color: var(--low-ink); }
+.lite-cmp-n[data-sev="high"] .dot { background: var(--high-ink); }
+.lite-cmp-n[data-sev="medium"] .dot { background: var(--med-ink); }
+.lite-cmp-n[data-sev="low"] .dot { background: var(--low-ink); }
+.lite-cmp-n[data-zero="1"] { opacity: .4; }
+.lite-cmp-none { font: 11.5px/1 var(--font-body); color: var(--fg-muted); }
+.lite-cmp-remove {
+  all: unset;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--fg-muted);
+}
+.lite-cmp-remove:hover { color: var(--high-ink); background: var(--high-surface); }
+.lite-cmp-foot { display: flex; align-items: center; justify-content: space-between; padding-top: 9px; }
+.lite-cmp-limit { font: 11.5px/1 var(--font-body); color: var(--fg-muted); }
+.lite-cmp-open {
+  all: unset;
+  box-sizing: border-box;
+  padding: 5px 8px;
+  border-radius: 7px;
+  cursor: pointer;
+  font: 540 12.5px/1 var(--font-display);
+  color: var(--ice);
+}
+.lite-cmp-open:hover { background: color-mix(in srgb, var(--brand) 14%, transparent); }
+.lite-compare-tray .lite-decide-slot:not(:empty) {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-soft);
+}
+
+/* the footer: who answered, and the app as text */
+.lite-footer { padding: 7px 14px; font-size: 11px; }
+.lite-footer .lite-open-app {
+  padding: 4px 6px;
+  background: transparent;
+  color: var(--ice);
+}
+.lite-footer .lite-open-app:hover { background: color-mix(in srgb, var(--brand) 14%, transparent); color: var(--ice); }
+
+@media (prefers-reduced-motion: reduce) {
+  .lite-compare-tray { animation: none; }
+  .lite-compare-toggle .chev { transition: none; }
 }

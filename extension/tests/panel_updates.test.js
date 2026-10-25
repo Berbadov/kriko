@@ -60,22 +60,19 @@ test("changed and removed claims update without keeping stale text or expansion"
   assert.equal(p.shadow().querySelector(".lite-rc-new"), null);
 });
 
-test("queue help explains the workflow without adding a product", () => {
-  const p = loadPanel();
+test("a new answer leaves an open shortlist as it was", async () => {
+  const p = loadPanel({ workerResponse: (m) => (m.type === "COMPARE_LIST"
+    ? { ok: true, max: 8, items: [{ queue_id: "q1", url: "https://x.example/a", name: "A", severities: [] }] }
+    : { ok: true }) });
   p.openPanel();
   p.deliverEntry(answer([claim("old")]));
-  const help = p.click(".lite-queue-help");
-  assert.equal(help.getAttribute("aria-expanded"), "true");
-  const text = p.shadow().querySelector(".lite-queue-guide");
-  assert.equal(text.hidden, false);
-  assert.match(text.textContent, /listing|page/i);
-  assert.match(text.textContent, /Compare/);
-  assert.match(text.textContent, /Start queue/);
-  assert.equal(p.sent.filter(m => m.type === "QUEUE_ADD").length, 0);
+  await new Promise((resolve) => setImmediate(resolve));
+  p.click(".lite-compare-toggle");
+  assert.equal(p.shadow().querySelector(".lite-compare-tray").hidden, false);
   p.deliverEntry(answer([claim("old"), claim("new")]));
-  assert.equal(p.shadow().querySelector(".lite-queue-guide").hidden, false);
-  p.click(".lite-queue-help");
-  assert.equal(p.shadow().querySelector(".lite-queue-guide").hidden, true);
+  assert.equal(p.shadow().querySelector(".lite-compare-tray").hidden, false,
+    "a live update does not close what the reader opened");
+  assert.equal(p.sent.filter((m) => m.type === "QUEUE_ADD").length, 0, "and adds nothing");
 });
 
 test("the panel offers no box for asking an agent about a saved answer", () => {
@@ -155,11 +152,13 @@ test("a research run that kept nothing says no data showed an issue", () => {
   p.click(".lite-gap-btn");
   p.click(".lite-research-start");
   p.flushTimers();
-  const status = p.shadow().querySelector(".lite-research-status").textContent;
-  assert.match(status, /No data found that shows an issue/);
-  assert.match(status, /read 4 source\(s\), none of them said anything keepable/);
-  assert.match(status, /not proof that there is no issue/);
-  assert.doesNotMatch(status, /Open the research job for findings/);
+  const card = p.shadow().querySelector(".lite-noissue");
+  assert.ok(card);
+  assert.match(card.querySelector(".lite-noissue-note").textContent, /No data found that shows an issue/);
+  assert.match(card.querySelector(".lite-noissue-note").textContent,
+    /read 4 source\(s\), none of them said anything keepable/);
+  assert.equal(p.shadow().querySelector(".lite-research-status").textContent, "",
+    "the completed result is not repeated in the status line");
 });
 
 test("a research run with a kept claim or a brief is not called empty", () => {
@@ -219,7 +218,7 @@ test("a zero-issue quick look retains listing facts and evidence", () => {
     if (m.type === "RESEARCH_PRODUCT") return { ok: true, job: { job_id: "oil-look", kind: "quick_look" } };
     if (m.type === "JOB_STATUS") return { ok: true, job: {
       job_id: "oil-look", kind: "quick_look", state: "succeeded", done: true,
-      result: { risks: [], specs: [],
+      result: { product: "Example oil", assumed: "Example Oil", risks: [], specs: [],
         diagnostic: { code: "no_issues_found", message: "No supported issues found in the pages checked." },
         coverage: { pages_read: 2, pages_relevant: 2, pages_extracted: 2, status: "no_supported_findings" },
         listing: { url: "https://example.test/oil", facts: { Volume: "4 L", Grade: "5W-30" } },
@@ -233,7 +232,13 @@ test("a zero-issue quick look retains listing facts and evidence", () => {
   p.click(".lite-research-product");
   p.type(".lite-research-name", "Example oil");
   p.click(".lite-research-start");
-  assert.match(p.shadow().querySelector(".lite-research-status").textContent, /Nothing sourced found/);
+  assert.match(p.shadow().querySelector(".lite-research-status").textContent,
+    /^$/, "the empty card is the single completed-state message");
+  assert.ok(p.shadow().querySelector(".lite-noissue"), "specs do not hide the no-issue result");
+  assert.equal(p.shadow().querySelector(".lite-quick-details").open, false,
+    "listing facts stay collapsed until requested");
+  assert.equal(p.shadow().querySelector(".lite-quick-assumed"), null,
+    "the same product name is not echoed as an agent match");
   assert.match(p.shadow().querySelector(".lite-quick-specs").textContent, /Volume: 4 L/);
   assert.equal(p.shadow().querySelector(".lite-quick-source-list a").href, "https://example.test/datasheet");
   assert.equal(p.shadow().querySelector(".lite-noissue input"), null, "no agent question box in the card");
@@ -248,8 +253,9 @@ test("a zero-issue quick look retains listing facts and evidence", () => {
 const EMPTY_QUICK = {
   job_id: "oil-look", kind: "quick_look", state: "succeeded", done: true,
   result: {
-    risks: [], specs: [],
-    diagnostic: { code: "no_issues_found", message: "No supported issues found in the pages checked." },
+    risks: [], specs: [], dropped: 1,
+    diagnostic: { code: "evidence_rejected",
+      message: "Relevant pages were checked, but candidate findings did not pass the evidence checks." },
     coverage: { pages_read: 3, pages_relevant: 2, pages_extracted: 2,
       publishers_read: 2, sources_cited: 1, status: "no_supported_findings" },
     evidence_pages: [
@@ -279,7 +285,9 @@ test("a quick look that kept nothing is a card with the pages and no agent box",
   assert.equal(card.dataset.empty, "quick");
   assert.match(card.querySelector(".lite-noissue-title").textContent, /No sourced issues kept/);
   assert.match(card.querySelector(".lite-noissue-note").textContent,
-    /Not proof there is no issue/);
+    /candidate findings did not pass the evidence checks/);
+  assert.equal(p.shadow().querySelector(".lite-research-status").textContent, "",
+    "the diagnostic is not repeated beside the empty card");
   assert.match(card.querySelector(".lite-noissue-stats").textContent, /3\s*pages read/);
   assert.match(card.querySelector(".lite-noissue-stats").textContent, /1\s*cited/);
   assert.equal(card.querySelector(".lite-quick-source-list a").href,
@@ -311,12 +319,54 @@ test("a deep run that kept nothing shows the same no-issue card", () => {
   const card = p.shadow().querySelector(".lite-noissue");
   assert.ok(card, "the empty deep run rendered the same card");
   assert.equal(card.dataset.empty, "deep");
-  assert.match(card.textContent, /Not proof there is no issue/);
+  assert.match(card.textContent, /not proof that there is no issue/);
   assert.equal(card.querySelector(".lite-quick-source-list a").href,
     "https://example.test/thread");
-  // The status sentence the panel already wrote is still there beside it.
-  assert.match(p.shadow().querySelector(".lite-research-status").textContent,
-    /not proof that there is no issue/);
+  assert.equal(p.shadow().querySelector(".lite-research-status").textContent, "",
+    "the completed deep-run finding appears only once");
+});
+
+test("a quick look with no pages says it could not check findings", () => {
+  const p = loadPanel({ workerResponse: m => {
+    if (m.type === "RESEARCH_PLANE") return { ok: true, plane: { backend: "local" } };
+    if (m.type === "RESEARCH_PRODUCT") return { ok: true, job: { job_id: "empty", kind: "quick_look" } };
+    if (m.type === "JOB_STATUS") return { ok: true, job: { job_id: "empty", kind: "quick_look",
+      state: "succeeded", done: true,
+      result: { risks: [], specs: [], diagnostic: { code: "no_pages", message: "No source pages were read." },
+        coverage: { pages_read: 0, pages_tried: 0, status: "no_sources" }, evidence_pages: [] } } };
+    return { ok: true, items: [] };
+  } });
+  p.openPanel();
+  p.deliverEntry({ ok: false, code: "UNKNOWN_PRODUCT", productName: "Example" });
+  p.click(".lite-research-product");
+  p.type(".lite-research-name", "Example");
+  p.click(".lite-research-start");
+  const card = p.shadow().querySelector(".lite-noissue");
+  assert.match(card.querySelector(".lite-noissue-note").textContent, /No source pages were read/);
+  assert.match(card.querySelector(".lite-noissue-stats").textContent, /0\s*pages read/);
+  assert.equal(p.shadow().querySelector(".lite-research-status").textContent, "");
+});
+
+test("an unreadable answer with missing coverage does not claim zero pages", () => {
+  const p = loadPanel({ workerResponse: m => {
+    if (m.type === "RESEARCH_PLANE") return { ok: true, plane: { backend: "local" } };
+    if (m.type === "RESEARCH_PRODUCT") return { ok: true, job: { job_id: "bad-answer", kind: "quick_look" } };
+    if (m.type === "JOB_STATUS") return { ok: true, job: { job_id: "bad-answer", kind: "quick_look",
+      state: "succeeded", done: true,
+      result: { risks: [], specs: [], diagnostic: { code: "unreadable_answer" }, coverage: {},
+        listing: { url: "https://example.test/product", facts: {} }, evidence_pages: [] } } };
+    return { ok: true, items: [] };
+  } });
+  p.openPanel();
+  p.deliverEntry({ ok: false, code: "UNKNOWN_PRODUCT", productName: "Example" });
+  p.click(".lite-research-product");
+  p.type(".lite-research-name", "Example");
+  p.click(".lite-research-start");
+  const card = p.shadow().querySelector(".lite-noissue");
+  assert.match(card.querySelector(".lite-noissue-note").textContent, /unreadable answer.*Retry research/i);
+  assert.equal(card.querySelector(".lite-noissue-stats"), null);
+  assert.equal(card.querySelector(".lite-quick-source-list a"), null,
+    "a listing URL is not presented as a page read or citation");
 });
 
 // ── light and dark ──────────────────────────────────────────────────────
@@ -326,26 +376,26 @@ const hostAttr = (p) => p.dom.window.document.querySelector("kriko-panel-host").
 test("the header toggle sets the theme attribute and remembers it", () => {
   const p = loadPanel();
   p.openPanel();
-  assert.equal(hostAttr(p), "dark");
-  p.click(".lite-btn-theme");
-  assert.equal(hostAttr(p), "light");
-  assert.equal(p.local["kriko.theme"], "light");
-  const button = p.shadow().querySelector(".lite-btn-theme");
-  assert.equal(button.getAttribute("aria-pressed"), "true");
-  assert.match(button.getAttribute("aria-label"), /dark/);
+  assert.equal(hostAttr(p), "light", "fresh panels open in the warm paper theme");
   p.click(".lite-btn-theme");
   assert.equal(hostAttr(p), "dark");
   assert.equal(p.local["kriko.theme"], "dark");
+  const button = p.shadow().querySelector(".lite-btn-theme");
+  assert.equal(button.getAttribute("aria-pressed"), "false");
+  assert.match(button.getAttribute("aria-label"), /light/);
+  p.click(".lite-btn-theme");
+  assert.equal(hostAttr(p), "light");
+  assert.equal(p.local["kriko.theme"], "light");
 });
 
-test("a stored choice opens the panel in it, and an unset one follows the system", () => {
+test("stored themes are respected and a fresh install opens warm paper", () => {
   const stored = loadPanel();
-  stored.local["kriko.theme"] = "light";
+  stored.local["kriko.theme"] = "dark";
   stored.openPanel();
-  assert.equal(hostAttr(stored), "light");
+  assert.equal(hostAttr(stored), "dark");
 
   const system = loadPanel();
-  system.dom.window.matchMedia = (q) => ({ matches: /prefers-color-scheme: light/.test(q), media: q,
+  system.dom.window.matchMedia = (q) => ({ matches: /prefers-color-scheme: dark/.test(q), media: q,
     addEventListener() {}, removeEventListener() {} });
   system.openPanel();
   assert.equal(hostAttr(system), "light");

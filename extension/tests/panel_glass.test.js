@@ -60,6 +60,14 @@ const THEMES = {
 };
 const PAGES = { white: [255, 255, 255], black: [0, 0, 0], grey: [128, 128, 128], "listing yellow": [241, 214, 138] };
 
+test("the light surface uses Kriko's warm paper and ink palette", () => {
+  assert.equal(token("--light-bg-base"), "#f4f0e6");
+  assert.equal(token("--light-bg-panel"), "#fffdf7");
+  assert.equal(token("--light-fg"), "#24231f");
+  assert.equal(token("--light-brand"), "#2e5bef");
+  assert.equal(token("--light-border"), "rgba(83,72,50,0.16)");
+});
+
 for (const [name, theme] of Object.entries(THEMES)) {
   for (const [pageName, page] of Object.entries(PAGES)) {
     test(`text stays at 4.5:1 or better on the ${name} panel over a ${pageName} page`, () => {

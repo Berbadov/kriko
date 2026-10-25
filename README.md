@@ -1,26 +1,29 @@
 # Kriko
 
-[![version](https://img.shields.io/badge/version-0.3.4-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
+[![version](https://img.shields.io/badge/version-0.3.6-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
 
 Kriko answers one question about the product you are looking at: *what is known
-to go wrong with this exact one*. It runs on your computer — a Windows desktop
-app and a browser extension — and keeps the source beside every finding.
+to go wrong with this exact one*. It runs on your computer — a desktop app for
+Windows, with an Apple Silicon macOS build made from source, and a browser
+extension — and keeps the source beside every finding.
 Installed catalog lookups work offline. Research uses the agent or model you
 choose, and a paid provider bills your own account.
 
-**[Download the Windows installer](https://github.com/Berbadov/kriko/releases/latest/download/kriko-0.3.4-x86_64-setup.exe)** ·
+**[Download the Windows installer](https://github.com/Berbadov/kriko/releases/latest/download/kriko-0.3.6-x86_64-setup.exe)** ·
 [Browser extension](https://chromewebstore.google.com/detail/kriko/bdifnaggafjokndlpjgmlfappcoehdjb) ·
 [Website](https://kriko.cc)
 
-0.3.2 improves shared-access setup and connection reliability. The extension
-panel opens on request; the [changelog](CHANGELOG.md) has the rest.
+0.3.6 makes the Kriko Agent plan its searches and show what it did. The
+companion extension 0.5.0 is a quieter panel with Compare inside it, and mobile
+0.10.0 has a floating scanner you can drag, open and read. See the
+[changelog](CHANGELOG.md) for the release scope.
 
 ## Install
 
 | Artifact | Use |
 |---|---|
-| `kriko-0.3.4-x86_64-setup.exe` | Per-user Windows installer; no administrator rights required. |
-| `kriko-0.3.4-win64-portable.zip` | Extract the whole archive and open `kriko.exe`. |
+| `kriko-0.3.6-x86_64-setup.exe` | Per-user Windows installer; no administrator rights required. |
+| `kriko-0.3.6-win64-portable.zip` | Extract the whole archive and open `kriko.exe`. |
 
 1. Open Kriko, choose an agent in **More → Agents** and press **Check connection**.
 2. Open **Catalogs → Find release catalogs** and install one, or import a
@@ -29,9 +32,11 @@ panel opens on request; the [changelog](CHANGELOG.md) has the rest.
    keep the desktop app running, and press the toolbar button or **Alt + K** on a
    product listing.
 
-The installer is unsigned, so Windows may warn before it runs. The published
-desktop scope is Windows x86_64; the source builds elsewhere. Details:
-[Windows installation](docs/INSTALL_WINDOWS.md).
+The installer is unsigned, so Windows may warn before it runs. Published desktop
+artifacts are Windows x86_64. A native Apple Silicon build is made from source
+by the desktop recipe — `kriko-ui/package-macos.sh` — and is not a release
+download yet. Details: [Windows installation](docs/INSTALL_WINDOWS.md),
+[macOS installation](docs/INSTALL_MACOS.md).
 
 ## What it does
 
@@ -46,6 +51,30 @@ Kriko Agent is experimental and runs on your own provider keys; shared access an
 the trial are in [shared access](docs/security/shared-access.md). The app's
 screens and how to grow knowledge are in [Usage](docs/USAGE.md); matching, the
 catalog lifecycle and layering are in [How it works](docs/HOW_IT_WORKS.md).
+
+## The stack, measured
+
+Kriko Agent is a fixed chain — route the question, read Kriko's own records,
+research the web when they do not answer, cite the pages, then act in the app —
+and it is compared against the previous code rather than described.
+
+![Kriko stack benchmark: routing and extraction accuracy, cost per turn, and retrieval appetite](benchmarks/stack-2026-10-25-dashboard.png)
+
+- **Routing:** the product-failure question reaches the installed records on
+  **42 of 42** test messages, against 33 of 42 before. Ordinary chat and buying
+  questions do not move.
+- **Claim extraction:** **8 of 8** documents keep their expected claims, against
+  5 of 8 before. The old extractor stopped at the first 6,000 characters.
+- **One live turn:** 11.45 s, eight pages read, a corrected premise (that engine
+  has a belt, not a valve-train chain), the reader's preference saved in **For
+  you**, and **$0.0060** spent.
+- **The honest cost:** the same tokens cost about 44% less on Mercury 3, but
+  Mercury 3 can choose more searches and erase that advantage. The eager
+  profile in the product-search harness did exactly that.
+
+The full method, the small-sample caveats and the reproducible commands are in
+[the benchmark note](benchmarks/stack-2026-10-25.md). This is a measured
+development stack, not a scored quality distribution.
 
 ## Your data
 

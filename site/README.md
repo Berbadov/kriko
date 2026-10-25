@@ -49,11 +49,20 @@ A test fails if `tr/index.html` is stale.
 
 ## Examples
 
-The four example products are invented, and so is every finding on them. They are
+Every example product is invented, and so is every finding on them. They are
 drawn in the real extension panel: `tools/capture.mjs` runs the extension's own
 code in a browser, hands it each product from `tools/examples.json` the way the
 engine would, and photographs the panel in light and dark. Nothing on the site
 assesses a real manufacturer or model, and each picture says it is an example.
+
+`examples.json` holds three kinds of entry. `products` are the panels the page
+shows (the e-bike is the one the hero and the three steps follow, the other four
+fill the gallery), `research` is the one product no catalog knows, and
+`shortlist` is what sits beside the e-bike in the Compare picture. A new product
+under `products` needs its two pictures, which the capture writes and a test
+checks. The panel's theme is the reader's stored choice, so the capture names
+it for each picture; a new panel state that asks the worker for something the
+preview page does not answer needs a stub in `capture.mjs`.
 
 To change an example, edit `tools/examples.json` and then:
 

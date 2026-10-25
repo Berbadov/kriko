@@ -1,6 +1,6 @@
 # Kriko Agent
 
-Kriko Agent is the app's fixed hosted research stack: Mercury 2.5 plans and
+Kriko Agent is the app's fixed hosted research stack: Mercury 3 plans and
 writes the answer; DeepSeek Search and Fetch supply web evidence. It appears
 under **Settings → Agents** after both provider keys are available.
 
@@ -11,8 +11,11 @@ Set these keys in **Settings → Keys** or the ~/.kriko/env file:
 
 The key values stay in the application process. Mercury receives the research
 brief and its supplied evidence; DeepSeek receives search queries and URLs from
-its own search results. Kriko Agent is pinned to Mercury 2.5 so a saved
+its own search results. Kriko Agent is pinned to Mercury 3 so a saved
 per-agent model preference cannot silently change the benchmarked stack.
+The adapter sends Mercury 3's own envelope: temperature 0.5 (the model's
+floor — 0.1 is a Mercury 2.5 value the provider refuses), a 131,072-token
+output ceiling, and the 1M-token context window.
 
 The agent requests page content with each DeepSeek search. It fetches a result
 URL only when the inline text is missing or insufficient. Duplicate search and
@@ -27,12 +30,13 @@ entries. Cache hits appear in the run log and do not incur another DeepSeek
 retrieval charge. The cache contains result text and URLs but no API keys; delete
 that SQLite file to clear it.
 
-Mercury's conversation context is capped at 48,000 serialized characters, and
+Mercury 3's conversation context is capped at 96,000 serialized characters, and
 the incoming brief is clipped to 32,000 characters if needed (the newest
 24,000 characters of the chat travel with it). Tool output is
 trimmed to fit while keeping source URLs and result metadata first. The full
 retrieved text remains in the run's grounding data, up to 8,000 characters per
-URL.
+URL; the copy sent back to the model is 4,000 characters per result, which is
+what keeps a five-result search from spending the whole turn's input budget.
 
 Settings → Research has two Kriko Agent controls. **Thoroughness** sets the
 search-call ceiling (3 at Low, 5 at the default midpoint, 8 at High) and the
@@ -42,7 +46,7 @@ case-sensitive quote from the returned source. Higher settings ask Mercury to
 seek independent corroboration for consequential details.
 
 Run token and cost reporting uses Mercury's reported input/output usage and
-the model catalogue's Mercury 2.5 rates. DeepSeek is estimated at $0.00075 per
+the model catalogue's Mercury 3 rates. DeepSeek is estimated at $0.00075 per
 successful search or fetch request. If Mercury omits token usage, Kriko marks
 the total unknown instead of reporting a partial amount as the full cost.
 
@@ -127,6 +131,73 @@ A line beginning `searched` is classified as a search step (`app/web/steps.py`),
 so a run's kinds can be filtered and read rather than guessed at. The in-house
 search chooses its kinds the same way and logs the same shapes; see
 `local_search_plan.choose_kinds` for how a question becomes a set of kinds.
+
+## The plan before the spend, and the record after it
+
+A turn used to spend the Settings dial the same way on every question, took any
+page a search returned as evidence about the product, and kept every result for
+fifteen minutes. `app/providers/agentplan.py` is the small deterministic layer
+that replaces those three habits, with no model call and no category: it reads
+the reader's own words (`converse(question=…)`, set by `chat_ask` from the
+message) against the closed vocabularies the app already keeps.
+
+- **Effort by uncertainty.** `make_plan` reads which kinds of source the question
+  asks for (`local_search_plan.choose_kinds`). A question that asks only for a
+  maker's figures or a review is a lookup and is worth `LOOKUP_CALLS` (4)
+  retrievals; one that asks for owner reports or recalls, or for two kinds, is a
+  hunt for failures and gets the dial's whole ceiling. A question that names no
+  kind fails open to the dial untouched, and the plan never exceeds it. The run
+  logs `plan: searching kinds: forums, recalls`.
+- **Identity beside the evidence.** The question is reduced to the words that name
+  the product — model codes and proper names, never a bare number — and every
+  result and fetched page the model is shown carries `about_product`: whether the
+  page's text has them (every model code, spaces and hyphens ignored; two thirds
+  of the plain names). The system prompt tells the agent a page that is not about
+  the product supports no claim about it. It is a signal, not a gate, and `null`
+  when the question named nothing to check; it is computed for each question and
+  never stored in the cache, because the cached row belongs to a query and the
+  next question may be about another product.
+- **Coverage, in-band.** When the question asked for a kind no search has gone to
+  and retrievals remain, the last result of the round carries `coverage`
+  (`still_asked`, with each kind's own word). Asking again after a finished draft
+  would cost a model call and throw away words the reader watched stream in; a
+  note beside the evidence is read before the agent decides to answer. A kind
+  still unsearched at the end is reported as missing, never hidden.
+- **Freshness by kind.** A search result is reused for as long as its kind stays
+  true (`agentplan.FRESHNESS_SECONDS`): recalls five minutes, news ten, forums
+  thirty, reviews and video an hour, the maker's documentation a day. A search
+  that names no kind, or asks for none, keeps the fifteen-minute default.
+- **The record.** `reply.record` says what the turn did, from what it actually
+  retrieved: `searches`, `pages` (with readable text), `unreadable`, `cached`,
+  `retrieved`, the `kinds` covered and the kinds `missing`, and — when a product
+  was named — `on_product` and `off_product` pages. `ApiAgentResearcher` merges
+  it across the turn's calls, `chat_ask` carries it with the usage fields so the
+  saved message reads it back under `spend.record`, and the answer shows one
+  quiet line: `3 searches · 5 pages read · forums, reviews · not searched: recalls`.
+  The tooltip says how many pages had no readable text, how many were not about
+  the product, and how many came from this computer's recent searches.
+
+## What it may change in the app
+
+The agent has three named actions, and no others. They arrive as tool calls, and
+the turn carries back the same objects the screen draws (`reply.actions`,
+`app/agentactions.py`); the answer's prose never creates one.
+
+| Action | What it does | Press needed? |
+|---|---|---|
+| `remember` | Adds one lasting statement to the reader's profile — a must, an avoid, a preference, a distrust, or a line about how they use things — and saves it in **For you** | No: it is the low-risk action, and the reader can edit or remove it where it landed |
+| `open` | Takes the reader to a screen they asked to see | Yes: navigating away mid-answer is the reader's move, not the answer's |
+| `start_quick_look` | Starts one Quick Look on a product, saving its sourced risks in History | Yes: it spends the reader's credits, so the card's Start button is the consent |
+
+A new spending or installing action comes back as `proposed` too, and its
+screen runs it only on a press; a page's text cannot spend the reader's credits
+or change an installed catalog. `start_quick_look` is run by
+`POST /api/agent-actions`, which accepts no other action and starts the same
+`quick_look` job the extension's button does.
+
+The adapter passes the action executor only where it has app state
+(`ApiAgentResearcher._app_action`). A test that has no app state still gets a
+plain research turn.
 
 ## Buying questions: identify, research, then name a product
 

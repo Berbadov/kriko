@@ -1,5 +1,5 @@
 /**
- * The root layout: load the faces, then mount the stack.
+ * The root layout: load the faces, mount the store, then the runtime theme.
  *
  * Fonts are loaded at runtime rather than embedded, so the app runs in Expo Go
  * without a development build. The splash holds until they are in.
@@ -17,11 +17,13 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { StoreProvider } from '../engine/store';
-import { color } from '../theme/tokens';
+import { StoreProvider, useStore } from '../engine/store';
+import { OverlaySessionProvider } from '../components/OverlaySession';
+import { MotionProvider, useReducedMotion } from '../components/Motion';
+import { BottomNav } from '../components/Chrome';
+import { ThemeProvider, useTheme } from '../theme/theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -44,31 +46,56 @@ export default function RootLayout() {
   if (!loaded && !error) return null;
 
   return (
-    <GestureHandlerRootView style={styles.root}>
-      <SafeAreaProvider>
-        <StoreProvider>
-          <View style={styles.root}>
-            <StatusBar style="light" />
-            <Stack
-              screenOptions={{
-                headerShown: false,
-                contentStyle: { backgroundColor: color.ground },
-                animation: 'slide_from_right',
-              }}
-            >
-              <Stack.Screen name="index" options={{ animation: 'none' }} />
-              <Stack.Screen name="setup" options={{ animation: 'none' }} />
-              <Stack.Screen name="chat" options={{ animation: 'fade' }} />
-              <Stack.Screen name="check" options={{ animation: 'slide_from_bottom' }} />
-              <Stack.Screen name="product/[id]" />
-            </Stack>
-          </View>
-        </StoreProvider>
-      </SafeAreaProvider>
-    </GestureHandlerRootView>
+    <SafeAreaProvider>
+      <StoreProvider>
+        <ThemedApp />
+      </StoreProvider>
+    </SafeAreaProvider>
+  );
+}
+
+function ThemedApp() {
+  const { appearance, textSize, motion } = useStore();
+  return (
+    <ThemeProvider appearance={appearance} textSize={textSize}>
+      <MotionProvider preference={motion}>
+        <OverlaySessionProvider>
+          <AppStack />
+        </OverlaySessionProvider>
+      </MotionProvider>
+    </ThemeProvider>
+  );
+}
+
+function AppStack() {
+  const reduced = useReducedMotion();
+  const { dark, color } = useTheme();
+  const { access } = useStore();
+  return (
+    <View style={[styles.root, { backgroundColor: color.ground }]}>
+      <StatusBar style={dark ? 'light' : 'dark'} />
+      <View style={styles.stack}>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: color.ground },
+            animation: reduced === false ? 'fade_from_bottom' : 'none',
+          }}
+        >
+          <Stack.Screen name="index" />
+          <Stack.Screen name="history" />
+          <Stack.Screen name="queue" />
+          <Stack.Screen name="sources/[id]" />
+          <Stack.Screen name="settings" />
+          <Stack.Screen name="about" />
+        </Stack>
+      </View>
+      {access.kind === 'none' ? null : <BottomNav />}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: color.ground },
+  root: { flex: 1 },
+  stack: { flex: 1 },
 });

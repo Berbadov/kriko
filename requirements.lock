@@ -12,17 +12,18 @@
 # a release-artifact change.
 #
 # Used as `pip install -r requirements.lock -e "."` rather than with
-# `--no-deps`: three of the closure's members are platform-only and cannot be
-# pinned from a Linux resolve — colorama on Windows via click, pywin32 on
-# Windows via mcp, and **pywinpty**, which is the one that matters most here
+# `--no-deps`: two of the closure's members exist only on Windows — pywin32,
+# reached through mcp, and **pywinpty**, which is the one that matters most here
 # because `app/web/routers/terminal.py` imports it directly and the frozen
-# sidecar carries it. All three are whatever pip holds on the day the Windows
-# artifact is built, which is the unreproducibility this file exists to remove,
-# admitted in the one place it cannot currently be removed. To close it, run
-# `tools/relock.py` on a Windows host (or add the resolved `pywinpty==x.y.z`
-# line here by hand, deliberately) — and note that `kriko-sidecar.spec` fails
-# the freeze with a sentence if the resolved pywinpty stops shipping the agent
-# file, so a silent shape change is not possible.
+# sidecar carries it. Pinned without a marker they made this file uninstallable
+# on every other platform: a Linux or macOS build stopped on `pywin32==312`
+# before it could freeze anything, which is what kept the `packs` job and the
+# macOS package from running at all. They carry the marker pip itself would
+# apply (`sys_platform == 'win32'`), which leaves the Windows artifact's
+# contents exactly as they were and lets every other platform install the same
+# closure. `kriko-sidecar.spec` still fails the freeze with a sentence if the
+# resolved pywinpty stops shipping the agent file, so a silent shape change is
+# not possible.
 #
 # Regenerate deliberately, never as a side effect — `python
 # tools/relock.py` prints this file from the current environment, and
@@ -50,13 +51,14 @@ opentelemetry-api==1.45.1
 ptyprocess==0.7.0
 pycparser==3.11
 pydantic==2.14.1
+pydantic-core==2.50.1
 pydantic-settings==2.16.1
 pyjwt==2.15.1
 pypdf==6.21.2
 python-dotenv==1.2.4
 python-multipart==0.0.32
-pywin32==312
-pywinpty==3.1.0
+pywin32==312; sys_platform == 'win32'
+pywinpty==3.1.0; sys_platform == 'win32'
 pyyaml==6.0.3
 referencing==0.37.0
 rpds-py==2026.9.1

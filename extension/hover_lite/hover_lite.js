@@ -20,7 +20,7 @@
   const { renderClaimCard, updateClaimCard, markClaimCard, factClaimCard, renderRichText } =
     window.__KrikoPanelClaimCard;
   const { filterByEvidence, normaliseSensitivity, hiddenWords } = window.__KrikoPanelClaimCard;
-  const { describeRun, coverageSummary, reportsPages } = window.__KrikoRunProgress;
+  const { describeRun, coverageSummary } = window.__KrikoRunProgress;
 
   const HOST_TAG = "kriko-panel-host";
 
@@ -32,10 +32,12 @@
    * ever mounts on a page an adapter matched, so naming *which* site was never
    * information the reader needed; it was only a sentence that would be wrong
    * on the second site and unnoticed on the third. */
-  const IDLE_HINT = "See what is known about this product.";
+  // The button already says what a press does, so an idle panel adds no line
+  // under it. Only a product nothing installed knows gets one.
+  const IDLE_HINT = "";
   // A product nothing installed knows: the button researches it, so the hint
-  // says what it will do rather than promising a search that cannot find it.
-  const UNKNOWN_HINT = "New product. Research it to see what is known.";
+  // says why rather than promising a search that cannot find it.
+  const UNKNOWN_HINT = "Not in your catalogs yet.";
 
   /* The reader's light/dark choice, shared with the options page. Absent when
    * they have never chosen, in which case the system preference decides — the
@@ -86,7 +88,13 @@
     errorMsg: null,
     errorCode: null,
     listingMeta: null,         // derived from background metadata response
-    queue: null,               // {url, phase, text}: this page's Add to queue press
+    queue: null,               // {url, phase, text}: this page's Add to compare press
+    // The shortlist drawn inside the panel: the app's research queue with the
+    // severity of every risk in each product's stored check. `null` until the
+    // worker has answered once, so "empty" and "not asked" never look alike.
+    compare: null,             // {items: [{queue_id, url, name, severities}], max}
+    compareOpen: false,        // the side-by-side tray is showing
+    compareError: "",
     // The reader as a buyer (`buyer_card.js`): what the app said about this page
     // as a purchase, the questions about earlier purchases that have come due,
     // the shortlist's pick, and which little forms are open.
@@ -94,7 +102,6 @@
     buyerDue: [],
     buyerUi: {},
     pick: null,
-    queueHelpOpen: false,
     // Typing the name. Panel-local: a search is a question the reader is
     // asking right now, not something the next analysis should remember.
     searchOpen: false,
@@ -174,9 +181,6 @@
     researchQuickJob: null,
     taskLogs: new Map(),
     quickSourcesOpen: false,
-    // The product info (the listing's facts and the quick look's specs) is a
-    // reference, closed until the reader asks for it.
-    specsOpen: false,
     // When the followed run started, for the elapsed time beside its stage.
     researchStartedAt: 0,
     researchState: "",
@@ -335,21 +339,17 @@
     return Boolean(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   }
 
-  /* ─── Light and dark ───────────────────────────────────────────────────
+  /* ─── Warm paper default and dark option ───────────────────────────────
    *
    * The choice lives in chrome.storage.local under one key, shared with the
    * options page, so either surface opens the way the other was left. Until
    * storage answers — and when the reader has never chosen — the system
-   * preference decides, which is also what the stylesheet paints before this
-   * file runs. The host element carries `data-theme`, because the panel lives
+   * warm paper is the product default; an explicit saved dark choice remains
+   * available. The host element carries `data-theme`, because the panel lives
    * in a shadow root and the attribute has to live on the element the sheet's
    * `:host([data-theme="light"])` can see. */
-  function prefersLight() {
-    return Boolean(window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches);
-  }
-
   function currentTheme() {
-    return state.theme || (prefersLight() ? "light" : "dark");
+    return state.theme || "light";
   }
 
   function paintTheme() {
@@ -1331,9 +1331,18 @@
     };
     const deepen = result.deepen_job_id || state.researchJob?.deepen_job_id;
     const found = state.researchQuick.risks.length;
+    const diagnostic = String(result.diagnostic?.message || "").trim();
+    const coverage = result.coverage || result.telemetry?.coverage || {};
+    const pagesRead = Number(coverage.pages_read) || 0;
     const said = found
       ? `${found} thing${found === 1 ? "" : "s"} to know.`
-      : "Nothing sourced found.";
+      : diagnostic || (state.researchQuick.dropped
+        ? `Candidate findings did not pass source checks (${state.researchQuick.dropped} dropped).`
+        : state.researchQuick.specs.length
+          ? `${state.researchQuick.specs.length} sourced product specification(s) found; no sourced risks.`
+          : pagesRead
+            ? `Read ${pagesRead} page(s); no supported risks were kept.`
+            : "No source pages were read; findings could not be checked.");
     if (!deepen) {
       // A quick look is not a pack: it is saved as it is, and joins a pack
       // only when the reader presses "Add to a pack".
@@ -1345,7 +1354,7 @@
     }
     state.researchJob = { job_id: deepen, kind: "pack_author" };
     state.researchState = "queued";
-    state.researchMessage = `${said} Digging deeper…`;
+    state.researchMessage = "Checking more sources…";
     renderResearch();
     pollResearchJob(deepen);
   }
@@ -1431,28 +1440,13 @@
    * the product instead of leaving for the app. */
   function coverageWords(coverage) {
     if (!coverage) return "";
+    // Older/failed responses may contain an empty coverage object. A missing
+    // count is unknown, not evidence that zero pages were read.
+    if (coverage.pages_read === undefined || coverage.pages_read === null) return "";
     // The run's own tally, as `run_progress.js` words it: pages read out of
     // pages tried first, then what came of them.
     const { pages, rest } = coverageSummary(coverage);
-    return [pages, ...rest].filter(Boolean).join(" \u00b7 ");
-  }
-
-  /* A label or value as the page wrote it. Sites put the separator inside the
-   * text ("Ekran Boyutu: : 27 inç", "Anti-Glare: :"), so the colons at the edges
-   * belong to neither; a row with nothing left in it is not a fact. */
-  function factText(value) {
-    const text = typeof value === "object" && value !== null ? JSON.stringify(value) : String(value ?? "");
-    return text.replace(/^[\s:]+|[\s:]+$/g, "");
-  }
-
-  /* The product info: what the listing and the quick look say about the
-   * product, as rows. Closed by default, because a full spec sheet is what a
-   * reader looks up, not what the card is for. The count is written once the
-   * rows are in, and a card with no rows has no product info at all. */
-  function productInfoMarkup() {
-    return `<details class="lite-quick-info" ${state.specsOpen ? "open" : ""}>
-        <summary>Product info</summary><div class="lite-quick-specs"></div>
-      </details>`;
+    return [pages, ...rest].join(" \u00b7 ");
   }
 
   function noIssueCardMarkup(empty) {
@@ -1473,7 +1467,10 @@
         </div>
       </div>
       ${statChips}
-      ${productInfoMarkup()}
+      ${empty.hasProductDetails ? `<details class="lite-quick-details">
+        <summary>Product details (${Number(empty.detailCount) || 0})</summary>
+        <div class="lite-quick-specs"></div>
+      </details>` : ""}
       <details class="lite-quick-sources" ${state.quickSourcesOpen ? "open" : ""}>
         <summary>Pages read</summary>
         <div class="lite-quick-source-list"></div>
@@ -1494,8 +1491,20 @@
     const editingId = editing?.dataset.id;
     const selection = editing ? [editing.selectionStart, editing.selectionEnd] : null;
     const quickCoverage = state.researchQuick?.coverage;
-    const quickIsEmpty = Boolean(state.researchQuick
-      && !state.researchQuick.risks?.length && !state.researchQuick.specs?.length);
+    // A listing/specification dump is not a sourced issue. Keep the concise
+    // no-issue state whenever the quick look found no supported risks.
+    const quickIsEmpty = Boolean(state.researchQuick && !state.researchQuick.risks?.length);
+    const listingFacts = Object.entries(state.researchQuick?.listing?.facts || {});
+    const assumed = String(state.researchQuick?.assumed || "");
+    const assumedIdentity = assumed.replace(/[^a-z0-9]/gi, "").toLowerCase();
+    const productIdentity = String(state.researchQuick?.product || state.researchName)
+      .replace(/[^a-z0-9]/gi, "").toLowerCase();
+    const distinctAssumption = assumed && assumedIdentity !== productIdentity;
+    const detailCount = (state.researchQuick?.specs?.length || 0)
+      + listingFacts.length + (state.researchQuick?.listing?.description ? 1 : 0)
+      + (distinctAssumption ? 1 : 0);
+    const quickReadCountKnown = quickCoverage?.pages_read !== undefined
+      && quickCoverage?.pages_read !== null;
     const rejectionReasons = quickCoverage?.rejection_reasons;
     const rejectionSummary = rejectionReasons && typeof rejectionReasons === "object"
       ? Object.entries(rejectionReasons)
@@ -1511,10 +1520,19 @@
       ? {
         kind: "quick",
         title: "No sourced issues kept",
-        note: reportsPages(quickCoverage)
-          ? "Nothing found in the pages read. Not proof there is no issue."
-          : "Nothing found. The agent did not say which pages it read. Not proof there is no issue.",
+        note: state.researchQuick?.diagnostic?.code === "unreadable_answer"
+          ? "Research returned an unreadable answer. Retry research."
+          : quickReadCountKnown && !(Number(quickCoverage.pages_read) > 0)
+          ? "No source pages were read, so findings could not be checked."
+          : state.researchQuick?.diagnostic?.message
+          || (state.researchQuick?.dropped
+            ? `Candidate findings did not pass source checks (${state.researchQuick.dropped} dropped).`
+            : quickReadCountKnown && Number(quickCoverage.pages_read) > 0
+              ? "No supported risks were found in the pages read. This does not prove there is no issue."
+              : "Research could not confirm any findings. Retry research."),
         coverage: quickCoverage,
+        hasProductDetails: detailCount > 0,
+        detailCount,
         outcome: state.researchQuick?.diagnostic?.message || "",
       }
       : state.researchEmpty;
@@ -1543,9 +1561,8 @@
         </div>
         ${emptyCard ? noIssueCardMarkup(emptyCard) : ""}
         ${state.researchQuick && !quickIsEmpty ? `<div class="lite-quick">
-          ${state.researchQuick.assumed ? `<p class="lite-quick-assumed">Taken as: ${renderRichText(state.researchQuick.assumed)}</p>` : ""}
           <div class="lite-quick-cards"></div>
-          ${productInfoMarkup()}
+          ${detailCount ? `<details class="lite-quick-details"><summary>Product details (${detailCount})</summary><div class="lite-quick-specs"></div></details>` : ""}
           <details class="lite-quick-sources" ${state.quickSourcesOpen ? "open" : ""}>
             <summary>Sources</summary><div class="lite-quick-source-list"></div>
           </details>
@@ -1585,7 +1602,7 @@
       paintLearn(slot);
       renderTaskLog(slot.querySelector(".lite-task-log-slot"), state.researchJob);
       slot.querySelector(".lite-research").dataset.state = state.researchState;
-      slot.querySelector(".lite-research-status").textContent = state.researchMessage;
+      slot.querySelector(".lite-research-status").textContent = emptyCard && !busy ? "" : state.researchMessage;
       paintRun(slot);
       const name = slot.querySelector(".lite-research-name");
       if (name && name.value !== state.researchName) name.value = state.researchName;
@@ -1622,7 +1639,7 @@
     wireQuickAgent(slot);
     renderTaskLog(slot.querySelector(".lite-task-log-slot"), state.researchJob);
     slot.querySelector(".lite-research").dataset.state = state.researchState;
-    slot.querySelector(".lite-research-status").textContent = state.researchMessage;
+    slot.querySelector(".lite-research-status").textContent = emptyCard && !busy ? "" : state.researchMessage;
     paintRun(slot);
     const name = slot.querySelector(".lite-research-name");
     if (name) {
@@ -1641,21 +1658,20 @@
     const sources = new Map();
     const specsSlot = slot.querySelector(".lite-quick-specs");
     for (const spec of state.researchQuick?.specs || []) {
-      const name = factText(spec.name);
-      const value = factText(spec.value);
-      if (!name || !value) continue;
       const item = document.createElement("p");
-      item.innerHTML = `${renderRichText(name)}: ${renderRichText(value)}`;
+      item.innerHTML = `${renderRichText(spec.name)}: ${renderRichText(spec.value)}`;
       specsSlot?.appendChild(item);
     }
     const listing = state.researchQuick?.listing || {};
-    const facts = Object.entries(listing.facts || {})
-      .map(([name, value]) => [factText(name), factText(value)])
-      .filter(([name, value]) => name && value)
-      .slice(0, 20);
-    for (const [name, value] of facts) {
+    if (distinctAssumption) {
       const item = document.createElement("p");
-      item.textContent = `${name}: ${value}`;
+      item.className = "lite-quick-assumed";
+      item.innerHTML = `Product match: ${renderRichText(assumed)}`;
+      specsSlot?.appendChild(item);
+    }
+    for (const [name, value] of Object.entries(listing.facts || {}).slice(0, 12)) {
+      const item = document.createElement("p");
+      item.textContent = `${name}: ${typeof value === "object" ? JSON.stringify(value) : value}`;
       specsSlot?.appendChild(item);
     }
     if (listing.description) {
@@ -1663,14 +1679,6 @@
       item.textContent = String(listing.description).slice(0, 1200);
       specsSlot?.appendChild(item);
     }
-    // Each product-info block says how many rows it holds, opens onto them
-    // when the reader asks, and is left out entirely when it has none.
-    slot.querySelectorAll(".lite-quick-info").forEach((info) => {
-      const rows = info.querySelectorAll(".lite-quick-specs > *").length;
-      if (!rows) { info.remove(); return; }
-      info.querySelector("summary").textContent = `Product info · ${rows}`;
-      info.addEventListener("toggle", () => { state.specsOpen = info.open; });
-    });
     for (const page of state.researchQuick?.evidence_pages || []) {
       if (/^https?:\/\//i.test(page.url || "")) sources.set(page.url, page);
     }
@@ -1678,9 +1686,6 @@
     // on a quick look.
     for (const page of state.researchEmpty?.evidence_pages || []) {
       if (/^https?:\/\//i.test(page.url || "")) sources.set(page.url, page);
-    }
-    if (/^https?:\/\//i.test(listing.url || "") && !sources.has(listing.url)) {
-      sources.set(listing.url, { url: listing.url, domain: "Product listing" });
     }
     for (const risk of state.researchQuick?.risks || []) {
       for (const src of risk.sources || []) if (/^https?:\/\//i.test(src.url || "")) sources.set(src.url, src);
@@ -2021,7 +2026,7 @@
       state.researchEmpty = emptied ? {
         kind: "deep",
         title: "No sourced issues kept",
-        note: "Nothing found in the pages read. Not proof there is no issue.",
+        note: noKeptData(job.result),
         coverage: job.result?.coverage || job.result?.telemetry?.coverage || null,
         evidence_pages: Array.isArray(job.result?.evidence_pages)
           ? job.result.evidence_pages
@@ -2218,9 +2223,8 @@
     // where the listing stopped.
     panel.setAttribute("role", "complementary");
     panel.setAttribute("aria-label", "Kriko product knowledge");
-    // The theme on the host before the first paint, so a stored light choice
-    // never shows a dark frame. `state.theme` is empty until storage answers;
-    // until then the system preference is what the stylesheet is already using.
+    // Set the warm paper theme before the first paint. The saved dark choice
+    // is applied synchronously when storage answers below.
     hostEl.dataset.theme = currentTheme();
     hostEl.dataset.motion = currentMotion();
 
@@ -2251,6 +2255,7 @@
     bodyEl.addEventListener("click", onBuyerClick);
     bodyEl.addEventListener("submit", onBuyerSubmit);
     loadBuyer();
+    loadCompare();
 
     // Wire panel-level handlers. The ripple rides the same pointerdown the
     // drag does, and adds nothing when reduced motion is on.
@@ -2297,10 +2302,6 @@
     readGlass();
     wireEvidenceTips();
     scheduleTour();
-    panel.querySelector(".lite-find-product").addEventListener("click", () => {
-      const product = (state.result?.subjects || []).find((one) => one.kind === "product");
-      openSearch(product?.label || "");
-    });
     panel.querySelector(".lite-research-product").addEventListener("click", () => {
       const subjects = (state.result?.subjects || []).filter((one) => one.kind === "product");
       researchSubject(subjects.length === 1 ? subjects[0] : null);
@@ -2343,17 +2344,19 @@
   const TOUR_KEY = "kriko.panelTour";
   const TOUR_STEPS = [
     { target: ".lite-header", title: "Kriko is on this page",
-      text: "This panel shows what is known about the product here. Drag the top bar to move it." },
-    // The big button is gone once there is a result, and the two small ones
-    // take its place, so the step points at whichever the panel is showing.
-    { target: ".lite-cta, .lite-product-actions", title: "Look the product up",
-      text: "Search finds the product in your catalogs. If none knows it, research it with your agent." },
+      text: "It shows what is known about the product here. Drag the top bar to move it." },
+    // The big button is gone once there is a result, and the small one takes
+    // its place, so the step points at whichever the panel is showing.
+    { target: ".lite-cta, .lite-product-actions", title: "Look it up",
+      text: "Checks the product against your catalogs." },
+    { target: ".lite-compare-bar", title: "Compare",
+      text: "Add the products you are weighing. They line up here, side by side." },
     { target: ".lite-btn-search", title: "Search",
-      text: "Look up any product in your catalogs. You do not need to be on its page." },
+      text: "Look up any product, without being on its page." },
     { target: ".lite-btn-theme", title: "Light or dark",
-      text: "Pick the look you want. The app and this panel share it." },
+      text: "The app and this panel share it." },
     { target: ".lite-btn-close", title: "Close and open",
-      text: "Close the panel here. Open it again from the Kriko button in the toolbar." },
+      text: "Open it again from the Kriko button in the toolbar." },
   ];
   let tourEl = null;
 
@@ -2607,7 +2610,6 @@
       <header class="lite-header" title="Drag to move">
         <div class="lite-titlebox">
           ${wordmark}
-          <div class="lite-subtitle">local product knowledge</div>
         </div>
         <button type="button" class="lite-iconbtn lite-btn-theme"
                 title="Switch to light theme" aria-label="Switch to light theme"
@@ -2644,11 +2646,9 @@
           </button>
           <p class="lite-status" role="status">${escapeHtml(IDLE_HINT)}</p>
         </div>
-        <div class="lite-queue-slot"></div>
-        <div class="lite-decide-slot"></div>
+        <div class="lite-compare-slot"></div>
         <div class="lite-product-actions">
-          <button type="button" class="lite-find-product">Search packs</button>
-          <button type="button" class="lite-research-product" >Research</button>
+          <button type="button" class="lite-research-product">Research</button>
         </div>
         <div class="lite-live-slot"></div>
         <div class="lite-search-slot"></div>
@@ -2683,7 +2683,7 @@
         <span class="lite-count" data-sev="medium">
           <span class="dot"></span>
           <span class="num">${c.medium}</span>
-          <span class="lbl">worth checking</span>
+          <span class="lbl">to check</span>
         </span>
         <span class="lite-count" data-sev="low">
           <span class="dot"></span>
@@ -2744,60 +2744,133 @@
     `;
   }
 
-  /* The queue row has a slot of its own. It used to sit inside the listing
-   * header, which exists only once a pack has read the page, so on a product
-   * nothing installed knew (the very one a reader wants to line up and
-   * research) the button was simply gone. */
-  function renderQueue() {
-    const slot = bodyEl?.querySelector(".lite-queue-slot");
+  /* Compare lives in the panel.
+   *
+   * It used to be a button in the footer that only opened the app, beside a
+   * separate "Add to queue" with a help text to explain what the queue was for.
+   * The queue is the shortlist, so the panel now says so: one key puts this
+   * page's product on it, and the shortlist opens right here, side by side,
+   * with how many risks of each severity every product has. The app still does
+   * the research and holds the whole of the comparison; the panel draws a row
+   * per product from what the app already stored. */
+  function compareItems() {
+    return state.compare ? state.compare.items : [];
+  }
+
+  function severityCounts(severities) {
+    if (!Array.isArray(severities)) return null;
+    const n = { high: 0, medium: 0, low: 0 };
+    for (const one of severities) if (one in n) n[one] += 1;
+    return n;
+  }
+
+  function renderCompareRow(item) {
+    const here = item.url === window.location.href;
+    const n = severityCounts(item.severities);
+    const word = { high: "Serious", medium: "To check", low: "Minor" };
+    const cells = n
+      ? ["high", "medium", "low"].map((sev) =>
+        `<span class="lite-cmp-n" data-sev="${sev}" data-zero="${n[sev] ? "0" : "1"}"
+          title="${word[sev]}"><span class="dot"></span>${n[sev]}</span>`).join("")
+      : `<span class="lite-cmp-none">Not checked yet</span>`;
+    return `
+      <li class="lite-cmp-row" data-here="${here ? "1" : "0"}" data-id="${escapeHtml(item.queue_id)}">
+        <span class="lite-cmp-name" title="${escapeHtml(item.name || item.url)}">
+          ${escapeHtml(item.name || item.url)}${here ? ' <span class="lite-cmp-here">this page</span>' : ""}</span>
+        <span class="lite-cmp-counts">${cells}</span>
+        <button type="button" class="lite-cmp-remove" aria-label="Remove ${escapeHtml(item.name || "this product")}"
+          title="Remove">${iconSvg("x", { size: 12, strokeWidth: 2.2 })}</button>
+      </li>`;
+  }
+
+  function renderCompare() {
+    const slot = bodyEl?.querySelector(".lite-compare-slot");
     if (!slot) return;
-    slot.innerHTML = renderQueueRow();
-    slot.querySelector(".lite-queue")?.addEventListener("click", addToQueue);
-    slot.querySelector(".lite-queue-help")?.addEventListener("click", (event) => {
-      state.queueHelpOpen = !state.queueHelpOpen;
-      event.currentTarget.setAttribute("aria-expanded", String(state.queueHelpOpen));
-      slot.querySelector(".lite-queue-guide").hidden = !state.queueHelpOpen;
+    const q = queueHere();
+    const phase = q ? q.phase : "idle";
+    const items = compareItems();
+    const max = state.compare ? state.compare.max : 0;
+    const onList = phase === "queued" || phase === "already"
+      || items.some((item) => item.url === window.location.href);
+    const label = phase === "busy" ? "Adding…" : onList ? "In compare" : "Add to compare";
+    const open = state.compareOpen && items.length > 0;
+    const note = (q && q.text) || state.compareError;
+    slot.innerHTML = `
+      <div class="lite-compare" data-open="${open ? "1" : "0"}">
+        <div class="lite-compare-bar" data-phase="${phase}">
+          <button type="button" class="lite-compare-add" ${phase === "busy" || onList ? "disabled" : ""}
+            aria-pressed="${onList ? "true" : "false"}">
+            ${iconSvg(onList ? "check" : "plus", { size: 13, strokeWidth: 2.4 })}<span>${label}</span></button>
+          ${items.length ? `<button type="button" class="lite-compare-toggle" aria-expanded="${open}"
+            aria-controls="lite-compare-tray">Compare · ${items.length}
+            <span class="chev" aria-hidden="true"></span></button>` : ""}
+        </div>
+        ${note ? `<p class="lite-compare-note" role="status" data-tone="bad">${escapeHtml(note)}</p>` : ""}
+        <div id="lite-compare-tray" class="lite-compare-tray" ${open ? "" : "hidden"}>
+          <ul class="lite-cmp-list">${items.map(renderCompareRow).join("")}</ul>
+          <div class="lite-cmp-foot">
+            <span class="lite-cmp-limit">${items.length} of ${max || items.length}</span>
+            <button type="button" class="lite-cmp-open">Open side by side</button>
+          </div>
+          <div class="lite-decide-slot"></div>
+        </div>
+      </div>`;
+    slot.querySelector(".lite-compare-add")?.addEventListener("click", addToCompare);
+    slot.querySelector(".lite-compare-toggle")?.addEventListener("click", () => {
+      state.compareOpen = !state.compareOpen;
+      if (state.compareOpen) loadCompare();
+      renderCompare();
+    });
+    slot.querySelector(".lite-cmp-open")?.addEventListener("click", () =>
+      openInApp("compare", appUrlFor("compare")));
+    slot.querySelectorAll(".lite-cmp-remove").forEach((button) =>
+      button.addEventListener("click", () => removeFromCompare(button.closest(".lite-cmp-row").dataset.id)));
+    renderDecide();
+  }
+
+  function loadCompare() {
+    askWorker("COMPARE_LIST", {}).then((reply) => {
+      if (!reply.ok) {
+        // The shortlist lives in the app; with no app there is nothing to draw.
+        // Keep whatever was drawn before rather than blanking a list the reader
+        // can still see, and say nothing: the add key says why when it matters.
+        if (!state.compare) state.compare = { items: [], max: 0 };
+        renderCompare();
+        return;
+      }
+      state.compare = { items: Array.isArray(reply.items) ? reply.items : [], max: reply.max || 0 };
+      state.compareError = "";
+      renderCompare();
     });
   }
 
-  // Queue mode. The reader lines up the products they are weighing from the
-  // listings themselves; an agent in the app researches them one after
-  // another and Compare lines them up. The state is this page's only: a
-  // queue press on another listing is another product.
+  function removeFromCompare(queueId) {
+    askWorker("COMPARE_REMOVE", { queue_id: queueId }).then((reply) => {
+      if (!reply.ok) {
+        state.compareError = reply.error || "Could not remove it. Try again.";
+        renderCompare();
+        return;
+      }
+      // Removing this page's own row frees its key again.
+      const gone = compareItems().find((item) => item.queue_id === queueId);
+      if (gone && gone.url === window.location.href) state.queue = null;
+      state.pick = null;
+      state.compareError = "";
+      loadCompare();
+    });
+  }
+
+  // The state is this page's only: a press on another listing is another product.
   function queueHere() {
     return state.queue && state.queue.url === window.location.href ? state.queue : null;
   }
 
-  function renderQueueRow() {
-    const q = queueHere();
-    const phase = q ? q.phase : "idle";
-    const label = phase === "busy" ? "Queuing…"
-      : phase === "queued" || phase === "already" ? "In the queue"
-        : "Add to queue";
-    const done = phase === "queued" || phase === "already";
-    return `
-      <div class="lite-queue-row" data-phase="${phase}">
-        <button type="button" class="lite-queue" ${phase === "busy" || done ? "disabled" : ""}
-          aria-pressed="${done ? "true" : "false"}">${label}</button>
-        <button type="button" class="lite-queue-help" aria-label="How to use the research queue"
-          aria-controls="lite-queue-guide" aria-expanded="${state.queueHelpOpen}"
-          title="How to use the research queue">?</button>
-        ${q && q.text ? `<span class="lite-queue-note" role="status">${escapeHtml(q.text)}</span>` : ""}
-      </div>
-      <div id="lite-queue-guide" class="lite-queue-guide" ${state.queueHelpOpen ? "" : "hidden"}>
-        <strong>Research a shortlist</strong>
-        <p>Add products from their listings, then open <b>Compare → Research queue</b>
-          in Kriko, choose an agent and press <b>Start queue</b>.</p>
-        <p>The agent researches each in turn. Adding does not start research;
-          the queue stays on this computer.</p>
-      </div>`;
-  }
-
-  function addToQueue() {
+  function addToCompare() {
     const lm = state.listingMeta || {};
     const url = window.location.href;
     state.queue = { url, phase: "busy", text: "" };
-    renderQueue();
+    state.compareError = "";
+    renderCompare();
     chrome.runtime.sendMessage({ type: "QUEUE_ADD", payload: {
       url,
       // the engine's reading of the product first: it is the name the
@@ -2809,13 +2882,16 @@
       if (chrome.runtime.lastError || !response || !response.ok) {
         const full = response && response.status === 409;
         state.queue = { url, phase: "error", text: full
-          ? "The queue is full. Research or remove one in Kriko first."
-          : (response && response.error) || "Kriko is not running. Open the Kriko app, then try again." };
+          ? "Compare is full. Remove one first."
+          : (response && response.error) || "Kriko is not running. Open the app, then try again." };
+        // A full list is fixed from the list, so show it.
+        if (full) { state.compareOpen = true; loadCompare(); }
       } else {
-        state.queue = { url, phase: response.added ? "queued" : "already",
-          text: `${response.added ? "Queued" : "Already queued"} · ${response.count} of ${response.max} in Compare` };
+        state.queue = { url, phase: response.added ? "queued" : "already", text: "" };
+        state.compareOpen = true;
+        loadCompare();
       }
-      renderQueue();
+      renderCompare();
     });
   }
 
@@ -2837,13 +2913,13 @@
   function renderDecide() {
     const slot = bodyEl?.querySelector(".lite-decide-slot");
     if (!slot || !BUYER) return;
-    // Deciding is for a reader who has something to decide: a page that was
-    // read, or a shortlist started from this page. Not for an error or a nudge.
-    if (state.pipeline !== "result" && !state.pick && !queueHere()) { slot.innerHTML = ""; return; }
+    // Deciding is for a reader with something to decide between: two products
+    // on the shortlist, or a pick already made.
+    if (compareItems().length < 2 && !state.pick) { slot.innerHTML = ""; return; }
     const busy = state.buyerUi.deciding;
     slot.innerHTML = `<div class="lite-buy-actions"><button type="button" class="lite-buy-btn" data-act="decide"
-      ${busy ? "disabled" : ""} title="Rank the products in your queue for what you told Kriko you need">
-      ${busy ? "Deciding…" : "Decide between my shortlist"}</button></div>`
+      ${busy ? "disabled" : ""} title="Rank the shortlist for what you told Kriko you need">
+      ${busy ? "Deciding…" : "Help me decide"}</button></div>`
       + (state.buyerUi.decideError ? `<p class="lite-buy-note" data-tone="bad">${BUYER.esc(state.buyerUi.decideError)}</p>` : "")
       + BUYER.renderPick(state.pick, state.buyerUi);
   }
@@ -3451,8 +3527,9 @@
   function renderStatus() {
     if (!statusEl) return;
     if (state.pipeline === "idle") {
-      statusEl.textContent = ctaIsResearch() ? UNKNOWN_HINT : IDLE_HINT;
-      statusEl.style.display = "";
+      const hint = ctaIsResearch() ? UNKNOWN_HINT : IDLE_HINT;
+      statusEl.textContent = hint;
+      statusEl.style.display = hint ? "" : "none";
     } else if (state.pipeline === "analyzing") {
       statusEl.textContent = stageSentence(state.stage);
       statusEl.style.display = "";
@@ -3742,15 +3819,19 @@
           <strong class="lite-unknown-name"></strong> yet. Research it.</p>
       `;
       card.querySelector(".lite-unknown-name").textContent = state.unknownProduct;
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "lite-verdict-btn lite-unknown-research";
-      button.textContent = "Research";
-      button.title = "A quick look answers here; a deeper run follows.";
-      button.setAttribute("aria-label", "Research this product");
-      button.addEventListener("click", () =>
-        researchSubject({ label: state.unknownProduct }));
-      card.appendChild(button);
+      // The primary key above already says "Research this product" while the
+      // panel is idle; a second one in the card would be the same press twice.
+      if (!ctaIsResearch()) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "lite-verdict-btn lite-unknown-research";
+        button.textContent = "Research";
+        button.title = "A quick look answers here; a deeper run follows.";
+        button.setAttribute("aria-label", "Research this product");
+        button.addEventListener("click", () =>
+          researchSubject({ label: state.unknownProduct }));
+        card.appendChild(button);
+      }
       // On a site nothing reads, the product is half of it: the other half is
       // teaching Kriko the page, so the next one of its listings reads too.
       if (state.learnable && !state.researchOpen) {
@@ -3761,7 +3842,7 @@
         paintLearn(learn);
         card.appendChild(learn);
       }
-      slot.appendChild(card);
+      slot.replaceChildren(card);
       return;
     }
 
@@ -3781,7 +3862,7 @@
           <p class="lite-verdict-say">Kriko reads this site's listings. This
             page isn't one.</p>
         `;
-        slot.appendChild(card);
+        slot.replaceChildren(card);
         return;
       }
       // The way out of "nothing reads this site" is on the card itself: the
@@ -3809,7 +3890,7 @@
       button.addEventListener("click", () =>
         openInApp("sites", appUrlFor("sites")));
       card.appendChild(button);
-      slot.appendChild(card);
+      slot.replaceChildren(card);
       return;
     }
 
@@ -3912,7 +3993,7 @@
       if (asked) card.appendChild(renderDiagnosis(asked));
     }
 
-    slot.appendChild(card);
+    slot.replaceChildren(card);
   }
 
   /* What the reader was actually shown, which is not always what was weighed.
@@ -4121,38 +4202,27 @@
     // Nothing to expand, collapse or count: the row would be three zeroes and
     // two controls that do nothing.
     if (!total) { claimsHeadEl.querySelector(".lite-claims-head")?.remove(); return; }
-    const allOpen  = state.openIds.size === total && total > 0;
-    const allClose = state.openIds.size === 0;
+    const allOpen = state.openIds.size === total && total > 0;
 
-    // Build once. On subsequent toggles, mutate in place so the entrance
-    // animation does not retrigger.
+    // One quiet toggle instead of a pair that each did half of it. Built once;
+    // on later toggles it is mutated in place so the entrance animation does
+    // not retrigger.
     let head = claimsHeadEl.querySelector(".lite-claims-head");
     if (!head) {
       claimsHeadEl.insertAdjacentHTML("afterbegin", `
         <div class="lite-claims-head">
           <div class="lite-claims-label">Risks · ${total}</div>
-          <div class="lite-chip-group">
-            <button type="button" class="lite-chip lite-chip-expand" data-on="${allOpen ? "1" : "0"}">
-              + Expand all
-            </button>
-            <button type="button" class="lite-chip lite-chip-collapse" data-on="${allClose ? "1" : "0"}">
-              − Collapse all
-            </button>
-          </div>
+          <button type="button" class="lite-chip lite-chip-expand"></button>
         </div>
       `);
-      claimsHeadEl.querySelector(".lite-chip-expand").addEventListener("click", expandAll);
-      claimsHeadEl.querySelector(".lite-chip-collapse").addEventListener("click", collapseAll);
-      return;
+      head = claimsHeadEl.querySelector(".lite-claims-head");
+      head.querySelector(".lite-chip-expand").addEventListener("click", () =>
+        setAllOpen(!(state.openIds.size === claimsView().shown.length && state.openIds.size > 0)));
     }
-
-    // Update in place
-    const label = head.querySelector(".lite-claims-label");
-    if (label) label.textContent = `Risks · ${total}`;
-    const expandBtn   = head.querySelector(".lite-chip-expand");
-    const collapseBtn = head.querySelector(".lite-chip-collapse");
-    if (expandBtn)   expandBtn.dataset.on   = allOpen  ? "1" : "0";
-    if (collapseBtn) collapseBtn.dataset.on = allClose ? "1" : "0";
+    head.querySelector(".lite-claims-label").textContent = `Risks · ${total}`;
+    const toggle = head.querySelector(".lite-chip-expand");
+    toggle.textContent = allOpen ? "Collapse all" : "Expand all";
+    toggle.dataset.on = allOpen ? "1" : "0";
   }
 
   /* ─── Why a card is marked thin ────────────────────────────────────────
@@ -4300,16 +4370,7 @@
     // "hit Analyze" under it reads as Kriko not noticing its own answer.
     if (state.noAdapter || state.unknownProduct) return;
 
-    if (state.pipeline === "idle" || !state.result) {
-      const empty = document.createElement("div");
-      empty.className = "lite-empty";
-      empty.innerHTML = `
-        <span class="lite-empty-icon">${iconSvg("search", { size: 18 })}</span>
-        <div>No search yet. Press <b>Search this product</b>.</div>
-      `;
-      claimsListEl.appendChild(empty);
-      return;
-    }
+    if (state.pipeline === "idle" || !state.result) return;
 
     // An answer with no claims is not the same as no answer. If the packs
     // resolved this listing and hold nothing on it, that gap is the content.
@@ -4564,8 +4625,6 @@
     }
     const packs = Array.isArray(state.result.packs) ? state.result.packs : [];
     footerEl.textContent = packs.map((p) => `${p.pack_id} · ${p.version}`).join("  |  ");
-    // A separator only when something stands before the button.
-    const join = () => { if (footerEl.textContent) footerEl.append(" · "); };
 
     // The app stored this same answer and can show the whole of it. Offered
     // only when the app said so: a link to a report that was never written is
@@ -4575,8 +4634,6 @@
     // has running, which is not what "open in Kriko" means to anyone. The
     // button posts the route instead and the app raises itself; the tab is
     // kept only as the fallback for when no shell is listening.
-    const routes = state.result.app_routes || {};
-    const urls = state.result.app_urls || {};
     if (state.result.app_route || state.result.app_url) {
       const button = document.createElement("button");
       button.type = "button";
@@ -4584,20 +4641,6 @@
       button.textContent = "Open in Kriko";
       button.addEventListener("click", () =>
         openInApp(state.result.app_route || "check", state.result.app_url));
-      join();
-      footerEl.append(button);
-    }
-
-    // What a reader does with the answer once read: line it up against
-    // another. Offered only when the app handed back a route for it, because a
-    // button that opens an empty screen teaches the reader the button is broken.
-    if (routes.compare) {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "lite-open-app";
-      button.textContent = "Compare";
-      button.addEventListener("click", () => openInApp(routes.compare, urls.compare));
-      join();
       footerEl.append(button);
     }
     footerEl.hidden = false;
@@ -4605,10 +4648,11 @@
 
   function renderProductActions() {
     const knownProduct = (state.result?.subjects || []).some((one) => one.kind === "product");
-    const find = bodyEl?.querySelector(".lite-find-product");
     const research = bodyEl?.querySelector(".lite-research-product");
-    if (find) find.textContent = knownProduct ? "Search again" : "Search packs";
-    if (research) research.hidden = knownProduct;
+    // A named product nothing holds already has its own research key (the
+    // primary one, and the card under it), so this one is for the pages that
+    // name nothing.
+    if (research) research.hidden = knownProduct || Boolean(state.unknownProduct);
   }
 
   function renderBody() {
@@ -4621,8 +4665,7 @@
     const focused = shadow.activeElement;
     renderListingHeader();
     renderBuyer();
-    renderQueue();
-    renderDecide();
+    renderCompare();
     renderCriticalAlerts();
     renderCta();
     renderStatus();
@@ -4662,6 +4705,4 @@
     cards.forEach((card) => updateClaimCard(card, { open }));
     renderClaimsHeader();
   }
-  function expandAll()   { setAllOpen(true); }
-  function collapseAll() { setAllOpen(false); }
 })();
