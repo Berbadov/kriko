@@ -1,134 +1,205 @@
 {
-  "note": "Invented products and invented findings, drawn in the real extension panel (see capture.mjs). Nothing here assesses a real brand.",
+  "note": "Invented products and invented findings, drawn in the real extension panel (see capture.mjs). Nothing here assesses a real brand. `products` are the four pictures in the gallery; `research` is the one product no catalog knows; `shortlist` is what sits beside the first product in the Compare picture.",
   "products": {
-    "hatchback": {
-      "title": "Hatchback D · 2017",
-      "label": "Hatchback D",
-      "pack": "example.cars",
+    "ebike": {
+      "title": "E-bike M · 2022",
+      "label": "E-bike M",
+      "pack": "example.bikes",
       "claims": [
         {
-          "title": "Water gets into the rear footwell",
-          "severity": "high", "strength": "reported", "domain": "body",
-          "body": "Owners of this generation report a damp rear carpet after rain. The usual cause is a blocked drain in the boot channel, and it shows as a water line in the spare-wheel well.",
-          "advice": "Lift the boot floor and look for a water line or a musty smell.",
-          "sources": [{ "title": "Owner forum thread", "domain": "example.org", "url": "https://example.org/forum/hatchback-d-damp" }]
+          "title": "Battery range drops by a third after two winters",
+          "severity": "high", "strength": "reported", "domain": "battery",
+          "body": "Owners of the 2022 model report a usable range about a third lower after two winters of outdoor storage. The pack ages faster when it is left cold and full.",
+          "advice": "Ask for the charge-cycle count and the range on the last ride.",
+          "sources": [{ "title": "Owner forum thread", "domain": "example.org", "url": "https://example.org/forum/ebike-m-battery", "quote": "Mine does 40 km now, it did 60 when I bought it, and it lived in the shed." }]
         },
         {
-          "title": "Timing belt due at 6 years or 90,000 km",
-          "severity": "medium", "strength": "documented", "domain": "engine",
-          "body": "The service schedule calls for a belt change at 6 years or 90,000 km, whichever comes first. A car sold at 7 years with no invoice may be overdue.",
-          "advice": "Ask for the invoice for the last belt and water-pump change.",
-          "sources": [{ "title": "Service schedule", "domain": "example.org", "url": "https://example.org/manual/schedule" }]
+          "title": "Motor cuts out after rain",
+          "severity": "medium", "strength": "reported", "domain": "electrical",
+          "body": "Water gets into the controller plug under the rear rack. The motor stops until the plug dries.",
+          "advice": "Check the plug under the rack for green corrosion.",
+          "sources": [{ "title": "Repair thread", "domain": "example.org", "url": "https://example.org/forum/ebike-m-plug", "quote": "Cut out twice in the wet. The plug under the rack was full of water." }]
         },
         {
-          "title": "Dual-clutch judders when pulling away",
-          "severity": "medium", "strength": "reported", "domain": "transmission",
-          "body": "A shudder from a standstill is a common complaint on the automatic version, worst in stop-start traffic.",
-          "advice": "Drive it in stop-start conditions, not only on a clear road.",
-          "sources": [{ "title": "Repair thread", "domain": "example.org", "url": "https://example.org/forum/dct-judder" }]
+          "title": "Brake pads are a six-month item",
+          "severity": "medium", "strength": "documented", "domain": "brakes",
+          "body": "The service manual calls for new pads every six months of daily commuting. Original pads on a two-year-old bike mean the brakes were not serviced.",
+          "advice": "Ask which pads are on it and when the brakes were last bled.",
+          "sources": [{ "title": "Service manual", "domain": "example.org", "url": "https://example.org/manual/ebike-m", "quote": "Replace the pads every six months under daily use." }]
         },
         {
-          "title": "Screen reboots on cold mornings",
-          "severity": "low", "strength": "reported", "domain": "electrical",
-          "body": "The infotainment unit restarts a few times after a cold start. A software update stops it.",
+          "title": "Display shows a sensor error on cold starts",
+          "severity": "low", "strength": "reported", "domain": "display",
+          "body": "The screen flags a speed-sensor error below freezing. It clears after a few minutes.",
           "sources": []
         }
       ]
     },
-    "laptop": {
-      "title": "Laptop A · 256 GB",
-      "label": "Laptop A",
-      "pack": "example.laptops",
+    "vacuum": {
+      "title": "Robot vacuum R · LiDAR",
+      "label": "Robot vacuum R",
+      "pack": "example.home",
       "claims": [
         {
-          "title": "The review tested the 1 TB model, not 256 GB",
-          "severity": "high", "strength": "documented", "domain": "storage",
-          "body": "The headline speed comes from a review of the 1 TB version. The 256 GB drive has fewer chips and is slower in the same test lineup.",
-          "advice": "Look for a test of the 256 GB configuration before trusting the headline speed.",
-          "sources": [{ "title": "Review test sheet", "domain": "example.org", "url": "https://example.org/review/laptop-a" }]
+          "title": "Side-brush motor fails after about eight months",
+          "severity": "high", "strength": "reported", "domain": "brush",
+          "body": "Owners report the side brush stopping, then a grinding noise from the motor housing, after roughly eight months of daily runs.",
+          "advice": "Ask whether a spare brush assembly is sold, and what it costs.",
+          "sources": [{ "title": "Owner forum thread", "domain": "example.org", "url": "https://example.org/forum/vacuum-r-brush", "quote": "Month eight, the side brush just stopped. The motor grinds when I spin it by hand." }]
         },
         {
-          "title": "Fan ramps up under light load",
-          "severity": "medium", "strength": "reported", "domain": "cooling",
-          "body": "Several owners report the fan spinning up during video calls and browsing, not only under heavy work.",
-          "advice": "Run a video call for ten minutes and listen.",
-          "sources": [{ "title": "Owner reports", "domain": "example.org", "url": "https://example.org/forum/laptop-a-fan" }]
+          "title": "Schedules need a cloud account",
+          "severity": "medium", "strength": "documented", "domain": "app",
+          "body": "No-go zones and schedules can only be set in the app, which asks you to sign in. Without an account the robot only cleans on demand.",
+          "advice": "Check what the app asks for before you rely on the schedule.",
+          "sources": [{ "title": "User manual", "domain": "example.org", "url": "https://example.org/manual/vacuum-r", "quote": "Sign in to the app to create a schedule or draw a no-go zone." }]
         },
         {
-          "title": "Charging port loosens over time",
-          "severity": "medium", "strength": "reported", "domain": "power",
-          "body": "The left charging port works loose after a few months of daily use on some units.",
-          "advice": "Wiggle the cable gently in each port when you inspect it.",
-          "sources": [{ "title": "Repair guide", "domain": "example.org", "url": "https://example.org/repair/laptop-a-port" }]
+          "title": "Stuck on thresholds above 1.5 cm",
+          "severity": "medium", "strength": "reported", "domain": "navigation",
+          "body": "The robot climbs low door rails but stalls on higher ones, and some units keep trying until the battery is flat.",
+          "advice": "Measure your highest threshold before you buy.",
+          "sources": [{ "title": "Review notes", "domain": "example.org", "url": "https://example.org/review/vacuum-r", "quote": "Fine on the rugs, stranded on the bathroom door rail every time." }]
         },
         {
-          "title": "Battery claim is for low-brightness video",
-          "severity": "low", "strength": "documented", "domain": "battery",
-          "body": "The advertised battery life was measured with video playback at a low screen brightness.",
+          "title": "Dustbin lid pops open on bumps",
+          "severity": "low", "strength": "reported", "domain": "bin",
+          "body": "The lid latch is loose on some units and the bin empties itself over the first rug.",
           "sources": []
         }
       ]
     },
-    "headphones": {
-      "title": "Headphones B · Wireless",
-      "label": "Headphones B",
-      "pack": "example.audio",
+    "phone": {
+      "title": "Phone P · 128 GB",
+      "label": "Phone P",
+      "pack": "example.phones",
       "claims": [
         {
-          "title": "Hinge cracks near the swivel",
-          "severity": "high", "strength": "reported", "domain": "build",
-          "body": "A hairline crack appears where the earcup meets the headband after several months of folding them into a bag.",
-          "advice": "Check the plastic around both swivels in good light.",
-          "sources": [{ "title": "Teardown notes", "domain": "example.org", "url": "https://example.org/teardown/headphones-b" }]
+          "title": "Fingerprint sensor stops after a screen repair",
+          "severity": "high", "strength": "reported", "domain": "display",
+          "body": "A replacement screen that is not matched to the phone can switch off the fingerprint sensor for good. Owners report it after repairs at independent shops.",
+          "advice": "Ask whether the screen was ever replaced, and test the sensor yourself.",
+          "sources": [{ "title": "Repair thread", "domain": "example.org", "url": "https://example.org/forum/phone-p-sensor", "quote": "New screen fitted, and the fingerprint sensor has never worked since." }]
         },
         {
-          "title": "Ear-pad foam flakes after a year",
-          "severity": "medium", "strength": "reported", "domain": "comfort",
-          "body": "The pad covering peels with sweat and warmth. Replacement pads are sold separately.",
-          "advice": "Ask whether pads are included for replacement and what they cost.",
-          "sources": [{ "title": "Long-term review", "domain": "example.org", "url": "https://example.org/review/headphones-b" }]
+          "title": "Battery health falls below 80% within two years",
+          "severity": "medium", "strength": "documented", "domain": "battery",
+          "body": "The maker rates the battery for 500 full charges down to 80%. A phone sold at two years, charged daily, is probably near that line.",
+          "advice": "Open the battery health screen and ask for a photo of it.",
+          "sources": [{ "title": "Maker's support page", "domain": "example.org", "url": "https://example.org/support/phone-p-battery", "quote": "Rated to keep 80% of its capacity at 500 full charge cycles." }]
         },
         {
-          "title": "Hiss with noise cancelling on early firmware",
+          "title": "Water resistance is gone after any repair",
+          "severity": "medium", "strength": "reported", "domain": "build",
+          "body": "The seal is glued, and few repairs restore it. A phone that has been opened is splash-proof at best.",
+          "advice": "Ask if the case has been opened, and look for gaps along the frame.",
+          "sources": [{ "title": "Teardown notes", "domain": "example.org", "url": "https://example.org/teardown/phone-p", "quote": "The adhesive seal does not survive the opening and shops rarely replace it." }]
+        },
+        {
+          "title": "Speaker crackles at full volume",
           "severity": "low", "strength": "reported", "domain": "audio",
-          "body": "A faint hiss in quiet rooms is fixed by a firmware update released after launch.",
+          "body": "A crackle at the top of the volume range, mostly on speech. A software update reduces it.",
           "sources": []
         }
       ]
     },
-    "espresso": {
-      "title": "Espresso machine C · 15 bar",
-      "label": "Espresso machine C",
-      "pack": "example.coffee",
+    "washer": {
+      "title": "Washing machine W · 9 kg",
+      "label": "Washing machine W",
+      "pack": "example.laundry",
       "claims": [
         {
-          "title": "Pump gets loud and weak after a year",
-          "severity": "high", "strength": "reported", "domain": "pump",
-          "body": "Owners report the vibration pump turning noisy and losing pressure after about 12 months of daily use.",
-          "advice": "Ask for the purchase date and whether the pump has been replaced.",
-          "sources": [{ "title": "Owner forum thread", "domain": "example.org", "url": "https://example.org/forum/espresso-c-pump" }]
+          "title": "Drum bearing grows loud after two years",
+          "severity": "high", "strength": "reported", "domain": "drum",
+          "body": "Owners report a rumble on the spin cycle from about the second year. The bearing is welded into the tub, so the repair costs close to a new machine.",
+          "advice": "Ask for its age, and run a spin cycle if you can hear one.",
+          "sources": [{ "title": "Owner forum thread", "domain": "example.org", "url": "https://example.org/forum/washer-w-bearing", "quote": "Year two, a rumble on every spin. The repairman quoted nearly the price of a new one." }]
         },
         {
-          "title": "Scale builds up fast in hard water",
-          "severity": "medium", "strength": "documented", "domain": "boiler",
-          "body": "The small boiler scales quickly. The manual asks for descaling every four to six weeks in hard-water areas.",
-          "advice": "Look for white deposits and ask how often it was descaled.",
-          "sources": [{ "title": "Service manual", "domain": "example.org", "url": "https://example.org/manual/espresso-c" }]
+          "title": "Door seal grows mould if the door stays shut",
+          "severity": "medium", "strength": "documented", "domain": "seal",
+          "body": "The manual asks you to leave the door open after each wash. Left shut, the seal turns black and starts to smell.",
+          "advice": "Look under the door seal for dark spots.",
+          "sources": [{ "title": "User manual", "domain": "example.org", "url": "https://example.org/manual/washer-w", "quote": "Leave the door ajar after every wash to let the seal dry." }]
         },
         {
-          "title": "Steam wand seal leaks",
-          "severity": "medium", "strength": "reported", "domain": "steam",
-          "body": "A slow drip from the steam wand appears once the rubber seal hardens, usually after two to three years.",
-          "advice": "Run the steam wand, then watch for drips when it is off.",
-          "sources": [{ "title": "Repair thread", "domain": "example.org", "url": "https://example.org/forum/espresso-c-seal" }]
+          "title": "Drain pump blocks with coins and hair",
+          "severity": "medium", "strength": "reported", "domain": "pump",
+          "body": "The filter sits behind a low flap and the pump jams easily. A blocked pump leaves water in the drum.",
+          "advice": "Find the filter before you buy; it should open without tools.",
+          "sources": [{ "title": "Repair guide", "domain": "example.org", "url": "https://example.org/repair/washer-w-pump", "quote": "Filter behind the bottom flap, packed with hair and a coin." }]
         },
         {
-          "title": "Drip-tray sensor sticks",
-          "severity": "low", "strength": "reported", "domain": "body",
-          "body": "The float in the drip tray sticks and shows an empty-tank warning while the tank is full.",
+          "title": "Time left jumps during the wash",
+          "severity": "low", "strength": "reported", "domain": "display",
+          "body": "The countdown stalls and then skips ahead while the machine balances the load. It finishes on time.",
+          "sources": []
+        }
+      ]
+    },
+    "drill": {
+      "title": "Cordless drill D · 18 V",
+      "label": "Cordless drill D",
+      "pack": "example.tools",
+      "claims": [
+        {
+          "title": "Battery contacts overheat under heavy load",
+          "severity": "high", "strength": "reported", "domain": "battery",
+          "body": "Owners report the pack contacts burning after long runs in masonry. The pack housing warps and no longer clicks into the drill.",
+          "advice": "Look at the pack contacts for burn marks, and check the pack still clicks in.",
+          "sources": [{ "title": "Owner forum thread", "domain": "example.org", "url": "https://example.org/forum/drill-d-contacts", "quote": "An afternoon in concrete and the contacts were black. The pack will not seat any more." }]
+        },
+        {
+          "title": "Chuck slips under hard load",
+          "severity": "medium", "strength": "reported", "domain": "chuck",
+          "body": "The keyless chuck loosens in hard materials and the bit spins free. Tightening by hand is not enough.",
+          "advice": "Clamp a large bit and pull hard to see whether it holds.",
+          "sources": [{ "title": "Review notes", "domain": "example.org", "url": "https://example.org/review/drill-d", "quote": "The chuck lets go of 10 mm bits in steel. I went back to a keyed one." }]
+        },
+        {
+          "title": "Charger fits only the same battery generation",
+          "severity": "medium", "strength": "documented", "domain": "charger",
+          "body": "Packs from the older range do not charge on this charger, and the new pack does not fit older tools.",
+          "advice": "Ask which batteries and tools come with it, and whether they match.",
+          "sources": [{ "title": "Maker's compatibility chart", "domain": "example.org", "url": "https://example.org/support/drill-d-chart", "quote": "Packs marked 2019 or earlier are not compatible with this charger." }]
+        },
+        {
+          "title": "Work light switches off after ten seconds",
+          "severity": "low", "strength": "reported", "domain": "light",
+          "body": "The LED goes out on its own, and the delay cannot be changed.",
           "sources": []
         }
       ]
     }
-  }
+  },
+  "research": {
+    "title": "Air fryer A · 5 L",
+    "pack": "example.kitchen",
+    "claims": [
+      {
+        "title": "Basket coating flakes after a year",
+        "severity": "high", "strength": "reported", "domain": "basket",
+        "body": "The non-stick layer lifts at the corners of the basket after about a year of weekly use.",
+        "advice": "Look closely at the basket corners and ask whether a spare is sold.",
+        "sources": [{ "title": "Owner forum thread", "domain": "example.org", "url": "https://example.org/forum/air-fryer-a-basket", "quote": "The coating is peeling off the corners of the basket after twelve months." }]
+      },
+      {
+        "title": "Handle gets hot on long cooks",
+        "severity": "medium", "strength": "reported", "domain": "handle",
+        "body": "The handle warms through after twenty minutes at high heat. It is too hot to grip bare-handed on some units.",
+        "advice": "Ask whether an oven glove is needed for long cooks.",
+        "sources": [{ "title": "Review notes", "domain": "example.org", "url": "https://example.org/review/air-fryer-a-handle", "quote": "After 25 minutes the handle is too hot to hold without a glove." }]
+      },
+      {
+        "title": "The beeper cannot be turned off",
+        "severity": "low", "strength": "reported", "domain": "controls",
+        "body": "A loud beep ends every cook, and the menu has no way to silence it.",
+        "sources": [{ "title": "Owner forum thread", "domain": "example.org", "url": "https://example.org/forum/air-fryer-a-beep", "quote": "No setting for the beep. It wakes the whole house." }]
+      }
+    ]
+  },
+  "shortlist": [
+    { "queue_id": "q-k", "name": "E-bike K · 2021", "url": "https://shop.example/e-bike-k-2021", "severities": ["high", "high", "medium", "low"] },
+    { "queue_id": "q-t", "name": "E-bike T · 2023", "url": "https://shop.example/e-bike-t-2023", "severities": ["medium", "low", "low"] }
+  ]
 }
