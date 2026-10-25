@@ -8,7 +8,7 @@
 #
 #   powershell -ExecutionPolicy Bypass -File tools\build-apk.ps1
 #
-# Nothing here is committed under android/ — prebuild regenerates it.
+# Nothing here is committed under android/ -- prebuild regenerates it.
 
 param(
     [string]$Stage = 'C:\a',
