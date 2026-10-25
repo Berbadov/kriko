@@ -1127,7 +1127,7 @@ function normalizeAnswer(text: string, language: 'en' | 'tr' = 'en'): string {
   if (/^\s*[-*•]\s/m.test(trimmed)) return trimmed;
 
   const cleaned = trimmed.replace(/\*\*/g, '').replace(/\s+/g, ' ').trim();
-  const marker = /(?:^|\n|\.\s+)(Verdict|Check|Gap|Hüküm|Kontrol|Eksik)\s*:?\s*/gi;
+  const marker = /(?:^|\n|\.\s+)(Verdict|Check|Gap|Karar|Hüküm|Kontrol|Eksik)\s*:?\s*/gi;
   const matches = [...cleaned.matchAll(marker)];
   if (matches.length < 2) return trimmed;
 
@@ -1145,9 +1145,9 @@ function normalizeAnswer(text: string, language: 'en' | 'tr' = 'en'): string {
     const raw = match[1].toLowerCase();
     const label =
       language === 'tr'
-        ? raw.startsWith('h')
-          ? 'Hüküm'
-          : raw.startsWith('k')
+        ? raw === 'karar' || raw === 'hüküm'
+          ? 'Karar'
+          : raw === 'kontrol'
             ? 'Kontrol'
             : 'Eksik'
         : raw === 'verdict'

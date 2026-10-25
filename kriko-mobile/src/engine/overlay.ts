@@ -31,6 +31,12 @@ export type OverlayTheme = "dark" | "paper" | "white";
  */
 export type OverlayLabels = {
   scan: string;
+  /** The tray's one big action, and the sheet's first button. */
+  scanPage: string;
+  scanAgain: string;
+  results: string;
+  /** The quiet disclosure that opens the review-site field. */
+  siteComments: string;
   queue: string;
   stop: string;
   now: string;
@@ -68,6 +74,8 @@ type KrikoOverlayNative = {
   stopSession(): Promise<void>;
   isActive(): Promise<boolean>;
   ensureHeadlessSession(): void;
+  moveToBack(): Promise<boolean>;
+  setAppForeground(foreground: boolean): void;
   updateJobs(json: string): void;
   updateUi(json: string): void;
   addListener(eventName: string): void;
@@ -141,6 +149,25 @@ export function startOverlaySession(): Promise<void> {
 
 export function stopOverlaySession(): Promise<void> {
   return overlayAvailable() ? native!.stopSession() : Promise.resolve();
+}
+
+/**
+ * Tell the scanner whether Kriko's own screen is in front. It floats over the
+ * reader's page, so it stands down while the app is showing and returns the
+ * moment the reader moves on.
+ */
+export function setOverlayAppForeground(foreground: boolean): void {
+  if (overlayAvailable()) native!.setAppForeground(foreground);
+}
+
+/**
+ * Send Kriko's own window behind whatever the reader was looking at, so the
+ * scanner floats over their page and not over Kriko. Resolves false when there
+ * is nothing to step aside for (no native module, or no activity).
+ */
+export function moveAppToBack(): Promise<boolean> {
+  if (!overlayAvailable()) return Promise.resolve(false);
+  return native!.moveToBack().catch(() => false);
 }
 
 export function updateOverlayJobs(jobs: OverlayJob[]): void {

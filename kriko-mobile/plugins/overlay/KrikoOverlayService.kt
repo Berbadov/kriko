@@ -13,10 +13,13 @@ import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Outline
+import android.graphics.Paint
 import android.graphics.PixelFormat
 import android.graphics.Rect
+import android.graphics.RectF
 import android.graphics.Typeface
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
@@ -32,6 +35,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.IBinder
+import android.os.SystemClock
 import android.provider.Settings
 import android.text.Html
 import android.text.InputType
@@ -49,8 +53,9 @@ import android.view.WindowManager
 import android.view.animation.DecelerateInterpolator
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
+import android.widget.FrameLayout
+import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
-import android.widget.ProgressBar
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
@@ -80,12 +85,28 @@ private data class Palette(
   val ok: Int,
 )
 
+/**
+ * The floating scanner, in three pieces that never cover each other:
+ *
+ *  - the **puck**: one round blue K the reader drags anywhere. It snaps to the
+ *    nearest screen edge, dims when idle, spins a ring while research runs and
+ *    carries a green count when answers are waiting;
+ *  - the **tray**: tap the puck and a small card opens beside it with one big
+ *    action (Scan this page), the results, and — deliberately apart — Stop;
+ *  - the **sheet**: the answer, sized to its content and anchored to the bottom
+ *    where a thumb reaches it, with the other scans as chips under it.
+ *
+ * The capture pipeline, the notification and the palette contract are those of
+ * the previous capsule; only what the reader sees and touches changed.
+ */
 class KrikoOverlayService : Service() {
   companion object {
     const val ACTION_START = "__PACKAGE__.overlay.START"
     const val ACTION_STOP = "__PACKAGE__.overlay.STOP"
     const val ACTION_UPDATE = "__PACKAGE__.overlay.UPDATE"
     const val ACTION_UI = "__PACKAGE__.overlay.UI"
+    const val ACTION_APP = "__PACKAGE__.overlay.APP"
+    const val EXTRA_FOREGROUND = "foreground"
     const val EXTRA_RESULT_CODE = "resultCode"
     const val EXTRA_RESULT_DATA = "resultData"
     const val EXTRA_JOBS = "jobs"
@@ -93,6 +114,13 @@ class KrikoOverlayService : Service() {
     private const val CHANNEL_ID = "kriko_screen_scan"
     private const val NOTIFICATION_ID = 7406
     private const val ON_ACCENT = 0xFFFFFFFF.toInt()
+    /** The visible disc; the window around it leaves room for its shadow and badge. */
+    private const val PUCK_DP = 54
+    private const val PUCK_PAD_DP = 7
+    private const val EDGE_DP = 4
+    private const val TRAY_DP = 232
+    private const val DIM_AFTER_MS = 4200L
+    private const val DIM_ALPHA = 0.58f
 
     /**
      * The three palettes the app can resolve to. Every value mirrors
@@ -145,6 +173,10 @@ class KrikoOverlayService : Service() {
     /** English, used until the JS side sends its translated labels. */
     private val DEFAULT_LABELS: Map<String, String> = linkedMapOf(
       "scan" to "Scan",
+      "scanPage" to "Scan this page",
+      "scanAgain" to "Scan again",
+      "results" to "Results",
+      "siteComments" to "Site comments",
       "queue" to "Queue",
       "stop" to "Stop",
       "now" to "Now",
@@ -190,39 +222,59 @@ class KrikoOverlayService : Service() {
   private var reader: ImageReader? = null
   private var captureThread: HandlerThread? = null
   private var captureHandler: Handler? = null
-  private var bubble: View? = null
-  private var panel: View? = null
-  private var bubbleParams: WindowManager.LayoutParams? = null
-  private var panelParams: WindowManager.LayoutParams? = null
-  private var panelScroll: ScrollView? = null
   @Volatile private var capturePending = false
   @Volatile private var scanGeneration = 0
   private var shuttingDown = false
   private var jobs = JSONArray()
   private var selectedJob = ""
+  /** Finished answers the reader has already looked at; the rest wear a badge. */
+  private val seen = mutableSetOf<String>()
+
+  // The puck.
+  private var puck: FrameLayout? = null
+  private var puckParams: WindowManager.LayoutParams? = null
+  private var puckRing: RingView? = null
+  private var puckBadge: TextView? = null
+  private var puckSnap: ValueAnimator? = null
+  private var puckYBeforeSheet: Int? = null
+
+  // The tray.
+  private var tray: View? = null
+  private var trayParams: WindowManager.LayoutParams? = null
+  private var trayClosedAt = 0L
+  private var trayBadge: TextView? = null
+
+  // The sheet.
+  private var sheet: View? = null
+  private var sheetParams: WindowManager.LayoutParams? = null
+  private var sheetTitle: TextView? = null
+  private var sheetStatus: TextView? = null
+  private var sheetBar: View? = null
+  private var sheetScroll: ScrollView? = null
+  private var sheetBody: LinearLayout? = null
+  private var sheetChips: LinearLayout? = null
+  private var sheetChipsScroll: View? = null
+  private var sheetActions: LinearLayout? = null
   private var siteUrlInput: EditText? = null
-  private var jobList: LinearLayout? = null
-  private var panelMode = "queue"
-  private var currentTab: TextView? = null
-  private var queueTab: TextView? = null
-  private var siteActionView: View? = null
-  private var bubbleHandle: View? = null
-  private var bubbleScanView: TextView? = null
-  private var bubbleQueueChip: View? = null
-  private var bubbleQueueLabel: TextView? = null
-  private var bubbleQueueBadge: TextView? = null
-  private var bubbleDot: View? = null
-  private var bubbleStopView: TextView? = null
-  private var dotAnimator: ValueAnimator? = null
+  private var siteSection: View? = null
+  private var siteOpen = false
+  private var answerView: TextView? = null
+  private var stepView: TextView? = null
+  private var renderedSignature: String? = null
+
   /** A UI update arrived mid-capture; apply it when the windows come back. */
   private var uiDirty = false
+
+  /**
+   * Whether Kriko's own screen is in front. The scanner floats over the reader's
+   * page, so while the app itself is showing it stands down instead of sitting on
+   * the app's tabs. True until JS says otherwise: a session starts from the app.
+   */
+  private var appForeground = true
+  /** The first-run hint (the tray, open once) waits for the reader to leave the app. */
+  private var hintPending = false
   private var palette: Palette = DARK
   private val labels: MutableMap<String, String> = LinkedHashMap(DEFAULT_LABELS)
-  private var panelCloseGeneration = 0
-  private var panelIsClosing = false
-  private var panelTransitionGeneration = 0
-  private var panelSwitching = false
-  private var pendingPanelMode: String? = null
   private val activeMotion = WeakHashMap<View, ValueAnimator>()
   private val gentleSpring = TimeInterpolator { input ->
     val t = input.coerceIn(0f, 1f).toDouble()
@@ -231,13 +283,10 @@ class KrikoOverlayService : Service() {
   private val geistRegular by lazy { runCatching { Typeface.createFromAsset(assets, "fonts/KrikoGeist-Regular.ttf") }.getOrDefault(Typeface.DEFAULT) }
   private val geistMedium by lazy { runCatching { Typeface.createFromAsset(assets, "fonts/KrikoGeist-Medium.ttf") }.getOrDefault(Typeface.DEFAULT) }
   private val geistSemiBold by lazy { runCatching { Typeface.createFromAsset(assets, "fonts/KrikoGeist-SemiBold.ttf") }.getOrDefault(Typeface.DEFAULT_BOLD) }
-  private var renderedSignature: String? = null
-  private val answerViews = mutableMapOf<String, TextView>()
-  private val stepViews = mutableMapOf<String, TextView>()
-  private val statusViews = mutableMapOf<String, TextView>()
   @Volatile private var captureMode = "research"
   @Volatile private var reviewSite = ""
   private val mainHandler = Handler(android.os.Looper.getMainLooper())
+  private val dimRunnable = Runnable { dimPuck() }
   private val projectionCallback = object : MediaProjection.Callback() {
     override fun onStop() {
       if (!shuttingDown) {
@@ -268,11 +317,15 @@ class KrikoOverlayService : Service() {
         intent.getStringExtra(EXTRA_UI)?.let { applyUi(it) }
         return START_NOT_STICKY
       }
+      ACTION_APP -> {
+        setAppForeground(intent.getBooleanExtra(EXTRA_FOREGROUND, true))
+        return START_NOT_STICKY
+      }
       ACTION_UPDATE -> {
         val json = intent.getStringExtra(EXTRA_JOBS)
         if (json != null) {
           jobs = try { JSONArray(json) } catch (_: Exception) { JSONArray() }
-          renderPanel()
+          renderAll()
         }
         return START_NOT_STICKY
       }
@@ -283,7 +336,7 @@ class KrikoOverlayService : Service() {
 
   private fun startProjection(intent: Intent) {
     if (isActive) return
-    // Carry the reader's last palette and words into the very first bubble.
+    // Carry the reader's last palette and words into the very first puck.
     intent.getStringExtra(EXTRA_UI)?.let { readUi(it) }
     val resultCode = intent.getIntExtra(EXTRA_RESULT_CODE, 0)
     val data = intent.getParcelableExtra<Intent>(EXTRA_RESULT_DATA)
@@ -315,9 +368,12 @@ class KrikoOverlayService : Service() {
       )
       if (!Settings.canDrawOverlays(this)) throw IllegalStateException("Overlay permission was revoked.")
       isActive = true
-      showBubble()
+      showPuck()
       sendSession(true)
       KrikoOverlayModule.serviceReady()
+      // Once the reader has left the app for their own page, show what to do a
+      // single time, so the first thing on that screen is the button that matters.
+      hintPending = true
     } catch (error: Exception) {
       failStart(error.message ?: "Could not start the screen scan session.")
     }
@@ -344,14 +400,14 @@ class KrikoOverlayService : Service() {
     KrikoOverlayModule.serviceFailed(message)
   }
 
-  /** One translated bubble/panel word, or its English default. */
+  /** One translated word, or its English default. */
   private fun L(key: String): String = labels[key] ?: DEFAULT_LABELS[key] ?: key
 
   // ------------------------------------------------------------------ UI feed --
 
   /**
    * Read `{ theme, labels }` without touching views. Called before the first
-   * bubble exists, so the window is built in the right palette already.
+   * puck exists, so the window is built in the right palette already.
    */
   private fun readUi(json: String) {
     val parsed = try { JSONObject(json) } catch (_: Exception) { return }
@@ -379,51 +435,70 @@ class KrikoOverlayService : Service() {
   }
 
   /**
-   * Rebuild the bubble and, when open, the panel in the current palette and
-   * language while keeping where they were and what the reader had typed.
+   * Rebuild the puck and whatever is open in the current palette and language,
+   * keeping where they were and what the reader had typed.
    */
   private fun refreshUi() {
     if (!isActive || shuttingDown) return
-    val panelWasOpen = panel?.visibility == View.VISIBLE
-    val keepMode = panelMode
+    val trayWasOpen = tray != null
+    val sheetWasOpen = sheet != null
     val keepSite = siteUrlInput?.text?.toString().orEmpty()
-    val keepScroll = panelScroll?.scrollY ?: 0
-    val keepX = bubbleParams?.x
-    val keepY = bubbleParams?.y
-    removePanel()
-    bubble?.let { view ->
-      stopDot()
-      activeMotion.remove(view)?.cancel()
-      try { windowManager.removeView(view) } catch (_: Exception) { }
-    }
-    bubble = null
-    bubbleParams = null
-    showBubble()
-    val params = bubbleParams
+    val keepScroll = sheetScroll?.scrollY ?: 0
+    val keepX = puckParams?.x
+    val keepY = puckParams?.y
+    removeTray(animated = false)
+    removeSheet()
+    removePuck()
+    showPuck()
+    val params = puckParams
     if (params != null && keepX != null && keepY != null) {
       params.x = keepX
       params.y = keepY
-      try { bubble?.let { windowManager.updateViewLayout(it, params) } } catch (_: Exception) { }
+      try { puck?.let { windowManager.updateViewLayout(it, params) } } catch (_: Exception) { }
     }
-    // A translated label can change the capsule's width, so clamp the restored
-    // position once the new window has measured itself.
-    val moved = bubble
-    if (moved != null) {
-      moved.post {
-        if (bubble !== moved || shuttingDown) return@post
-        val bounds = displayBounds()
-        val current = bubbleParams ?: return@post
-        current.x = current.x.coerceIn(0, (bounds.width() - moved.width).coerceAtLeast(0))
-        current.y = current.y.coerceIn(0, (bounds.height() - moved.height).coerceAtLeast(0))
-        try { windowManager.updateViewLayout(moved, current) } catch (_: Exception) { }
+    if (sheetWasOpen) {
+      openSheet()
+      siteUrlInput?.setText(keepSite)
+      sheetScroll?.post { sheetScroll?.scrollTo(0, keepScroll) }
+    } else if (trayWasOpen && !appForeground) {
+      showTray()
+    }
+    hideWhileInApp()
+    updateNotification()
+  }
+
+  /** Stand down while Kriko's own screen is showing; come back when it is not. */
+  private fun setAppForeground(value: Boolean) {
+    if (appForeground == value) return
+    appForeground = value
+    if (!isActive || shuttingDown) return
+    if (value) {
+      removeTray(animated = false)
+      puck?.visibility = View.GONE
+      sheet?.visibility = View.GONE
+    } else if (!capturePending) {
+      restoreWindows()
+      if (hintPending && tray == null && sheet == null) {
+        hintPending = false
+        mainHandler.postDelayed({
+          if (isActive && !shuttingDown && !appForeground && tray == null && sheet == null) showTray()
+        }, 450)
       }
     }
-    if (panelWasOpen) {
-      togglePanel(keepMode)
-      siteUrlInput?.setText(keepSite)
-      panelScroll?.post { panelScroll?.scrollTo(0, keepScroll) }
-    }
-    updateNotification()
+  }
+
+  /** Bring the puck (and an open sheet) back after a capture or after leaving the app. */
+  private fun restoreWindows() {
+    if (appForeground) return
+    puck?.let { animateIn(it, 0.9f, 220L) }
+    sheet?.let { animateIn(it, 0.96f, 200L) }
+  }
+
+  /** Hide whatever a rebuild just created if Kriko's own screen is in front. */
+  private fun hideWhileInApp() {
+    if (!appForeground) return
+    puck?.visibility = View.GONE
+    sheet?.visibility = View.GONE
   }
 
   /** Replace the ongoing notification's words and colour without touching capture. */
@@ -462,273 +537,556 @@ class KrikoOverlayService : Service() {
     (getSystemService(NOTIFICATION_SERVICE) as NotificationManager).createNotificationChannel(channel)
   }
 
-  // ------------------------------------------------------------------- bubble --
+  // ---------------------------------------------------------------- job state --
+
+  private fun statusOf(index: Int): String = jobs.optJSONObject(index)?.optString("status") ?: ""
+
+  private fun isActiveStatus(status: String) =
+    status == "queued" || status == "running" || status == "reading"
+
+  private fun activeCount(): Int = (0 until jobs.length()).count { isActiveStatus(statusOf(it)) }
+
+  private fun hasRunningJob(): Boolean = (0 until jobs.length()).any {
+    val status = statusOf(it)
+    status == "running" || status == "reading"
+  }
+
+  /** Finished answers nobody has opened yet. */
+  private fun readyCount(): Int = (0 until jobs.length()).count { index ->
+    val item = jobs.optJSONObject(index)
+    item != null && item.optString("status") == "done" && !seen.contains(item.optString("id"))
+  }
+
+  /** The job the sheet shows: the reader's pick, else what is running, else the newest. */
+  private fun currentJob(): JSONObject? {
+    val items = (0 until jobs.length()).mapNotNull { jobs.optJSONObject(it) }
+    return items.firstOrNull { it.optString("id") == selectedJob }
+      ?: items.firstOrNull { isActiveStatus(it.optString("status")) }
+      ?: items.firstOrNull()
+  }
+
+  /** Everything that reflects job state, refreshed whenever the jobs change. */
+  private fun renderAll() {
+    syncPuck()
+    syncTray()
+    renderSheet()
+  }
+
+  // --------------------------------------------------------------------- puck --
 
   /**
-   * A compact capsule: a blue K grip, Scan, the queue chip with its active
-   * count, a running dot, and a quiet Stop. The window stays
-   * WRAP_CONTENT x 52dp and is dragged and clamped by the K grip.
+   * One round K. The window is the disc plus a little air for its shadow and
+   * badge; the reader drags it anywhere and it settles on the nearest edge.
    */
-  private fun showBubble() {
-    if (bubble != null || !Settings.canDrawOverlays(this)) return
+  private fun showPuck() {
+    if (puck != null || !Settings.canDrawOverlays(this)) return
     val p = palette
-    val root = LinearLayout(this).apply {
-      orientation = LinearLayout.HORIZONTAL
-      gravity = Gravity.CENTER_VERTICAL
-      background = capsule(p.panel, 26, p.edge)
-      setPadding(dp(6), dp(6), dp(8), dp(6))
-      elevation = dp(12).toFloat()
-      outlineProvider = roundOutline(26)
-      // Keep the K grip's soft shadow visible inside the capsule's padding.
-      clipChildren = false
+    val disc = FrameLayout(this).apply {
+      background = puckBackground(p)
+      elevation = dp(8).toFloat()
+      outlineProvider = roundOutline(PUCK_DP / 2)
     }
-
-    val handle = LinearLayout(this).apply {
-      orientation = LinearLayout.VERTICAL
-      gravity = Gravity.CENTER
-      background = handleBackground(p)
-      contentDescription = L("dragHint")
-      elevation = dp(2).toFloat()
-      outlineProvider = roundOutline(15)
-      layoutParams = LinearLayout.LayoutParams(dp(40), dp(40))
-    }
-    handle.addView(TextView(this).apply {
+    disc.addView(TextView(this).apply {
       text = "K"
       setTextColor(ON_ACCENT)
-      textSize = 14f
+      textSize = 21f
       typeface = geistSemiBold
       includeFontPadding = false
       gravity = Gravity.CENTER
-    })
-    handle.addView(View(this).apply {
-      // The grip line: a small drag affordance under the mark.
-      background = capsule(tint(ON_ACCENT, 0.5f), 1, Color.TRANSPARENT)
-      layoutParams = LinearLayout.LayoutParams(dp(9), dp(2)).apply { topMargin = dp(2) }
-    })
+    }, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+    val ring = RingView(this)
+    puckRing = ring
+    disc.addView(ring, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
 
-    val scan = button(L("scan"), p.accent, ON_ACCENT, tint(ON_ACCENT, 0.24f), Color.TRANSPARENT, 34) {
-      requestCapture("research")
+    val root = FrameLayout(this).apply {
+      clipChildren = false
+      clipToPadding = false
+      contentDescription = L("dragHint")
     }
-
-    val chip = LinearLayout(this).apply {
-      orientation = LinearLayout.HORIZONTAL
-      gravity = Gravity.CENTER
-      background = capsule(p.raised, 16, p.edge, tint(p.ink, 0.08f))
-      setPadding(dp(9), 0, dp(9), 0)
-      isClickable = true
-      contentDescription = L("queue")
-      installPressMotion(this)
-      setOnClickListener { togglePanel("queue") }
-      layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(32)).apply { marginStart = dp(8) }
-    }
-    val chipLabel = TextView(this).apply {
-      text = L("queue")
-      setTextColor(p.ink)
-      textSize = 12f
-      typeface = geistMedium
-      includeFontPadding = false
-      gravity = Gravity.CENTER
-    }
+    root.addView(disc, FrameLayout.LayoutParams(dp(PUCK_DP), dp(PUCK_DP)).apply {
+      setMargins(dp(PUCK_PAD_DP), dp(PUCK_PAD_DP), dp(PUCK_PAD_DP), dp(PUCK_PAD_DP))
+    })
     val badge = TextView(this).apply {
-      text = activeCount().toString()
       setTextColor(ON_ACCENT)
-      textSize = 10f
+      textSize = 10.5f
       typeface = geistSemiBold
       includeFontPadding = false
       gravity = Gravity.CENTER
-      background = capsule(p.accent, 9, Color.TRANSPARENT)
+      background = capsule(p.ok, 9, p.panel)
+      minWidth = dp(18)
       setPadding(dp(5), dp(1), dp(5), dp(1))
-      visibility = if (activeCount() > 0) View.VISIBLE else View.GONE
-      layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(18)).apply { marginStart = dp(5) }
-    }
-    chip.addView(chipLabel)
-    chip.addView(badge)
-
-    val dot = View(this).apply {
-      background = circle(p.accent)
-      layoutParams = LinearLayout.LayoutParams(dp(8), dp(8)).apply { marginStart = dp(8) }
       visibility = View.GONE
+      elevation = dp(10).toFloat()
     }
+    puckBadge = badge
+    root.addView(badge, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(18),
+      Gravity.TOP or Gravity.END).apply { setMargins(0, dp(1), dp(1), 0) })
 
-    val stop = TextView(this).apply {
-      text = L("stop")
-      setTextColor(p.ink3)
-      textSize = 12f
-      typeface = geistMedium
-      includeFontPadding = false
-      gravity = Gravity.CENTER
-      contentDescription = L("stopSharing")
-      setPadding(dp(10), 0, dp(10), 0)
-      background = capsule(Color.TRANSPARENT, 16, Color.TRANSPARENT, tint(p.ink, 0.08f))
-      installPressMotion(this)
-      setOnClickListener { stopSession() }
-      layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(32)).apply { marginStart = dp(8) }
-    }
-
-    root.addView(handle)
-    root.addView(scan)
-    root.addView(chip)
-    root.addView(dot)
-    root.addView(stop)
-
-    bubble = root
-    bubbleHandle = handle
-    bubbleScanView = scan
-    bubbleQueueChip = chip
-    bubbleQueueLabel = chipLabel
-    bubbleQueueBadge = badge
-    bubbleDot = dot
-    bubbleStopView = stop
-    bubbleParams = overlayParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(52), Gravity.TOP or Gravity.START).apply {
-      x = dp(18)
-      y = dp(190)
+    puck = root
+    val size = dp(PUCK_DP + PUCK_PAD_DP * 2)
+    val bounds = displayBounds()
+    puckParams = overlayParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
+      Gravity.TOP or Gravity.START).apply {
+      x = bounds.width() - size - dp(EDGE_DP)
+      y = dp(210)
     }
     root.alpha = 0f
-    root.scaleX = 0.94f
-    root.scaleY = 0.94f
-    // The K grip owns the touch stream so the window can be dragged; sibling
-    // actions stay tappable.
-    installDrag(handle, bubbleParams!!, root)
-    windowManager.addView(root, bubbleParams)
-    animateIn(root, 0.94f, 240L)
-    syncBubble()
+    root.scaleX = 0.8f
+    root.scaleY = 0.8f
+    installPuckTouch(root)
+    windowManager.addView(root, puckParams)
+    if (appForeground) root.visibility = View.GONE else animateIn(root, 0.8f, 260L)
+    syncPuck()
+    scheduleDim()
   }
 
-  /** Bubble text, badge and running dot, refreshed whenever job state changes. */
-  private fun syncBubble() {
-    val active = activeCount()
-    bubbleQueueLabel?.text = L("queue")
-    bubbleQueueChip?.contentDescription = if (active > 0) "${L("queue")} $active" else L("queue")
-    bubbleQueueBadge?.let { badge ->
-      badge.text = active.toString()
-      badge.visibility = if (active > 0) View.VISIBLE else View.GONE
-    }
-    bubbleScanView?.let { scan ->
-      scan.text = L("scan")
-      scan.contentDescription = L("scan")
-    }
-    bubbleStopView?.let { stop ->
-      stop.text = L("stop")
-      stop.contentDescription = L("stopSharing")
-    }
-    bubbleHandle?.contentDescription = L("dragHint")
-    setDotRunning(hasRunningJob())
+  private fun puckBackground(p: Palette): Drawable = GradientDrawable(
+    GradientDrawable.Orientation.TOP_BOTTOM,
+    intArrayOf(mix(p.accent, ON_ACCENT, 0.2f), p.accent),
+  ).apply {
+    shape = GradientDrawable.OVAL
+    setStroke(dp(1), tint(ON_ACCENT, 0.26f))
   }
 
-  /** The small dot breathes while research runs; static when motion is off. */
-  private fun setDotRunning(running: Boolean) {
-    val dot = bubbleDot ?: return
-    dot.visibility = if (running) View.VISIBLE else View.GONE
-    dot.contentDescription = if (running) L("running") else null
-    if (!running) {
-      stopDot()
+  /** Spinner ring while research runs, green count when answers are waiting. */
+  private fun syncPuck() {
+    val running = activeCount() > 0
+    puckRing?.setRunning(running)
+    val ready = readyCount()
+    puckBadge?.let { badge ->
+      badge.text = ready.toString()
+      badge.visibility = if (ready > 0) View.VISIBLE else View.GONE
+      badge.background = capsule(palette.ok, 9, palette.panel)
+    }
+    puck?.contentDescription = when {
+      ready > 0 -> "${L("dragHint")} · ${L("results")} $ready"
+      running -> "${L("dragHint")} · ${L("running")}"
+      else -> L("dragHint")
+    }
+    if (running || ready > 0) wakePuck() else scheduleDim()
+  }
+
+  private fun wakePuck() {
+    mainHandler.removeCallbacks(dimRunnable)
+    val view = puck ?: return
+    if (view.visibility == View.VISIBLE && view.alpha < 1f) animateView(view, 1f, 1f, 0f, 160L, spring = false)
+  }
+
+  private fun scheduleDim() {
+    mainHandler.removeCallbacks(dimRunnable)
+    mainHandler.postDelayed(dimRunnable, DIM_AFTER_MS)
+  }
+
+  private fun dimPuck() {
+    val view = puck ?: return
+    // Idle means nothing is open, nothing is running and nothing is waiting.
+    if (tray != null || sheet != null || activeCount() > 0 || readyCount() > 0) return
+    if (view.visibility == View.VISIBLE) animateView(view, DIM_ALPHA, 1f, 0f, 320L, spring = false)
+  }
+
+  /** Slide the puck to the nearer screen edge once the finger lets go. */
+  private fun snapPuck() {
+    val view = puck ?: return
+    val params = puckParams ?: return
+    val bounds = displayBounds()
+    val width = if (view.width > 0) view.width else dp(PUCK_DP + PUCK_PAD_DP * 2)
+    val left = dp(EDGE_DP)
+    val right = (bounds.width() - width - dp(EDGE_DP)).coerceAtLeast(left)
+    val target = if (params.x + width / 2 < bounds.width() / 2) left else right
+    puckSnap?.cancel()
+    if (!animationsEnabled() || target == params.x) {
+      params.x = target
+      try { windowManager.updateViewLayout(view, params) } catch (_: Exception) { }
       return
     }
-    if (dotAnimator != null) return
-    if (!animationsEnabled()) {
-      dot.alpha = 1f
-      return
-    }
-    dotAnimator = ValueAnimator.ofFloat(0.32f, 1f).apply {
-      duration = 850
-      repeatCount = ValueAnimator.INFINITE
-      repeatMode = ValueAnimator.REVERSE
-      interpolator = DecelerateInterpolator()
-      addUpdateListener { animation -> dot.alpha = animation.animatedValue as Float }
+    val from = params.x
+    puckSnap = ValueAnimator.ofFloat(0f, 1f).apply {
+      duration = 260
+      interpolator = gentleSpring
+      addUpdateListener { animation ->
+        if (puck !== view) return@addUpdateListener
+        params.x = (from + (target - from) * (animation.animatedValue as Float)).roundToInt()
+        try { windowManager.updateViewLayout(view, params) } catch (_: Exception) { }
+      }
       start()
     }
   }
 
-  private fun stopDot() {
-    dotAnimator?.cancel()
-    dotAnimator = null
-    bubbleDot?.alpha = 1f
-  }
-
-  private fun activeCount(): Int = (0 until jobs.length()).count { index ->
-    val status = jobs.optJSONObject(index)?.optString("status") ?: ""
-    status == "queued" || status == "running" || status == "reading"
-  }
-
-  private fun tabQueueLabel(): String {
-    val active = activeCount()
-    return if (active == 0) L("all") else "${L("all")} · $active"
-  }
-
-  private fun hasRunningJob(): Boolean = (0 until jobs.length()).any { index ->
-    val status = jobs.optJSONObject(index)?.optString("status") ?: ""
-    status == "running" || status == "reading"
-  }
-
-  // -------------------------------------------------------------------- panel --
-
-  private fun togglePanel(mode: String = "queue") {
-    if (panel != null) {
-      if (panelIsClosing || panel?.visibility != View.VISIBLE) {
-        panelCloseGeneration += 1
-        panelIsClosing = false
-        panel?.let { animateIn(it, 0.95f, 230L) }
+  private fun installPuckTouch(view: View) {
+    var downX = 0f
+    var downY = 0f
+    var startX = 0
+    var startY = 0
+    var moved = false
+    val touchSlop = ViewConfiguration.get(this).scaledTouchSlop
+    view.setOnTouchListener { _, event ->
+      val params = puckParams ?: return@setOnTouchListener false
+      when (event.actionMasked) {
+        MotionEvent.ACTION_DOWN -> {
+          puckSnap?.cancel()
+          downX = event.rawX; downY = event.rawY
+          startX = params.x; startY = params.y
+          moved = false
+          mainHandler.removeCallbacks(dimRunnable)
+          view.alpha = 1f
+          animateView(view, 1f, 0.94f, 0f, 90L, spring = true)
+          true
+        }
+        MotionEvent.ACTION_MOVE -> {
+          val dx = (event.rawX - downX).roundToInt()
+          val dy = (event.rawY - downY).roundToInt()
+          if (kotlin.math.abs(dx) + kotlin.math.abs(dy) > touchSlop) moved = true
+          if (moved) {
+            val bounds = displayBounds()
+            params.x = (startX + dx).coerceIn(0, (bounds.width() - view.width).coerceAtLeast(0))
+            params.y = (startY + dy).coerceIn(0, (bounds.height() - view.height).coerceAtLeast(0))
+            try { windowManager.updateViewLayout(view, params) } catch (_: Exception) { }
+            // A tray that stays behind while the puck moves points at nothing.
+            if (tray != null) removeTray(animated = false)
+          }
+          true
+        }
+        MotionEvent.ACTION_UP -> {
+          animateView(view, 1f, 1f, 0f, 160L, spring = true)
+          if (moved) {
+            snapPuck()
+            scheduleDim()
+          } else {
+            view.performClick()
+            onPuckTap()
+          }
+          true
+        }
+        MotionEvent.ACTION_CANCEL -> {
+          animateView(view, 1f, 1f, 0f, 160L, spring = true)
+          scheduleDim()
+          true
+        }
+        else -> true
       }
-      switchPanelMode(mode)
+    }
+  }
+
+  /** Tap: a closed tray opens; an open one closes; a sheet folds away first. */
+  private fun onPuckTap() {
+    if (capturePending) return
+    if (sheet != null) {
+      hideSheetAnimated()
       return
     }
-    val p = palette
-    val container = LinearLayout(this).apply {
-      orientation = LinearLayout.VERTICAL
-      background = capsule(p.panel, 20, p.edge)
-      elevation = dp(20).toFloat()
-      outlineProvider = roundOutline(20)
-      clipToOutline = true
-      setPadding(dp(12), dp(10), dp(12), dp(10))
+    if (tray != null) {
+      removeTray(animated = true)
+      return
     }
+    // The same touch that closed the tray (a tap outside it) must not reopen it.
+    if (SystemClock.uptimeMillis() - trayClosedAt < 600) return
+    showTray()
+  }
+
+  // --------------------------------------------------------------------- tray --
+
+  private fun showTray() {
+    val anchor = puck ?: return
+    if (tray != null || appForeground) return
+    val p = palette
+    val width = dp(TRAY_DP)
+    val card = LinearLayout(this).apply {
+      orientation = LinearLayout.VERTICAL
+      background = capsule(p.panel, 22, p.edge)
+      elevation = dp(16).toFloat()
+      outlineProvider = roundOutline(22)
+      clipToOutline = true
+      setPadding(dp(10), dp(10), dp(10), dp(6))
+    }
+    card.addView(
+      actionRow("scan", L("scanPage"), p.accent, ON_ACCENT, tint(ON_ACCENT, 0.24f), Color.TRANSPARENT, 52, 15f) {
+        removeTray(animated = false)
+        requestCapture("research")
+      },
+      LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(52)),
+    )
+
+    val results = actionRow("list", L("results"), p.raised, p.ink, tint(p.ink, 0.08f), p.edge, 46, 13.5f) {
+      removeTray(animated = false)
+      openSheet()
+    }
+    val badge = TextView(this).apply {
+      setTextColor(ON_ACCENT)
+      textSize = 10.5f
+      typeface = geistSemiBold
+      includeFontPadding = false
+      gravity = Gravity.CENTER
+      setPadding(dp(6), dp(1), dp(6), dp(1))
+      visibility = View.GONE
+    }
+    trayBadge = badge
+    results.addView(badge, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(18)).apply {
+      marginStart = dp(8)
+    })
+    card.addView(results, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(46)).apply {
+      topMargin = dp(8)
+    })
+
+    // Stop sits apart and quiet: ending the session is never one slip away from Scan.
+    card.addView(View(this).apply { setBackgroundColor(p.edge) },
+      LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 1).apply {
+        topMargin = dp(10)
+        marginStart = dp(4); marginEnd = dp(4)
+      })
+    card.addView(
+      actionRow("stop", L("stopSharing"), Color.TRANSPARENT, p.risk, tint(p.risk, 0.14f), Color.TRANSPARENT, 42, 12.5f) {
+        stopSession()
+      },
+      LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(42)).apply { topMargin = dp(2) },
+    )
+
+    val bounds = displayBounds()
+    card.measure(
+      View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
+      View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
+    )
+    val height = card.measuredHeight
+    val params = puckParams
+    val puckWidth = if (anchor.width > 0) anchor.width else dp(PUCK_DP + PUCK_PAD_DP * 2)
+    val puckCenterX = (params?.x ?: 0) + puckWidth / 2
+    val opensRight = puckCenterX < bounds.width() / 2
+    val gap = dp(6)
+    val x = if (opensRight) (params?.x ?: 0) + puckWidth + gap
+    else ((params?.x ?: 0) - width - gap).coerceAtLeast(dp(6))
+    val y = ((params?.y ?: 0) - dp(8)).coerceIn(dp(24), (bounds.height() - height - dp(48)).coerceAtLeast(dp(24)))
+
+    trayParams = overlayParams(width, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP or Gravity.START,
+      WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH).apply {
+      this.x = x
+      this.y = y
+    }
+    card.setOnTouchListener { _, event ->
+      if (event.action == MotionEvent.ACTION_OUTSIDE) {
+        removeTray(animated = true)
+        true
+      } else false
+    }
+    card.alpha = 0f
+    card.scaleX = 0.92f
+    card.scaleY = 0.92f
+    card.pivotX = if (opensRight) 0f else width.toFloat()
+    card.pivotY = dp(26).toFloat()
+    tray = card
+    windowManager.addView(card, trayParams)
+    animateIn(card, 0.92f, 220L)
+    wakePuck()
+    syncTray()
+  }
+
+  private fun syncTray() {
+    val badge = trayBadge ?: return
+    val ready = readyCount()
+    val active = activeCount()
+    val count = if (ready > 0) ready else active
+    badge.visibility = if (count > 0) View.VISIBLE else View.GONE
+    badge.text = count.toString()
+    badge.background = capsule(if (ready > 0) palette.ok else palette.accent, 9, Color.TRANSPARENT)
+  }
+
+  private fun removeTray(animated: Boolean) {
+    val view = tray ?: return
+    tray = null
+    trayParams = null
+    trayBadge = null
+    trayClosedAt = SystemClock.uptimeMillis()
+    val dispose = {
+      activeMotion.remove(view)?.cancel()
+      try { windowManager.removeView(view) } catch (_: Exception) { }
+    }
+    if (animated && animationsEnabled()) {
+      animateView(view, 0f, 0.94f, 0f, 140L, spring = false) { dispose() }
+    } else {
+      dispose()
+    }
+    scheduleDim()
+  }
+
+  // -------------------------------------------------------------------- sheet --
+
+  private fun openSheet() {
+    if (sheet != null) {
+      renderSheet()
+      return
+    }
+    removeTray(animated = false)
+    val p = palette
+    val bounds = displayBounds()
+    val density = resources.displayMetrics.density
+    val screenWidthDp = (bounds.width() / density).roundToInt()
+    val screenHeightDp = (bounds.height() / density).roundToInt()
+    val sheetWidthDp = minOf(404, screenWidthDp - 16).coerceAtLeast(240)
+    // The body gives way first; header, chips and buttons always stay in reach.
+    val bodyCapDp = (screenHeightDp * 0.5 - 150).toInt().coerceIn(96, 400)
+
+    val root = LinearLayout(this).apply {
+      orientation = LinearLayout.VERTICAL
+      background = capsule(p.panel, 26, p.edge)
+      elevation = dp(20).toFloat()
+      outlineProvider = roundOutline(26)
+      clipToOutline = true
+      setPadding(dp(16), dp(8), dp(16), dp(12))
+    }
+    root.addView(View(this).apply { background = capsule(tint(p.ink, 0.2f), 2, Color.TRANSPARENT) },
+      LinearLayout.LayoutParams(dp(34), dp(4)).apply {
+        gravity = Gravity.CENTER_HORIZONTAL
+        bottomMargin = dp(8)
+      })
+
     val header = LinearLayout(this).apply {
       orientation = LinearLayout.HORIZONTAL
       gravity = Gravity.CENTER_VERTICAL
     }
     val title = TextView(this).apply {
-      text = "Kriko"
       setTextColor(p.ink)
       textSize = 16f
       typeface = geistSemiBold
-      letterSpacing = 0.035f
-      layoutParams = LinearLayout.LayoutParams(0, dp(36), 1f)
-      gravity = Gravity.CENTER_VERTICAL
+      maxLines = 2
+      ellipsize = android.text.TextUtils.TruncateAt.END
     }
-    header.addView(title)
-    header.addView(button(L("scan"), p.accent, ON_ACCENT, tint(ON_ACCENT, 0.24f)) {
-      requestCapture("research")
+    sheetTitle = title
+    header.addView(title, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+    val status = TextView(this).apply {
+      textSize = 11f
+      typeface = geistMedium
+      includeFontPadding = false
+      gravity = Gravity.CENTER
+      setPadding(dp(9), dp(4), dp(9), dp(4))
+      visibility = View.GONE
+    }
+    sheetStatus = status
+    header.addView(status, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+      marginStart = dp(8)
     })
-    header.addView(button(L("close"), p.raised, p.ink2, tint(p.ink, 0.10f), p.edge) {
-      hidePanelAnimated()
-    })
-    container.addView(header)
+    val close = TextView(this).apply {
+      text = "×"
+      setTextColor(p.ink2)
+      textSize = 26f
+      typeface = geistRegular
+      includeFontPadding = false
+      gravity = Gravity.CENTER
+      contentDescription = L("close")
+      background = capsule(Color.TRANSPARENT, 22, Color.TRANSPARENT, tint(p.ink, 0.10f))
+      installPressMotion(this)
+      setOnClickListener { hideSheetAnimated() }
+    }
+    header.addView(close, LinearLayout.LayoutParams(dp(44), dp(44)).apply { marginStart = dp(4); marginEnd = -dp(8) })
+    root.addView(header)
 
-    val tabs = LinearLayout(this).apply {
+    val bar = IndeterminateBar(this, tint(p.ink, 0.08f), p.accentHi)
+    bar.visibility = View.GONE
+    sheetBar = bar
+    root.addView(bar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(3)).apply {
+      topMargin = dp(4)
+      bottomMargin = dp(2)
+    })
+
+    val scroll = CappedScroll(this, dp(bodyCapDp)).apply {
+      isFillViewport = false
+      overScrollMode = View.OVER_SCROLL_NEVER
+      isVerticalScrollBarEnabled = false
+    }
+    sheetScroll = scroll
+    val body = LinearLayout(this).apply {
+      orientation = LinearLayout.VERTICAL
+      setPadding(0, dp(2), 0, dp(4))
+    }
+    sheetBody = body
+    scroll.addView(body)
+    root.addView(scroll, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+
+    val chipsRow = LinearLayout(this).apply {
       orientation = LinearLayout.HORIZONTAL
       gravity = Gravity.CENTER_VERTICAL
-      background = capsule(p.ground, 12, p.edge)
-      setPadding(dp(3), dp(3), dp(3), dp(3))
     }
-    val nowTab = tabButton(L("now")) { switchPanelMode("current") }
-    val allTab = tabButton(tabQueueLabel()) { switchPanelMode("queue") }
-    currentTab = nowTab
-    queueTab = allTab
-    tabs.addView(nowTab, LinearLayout.LayoutParams(0, dp(34), 1f))
-    tabs.addView(allTab, LinearLayout.LayoutParams(0, dp(34), 1f))
-    container.addView(tabs, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(40)).apply {
-      topMargin = dp(7)
-      bottomMargin = dp(8)
+    sheetChips = chipsRow
+    val chipsScroll = HorizontalScrollView(this).apply {
+      isHorizontalScrollBarEnabled = false
+      overScrollMode = View.OVER_SCROLL_NEVER
+      addView(chipsRow)
+      visibility = View.GONE
+    }
+    sheetChipsScroll = chipsScroll
+    root.addView(chipsScroll, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(34)).apply {
+      topMargin = dp(6)
     })
 
-    val siteUrl = EditText(this).apply {
+    val actions = LinearLayout(this).apply {
+      orientation = LinearLayout.HORIZONTAL
+      gravity = Gravity.CENTER_VERTICAL
+    }
+    sheetActions = actions
+    root.addView(actions, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+      topMargin = dp(8)
+    })
+
+    root.addView(buildSiteSection(p), LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+
+    sheet = root
+    sheetParams = overlayParams(dp(sheetWidthDp), ViewGroup.LayoutParams.WRAP_CONTENT,
+      Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply {
+      y = dp(26)
+      softInputMode = WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
+    }
+    root.alpha = 0f
+    root.scaleX = 0.96f
+    root.scaleY = 0.96f
+    root.pivotX = (dp(sheetWidthDp) / 2).toFloat()
+    root.pivotY = Float.MAX_VALUE
+    windowManager.addView(root, sheetParams)
+    if (appForeground) root.visibility = View.GONE else animateIn(root, 0.96f, 240L)
+    keepPuckAboveSheet(screenHeightDp, bodyCapDp)
+    wakePuck()
+    renderedSignature = null
+    renderSheet()
+  }
+
+  /** If the sheet would cover the puck, lift the puck above it until the sheet closes. */
+  private fun keepPuckAboveSheet(screenHeightDp: Int, bodyCapDp: Int) {
+    val params = puckParams ?: return
+    val view = puck ?: return
+    val bounds = displayBounds()
+    // The sheet is at most its body cap plus about 250 dp of header and buttons.
+    val sheetTop = bounds.height() - dp(bodyCapDp + 250 + 26)
+    val puckHeight = if (view.height > 0) view.height else dp(PUCK_DP + PUCK_PAD_DP * 2)
+    if (params.y + puckHeight > sheetTop) {
+      puckYBeforeSheet = params.y
+      params.y = (sheetTop - puckHeight - dp(6)).coerceAtLeast(dp(24))
+      try { windowManager.updateViewLayout(view, params) } catch (_: Exception) { }
+    }
+  }
+
+  private fun restorePuckHeight() {
+    val before = puckYBeforeSheet ?: return
+    puckYBeforeSheet = null
+    val params = puckParams ?: return
+    val view = puck ?: return
+    params.y = before
+    try { windowManager.updateViewLayout(view, params) } catch (_: Exception) { }
+  }
+
+  /** The quiet "Site comments" disclosure: a URL field and one button. */
+  private fun buildSiteSection(p: Palette): View {
+    val wrap = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+    val field = LinearLayout(this).apply {
+      orientation = LinearLayout.VERTICAL
+      visibility = if (siteOpen) View.VISIBLE else View.GONE
+    }
+    siteSection = field
+    val input = EditText(this).apply {
       hint = L("siteUrlHint")
       setHintTextColor(p.ink3)
       setTextColor(p.ink)
-      textSize = 13f
+      textSize = 13.5f
+      typeface = geistRegular
       setSingleLine(true)
       inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
-      background = capsule(p.ground, 10, p.edge)
-      setPadding(dp(11), dp(5), dp(11), dp(5))
+      background = capsule(p.raised, 12, p.edge)
+      setPadding(dp(12), dp(6), dp(12), dp(6))
       isFocusable = true
       isFocusableInTouchMode = true
       setOnTouchListener { _, event ->
@@ -737,175 +1095,138 @@ class KrikoOverlayService : Service() {
       }
       setOnClickListener { enableInputWindow(this) }
       onFocusChangeListener = View.OnFocusChangeListener { _, focused ->
-        val params = panelParams ?: return@OnFocusChangeListener
+        val params = sheetParams ?: return@OnFocusChangeListener
         params.flags = if (focused) {
           params.flags and WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE.inv()
         } else {
           params.flags or WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
         }
-        try { panel?.let { windowManager.updateViewLayout(it, params) } } catch (_: Exception) { }
+        try { sheet?.let { windowManager.updateViewLayout(it, params) } } catch (_: Exception) { }
         if (focused) post { (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager)
           .showSoftInput(this, InputMethodManager.SHOW_IMPLICIT) }
       }
     }
-    siteUrlInput = siteUrl
-    container.addView(siteUrl, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(40)))
-    val siteAction = button(L("readSiteComments"), p.accent, ON_ACCENT, tint(ON_ACCENT, 0.24f), Color.TRANSPARENT, 38) {
-      reviewSite = siteUrlInput?.text?.toString()?.trim().orEmpty()
-      clearInputFocus()
-      requestCapture("site_reviews", reviewSite)
-    }
-    siteActionView = siteAction
-    container.addView(siteAction, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(38)).apply {
-      topMargin = dp(6)
-      bottomMargin = dp(8)
-    })
+    siteUrlInput = input
+    field.addView(input, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(44)).apply { topMargin = dp(6) })
+    field.addView(
+      actionRow(null, L("readSiteComments"), p.raised, p.ink, tint(p.ink, 0.08f), p.edge, 42, 13f) {
+        reviewSite = siteUrlInput?.text?.toString()?.trim().orEmpty()
+        clearInputFocus()
+        requestCapture("site_reviews", reviewSite)
+      },
+      LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(42)).apply { topMargin = dp(6) },
+    )
 
-    val bounds = displayBounds()
-    val density = resources.displayMetrics.density
-    val screenWidthDp = (bounds.width() / density).roundToInt()
-    val screenHeightDp = (bounds.height() / density).roundToInt()
-    val panelWidthDp = minOf(360, screenWidthDp - 20).coerceAtLeast(200)
-    val scrollHeight = minOf(360, screenHeightDp - 290).coerceAtLeast(72)
-    val scroll = ScrollView(this).apply {
-      isFillViewport = false
-      overScrollMode = View.OVER_SCROLL_NEVER
+    val toggle = TextView(this).apply {
+      text = "${L("siteComments")}  ${if (siteOpen) "▴" else "▾"}"
+      setTextColor(p.ink3)
+      textSize = 12f
+      typeface = geistMedium
+      includeFontPadding = false
+      gravity = Gravity.CENTER_VERTICAL
+      setPadding(dp(2), 0, dp(2), 0)
+      background = capsule(Color.TRANSPARENT, 10, Color.TRANSPARENT, tint(p.ink, 0.08f))
+      isClickable = true
+      setOnClickListener {
+        siteOpen = !siteOpen
+        text = "${L("siteComments")}  ${if (siteOpen) "▴" else "▾"}"
+        field.visibility = if (siteOpen) View.VISIBLE else View.GONE
+      }
     }
-    panelScroll = scroll
-    val list = LinearLayout(this).apply {
-      orientation = LinearLayout.VERTICAL
-      setPadding(0, dp(2), 0, dp(2))
-    }
-    jobList = list
-    scroll.addView(list)
-    container.addView(scroll, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(scrollHeight)))
-    panel = container
-    panelMode = mode
-    panelParams = overlayParams(dp(panelWidthDp), WindowManager.LayoutParams.WRAP_CONTENT, Gravity.TOP or Gravity.END).apply {
-      x = dp(10)
-      y = dp(minOf(64, (screenHeightDp - 20 - 221 - scrollHeight).coerceAtLeast(8)))
-    }
-    container.alpha = 0f
-    container.scaleX = 0.96f
-    container.scaleY = 0.96f
-    windowManager.addView(container, panelParams)
-    animateIn(container, 0.96f, 230L)
-    renderPanel()
+    wrap.addView(toggle, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(38)).apply { topMargin = dp(4) })
+    wrap.addView(field)
+    return wrap
   }
 
-  private fun renderPanel() {
-    syncBubble()
-    styleTabs()
-    siteUrlInput?.visibility = if (panelMode == "current") View.VISIBLE else View.GONE
-    siteActionView?.visibility = if (panelMode == "current") View.VISIBLE else View.GONE
-    val list = jobList ?: return
-    if (panelSwitching) return
+  private fun renderSheet() {
+    val body = sheetBody ?: return
+    val item = currentJob()
+    val id = item?.optString("id").orEmpty()
+    val status = item?.optString("status").orEmpty()
+    // Looking at a finished answer is what clears its badge.
+    if (item != null && status == "done" && seen.add(id)) syncPuck()
+
     val signature = buildString {
-      append(panelMode).append('|').append(selectedJob).append('|')
+      append(id).append('|').append(status).append('|')
+      append(item?.optString("title").orEmpty()).append('|')
+      append(item?.optString("error").orEmpty()).append('|')
+      append(item?.optJSONArray("sources")?.length() ?: 0).append('|')
+      append(item?.optString("text").orEmpty().isNotBlank()).append('|')
+      append(item?.optJSONArray("steps")?.length()?.let { it > 0 } ?: false).append('|')
       for (index in 0 until jobs.length()) {
-        val item = jobs.optJSONObject(index) ?: continue
-        val steps = item.optJSONArray("steps") ?: JSONArray()
-        append(item.optString("id")).append(':')
-          .append(item.optString("status")).append(':')
-          .append(item.optString("title")).append(':')
-          .append(item.optString("error")).append(':')
-          .append(steps.length() > 0)
-          .append(':').append(item.optJSONArray("sources")?.length() ?: 0)
-          .append(':').append(item.optString("text").isNotBlank()).append(';')
+        val other = jobs.optJSONObject(index) ?: continue
+        append(other.optString("id")).append(':').append(other.optString("status")).append(':')
+          .append(other.optString("title")).append(';')
       }
     }
     if (signature == renderedSignature) {
-      updateAnswerViews()
+      updateLiveViews(item)
       return
     }
     renderedSignature = signature
-    val priorScroll = panelScroll?.scrollY ?: 0
-    if (panelMode == "queue") renderQueue(list) else renderCurrent(list)
-    panelScroll?.post { panelScroll?.scrollTo(0, priorScroll) }
-  }
-
-  /** Selected/unselected tab pills, in the current palette. */
-  private fun styleTabs() {
     val p = palette
-    val nowSelected = panelMode == "current"
-    currentTab?.let { tab ->
-      tab.background = capsule(
-        if (nowSelected) p.raised else Color.TRANSPARENT,
-        9,
-        if (nowSelected) p.edge else Color.TRANSPARENT,
-        tint(p.ink, 0.08f),
-      )
-      tab.setTextColor(if (nowSelected) p.ink else p.ink2)
+    val priorScroll = sheetScroll?.scrollY ?: 0
+
+    sheetTitle?.text = item?.optString("title")?.ifBlank { L("productScan") } ?: "Kriko"
+    val active = isActiveStatus(status)
+    sheetBar?.visibility = if (active) View.VISIBLE else View.GONE
+    sheetStatus?.let { chip ->
+      if (status.isBlank()) {
+        chip.visibility = View.GONE
+      } else {
+        val color = when (status) {
+          "done" -> p.ok
+          "error", "cancelled" -> p.risk
+          else -> p.accentHi
+        }
+        chip.text = statusLabel(status)
+        chip.setTextColor(color)
+        chip.background = capsule(tint(color, 0.14f), 11, Color.TRANSPARENT)
+        chip.visibility = View.VISIBLE
+      }
     }
-    val allSelected = panelMode == "queue"
-    queueTab?.let { tab ->
-      tab.text = tabQueueLabel()
-      tab.background = capsule(
-        if (allSelected) p.raised else Color.TRANSPARENT,
-        9,
-        if (allSelected) p.edge else Color.TRANSPARENT,
-        tint(p.ink, 0.08f),
-      )
-      tab.setTextColor(if (allSelected) p.ink else p.ink2)
+
+    body.removeAllViews()
+    answerView = null
+    stepView = null
+    if (item == null) {
+      body.addView(bodyText(L("answerEmpty"), 13.5f, p.ink2))
+    } else {
+      val steps = item.optJSONArray("steps") ?: JSONArray()
+      val latestStep = if (steps.length() > 0) steps.optJSONObject(steps.length() - 1) else null
+      if (latestStep != null && (status == "running" || status == "reading")) {
+        val view = bodyText(latestStep.optString("text"), 12.5f, p.ink2)
+        stepView = view
+        body.addView(view)
+      }
+      val error = item.optString("error")
+      if (error.isNotBlank()) body.addView(errorText(error))
+      val answer = item.optString("text")
+      if (answer.isNotBlank()) {
+        val view = answerText(answer, item.optJSONArray("sources") ?: JSONArray())
+        answerView = view
+        body.addView(view)
+      }
+      addSources(body, item.optJSONArray("sources") ?: JSONArray())
     }
+
+    renderChips()
+    renderActions(active, id)
+    sheetScroll?.post { sheetScroll?.scrollTo(0, priorScroll) }
   }
 
-  private fun switchPanelMode(mode: String) {
-    if (!panelSwitching && mode == panelMode) {
-      renderPanel()
-      return
-    }
-    if (panelSwitching && pendingPanelMode == mode) return
-    val list = jobList
-    if (!animationsEnabled() || list == null) {
-      panelTransitionGeneration += 1
-      panelSwitching = false
-      pendingPanelMode = null
-      panelMode = mode
-      renderedSignature = null
-      renderPanel()
-      return
-    }
-
-    panelTransitionGeneration += 1
-    val generation = panelTransitionGeneration
-    pendingPanelMode = mode
-    panelSwitching = true
-    animateView(list, 0f, 0.99f, dp(4).toFloat(), 90L, spring = false) {
-      if (generation != panelTransitionGeneration || panel == null || list.parent?.parent !== panel) return@animateView
-      panelMode = mode
-      pendingPanelMode = null
-      panelSwitching = false
-      renderedSignature = null
-      list.alpha = 0f
-      list.scaleX = 0.99f
-      list.scaleY = 0.99f
-      list.translationY = -dp(3).toFloat()
-      renderPanel()
-      animateView(list, 1f, 1f, 0f, 210L, spring = true)
-    }
-  }
-
-  private fun updateAnswerViews() {
-    for (index in 0 until jobs.length()) {
-      val item = jobs.optJSONObject(index) ?: continue
-      val answer = answerViews[item.optString("id")] ?: continue
-      answer.text = Html.fromHtml(
+  /** Streaming text and the latest step change far more often than the layout does. */
+  private fun updateLiveViews(item: JSONObject?) {
+    if (item == null) return
+    answerView?.let { view ->
+      view.text = Html.fromHtml(
         markdownHtml(item.optString("text"), item.optJSONArray("sources") ?: JSONArray()),
         Html.FROM_HTML_MODE_COMPACT,
       )
     }
-    for (index in 0 until jobs.length()) {
-      val item = jobs.optJSONObject(index) ?: continue
-      val stepView = stepViews[item.optString("id")] ?: continue
-      val steps = item.optJSONArray("steps") ?: JSONArray()
-      val latestStep = if (steps.length() > 0) steps.optJSONObject(steps.length() - 1) else null
-      setProgressText(stepView, latestStep?.optString("text").orEmpty())
-    }
-    for (index in 0 until jobs.length()) {
-      val item = jobs.optJSONObject(index) ?: continue
-      statusViews[item.optString("id")]?.text = statusLabel(item.optString("status"))
-    }
+    val steps = item.optJSONArray("steps") ?: JSONArray()
+    val latest = if (steps.length() > 0) steps.optJSONObject(steps.length() - 1) else null
+    stepView?.let { view -> setProgressText(view, latest?.optString("text").orEmpty()) }
   }
 
   private fun setProgressText(view: TextView, text: String) {
@@ -916,110 +1237,80 @@ class KrikoOverlayService : Service() {
     animateView(view, 1f, 1f, 0f, 135L, spring = false)
   }
 
-  private fun renderCurrent(list: LinearLayout) {
-    list.removeAllViews()
-    answerViews.clear()
-    stepViews.clear()
-    statusViews.clear()
-    val items = (0 until jobs.length()).mapNotNull { jobs.optJSONObject(it) }
-    val current = items.firstOrNull { it.optString("status") == "running" || it.optString("status") == "reading" }
-      ?: items.firstOrNull { it.optString("id") == selectedJob }
-      ?: items.firstOrNull()
-    if (current == null) {
-      list.addView(bodyText(L("answerEmpty"), 13f, palette.ink2))
-      return
-    }
-    renderJobCard(list, current)
+  /** Other scans, as chips; hidden while there is only one. */
+  private fun renderChips() {
+    val row = sheetChips ?: return
+    row.removeAllViews()
+    val items = (0 until minOf(jobs.length(), 12)).mapNotNull { jobs.optJSONObject(it) }
+    sheetChipsScroll?.visibility = if (items.size > 1) View.VISIBLE else View.GONE
+    if (items.size <= 1) return
+    val current = currentJob()?.optString("id").orEmpty()
+    for (item in items) row.addView(jobChip(item, item.optString("id") == current))
   }
 
-  private fun renderQueue(list: LinearLayout) {
-    list.removeAllViews()
-    answerViews.clear()
-    stepViews.clear()
-    statusViews.clear()
-    if (jobs.length() == 0) {
-      list.addView(bodyText(L("queueEmpty"), 13f, palette.ink2))
-      return
-    }
-    for (index in 0 until minOf(jobs.length(), 16)) {
-      val item = jobs.optJSONObject(index) ?: continue
-      renderJobCard(list, item)
-    }
-  }
-
-  private fun renderJobCard(list: LinearLayout, item: JSONObject) {
+  private fun jobChip(item: JSONObject, selected: Boolean): View {
     val p = palette
     val id = item.optString("id")
-    val status = item.optString("status")
-    val card = LinearLayout(this).apply {
-      orientation = LinearLayout.VERTICAL
-      background = capsule(p.raised, 14, p.edge, tint(p.ink, 0.05f))
-      setPadding(dp(11), dp(9), dp(11), dp(9))
-      isClickable = true
-      layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-        .apply { bottomMargin = dp(7) }
-      setOnClickListener {
-        selectedJob = id
-        if (panelMode == "queue") switchPanelMode("current")
-      }
-    }
-    val top = LinearLayout(this).apply {
-      orientation = LinearLayout.HORIZONTAL
-      gravity = Gravity.CENTER_VERTICAL
-    }
-    val title = TextView(this).apply {
-      text = item.optString("title").ifBlank { L("productScan") }
-      setTextColor(p.ink)
-      textSize = 14f
-      typeface = geistSemiBold
-      maxLines = 2
-      layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-    }
-    top.addView(title)
-    val active = status == "queued" || status == "running" || status == "reading"
-    if (active) top.addView(ProgressBar(this).apply {
-      isIndeterminate = true
-      indeterminateTintList = ColorStateList.valueOf(p.accentHi)
-      layoutParams = LinearLayout.LayoutParams(dp(18), dp(18)).apply { marginStart = dp(8) }
-    })
-    card.addView(top)
-    val statusColor = when (status) {
+    val dot = when (item.optString("status")) {
       "done" -> p.ok
       "error", "cancelled" -> p.risk
       else -> p.accentHi
     }
-    if (status.isNotBlank()) {
-      val statusView = bodyText(statusLabel(status), 11f, statusColor)
-      statusViews[id] = statusView
-      card.addView(statusView)
+    val raw = item.optString("title").ifBlank { L("productScan") }
+    val label = if (raw.length > 24) raw.take(23).trimEnd() + "…" else raw
+    return LinearLayout(this).apply {
+      orientation = LinearLayout.HORIZONTAL
+      gravity = Gravity.CENTER_VERTICAL
+      background = capsule(if (selected) p.raised else Color.TRANSPARENT, 17,
+        if (selected) p.accent else p.edge, tint(p.ink, 0.08f))
+      setPadding(dp(11), 0, dp(13), 0)
+      contentDescription = raw
+      isClickable = true
+      installPressMotion(this)
+      setOnClickListener {
+        selectedJob = id
+        renderedSignature = null
+        renderSheet()
+      }
+      addView(View(this@KrikoOverlayService).apply { background = circle(dot) },
+        LinearLayout.LayoutParams(dp(7), dp(7)).apply { marginEnd = dp(7) })
+      addView(TextView(this@KrikoOverlayService).apply {
+        text = label
+        setTextColor(if (selected) p.ink else p.ink2)
+        textSize = 12.5f
+        typeface = geistMedium
+        includeFontPadding = false
+        maxLines = 1
+      })
+      layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(34)).apply { marginEnd = dp(6) }
     }
-    val steps = item.optJSONArray("steps") ?: JSONArray()
-    val latestStep = if (steps.length() > 0) steps.optJSONObject(steps.length() - 1) else null
-    if (latestStep != null && (status == "running" || status == "reading")) {
-      val stepView = bodyText(latestStep.optString("text"), 11f, p.ink2)
-      stepViews[id] = stepView
-      card.addView(stepView)
-    }
-    val error = item.optString("error")
-    val answer = item.optString("text")
-    if (error.isNotBlank()) card.addView(errorText(error))
-    if (answer.isNotBlank()) {
-      val answerView = answerText(answer, item.optJSONArray("sources") ?: JSONArray())
-      answerViews[id] = answerView
-      card.addView(answerView)
-    }
-    addSources(card, item.optJSONArray("sources") ?: JSONArray())
-    list.addView(card)
-    if (active) card.addView(
-      button(L("cancel"), p.riskWash, p.risk, tint(p.risk, 0.16f)) { emitAction("cancel", id) },
-      LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(34)).apply { topMargin = dp(6) },
+  }
+
+  private fun renderActions(active: Boolean, id: String) {
+    val row = sheetActions ?: return
+    val p = palette
+    row.removeAllViews()
+    row.addView(
+      actionRow("scan", L(if (jobs.length() == 0) "scanPage" else "scanAgain"), p.accent, ON_ACCENT,
+        tint(ON_ACCENT, 0.24f), Color.TRANSPARENT, 46, 14f) {
+        requestCapture("research")
+      },
+      LinearLayout.LayoutParams(0, dp(46), 1f),
     )
+    if (active && id.isNotBlank()) {
+      row.addView(
+        actionRow(null, L("cancel"), p.riskWash, p.risk, tint(p.risk, 0.16f), Color.TRANSPARENT, 46, 13.5f) {
+          emitAction("cancel", id)
+        },
+        LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(46)).apply { marginStart = dp(8) },
+      )
+    }
   }
 
   /** The clickable sources under an answer, headed by the translated word. */
   private fun addSources(card: LinearLayout, sources: JSONArray) {
     val rows = mutableListOf<Pair<String, String>>()
-    for (index in 0 until minOf(sources.length(), 4)) {
+    for (index in 0 until minOf(sources.length(), 5)) {
       val source = sources.optJSONObject(index) ?: continue
       val url = safeHttpUrl(source.optString("url"))
       if (url.isBlank()) continue
@@ -1031,16 +1322,72 @@ class KrikoOverlayService : Service() {
     for ((url, label) in rows) card.addView(sourceRow(label, url))
   }
 
+  private fun hideSheetAnimated() {
+    val target = sheet ?: return
+    cancelSheetFocus()
+    animateView(target, 0f, 0.96f, dp(6).toFloat(), 170L, spring = false) {
+      if (sheet === target) removeSheet()
+    }
+    restorePuckHeight()
+    scheduleDim()
+  }
+
+  private fun cancelSheetFocus() {
+    if (siteUrlInput?.hasFocus() == true) clearInputFocus()
+  }
+
+  private fun removeSheet() {
+    val view = sheet
+    if (view != null) {
+      activeMotion.remove(view)?.cancel()
+      try { windowManager.removeView(view) } catch (_: Exception) { }
+    }
+    sheet = null
+    sheetParams = null
+    sheetTitle = null
+    sheetStatus = null
+    sheetBar = null
+    sheetScroll = null
+    sheetBody = null
+    sheetChips = null
+    sheetChipsScroll = null
+    sheetActions = null
+    siteUrlInput = null
+    siteSection = null
+    answerView = null
+    stepView = null
+    renderedSignature = null
+    restorePuckHeight()
+  }
+
+  private fun removePuck() {
+    puckSnap?.cancel()
+    puckSnap = null
+    mainHandler.removeCallbacks(dimRunnable)
+    puckRing?.setRunning(false)
+    puck?.let {
+      activeMotion.remove(it)?.cancel()
+      try { windowManager.removeView(it) } catch (_: Exception) { }
+    }
+    puck = null
+    puckParams = null
+    puckRing = null
+    puckBadge = null
+  }
+
+  // ------------------------------------------------------------------ capture --
+
   private fun requestCapture(mode: String = "research", siteUrl: String = "") {
     if (!isActive || capturePending) return
-    cancelPanelTransition()
     capturePending = true
     scanGeneration += 1
     val thisScan = scanGeneration
     captureMode = mode
     reviewSite = siteUrl
-    bubble?.visibility = View.GONE
-    panel?.visibility = View.GONE
+    cancelSheetFocus()
+    removeTray(animated = false)
+    puck?.visibility = View.GONE
+    sheet?.visibility = View.GONE
     // Allow the OS compositor to remove our translucent windows before one
     // requested frame is routed to ImageReader.
     mainHandler.postDelayed({
@@ -1068,14 +1415,7 @@ class KrikoOverlayService : Service() {
     try {
       val encoded = encode(image)
       image.close()
-      mainHandler.post {
-        if (uiDirty) {
-          uiDirty = false
-          refreshUi()
-        }
-        bubble?.let { it.visibility = View.VISIBLE; animateIn(it, 0.96f, 180L) }
-        showResultPanel()
-      }
+      mainHandler.post { afterCapture() }
       if (encoded != null) {
         val body = Arguments.createMap().apply {
           putString("base64", encoded)
@@ -1090,16 +1430,23 @@ class KrikoOverlayService : Service() {
       }
     } catch (_: Exception) {
       image.close()
-      mainHandler.post {
-        if (uiDirty) {
-          uiDirty = false
-          refreshUi()
-        }
-        bubble?.let { it.visibility = View.VISIBLE; animateIn(it, 0.96f, 180L) }
-        showResultPanel()
-      }
+      mainHandler.post { afterCapture() }
       showToast(L("captureFailed"))
     }
+  }
+
+  /** Bring the puck back and show the new scan's progress where a thumb reaches it. */
+  private fun afterCapture() {
+    if (uiDirty) {
+      uiDirty = false
+      refreshUi()
+    }
+    puck?.let { if (!appForeground) animateIn(it, 0.9f, 200L) }
+    // A new scan is what the reader is waiting on: show it, not an older pick.
+    selectedJob = ""
+    renderedSignature = null
+    openSheet()
+    sheet?.let { if (!appForeground) animateIn(it, 0.96f, 230L) }
   }
 
   private fun encode(image: Image): String? {
@@ -1124,32 +1471,14 @@ class KrikoOverlayService : Service() {
     image?.close()
     capturePending = false
     display?.setSurface(null)
-    val restorePanel = panel != null
-    val mode = panelMode
     if (uiDirty) {
       uiDirty = false
       refreshUi()
-      if (restorePanel && panel == null) togglePanel(mode)
     }
-    bubble?.let { animateIn(it, 0.92f, 210L) }
-    panel?.let { animateIn(it, 0.95f, 210L) }
+    restoreWindows()
   }
 
-  private fun showResultPanel() {
-    if (panel == null) {
-      togglePanel("current")
-      return
-    }
-    panelCloseGeneration += 1
-    panelIsClosing = false
-    panelTransitionGeneration += 1
-    panelSwitching = false
-    pendingPanelMode = null
-    panelMode = "current"
-    renderedSignature = null
-    renderPanel()
-    panel?.let { animateIn(it, 0.95f, 230L) }
-  }
+  // ------------------------------------------------------------------- motion --
 
   private fun animationsEnabled(): Boolean = Build.VERSION.SDK_INT < 26 || ValueAnimator.areAnimatorsEnabled()
 
@@ -1193,8 +1522,7 @@ class KrikoOverlayService : Service() {
       addUpdateListener { valueAnimator ->
         val fraction = valueAnimator.animatedValue as Float
         view.alpha = (fromAlpha + (alpha - fromAlpha) * fraction).coerceIn(0f, 1f)
-        val nextScale = fromScaleX + (scale - fromScaleX) * fraction
-        view.scaleX = nextScale
+        view.scaleX = fromScaleX + (scale - fromScaleX) * fraction
         view.scaleY = fromScaleY + (scale - fromScaleY) * fraction
         view.translationY = fromTranslation + (translationY - fromTranslation) * fraction
       }
@@ -1215,30 +1543,6 @@ class KrikoOverlayService : Service() {
     animator.start()
   }
 
-  private fun hidePanelAnimated() {
-    val target = panel ?: return
-    panelCloseGeneration += 1
-    val generation = panelCloseGeneration
-    panelIsClosing = true
-    cancelPanelTransition()
-    animateView(target, 0f, 0.96f, -dp(3).toFloat(), 180L, spring = false) {
-      if (generation == panelCloseGeneration && panel === target) removePanel()
-    }
-  }
-
-  private fun cancelPanelTransition() {
-    panelTransitionGeneration += 1
-    panelSwitching = false
-    pendingPanelMode = null
-    jobList?.let {
-      activeMotion.remove(it)?.cancel()
-      it.alpha = 1f
-      it.scaleX = 1f
-      it.scaleY = 1f
-      it.translationY = 0f
-    }
-  }
-
   private fun openSource(url: String) {
     try {
       startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
@@ -1247,48 +1551,51 @@ class KrikoOverlayService : Service() {
     }
   }
 
-  /** A pill button with a ripple that clips to its own radius. */
-  private fun button(
+  // ------------------------------------------------------------------ widgets --
+
+  /**
+   * A full-width pill: an optional glyph, then the label, centred as a pair.
+   * The ripple clips to the pill's own radius.
+   */
+  private fun actionRow(
+    glyph: String?,
     label: String,
     backgroundColor: Int,
     foregroundColor: Int,
     rippleColor: Int,
-    strokeColor: Int = Color.TRANSPARENT,
-    heightDp: Int = 34,
+    strokeColor: Int,
+    heightDp: Int,
+    textSp: Float,
     onClick: () -> Unit,
-  ): TextView = TextView(this).apply {
-    text = label
-    setTextColor(foregroundColor)
-    textSize = 12f
-    typeface = geistMedium
+  ): LinearLayout = LinearLayout(this).apply {
+    orientation = LinearLayout.HORIZONTAL
     gravity = Gravity.CENTER
-    includeFontPadding = false
+    background = capsule(backgroundColor, heightDp / 2, strokeColor, rippleColor)
+    setPadding(dp(14), 0, dp(14), 0)
+    isClickable = true
     contentDescription = label
-    setPadding(dp(12), 0, dp(12), 0)
-    background = capsule(backgroundColor, 17, strokeColor, rippleColor)
     installPressMotion(this)
     setOnClickListener { onClick() }
-    layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(heightDp))
-      .apply { marginStart = dp(8) }
-  }
-
-  private fun tabButton(label: String, onClick: () -> Unit): TextView = TextView(this).apply {
-    text = label
-    textSize = 12f
-    typeface = geistMedium
-    gravity = Gravity.CENTER
-    includeFontPadding = false
-    setTextColor(palette.ink2)
-    setPadding(dp(8), 0, dp(8), 0)
-    installPressMotion(this)
-    setOnClickListener { onClick() }
+    if (glyph != null) {
+      addView(GlyphView(this@KrikoOverlayService, glyph, foregroundColor),
+        LinearLayout.LayoutParams(dp(20), dp(20)).apply { marginEnd = dp(9) })
+    }
+    addView(TextView(this@KrikoOverlayService).apply {
+      text = label
+      setTextColor(foregroundColor)
+      textSize = textSp
+      typeface = geistSemiBold
+      includeFontPadding = false
+      maxLines = 1
+      gravity = Gravity.CENTER
+    })
   }
 
   /** A short scale on press; the ripple comes from the background drawable. */
   private fun installPressMotion(view: View) {
     view.setOnTouchListener { pressedView, event ->
       when (event.actionMasked) {
-        MotionEvent.ACTION_DOWN -> animateView(pressedView, 1f, 0.96f, 0f, 90L, spring = true)
+        MotionEvent.ACTION_DOWN -> animateView(pressedView, 1f, 0.97f, 0f, 90L, spring = true)
         MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> animateView(pressedView, 1f, 1f, 0f, 150L, spring = true)
       }
       false
@@ -1307,20 +1614,20 @@ class KrikoOverlayService : Service() {
   private fun sectionText(label: String) = TextView(this).apply {
     text = label
     setTextColor(palette.ink3)
-    textSize = 10.5f
+    textSize = 11f
     typeface = geistSemiBold
-    letterSpacing = 0.06f
-    setPadding(0, dp(9), 0, dp(3))
+    letterSpacing = 0.05f
+    setPadding(0, dp(10), 0, dp(3))
   }
 
   private fun errorText(message: String) = TextView(this).apply {
     text = message
     setTextColor(palette.risk)
-    textSize = 12f
+    textSize = 12.5f
     typeface = geistRegular
     setLineSpacing(dp(2).toFloat(), 1f)
-    background = capsule(palette.riskWash, 10, Color.TRANSPARENT)
-    setPadding(dp(9), dp(7), dp(9), dp(7))
+    background = capsule(palette.riskWash, 12, Color.TRANSPARENT)
+    setPadding(dp(11), dp(8), dp(11), dp(8))
     layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
       .apply { topMargin = dp(5) }
   }
@@ -1328,11 +1635,12 @@ class KrikoOverlayService : Service() {
   private fun sourceRow(label: String, url: String) = TextView(this).apply {
     text = label
     setTextColor(palette.accentHi)
-    textSize = 12f
+    textSize = 12.5f
     typeface = geistMedium
     maxLines = 2
+    ellipsize = android.text.TextUtils.TruncateAt.END
     contentDescription = label
-    setPadding(dp(8), dp(5), dp(8), dp(5))
+    setPadding(dp(8), dp(6), dp(8), dp(6))
     background = capsule(Color.TRANSPARENT, 8, Color.TRANSPARENT, tint(palette.accentHi, 0.12f))
     isClickable = true
     setOnClickListener { openSource(url) }
@@ -1353,10 +1661,10 @@ class KrikoOverlayService : Service() {
   private fun answerText(markdown: String, sources: JSONArray): TextView {
     val answer = TextView(this).apply {
       setTextColor(palette.ink)
-      textSize = 13.5f
+      textSize = 14f
       typeface = geistRegular
       setLineSpacing(dp(3).toFloat(), 1f)
-      setPadding(0, dp(7), 0, dp(5))
+      setPadding(0, dp(6), 0, dp(4))
       setTextIsSelectable(true)
       setLinkTextColor(palette.accentHi)
       movementMethod = LinkMovementMethod.getInstance()
@@ -1426,7 +1734,7 @@ class KrikoOverlayService : Service() {
   }
 
   @Suppress("DEPRECATION")
-  private fun overlayParams(width: Int, height: Int, gravity: Int): WindowManager.LayoutParams {
+  private fun overlayParams(width: Int, height: Int, gravity: Int, extraFlags: Int = 0): WindowManager.LayoutParams {
     val type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
       WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
     } else {
@@ -1435,53 +1743,12 @@ class KrikoOverlayService : Service() {
     return WindowManager.LayoutParams(
       width, height, type,
       WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
-        or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+        or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+        or extraFlags,
       PixelFormat.TRANSLUCENT,
     ).apply {
       this.gravity = gravity
-    alpha = 1f
-    }
-  }
-
-  private fun installDrag(view: View, params: WindowManager.LayoutParams, windowView: View = view) {
-    var downX = 0f
-    var downY = 0f
-    var startX = 0
-    var startY = 0
-    var moved = false
-    val touchSlop = ViewConfiguration.get(this).scaledTouchSlop
-    view.setOnTouchListener { _, event ->
-      when (event.action) {
-        MotionEvent.ACTION_DOWN -> {
-          downX = event.rawX; downY = event.rawY
-          startX = params.x; startY = params.y
-          moved = false
-          animateView(view, 1f, 0.96f, 0f, 90L, spring = true)
-          true
-        }
-        MotionEvent.ACTION_MOVE -> {
-          val dx = (event.rawX - downX).roundToInt()
-          val dy = (event.rawY - downY).roundToInt()
-          if (kotlin.math.abs(dx) + kotlin.math.abs(dy) > touchSlop) moved = true
-          if (moved) {
-            val bounds = displayBounds()
-            params.x = (startX + dx).coerceIn(0, (bounds.width() - windowView.width).coerceAtLeast(0))
-            params.y = (startY + dy).coerceIn(0, (bounds.height() - windowView.height).coerceAtLeast(0))
-            try { windowManager.updateViewLayout(windowView, params) } catch (_: Exception) { }
-          }
-          true
-        }
-        MotionEvent.ACTION_UP -> {
-          animateView(view, 1f, 1f, 0f, 150L, spring = true)
-          if (!moved) view.performClick()
-          true
-        }
-        MotionEvent.ACTION_CANCEL -> {
-          animateView(view, 1f, 1f, 0f, 150L, spring = true)
-          true
-        }
-        else -> true
-      }
+      alpha = 1f
     }
   }
 
@@ -1507,20 +1774,6 @@ class KrikoOverlayService : Service() {
     setColor(color)
   }
 
-  /**
-   * The K grip: a top-lit blue gradient, a hairline inner highlight and a small
-   * grip line under the mark. The drag owns the touch stream, so press feedback
-   * is the scale in `installDrag`, not a ripple.
-   */
-  private fun handleBackground(p: Palette): Drawable = GradientDrawable(
-    GradientDrawable.Orientation.TOP_BOTTOM,
-    intArrayOf(mix(p.accent, ON_ACCENT, 0.18f), p.accent),
-  ).apply {
-    shape = GradientDrawable.RECTANGLE
-    cornerRadius = dp(15).toFloat()
-    setStroke(dp(1), tint(ON_ACCENT, 0.22f))
-  }
-
   private fun roundOutline(radiusDp: Int): ViewOutlineProvider = object : ViewOutlineProvider() {
     override fun getOutline(view: View, outline: Outline) {
       outline.setRoundRect(0, 0, view.width, view.height, dp(radiusDp).toFloat())
@@ -1541,6 +1794,156 @@ class KrikoOverlayService : Service() {
     (Color.blue(color) + (Color.blue(other) - Color.blue(color)) * fraction).roundToInt(),
   )
 
+  // ----------------------------------------------------------- custom views --
+
+  /** A scroll view that stops growing at a cap, so the buttons below it stay on screen. */
+  private inner class CappedScroll(context: Context, private val capPx: Int) : ScrollView(context) {
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+      super.onMeasure(widthMeasureSpec, View.MeasureSpec.makeMeasureSpec(capPx, View.MeasureSpec.AT_MOST))
+    }
+  }
+
+  /** The action glyphs, drawn in the app's own line weight so no icon font is needed. */
+  private inner class GlyphView(context: Context, private val kind: String, private val color: Int) : View(context) {
+    private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+      style = Paint.Style.STROKE
+      strokeCap = Paint.Cap.ROUND
+      strokeJoin = Paint.Join.ROUND
+    }
+
+    override fun onDraw(canvas: Canvas) {
+      val w = width.toFloat()
+      val h = height.toFloat()
+      paint.color = color
+      paint.strokeWidth = w * 0.095f
+      when (kind) {
+        "scan" -> {
+          // Four corner brackets around a small ring: the viewfinder.
+          val m = w * 0.12f
+          val l = w * 0.27f
+          canvas.drawLine(m, m + l, m, m, paint); canvas.drawLine(m, m, m + l, m, paint)
+          canvas.drawLine(w - m - l, m, w - m, m, paint); canvas.drawLine(w - m, m, w - m, m + l, paint)
+          canvas.drawLine(m, h - m - l, m, h - m, paint); canvas.drawLine(m, h - m, m + l, h - m, paint)
+          canvas.drawLine(w - m - l, h - m, w - m, h - m, paint); canvas.drawLine(w - m, h - m, w - m, h - m - l, paint)
+          canvas.drawCircle(w / 2, h / 2, w * 0.12f, paint)
+        }
+        "list" -> {
+          val x1 = w * 0.2f
+          val x2 = w * 0.8f
+          for (row in 0..2) {
+            val y = h * (0.28f + row * 0.22f)
+            canvas.drawLine(x1, y, if (row == 2) w * 0.56f else x2, y, paint)
+          }
+        }
+        "stop" -> {
+          val inset = w * 0.22f
+          canvas.drawRoundRect(RectF(inset, inset, w - inset, h - inset), w * 0.1f, w * 0.1f, paint)
+        }
+      }
+    }
+  }
+
+  /** The thin ring that turns around the puck while research runs. */
+  private inner class RingView(context: Context) : View(context) {
+    private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+      style = Paint.Style.STROKE
+      strokeCap = Paint.Cap.ROUND
+      color = tint(ON_ACCENT, 0.92f)
+    }
+    private val box = RectF()
+    private var running = false
+    private var angle = 0f
+    private var spinner: ValueAnimator? = null
+
+    fun setRunning(value: Boolean) {
+      if (value == running) return
+      running = value
+      spinner?.cancel()
+      spinner = null
+      if (running && animationsEnabled()) {
+        spinner = ValueAnimator.ofFloat(0f, 360f).apply {
+          duration = 1100
+          repeatCount = ValueAnimator.INFINITE
+          interpolator = android.view.animation.LinearInterpolator()
+          addUpdateListener { animation ->
+            angle = animation.animatedValue as Float
+            invalidate()
+          }
+          start()
+        }
+      }
+      invalidate()
+    }
+
+    override fun onDetachedFromWindow() {
+      spinner?.cancel()
+      spinner = null
+      super.onDetachedFromWindow()
+    }
+
+    override fun onDraw(canvas: Canvas) {
+      if (!running) return
+      val inset = dp(4).toFloat()
+      paint.strokeWidth = dp(2).toFloat()
+      box.set(inset, inset, width - inset, height - inset)
+      canvas.drawArc(box, angle - 90f, 96f, false, paint)
+    }
+  }
+
+  /** A thin sliding highlight: "working" without a percentage nobody can know. */
+  private inner class IndeterminateBar(
+    context: Context,
+    track: Int,
+    private val fill: Int,
+  ) : FrameLayout(context) {
+    private val runner = View(context)
+    private var animator: ValueAnimator? = null
+
+    init {
+      background = shape(track, 2)
+      clipChildren = true
+      clipToOutline = true
+      outlineProvider = roundOutline(2)
+      runner.background = shape(fill, 2)
+      addView(runner, LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT))
+    }
+
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+      super.onSizeChanged(w, h, oldw, oldh)
+      runner.layoutParams = (runner.layoutParams as LayoutParams).apply { width = (w * 0.38f).roundToInt() }
+      restart()
+    }
+
+    override fun onVisibilityChanged(changedView: View, visibility: Int) {
+      super.onVisibilityChanged(changedView, visibility)
+      if (changedView === this) restart()
+    }
+
+    private fun restart() {
+      animator?.cancel()
+      animator = null
+      if (visibility != View.VISIBLE || width <= 0) return
+      if (!animationsEnabled()) {
+        runner.translationX = 0f
+        return
+      }
+      val travel = width.toFloat()
+      animator = ValueAnimator.ofFloat(-travel * 0.4f, travel).apply {
+        duration = 1250
+        repeatCount = ValueAnimator.INFINITE
+        interpolator = android.view.animation.AccelerateDecelerateInterpolator()
+        addUpdateListener { animation -> runner.translationX = animation.animatedValue as Float }
+        start()
+      }
+    }
+
+    override fun onDetachedFromWindow() {
+      animator?.cancel()
+      animator = null
+      super.onDetachedFromWindow()
+    }
+  }
+
   // ----------------------------------------------------------------- plumbing --
 
   private fun emitAction(action: String, id: String) {
@@ -1560,28 +1963,6 @@ class KrikoOverlayService : Service() {
     Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
   }
 
-  private fun removePanel() {
-    panelCloseGeneration += 1
-    panelIsClosing = false
-    cancelPanelTransition()
-    panel?.let {
-      activeMotion.remove(it)?.cancel()
-      try { windowManager.removeView(it) } catch (_: Exception) { }
-    }
-    panel = null
-    panelParams = null
-    siteUrlInput = null
-    jobList = null
-    panelScroll = null
-    renderedSignature = null
-    answerViews.clear()
-    stepViews.clear()
-    currentTab = null
-    queueTab = null
-    siteActionView = null
-    statusViews.clear()
-  }
-
   private fun clearInputFocus() {
     siteUrlInput?.let { input ->
       try {
@@ -1593,10 +1974,10 @@ class KrikoOverlayService : Service() {
   }
 
   private fun enableInputWindow(input: EditText) {
-    val params = panelParams ?: return
+    val params = sheetParams ?: return
     params.flags = params.flags and WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE.inv()
     params.softInputMode = WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
-    try { panel?.let { windowManager.updateViewLayout(it, params) } } catch (_: Exception) { }
+    try { sheet?.let { windowManager.updateViewLayout(it, params) } } catch (_: Exception) { }
     input.requestFocus()
     input.post { (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager)
       .showSoftInput(input, InputMethodManager.SHOW_IMPLICIT) }
@@ -1625,21 +2006,10 @@ class KrikoOverlayService : Service() {
     captureThread?.quitSafely()
     captureThread = null
     captureHandler = null
-    removePanel()
-    stopDot()
-    bubble?.let {
-      activeMotion.remove(it)?.cancel()
-      try { windowManager.removeView(it) } catch (_: Exception) { }
-    }
-    bubble = null
-    bubbleHandle = null
-    bubbleScanView = null
-    bubbleQueueChip = null
-    bubbleQueueLabel = null
-    bubbleQueueBadge = null
-    bubbleDot = null
-    bubbleStopView = null
-    bubbleParams = null
+    mainHandler.removeCallbacksAndMessages(null)
+    removeTray(animated = false)
+    removeSheet()
+    removePuck()
     projection?.let { current ->
       try { current.unregisterCallback(projectionCallback) } catch (_: Exception) { }
       if (stopProjection) try { current.stop() } catch (_: Exception) { }

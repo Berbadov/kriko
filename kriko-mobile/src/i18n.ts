@@ -59,6 +59,19 @@ export function useLanguage(): Language {
 }
 
 /**
+ * Upper-case a run the way the reader's language does it.
+ *
+ * Turkish has two letters I: `i` capitalises to `İ` and `ı` to `I`. A native
+ * `textTransform: 'uppercase'` follows the phone's locale, not the app's, so an
+ * English-locale phone showing Turkish drew "GEÇMIŞ" for "geçmiş". The mapping
+ * is done here, once, before the string reaches the native text view.
+ */
+export function upper(text: string, lang: Language = current): string {
+  if (lang !== 'tr') return text.toUpperCase();
+  return text.replace(/i/g, 'İ').replace(/ı/g, 'I').toUpperCase();
+}
+
+/**
  * Static copy, keyed by its exact English. Every string here is one a screen
  * renders through `Txt`; names, URLs, prices and key shapes are left alone.
  */
@@ -80,7 +93,7 @@ export const translations: Record<string, string> = {
     'İstediğin ürün sayfasını aç. Taramak istediğinde yüzen Kriko düğmesine dokun. Bulguları sayfanın üzerinde gör veya araştırma sürerken başka ürünleri sıraya ekle.',
   '1. Allow Kriko to display over other apps.': '1. Kriko’nun diğer uygulamaların üzerinde görünmesine izin ver.',
   '2. Approve Android’s screen sharing prompt.': '2. Android’in ekran paylaşımı isteğini onayla.',
-  '3. Browse at your pace. Tap Kriko to scan.': '3. İstediğin gibi gezin. Taramak için Kriko’ya dokun.',
+  '3. Browse at your pace. Tap Kriko to scan.': '3. İstediğin gibi gez. Taramak için Kriko’ya dokun.',
   'Only the frames you request are sent for reading. Stop sharing from the floating panel or Android notification.':
     'Yalnızca istediğin kareler okunmak üzere gönderilir. Paylaşımı yüzen panelden veya Android bildiriminden durdur.',
   'The floating scanner needs the updated Android build. You can still upload a screenshot here.':
@@ -144,7 +157,7 @@ export const translations: Record<string, string> = {
   'What do owners report about the Bosch GSB 600?':
     'Sahipler Bosch GSB 600 hakkında ne bildiriyor?',
   'A careful researcher for the product in front of you. It searches the web, reads the pages, and answers with what it found — or says what it could not.':
-    'Önündeki ürün için dikkatli bir araştırmacı. Web’de arar, sayfaları okur ve bulduklarıyla yanıtlar — bulamadığını da söyler.',
+    'Önündeki ürün için dikkatli bir araştırmacı. Webde arar, sayfaları okur ve bulduklarıyla yanıtlar — bulamadığını da söyler.',
   'No keys on this phone yet': 'Bu telefonda henüz anahtar yok',
   'access is the owner’s': 'erişim sahibinin',
   'Kriko Agent runs on the keys of the person who shared this build. They send an access code and a password in two separate messages; the code opens only inside Kriko.':
@@ -159,7 +172,7 @@ export const translations: Record<string, string> = {
   'Use Kriko Agent': 'Kriko Agent’ı kullan',
   'keys · on this phone': 'anahtarlar · bu telefonda',
   'Kriko Agent researches with Mercury and reads the web with DeepSeek. The person who shared access sends a code and a password, in two messages.':
-    'Kriko Agent, Mercury ile araştırır ve Web’i DeepSeek ile okur. Erişimi paylaşan kişi kodu ve parolayı iki mesajda gönderir.',
+    'Kriko Agent, Mercury ile araştırır ve webi DeepSeek ile okur. Erişimi paylaşan kişi kodu ve parolayı iki mesajda gönderir.',
   'Access code': 'Erişim kodu',
   'My own keys': 'Kendi anahtarlarım',
   Password: 'Parola',
@@ -199,9 +212,9 @@ export const translations: Record<string, string> = {
   new: 'yeni',
   used: 'kullanılmış',
   refurbished: 'yenilenmiş',
-  'What the image says': 'Görüntünün söyledikleri',
+  'What the image says': 'Görüntüde yazanlar',
   'Title, variant, specs, seller claims…': 'Başlık, varyant, özellikler, satıcı iddiaları…',
-  'Your question (optional)': 'Sorun (isteğe bağlı)',
+  'Your question (optional)': 'Sorduğun soru (isteğe bağlı)',
   'What should I check before buying it?': 'Satın almadan önce neyi kontrol etmeliyim?',
   'Ask about this': 'Bunu sor',
   'Reading…': 'Okunuyor…',
@@ -210,7 +223,7 @@ export const translations: Record<string, string> = {
 
   /* -------------------------------------------------- reading a screen -- */
   'Read my screen': 'Ekranımı oku',
-  'android screen access · once per read': 'android ekran erişimi · okuma başına bir kez',
+  'android screen access · once per read': 'Android ekran erişimi · okuma başına bir kez',
   'Switch to the listing now': 'Şimdi ilana geç',
   'Kriko reads the screen when the count reaches zero. Stay on the listing until then.':
     'Sayaç sıfıra indiğinde Kriko ekranı okur. O ana kadar ilanda kal.',
@@ -245,7 +258,7 @@ export const translations: Record<string, string> = {
   'Searched, read and cited. It says what it could not find instead of filling the gap.':
     'Arandı, okundu, kaynak gösterildi. Boşluğu doldurmak yerine bulamadığını söyler.',
   'What goes wrong with a Bosch GSB 600 drill?': 'Bosch GSB 600 matkapta ne ters gidebilir?',
-  'Are used Galaxy Buds2 Pro worth $90?': 'Kullanılmış Galaxy Buds2 Pro 90$ eder mi?',
+  'Are used Galaxy Buds2 Pro worth $90?': 'Kullanılmış Galaxy Buds2 Pro 90 dolara değer mi?',
   'Trial used': 'Deneme bitti',
   Shared: 'Paylaşılan',
   'Own keys': 'Kendi anahtarlarım',
@@ -276,10 +289,10 @@ export const translations: Record<string, string> = {
   Open: 'Açık',
   'Nothing asked yet': 'Henüz bir şey sorulmadı',
   'A question searches the web, reads the pages, and answers with the sources behind it. It stays here until you clear it.':
-    'Bir soru Web’de arar, sayfaları okur ve arkasındaki kaynaklarla yanıtlar. Sen temizleyene kadar burada kalır.',
+    'Bir soru webde arar, sayfaları okur ve arkasındaki kaynaklarla yanıtlar. Sen temizleyene kadar burada kalır.',
   'Ask the first one': 'İlkini sor',
   'Nothing asked yet. A question searches the web, reads the pages, and answers with the sources behind it.':
-    'Henüz bir şey sorulmadı. Bir soru Web’de arar, sayfaları okur ve arkasındaki kaynaklarla yanıtlar.',
+    'Henüz bir şey sorulmadı. Bir soru webde arar, sayfaları okur ve arkasındaki kaynaklarla yanıtlar.',
 
   /* -------------------------------------------------------- settings -- */
   'Free trial': 'Ücretsiz deneme',
@@ -306,7 +319,7 @@ export const translations: Record<string, string> = {
   none: 'yok',
   'What leaves this phone': 'Bu telefondan ne çıkıyor',
   'Your question and the listing text read from a screenshot go to Inception, which writes the answer. Search queries and the URLs it chooses go to DeepSeek, which returns the pages. A screenshot is uploaded once to DeepSeek to be read; the image is kept only as a thumbnail in your chat. There is no analytics and no Kriko account.':
-    'Sorun ve ekran görüntüsünden okunan ilan metni, yanıtı yazan Inception’a gider. Arama sorguları ve seçtiği adresler, sayfaları getiren DeepSeek’e gider. Bir ekran görüntüsü okunmak için bir kez DeepSeek’e yüklenir; görüntü sohbetinde yalnızca küçük resim olarak kalır. Analitik ve Kriko hesabı yok.',
+    'Sorduğun soru ve ekran görüntüsünden okunan ilan metni, yanıtı yazan Inception’a gider. Arama sorguları ve seçtiği adresler, sayfaları getiren DeepSeek’e gider. Bir ekran görüntüsü okunmak için bir kez DeepSeek’e yüklenir; görüntü sohbetinde yalnızca küçük resim olarak kalır. Analitik ve Kriko hesabı yok.',
   Conversations: 'Konuşmalar',
   'Clear every chat': 'Tüm sohbetleri temizle',
   'Nothing saved yet.': 'Henüz bir şey kaydedilmedi.',
@@ -323,7 +336,7 @@ export const translations: Record<string, string> = {
     'İçinde bir araştırmacı olan küçük, yerel öncelikli bir okuyucu.',
   'Kriko Agent for mobile': 'Mobil için Kriko Agent',
   'Ask what is known to go wrong with a product, or read the screen in front of you. The answer is researched on the open web, cites the pages it read, and keeps the work where you can see it.':
-    'Bir üründe bilinen sorunları sor ya da önündeki ekranı oku. Yanıt açık Web’de araştırılır, okuduğu sayfaları kaynak gösterir ve çalışmayı görebileceğin yerde tutar.',
+    'Bir üründe bilinen sorunları sor ya da önündeki ekranı oku. Yanıt açık webde araştırılır, okuduğu sayfaları kaynak gösterir ve çalışmayı görebileceğin yerde tutar.',
   'New in this build': 'Bu derlemede yeni',
   'A four-second capture of the listing you are already looking at. No screenshot, no photo library.':
     'Zaten baktığın ilanın dört saniyelik kaydı. Ekran görüntüsü yok, fotoğraf arşivi yok.',
@@ -332,13 +345,13 @@ export const translations: Record<string, string> = {
     'Üst çubuktaki artı, eskisini kaybetmeden temiz bir konuşma başlatır.',
   'Short answers': 'Kısa yanıtlar',
   'A verdict, the checks that matter, and the gap. Bullets, not paragraphs.':
-    'Bir hüküm, önemli kontroller ve eksik kalan. Paragraf değil, maddeler.',
+    'Bir karar, önemli kontroller ve eksik kalan. Paragraf değil, maddeler.',
   'History and sources as pages': 'Geçmiş ve kaynaklar sayfa olarak',
   'The full record is a screen you can read, not a sheet that disappears.':
     'Tam kayıt, kaybolan bir kayan panel değil, okuyabileceğin bir ekran.',
   'Your question and the listing text go to Inception to write the answer. Search queries and chosen URLs go to DeepSeek. A screenshot or a screen read is uploaded once to DeepSeek vision. There is no Kriko account, no Kriko server and no analytics.':
-    'Sorun ve ilan metni, yanıtı yazması için Inception’a gider. Arama sorguları ve seçilen adresler DeepSeek’e gider. Bir ekran görüntüsü ya da ekran okuması bir kez DeepSeek vision’a yüklenir. Kriko hesabı, Kriko sunucusu ve analitik yok.',
-  'The stack': 'Yığın',
+    'Sorduğun soru ve ilan metni, yanıtı yazması için Inception’a gider. Arama sorguları ve seçilen adresler DeepSeek’e gider. Bir ekran görüntüsü ya da ekran okuması bir kez DeepSeek vision’a yüklenir. Kriko hesabı, Kriko sunucusu ve analitik yok.',
+  'The stack': 'Altyapı',
   'Plans the research and writes the answer.': 'Araştırmayı planlar ve yanıtı yazar.',
   'Finds the pages and returns their text.': 'Sayfaları bulur ve metinlerini getirir.',
   'Reads a listing screenshot or a screen capture.':
@@ -371,7 +384,7 @@ export const translations: Record<string, string> = {
   'The code opened, but carried nothing readable.':
     'Kod açıldı ama okunacak bir şey taşımıyor.',
   'This build cannot open access codes: it was made without its share pepper.':
-    'Bu derleme erişim kodlarını açamıyor: paylaşım pepper’ı olmadan derlenmiş.',
+    'Bu derleme erişim kodlarını açamıyor: paylaşım için gereken gizli değer olmadan derlenmiş.',
   'Paste the password that came with the code as well.':
     'Kodla gelen parolayı da yapıştır.',
   'That code carries no keys.': 'Bu kod anahtar taşımıyor.',
@@ -391,13 +404,13 @@ export const translations: Record<string, string> = {
   'The agent used its research budget without writing an answer. Ask again, or narrow the question.':
     'Ajan, yanıt yazmadan araştırma bütçesini tüketti. Yeniden sor ya da soruyu daralt.',
   'The agent asked for more web access after its retrieval budget ended. Ask again, or narrow the question.':
-    'Ajan, arama bütçesi bittikten sonra daha fazla Web erişimi istedi. Yeniden sor ya da soruyu daralt.',
+    'Ajan, arama bütçesi bittikten sonra daha fazla web erişimi istedi. Yeniden sor ya da soruyu daralt.',
   'The image reader did not answer in the expected shape.':
     'Görüntü okuyucu beklenen biçimde yanıt vermedi.',
   'Fetch only accepts a URL returned by search':
-    'Getirme yalnızca aramadan dönen bir adresi kabul eder',
+    'Sayfa okuma yalnızca aramadan dönen bir adresi kabul eder',
   'Unsupported tool': 'Desteklenmeyen araç',
-  'Refused a fetch that search did not return': 'Aramadan dönmeyen bir getirme reddedildi',
+  'Refused a fetch that search did not return': 'Aramadan dönmeyen bir sayfa okuma isteği reddedildi',
 
   /* ------------------------------------------------ about this build -- */
   Back: 'Geri',
@@ -420,7 +433,7 @@ export const translations: Record<string, string> = {
   'Searches stop when evidence is enough or stops improving, leaving time to write the answer.':
     'Kanıt yeterli olduğunda veya yenisi gelmediğinde aramalar durur; yanıtı yazmaya zaman kalır.',
   'Your question and listing text go to Inception to write the answer. Search queries and chosen URLs go to DeepSeek. Screenshots are uploaded once to DeepSeek vision for reading, then kept only as a thumbnail in the conversation. There is no Kriko account, server, or analytics.':
-    'Sorun ve ilan metni, yanıtı yazması için Inception’a gider. Arama sorguları ve seçilen adresler DeepSeek’e gider. Ekran görüntüleri okunmak üzere bir kez DeepSeek vision’a yüklenir, sonra konuşmada yalnızca küçük resim olarak kalır. Kriko hesabı, sunucusu ve analitik yoktur.',
+    'Sorduğun soru ve ilan metni, yanıtı yazması için Inception’a gider. Arama sorguları ve seçilen adresler DeepSeek’e gider. Ekran görüntüleri okunmak üzere bir kez DeepSeek vision’a yüklenir, sonra konuşmada yalnızca küçük resim olarak kalır. Kriko hesabı, sunucusu ve analitik yoktur.',
   Answers: 'Yanıtlar',
   'Search and pages': 'Arama ve sayfalar',
   'Image reading': 'Görüntü okuma',
@@ -494,7 +507,7 @@ export const translations: Record<string, string> = {
   'What happens to your data': 'Verilerine ne olur',
   'Writes answers': 'Yanıtı yazar',
   'Your question and listing text go to Inception. Search queries and chosen pages go to DeepSeek. A screenshot is uploaded once for reading and kept only as a chat thumbnail. No Kriko account, server, or analytics.':
-    'Sorun ve ilan metni Inception’a gider. Arama sorguları ve seçilen sayfalar DeepSeek’e gider. Bir ekran görüntüsü okunmak üzere bir kez yüklenir ve yalnızca sohbet küçük resmi olarak saklanır. Kriko hesabı, sunucusu veya analitik yok.',
+    'Sorduğun soru ve ilan metni Inception’a gider. Arama sorguları ve seçilen sayfalar DeepSeek’e gider. Bir ekran görüntüsü okunmak üzere bir kez yüklenir ve yalnızca sohbet küçük resmi olarak saklanır. Kriko hesabı, sunucusu veya analitik yok.',
   'Saved conversations': 'Kaydedilen konuşmalar',
   'Clear chats and scan results': 'Sohbetleri ve tarama sonuçlarını temizle',
   More: 'Daha fazla',
@@ -519,7 +532,7 @@ export const translations: Record<string, string> = {
   'Sent separately': 'Ayrı gönderildi',
   'Label · optional': 'Etiket · isteğe bağlı',
   'Mercury writes the answer. DeepSeek searches and reads the web.':
-    'Yanıtı Mercury yazar. DeepSeek arar ve web’i okur.',
+    'Yanıtı Mercury yazar. DeepSeek arar ve webi okur.',
   'Opening access on this phone…': 'Erişim bu telefonda açılıyor…',
   'Access codes are checked on this phone. Opened keys are stored in the system’s secure storage and are never shown again.':
     'Erişim kodları bu telefonda denetlenir. Açılan anahtarlar sistemin güvenli deposunda saklanır ve bir daha gösterilmez.',
@@ -527,7 +540,7 @@ export const translations: Record<string, string> = {
   /* ------------------------------------------------------ chrome -- */
   'a closer look': 'daha yakından',
   Home: 'Ana sayfa',
-  'Your question': 'Sorun',
+  'Your question': 'Sorduğun soru',
   Stop: 'Durdur',
   'Scan a product': 'Bir ürün tara',
   'Scan page': 'Sayfayı tara',
@@ -578,10 +591,14 @@ export const translations: Record<string, string> = {
   'Scan products while you browse.': 'Gezinirken ürünleri tara.',
   'Allow Kriko over other apps.': 'Kriko’nun diğer uygulamaların üzerinde görünmesine izin ver.',
   'Approve Android’s screen sharing prompt.': 'Android’in ekran paylaşımı isteğini onayla.',
-  'Browse and tap the floating Kriko button to scan.':
-    'Gezin ve taramak için yüzen Kriko düğmesine dokun.',
-  'Only frames you request are sent for reading. Stop from the floating panel or Android notification.':
-    'Yalnızca istediğin kareler okunmak üzere gönderilir. Yüzen panelden veya Android bildiriminden durdur.',
+  'Open the page you want, then tap the K and Scan this page.':
+    'İstediğin sayfayı aç, sonra K’ye dokun ve Bu sayfayı tara’ya bas.',
+  'Only screens you scan are sent for reading. Stop from the K’s tray or the Android notification.':
+    'Yalnızca taradığın ekranlar okunmak üzere gönderilir. K’nin menüsünden ya da Android bildiriminden durdur.',
+  'Scan this page': 'Bu sayfayı tara',
+  'Scan again': 'Yeniden tara',
+  'Results': 'Sonuçlar',
+  'Site comments': 'Site yorumları',
 
   /* ------------------------------------------------ screenshot read -- */
   'Identify the product': 'Ürünü tanımla',
@@ -595,7 +612,7 @@ export const translations: Record<string, string> = {
   'Listing details': 'İlan ayrıntıları',
   'Adjust anything that looks off.': 'Yanlış görünen her şeyi düzelt.',
   'Visible listing text': 'Görünen ilan metni',
-  'Your question · optional': 'Sorun · isteğe bağlı',
+  'Your question · optional': 'Sorduğun soru · isteğe bağlı',
   'The image is sent to DeepSeek to read it. Kriko keeps the observations above and the thumbnail in your message.':
     'Görüntü okunması için DeepSeek’e gönderilir. Kriko yalnızca yukarıdaki gözlemleri ve mesajındaki küçük resmi saklar.',
 
@@ -645,7 +662,7 @@ export const translations: Record<string, string> = {
   'I have my own provider keys': 'Kendi sağlayıcı anahtarlarım var',
   'Set up keys': 'Anahtarları ayarla',
   'Your question and the product details go to the research providers. Kriko keeps your chats on this phone.':
-    'Sorun ve ürün ayrıntıları araştırma sağlayıcılarına gider. Kriko sohbetlerini bu telefonda tutar.',
+    'Sorduğun soru ve ürün ayrıntıları araştırma sağlayıcılarına gider. Kriko sohbetlerini bu telefonda tutar.',
 
   /* ------------------------------------------- vision errors and notes -- */
   'the image reader ran out of room before it could answer':
@@ -716,7 +733,7 @@ const patterns: readonly (readonly [RegExp, string])[] = [
   ],
   [
     /^The owner’s Mercury and DeepSeek keys, opened on this phone\.$/,
-    'Sahibin Mercury ve DeepSeek anahtarları bu telefonda açık.',
+    'Sahibinin Mercury ve DeepSeek anahtarları bu telefonda açık.',
   ],
 
   /* Lists, counters and build lines. */
