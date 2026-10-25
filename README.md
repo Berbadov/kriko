@@ -1,6 +1,6 @@
 # Kriko
 
-[![version](https://img.shields.io/badge/version-0.3.5-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
+[![version](https://img.shields.io/badge/version-0.3.6-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
 
 Kriko answers one question about the product you are looking at: *what is known
 to go wrong with this exact one*. It runs on your computer — a desktop app for
@@ -9,21 +9,21 @@ extension — and keeps the source beside every finding.
 Installed catalog lookups work offline. Research uses the agent or model you
 choose, and a paid provider bills your own account.
 
-**[Download the Windows installer](https://github.com/Berbadov/kriko/releases/latest/download/kriko-0.3.5-x86_64-setup.exe)** ·
+**[Download the Windows installer](https://github.com/Berbadov/kriko/releases/latest/download/kriko-0.3.6-x86_64-setup.exe)** ·
 [Browser extension](https://chromewebstore.google.com/detail/kriko/bdifnaggafjokndlpjgmlfappcoehdjb) ·
 [Website](https://kriko.cc)
 
-0.3.5 improves grounded Quick Look responses and research coverage reporting.
-The companion extension 0.4.8 has a more compact panel, and mobile 0.8.0 brings
-a warm paper interface, on-demand scanning and animated progress. See the
+0.3.6 makes the Kriko Agent plan its searches and show what it did. The
+companion extension 0.5.0 is a quieter panel with Compare inside it, and mobile
+0.10.0 has a floating scanner you can drag, open and read. See the
 [changelog](CHANGELOG.md) for the release scope.
 
 ## Install
 
 | Artifact | Use |
 |---|---|
-| `kriko-0.3.5-x86_64-setup.exe` | Per-user Windows installer; no administrator rights required. |
-| `kriko-0.3.5-win64-portable.zip` | Extract the whole archive and open `kriko.exe`. |
+| `kriko-0.3.6-x86_64-setup.exe` | Per-user Windows installer; no administrator rights required. |
+| `kriko-0.3.6-win64-portable.zip` | Extract the whole archive and open `kriko.exe`. |
 
 1. Open Kriko, choose an agent in **More → Agents** and press **Check connection**.
 2. Open **Catalogs → Find release catalogs** and install one, or import a

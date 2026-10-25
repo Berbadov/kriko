@@ -3,6 +3,14 @@
 Reader-visible changes for each release. Newest first. Published versions are
 immutable; a correction is a newer version.
 
+### 0.3.6
+
+- **The Kriko Agent plans its research and shows what it did.** Before it searches, it works out which kinds of source your question needs, checks each page against the product you named, and counts what it covered and how fresh it is. Every answer in the desktop chat now carries a record: the searches it ran, the pages it read and the kinds of source behind the answer. The plan comes from your question and the catalog's own data; the engine still decides nothing about what is worth surfacing in a category.
+- **The browser panel is quiet, and Compare is in it.** Extension 0.5.0 drops the subtitle, the boxed keys, the three pill counts, the queue help and the two expand buttons, and keeps one line of counts, one search and one Expand toggle. **Add to compare** puts the product on your shortlist, which is the app's research queue, so there is no second list. Each row counts its serious, to-check and minor findings from its stored check, or says *Not checked yet*. **Open side by side** raises the app's Compare screen, and **Help me decide** appears with two or more products. A product no catalog holds has one **Research** button instead of three. The settings page and the tour say less.
+- **A phone scanner you can see and use.** Mobile 0.10.0 replaces the floating panel with a small K puck you can drag to an edge. One press opens a tray with the one thing you came to do (**Scan this page**, **Results**, **Stop screen sharing**), and the answer opens in a sheet at the bottom that never covers the puck. The scanner steps aside while Kriko itself is in front, and starting a screen share sends Kriko to the background so the page you want is the one in view. Twenty-five Turkish strings are corrected.
+- **kriko.cc shows new examples.** One invented e-bike followed through three steps, Compare included, and four other invented products, all drawn in the real panel. The Turkish page is rebuilt from it.
+- **The chat's mid-search progress test no longer fails on a busy machine.** It looked at the job log a fixed 200 ms after the search began; it now waits for the line it asserts. A test change only: nothing a reader sees.
+
 ### 0.3.5
 
 - **A macOS build for Apple Silicon.** `kriko-ui/package-macos.sh` assembles `Kriko.app` and a disk image on an arm64 Mac — the app, the engine it starts, and the search program beside it — signs the whole bundle, opens the result once to prove it starts, and hashes the image. Tauri and PyInstaller do not cross-compile, so it refuses to build an architecture the machine is not; the `macos-arm64` job in the desktop workflow runs the same script. The build is ad-hoc signed and not notarized, so the first open of a downloaded copy is right-click → Open, and there is no in-app update on macOS yet: replace the app from the next disk image.
