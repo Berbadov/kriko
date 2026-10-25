@@ -103,6 +103,25 @@ desktop screen, and narrow, for a phone. The checked product and the start
 screen are only shown narrow, so they are drawn only at that size. `ONLY=compare`
 draws one picture.
 
+## The advertisement
+
+`tools/ad/` draws a 40-second silent advertisement, 1920x1080 at 30 fps, from
+the same invented e-bike and the pictures above. Nothing in it is a recording:
+`tools/ad/index.html` is one stage, `tools/ad/scenes.js` sets every element as a
+function of time (`render(t)`), and `tools/ad/render.mjs` photographs each frame
+in a browser and pipes the frames to ffmpeg. The same time always gives the
+same frame, so a change is checked by drawing a few stills before the render.
+
+```sh
+PLAYWRIGHT_MODULE=/path/to/playwright/index.mjs node site/tools/ad/render.mjs stills 2.6,13,24.8
+python3 site/tools/ad/sheet.py site/tools/ad/out/sheet.png 2.6 13 24.8   # from site/tools/ad
+PLAYWRIGHT_MODULE=/path/to/playwright/index.mjs FFMPEG=/path/to/ffmpeg node site/tools/ad/render.mjs video
+```
+
+The text on screen is the sound-off script, and the three promises are the
+page's own lines word for word. `out/` (stills and the video) is not committed.
+The ad says in its corner that the products and findings are invented.
+
 ## Readability
 
 Body text is 19px with 1.7 line height, lines stay under about 70 characters,
