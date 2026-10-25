@@ -2,7 +2,7 @@
   "expo": {
     "name": "Kriko Agent",
     "slug": "kriko-mobile",
-    "version": "0.9.2",
+    "version": "0.10.0",
     "scheme": "kriko",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -19,7 +19,7 @@
     },
     "android": {
       "package": "app.kriko.mobile",
-      "versionCode": 9,
+      "versionCode": 10,
       "softwareKeyboardLayoutMode": "resize",
       "predictiveBackGestureEnabled": false,
       "adaptiveIcon": {
