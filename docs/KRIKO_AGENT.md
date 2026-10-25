@@ -15,7 +15,11 @@ its own search results. Kriko Agent is pinned to Mercury 3 so a saved
 per-agent model preference cannot silently change the benchmarked stack.
 The adapter sends Mercury 3's own envelope: temperature 0.5 (the model's
 floor — 0.1 is a Mercury 2.5 value the provider refuses), a 131,072-token
-output ceiling, and the 1M-token context window.
+output ceiling the model accepts, and the 1M-token context window. What a turn
+asks for is less: 16,384 output tokens (`DEFAULT_MAX_TOKENS`), 32,768 where it
+writes a whole catalog (`AUTHORING_MAX_TOKENS`). Mercury 3 reasons before it
+answers and the reasoning counts against the same ceiling, so 8,192 cut off a
+turn whose visible answer was two thousand tokens.
 
 The agent requests page content with each DeepSeek search. It fetches a result
 URL only when the inline text is missing or insufficient. Duplicate search and
@@ -40,7 +44,8 @@ what keeps a five-result search from spending the whole turn's input budget.
 
 Settings → Research has two Kriko Agent controls. **Thoroughness** sets the
 search-call ceiling (3 at Low, 5 at the default midpoint, 8 at High) and the
-result count per search (2, 4, and 5 respectively). **Validation sensitivity**
+result count per search (2, 4, and 5 respectively); a scope (below) can raise the
+call ceiling for a complex product, to 12 at most. **Validation sensitivity**
 requires quotes of 8–20 characters; at 80% and above it also requires an exact
 case-sensitive quote from the returned source. Higher settings ask Mercury to
 seek independent corroboration for consequential details.
@@ -67,8 +72,9 @@ sentence rather than silence.
 | Turn deadline | 120 s (`TIMEOUT_SECONDS`) | The next retrieval is refused; the turn ends with the deadline as its reason |
 | Mercury request | `min(45 s, time left)` | The stream is cut; the reply carries the error |
 | One DeepSeek call | `min(10 s, (time left − 1.5) / 3)` | That search or fetch reports "did not answer in time" and the turn continues with what it has |
-| Tool rounds | 4 (`MAX_TOOL_ROUNDS`) | "Mercury exceeded the web research round limit" |
-| Tool calls | 8, and thoroughness (3/5/8) | "Mercury requested web access after its tool budget ended" |
+| Tool rounds | 4 (`MAX_TOOL_ROUNDS`), 5 when a scope asked for more than 8 retrievals | "Mercury exceeded the web research round limit" |
+| Tool calls | 12 at most (`MAX_TOOL_CALLS`); thoroughness (3/5/8) unless a scope sized it | "Mercury requested web access after its tool budget ended" |
+| Response ceiling | 16,384 tokens, 32,768 when authoring | A cut-off answer is kept where it can be (below), refused where it cannot |
 | Waiting on a tool | `time left + 1 s`, then the future is cancelled | "The search service did not answer in time" |
 | Retrieval pool | 4 at once, 0.21 s pacing per lane | Queued, not dropped |
 
@@ -81,6 +87,58 @@ through `on_step` — `searching: <query>`, `search (cached): <query>`,
 `3 result(s): <query>`, `search failed: <query> (…)`, `free trial: 7 question(s)
 left` — and `apiagent` publishes them on the job thread, so they appear in the
 run's log as they happen instead of one frozen "searching the web" for a minute.
+
+## Scope before search, and what a cut-off answer keeps
+
+The reader's words: *"kriko agent aint performing well on quick searches … for
+cars only brought 3 issues where that car had more than 3 and in many places"*,
+and *"I think agent needs a thinking before going out on internet and search"*.
+
+Three faults sat behind it, found by re-running a stored job on the reader's own
+keys. The retrieval budget was the Settings dial for every product, so a
+three-system car and a wristwatch each got five retrievals. A finding whose
+quote was verbatim on a page the agent held was dropped because it cited an
+address the search never returned. And an answer that reached the response
+ceiling was thrown away whole, which is also how a catalog authoring job for the
+same car failed with "reached the response token limit".
+
+**Scope.** Before a quick look searches, or a question that asks for failures is
+answered, one tool-less Mercury call (`ApiAgentResearcher.scope_for`, at most
+20 s) names how complex the product is and which aspects need their own
+evidence: the components and systems a fault could be in (`agentplan.Scope`:
+`simple`, `moderate` or `complex`, at most 8 aspects, each with the query to
+search it). The scope sizes three things and nothing else:
+
+- the **retrieval pool**: the dial's ceiling plus 0, 2 or 4 for the complexity,
+  never more than one retrieval per aspect plus one, never under 3 or over 12
+  (`agentplan.scoped_calls`);
+- the **finding cap**: 4, 6 or 10 sourced risks (`agentplan.risk_cap`), kept most
+  serious first, where the unscoped brief keeps its old cap;
+- a **checklist** in the system prompt: each aspect with its query, and the
+  instruction to search the ones it has no evidence for before answering.
+
+Each kept finding is tagged with the aspect it belongs to (the aspect's name or
+its query both count), so the run's log says `scope: complex, 6 of 7 aspects
+covered` and the job result carries the same record. **It fails open.** A scope
+that times out, errors or cannot be read is `None`, the run says it could not
+scope the subject, and everything behaves as the dial alone did. A product the
+scope calls simple gets the dial's budget, not less.
+
+**A cut-off answer.** At the response ceiling, a turn that has no pending tool
+call keeps what was written (`reply.truncated`, `telemetry["truncated"]`) when
+the caller asked for it: quick looks and the two catalog-authoring jobs do, since
+`packauthor.read_payload` repairs cut-off JSON and a quick look's findings are
+independent objects. A cut-off *tool call* is never kept, and any other caller
+still gets the error. `read_payload` now reaches that repair for a catalog cut
+off after complete claims, which it did not before: the complete claim objects
+inside the cut-off outer object used to be mistaken for the whole answer.
+
+**A mistyped address.** `quicklook.ground` checks a quote against the page it
+cites. When the cited address is not one of the pages the search returned, the
+quote (25 characters or more) is looked for on the pages held, and the finding is
+kept on the page that carries it, preferring the nearest address. The words are
+still found in a page's own text, so nothing ungrounded gets in; a cited address
+that *is* a held page whose text lacks the quote stays refused.
 
 ## Which web search: the agent's own, or Kriko's
 

@@ -102,6 +102,38 @@ def test_a_truncated_object_cut_mid_string_falls_back_to_the_last_comma():
     assert "stopped mid-object" in note
 
 
+def test_a_cut_off_pack_is_repaired_not_replaced_by_one_of_its_own_claims():
+    """The Golf catalog: the reply stopped inside `claims`, after whole claims.
+
+    Every finished claim is a complete object, so the loose-object scan used to
+    hand back the last claim as if it were the pack and the repair never ran.
+    """
+    pack = {"pack_id": "x", "identity": {"make": ["a"]},
+            "claims": [{"title": "one", "evidence": [{"url": "u", "quote": "q"}]},
+                       {"title": "two", "evidence": [{"url": "u", "quote": "q"}]}]}
+    cut = json.dumps(pack)[:-1] + ', {"title": "thr'
+    payload, note = packauthor.read_payload(cut)
+    assert payload["pack_id"] == "x"
+    assert [claim["title"] for claim in payload["claims"]] == ["one", "two"]
+    assert "stopped mid-object" in note
+
+    fenced = "```json\n" + cut          # the closing fence never came
+    payload, note = packauthor.read_payload(fenced)
+    assert payload["pack_id"] == "x" and len(payload["claims"]) == 2
+
+
+def test_a_whole_first_object_still_wins_over_a_cut_off_second_one():
+    text = '{"a": 1} and then I began again: {"a": 2, "b": [1, 2'
+    payload, note = packauthor.read_payload(text)
+    assert payload == {"a": 1}
+    assert note == ""
+
+
+def test_a_stray_brace_in_the_prose_does_not_hide_the_object():
+    payload, _ = packauthor.read_payload('Use {braces} like so: {"a": 1}')
+    assert payload == {"a": 1}
+
+
 def test_garbage_comes_back_empty_not_raising():
     payload, note = packauthor.read_payload("I could not find much, sorry.")
     assert payload == {}
