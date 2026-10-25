@@ -1150,9 +1150,28 @@ def read_payload(text: str) -> tuple[dict, str]:
     if fenced:
         return fenced[-1], ""
     loose = _objects(text)
-    if loose:
+    # A reply cut off inside its outer object still holds whole objects: every
+    # finished claim is one. They are pieces of the answer, not the answer, and
+    # taking the last one made the repair below unreachable for any pack with a
+    # single claim in it. So the loose objects are the answer only when the
+    # first object in the reply closed; otherwise the cut-off one is repaired.
+    if loose and _first_object_closes(text):
         return loose[-1], ""
-    return _repair(text)
+    repaired = _repair(text)
+    if repaired[0]:
+        return repaired
+    return (loose[-1], "") if loose else ({}, "")
+
+
+def _first_object_closes(text: str) -> bool:
+    start = text.find("{")
+    if start == -1:
+        return False
+    try:
+        _DECODER.raw_decode(text, start)
+    except ValueError:
+        return False
+    return True
 
 
 def _payload(text: str) -> dict:

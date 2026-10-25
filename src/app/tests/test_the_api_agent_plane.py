@@ -97,6 +97,7 @@ def test_kriko_quicklook_repairs_invalid_json_without_another_search():
     researcher.searched.append('TCL55V6C owner complaints')
     researcher.ask = lambda prompt, allow_tools=True: (
         calls.append((prompt, allow_tools)) or replies.pop(0))
+    researcher.scope_for = lambda subject: None   # this test is about the repair
 
     answer = researcher.ask_quick("TCL55V6C")
 
@@ -117,6 +118,7 @@ def test_quicklook_skips_format_repair_when_spend_limit_is_exhausted():
     calls = []
     raw = "The final output was not JSON."
     researcher.ask = lambda prompt, allow_tools=True: calls.append(allow_tools) or raw
+    researcher.scope_for = lambda subject: None   # this test is about the spend limit
     researcher._at_least = researcher._budget()
 
     assert researcher.ask_quick("TCL55V6C") == raw
