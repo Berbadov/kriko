@@ -22,3 +22,12 @@ def test_signal_gate_turkish_english_and_codes():
     assert chunk_has_signal("the timing chain is a known failure")     # EN lexicon
     assert chunk_has_signal("the EA888 uses a different tensioner")    # code token
     assert not chunk_has_signal("today we unbox the new infotainment") # filler
+
+
+def test_signal_gate_reads_a_symptom_without_the_word_failure():
+    """These were skipped before 2026-10-25: the words were missing."""
+    assert chunk_has_signal("the thermostat housing is cracking")
+    assert chunk_has_signal("coolant seepage at the housing seam")
+    assert chunk_has_signal("the engine overheats on the motorway")
+    assert chunk_has_signal("the head gasket warped after the recall")
+    assert chunk_has_signal("a squeal from the auxiliary belt when cold")

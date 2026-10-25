@@ -3,6 +3,11 @@
 Reader-visible changes for each release. Newest first. Published versions are
 immutable; a correction is a newer version.
 
+### 0.3.5
+
+- **Claim extraction reads the whole source.** The pack builder used to send only the first 6,000 characters of a thread or transcript to the extractor, so a fault reported later in the page was never a claim. It now reads the document in overlapping chunks, always opening and closing it and paying for a middle chunk only when the signal gate finds a failure word or a declared component code. Claims repeated by the overlap are written once.
+- **The signal gate recognises the symptom, not just the word "failure".** Chunks whose only symptom was cracking, seepage, overheating, warping, a squeal, a grind, a seized part, corrosion, sludge, a whine, a clunk or a squeak were skipped before the model saw them; those words are now in the category-neutral failure lexicon.
+
 ### 0.3.4
 
 - **"Update now" installs the new version.** Apps on 0.3.2 were offered an
