@@ -90,6 +90,9 @@ class Reply:
     error: str = ""
     #: False when a completion response omitted either token count.
     usage_complete: bool = True
+    #: True when the final answer reached the response limit and was kept cut
+    #: off (`kriko_agent.converse(keep_partial=True)`); `text` ends mid-reply.
+    truncated: bool = False
 
 
 def _plain(text) -> str:
