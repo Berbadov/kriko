@@ -1,29 +1,19 @@
 package __PACKAGE__.overlay
 
-import android.animation.Animator
-import android.animation.AnimatorListenerAdapter
-import android.animation.TimeInterpolator
-import android.animation.ValueAnimator
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
-import android.content.res.ColorStateList
 import android.graphics.Bitmap
-import android.graphics.Canvas
+import android.graphics.BitmapFactory
 import android.graphics.Color
-import android.graphics.Outline
-import android.graphics.Paint
 import android.graphics.PixelFormat
 import android.graphics.Rect
-import android.graphics.RectF
-import android.graphics.Typeface
-import android.graphics.drawable.Drawable
-import android.graphics.drawable.GradientDrawable
-import android.graphics.drawable.RippleDrawable
 import android.hardware.display.DisplayManager
 import android.hardware.display.VirtualDisplay
 import android.media.Image
@@ -37,9 +27,8 @@ import android.os.HandlerThread
 import android.os.IBinder
 import android.os.SystemClock
 import android.provider.Settings
-import android.text.Html
 import android.text.InputType
-import android.text.method.LinkMovementMethod
+import android.text.TextUtils
 import android.util.Base64
 import android.util.DisplayMetrics
 import android.view.Display
@@ -48,15 +37,13 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
 import android.view.ViewGroup
-import android.view.ViewOutlineProvider
+import android.view.WindowInsets
 import android.view.WindowManager
-import android.view.animation.DecelerateInterpolator
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
-import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import com.facebook.react.bridge.Arguments
@@ -64,40 +51,26 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
-import java.util.WeakHashMap
-import kotlin.math.cos
-import kotlin.math.exp
+import java.util.concurrent.Executors
+import kotlin.math.abs
 import kotlin.math.roundToInt
-
-/** One resolved palette; the values mirror `src/theme/palettes.ts`. */
-private data class Palette(
-  val ground: Int,
-  val panel: Int,
-  val raised: Int,
-  val edge: Int,
-  val ink: Int,
-  val ink2: Int,
-  val ink3: Int,
-  val accent: Int,
-  val accentHi: Int,
-  val risk: Int,
-  val riskWash: Int,
-  val ok: Int,
-)
 
 /**
  * The floating scanner, in three pieces that never cover each other:
  *
- *  - the **puck**: one round blue K the reader drags anywhere. It snaps to the
- *    nearest screen edge, dims when idle, spins a ring while research runs and
- *    carries a green count when answers are waiting;
+ *  - the **puck**: a small page with a K on it that the reader drags anywhere.
+ *    It snaps to the nearest screen edge, rests half-transparent (the reader
+ *    sets how much), sweeps a band of light while research runs, turns over
+ *    when an answer is ready and shows a green count for the ones waiting;
  *  - the **tray**: tap the puck and a small card opens beside it with one big
- *    action (Scan this page), the results, and — deliberately apart — Stop;
- *  - the **sheet**: the answer, sized to its content and anchored to the bottom
- *    where a thumb reaches it, with the other scans as chips under it.
+ *    action (Scan this page), the results, and, deliberately apart, Stop;
+ *  - the **sheet**: the answer, pinned to the top of the screen under the
+ *    status bar, with the picture of the scanned page beside its title, the
+ *    answer set as short blocks and the other scans as chips under it.
  *
- * The capture pipeline, the notification and the palette contract are those of
- * the previous capsule; only what the reader sees and touches changed.
+ * The scanner outlives everything but the reader's own Stop. When Android ends
+ * the screen capture (it does so when the phone locks) the puck stays, goes
+ * grey, and asks for capture again the next time the reader presses Scan.
  */
 class KrikoOverlayService : Service() {
   companion object {
@@ -106,6 +79,9 @@ class KrikoOverlayService : Service() {
     const val ACTION_UPDATE = "__PACKAGE__.overlay.UPDATE"
     const val ACTION_UI = "__PACKAGE__.overlay.UI"
     const val ACTION_APP = "__PACKAGE__.overlay.APP"
+    /** Capture consent arrived from the re-arm screen (see [KrikoCaptureActivity]). */
+    const val ACTION_PROJECTION = "__PACKAGE__.overlay.PROJECTION"
+    const val ACTION_PROJECTION_DENIED = "__PACKAGE__.overlay.PROJECTION_DENIED"
     const val EXTRA_FOREGROUND = "foreground"
     const val EXTRA_RESULT_CODE = "resultCode"
     const val EXTRA_RESULT_DATA = "resultData"
@@ -113,110 +89,26 @@ class KrikoOverlayService : Service() {
     const val EXTRA_UI = "ui"
     private const val CHANNEL_ID = "kriko_screen_scan"
     private const val NOTIFICATION_ID = 7406
-    private const val ON_ACCENT = 0xFFFFFFFF.toInt()
-    /** The visible disc; the window around it leaves room for its shadow and badge. */
-    private const val PUCK_DP = 54
     private const val PUCK_PAD_DP = 7
     private const val EDGE_DP = 4
     private const val TRAY_DP = 232
-    private const val DIM_AFTER_MS = 4200L
-    private const val DIM_ALPHA = 0.58f
+    private const val SETTLE_AFTER_MS = 4200L
+    private const val CAPTURE_WATCHDOG_MS = 6500L
 
-    /**
-     * The three palettes the app can resolve to. Every value mirrors
-     * `src/theme/palettes.ts`: dark, paper and white. There is no fourth,
-     * hardcoded dark panel hiding anywhere below.
-     */
-    private val DARK = Palette(
-      ground = 0xFF000000.toInt(),
-      panel = 0xFF111111.toInt(),
-      raised = 0xFF1A1A1A.toInt(),
-      edge = 0x26FFFFFF,
-      ink = 0xFFF5F5F5.toInt(),
-      ink2 = 0xFFB8B8B8.toInt(),
-      ink3 = 0xFF989898.toInt(),
-      accent = 0xFF3562E9.toInt(),
-      accentHi = 0xFF99B1FF.toInt(),
-      risk = 0xFFFF6B7A.toInt(),
-      riskWash = 0x24FF6B7A,
-      ok = 0xFF3DDC97.toInt(),
-    )
-    private val PAPER = Palette(
-      ground = 0xFFF4F0E6.toInt(),
-      panel = 0xFFFFFDF7.toInt(),
-      raised = 0xFFFAF7EF.toInt(),
-      edge = 0xFFC5BDAD.toInt(),
-      ink = 0xFF24231F.toInt(),
-      ink2 = 0xFF5D5A52.toInt(),
-      ink3 = 0xFF78756D.toInt(),
-      accent = 0xFF2E5BEF.toInt(),
-      accentHi = 0xFF2E5BEF.toInt(),
-      risk = 0xFFB74739.toInt(),
-      riskWash = 0xFFF6E7DF.toInt(),
-      ok = 0xFF39735B.toInt(),
-    )
-    private val WHITE = Palette(
-      ground = 0xFFF7F8FA.toInt(),
-      panel = 0xFFFFFFFF.toInt(),
-      raised = 0xFFFFFFFF.toInt(),
-      edge = 0xFFC8CDD4.toInt(),
-      ink = 0xFF111318.toInt(),
-      ink2 = 0xFF4A4F57.toInt(),
-      ink3 = 0xFF6B7280.toInt(),
-      accent = 0xFF2E5BEF.toInt(),
-      accentHi = 0xFF2E5BEF.toInt(),
-      risk = 0xFFB42318.toInt(),
-      riskWash = 0xFFFDECEA.toInt(),
-      ok = 0xFF1F7A54.toInt(),
-    )
-
-    /** English, used until the JS side sends its translated labels. */
-    private val DEFAULT_LABELS: Map<String, String> = linkedMapOf(
-      "scan" to "Scan",
-      "scanPage" to "Scan this page",
-      "scanAgain" to "Scan again",
-      "results" to "Results",
-      "siteComments" to "Site comments",
-      "queue" to "Queue",
-      "stop" to "Stop",
-      "now" to "Now",
-      "all" to "All",
-      "readSiteComments" to "Read site comments",
-      "siteUrlHint" to "Review site (optional)",
-      "cancel" to "Cancel",
-      "close" to "Close",
-      "queued" to "Queued",
-      "running" to "Running",
-      "reading" to "Reading",
-      "done" to "Done",
-      "error" to "Error",
-      "cancelled" to "Cancelled",
-      "productScan" to "Product scan",
-      "sources" to "Sources",
-      "queueFull" to "Queue is full",
-      "dragHint" to "Drag Kriko, or tap it to open the scan panel",
-      "notificationTitle" to "Kriko screen scan is active",
-      "notificationText" to "Tap the floating bubble to scan one screen when you choose.",
-      "stopSharing" to "Stop screen sharing",
-      "channelName" to "Floating screen scan",
-      "channelDescription" to "Shows when Kriko's user-started floating scan session is active.",
-      "queueEmpty" to "Scan a product page. Each scan joins the queue here.",
-      "answerEmpty" to "Scan a product page to see its answer and sources here.",
-      "captureFailed" to "Could not read that screen. Try scanning again.",
-      "sourceFailed" to "Could not open that source.",
-    )
-
-    private fun paletteFor(name: String?): Palette = when (name) {
-      "paper" -> PAPER
-      "white" -> WHITE
-      else -> DARK
-    }
-
+    /** A scanner session exists: the puck is up, whether or not capture is live. */
     @Volatile var isActive: Boolean = false
+      private set
+
+    /** Android's screen-capture grant is held, so Scan can answer without asking. */
+    @Volatile var captureLive: Boolean = false
       private set
   }
 
   private lateinit var windowManager: WindowManager
+  private lateinit var ui: KrikoUi
+  private lateinit var fonts: KrikoFonts
+  private lateinit var answer: KrikoAnswer
+  private val motion = KrikoMotion()
   private var projection: MediaProjection? = null
   private var display: VirtualDisplay? = null
   private var reader: ImageReader? = null
@@ -229,13 +121,21 @@ class KrikoOverlayService : Service() {
   private var selectedJob = ""
   /** Finished answers the reader has already looked at; the rest wear a badge. */
   private val seen = mutableSetOf<String>()
+  private var lastReady = 0
+  /** A scan the reader asked for while capture was paused; it runs once consent returns. */
+  private var pendingResume: Pair<String, String>? = null
+  private val imageWorker = Executors.newSingleThreadExecutor()
+  private var thumbPath = ""
+  private var thumbBitmap: Bitmap? = null
+
+  private val palette: Palette get() = ui.palette
 
   // The puck.
   private var puck: FrameLayout? = null
+  private var puckView: KrikoPuckView? = null
   private var puckParams: WindowManager.LayoutParams? = null
-  private var puckRing: RingView? = null
   private var puckBadge: TextView? = null
-  private var puckSnap: ValueAnimator? = null
+  private var puckSnap: android.animation.ValueAnimator? = null
   private var puckYBeforeSheet: Int? = null
 
   // The tray.
@@ -247,10 +147,11 @@ class KrikoOverlayService : Service() {
   // The sheet.
   private var sheet: View? = null
   private var sheetParams: WindowManager.LayoutParams? = null
+  private var sheetThumb: ScanThumb? = null
   private var sheetTitle: TextView? = null
   private var sheetStatus: TextView? = null
   private var sheetBar: View? = null
-  private var sheetScroll: ScrollView? = null
+  private var sheetScroll: CappedScroll? = null
   private var sheetBody: LinearLayout? = null
   private var sheetChips: LinearLayout? = null
   private var sheetChipsScroll: View? = null
@@ -258,7 +159,7 @@ class KrikoOverlayService : Service() {
   private var siteUrlInput: EditText? = null
   private var siteSection: View? = null
   private var siteOpen = false
-  private var answerView: TextView? = null
+  private var answerBox: LinearLayout? = null
   private var stepView: TextView? = null
   private var renderedSignature: String? = null
 
@@ -273,37 +174,26 @@ class KrikoOverlayService : Service() {
   private var appForeground = true
   /** The first-run hint (the tray, open once) waits for the reader to leave the app. */
   private var hintPending = false
-  private var palette: Palette = DARK
-  private val labels: MutableMap<String, String> = LinkedHashMap(DEFAULT_LABELS)
-  private val activeMotion = WeakHashMap<View, ValueAnimator>()
-  private val gentleSpring = TimeInterpolator { input ->
-    val t = input.coerceIn(0f, 1f).toDouble()
-    (1.0 - exp(-8.2 * t) * cos(10.5 * t)).coerceIn(0.0, 1.08).toFloat()
-  }
-  private val geistRegular by lazy { runCatching { Typeface.createFromAsset(assets, "fonts/KrikoGeist-Regular.ttf") }.getOrDefault(Typeface.DEFAULT) }
-  private val geistMedium by lazy { runCatching { Typeface.createFromAsset(assets, "fonts/KrikoGeist-Medium.ttf") }.getOrDefault(Typeface.DEFAULT) }
-  private val geistSemiBold by lazy { runCatching { Typeface.createFromAsset(assets, "fonts/KrikoGeist-SemiBold.ttf") }.getOrDefault(Typeface.DEFAULT_BOLD) }
   @Volatile private var captureMode = "research"
   @Volatile private var reviewSite = ""
   private val mainHandler = Handler(android.os.Looper.getMainLooper())
-  private val dimRunnable = Runnable { dimPuck() }
-  private val projectionCallback = object : MediaProjection.Callback() {
-    override fun onStop() {
-      if (!shuttingDown) {
-        shuttingDown = true
-        releaseResources(stopProjection = false)
-        isActive = false
-        stopForeground(STOP_FOREGROUND_REMOVE)
-        sendSession(false)
-        KrikoOverlayModule.finishHeadlessSession()
-        stopSelf()
-      }
+  private val settleRunnable = Runnable { settlePuck() }
+  private val captureWatchdog = Runnable {
+    if (capturePending) {
+      finishCapture(null)
+      showToast(L("captureFailed"))
     }
+  }
+  private val projectionCallback = object : MediaProjection.Callback() {
+    override fun onStop() = onProjectionStopped()
   }
 
   override fun onCreate() {
     super.onCreate()
     windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
+    ui = KrikoUi(this).loadSaved()
+    fonts = KrikoFonts(this)
+    answer = KrikoAnswer(this, ui, fonts) { openSource(it) }
     createNotificationChannel()
   }
 
@@ -329,7 +219,17 @@ class KrikoOverlayService : Service() {
         }
         return START_NOT_STICKY
       }
-      ACTION_START -> startProjection(intent)
+      ACTION_START, ACTION_PROJECTION -> {
+        if (isActive && !shuttingDown) {
+          if (!captureLive) attachProjection(intent)
+        } else {
+          startProjection(intent)
+        }
+      }
+      ACTION_PROJECTION_DENIED -> {
+        pendingResume = null
+        showToast(L("resumeFailed"))
+      }
     }
     return START_NOT_STICKY
   }
@@ -347,29 +247,13 @@ class KrikoOverlayService : Service() {
     try {
       startForeground(NOTIFICATION_ID, buildNotification())
       val manager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
-      val currentProjection = manager.getMediaProjection(resultCode, data)
+      val current = manager.getMediaProjection(resultCode, data)
         ?: throw IllegalStateException("Android could not start the screen capture session.")
-      projection = currentProjection
-      currentProjection.registerCallback(projectionCallback, mainHandler)
-
-      val bounds = displayBounds()
-      val density = resources.configuration.densityDpi
-      val imageReader = ImageReader.newInstance(bounds.width(), bounds.height(), PixelFormat.RGBA_8888, 2)
-      reader = imageReader
-      captureThread = HandlerThread("KrikoOverlayCapture").also { it.start() }
-      captureHandler = Handler(captureThread!!.looper)
-      imageReader.setOnImageAvailableListener({ source -> onFrameAvailable(source) }, captureHandler)
-
-      // The surface stays detached between user scans. The projection token and
-      // virtual display remain alive, but no frames are delivered or retained.
-      display = currentProjection.createVirtualDisplay(
-        "KrikoOnDemandScreenScan", bounds.width(), bounds.height(), density,
-        DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR, null, null, mainHandler,
-      )
+      setupCapture(current)
       if (!Settings.canDrawOverlays(this)) throw IllegalStateException("Overlay permission was revoked.")
       isActive = true
       showPuck()
-      sendSession(true)
+      sendSession(true, paused = false)
       KrikoOverlayModule.serviceReady()
       // Once the reader has left the app for their own page, show what to do a
       // single time, so the first thing on that screen is the button that matters.
@@ -377,6 +261,101 @@ class KrikoOverlayService : Service() {
     } catch (error: Exception) {
       failStart(error.message ?: "Could not start the screen scan session.")
     }
+  }
+
+  /**
+   * Capture consent came back to a session that survived the last grant (the
+   * phone locked, or the system's own cast control stopped it). Reuse the
+   * windows already on screen and carry on with the scan that asked for it.
+   */
+  private fun attachProjection(intent: Intent) {
+    val resultCode = intent.getIntExtra(EXTRA_RESULT_CODE, 0)
+    val data = intent.getParcelableExtra<Intent>(EXTRA_RESULT_DATA)
+    if (data == null || resultCode == 0) {
+      pendingResume = null
+      showToast(L("resumeFailed"))
+      KrikoOverlayModule.startRejected("Screen capture permission data is missing. Start the session again.")
+      return
+    }
+    try {
+      startForeground(NOTIFICATION_ID, buildNotification())
+      val manager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+      val current = manager.getMediaProjection(resultCode, data)
+        ?: throw IllegalStateException("Android could not start the screen capture session.")
+      setupCapture(current)
+      syncPuck()
+      updateNotification()
+      sendSession(true, paused = false)
+      KrikoOverlayModule.serviceReady()
+      val resume = pendingResume
+      pendingResume = null
+      if (resume != null) {
+        // Let the permission dialog finish leaving before the screen is read.
+        mainHandler.postDelayed({
+          if (isActive && !shuttingDown) requestCapture(resume.first, resume.second)
+        }, 750)
+      }
+    } catch (error: Exception) {
+      tearDownCapture(stopProjection = true)
+      pendingResume = null
+      syncPuck()
+      showToast(L("resumeFailed"))
+      KrikoOverlayModule.startRejected(error.message ?: "Could not start the screen scan session.")
+    }
+  }
+
+  /** The projection, its reader and the display that feeds it. */
+  private fun setupCapture(current: MediaProjection) {
+    projection = current
+    current.registerCallback(projectionCallback, mainHandler)
+    val bounds = displayBounds()
+    val density = resources.configuration.densityDpi
+    val imageReader = ImageReader.newInstance(bounds.width(), bounds.height(), PixelFormat.RGBA_8888, 2)
+    reader = imageReader
+    captureThread = HandlerThread("KrikoOverlayCapture").also { it.start() }
+    captureHandler = Handler(captureThread!!.looper)
+    imageReader.setOnImageAvailableListener({ source -> onFrameAvailable(source) }, captureHandler)
+    // The surface stays detached between user scans. The projection token and
+    // virtual display remain alive, but no frames are delivered or retained.
+    display = current.createVirtualDisplay(
+      "KrikoOnDemandScreenScan", bounds.width(), bounds.height(), density,
+      DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR, null, null, mainHandler,
+    )
+    captureLive = true
+  }
+
+  private fun tearDownCapture(stopProjection: Boolean) {
+    captureLive = false
+    capturePending = false
+    mainHandler.removeCallbacks(captureWatchdog)
+    try { display?.setSurface(null) } catch (_: Exception) { }
+    try { display?.release() } catch (_: Exception) { }
+    display = null
+    try { reader?.setOnImageAvailableListener(null, null) } catch (_: Exception) { }
+    try { reader?.close() } catch (_: Exception) { }
+    reader = null
+    captureThread?.quitSafely()
+    captureThread = null
+    captureHandler = null
+    projection?.let { current ->
+      try { current.unregisterCallback(projectionCallback) } catch (_: Exception) { }
+      if (stopProjection) try { current.stop() } catch (_: Exception) { }
+    }
+    projection = null
+  }
+
+  /**
+   * Android ended the capture grant: the phone locked, the reader pressed the
+   * system's own stop control, or the system reclaimed it. The scanner is not
+   * over. The puck stays, shows it is paused, and the next Scan asks again.
+   */
+  private fun onProjectionStopped() {
+    if (shuttingDown || !isActive) return
+    tearDownCapture(stopProjection = false)
+    restoreWindows()
+    syncPuck()
+    updateNotification()
+    sendSession(true, paused = true)
   }
 
   private fun displayBounds(): Rect {
@@ -391,6 +370,19 @@ class KrikoOverlayService : Service() {
     return Rect(0, 0, metrics.widthPixels, metrics.heightPixels)
   }
 
+  /** The height of the status bar (and any cut-out), so the sheet starts below it. */
+  private fun statusBarInset(): Int {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+      try {
+        val insets = windowManager.currentWindowMetrics.windowInsets.getInsetsIgnoringVisibility(
+          WindowInsets.Type.statusBars() or WindowInsets.Type.displayCutout())
+        if (insets.top > 0) return insets.top
+      } catch (_: Exception) { }
+    }
+    val id = resources.getIdentifier("status_bar_height", "dimen", "android")
+    return if (id > 0) resources.getDimensionPixelSize(id) else dp(26)
+  }
+
   private fun failStart(message: String) {
     shuttingDown = true
     releaseResources(stopProjection = true)
@@ -401,22 +393,16 @@ class KrikoOverlayService : Service() {
   }
 
   /** One translated word, or its English default. */
-  private fun L(key: String): String = labels[key] ?: DEFAULT_LABELS[key] ?: key
+  private fun L(key: String): String = ui.label(key)
 
   // ------------------------------------------------------------------ UI feed --
 
   /**
-   * Read `{ theme, labels }` without touching views. Called before the first
-   * puck exists, so the window is built in the right palette already.
+   * Read `{ theme, labels, puckOpacity }` without touching views. Called before
+   * the first puck exists, so the window is built in the right palette already.
    */
   private fun readUi(json: String) {
-    val parsed = try { JSONObject(json) } catch (_: Exception) { return }
-    if (parsed.has("theme")) palette = paletteFor(parsed.optString("theme"))
-    val incoming = parsed.optJSONObject("labels") ?: return
-    for (key in DEFAULT_LABELS.keys) {
-      val value = incoming.optString(key)
-      if (value.isNotBlank()) labels[key] = value
-    }
+    if (!ui.apply(json)) return
     // The channel is visible in Android settings; keep its name and
     // description in the reader's language as well.
     createNotificationChannel()
@@ -490,8 +476,8 @@ class KrikoOverlayService : Service() {
   /** Bring the puck (and an open sheet) back after a capture or after leaving the app. */
   private fun restoreWindows() {
     if (appForeground) return
-    puck?.let { animateIn(it, 0.9f, 220L) }
-    sheet?.let { animateIn(it, 0.96f, 200L) }
+    puck?.let { motion.animateIn(it, 0.9f, 220L) }
+    sheet?.let { motion.animateIn(it, 0.97f, 200L, fromTranslationY = -dp(10).toFloat()) }
   }
 
   /** Hide whatever a rebuild just created if Kriko's own screen is in front. */
@@ -501,10 +487,16 @@ class KrikoOverlayService : Service() {
     sheet?.visibility = View.GONE
   }
 
-  /** Replace the ongoing notification's words and colour without touching capture. */
+  /**
+   * Replace the ongoing notification's words without touching the foreground
+   * state: re-declaring the capture type needs a live grant, which a paused
+   * session does not have.
+   */
   private fun updateNotification() {
     if (!isActive || shuttingDown) return
-    try { startForeground(NOTIFICATION_ID, buildNotification()) } catch (_: Exception) { }
+    try {
+      (getSystemService(NOTIFICATION_SERVICE) as NotificationManager).notify(NOTIFICATION_ID, buildNotification())
+    } catch (_: Exception) { }
   }
 
   private fun buildNotification(): Notification {
@@ -520,7 +512,7 @@ class KrikoOverlayService : Service() {
     return builder
       .setSmallIcon(android.R.drawable.ic_menu_camera)
       .setContentTitle(L("notificationTitle"))
-      .setContentText(L("notificationText"))
+      .setContentText(if (captureLive || !isActive) L("notificationText") else L("notificationPausedText"))
       .setColor(palette.accent)
       .setOngoing(true)
       .addAction(android.R.drawable.ic_menu_close_clear_cancel, L("stopSharing"), pending)
@@ -528,7 +520,7 @@ class KrikoOverlayService : Service() {
   }
 
   private fun createNotificationChannel() {
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || !::ui.isInitialized) return
     val channel = NotificationChannel(CHANNEL_ID, L("channelName"),
       NotificationManager.IMPORTANCE_LOW).apply {
       description = L("channelDescription")
@@ -545,11 +537,6 @@ class KrikoOverlayService : Service() {
     status == "queued" || status == "running" || status == "reading"
 
   private fun activeCount(): Int = (0 until jobs.length()).count { isActiveStatus(statusOf(it)) }
-
-  private fun hasRunningJob(): Boolean = (0 until jobs.length()).any {
-    val status = statusOf(it)
-    status == "running" || status == "reading"
-  }
 
   /** Finished answers nobody has opened yet. */
   private fun readyCount(): Int = (0 until jobs.length()).count { index ->
@@ -575,59 +562,43 @@ class KrikoOverlayService : Service() {
   // --------------------------------------------------------------------- puck --
 
   /**
-   * One round K. The window is the disc plus a little air for its shadow and
-   * badge; the reader drags it anywhere and it settles on the nearest edge.
+   * One page-shaped K. The window is the page plus a little air for the badge;
+   * the reader drags it anywhere and it settles on the nearest edge.
    */
   private fun showPuck() {
     if (puck != null || !Settings.canDrawOverlays(this)) return
     val p = palette
-    val disc = FrameLayout(this).apply {
-      background = puckBackground(p)
-      elevation = dp(8).toFloat()
-      outlineProvider = roundOutline(PUCK_DP / 2)
-    }
-    disc.addView(TextView(this).apply {
-      text = "K"
-      setTextColor(ON_ACCENT)
-      textSize = 21f
-      typeface = geistSemiBold
-      includeFontPadding = false
-      gravity = Gravity.CENTER
-    }, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
-    val ring = RingView(this)
-    puckRing = ring
-    disc.addView(ring, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
-
+    val view = KrikoPuckView(this, ui, fonts)
+    puckView = view
     val root = FrameLayout(this).apply {
       clipChildren = false
       clipToPadding = false
       contentDescription = L("dragHint")
     }
-    root.addView(disc, FrameLayout.LayoutParams(dp(PUCK_DP), dp(PUCK_DP)).apply {
+    root.addView(view, FrameLayout.LayoutParams(dp(KrikoPuckView.PAGE_W_DP), dp(KrikoPuckView.PAGE_H_DP)).apply {
       setMargins(dp(PUCK_PAD_DP), dp(PUCK_PAD_DP), dp(PUCK_PAD_DP), dp(PUCK_PAD_DP))
     })
     val badge = TextView(this).apply {
-      setTextColor(ON_ACCENT)
+      setTextColor(KrikoTheme.ON_ACCENT)
       textSize = 10.5f
-      typeface = geistSemiBold
+      typeface = fonts.semiBold
       includeFontPadding = false
       gravity = Gravity.CENTER
       background = capsule(p.ok, 9, p.panel)
       minWidth = dp(18)
       setPadding(dp(5), dp(1), dp(5), dp(1))
       visibility = View.GONE
-      elevation = dp(10).toFloat()
     }
     puckBadge = badge
     root.addView(badge, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(18),
       Gravity.TOP or Gravity.END).apply { setMargins(0, dp(1), dp(1), 0) })
 
     puck = root
-    val size = dp(PUCK_DP + PUCK_PAD_DP * 2)
+    val width = dp(KrikoPuckView.PAGE_W_DP + PUCK_PAD_DP * 2)
     val bounds = displayBounds()
     puckParams = overlayParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
       Gravity.TOP or Gravity.START).apply {
-      x = bounds.width() - size - dp(EDGE_DP)
+      x = bounds.width() - width - dp(EDGE_DP)
       y = dp(210)
     }
     root.alpha = 0f
@@ -635,53 +606,54 @@ class KrikoOverlayService : Service() {
     root.scaleY = 0.8f
     installPuckTouch(root)
     windowManager.addView(root, puckParams)
-    if (appForeground) root.visibility = View.GONE else animateIn(root, 0.8f, 260L)
+    if (appForeground) root.visibility = View.GONE else motion.animateIn(root, 0.8f, 260L)
+    lastReady = readyCount()
     syncPuck()
-    scheduleDim()
+    scheduleSettle()
   }
 
-  private fun puckBackground(p: Palette): Drawable = GradientDrawable(
-    GradientDrawable.Orientation.TOP_BOTTOM,
-    intArrayOf(mix(p.accent, ON_ACCENT, 0.2f), p.accent),
-  ).apply {
-    shape = GradientDrawable.OVAL
-    setStroke(dp(1), tint(ON_ACCENT, 0.26f))
-  }
-
-  /** Spinner ring while research runs, green count when answers are waiting. */
+  /** Scanning sweep while research runs, a grey page while capture is paused. */
   private fun syncPuck() {
     val running = activeCount() > 0
-    puckRing?.setRunning(running)
+    val view = puckView
+    view?.setMode(when {
+      running -> KrikoPuckView.Mode.SCANNING
+      !captureLive -> KrikoPuckView.Mode.PAUSED
+      else -> KrikoPuckView.Mode.IDLE
+    })
     val ready = readyCount()
     puckBadge?.let { badge ->
       badge.text = ready.toString()
       badge.visibility = if (ready > 0) View.VISIBLE else View.GONE
       badge.background = capsule(palette.ok, 9, palette.panel)
     }
+    // An answer arriving is the one thing worth turning the page over for.
+    if (ready > lastReady && puck?.visibility == View.VISIBLE) view?.flip()
+    lastReady = ready
     puck?.contentDescription = when {
       ready > 0 -> "${L("dragHint")} · ${L("results")} $ready"
       running -> "${L("dragHint")} · ${L("running")}"
+      !captureLive -> "${L("dragHint")} · ${L("paused")}"
       else -> L("dragHint")
     }
-    if (running || ready > 0) wakePuck() else scheduleDim()
+    if (running || ready > 0) wakePuck() else scheduleSettle()
   }
 
   private fun wakePuck() {
-    mainHandler.removeCallbacks(dimRunnable)
-    val view = puck ?: return
-    if (view.visibility == View.VISIBLE && view.alpha < 1f) animateView(view, 1f, 1f, 0f, 160L, spring = false)
+    mainHandler.removeCallbacks(settleRunnable)
+    puckView?.awaken()
   }
 
-  private fun scheduleDim() {
-    mainHandler.removeCallbacks(dimRunnable)
-    mainHandler.postDelayed(dimRunnable, DIM_AFTER_MS)
+  private fun scheduleSettle() {
+    mainHandler.removeCallbacks(settleRunnable)
+    mainHandler.postDelayed(settleRunnable, SETTLE_AFTER_MS)
   }
 
-  private fun dimPuck() {
-    val view = puck ?: return
+  /** Back to the reader's chosen opacity once nothing wants their attention. */
+  private fun settlePuck() {
     // Idle means nothing is open, nothing is running and nothing is waiting.
     if (tray != null || sheet != null || activeCount() > 0 || readyCount() > 0) return
-    if (view.visibility == View.VISIBLE) animateView(view, DIM_ALPHA, 1f, 0f, 320L, spring = false)
+    if (puck?.visibility == View.VISIBLE) puckView?.settle()
   }
 
   /** Slide the puck to the nearer screen edge once the finger lets go. */
@@ -689,7 +661,7 @@ class KrikoOverlayService : Service() {
     val view = puck ?: return
     val params = puckParams ?: return
     val bounds = displayBounds()
-    val width = if (view.width > 0) view.width else dp(PUCK_DP + PUCK_PAD_DP * 2)
+    val width = if (view.width > 0) view.width else dp(KrikoPuckView.PAGE_W_DP + PUCK_PAD_DP * 2)
     val left = dp(EDGE_DP)
     val right = (bounds.width() - width - dp(EDGE_DP)).coerceAtLeast(left)
     val target = if (params.x + width / 2 < bounds.width() / 2) left else right
@@ -700,9 +672,9 @@ class KrikoOverlayService : Service() {
       return
     }
     val from = params.x
-    puckSnap = ValueAnimator.ofFloat(0f, 1f).apply {
+    puckSnap = android.animation.ValueAnimator.ofFloat(0f, 1f).apply {
       duration = 260
-      interpolator = gentleSpring
+      interpolator = motion.spring
       addUpdateListener { animation ->
         if (puck !== view) return@addUpdateListener
         params.x = (from + (target - from) * (animation.animatedValue as Float)).roundToInt()
@@ -727,30 +699,32 @@ class KrikoOverlayService : Service() {
           downX = event.rawX; downY = event.rawY
           startX = params.x; startY = params.y
           moved = false
-          mainHandler.removeCallbacks(dimRunnable)
-          view.alpha = 1f
-          animateView(view, 1f, 0.94f, 0f, 90L, spring = true)
+          mainHandler.removeCallbacks(settleRunnable)
+          puckView?.awaken()
+          puckView?.setPress(true)
           true
         }
         MotionEvent.ACTION_MOVE -> {
           val dx = (event.rawX - downX).roundToInt()
           val dy = (event.rawY - downY).roundToInt()
-          if (kotlin.math.abs(dx) + kotlin.math.abs(dy) > touchSlop) moved = true
+          if (abs(dx) + abs(dy) > touchSlop) moved = true
           if (moved) {
             val bounds = displayBounds()
             params.x = (startX + dx).coerceIn(0, (bounds.width() - view.width).coerceAtLeast(0))
             params.y = (startY + dy).coerceIn(0, (bounds.height() - view.height).coerceAtLeast(0))
             try { windowManager.updateViewLayout(view, params) } catch (_: Exception) { }
+            // The reader chose this spot; do not put the puck back when the sheet closes.
+            puckYBeforeSheet = null
             // A tray that stays behind while the puck moves points at nothing.
             if (tray != null) removeTray(animated = false)
           }
           true
         }
         MotionEvent.ACTION_UP -> {
-          animateView(view, 1f, 1f, 0f, 160L, spring = true)
+          puckView?.setPress(false)
           if (moved) {
             snapPuck()
-            scheduleDim()
+            scheduleSettle()
           } else {
             view.performClick()
             onPuckTap()
@@ -758,8 +732,8 @@ class KrikoOverlayService : Service() {
           true
         }
         MotionEvent.ACTION_CANCEL -> {
-          animateView(view, 1f, 1f, 0f, 160L, spring = true)
-          scheduleDim()
+          puckView?.setPress(false)
+          scheduleSettle()
           true
         }
         else -> true
@@ -794,12 +768,23 @@ class KrikoOverlayService : Service() {
       orientation = LinearLayout.VERTICAL
       background = capsule(p.panel, 22, p.edge)
       elevation = dp(16).toFloat()
-      outlineProvider = roundOutline(22)
+      outlineProvider = KrikoDraw.roundOutline(this@KrikoOverlayService, 22)
       clipToOutline = true
       setPadding(dp(10), dp(10), dp(10), dp(6))
     }
+    if (!captureLive) {
+      card.addView(TextView(this).apply {
+        text = L("paused")
+        setTextColor(p.ink3)
+        textSize = 11.5f
+        typeface = fonts.medium
+        includeFontPadding = false
+        gravity = Gravity.CENTER_VERTICAL
+        setPadding(dp(6), 0, dp(6), 0)
+      }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(24)).apply { bottomMargin = dp(4) })
+    }
     card.addView(
-      actionRow("scan", L("scanPage"), p.accent, ON_ACCENT, tint(ON_ACCENT, 0.24f), Color.TRANSPARENT, 52, 15f) {
+      actionRow("scan", L("scanPage"), p.accent, KrikoTheme.ON_ACCENT, tint(KrikoTheme.ON_ACCENT, 0.24f), Color.TRANSPARENT, 52, 15f) {
         removeTray(animated = false)
         requestCapture("research")
       },
@@ -811,9 +796,9 @@ class KrikoOverlayService : Service() {
       openSheet()
     }
     val badge = TextView(this).apply {
-      setTextColor(ON_ACCENT)
+      setTextColor(KrikoTheme.ON_ACCENT)
       textSize = 10.5f
-      typeface = geistSemiBold
+      typeface = fonts.semiBold
       includeFontPadding = false
       gravity = Gravity.CENTER
       setPadding(dp(6), dp(1), dp(6), dp(1))
@@ -847,7 +832,7 @@ class KrikoOverlayService : Service() {
     )
     val height = card.measuredHeight
     val params = puckParams
-    val puckWidth = if (anchor.width > 0) anchor.width else dp(PUCK_DP + PUCK_PAD_DP * 2)
+    val puckWidth = if (anchor.width > 0) anchor.width else dp(KrikoPuckView.PAGE_W_DP + PUCK_PAD_DP * 2)
     val puckCenterX = (params?.x ?: 0) + puckWidth / 2
     val opensRight = puckCenterX < bounds.width() / 2
     val gap = dp(6)
@@ -873,7 +858,7 @@ class KrikoOverlayService : Service() {
     card.pivotY = dp(26).toFloat()
     tray = card
     windowManager.addView(card, trayParams)
-    animateIn(card, 0.92f, 220L)
+    motion.animateIn(card, 0.92f, 220L)
     wakePuck()
     syncTray()
   }
@@ -895,19 +880,23 @@ class KrikoOverlayService : Service() {
     trayBadge = null
     trayClosedAt = SystemClock.uptimeMillis()
     val dispose = {
-      activeMotion.remove(view)?.cancel()
+      motion.cancel(view)
       try { windowManager.removeView(view) } catch (_: Exception) { }
     }
     if (animated && animationsEnabled()) {
-      animateView(view, 0f, 0.94f, 0f, 140L, spring = false) { dispose() }
+      motion.animate(view, 0f, 0.94f, 0f, 140L, spring = false) { dispose() }
     } else {
       dispose()
     }
-    scheduleDim()
+    scheduleSettle()
   }
 
   // -------------------------------------------------------------------- sheet --
 
+  /**
+   * The answer sheet. It hangs from the top of the screen, under the status bar,
+   * where a glance finds it and the reader's own page stays visible below.
+   */
   private fun openSheet() {
     if (sheet != null) {
       renderSheet()
@@ -921,67 +910,68 @@ class KrikoOverlayService : Service() {
     val screenHeightDp = (bounds.height() / density).roundToInt()
     val sheetWidthDp = minOf(404, screenWidthDp - 16).coerceAtLeast(240)
     // The body gives way first; header, chips and buttons always stay in reach.
-    val bodyCapDp = (screenHeightDp * 0.5 - 150).toInt().coerceIn(96, 400)
+    val bodyCapDp = (screenHeightDp * 0.62 - 205).toInt().coerceIn(110, 470)
 
     val root = LinearLayout(this).apply {
       orientation = LinearLayout.VERTICAL
       background = capsule(p.panel, 26, p.edge)
       elevation = dp(20).toFloat()
-      outlineProvider = roundOutline(26)
+      outlineProvider = KrikoDraw.roundOutline(this@KrikoOverlayService, 26)
       clipToOutline = true
-      setPadding(dp(16), dp(8), dp(16), dp(12))
+      setPadding(dp(16), dp(14), dp(16), dp(12))
     }
-    root.addView(View(this).apply { background = capsule(tint(p.ink, 0.2f), 2, Color.TRANSPARENT) },
-      LinearLayout.LayoutParams(dp(34), dp(4)).apply {
-        gravity = Gravity.CENTER_HORIZONTAL
-        bottomMargin = dp(8)
-      })
 
     val header = LinearLayout(this).apply {
       orientation = LinearLayout.HORIZONTAL
       gravity = Gravity.CENTER_VERTICAL
     }
+    val thumb = ScanThumb(this, ui, fonts)
+    sheetThumb = thumb
+    header.addView(thumb, LinearLayout.LayoutParams(dp(46), dp(58)).apply { marginEnd = dp(12) })
+    val titleColumn = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
     val title = TextView(this).apply {
       setTextColor(p.ink)
       textSize = 16f
-      typeface = geistSemiBold
+      typeface = fonts.semiBold
       maxLines = 2
-      ellipsize = android.text.TextUtils.TruncateAt.END
+      ellipsize = TextUtils.TruncateAt.END
     }
     sheetTitle = title
-    header.addView(title, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+    titleColumn.addView(title, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
     val status = TextView(this).apply {
       textSize = 11f
-      typeface = geistMedium
+      typeface = fonts.medium
       includeFontPadding = false
       gravity = Gravity.CENTER
       setPadding(dp(9), dp(4), dp(9), dp(4))
       visibility = View.GONE
     }
     sheetStatus = status
-    header.addView(status, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-      marginStart = dp(8)
+    titleColumn.addView(status, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+      topMargin = dp(6)
     })
+    header.addView(titleColumn, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
     val close = TextView(this).apply {
       text = "×"
       setTextColor(p.ink2)
       textSize = 26f
-      typeface = geistRegular
+      typeface = fonts.regular
       includeFontPadding = false
       gravity = Gravity.CENTER
       contentDescription = L("close")
       background = capsule(Color.TRANSPARENT, 22, Color.TRANSPARENT, tint(p.ink, 0.10f))
-      installPressMotion(this)
+      motion.pressMotion(this)
       setOnClickListener { hideSheetAnimated() }
     }
     header.addView(close, LinearLayout.LayoutParams(dp(44), dp(44)).apply { marginStart = dp(4); marginEnd = -dp(8) })
     root.addView(header)
+    installSheetDrag(header, root)
 
     val bar = IndeterminateBar(this, tint(p.ink, 0.08f), p.accentHi)
     bar.visibility = View.GONE
     sheetBar = bar
     root.addView(bar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(3)).apply {
-      topMargin = dp(4)
+      topMargin = dp(10)
       bottomMargin = dp(2)
     })
 
@@ -993,7 +983,7 @@ class KrikoOverlayService : Service() {
     sheetScroll = scroll
     val body = LinearLayout(this).apply {
       orientation = LinearLayout.VERTICAL
-      setPadding(0, dp(2), 0, dp(4))
+      setPadding(0, dp(4), 0, dp(4))
     }
     sheetBody = body
     scroll.addView(body)
@@ -1028,36 +1018,77 @@ class KrikoOverlayService : Service() {
 
     sheet = root
     sheetParams = overlayParams(dp(sheetWidthDp), ViewGroup.LayoutParams.WRAP_CONTENT,
-      Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply {
-      y = dp(26)
+      Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply {
+      y = statusBarInset() + dp(8)
       softInputMode = WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
     }
     root.alpha = 0f
-    root.scaleX = 0.96f
-    root.scaleY = 0.96f
+    root.scaleX = 0.97f
+    root.scaleY = 0.97f
+    root.translationY = -dp(26).toFloat()
     root.pivotX = (dp(sheetWidthDp) / 2).toFloat()
-    root.pivotY = Float.MAX_VALUE
+    root.pivotY = 0f
     windowManager.addView(root, sheetParams)
-    if (appForeground) root.visibility = View.GONE else animateIn(root, 0.96f, 240L)
-    keepPuckAboveSheet(screenHeightDp, bodyCapDp)
+    if (appForeground) root.visibility = View.GONE
+    else motion.animateIn(root, 0.97f, 260L, fromTranslationY = -dp(26).toFloat())
+    root.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> keepPuckClearOfSheet() }
     wakePuck()
     renderedSignature = null
     renderSheet()
   }
 
-  /** If the sheet would cover the puck, lift the puck above it until the sheet closes. */
-  private fun keepPuckAboveSheet(screenHeightDp: Int, bodyCapDp: Int) {
+  /** Dragging the header upward folds the sheet away, the way a notification goes. */
+  private fun installSheetDrag(handle: View, target: View) {
+    var downY = 0f
+    var dragging = false
+    val slop = ViewConfiguration.get(this).scaledTouchSlop
+    handle.setOnTouchListener { _, event ->
+      when (event.actionMasked) {
+        MotionEvent.ACTION_DOWN -> {
+          downY = event.rawY
+          dragging = false
+          true
+        }
+        MotionEvent.ACTION_MOVE -> {
+          val dy = event.rawY - downY
+          if (!dragging && dy < -slop) dragging = true
+          if (dragging) {
+            motion.cancel(target)
+            target.translationY = dy.coerceAtMost(0f)
+            target.alpha = (1f + dy / dp(220)).coerceIn(0.35f, 1f)
+          }
+          true
+        }
+        MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+          if (dragging && target.translationY < -dp(54)) {
+            hideSheetAnimated()
+          } else if (dragging) {
+            motion.animate(target, 1f, 1f, 0f, 220L, spring = true)
+          }
+          dragging = false
+          true
+        }
+        else -> true
+      }
+    }
+  }
+
+  /** If the sheet would cover the puck, move the puck just below it until the sheet closes. */
+  private fun keepPuckClearOfSheet() {
     val params = puckParams ?: return
     val view = puck ?: return
+    val shown = sheet ?: return
+    val sheetTop = sheetParams?.y ?: return
     val bounds = displayBounds()
-    // The sheet is at most its body cap plus about 250 dp of header and buttons.
-    val sheetTop = bounds.height() - dp(bodyCapDp + 250 + 26)
-    val puckHeight = if (view.height > 0) view.height else dp(PUCK_DP + PUCK_PAD_DP * 2)
-    if (params.y + puckHeight > sheetTop) {
-      puckYBeforeSheet = params.y
-      params.y = (sheetTop - puckHeight - dp(6)).coerceAtLeast(dp(24))
-      try { windowManager.updateViewLayout(view, params) } catch (_: Exception) { }
-    }
+    val sheetBottom = sheetTop + shown.height + dp(8)
+    val puckHeight = if (view.height > 0) view.height else dp(KrikoPuckView.PAGE_H_DP + PUCK_PAD_DP * 2)
+    val overlaps = params.y < sheetBottom && params.y + puckHeight > sheetTop
+    if (!overlaps) return
+    if (puckYBeforeSheet == null) puckYBeforeSheet = params.y
+    val target = sheetBottom.coerceAtMost((bounds.height() - puckHeight - dp(24)).coerceAtLeast(dp(24)))
+    if (target == params.y) return
+    params.y = target
+    try { windowManager.updateViewLayout(view, params) } catch (_: Exception) { }
   }
 
   private fun restorePuckHeight() {
@@ -1082,7 +1113,7 @@ class KrikoOverlayService : Service() {
       setHintTextColor(p.ink3)
       setTextColor(p.ink)
       textSize = 13.5f
-      typeface = geistRegular
+      typeface = fonts.regular
       setSingleLine(true)
       inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
       background = capsule(p.raised, 12, p.edge)
@@ -1121,7 +1152,7 @@ class KrikoOverlayService : Service() {
       text = "${L("siteComments")}  ${if (siteOpen) "▴" else "▾"}"
       setTextColor(p.ink3)
       textSize = 12f
-      typeface = geistMedium
+      typeface = fonts.medium
       includeFontPadding = false
       gravity = Gravity.CENTER_VERTICAL
       setPadding(dp(2), 0, dp(2), 0)
@@ -1150,6 +1181,7 @@ class KrikoOverlayService : Service() {
       append(id).append('|').append(status).append('|')
       append(item?.optString("title").orEmpty()).append('|')
       append(item?.optString("error").orEmpty()).append('|')
+      append(item?.optString("image").orEmpty()).append('|')
       append(item?.optJSONArray("sources")?.length() ?: 0).append('|')
       append(item?.optString("text").orEmpty().isNotBlank()).append('|')
       append(item?.optJSONArray("steps")?.length()?.let { it > 0 } ?: false).append('|')
@@ -1167,9 +1199,11 @@ class KrikoOverlayService : Service() {
     val p = palette
     val priorScroll = sheetScroll?.scrollY ?: 0
 
-    sheetTitle?.text = item?.optString("title")?.ifBlank { L("productScan") } ?: "Kriko"
+    sheetTitle?.text = item?.optString("title")?.ifBlank { L("productScan") } ?: L("assistTitle")
     val active = isActiveStatus(status)
     sheetBar?.visibility = if (active) View.VISIBLE else View.GONE
+    sheetThumb?.setActive(active)
+    showJobImage(item)
     sheetStatus?.let { chip ->
       if (status.isBlank()) {
         chip.visibility = View.GONE
@@ -1187,7 +1221,7 @@ class KrikoOverlayService : Service() {
     }
 
     body.removeAllViews()
-    answerView = null
+    answerBox = null
     stepView = null
     if (item == null) {
       body.addView(bodyText(L("answerEmpty"), 13.5f, p.ink2))
@@ -1201,28 +1235,33 @@ class KrikoOverlayService : Service() {
       }
       val error = item.optString("error")
       if (error.isNotBlank()) body.addView(errorText(error))
-      val answer = item.optString("text")
-      if (answer.isNotBlank()) {
-        val view = answerText(answer, item.optJSONArray("sources") ?: JSONArray())
-        answerView = view
-        body.addView(view)
+      val text = item.optString("text")
+      if (text.isNotBlank()) {
+        val box = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        answerBox = box
+        body.addView(box, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        answer.render(box, text, item.optJSONArray("sources") ?: JSONArray())
+      } else if (active) {
+        // Nothing has arrived yet: show where the words will go.
+        body.addView(SkeletonView(this, tint(p.ink, 0.07f), tint(p.ink, 0.12f)),
+          LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+            topMargin = dp(10)
+            bottomMargin = dp(4)
+          })
       }
       addSources(body, item.optJSONArray("sources") ?: JSONArray())
     }
 
     renderChips()
-    renderActions(active, id)
+    renderActions(active, id, item?.optString("text").orEmpty())
     sheetScroll?.post { sheetScroll?.scrollTo(0, priorScroll) }
   }
 
   /** Streaming text and the latest step change far more often than the layout does. */
   private fun updateLiveViews(item: JSONObject?) {
     if (item == null) return
-    answerView?.let { view ->
-      view.text = Html.fromHtml(
-        markdownHtml(item.optString("text"), item.optJSONArray("sources") ?: JSONArray()),
-        Html.FROM_HTML_MODE_COMPACT,
-      )
+    answerBox?.let { box ->
+      answer.render(box, item.optString("text"), item.optJSONArray("sources") ?: JSONArray())
     }
     val steps = item.optJSONArray("steps") ?: JSONArray()
     val latest = if (steps.length() > 0) steps.optJSONObject(steps.length() - 1) else null
@@ -1234,7 +1273,49 @@ class KrikoOverlayService : Service() {
     view.text = text
     if (!animationsEnabled()) return
     view.alpha = minOf(view.alpha, 0.84f)
-    animateView(view, 1f, 1f, 0f, 135L, spring = false)
+    motion.animate(view, 1f, 1f, 0f, 135L, spring = false)
+  }
+
+  /** The scanned page's picture beside the title, decoded off the main thread. */
+  private fun showJobImage(item: JSONObject?) {
+    val thumb = sheetThumb ?: return
+    val raw = item?.optString("image").orEmpty()
+    val path = if (raw.startsWith("file:")) Uri.parse(raw).path.orEmpty() else raw
+    if (path.isBlank()) {
+      thumb.setBitmap(null)
+      return
+    }
+    val cached = thumbBitmap
+    if (path == thumbPath && cached != null) {
+      thumb.setBitmap(cached)
+      return
+    }
+    thumb.setBitmap(null)
+    val width = dp(92)
+    val height = dp(116)
+    imageWorker.execute {
+      val decoded = decodeThumb(path, width, height)
+      mainHandler.post {
+        if (decoded != null) {
+          thumbPath = path
+          thumbBitmap = decoded
+        }
+        val stillThis = currentJob()?.optString("image").orEmpty().let {
+          (if (it.startsWith("file:")) Uri.parse(it).path.orEmpty() else it) == path
+        }
+        if (stillThis) sheetThumb?.setBitmap(decoded)
+      }
+    }
+  }
+
+  private fun decodeThumb(path: String, wantWidth: Int, wantHeight: Int): Bitmap? = try {
+    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    BitmapFactory.decodeFile(path, bounds)
+    var sample = 1
+    while (bounds.outWidth / (sample * 2) >= wantWidth && bounds.outHeight / (sample * 2) >= wantHeight) sample *= 2
+    BitmapFactory.decodeFile(path, BitmapFactory.Options().apply { inSampleSize = sample })
+  } catch (_: Exception) {
+    null
   }
 
   /** Other scans, as chips; hidden while there is only one. */
@@ -1266,19 +1347,19 @@ class KrikoOverlayService : Service() {
       setPadding(dp(11), 0, dp(13), 0)
       contentDescription = raw
       isClickable = true
-      installPressMotion(this)
+      motion.pressMotion(this)
       setOnClickListener {
         selectedJob = id
         renderedSignature = null
         renderSheet()
       }
-      addView(View(this@KrikoOverlayService).apply { background = circle(dot) },
+      addView(View(this@KrikoOverlayService).apply { background = KrikoDraw.circle(dot) },
         LinearLayout.LayoutParams(dp(7), dp(7)).apply { marginEnd = dp(7) })
       addView(TextView(this@KrikoOverlayService).apply {
         text = label
         setTextColor(if (selected) p.ink else p.ink2)
         textSize = 12.5f
-        typeface = geistMedium
+        typeface = fonts.medium
         includeFontPadding = false
         maxLines = 1
       })
@@ -1286,17 +1367,23 @@ class KrikoOverlayService : Service() {
     }
   }
 
-  private fun renderActions(active: Boolean, id: String) {
+  private fun renderActions(active: Boolean, id: String, answerText: String) {
     val row = sheetActions ?: return
     val p = palette
     row.removeAllViews()
     row.addView(
-      actionRow("scan", L(if (jobs.length() == 0) "scanPage" else "scanAgain"), p.accent, ON_ACCENT,
-        tint(ON_ACCENT, 0.24f), Color.TRANSPARENT, 46, 14f) {
+      actionRow("scan", L(if (jobs.length() == 0) "scanPage" else "scanAgain"), p.accent, KrikoTheme.ON_ACCENT,
+        tint(KrikoTheme.ON_ACCENT, 0.24f), Color.TRANSPARENT, 46, 14f) {
         requestCapture("research")
       },
       LinearLayout.LayoutParams(0, dp(46), 1f),
     )
+    if (answerText.isNotBlank()) {
+      row.addView(
+        iconButton("copy", L("copy")) { copyAnswer(answerText) },
+        LinearLayout.LayoutParams(dp(46), dp(46)).apply { marginStart = dp(8) },
+      )
+    }
     if (active && id.isNotBlank()) {
       row.addView(
         actionRow(null, L("cancel"), p.riskWash, p.risk, tint(p.risk, 0.16f), Color.TRANSPARENT, 46, 13.5f) {
@@ -1307,29 +1394,39 @@ class KrikoOverlayService : Service() {
     }
   }
 
-  /** The clickable sources under an answer, headed by the translated word. */
+  private fun copyAnswer(markdown: String) {
+    try {
+      val clipboard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+      clipboard.setPrimaryClip(ClipData.newPlainText("Kriko", KrikoMarkdown.plain(markdown)))
+      showToast(L("copied"))
+    } catch (_: Exception) { }
+  }
+
+  /** The clickable sources under an answer, each a numbered row with its site. */
   private fun addSources(card: LinearLayout, sources: JSONArray) {
-    val rows = mutableListOf<Pair<String, String>>()
-    for (index in 0 until minOf(sources.length(), 5)) {
+    val rows = mutableListOf<Triple<String, String, String>>()
+    for (index in 0 until minOf(sources.length(), 6)) {
       val source = sources.optJSONObject(index) ?: continue
       val url = safeHttpUrl(source.optString("url"))
       if (url.isBlank()) continue
-      val label = source.optString("title").ifBlank { source.optString("host").ifBlank { url } }
-      rows.add(url to label)
+      val host = (Uri.parse(url).host ?: "").removePrefix("www.")
+      val label = source.optString("title").ifBlank { host.ifBlank { url } }
+      val number = source.optString("n").ifBlank { (index + 1).toString() }
+      rows.add(Triple(number, label, url))
     }
     if (rows.isEmpty()) return
     card.addView(sectionText(L("sources")))
-    for ((url, label) in rows) card.addView(sourceRow(label, url))
+    for ((number, label, url) in rows) card.addView(sourceRow(number, label, url))
   }
 
   private fun hideSheetAnimated() {
     val target = sheet ?: return
     cancelSheetFocus()
-    animateView(target, 0f, 0.96f, dp(6).toFloat(), 170L, spring = false) {
+    motion.animate(target, 0f, 0.97f, -dp(14).toFloat(), 170L, spring = false) {
       if (sheet === target) removeSheet()
     }
     restorePuckHeight()
-    scheduleDim()
+    scheduleSettle()
   }
 
   private fun cancelSheetFocus() {
@@ -1339,11 +1436,12 @@ class KrikoOverlayService : Service() {
   private fun removeSheet() {
     val view = sheet
     if (view != null) {
-      activeMotion.remove(view)?.cancel()
+      motion.cancel(view)
       try { windowManager.removeView(view) } catch (_: Exception) { }
     }
     sheet = null
     sheetParams = null
+    sheetThumb = null
     sheetTitle = null
     sheetStatus = null
     sheetBar = null
@@ -1354,7 +1452,7 @@ class KrikoOverlayService : Service() {
     sheetActions = null
     siteUrlInput = null
     siteSection = null
-    answerView = null
+    answerBox = null
     stepView = null
     renderedSignature = null
     restorePuckHeight()
@@ -1363,15 +1461,14 @@ class KrikoOverlayService : Service() {
   private fun removePuck() {
     puckSnap?.cancel()
     puckSnap = null
-    mainHandler.removeCallbacks(dimRunnable)
-    puckRing?.setRunning(false)
+    mainHandler.removeCallbacks(settleRunnable)
     puck?.let {
-      activeMotion.remove(it)?.cancel()
+      motion.cancel(it)
       try { windowManager.removeView(it) } catch (_: Exception) { }
     }
     puck = null
+    puckView = null
     puckParams = null
-    puckRing = null
     puckBadge = null
   }
 
@@ -1379,6 +1476,10 @@ class KrikoOverlayService : Service() {
 
   private fun requestCapture(mode: String = "research", siteUrl: String = "") {
     if (!isActive || capturePending) return
+    if (!captureLive || projection == null || display == null || reader == null) {
+      resumeCapture(mode, siteUrl)
+      return
+    }
     capturePending = true
     scanGeneration += 1
     val thisScan = scanGeneration
@@ -1388,10 +1489,18 @@ class KrikoOverlayService : Service() {
     removeTray(animated = false)
     puck?.visibility = View.GONE
     sheet?.visibility = View.GONE
+    // Whatever happens below, the windows come back: a scan that stalls must not
+    // leave the reader with a scanner that has vanished.
+    mainHandler.removeCallbacks(captureWatchdog)
+    mainHandler.postDelayed(captureWatchdog, CAPTURE_WATCHDOG_MS)
     // Allow the OS compositor to remove our translucent windows before one
     // requested frame is routed to ImageReader.
     mainHandler.postDelayed({
-      if (!capturePending || display == null || reader == null) return@postDelayed
+      if (!capturePending || thisScan != scanGeneration) return@postDelayed
+      if (display == null || reader == null) {
+        finishCapture(null)
+        return@postDelayed
+      }
       try {
         display?.setSurface(reader?.surface)
         mainHandler.postDelayed({
@@ -1403,6 +1512,21 @@ class KrikoOverlayService : Service() {
     }, if (mode == "site_reviews") 550 else 300)
   }
 
+  /**
+   * Capture was ended by the system. Ask for it again, then carry on with the
+   * scan the reader pressed: one short permission screen, no trip into the app.
+   */
+  private fun resumeCapture(mode: String, siteUrl: String) {
+    pendingResume = mode to siteUrl
+    removeTray(animated = false)
+    try {
+      startActivity(Intent(this, KrikoCaptureActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    } catch (_: Exception) {
+      pendingResume = null
+      showToast(L("resumeFailed"))
+    }
+  }
+
   private fun onFrameAvailable(source: ImageReader) {
     val image = try { source.acquireLatestImage() } catch (_: Exception) { null }
     if (image == null) return
@@ -1411,45 +1535,68 @@ class KrikoOverlayService : Service() {
       return
     }
     capturePending = false
+    mainHandler.removeCallbacks(captureWatchdog)
     display?.setSurface(null)
     try {
-      val encoded = encode(image)
+      val jpeg = encode(image)
       image.close()
-      mainHandler.post { afterCapture() }
-      if (encoded != null) {
+      if (jpeg == null) {
+        mainHandler.post { afterCapture(openSheet = false) }
+        showToast(L("captureFailed"))
+        return
+      }
+      val uri = KrikoHandoff.writeFrame(this, jpeg)
+      val mode = captureMode
+      val site = reviewSite
+      if (KrikoOverlayModule.jsReady) {
+        mainHandler.post { afterCapture(openSheet = true) }
         val body = Arguments.createMap().apply {
-          putString("base64", encoded)
+          putString("base64", Base64.encodeToString(jpeg, Base64.NO_WRAP))
           putString("mime", "image/jpeg")
-          putString("uri", "")
-          putString("mode", captureMode)
-          if (captureMode == "site_reviews") putString("reviewSite", reviewSite)
+          putString("uri", uri ?: "")
+          putString("mode", mode)
+          if (mode == "site_reviews") putString("reviewSite", site)
         }
         KrikoOverlayModule.emit("onScan", body)
       } else {
-        showToast(L("captureFailed"))
+        // Kriko's screen is gone (swiped away, or reclaimed). The scan is not
+        // lost: it opens the app on a fresh chat that reads it.
+        mainHandler.post {
+          afterCapture(openSheet = false)
+          if (uri == null) showToast(L("captureFailed")) else openApp(uri, mode, site)
+        }
       }
     } catch (_: Exception) {
       image.close()
-      mainHandler.post { afterCapture() }
+      mainHandler.post { afterCapture(openSheet = false) }
       showToast(L("captureFailed"))
     }
   }
 
+  private fun openApp(uri: String, mode: String, site: String) {
+    try {
+      startActivity(KrikoHandoff.intent(this, uri, mode = mode, site = site))
+    } catch (_: Exception) {
+      showToast(L("resumeFailed"))
+    }
+  }
+
   /** Bring the puck back and show the new scan's progress where a thumb reaches it. */
-  private fun afterCapture() {
+  private fun afterCapture(openSheet: Boolean) {
     if (uiDirty) {
       uiDirty = false
       refreshUi()
     }
-    puck?.let { if (!appForeground) animateIn(it, 0.9f, 200L) }
+    puck?.let { if (!appForeground) motion.animateIn(it, 0.9f, 200L) }
+    if (!openSheet) return
     // A new scan is what the reader is waiting on: show it, not an older pick.
     selectedJob = ""
     renderedSignature = null
     openSheet()
-    sheet?.let { if (!appForeground) animateIn(it, 0.96f, 230L) }
+    sheet?.let { if (!appForeground) motion.animateIn(it, 0.97f, 240L, fromTranslationY = -dp(26).toFloat()) }
   }
 
-  private fun encode(image: Image): String? {
+  private fun encode(image: Image): ByteArray? {
     val plane = image.planes.firstOrNull() ?: return null
     val pixelStride = plane.pixelStride
     val rowStride = plane.rowStride
@@ -1464,83 +1611,19 @@ class KrikoOverlayService : Service() {
     cropped.compress(Bitmap.CompressFormat.JPEG, 86, out)
     if (cropped !== raw) cropped.recycle()
     raw.recycle()
-    return Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP)
+    return out.toByteArray()
   }
 
   private fun finishCapture(image: Image?) {
     image?.close()
     capturePending = false
-    display?.setSurface(null)
+    mainHandler.removeCallbacks(captureWatchdog)
+    try { display?.setSurface(null) } catch (_: Exception) { }
     if (uiDirty) {
       uiDirty = false
       refreshUi()
     }
     restoreWindows()
-  }
-
-  // ------------------------------------------------------------------- motion --
-
-  private fun animationsEnabled(): Boolean = Build.VERSION.SDK_INT < 26 || ValueAnimator.areAnimatorsEnabled()
-
-  private fun animateIn(view: View, initialScale: Float, duration: Long) {
-    if (view.visibility != View.VISIBLE) {
-      view.alpha = 0f
-      view.scaleX = initialScale
-      view.scaleY = initialScale
-    }
-    view.visibility = View.VISIBLE
-    animateView(view, 1f, 1f, 0f, duration, spring = true)
-  }
-
-  private fun animateView(
-    view: View,
-    alpha: Float,
-    scale: Float,
-    translationY: Float,
-    duration: Long,
-    spring: Boolean,
-    onEnd: (() -> Unit)? = null,
-  ) {
-    activeMotion.remove(view)?.cancel()
-    if (!animationsEnabled()) {
-      view.alpha = alpha.coerceIn(0f, 1f)
-      view.scaleX = scale
-      view.scaleY = scale
-      view.translationY = translationY
-      onEnd?.invoke()
-      return
-    }
-    val fromAlpha = view.alpha
-    val fromScaleX = view.scaleX
-    val fromScaleY = view.scaleY
-    val fromTranslation = view.translationY
-    var cancelled = false
-    lateinit var animator: ValueAnimator
-    animator = ValueAnimator.ofFloat(0f, 1f).apply {
-      this.duration = duration
-      interpolator = if (spring) gentleSpring else DecelerateInterpolator()
-      addUpdateListener { valueAnimator ->
-        val fraction = valueAnimator.animatedValue as Float
-        view.alpha = (fromAlpha + (alpha - fromAlpha) * fraction).coerceIn(0f, 1f)
-        view.scaleX = fromScaleX + (scale - fromScaleX) * fraction
-        view.scaleY = fromScaleY + (scale - fromScaleY) * fraction
-        view.translationY = fromTranslation + (translationY - fromTranslation) * fraction
-      }
-      addListener(object : AnimatorListenerAdapter() {
-        override fun onAnimationCancel(animation: Animator) { cancelled = true }
-        override fun onAnimationEnd(animation: Animator) {
-          if (cancelled || activeMotion[view] !== animator) return
-          activeMotion.remove(view)
-          view.alpha = alpha.coerceIn(0f, 1f)
-          view.scaleX = scale
-          view.scaleY = scale
-          view.translationY = translationY
-          onEnd?.invoke()
-        }
-      })
-    }
-    activeMotion[view] = animator
-    animator.start()
   }
 
   private fun openSource(url: String) {
@@ -1574,7 +1657,7 @@ class KrikoOverlayService : Service() {
     setPadding(dp(14), 0, dp(14), 0)
     isClickable = true
     contentDescription = label
-    installPressMotion(this)
+    motion.pressMotion(this)
     setOnClickListener { onClick() }
     if (glyph != null) {
       addView(GlyphView(this@KrikoOverlayService, glyph, foregroundColor),
@@ -1584,21 +1667,24 @@ class KrikoOverlayService : Service() {
       text = label
       setTextColor(foregroundColor)
       textSize = textSp
-      typeface = geistSemiBold
+      typeface = fonts.semiBold
       includeFontPadding = false
       maxLines = 1
       gravity = Gravity.CENTER
     })
   }
 
-  /** A short scale on press; the ripple comes from the background drawable. */
-  private fun installPressMotion(view: View) {
-    view.setOnTouchListener { pressedView, event ->
-      when (event.actionMasked) {
-        MotionEvent.ACTION_DOWN -> animateView(pressedView, 1f, 0.97f, 0f, 90L, spring = true)
-        MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> animateView(pressedView, 1f, 1f, 0f, 150L, spring = true)
-      }
-      false
+  /** A square-ish round button holding one glyph. */
+  private fun iconButton(glyph: String, description: String, onClick: () -> Unit): View {
+    val p = palette
+    return FrameLayout(this).apply {
+      background = capsule(p.raised, 23, p.edge, tint(p.ink, 0.08f))
+      isClickable = true
+      contentDescription = description
+      motion.pressMotion(this)
+      setOnClickListener { onClick() }
+      addView(GlyphView(this@KrikoOverlayService, glyph, p.ink2),
+        FrameLayout.LayoutParams(dp(20), dp(20), Gravity.CENTER))
     }
   }
 
@@ -1606,25 +1692,25 @@ class KrikoOverlayService : Service() {
     this.text = text
     setTextColor(color)
     textSize = size
-    typeface = geistRegular
+    typeface = fonts.regular
     setLineSpacing(dp(2).toFloat(), 1f)
     setPadding(0, dp(4), 0, dp(2))
   }
 
   private fun sectionText(label: String) = TextView(this).apply {
-    text = label
+    text = label.uppercase()
     setTextColor(palette.ink3)
     textSize = 11f
-    typeface = geistSemiBold
-    letterSpacing = 0.05f
-    setPadding(0, dp(10), 0, dp(3))
+    typeface = fonts.semiBold
+    letterSpacing = 0.08f
+    setPadding(0, dp(18), 0, dp(4))
   }
 
   private fun errorText(message: String) = TextView(this).apply {
     text = message
     setTextColor(palette.risk)
     textSize = 12.5f
-    typeface = geistRegular
+    typeface = fonts.regular
     setLineSpacing(dp(2).toFloat(), 1f)
     background = capsule(palette.riskWash, 12, Color.TRANSPARENT)
     setPadding(dp(11), dp(8), dp(11), dp(8))
@@ -1632,20 +1718,53 @@ class KrikoOverlayService : Service() {
       .apply { topMargin = dp(5) }
   }
 
-  private fun sourceRow(label: String, url: String) = TextView(this).apply {
-    text = label
-    setTextColor(palette.accentHi)
-    textSize = 12.5f
-    typeface = geistMedium
-    maxLines = 2
-    ellipsize = android.text.TextUtils.TruncateAt.END
-    contentDescription = label
-    setPadding(dp(8), dp(6), dp(8), dp(6))
-    background = capsule(Color.TRANSPARENT, 8, Color.TRANSPARENT, tint(palette.accentHi, 0.12f))
-    isClickable = true
-    setOnClickListener { openSource(url) }
-    layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-      .apply { bottomMargin = dp(2) }
+  /** One source: its number, its title and the site it came from. */
+  private fun sourceRow(number: String, label: String, url: String): View {
+    val p = palette
+    val host = (Uri.parse(url).host ?: "").removePrefix("www.")
+    return LinearLayout(this).apply {
+      orientation = LinearLayout.HORIZONTAL
+      gravity = Gravity.CENTER_VERTICAL
+      setPadding(dp(6), dp(6), dp(8), dp(6))
+      background = capsule(Color.TRANSPARENT, 10, Color.TRANSPARENT, tint(p.accentHi, 0.12f))
+      isClickable = true
+      contentDescription = label
+      motion.pressMotion(this)
+      setOnClickListener { openSource(url) }
+      addView(TextView(this@KrikoOverlayService).apply {
+        text = number
+        setTextColor(p.accentHi)
+        textSize = 11.5f
+        typeface = fonts.semiBold
+        includeFontPadding = false
+        gravity = Gravity.CENTER
+        background = capsule(tint(p.accent, if (p === KrikoTheme.DARK) 0.26f else 0.12f), 7, Color.TRANSPARENT)
+      }, LinearLayout.LayoutParams(dp(22), dp(22)).apply { marginEnd = dp(10) })
+      val column = LinearLayout(this@KrikoOverlayService).apply { orientation = LinearLayout.VERTICAL }
+      column.addView(TextView(this@KrikoOverlayService).apply {
+        text = label
+        setTextColor(p.ink)
+        textSize = 13f
+        typeface = fonts.medium
+        includeFontPadding = false
+        maxLines = 1
+        ellipsize = TextUtils.TruncateAt.END
+      })
+      if (host.isNotBlank() && host != label) {
+        column.addView(TextView(this@KrikoOverlayService).apply {
+          text = host
+          setTextColor(p.ink3)
+          textSize = 11f
+          typeface = fonts.regular
+          includeFontPadding = false
+          maxLines = 1
+          ellipsize = TextUtils.TruncateAt.END
+        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(3) })
+      }
+      addView(column, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+      layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+        .apply { bottomMargin = dp(2) }
+    }
   }
 
   private fun statusLabel(status: String): String = when (status) {
@@ -1656,81 +1775,6 @@ class KrikoOverlayService : Service() {
     "error" -> L("error")
     "cancelled" -> L("cancelled")
     else -> status
-  }
-
-  private fun answerText(markdown: String, sources: JSONArray): TextView {
-    val answer = TextView(this).apply {
-      setTextColor(palette.ink)
-      textSize = 14f
-      typeface = geistRegular
-      setLineSpacing(dp(3).toFloat(), 1f)
-      setPadding(0, dp(6), 0, dp(4))
-      setTextIsSelectable(true)
-      setLinkTextColor(palette.accentHi)
-      movementMethod = LinkMovementMethod.getInstance()
-    }
-    answer.text = Html.fromHtml(markdownHtml(markdown, sources), Html.FROM_HTML_MODE_COMPACT)
-    return answer
-  }
-
-  private fun markdownHtml(markdown: String, sources: JSONArray): String {
-    val sourceUrls = mutableMapOf<String, String>()
-    for (index in 0 until sources.length()) {
-      val source = sources.optJSONObject(index) ?: continue
-      val number = source.optString("n")
-      val url = safeHttpUrl(source.optString("url"))
-      if (number.isNotBlank() && url.isNotBlank()) sourceUrls[number] = url
-    }
-    val out = StringBuilder()
-    for (raw in markdown.replace("\r\n", "\n").split("\n")) {
-      val line = raw.trim()
-      if (line.isEmpty()) {
-        out.append("<br/>")
-        continue
-      }
-      val heading = Regex("^(#{1,3})\\s+(.+)$").matchEntire(line)
-      val bullet = Regex("^[-*]\\s+(.+)$").matchEntire(line)
-      val numbered = Regex("^\\d+[.)]\\s+(.+)$").matchEntire(line)
-      when {
-        heading != null -> out.append("<br/><b>").append(inlineHtml(heading.groupValues[2], sourceUrls)).append("</b><br/>")
-        bullet != null -> out.append("&#8226;&nbsp; ").append(inlineHtml(bullet.groupValues[1], sourceUrls)).append("<br/>")
-        numbered != null -> out.append("&#8226;&nbsp; ").append(inlineHtml(numbered.groupValues[1], sourceUrls)).append("<br/>")
-        else -> out.append(inlineHtml(line, sourceUrls)).append("<br/>")
-      }
-    }
-    return out.toString()
-  }
-
-  private fun inlineHtml(line: String, sourceUrls: Map<String, String>): String {
-    var html = escapeHtml(line)
-    val markdownLink = Regex("\\[([^\\]]+)\\]\\((https?://[^\\s)]+)\\)")
-    html = markdownLink.replace(html) { match ->
-      val url = safeHttpUrl(match.groupValues[2].replace("&amp;", "&"))
-      if (url.isBlank()) match.groupValues[1]
-      else "<a href=\"" + escapeHtml(url) + "\">" + match.groupValues[1] + "</a>"
-    }
-    html = Regex("\\*\\*(.+?)\\*\\*").replace(html) { "<b>${it.groupValues[1]}</b>" }
-    html = Regex("(?<!\\*)\\*([^*]+)\\*(?!\\*)").replace(html) { "<i>${it.groupValues[1]}</i>" }
-    html = Regex("`([^`]+)`").replace(html) { "<tt>${it.groupValues[1]}</tt>" }
-    html = Regex("\\[(\\d+)]").replace(html) { match ->
-      val url = sourceUrls[match.groupValues[1]]
-      if (url == null) match.value else "<a href=\"" + escapeHtml(url) + "\">" + match.value + "</a>"
-    }
-    return html
-  }
-
-  private fun escapeHtml(value: String): String = value
-    .replace("&", "&amp;")
-    .replace("<", "&lt;")
-    .replace(">", "&gt;")
-    .replace("\"", "&quot;")
-
-  private fun safeHttpUrl(value: String): String {
-    val url = Uri.parse(value.trim())
-    val scheme = url.scheme?.lowercase()
-    if (scheme != "http" && scheme != "https") return ""
-    if (url.host.isNullOrBlank() || !url.userInfo.isNullOrBlank()) return ""
-    return url.toString()
   }
 
   @Suppress("DEPRECATION")
@@ -1754,195 +1798,10 @@ class KrikoOverlayService : Service() {
 
   // --------------------------------------------------------------- drawables --
 
-  private fun shape(color: Int, radiusDp: Int, strokeColor: Int = Color.TRANSPARENT): GradientDrawable =
-    GradientDrawable().apply {
-      shape = GradientDrawable.RECTANGLE
-      setColor(color)
-      cornerRadius = dp(radiusDp).toFloat()
-      if (Color.alpha(strokeColor) > 0) setStroke(dp(1), strokeColor)
-    }
+  private fun capsule(color: Int, radiusDp: Int, strokeColor: Int, rippleColor: Int? = null) =
+    KrikoDraw.capsule(this, color, radiusDp, strokeColor, rippleColor)
 
-  /** A hairline-edged rounded fill, optionally wrapped in a clipping press ripple. */
-  private fun capsule(color: Int, radiusDp: Int, strokeColor: Int, rippleColor: Int? = null): Drawable {
-    val content = shape(color, radiusDp, strokeColor)
-    if (rippleColor == null) return content
-    return RippleDrawable(ColorStateList.valueOf(rippleColor), content, shape(Color.WHITE, radiusDp))
-  }
-
-  private fun circle(color: Int): GradientDrawable = GradientDrawable().apply {
-    shape = GradientDrawable.OVAL
-    setColor(color)
-  }
-
-  private fun roundOutline(radiusDp: Int): ViewOutlineProvider = object : ViewOutlineProvider() {
-    override fun getOutline(view: View, outline: Outline) {
-      outline.setRoundRect(0, 0, view.width, view.height, dp(radiusDp).toFloat())
-    }
-  }
-
-  private fun tint(color: Int, fraction: Float): Int = Color.argb(
-    (255 * fraction).roundToInt().coerceIn(0, 255),
-    Color.red(color),
-    Color.green(color),
-    Color.blue(color),
-  )
-
-  private fun mix(color: Int, other: Int, fraction: Float): Int = Color.argb(
-    Color.alpha(color),
-    (Color.red(color) + (Color.red(other) - Color.red(color)) * fraction).roundToInt(),
-    (Color.green(color) + (Color.green(other) - Color.green(color)) * fraction).roundToInt(),
-    (Color.blue(color) + (Color.blue(other) - Color.blue(color)) * fraction).roundToInt(),
-  )
-
-  // ----------------------------------------------------------- custom views --
-
-  /** A scroll view that stops growing at a cap, so the buttons below it stay on screen. */
-  private inner class CappedScroll(context: Context, private val capPx: Int) : ScrollView(context) {
-    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-      super.onMeasure(widthMeasureSpec, View.MeasureSpec.makeMeasureSpec(capPx, View.MeasureSpec.AT_MOST))
-    }
-  }
-
-  /** The action glyphs, drawn in the app's own line weight so no icon font is needed. */
-  private inner class GlyphView(context: Context, private val kind: String, private val color: Int) : View(context) {
-    private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-      style = Paint.Style.STROKE
-      strokeCap = Paint.Cap.ROUND
-      strokeJoin = Paint.Join.ROUND
-    }
-
-    override fun onDraw(canvas: Canvas) {
-      val w = width.toFloat()
-      val h = height.toFloat()
-      paint.color = color
-      paint.strokeWidth = w * 0.095f
-      when (kind) {
-        "scan" -> {
-          // Four corner brackets around a small ring: the viewfinder.
-          val m = w * 0.12f
-          val l = w * 0.27f
-          canvas.drawLine(m, m + l, m, m, paint); canvas.drawLine(m, m, m + l, m, paint)
-          canvas.drawLine(w - m - l, m, w - m, m, paint); canvas.drawLine(w - m, m, w - m, m + l, paint)
-          canvas.drawLine(m, h - m - l, m, h - m, paint); canvas.drawLine(m, h - m, m + l, h - m, paint)
-          canvas.drawLine(w - m - l, h - m, w - m, h - m, paint); canvas.drawLine(w - m, h - m, w - m, h - m - l, paint)
-          canvas.drawCircle(w / 2, h / 2, w * 0.12f, paint)
-        }
-        "list" -> {
-          val x1 = w * 0.2f
-          val x2 = w * 0.8f
-          for (row in 0..2) {
-            val y = h * (0.28f + row * 0.22f)
-            canvas.drawLine(x1, y, if (row == 2) w * 0.56f else x2, y, paint)
-          }
-        }
-        "stop" -> {
-          val inset = w * 0.22f
-          canvas.drawRoundRect(RectF(inset, inset, w - inset, h - inset), w * 0.1f, w * 0.1f, paint)
-        }
-      }
-    }
-  }
-
-  /** The thin ring that turns around the puck while research runs. */
-  private inner class RingView(context: Context) : View(context) {
-    private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-      style = Paint.Style.STROKE
-      strokeCap = Paint.Cap.ROUND
-      color = tint(ON_ACCENT, 0.92f)
-    }
-    private val box = RectF()
-    private var running = false
-    private var angle = 0f
-    private var spinner: ValueAnimator? = null
-
-    fun setRunning(value: Boolean) {
-      if (value == running) return
-      running = value
-      spinner?.cancel()
-      spinner = null
-      if (running && animationsEnabled()) {
-        spinner = ValueAnimator.ofFloat(0f, 360f).apply {
-          duration = 1100
-          repeatCount = ValueAnimator.INFINITE
-          interpolator = android.view.animation.LinearInterpolator()
-          addUpdateListener { animation ->
-            angle = animation.animatedValue as Float
-            invalidate()
-          }
-          start()
-        }
-      }
-      invalidate()
-    }
-
-    override fun onDetachedFromWindow() {
-      spinner?.cancel()
-      spinner = null
-      super.onDetachedFromWindow()
-    }
-
-    override fun onDraw(canvas: Canvas) {
-      if (!running) return
-      val inset = dp(4).toFloat()
-      paint.strokeWidth = dp(2).toFloat()
-      box.set(inset, inset, width - inset, height - inset)
-      canvas.drawArc(box, angle - 90f, 96f, false, paint)
-    }
-  }
-
-  /** A thin sliding highlight: "working" without a percentage nobody can know. */
-  private inner class IndeterminateBar(
-    context: Context,
-    track: Int,
-    private val fill: Int,
-  ) : FrameLayout(context) {
-    private val runner = View(context)
-    private var animator: ValueAnimator? = null
-
-    init {
-      background = shape(track, 2)
-      clipChildren = true
-      clipToOutline = true
-      outlineProvider = roundOutline(2)
-      runner.background = shape(fill, 2)
-      addView(runner, LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT))
-    }
-
-    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
-      super.onSizeChanged(w, h, oldw, oldh)
-      runner.layoutParams = (runner.layoutParams as LayoutParams).apply { width = (w * 0.38f).roundToInt() }
-      restart()
-    }
-
-    override fun onVisibilityChanged(changedView: View, visibility: Int) {
-      super.onVisibilityChanged(changedView, visibility)
-      if (changedView === this) restart()
-    }
-
-    private fun restart() {
-      animator?.cancel()
-      animator = null
-      if (visibility != View.VISIBLE || width <= 0) return
-      if (!animationsEnabled()) {
-        runner.translationX = 0f
-        return
-      }
-      val travel = width.toFloat()
-      animator = ValueAnimator.ofFloat(-travel * 0.4f, travel).apply {
-        duration = 1250
-        repeatCount = ValueAnimator.INFINITE
-        interpolator = android.view.animation.AccelerateDecelerateInterpolator()
-        addUpdateListener { animation -> runner.translationX = animation.animatedValue as Float }
-        start()
-      }
-    }
-
-    override fun onDetachedFromWindow() {
-      animator?.cancel()
-      animator = null
-      super.onDetachedFromWindow()
-    }
-  }
+  private fun tint(color: Int, fraction: Float): Int = KrikoColor.tint(color, fraction)
 
   // ----------------------------------------------------------------- plumbing --
 
@@ -1954,8 +1813,11 @@ class KrikoOverlayService : Service() {
     KrikoOverlayModule.emit("onAction", body)
   }
 
-  private fun sendSession(active: Boolean) {
-    val body = Arguments.createMap().apply { putBoolean("active", active) }
+  private fun sendSession(active: Boolean, paused: Boolean = false) {
+    val body = Arguments.createMap().apply {
+      putBoolean("active", active)
+      putBoolean("paused", paused)
+    }
     KrikoOverlayModule.emit("onSession", body)
   }
 
@@ -1983,6 +1845,7 @@ class KrikoOverlayService : Service() {
       .showSoftInput(input, InputMethodManager.SHOW_IMPLICIT) }
   }
 
+  /** The reader's own Stop, from the tray or the notification: the one way a session ends. */
   private fun stopSession() {
     if (shuttingDown) return
     shuttingDown = true
@@ -1995,26 +1858,13 @@ class KrikoOverlayService : Service() {
   }
 
   private fun releaseResources(stopProjection: Boolean) {
-    capturePending = false
     uiDirty = false
-    try { display?.setSurface(null) } catch (_: Exception) { }
-    try { display?.release() } catch (_: Exception) { }
-    display = null
-    try { reader?.setOnImageAvailableListener(null, null) } catch (_: Exception) { }
-    try { reader?.close() } catch (_: Exception) { }
-    reader = null
-    captureThread?.quitSafely()
-    captureThread = null
-    captureHandler = null
+    pendingResume = null
     mainHandler.removeCallbacksAndMessages(null)
+    tearDownCapture(stopProjection)
     removeTray(animated = false)
     removeSheet()
     removePuck()
-    projection?.let { current ->
-      try { current.unregisterCallback(projectionCallback) } catch (_: Exception) { }
-      if (stopProjection) try { current.stop() } catch (_: Exception) { }
-    }
-    projection = null
   }
 
   override fun onDestroy() {
@@ -2025,6 +1875,7 @@ class KrikoOverlayService : Service() {
       sendSession(false)
       KrikoOverlayModule.finishHeadlessSession()
     }
+    imageWorker.shutdown()
     super.onDestroy()
   }
 

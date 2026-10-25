@@ -1,17 +1,24 @@
 import Constants from 'expo-constants';
 import { router, type Href } from 'expo-router';
-import { useState } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Alert, AppState, StyleSheet, View } from 'react-native';
 
 import { AccessSheet } from '../components/AccessSheet';
 import { Divider, HeaderAction, Hero, Page } from '../components/Chrome';
 import { BackIcon, ChevronRightIcon, GlobeIcon, KeyIcon, ShieldIcon, SparkIcon, TrashIcon } from '../components/Icon';
 import { MotionPressable, MotionView } from '../components/Motion';
+import { PuckPreview } from '../components/PuckPreview';
 import { Button, Chip, SectionLabel, Segmented, Toggle } from '../components/Primitives';
+import { isDefaultAssistant, openAssistantSettings, overlayAvailable } from '../engine/overlay';
 import { useStore } from '../engine/store';
 import { tr } from '../i18n';
 import { tap } from '../theme/feedback';
-import type { Appearance, MotionPreference, TextSize } from '../theme/preferences';
+import {
+  nearestPuckOpacityStep,
+  type Appearance,
+  type MotionPreference,
+  type TextSize,
+} from '../theme/preferences';
 import { gap, PAGE_X } from '../theme/tokens';
 import { makeStyles, useColors } from '../theme/theme';
 import { Txt } from '../theme/Txt';
@@ -30,6 +37,8 @@ export default function Settings() {
     textSize,
     motion,
     haptics,
+    puckOpacity,
+    setPuckOpacity,
     setThoroughness,
     setAnswerStyle,
     setAppLanguage,
@@ -42,6 +51,8 @@ export default function Settings() {
   const color = useColors();
   const styles = useStyles();
   const [sheet, setSheet] = useState(false);
+  const scanner = overlayAvailable();
+  const assistant = useAssistantStatus(scanner);
 
   const accessTitle =
     access.kind === 'trial' ? 'Free trial' : access.kind === 'shared' ? 'Shared access' :
@@ -159,6 +170,63 @@ export default function Settings() {
 
         <Divider />
 
+        {scanner ? (
+          <>
+            <MotionView delay={80} style={styles.section}>
+              <SectionLabel>Floating scanner</SectionLabel>
+              <View style={styles.puckRow}>
+                <PuckPreview opacity={puckOpacity} />
+                <View style={styles.puckText}>
+                  <Txt variant="rowTitle" tone="ink">Transparency</Txt>
+                  <Txt variant="bodyTight" tone="ink3">
+                    How solid the floating K is while it waits. A touch, a scan or an answer brings it to full strength.
+                  </Txt>
+                </View>
+              </View>
+              <Segmented<string>
+                value={String(nearestPuckOpacityStep(puckOpacity))}
+                onChange={(value) => setPuckOpacity(Number(value))}
+                options={[
+                  { value: '35', label: 'Faint' },
+                  { value: '55', label: 'Soft' },
+                  { value: '75', label: 'Strong' },
+                  { value: '100', label: 'Solid' },
+                ]}
+              />
+            </MotionView>
+
+            <Divider />
+
+            <MotionView delay={100} style={styles.section}>
+              <SectionLabel>Phone assistant</SectionLabel>
+              <View style={styles.accessRow}>
+                <View style={styles.keyMark}><SparkIcon size={19} color={color.accent} /></View>
+                <View style={styles.accessText}>
+                  <Txt variant="rowTitle" tone="ink">Scan with a long press</Txt>
+                  <Txt variant="bodyTight" tone="ink3">
+                    {assistant
+                      ? 'Kriko is your phone’s assistant. Hold the power or home button to scan the screen at once.'
+                      : 'Make Kriko your phone’s assistant, then hold the power or home button to scan the screen at once.'}
+                  </Txt>
+                </View>
+                <Chip label={assistant ? 'Active' : 'Not set'} tone={assistant ? 'ok' : 'neutral'} size="sm" />
+              </View>
+              <Button
+                label={assistant ? 'Assistant settings' : 'Set as assistant'}
+                variant={assistant ? 'ghost' : 'primary'}
+                onPress={() => { void openAssistantSettings(); }}
+              />
+              {assistant ? null : (
+                <Txt variant="bodyTight" tone="ink3">
+                  In the list, choose Kriko under Digital assistant app, and keep “Use screenshot” on.
+                </Txt>
+              )}
+            </MotionView>
+
+            <Divider />
+          </>
+        ) : null}
+
         <MotionView delay={110} style={styles.section}>
           <SectionLabel>Language</SectionLabel>
           <Setting label="Interface language" description="Answers follow the language you ask in.">
@@ -241,6 +309,23 @@ export default function Settings() {
       {sheet ? <AccessSheet visible onClose={() => setSheet(false)} /> : null}
     </Page>
   );
+}
+
+/**
+ * Whether Kriko is the phone's chosen assistant. It is chosen on a system
+ * screen, so it is read again every time the reader comes back to the app.
+ */
+function useAssistantStatus(enabled: boolean): boolean {
+  const [chosen, setChosen] = useState(false);
+  useEffect(() => {
+    if (!enabled) return undefined;
+    let alive = true;
+    const refresh = () => { void isDefaultAssistant().then((value) => { if (alive) setChosen(value); }); };
+    refresh();
+    const subscription = AppState.addEventListener('change', (state) => { if (state === 'active') refresh(); });
+    return () => { alive = false; subscription.remove(); };
+  }, [enabled]);
+  return chosen;
 }
 
 function Setting({ label, description, children }: { label: string; description: string; children: React.ReactNode }) {
@@ -344,6 +429,8 @@ const useStyles = makeStyles((color) => StyleSheet.create({
   settingText: { gap: 2 },
   toggleRow: { flexDirection: 'row', alignItems: 'center', gap: gap[3], paddingVertical: gap[1] },
   toggleText: { flex: 1 },
+  puckRow: { flexDirection: 'row', alignItems: 'center', gap: gap[3] },
+  puckText: { flex: 1, gap: 3 },
   themeRow: { flexDirection: 'row', gap: 8 },
   themeOption: {
     flex: 1,

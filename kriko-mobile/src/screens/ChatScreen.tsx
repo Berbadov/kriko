@@ -31,6 +31,7 @@ import { useOverlaySession } from '../components/OverlaySession';
 import { ScreenshotSheet, type Shot } from '../components/ScreenshotSheet';
 import { moveAppToBack } from '../engine/overlay';
 import { AccessError, useStore } from '../engine/store';
+import { keepThumbnail } from '../engine/thumbs';
 import { tr } from '../i18n';
 import type { AppAction, Message, Reading } from '../engine/types';
 import { gap, PAGE_X, radius } from '../theme/tokens';
@@ -200,7 +201,11 @@ export function ChatScreen() {
   const onAskShot = (reading: Reading, question: string) => {
     const uri = shot?.uri;
     setShot(null);
-    void ask(question, reading, uri);
+    // The chat keeps a small copy in the app's own storage, not the picker's cache.
+    void (async () => {
+      const kept = uri ? await keepThumbnail(uri) : undefined;
+      await ask(question, reading, kept ?? uri);
+    })();
   };
 
   const exhausted = access.kind === 'trial' && trialLeft <= 0;
@@ -261,9 +266,10 @@ export function ChatScreen() {
           ref={list}
           data={messages}
           keyExtractor={(message) => message.id}
-          renderItem={({ item }) => (
+          renderItem={({ item, index }) => (
             <MessageRow
               message={item}
+              scanning={working && item.role === 'user' && index === messages.length - 2}
               onAction={openAction}
               onOpenSources={
                 activeThread ? () => router.push(`/sources/${activeThread.id}` as Href) : undefined
@@ -272,7 +278,6 @@ export function ChatScreen() {
           )}
           ListEmptyComponent={(
             <Landing
-              onSuggestion={ask}
               onScan={readScreen}
               onPick={() => { void pick(); }}
               recentScans={recentScans}
