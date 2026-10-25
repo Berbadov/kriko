@@ -398,6 +398,33 @@ def test_authoring_a_pack_is_given_longer_than_one_subjects_research(
     assert asked["timeout"] == 90.0
 
 
+def test_the_authoring_door_sizes_an_api_agent_for_a_whole_catalog(tmp_path, monkeypatch):
+    """The Golf catalog failed at the default response ceiling, through this door."""
+    from app.providers import harness as harness_mod
+    from app.providers import kriko_agent
+    from app.web import tasks
+
+    class ApiShaped(harness_mod.HarnessResearcher):
+        keep_partial = False
+        max_tokens = None
+
+    fake = _fake_cli(tmp_path, _reply(PACK))
+    monkeypatch.setattr(harness_mod, "available", lambda: [fake])
+    made = []
+
+    def factory(**kwargs):
+        made.append(ApiShaped(fake, timeout=60))
+        return made[-1]
+
+    monkeypatch.setattr("app.providers.harness_researcher", factory)
+    settings = type("S", (), {"store_path": _store(tmp_path),
+                              "app_state_path": tmp_path / "app.sqlite"})()
+    tasks.pack_author(settings, {"category": "cordless drills"}, _Recorder())
+
+    assert made[0].keep_partial is True
+    assert made[0].max_tokens == kriko_agent.AUTHORING_MAX_TOKENS
+
+
 def test_one_press_ends_with_a_draft_and_a_message_naming_it(tmp_path, monkeypatch):
     """The reader's whole experience of D4, through the real job handler."""
     from app.providers import harness as harness_mod

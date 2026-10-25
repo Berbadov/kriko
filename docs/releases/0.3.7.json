@@ -1,0 +1,69 @@
+{
+  "version": "0.3.7",
+  "platform": "windows-x86_64",
+  "source_fingerprint": "faeb33f173d316b3d7f94a082dbcebc75e5ca8925f7b5a615fac01846b9bf326",
+  "recorded_at": "2026-10-25",
+  "note": "The maintainer asked for this release, which carries the scoped Quick Look, the address-grounding fix and the larger response ceiling, knowing the packaged-window, clean-install, upgrade and live-provider journeys below were not walked on this build. Missing journeys are recorded as not_observed; release_readiness.py is expected to refuse complete stable-readiness certification.",
+  "journeys": {
+    "fresh_install": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Installer not run: this machine has Kriko installed and the installer's hook would stop it and rewrite its registration."
+    },
+    "portable_start": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Portable archive built and hashed; the extracted portable window was not walked. The built tree's app stayed up for 25 seconds and spawned its engine."
+    },
+    "setup": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Not walked on the packaged window."
+    },
+    "compare": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Not walked: the extension and Compare did not change in this release."
+    },
+    "stop": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Tray Quit was not walked."
+    },
+    "reconnect": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Not walked on the packaged window."
+    },
+    "upgrade_retains_data": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "No installed-version upgrade was performed, from 0.3.6 or earlier."
+    },
+    "sourced_answer": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "No live research was run against the packed 0.3.7 engine. Live Quick Looks were run from source against the provider (keyboard, watch, car, television), which is not the packed build."
+    },
+    "follow_up": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Not walked on the packed engine."
+    }
+  },
+  "providers": {
+    "kriko-agent": {
+      "status": "not_observed",
+      "model": "unchanged since 0.3.3",
+      "version": "0.3.7",
+      "report": "docs/releases/0.3.7.md"
+    }
+  },
+  "observed_instead": [
+    "The full gate on 0197f5c2 passed before any push: 4,868 Python tests passed and 24 skipped with ruff and mypy clean; wheel, node, ui, site and tauri (13 Rust tests) passed.",
+    "The frozen 0.3.7 sidecar started, printed its port and answered /api/health with version 0.3.7, extension 0.5.0 and no catalogs; settings and the extension handshake answered.",
+    "The built desktop app stayed up for 25 seconds without a panic and spawned its engine (built tree, not an installed copy).",
+    "Installer, portable and engine ZIP SHA-256 sums were verified against the build's SHA256SUMS.txt after copying; the extension ZIP was compared file by file with the tree (28 files, no differences).",
+    "Live Quick Looks from source on the maintainer's keys, dial 50, one run each: keyboard 1 kept / 4 dropped to 6 / 0; watch 2 / 1 to 4 / 0; car 3 findings (one gearbox) to 6 across five systems; television 2 kept / 1 dropped. One to two cents each."
+  ]
+}
