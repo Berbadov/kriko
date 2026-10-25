@@ -1,0 +1,69 @@
+{
+  "version": "0.3.4",
+  "platform": "windows-x86_64",
+  "source_fingerprint": "ae268aef5c266eb402ccc862aa2d5509f428eb3f0f216ac18d430044f2767515",
+  "recorded_at": "2026-10-24",
+  "note": "The maintainer asked for this release to carry the update fix, the top-bar fix and the Arc-styled controls, knowing the packaged-window, clean-install, upgrade and live-provider journeys below were not walked on this build. Missing journeys are recorded as not_observed; release_readiness.py is expected to refuse complete stable-readiness certification.",
+  "journeys": {
+    "fresh_install": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Installer not run: this machine has Kriko installed and the installer's hook would stop it and rewrite its registration. The installer was extracted with 7-Zip instead: it holds the app, the engine and OpenSERP and no catalogs."
+    },
+    "portable_start": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Portable archive built and hashed; the extracted portable window was not walked."
+    },
+    "setup": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Not walked on the packaged window."
+    },
+    "compare": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Compare and Queue were seen in the web interface's demo mode in Chrome; packaged Compare was not walked live."
+    },
+    "stop": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Tray Quit was not walked."
+    },
+    "reconnect": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Not walked on the packaged window."
+    },
+    "upgrade_retains_data": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "No installed-version upgrade was performed, so the 0.3.2-to-0.3.4 path through the installer was not walked. engineupdate.offer was checked for a 0.3.2 shell against the 0.3.3 manifest edit and returned the installer."
+    },
+    "sourced_answer": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "No live research was run against the 0.3.4 frozen engine; nothing in this release changes research."
+    },
+    "follow_up": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Not walked; nothing in this release changes follow-up routing."
+    }
+  },
+  "providers": {
+    "kriko-agent": {
+      "status": "not_observed",
+      "model": "unchanged since 0.3.3",
+      "version": "0.3.4",
+      "report": "docs/releases/0.3.4.md"
+    }
+  },
+  "observed_instead": [
+    "Gate stages ui, node and py passed on the Arc branch before merge: 4,561 Python tests passed, 23 skipped; extension 514; UI 92.",
+    "Frozen 0.3.4 engine, extracted from the installer, started in 2.1 seconds on a throwaway profile and answered /api/health with version 0.3.4, extension 0.4.6 and no catalogs.",
+    "In the web interface's demo mode (dev server) in Chrome: the settings gear, the Arc textarea, file picker, checkboxes and fold-aways in the drawer panels, and Compare and Queue. The extension settings page was served from a static server: its checkbox and radio were seen drawn in the new style.",
+    "The Windows package script finished with exit code 0; its log was not read.",
+    "Installer, portable and engine ZIP SHA-256 sums recorded in SHA256SUMS.txt."
+  ]
+}
