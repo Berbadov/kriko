@@ -10,6 +10,7 @@
   ?state=error | idle | empty | several picks another state of the panel.
   ?research=failed | running | empty picks a state of the research card; "empty"
   is the no-issue card a quick look that kept nothing shows.
+  ?compare=two starts the shortlist with two other products on it.
 -->
 <html lang="en">
 <head>
@@ -166,6 +167,15 @@
         result: { agent: { label: "local", model: "Model not reported" } },
       };
     }
+    // ?compare=two starts with two other products on the shortlist, one of them
+    // never checked; the add key then puts this page on it.
+    const SHORTLIST_MAX = 8;
+    const shortlist = params.get("compare") === "two" ? [
+      { queue_id: "q-octavia", url: "https://shop.example/skoda-octavia-2-0-tdi", name: "Skoda Octavia 2.0 TDI Style, 2015",
+        severities: ["high", "high", "medium", "medium", "medium", "low"] },
+      { queue_id: "q-308", url: "https://shop.example/peugeot-308-bluehdi", name: "Peugeot 308 1.6 BlueHDi Allure, 2016",
+        severities: null },
+    ] : [];
     window.chrome = {
       runtime: {
         onMessage: { addListener: (fn) => runtimeListeners.push(fn) },
@@ -227,7 +237,19 @@
             if (state === "idle") return callback({ ok: false, code: "NO_ADAPTER", error: "No installed pack can read this page." });
             return callback({ ok: true, pending: true });
           }
-          if (message.type === "QUEUE_ADD") return setTimeout(() => callback({ ok: true, added: true, count: 4, max: 8 }), 400);
+          if (message.type === "QUEUE_ADD") return setTimeout(() => {
+            if (!shortlist.some((one) => one.url === location.href)) {
+              shortlist.unshift({ queue_id: "q-here", url: location.href, name: message.payload.name,
+                severities: CLAIMS.map((claim) => claim.severity) });
+            }
+            callback({ ok: true, added: true, count: shortlist.length, max: SHORTLIST_MAX });
+          }, 400);
+          if (message.type === "COMPARE_LIST") return callback({ ok: true, max: SHORTLIST_MAX, items: shortlist.map((one) => ({ ...one })) });
+          if (message.type === "COMPARE_REMOVE") {
+            const at = shortlist.findIndex((one) => one.queue_id === message.payload.queue_id);
+            if (at >= 0) shortlist.splice(at, 1);
+            return callback({ ok: true, removed: message.payload.queue_id });
+          }
           if (message.type === "SEARCH") return callback({ ok: true, items: [] });
           if (message.type === "OPERATIONS") return callback({ ok: true, feed: { items: [] } });
           callback({ ok: true });

@@ -206,7 +206,7 @@ test("the severity counts follow what is drawn, so no number points at a card th
   const p = panelWith("strict");
   const text = p.shadow().querySelector(".lite-counts-slot").textContent;
   assert.match(text, /1\s*serious/);
-  assert.match(text, /0\s*worth checking/);
+  assert.match(text, /0\s*to check/);
 });
 
 test("Show them reveals every card, and the note says so and can put them away again", () => {

@@ -2,14 +2,13 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Kriko extension settings</title>
+    <title>Kriko settings</title>
     <link rel="stylesheet" href="options.css" />
   </head>
   <body>
     <main>
       <header class="brand">
         <svg viewBox="0 0 302 100" role="img" aria-label="Kriko"><defs><clipPath id="kriko-cap"><rect x="-30" y="0" width="362" height="100"/></clipPath></defs><g transform="translate(18 0)"><g clip-path="url(#kriko-cap)" fill="none" stroke="currentColor" stroke-width="16" stroke-linejoin="miter" stroke-miterlimit="6"><path d="M8 17.0V83.0M8 50L54 -16M8 50L54 116"/></g><path d="M-12 50H44" stroke="currentColor" stroke-width="5" fill="none"/><rect x="-18" y="36" width="6" height="28" fill="currentColor"/><rect x="42" y="44" width="12" height="12" fill="currentColor"/></g><g transform="translate(84 0)" clip-path="url(#kriko-cap)" fill="none" stroke="currentColor" stroke-width="16" stroke-linejoin="miter" stroke-miterlimit="6"><path d="M8 102V8H36L48 20V38L36 50H8M28 50L52 108"/></g><g transform="translate(152 0)" fill="currentColor"><rect x="0" y="0" width="16" height="100"/></g><g transform="translate(180 0)" clip-path="url(#kriko-cap)" fill="none" stroke="currentColor" stroke-width="16" stroke-linejoin="miter" stroke-miterlimit="6"><path d="M8 -2V102M8 50L54 -16M8 50L54 116"/></g><g transform="translate(246 0)" fill="none" stroke="currentColor" stroke-width="16" stroke-linejoin="miter" stroke-miterlimit="6"><path d="M20 8H36L48 20V80L36 92H20L8 80V20Z"/></g></svg>
-        <span class="brand-tag">local product knowledge</span>
         <div class="brand-controls">
           <div class="motion" id="motion" role="group" aria-label="Motion profile">
             <button type="button" class="motion-btn" data-motion="calm"
@@ -23,14 +22,11 @@
                   aria-pressed="false" title="Switch to light theme"></button>
         </div>
       </header>
-      <h1>Kriko extension</h1>
-      <p class="lede">
-        Shows what is known to go wrong with the product on the page you are
-        reading.
-      </p>
+      <h1>Settings</h1>
+      <p class="lede">What is known to go wrong with the product you are looking at.</p>
 
       <form id="form" data-step="address" novalidate>
-        <label for="base">The app's address and port</label>
+        <label for="base">App address</label>
         <input
           id="base"
           name="base"
@@ -41,10 +37,9 @@
           placeholder="http://127.0.0.1:8787"
         />
         <p class="hint" id="base-hint">
-          Empty uses <code id="default">http://127.0.0.1:8787</code>. The
-          extension sends the page to that address and nowhere else, and the
-          app on this computer decides what to do with it. Changed the port in
-          Kriko? Enter the full address here, port included.
+          Empty uses <code id="default">http://127.0.0.1:8787</code>. Pages go
+          to this address and nowhere else. Changed the port in Kriko? Enter
+          the full address.
         </p>
         <div class="row">
           <button type="submit" id="save">Save and test</button>
@@ -57,10 +52,10 @@
       <p id="status" class="status" role="status" aria-live="polite"></p>
 
       <section class="sites" id="sites-section" data-step="sites">
-        <h2>Sites Kriko reads</h2>
+        <h2>Sites</h2>
         <p class="hint">
-          The packs decide what to read; this page asks permission. A site you
-          stop reading is left alone, on every page, until you turn it back on.
+          Packs choose what to read; you allow it here. A site you stop
+          reading is left alone everywhere.
         </p>
         <ul id="sites" class="sites-list"></ul>
         <div class="row">
@@ -71,12 +66,10 @@
       </section>
 
       <section class="kept" id="kept-section">
-        <h2>What Kriko kept</h2>
+        <h2>Saved here</h2>
         <p class="hint">
-          Kriko remembers the last few pages it answered on, so reopening the
-          panel does not ask the app again; a page it could not read keeps an
-          id so pressing again does not start the work twice. All of it stays on
-          this computer, and none of it is needed for Kriko to work.
+          Recent answers, so reopening the panel is instant. It stays on this
+          computer, and Kriko works without it.
         </p>
         <p class="kept-counts" id="kept-counts"></p>
         <div class="row">
@@ -89,15 +82,15 @@
       </section>
 
       <section class="appearance">
-        <h2>The panel</h2>
-        <p class="hint">By default the panel lets the page show through, blurred. Turn this on if that is hard to read.</p>
+        <h2>Panel</h2>
+        <p class="hint">The page shows through, blurred.</p>
         <label class="check"><input type="checkbox" id="panel-solid" />
           Make the panel opaque.</label>
       </section>
 
       <section class="evidence">
-        <h2>How much doubt to show</h2>
-        <p class="hint">Every finding carries a mark for how much it stands on. This decides which ones are drawn; nothing is deleted, and hidden ones are counted with a way to show them. The app's Settings has the same choice.</p>
+        <h2>Doubt</h2>
+        <p class="hint">Which findings are drawn. Nothing is deleted. The app's Settings has the same choice.</p>
         <div class="choices" role="radiogroup" aria-label="How much doubt to show">
           <label class="check"><input type="radio" name="sensitivity" value="all" checked />
             <span>Show everything</span></label>
@@ -110,12 +103,12 @@
       </section>
 
       <section class="buying">
-        <h2>Buying help</h2>
-        <p class="hint">What Kriko says on shopping pages once you have told it what you need.</p>
+        <h2>Shopping</h2>
+        <p class="hint">Help on shopping pages, once you have told Kriko what you need.</p>
         <label class="check"><input type="checkbox" id="buyer-guard" checked />
-          Look before I pay: on a cart or payment page, say if something is wrong.</label>
+          Check carts and payment pages before I pay.</label>
         <label class="check"><input type="checkbox" id="buyer-marks" checked />
-          Mark products on results pages that break what you need.</label>
+          Mark products that break what I need.</label>
         <div class="row">
           <button type="button" id="notify" class="quiet">Tell me when a watched price drops</button>
         </div>
@@ -124,13 +117,13 @@
 
       <section class="version">
         <h2>Versions</h2>
-        <p class="hint">Only matters when the two drift apart.</p>
+        <p class="hint">Shown when the app and the extension drift apart.</p>
         <p id="compat" class="status" role="status" aria-live="polite"></p>
       </section>
 
       <section class="tour">
-        <h2>The panel tour</h2>
-        <p class="hint">A short walk through the panel. It shows once, on the first product page.</p>
+        <h2>Tour</h2>
+        <p class="hint">A short walk through the panel, shown once.</p>
         <div class="row">
           <button type="button" id="tour" class="quiet">Show it again</button>
         </div>
@@ -139,10 +132,7 @@
 
       <section class="about">
         <h2>If nothing answers</h2>
-        <p>
-          The address is remembered either way. Start Kriko, then press
-          <strong>Save and test</strong>.
-        </p>
+        <p>Start Kriko, then press <strong>Save and test</strong>.</p>
       </section>
     </main>
     <script src="options.js"></script>
