@@ -4,26 +4,19 @@ import { StyleSheet, View } from 'react-native';
 
 import type { QueueJob } from '../engine/types';
 import { tr } from '../i18n';
-import { press, tap } from '../theme/feedback';
+import { press } from '../theme/feedback';
 import { font, gap, PAGE_X, radius } from '../theme/tokens';
 import { makeStyles, useColors } from '../theme/theme';
 import { Txt } from '../theme/Txt';
 import { MotionPressable, MotionView } from '../components/Motion';
-import { ChevronRightIcon, ImageIcon2, ScanIcon, SearchIcon } from '../components/Icon';
-
-const SUGGESTIONS = [
-  'What do owners report about the Bosch GSB 600?',
-  'Are used Galaxy Buds2 Pro worth $90?',
-] as const;
+import { ChevronRightIcon, ImageIcon2, ScanIcon } from '../components/Icon';
 
 export function Landing({
-  onSuggestion,
   onScan,
   onPick,
   recentScans,
   onOpenScan,
 }: {
-  onSuggestion: (text: string) => void;
   onScan: () => void;
   onPick: () => void;
   recentScans: QueueJob[];
@@ -85,31 +78,8 @@ export function Landing({
         </MotionPressable>
       </MotionView>
 
-      <MotionView delay={160} style={styles.suggestionsBlock}>
-        <View style={styles.sectionHeading}>
-          <Txt variant="sectionLabel" tone="ink3">Or start with a question</Txt>
-          <View style={styles.rule} />
-        </View>
-        {SUGGESTIONS.map((text, index) => (
-          <MotionPressable
-            key={text}
-            onPress={() => {
-              tap();
-              onSuggestion(text);
-            }}
-            accessibilityRole="button"
-            accessibilityLabel={text}
-            style={styles.suggestion}
-          >
-            <SearchIcon size={15} color={color.ink3} />
-            <Txt variant="bodyTight" tone="ink" style={styles.suggestionText}>{text}</Txt>
-            <Txt variant="monoSm" tone="ink4">0{index + 1}</Txt>
-          </MotionPressable>
-        ))}
-      </MotionView>
-
       {recent.length ? (
-        <MotionView delay={240} style={styles.recentBlock}>
+        <MotionView delay={160} style={styles.recentBlock}>
           <View style={styles.sectionHeading}>
             <Txt variant="sectionLabel" tone="ink3">Recently scanned</Txt>
             <View style={styles.rule} />
@@ -139,7 +109,7 @@ export function Landing({
         </MotionView>
       ) : null}
 
-      <MotionView delay={320} style={styles.footerNote}>
+      <MotionView delay={240} style={styles.footerNote}>
         <View style={styles.footerDot} />
         <Txt variant="monoSm" tone="ink3">Evidence first. Clear about what is missing.</Txt>
       </MotionView>
@@ -195,19 +165,8 @@ const useStyles = makeStyles((color) => StyleSheet.create({
     borderBottomColor: color.edge,
   },
   pickLabel: { flex: 1 },
-  suggestionsBlock: { gap: 4 },
   sectionHeading: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 4 },
   rule: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: color.edge },
-  suggestion: {
-    minHeight: 46,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: color.edge,
-    paddingHorizontal: 4,
-  },
-  suggestionText: { flex: 1 },
   recentBlock: { gap: 4 },
   recentRow: {
     minHeight: 56,
