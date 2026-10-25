@@ -20,13 +20,13 @@ function open(seed = {}) {
 test("a reader who has never seen the tour gets it, and it ends after the last step", () => {
   const p = open();
   assert.ok(overlay(p), "the tour did not open on the first visit");
-  assert.match(overlay(p).querySelector(".lite-tour-count").textContent, /1 of 5/);
+  assert.match(overlay(p).querySelector(".lite-tour-count").textContent, /1 of 6/);
   const seen = [title(p)];
   while (!overlay(p).querySelector(".lite-tour-next").textContent.includes("Done")) {
     p.click(".lite-tour-next");
     seen.push(title(p));
   }
-  assert.equal(seen.length, 5);
+  assert.equal(seen.length, 6);
   p.click(".lite-tour-next");
   assert.equal(overlay(p), null, "the tour stayed after Done");
   assert.equal(p.local[KEY], "done");
@@ -34,9 +34,9 @@ test("a reader who has never seen the tour gets it, and it ends after the last s
 
 test("every step points at something the panel has", () => {
   const p = open();
-  for (let i = 0; i < 5; i += 1) {
+  for (let i = 0; i < 6; i += 1) {
     assert.ok(!overlay(p).querySelector(".lite-tour-spot").hidden, `step ${i + 1} found nothing to point at`);
-    if (i < 4) p.click(".lite-tour-next");
+    if (i < 5) p.click(".lite-tour-next");
   }
 });
 

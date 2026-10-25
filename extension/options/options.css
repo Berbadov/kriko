@@ -443,11 +443,6 @@ main {
   color: var(--on-brand);
 }
 .brand svg { display: block; height: 26px; width: auto; }
-.brand-tag {
-  font-family: var(--font-body);
-  font-size: 12.5px;
-  color: rgba(240, 243, 255, 0.82);
-}
 
 h1 {
   margin: 0 0 0.35rem;

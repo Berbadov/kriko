@@ -149,55 +149,150 @@ test("a failure is said once, in the error box, not again in the status line", (
   assert.equal(p.statusText(), "", "the status line is empty while the error box speaks");
 });
 
-// ── queue mode ──────────────────────────────────────────────────────────
+// ── compare ─────────────────────────────────────────────────────────────
 
-test("Add to queue puts this listing's product in the app's research queue", () => {
-  // The queue is filled from the listings themselves: the reader presses the
-  // key on each product they are weighing, and Compare lines them up once an
-  // agent has researched them.
-  const p = loadPanel({ workerResponse: (m) => m.type === "QUEUE_ADD"
-    ? { ok: true, added: true, count: 2, max: 8 } : { ok: true } });
+const tick = () => new Promise((resolve) => setImmediate(resolve));
+
+// What the worker says to COMPARE_LIST: the shortlist, each product with the
+// severity of every risk in the check stored for it.
+const SHORTLIST = {
+  ok: true, max: 8, items: [
+    { queue_id: "q1", url: "https://www.listing.example/ilan/vasita-otomobil-volkswagen-golf-123456/detay",
+      name: "Golf VII", severities: ["high", "high", "medium", "low"] },
+    { queue_id: "q2", url: "https://other.example/octavia", name: "Octavia", severities: null },
+  ],
+};
+
+test("Add to compare puts this listing's product on the shortlist and opens it", async () => {
+  // The shortlist is filled from the listings themselves: the reader presses
+  // the key on each product they are weighing, and the tray lines them up.
+  let listed = false;
+  const p = loadPanel({ workerResponse: (m) => {
+    if (m.type === "QUEUE_ADD") { listed = true; return { ok: true, added: true, count: 2, max: 8 }; }
+    if (m.type === "COMPARE_LIST") return listed ? SHORTLIST : { ok: true, items: [], max: 8 };
+    return { ok: true };
+  } });
   p.openPanel();
   p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, lookup_id: "abc123" } });
-  p.click(".lite-queue");
+  p.click(".lite-compare-add");
 
   const ask = p.sent.find((m) => m.type === "QUEUE_ADD");
   assert.ok(ask, "the panel asked the worker to queue the product");
   assert.ok(ask.payload.url, "keyed by the listing's address");
   assert.equal(ask.payload.lookup_id, "abc123", "the stored answer travels with it");
   assert.ok(ask.payload.name, "under a name the agent can research");
-  const row = p.shadow().querySelector(".lite-queue-row");
-  assert.match(row.textContent, /In the queue/);
-  assert.match(row.textContent, /2 of 8/);
-  assert.ok(p.shadow().querySelector(".lite-queue").disabled, "a second press is not offered");
+  assert.equal(p.shadow().querySelector(".lite-compare-bar").dataset.phase, "queued");
+  assert.ok(p.shadow().querySelector(".lite-compare-add").disabled, "a second press is not offered");
+  assert.match(p.shadow().querySelector(".lite-compare-add").textContent, /In compare/);
+
+  await tick();
+  const tray = p.shadow().querySelector(".lite-compare-tray");
+  assert.equal(tray.hidden, false, "the shortlist opens where the reader pressed");
+  const rows = [...tray.querySelectorAll(".lite-cmp-row")];
+  assert.deepEqual(rows.map((row) => row.querySelector(".lite-cmp-name").textContent.replace(/\s+/g, " ").trim()),
+    ["Golf VII this page", "Octavia"]);
+  assert.deepEqual([...rows[0].querySelectorAll(".lite-cmp-n")].map((n) => n.textContent.trim()),
+    ["2", "1", "1"], "serious, to check, minor: counted from the stored check");
+  assert.match(rows[1].textContent, /Not checked yet/, "a product with no stored check says so");
+  assert.match(p.shadow().querySelector(".lite-compare-toggle").textContent, /Compare · 2/);
+  assert.match(p.shadow().querySelector(".lite-cmp-limit").textContent, /2 of 8/);
 });
 
-test("a full queue says so instead of pretending the product was queued", () => {
-  const p = loadPanel({ workerResponse: (m) => m.type === "QUEUE_ADD"
-    ? { ok: false, status: 409, error: "Kriko refused that (the queue holds 8 products)." }
-    : { ok: true } });
+test("a full shortlist says so, opens, and can be tried again", async () => {
+  const p = loadPanel({ workerResponse: (m) => {
+    if (m.type === "QUEUE_ADD") return { ok: false, status: 409, error: "Kriko refused that (the queue holds 8 products)." };
+    if (m.type === "COMPARE_LIST") return SHORTLIST;
+    return { ok: true };
+  } });
   p.openPanel();
   p.deliverEntry(ENTRY);
-  p.click(".lite-queue");
+  p.click(".lite-compare-add");
+  await tick();
 
-  const row = p.shadow().querySelector(".lite-queue-row");
-  assert.equal(row.dataset.phase, "error");
-  assert.match(row.textContent, /queue is full/);
-  assert.equal(p.shadow().querySelector(".lite-queue").disabled, false, "it can be tried again");
+  assert.equal(p.shadow().querySelector(".lite-compare-bar").dataset.phase, "error");
+  assert.match(p.shadow().querySelector(".lite-compare-note").textContent, /Compare is full/);
+  assert.equal(p.shadow().querySelector(".lite-compare-tray").hidden, false, "a full list is fixed from the list");
 });
 
-test("Add to queue is offered on a product nothing installed knows", () => {
-  // The button used to live in the listing header, which only a read page
-  // gets, so the unknown product a reader most wants to line up had none.
+test("Add to compare is offered on a product nothing installed knows", () => {
+  // The key used to live in the listing header, which only a read page gets,
+  // so the unknown product a reader most wants to line up had none.
   const p = loadPanel({ analyzeResponse: { ok: false, code: "UNKNOWN_PRODUCT", productName: "Acme Phone 5" },
     workerResponse: (m) => m.type === "QUEUE_ADD"
       ? { ok: true, added: true, count: 1, max: 8 } : undefined });
   p.openPanel();
   p.click(".lite-cta");
-  assert.ok(p.shadow().querySelector(".lite-queue"), "the queue key is on the panel");
-  p.click(".lite-queue");
+  assert.ok(p.shadow().querySelector(".lite-compare-add"), "the key is on the panel");
+  p.click(".lite-compare-add");
   const ask = p.sent.find((m) => m.type === "QUEUE_ADD");
   assert.equal(ask.payload.name, "Acme Phone 5");
+});
+
+test("a failed add can be tried again", () => {
+  const p = loadPanel({ workerResponse: (m) => (m.type === "QUEUE_ADD"
+    ? { ok: false, error: "Kriko is not running. Open the app, then try again." } : { ok: true }) });
+  p.openPanel();
+  p.deliverEntry(ENTRY);
+  p.click(".lite-compare-add");
+  assert.equal(p.shadow().querySelector(".lite-compare-bar").dataset.phase, "error");
+  assert.match(p.shadow().querySelector(".lite-compare-note").textContent, /not running/);
+  assert.equal(p.shadow().querySelector(".lite-compare-add").disabled, false, "it can be tried again");
+});
+
+test("the shortlist opens from its count, and a row can be taken off it", async () => {
+  let removed = false;
+  const p = loadPanel({ workerResponse: (m) => {
+    if (m.type === "COMPARE_LIST") return removed
+      ? { ...SHORTLIST, items: SHORTLIST.items.slice(1) } : SHORTLIST;
+    if (m.type === "COMPARE_REMOVE") { removed = true; return { ok: true, removed: "q1" }; }
+    return { ok: true };
+  } });
+  p.openPanel();
+  p.deliverEntry(ENTRY);
+  await tick();
+  assert.equal(p.shadow().querySelector(".lite-compare-tray").hidden, true, "closed until asked for");
+  assert.match(p.shadow().querySelector(".lite-compare-add").textContent, /In compare/,
+    "this page is already on the list");
+
+  p.click(".lite-compare-toggle");
+  assert.equal(p.shadow().querySelector(".lite-compare-tray").hidden, false);
+  assert.equal(p.shadow().querySelector(".lite-compare-toggle").getAttribute("aria-expanded"), "true");
+
+  p.click('.lite-cmp-row[data-id="q1"] .lite-cmp-remove');
+  await tick();
+  assert.deepEqual(JSON.parse(JSON.stringify(p.sent.find((m) => m.type === "COMPARE_REMOVE").payload)),
+    { queue_id: "q1" });
+  assert.equal(p.shadow().querySelectorAll(".lite-cmp-row").length, 1);
+  assert.equal(p.shadow().querySelector(".lite-compare-add").disabled, false,
+    "taking this page off the list gives its key back");
+});
+
+test("a row that cannot be removed says so instead of being drawn gone", async () => {
+  const p = loadPanel({ workerResponse: (m) => {
+    if (m.type === "COMPARE_LIST") return SHORTLIST;
+    if (m.type === "COMPARE_REMOVE") return { ok: false, error: "Kriko refused that (404)." };
+    return { ok: true };
+  } });
+  p.openPanel();
+  p.deliverEntry(ENTRY);
+  await tick();
+  p.click(".lite-compare-toggle");
+  p.click('.lite-cmp-row[data-id="q2"] .lite-cmp-remove');
+  await tick();
+  assert.equal(p.shadow().querySelectorAll(".lite-cmp-row").length, 2);
+  assert.match(p.shadow().querySelector(".lite-compare-note").textContent, /Kriko refused that/);
+});
+
+test("Open side by side raises the app on its compare screen", async () => {
+  const p = loadPanel({ workerResponse: (m) => (m.type === "COMPARE_LIST" ? SHORTLIST : { ok: true }) });
+  p.openPanel();
+  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, app_url: "http://127.0.0.1:8787/#/result/abc123" } });
+  await tick();
+  p.click(".lite-compare-toggle");
+  p.click(".lite-cmp-open");
+  const ask = p.sent.filter((m) => m.type === "OPEN_IN_APP").pop();
+  assert.equal(ask.payload.route, "compare");
+  assert.equal(ask.payload.fallbackUrl, "http://127.0.0.1:8787/#/compare");
 });
 
 test("a pack's or an agent's **bold** and `code` render, and their markup does not", () => {
@@ -260,7 +355,7 @@ test("an answer the app never stored offers no way in", () => {
   assert.equal(p.footer().querySelector(".lite-open-app"), null);
 });
 
-test("the panel hands the reader on to the screens they act from", () => {
+test("the footer is one way into the app, not a row of them", () => {
   // Reading the claims is half of it. The other half, holding this listing
   // against the others, lived only in the app, so a reader finishing the panel
   // had to find the same listing again by hand. The answer is already saved
@@ -283,16 +378,10 @@ test("the panel hands the reader on to the screens they act from", () => {
     },
   } });
 
+  // One way into the app from the footer. Compare is drawn in the panel.
   const labels = [...p.footer().querySelectorAll(".lite-open-app")]
     .map((b) => b.textContent);
-  assert.deepEqual(labels, ["Open in Kriko", "Compare"]);
-
-  p.footer().querySelectorAll(".lite-open-app")[1].dispatchEvent(
-    new p.dom.window.MouseEvent("click", { bubbles: true }));
-  const compare = p.sent.filter((m) => m.type === "OPEN_IN_APP").pop();
-  assert.equal(compare.payload.route, "compare/abc123");
-  assert.equal(compare.payload.fallbackUrl,
-               "http://127.0.0.1:8787/#/compare?left=abc123");
+  assert.deepEqual(labels, ["Open in Kriko"]);
 });
 
 test("an app that gave no routes offers no buttons for them", () => {
@@ -861,17 +950,19 @@ test("an unrelated listing refresh keeps unchanged search cards mounted", () => 
     "a background listing update rebuilt the same search results");
 });
 
-test("a product already in the catalogs searches that product again instead of research", () => {
+test("a product already in the catalogs offers search, not research", () => {
   const p = loadPanel({ searchResponse: HITS });
   p.openPanel();
   p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result,
     subjects: [{ kind: "product", subject_id: "product-1", label: "Golf VII" }] } });
 
-  assert.equal(p.shadow().querySelector(".lite-find-product").textContent,
-    "Search again");
+  assert.equal(p.shadow().querySelector(".lite-find-product"), null, "one search, in the header");
   assert.equal(p.shadow().querySelector(".lite-research-product").hidden, true);
-  p.click(".lite-find-product");
-  assert.equal(p.shadow().querySelector(".lite-search-field").value, "Golf VII");
+  p.click(".lite-btn-search");
+  const field = p.shadow().querySelector(".lite-search-field");
+  assert.ok(field, "the header's key opens the search");
+  field.value = "Golf VII";
+  field.dispatchEvent(new p.dom.window.Event("input", { bubbles: true }));
   p.flushTimers();
   assert.equal(p.sent.filter((message) => message.type === "SEARCH").at(-1).payload.q, "Golf VII");
 });
@@ -939,8 +1030,12 @@ test("a product nothing installed knows gets its name and one research button (B
   assert.match(box.textContent.replace(/\s+/g, " "), /doesn't know Bosch HSG 7584 B 1 yet/);
   assert.doesNotMatch(box.textContent, /Add this site/);
   assert.equal(p.errorText(), null, "not a red banner");
+  assert.equal(p.shadow().querySelector(".lite-unknown-research"), null,
+    "the primary key is the research button, so the card does not repeat it");
+  assert.equal(p.shadow().querySelector(".lite-research-product").hidden, true,
+    "and the product-actions key stays out of the way");
 
-  p.click(".lite-unknown-research");
+  p.click(".lite-cta");
   assert.equal(p.shadow().querySelector(".lite-research-name").value, "Bosch HSG 7584 B 1",
     "the name the page gave is already typed in");
   assert.ok(p.shadow().querySelector(".lite-research-start"));
@@ -958,7 +1053,7 @@ test("the primary button researches a product nothing installed knows; it does n
   });
   p.openPanel();
   assert.equal(p.shadow().querySelector(".lite-cta-label").textContent, "Research this product");
-  assert.match(p.statusText(), /Research it to see what is known/);
+  assert.match(p.statusText(), /Not in your catalogs/);
 
   const asks = p.sent.filter((m) => m.type === "ANALYZE").length;
   p.click(".lite-cta");
@@ -1007,7 +1102,6 @@ test("the empty state doesn't promise a run time it doesn't always keep", () => 
   const source = fs.readFileSync(
     path.join(__dirname, "..", "hover_lite", "hover_lite.js"), "utf8");
   assert.doesNotMatch(source, /under 2/);
-  assert.match(source, /No search yet/);
 });
 
 test("pressing Refresh asks background.js to bypass its own cache", () => {

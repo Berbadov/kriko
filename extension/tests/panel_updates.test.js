@@ -60,22 +60,19 @@ test("changed and removed claims update without keeping stale text or expansion"
   assert.equal(p.shadow().querySelector(".lite-rc-new"), null);
 });
 
-test("queue help explains the workflow without adding a product", () => {
-  const p = loadPanel();
+test("a new answer leaves an open shortlist as it was", async () => {
+  const p = loadPanel({ workerResponse: (m) => (m.type === "COMPARE_LIST"
+    ? { ok: true, max: 8, items: [{ queue_id: "q1", url: "https://x.example/a", name: "A", severities: [] }] }
+    : { ok: true }) });
   p.openPanel();
   p.deliverEntry(answer([claim("old")]));
-  const help = p.click(".lite-queue-help");
-  assert.equal(help.getAttribute("aria-expanded"), "true");
-  const text = p.shadow().querySelector(".lite-queue-guide");
-  assert.equal(text.hidden, false);
-  assert.match(text.textContent, /listing|page/i);
-  assert.match(text.textContent, /Compare/);
-  assert.match(text.textContent, /Start queue/);
-  assert.equal(p.sent.filter(m => m.type === "QUEUE_ADD").length, 0);
+  await new Promise((resolve) => setImmediate(resolve));
+  p.click(".lite-compare-toggle");
+  assert.equal(p.shadow().querySelector(".lite-compare-tray").hidden, false);
   p.deliverEntry(answer([claim("old"), claim("new")]));
-  assert.equal(p.shadow().querySelector(".lite-queue-guide").hidden, false);
-  p.click(".lite-queue-help");
-  assert.equal(p.shadow().querySelector(".lite-queue-guide").hidden, true);
+  assert.equal(p.shadow().querySelector(".lite-compare-tray").hidden, false,
+    "a live update does not close what the reader opened");
+  assert.equal(p.sent.filter((m) => m.type === "QUEUE_ADD").length, 0, "and adds nothing");
 });
 
 test("the panel offers no box for asking an agent about a saved answer", () => {
