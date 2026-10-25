@@ -1,6 +1,6 @@
 # Kriko Agent credential review — 2026-10-22
 
-Kriko Agent is an experimental preview combining Mercury 2.5 with DeepSeek
+Kriko Agent is an experimental preview combining Mercury 3 with DeepSeek
 Search and Fetch. It uses credentials supplied on the reader's computer.
 No shared Kriko account is included in the downloads.
 
@@ -28,11 +28,11 @@ OpenAI-compatible endpoint and its model. That could transmit a Mercury key to
 that endpoint if this action was used. Actual Kriko Agent chat calls use
 Inception's endpoint for Mercury and DeepSeek's endpoint for retrieval.
 
-The patch routes the key test directly to Inception with the Mercury 2.5 model,
-ignoring unrelated OpenAI-compatible configuration. A regression test verifies
-the destination, model, authorization header and absence of credentials from the
-response, using a dummy credential and mocked transport. The duplicate DeepSeek
-key entry is also removed.
+The patch routes the key test directly to Inception with the Mercury model
+(then 2.5, now 3), ignoring unrelated OpenAI-compatible configuration. A
+regression test verifies the destination, model, authorization header and
+absence of credentials from the response, using a dummy credential and mocked
+transport. The duplicate DeepSeek key entry is also removed.
 
 Anyone who used **Test** for Mercury in an affected build should replace that
 Mercury credential through their provider account. This recommendation concerns

@@ -5,8 +5,10 @@ import { ChatProvider, useChat } from './chat'
 import { CompareProvider, useCompare } from './compare'
 import { useAttention } from './engine/buyer'
 import { useEngine } from './engine/Engine'
+import { post } from './engine/api'
 import { useHandoff, type Landing } from './handoff'
 import { QueueProvider, useQueue } from './queue'
+import type { AppAction } from './activity/run'
 import { ChatScreen } from './screens/Chat'
 import { CompareScreen } from './screens/Compare'
 import { ProductScreen } from './screens/Product'
@@ -27,6 +29,8 @@ function Shell() {
   const [drawer, setDrawer] = useState(false)
   /** A panel the drawer should open on, asked for by the tour. */
   const [drawerPanel, setDrawerPanel] = useState<string | null>(null)
+  /** One line about a started app action, until the reader dismisses it. */
+  const [notice, setNotice] = useState('')
 
   useEffect(() => {
     const onDrawer = (event: Event) => {
@@ -54,6 +58,33 @@ function Shell() {
     setDrawerPanel(null)
     setNav((current) => ({ screen: 'chat', direction: current.screen === 'chat' ? 1 : -1, product: lookupId }))
   }, [])
+
+  /** A named action the agent proposed. Navigation is the window's; a Quick
+   *  Look is the engine's job and starts only after this press. */
+  const performAction = useCallback((action: AppAction) => {
+    if (action.kind === 'open') {
+      const target = String(action.params?.screen || '')
+      if (target === 'chat' || target === 'compare' || target === 'queue') {
+        go(target)
+        return
+      }
+      if (target === 'catalogs') showDrawer('browse')
+      else if (target === 'for-you') showDrawer('foryou')
+      else if (target) showDrawer(target)
+      return
+    }
+    if (action.kind === 'start_quick_look') {
+      setNotice('Starting the Quick Look…')
+      void post<{ job_id: string }>('/api/agent-actions', {
+        name: 'start_quick_look',
+        arguments: action.params,
+      }).then((started) => {
+        setNotice(`Quick Look started. Job ${started.job_id.slice(0, 8)} will appear in History when it finishes.`)
+      }).catch((error: unknown) => {
+        setNotice(error instanceof Error ? error.message : 'The Quick Look could not be started.')
+      })
+    }
+  }, [go])
 
   // The extension hands a product over.
   const land = useCallback(
@@ -134,6 +165,12 @@ function Shell() {
             <button className="btn ghost" onClick={() => showDrawer('settings')}>Add a provider key</button>
           </aside>
         )}
+        {notice && (
+          <aside className="engine-notice" role="status">
+            <span>{notice}</span>
+            <button className="btn ghost" onClick={() => setNotice('')}>Dismiss</button>
+          </aside>
+        )}
         <main className="stage">
           <AnimatePresence mode="popLayout" initial={false} custom={direction}>
             <motion.div
@@ -150,7 +187,7 @@ function Shell() {
               exit="exit"
               transition={m.tx.page}
             >
-              {screen === 'chat' && !product && <ChatScreen onOpen={openProduct} />}
+              {screen === 'chat' && !product && <ChatScreen onOpen={openProduct} onAction={performAction} />}
               {screen === 'chat' && product && <ProductScreen lookupId={product} onBack={() => go('chat')} onCompare={() => go('compare')} />}
               {screen === 'compare' && <CompareScreen />}
               {screen === 'queue' && <QueueScreen />}

@@ -525,7 +525,7 @@ def _api_agent(agent, *, timeout: float, model: str, app_state_path,
     from app.web.settings import KRIKO_HOME
 
     if agent.id == apiagent.KRIKO_AGENT.id:
-        # Kriko Agent is the evaluated, fixed Mercury 2.5 + DeepSeek Search
+        # Kriko Agent is the evaluated, fixed Mercury 3 + DeepSeek Search
         # stack; a per-harness model preference must not silently change it.
         model = agent.default_model
     elif not model.strip() and app_state_path is not None:

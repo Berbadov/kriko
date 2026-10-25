@@ -51,6 +51,21 @@ test("a page with no structured data is named by its heading, and not typed (B14
   assert.deepEqual(Object.keys(scrape.fields).filter((k) => k.startsWith("ld:")), []);
 });
 
+test("learning an unregistered page collects every labelled fact, not only the first (B151)", () => {
+  const s = loadContentScript(`<html><body><h1>Trail Bike X4</h1>
+    <dl><dt>Brand</dt><dd>Northstar</dd><dt>Frame</dt><dd>Aluminium</dd>
+      <dt>Wheel size</dt><dd>29 inch</dd></dl>
+    <table><tr><th>Gears</th><td>12</td></tr></table>
+    <ul><li><strong>Color</strong> Red</li></ul>
+  </body></html>`, "https://shop.example/bikes/x4");
+  const scrape = s.buildScrape([], {}, true);
+  assert.equal(scrape.fields.Brand, "Northstar");
+  assert.equal(scrape.fields.Frame, "Aluminium");
+  assert.equal(scrape.fields["Wheel size"], "29 inch");
+  assert.equal(scrape.fields.Gears, "12");
+  assert.equal(scrape.fields.Color, "Red");
+});
+
 test("a broken JSON-LD block is skipped, not fatal (B149)", () => {
   const s = loadContentScript(`<html><head>
     <script type="application/ld+json">{ not json</script>

@@ -332,21 +332,17 @@
     return Boolean(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   }
 
-  /* ─── Light and dark ───────────────────────────────────────────────────
+  /* ─── Warm paper default and dark option ───────────────────────────────
    *
    * The choice lives in chrome.storage.local under one key, shared with the
    * options page, so either surface opens the way the other was left. Until
    * storage answers — and when the reader has never chosen — the system
-   * preference decides, which is also what the stylesheet paints before this
-   * file runs. The host element carries `data-theme`, because the panel lives
+   * warm paper is the product default; an explicit saved dark choice remains
+   * available. The host element carries `data-theme`, because the panel lives
    * in a shadow root and the attribute has to live on the element the sheet's
    * `:host([data-theme="light"])` can see. */
-  function prefersLight() {
-    return Boolean(window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches);
-  }
-
   function currentTheme() {
-    return state.theme || (prefersLight() ? "light" : "dark");
+    return state.theme || "light";
   }
 
   function paintTheme() {
@@ -1328,9 +1324,18 @@
     };
     const deepen = result.deepen_job_id || state.researchJob?.deepen_job_id;
     const found = state.researchQuick.risks.length;
+    const diagnostic = String(result.diagnostic?.message || "").trim();
+    const coverage = result.coverage || result.telemetry?.coverage || {};
+    const pagesRead = Number(coverage.pages_read) || 0;
     const said = found
       ? `${found} thing${found === 1 ? "" : "s"} to know.`
-      : "Nothing sourced found.";
+      : diagnostic || (state.researchQuick.dropped
+        ? `Candidate findings did not pass source checks (${state.researchQuick.dropped} dropped).`
+        : state.researchQuick.specs.length
+          ? `${state.researchQuick.specs.length} sourced product specification(s) found; no sourced risks.`
+          : pagesRead
+            ? `Read ${pagesRead} page(s); no supported risks were kept.`
+            : "No source pages were read; findings could not be checked.");
     if (!deepen) {
       // A quick look is not a pack: it is saved as it is, and joins a pack
       // only when the reader presses "Add to a pack".
@@ -1342,7 +1347,7 @@
     }
     state.researchJob = { job_id: deepen, kind: "pack_author" };
     state.researchState = "queued";
-    state.researchMessage = `${said} Digging deeper…`;
+    state.researchMessage = "Checking more sources…";
     renderResearch();
     pollResearchJob(deepen);
   }
@@ -1428,6 +1433,9 @@
    * the product instead of leaving for the app. */
   function coverageWords(coverage) {
     if (!coverage) return "";
+    // Older/failed responses may contain an empty coverage object. A missing
+    // count is unknown, not evidence that zero pages were read.
+    if (coverage.pages_read === undefined || coverage.pages_read === null) return "";
     // The run's own tally, as `run_progress.js` words it: pages read out of
     // pages tried first, then what came of them.
     const { pages, rest } = coverageSummary(coverage);
@@ -1452,7 +1460,10 @@
         </div>
       </div>
       ${statChips}
-      <div class="lite-quick-specs"></div>
+      ${empty.hasProductDetails ? `<details class="lite-quick-details">
+        <summary>Product details (${Number(empty.detailCount) || 0})</summary>
+        <div class="lite-quick-specs"></div>
+      </details>` : ""}
       <details class="lite-quick-sources" ${state.quickSourcesOpen ? "open" : ""}>
         <summary>Pages read</summary>
         <div class="lite-quick-source-list"></div>
@@ -1473,8 +1484,20 @@
     const editingId = editing?.dataset.id;
     const selection = editing ? [editing.selectionStart, editing.selectionEnd] : null;
     const quickCoverage = state.researchQuick?.coverage;
-    const quickIsEmpty = Boolean(state.researchQuick
-      && !state.researchQuick.risks?.length && !state.researchQuick.specs?.length);
+    // A listing/specification dump is not a sourced issue. Keep the concise
+    // no-issue state whenever the quick look found no supported risks.
+    const quickIsEmpty = Boolean(state.researchQuick && !state.researchQuick.risks?.length);
+    const listingFacts = Object.entries(state.researchQuick?.listing?.facts || {});
+    const assumed = String(state.researchQuick?.assumed || "");
+    const assumedIdentity = assumed.replace(/[^a-z0-9]/gi, "").toLowerCase();
+    const productIdentity = String(state.researchQuick?.product || state.researchName)
+      .replace(/[^a-z0-9]/gi, "").toLowerCase();
+    const distinctAssumption = assumed && assumedIdentity !== productIdentity;
+    const detailCount = (state.researchQuick?.specs?.length || 0)
+      + listingFacts.length + (state.researchQuick?.listing?.description ? 1 : 0)
+      + (distinctAssumption ? 1 : 0);
+    const quickReadCountKnown = quickCoverage?.pages_read !== undefined
+      && quickCoverage?.pages_read !== null;
     const rejectionReasons = quickCoverage?.rejection_reasons;
     const rejectionSummary = rejectionReasons && typeof rejectionReasons === "object"
       ? Object.entries(rejectionReasons)
@@ -1490,8 +1513,19 @@
       ? {
         kind: "quick",
         title: "No sourced issues kept",
-        note: "Nothing found in the pages read. Not proof there is no issue.",
+        note: state.researchQuick?.diagnostic?.code === "unreadable_answer"
+          ? "Research returned an unreadable answer. Retry research."
+          : quickReadCountKnown && !(Number(quickCoverage.pages_read) > 0)
+          ? "No source pages were read, so findings could not be checked."
+          : state.researchQuick?.diagnostic?.message
+          || (state.researchQuick?.dropped
+            ? `Candidate findings did not pass source checks (${state.researchQuick.dropped} dropped).`
+            : quickReadCountKnown && Number(quickCoverage.pages_read) > 0
+              ? "No supported risks were found in the pages read. This does not prove there is no issue."
+              : "Research could not confirm any findings. Retry research."),
         coverage: quickCoverage,
+        hasProductDetails: detailCount > 0,
+        detailCount,
         outcome: state.researchQuick?.diagnostic?.message || "",
       }
       : state.researchEmpty;
@@ -1520,9 +1554,8 @@
         </div>
         ${emptyCard ? noIssueCardMarkup(emptyCard) : ""}
         ${state.researchQuick && !quickIsEmpty ? `<div class="lite-quick">
-          ${state.researchQuick.assumed ? `<p class="lite-quick-assumed">Taken as: ${renderRichText(state.researchQuick.assumed)}</p>` : ""}
           <div class="lite-quick-cards"></div>
-          <div class="lite-quick-specs"></div>
+          ${detailCount ? `<details class="lite-quick-details"><summary>Product details (${detailCount})</summary><div class="lite-quick-specs"></div></details>` : ""}
           <details class="lite-quick-sources" ${state.quickSourcesOpen ? "open" : ""}>
             <summary>Sources</summary><div class="lite-quick-source-list"></div>
           </details>
@@ -1562,7 +1595,7 @@
       paintLearn(slot);
       renderTaskLog(slot.querySelector(".lite-task-log-slot"), state.researchJob);
       slot.querySelector(".lite-research").dataset.state = state.researchState;
-      slot.querySelector(".lite-research-status").textContent = state.researchMessage;
+      slot.querySelector(".lite-research-status").textContent = emptyCard && !busy ? "" : state.researchMessage;
       paintRun(slot);
       const name = slot.querySelector(".lite-research-name");
       if (name && name.value !== state.researchName) name.value = state.researchName;
@@ -1599,7 +1632,7 @@
     wireQuickAgent(slot);
     renderTaskLog(slot.querySelector(".lite-task-log-slot"), state.researchJob);
     slot.querySelector(".lite-research").dataset.state = state.researchState;
-    slot.querySelector(".lite-research-status").textContent = state.researchMessage;
+    slot.querySelector(".lite-research-status").textContent = emptyCard && !busy ? "" : state.researchMessage;
     paintRun(slot);
     const name = slot.querySelector(".lite-research-name");
     if (name) {
@@ -1623,7 +1656,13 @@
       specsSlot?.appendChild(item);
     }
     const listing = state.researchQuick?.listing || {};
-    for (const [name, value] of Object.entries(listing.facts || {}).slice(0, 20)) {
+    if (distinctAssumption) {
+      const item = document.createElement("p");
+      item.className = "lite-quick-assumed";
+      item.innerHTML = `Product match: ${renderRichText(assumed)}`;
+      specsSlot?.appendChild(item);
+    }
+    for (const [name, value] of Object.entries(listing.facts || {}).slice(0, 12)) {
       const item = document.createElement("p");
       item.textContent = `${name}: ${typeof value === "object" ? JSON.stringify(value) : value}`;
       specsSlot?.appendChild(item);
@@ -1640,9 +1679,6 @@
     // on a quick look.
     for (const page of state.researchEmpty?.evidence_pages || []) {
       if (/^https?:\/\//i.test(page.url || "")) sources.set(page.url, page);
-    }
-    if (/^https?:\/\//i.test(listing.url || "") && !sources.has(listing.url)) {
-      sources.set(listing.url, { url: listing.url, domain: "Product listing" });
     }
     for (const risk of state.researchQuick?.risks || []) {
       for (const src of risk.sources || []) if (/^https?:\/\//i.test(src.url || "")) sources.set(src.url, src);
@@ -1983,7 +2019,7 @@
       state.researchEmpty = emptied ? {
         kind: "deep",
         title: "No sourced issues kept",
-        note: "Nothing found in the pages read. Not proof there is no issue.",
+        note: noKeptData(job.result),
         coverage: job.result?.coverage || job.result?.telemetry?.coverage || null,
         evidence_pages: Array.isArray(job.result?.evidence_pages)
           ? job.result.evidence_pages
@@ -2180,9 +2216,8 @@
     // where the listing stopped.
     panel.setAttribute("role", "complementary");
     panel.setAttribute("aria-label", "Kriko product knowledge");
-    // The theme on the host before the first paint, so a stored light choice
-    // never shows a dark frame. `state.theme` is empty until storage answers;
-    // until then the system preference is what the stylesheet is already using.
+    // Set the warm paper theme before the first paint. The saved dark choice
+    // is applied synchronously when storage answers below.
     hostEl.dataset.theme = currentTheme();
     hostEl.dataset.motion = currentMotion();
 
