@@ -1,0 +1,70 @@
+{
+  "version": "0.3.6",
+  "platform": "windows-x86_64",
+  "source_fingerprint": "a022ec08736ba0bc1f1ae2793f4d116f991c8daa2b875f8978a67b10cc3cf183",
+  "recorded_at": "2026-10-25",
+  "note": "The maintainer asked for this release, which carries the planned and recorded Kriko Agent research, extension 0.5.0 and the new website examples, knowing the packaged-window, clean-install, upgrade and live-provider journeys below were not walked on this build. Missing journeys are recorded as not_observed; release_readiness.py is expected to refuse complete stable-readiness certification.",
+  "journeys": {
+    "fresh_install": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Installer not run: this machine has Kriko installed and the installer's hook would stop it and rewrite its registration."
+    },
+    "portable_start": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Portable archive built and hashed; the extracted portable window was not walked. The built tree's app stayed up for 25 seconds and spawned its engine."
+    },
+    "setup": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Not walked on the packaged window."
+    },
+    "compare": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "The extension's Compare tray was captured on the preview page with stubbed answers; Compare against a running packaged app was not walked."
+    },
+    "stop": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Tray Quit was not walked."
+    },
+    "reconnect": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Not walked on the packaged window."
+    },
+    "upgrade_retains_data": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "No installed-version upgrade was performed, from 0.3.4 or from the 0.3.5 Preview."
+    },
+    "sourced_answer": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "No live research was run against the packed 0.3.6 engine; the agent's plan and record were exercised by tests."
+    },
+    "follow_up": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Not walked on the packed engine."
+    }
+  },
+  "providers": {
+    "kriko-agent": {
+      "status": "not_observed",
+      "model": "unchanged since 0.3.3",
+      "version": "0.3.6",
+      "report": "docs/releases/0.3.6.md"
+    }
+  },
+  "observed_instead": [
+    "The full gate on 6e6393e6 passed before any push: 4,639 Python tests passed and 24 skipped with ruff and mypy clean; wheel, node (extension 526), ui, site (13) and tauri (13 Rust tests) passed.",
+    "The frozen 0.3.6 sidecar started, printed its port and answered /api/health with version 0.3.6, extension 0.5.0 and no catalogs; a job for a missing subject failed cleanly, MCP answered initialize and the terminal answered.",
+    "The built desktop app stayed up for 25 seconds without a panic and spawned its engine (built tree, not an installed copy).",
+    "Installer, portable and engine ZIP SHA-256 sums were verified against the build's SHA256SUMS.txt after copying; the extension ZIP sum was recorded with them.",
+    "Pictures of the extension panel (light and dark), the phone scanner on an Android emulator in English and Turkish (dark palette only) and the website in English and Turkish are in docs/previews/.",
+    "The maintainer ran an earlier test build of this code (stamped 0.3.5) on their own machine and reported that it works well; what was tried was not recorded."
+  ]
+}
