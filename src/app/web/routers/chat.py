@@ -25,7 +25,8 @@ router = APIRouter(prefix="/api/chat", tags=["chat"])
 
 
 #: The result fields `app/turnusage.py` documents, and nothing else of the result.
-USAGE_FIELDS = ("spent_usd", "tokens", "tokens_in", "tokens_out", "usage", "context")
+USAGE_FIELDS = ("spent_usd", "tokens", "tokens_in", "tokens_out", "usage", "context",
+                "record")
 
 
 def usage_of_result(raw) -> dict:

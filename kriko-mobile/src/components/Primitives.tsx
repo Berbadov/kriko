@@ -1,17 +1,15 @@
-/**
- * The primitives every screen draws with.
- *
- * Sizes come from the captures: cards are a 358 px wide surface with a 20 px
- * corner and a 16 px inset, actions are 48 px tall, and the toggle is the 45 px
- * square with the knob that overhangs its right edge.
- */
+/** Shared paper surfaces, controls, and restrained motion. */
 
-import * as Haptics from 'expo-haptics';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, View, type TextStyle, type ViewStyle } from 'react-native';
 
-import { color, gap, radius } from '../theme/tokens';
+import { gap, radius } from '../theme/tokens';
+import { motion } from '../theme/motion';
+import { press as hapticPress, tap as hapticTap } from '../theme/feedback';
+import { makeStyles, useColors } from '../theme/theme';
 import { Txt } from '../theme/Txt';
+import { tr } from '../i18n';
+import { MotionPressable, useReducedMotion } from './Motion';
 
 /* ------------------------------------------------------------------ card -- */
 
@@ -24,6 +22,7 @@ export function Card({
   style?: ViewStyle | ViewStyle[];
   tone?: 'surface' | 'inset';
 }) {
+  const styles = useStyles();
   return (
     <View style={[styles.card, tone === 'inset' && styles.cardInset, style]}>{children}</View>
   );
@@ -31,6 +30,7 @@ export function Card({
 
 /** The small rounded square that holds a leading icon. */
 export function Tile({ children, size = 35 }: { children: ReactNode; size?: number }) {
+  const styles = useStyles();
   return (
     <View style={[styles.tile, { width: size, height: size, borderRadius: size * 0.29 }]}>{children}</View>
   );
@@ -48,47 +48,47 @@ type ButtonProps = {
 };
 
 export function Button({ label, onPress, icon, variant = 'primary', disabled, style }: ButtonProps) {
+  const color = useColors();
+  const styles = useStyles();
   const isDisabled = disabled === true && variant === 'primary';
   const press = () => {
     if (disabled) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    hapticPress();
     onPress?.();
   };
   return (
-    <Pressable
+    <MotionPressable
       onPress={press}
       disabled={disabled}
       accessibilityRole="button"
       accessibilityState={{ disabled: !!disabled }}
-      accessibilityLabel={label}
-      style={({ pressed }) => [
+      accessibilityLabel={tr(label)}
+      style={[
         styles.button,
         variant === 'primary' && styles.buttonPrimary,
         isDisabled && styles.buttonPrimaryOff,
         variant === 'ghost' && styles.buttonGhost,
         variant === 'quiet' && styles.buttonQuiet,
         variant === 'danger' && styles.buttonDanger,
-        pressed && !disabled && styles.buttonPressed,
         style,
       ]}
     >
       {icon}
       <Txt
         variant="action"
-        caps
         tone={
           variant === 'ghost' || variant === 'quiet'
             ? 'ink'
             : isDisabled
-              ? 'rgba(244,247,255,0.34)'
+              ? 'ink4'
               : variant === 'danger'
                 ? 'risk'
-                : '#FFFFFF'
+                : color.onAccent
         }
       >
         {label}
       </Txt>
-    </Pressable>
+    </MotionPressable>
   );
 }
 
@@ -108,6 +108,7 @@ export function Row({
   onPress?: () => void;
   style?: ViewStyle;
 }) {
+  const styles = useStyles();
   const content = (
     <>
       {leading}
@@ -125,11 +126,78 @@ export function Row({
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={title}
+      accessibilityLabel={tr(title)}
       style={({ pressed }) => [styles.row, pressed && styles.rowPressed, style]}
     >
       {content}
     </Pressable>
+  );
+}
+
+/** A row of mutually exclusive choices: one track, one raised selection. */
+export function Segmented<T extends string>({
+  options,
+  value,
+  onChange,
+}: {
+  options: { value: T; label: string }[];
+  value: T;
+  onChange: (value: T) => void;
+}) {
+  const reduced = useReducedMotion();
+  const styles = useStyles();
+  const [trackWidth, setTrackWidth] = useState(0);
+  const [indicatorX] = useState(() => new Animated.Value(0));
+  const positioned = useRef(false);
+  const activeIndex = Math.max(0, options.findIndex((option) => option.value === value));
+  const segmentWidth = options.length
+    ? Math.max(0, (trackWidth - 6 - Math.max(0, options.length - 1) * 3) / options.length)
+    : 0;
+
+  useEffect(() => {
+    if (!segmentWidth) return;
+    const target = activeIndex * (segmentWidth + 3);
+    indicatorX.stopAnimation();
+    if (reduced !== false || !positioned.current) {
+      indicatorX.setValue(target);
+      positioned.current = true;
+      return;
+    }
+    Animated.spring(indicatorX, { toValue: target, ...motion.spring.morph }).start();
+  }, [activeIndex, indicatorX, reduced, segmentWidth]);
+
+  return (
+    <View style={styles.segmented} onLayout={(event) => setTrackWidth(event.nativeEvent.layout.width)}>
+      {segmentWidth > 0 ? (
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.segmentIndicator,
+            { width: segmentWidth, transform: [{ translateX: indicatorX }] },
+          ]}
+        />
+      ) : null}
+      {options.map((option) => {
+        const active = option.value === value;
+        return (
+          <Pressable
+            key={option.value}
+            onPress={() => onChange(option.value)}
+            accessibilityRole="button"
+            accessibilityState={{ selected: active }}
+            accessibilityLabel={tr(option.label)}
+            style={({ pressed }) => [
+              styles.segment,
+              pressed && styles.rowPressed,
+            ]}
+          >
+            <Txt variant="actionSmall" tone={active ? 'ink' : 'ink3'} numberOfLines={1}>
+              {option.label}
+            </Txt>
+          </Pressable>
+        );
+      })}
+    </View>
   );
 }
 
@@ -146,6 +214,8 @@ export function Chip({
   tone?: 'neutral' | 'accent' | 'risk' | 'ok';
   size?: 'sm' | 'md';
 }) {
+  const color = useColors();
+  const styles = useStyles();
   return (
     <View
       style={[
@@ -159,8 +229,7 @@ export function Chip({
       {icon}
       <Txt
         variant="chip"
-        caps
-        tone={tone === 'accent' ? '#FFFFFF' : tone === 'risk' ? 'risk' : tone === 'ok' ? 'ok' : 'ink'}
+        tone={tone === 'accent' ? color.onAccent : tone === 'risk' ? 'risk' : tone === 'ok' ? 'ok' : 'ink'}
       >
         {label}
       </Txt>
@@ -179,45 +248,60 @@ export function ReaderLine({ text }: { text: string }) {
 
 /* --------------------------------------------------------------- toggle --- */
 
-export function Toggle({ value, onChange }: { value: boolean; onChange: () => void }) {
+export function Toggle({
+  value,
+  onChange,
+  label = 'Toggle',
+}: {
+  value: boolean;
+  onChange: () => void;
+  label?: string;
+}) {
+  const color = useColors();
+  const styles = useStyles();
   // Lazy state, not a ref: an Animated value is read while rendering, and a ref
   // would hide that from the React compiler.
   const [anim] = useState(() => new Animated.Value(value ? 1 : 0));
+  const [highlight] = useState(() => new Animated.Value(value ? 1 : 0));
+  const reduced = useReducedMotion();
 
   useEffect(() => {
-    Animated.timing(anim, {
-      toValue: value ? 1 : 0,
-      duration: 180,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: false,
-    }).start();
-  }, [anim, value]);
-
-  const knobStyle = {
-    transform: [
-      {
-        translateX: anim.interpolate({ inputRange: [0, 1], outputRange: [-17, 0] }),
-      },
-    ],
-    backgroundColor: anim.interpolate({
-      inputRange: [0, 1],
-      outputRange: ['#151C33', '#1E2A4C'],
-    }),
-  };
+    anim.stopAnimation();
+    highlight.stopAnimation();
+    const target = value ? 1 : 0;
+    if (reduced !== false) {
+      anim.setValue(target);
+      highlight.setValue(target);
+      return;
+    }
+    Animated.parallel([
+      Animated.spring(anim, { toValue: target, ...motion.spring.responsive }),
+      Animated.timing(highlight, {
+        toValue: target,
+        duration: motion.duration.fast,
+        easing: Easing.bezier(...motion.easing.standard),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [anim, highlight, value, reduced]);
 
   return (
     <Pressable
       onPress={() => {
-        Haptics.selectionAsync().catch(() => {});
+        hapticTap();
         onChange();
       }}
       accessibilityRole="switch"
       accessibilityState={{ checked: value }}
-      accessibilityLabel="Wi-Fi only"
+      accessibilityLabel={tr(label)}
       hitSlop={8}
     >
-      <View style={[styles.track, value && styles.trackOn]}>
-        <Animated.View style={[styles.knob, knobStyle]} />
+      <View style={styles.track}>
+        <Animated.View pointerEvents="none" style={[styles.trackOn, { opacity: highlight }]} />
+        <Animated.View style={[styles.knob, {
+          backgroundColor: color.surface,
+          transform: [{ translateX: anim.interpolate({ inputRange: [0, 1], outputRange: [0, 22] }) }],
+        }]} />
       </View>
     </Pressable>
   );
@@ -226,16 +310,26 @@ export function Toggle({ value, onChange }: { value: boolean; onChange: () => vo
 /* ------------------------------------------------------------- progress --- */
 
 export function ProgressBar({ value, height = 6 }: { value: number; height?: number }) {
+  const styles = useStyles();
   const [anim] = useState(() => new Animated.Value(value));
+  const reduced = useReducedMotion();
 
   useEffect(() => {
-    Animated.timing(anim, {
-      toValue: Math.max(0, Math.min(1, value)),
-      duration: 180,
-      easing: Easing.out(Easing.quad),
+    anim.stopAnimation();
+    const target = Math.max(0, Math.min(1, value));
+    if (reduced !== false) {
+      anim.setValue(target);
+      return;
+    }
+    Animated.spring(anim, {
+      toValue: target,
+      stiffness: 320,
+      damping: 36,
+      mass: 1,
+      overshootClamping: true,
       useNativeDriver: false,
     }).start();
-  }, [anim, value]);
+  }, [anim, value, reduced]);
 
   return (
     <View style={[styles.trackBar, { height, borderRadius: height / 2 }]}>
@@ -262,13 +356,12 @@ export function SectionLabel({ children, style }: { children: string; style?: Te
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((color) => StyleSheet.create({
   card: {
     backgroundColor: color.surface,
-    borderRadius: radius.xl,
-    borderWidth: 1,
-    borderColor: color.edge,
-    padding: 16,
+    borderRadius: radius.l,
+    borderWidth: 0,
+    padding: 18,
   },
   cardInset: { backgroundColor: color.inset },
   tile: {
@@ -279,8 +372,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   button: {
-    height: 48,
-    borderRadius: radius.l,
+    minHeight: 52,
+    borderRadius: radius.m,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
@@ -289,7 +382,7 @@ const styles = StyleSheet.create({
   },
   buttonPrimary: { backgroundColor: color.accent },
   buttonPrimaryOff: { backgroundColor: color.accentDim },
-  buttonGhost: { borderWidth: 1, borderColor: color.edge, backgroundColor: 'transparent' },
+  buttonGhost: { borderWidth: 1, borderColor: color.edge, backgroundColor: color.surface },
   buttonQuiet: { backgroundColor: color.raise },
   buttonDanger: { backgroundColor: color.riskWash },
   buttonPressed: { opacity: 0.82 },
@@ -311,34 +404,62 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: color.edge,
   },
+  segmented: {
+    flexDirection: 'row',
+    backgroundColor: color.inset,
+    borderRadius: radius.m,
+    borderWidth: 1,
+    borderColor: color.edge,
+    padding: 3,
+    gap: 3,
+    position: 'relative',
+  },
+  segmentIndicator: {
+    position: 'absolute',
+    left: 3,
+    top: 3,
+    height: 44,
+    borderRadius: radius.s,
+    backgroundColor: color.raise,
+    borderWidth: 1,
+    borderColor: color.edgeStrong,
+  },
+  segment: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: radius.s,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
   chipSm: { paddingHorizontal: 7, paddingVertical: 3 },
   chipAccent: { backgroundColor: color.accent, borderColor: color.accent },
-  chipRisk: { backgroundColor: color.riskWash, borderColor: 'rgba(255,111,99,0.35)' },
-  chipOk: { backgroundColor: 'rgba(61,220,151,0.12)', borderColor: 'rgba(61,220,151,0.3)' },
+  chipRisk: { backgroundColor: color.riskWash, borderColor: color.risk },
+  chipOk: { backgroundColor: color.accentWash, borderColor: color.ok },
   track: {
-    width: 45,
-    height: 45,
-    borderRadius: 14,
-    borderWidth: 1.5,
+    width: 52,
+    height: 30,
+    borderRadius: 15,
+    borderWidth: 1,
     borderColor: color.edgeStrong,
     backgroundColor: color.inset,
     justifyContent: 'center',
-    alignItems: 'flex-end',
+    alignItems: 'flex-start',
+    paddingHorizontal: 2,
   },
-  trackOn: { borderColor: '#A9C0FF', backgroundColor: '#14224A' },
+  trackOn: { ...StyleSheet.absoluteFill, borderRadius: 15, backgroundColor: color.accent },
   knob: {
-    width: 31,
-    height: 31,
-    borderRadius: 31,
-    marginRight: -6,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.45)',
-    shadowColor: '#000',
-    shadowOpacity: 0.45,
+    borderColor: color.edgeSoft,
+    shadowColor: color.shadow,
+    shadowOpacity: 0.10,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
     elevation: 4,
   },
-  trackBar: { backgroundColor: '#050C1C', overflow: 'hidden', width: '100%' },
+  trackBar: { backgroundColor: color.inset, overflow: 'hidden', width: '100%' },
   fill: { backgroundColor: color.fill },
-});
+}));

@@ -1,31 +1,42 @@
 {
   "expo": {
-    "name": "Kriko Prototype",
+    "name": "Kriko Agent",
     "slug": "kriko-mobile",
-    "version": "0.3.0",
+    "version": "0.10.0",
     "scheme": "kriko",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "dark",
-    "backgroundColor": "#03060F",
+    "userInterfaceStyle": "automatic",
+    "backgroundColor": "#000000",
     "newArchEnabled": true,
-    "platforms": ["ios", "android"],
+    "platforms": [
+      "android",
+      "web"
+    ],
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "app.kriko.mobile",
-      "infoPlist": {
-        "NSPhotoLibraryUsageDescription": "Kriko reads a screenshot on this phone to work out which product it shows. The image is never uploaded."
-      }
+      "bundleIdentifier": "app.kriko.mobile"
     },
     "android": {
       "package": "app.kriko.mobile",
-      "edgeToEdgeEnabled": true,
+      "versionCode": 10,
+      "softwareKeyboardLayoutMode": "resize",
       "predictiveBackGestureEnabled": false,
       "adaptiveIcon": {
-        "backgroundColor": "#2862FF",
+        "backgroundColor": "#1F4FFF",
         "foregroundImage": "./assets/adaptive-icon.png"
       },
-      "permissions": ["android.permission.READ_MEDIA_IMAGES"]
+      "permissions": [
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION",
+        "android.permission.POST_NOTIFICATIONS"
+      ],
+      "blockedPermissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -36,7 +47,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#03060F",
+          "backgroundColor": "#000000",
           "image": "./assets/splash-icon.png",
           "imageWidth": 180,
           "resizeMode": "contain"
@@ -48,7 +59,10 @@
         {
           "disableLibdav1d": true
         }
-      ]
+      ],
+      "expo-secure-store",
+      "react-native-frame-capture",
+      "./plugins/withKrikoOverlay"
     ],
     "experiments": {
       "typedRoutes": true

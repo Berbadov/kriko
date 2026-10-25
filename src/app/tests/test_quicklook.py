@@ -40,6 +40,17 @@ def test_an_unreadable_reply_is_an_honest_nothing():
         "dropped": 0}
 
 
+def test_current_listing_price_takes_priority_over_an_owners_historical_payment():
+    found = quicklook.parse(_fenced({"risks": [], "specs": [], "price": {
+        "amount": "20,000", "currency": "TRY", "seller": "Old seller",
+        "url": "https://owners.example/review", "quote": "I paid 20,000 TRY last year.",
+    }}), {"https://owners.example/review": "I paid 20,000 TRY last year."},
+        page={"facts": {"price": "18,500 TRY", "seller": "Current shop"}})
+    assert found["price"]["amount"] == 18500
+    assert found["price"]["seller"] == "Current shop"
+    assert found["price"]["source"] == "listing"
+
+
 def test_the_answer_names_the_kind_of_product_and_a_pack_id_in_one_short_line():
     found = quicklook.parse(_fenced({
         "assumed": "x", "category": "  wireless\n earbuds ", "pack": " Audio.Earbuds ",
@@ -152,6 +163,18 @@ def test_a_reply_cut_off_at_its_budget_keeps_the_items_it_finished():
 def test_a_reply_with_no_object_closes_to_nothing():
     assert quicklook.closed("no json here") is None
     assert quicklook.closed('{"risks": [') is None
+
+
+def test_complete_answer_payload_requires_both_result_arrays():
+    assert quicklook.answer_payload('{"risks": [], "specs": []}') == {
+        "risks": [], "specs": []}
+    assert quicklook.answer_payload('{"risks": []}') is None
+    assert quicklook.answer_payload('not JSON') is None
+
+
+def test_answer_payload_can_recover_a_closed_complete_object():
+    answer = '{"risks": [], "specs": [], "category": "television"} trailing output'
+    assert quicklook.answer_payload(answer)["category"] == "television"
 
 
 def test_a_trailing_comma_does_not_cost_the_reply():

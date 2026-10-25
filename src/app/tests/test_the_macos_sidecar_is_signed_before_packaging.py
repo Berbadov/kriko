@@ -1,8 +1,10 @@
 """The hardened macOS app needs one identity on every embedded executable.
 
 The frozen engine is the part of a macOS bundle that is built here, so its
-signing hook is held now. The macOS package recipe itself is not written for
-the Tauri app yet; when it is, its test goes beside this one.
+signing hook is held now: `kriko-ui/package-macos.sh` passes
+`KRIKO_MACOS_SIGN_IDENTITY` to the freeze and signs the whole bundle with the
+same identity. The recipe's own test is
+`test_the_macos_package_is_built_by_hand.py`.
 """
 
 from __future__ import annotations

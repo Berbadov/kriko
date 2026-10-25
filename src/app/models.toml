@@ -40,10 +40,13 @@
 "mistral-medium-latest" = { context = 262144, usd_in = 1.50, usd_out = 7.50, speed = "balanced", label = "Mistral Medium" }
 
 [mercury]
-# Mercury 2.5 rates used by the product-search benchmark, USD per million
-# tokens. The model catalogue is an estimate; actual account billing is the
-# provider's invoice.
-"mercury-2.5" = { context = 128000, usd_in = 0.20, usd_out = 0.75, speed = "fast", label = "Mercury 2.5" }
+# Mercury 3 rates used by Kriko Agent, USD per million tokens. 1M-token
+# context, 131,072-token output. The 0.10 / 0.35 figures are Inception's
+# launch discount (regularly 0.20 / 0.70); update this row when it ends. The
+# model catalogue is an estimate; actual account billing is the provider's
+# invoice. Mercury 2.5 stays listed because the search benchmark compares it.
+"mercury-3" = { context = 1000000, usd_in = 0.10, usd_out = 0.35, speed = "fast", label = "Mercury 3" }
+"mercury-2.5" = { context = 260000, usd_in = 0.20, usd_out = 0.75, speed = "fast", label = "Mercury 2.5" }
 
 # What a tool call costs on top of the tokens its results add. Not a model:
 # `load` skips this table, `tool_price` reads it.

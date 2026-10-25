@@ -105,32 +105,75 @@ def applies_here(requirement: str, platform: str = sys.platform) -> bool:
     return (platform == value) if op == "==" else (platform != value)
 
 
-def closure(roots: list[str]) -> dict[str, str | None]:
-    """Every distribution the roots reach, and the version installed here."""
-    found: dict[str, str | None] = {}
+#: The clause that decides a platform rather than a Python version. Only
+#: `sys_platform` appears in this project's own requirements (see
+#: `applies_here`), and only `==` names a platform a member exists on alone.
+_SYS_PLATFORM = re.compile(r"sys_platform\s*==\s*['\"]([^'\"]+)['\"]")
+
+
+def platform_pin(markers: set[str]) -> str:
+    """`win32` when every edge agrees the member exists only there, else ''.
+
+    `pywin32` (through `mcp`) and `pywinpty` (`pyproject.toml`) are reached only
+    from a `sys_platform == 'win32'` requirement. Pinned without that fact, the
+    lock could not be installed on Linux or macOS at all — pip stops on
+    `pywin32==312` before anything is frozen, which is what kept the `packs` job
+    and the macOS package from running. The marker is what pip would apply
+    anyway, so the Windows artifact's contents do not change.
+
+    A member reached both conditionally and unconditionally has more than one
+    marker, and gets no pin: it is needed everywhere, and saying otherwise
+    would drop it from a platform that needs it.
+    """
+    if not markers:
+        return ""
+    values = set()
+    for marker in markers:
+        found = _SYS_PLATFORM.findall(marker)
+        if len(found) != 1:
+            return ""
+        values.add(found[0])
+    return values.pop() if len(values) == 1 else ""
+
+
+def resolve(roots: list[str]) -> dict[str, tuple[str | None, str]]:
+    """Every distribution the roots reach: its version here, and its platform."""
+    versions: dict[str, str | None] = {}
+    edges: dict[str, set[str]] = {}
     queue = deque(roots)
     while queue:
-        name = name_of(queue.popleft())
-        if name in found:
+        requirement = queue.popleft()
+        name = name_of(requirement)
+        _, _, marker = requirement.partition(";")
+        edges.setdefault(name, set()).add(marker.strip())
+        if name in versions:
             continue
         try:
             dist = md.distribution(name)
         except md.PackageNotFoundError:
             # Platform-only, or simply not installed on this machine. Recorded
             # as absent so a caller can say so; never invented.
-            found[name] = None
+            versions[name] = None
             continue
-        found[name] = dist.version
-        for requirement in dist.requires or []:
-            if "extra ==" in requirement:
+        versions[name] = dist.version
+        for child in dist.requires or []:
+            if "extra ==" in child:
                 continue
-            queue.append(requirement)
-    return found
+            queue.append(child)
+    return {name: (version, platform_pin(edges[name])) for name, version in versions.items()}
+
+
+def closure(roots: list[str]) -> dict[str, str | None]:
+    """Every distribution the roots reach, and the version installed here."""
+    return {name: version for name, (version, _) in resolve(roots).items()}
 
 
 def pins() -> list[str]:
-    resolved = closure(runtime_roots())
-    return [f"{name}=={version}" for name, version in sorted(resolved.items()) if version]
+    return [
+        f"{name}=={version}" + (f"; sys_platform == '{platform}'" if platform else "")
+        for name, (version, platform) in sorted(resolve(runtime_roots()).items())
+        if version
+    ]
 
 
 def header() -> str:

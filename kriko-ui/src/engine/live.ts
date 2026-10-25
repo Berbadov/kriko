@@ -173,7 +173,7 @@ export function useLiveRun(): RunApi {
           const answer = (typeof turn.answer === 'string' && turn.answer) || latest.current.answer
           dispatch({
             type: 'replace',
-            patch: { rows: rowsFrom(turn.steps ?? [], seen.current, turn.activity, turn.sources, current.feed), answer, products: productsFrom(turn.products), followups: turn.followups ?? [], questions: turn.questions ?? [], pages: pagesFrom(turn.activity, turn.sources), usage: usageFrom(turn), answerFinal: turn.answer_final === true },
+            patch: { rows: rowsFrom(turn.steps ?? [], seen.current, turn.activity, turn.sources, current.feed), answer, products: productsFrom(turn.products), followups: turn.followups ?? [], questions: turn.questions ?? [], actions: turn.actions ?? latest.current.actions ?? [], pages: pagesFrom(turn.activity, turn.sources), usage: usageFrom(turn), answerFinal: turn.answer_final === true },
           })
           timer.current = window.setTimeout(() => void poll(jobId, threadId), POLL_MS)
           return
@@ -194,6 +194,7 @@ export function useLiveRun(): RunApi {
               ...(last?.agent?.id ? { agent: { id: last.agent.id, label: last.agent.label || last.agent.id } } : {}),
               followups: finished.followups ?? [],
               questions: last?.questions ?? finished.questions ?? [],
+              actions: last?.actions ?? finished.actions ?? [],
               pages: pagesFrom(finished.activity, finished.sources),
               // The job that answered recorded what it spent; the message points at it.
               usage: usageFrom(last?.spend ?? turn),
@@ -300,6 +301,7 @@ export function useLiveRun(): RunApi {
             turn.rows = rowsFrom(message.steps ?? [], seen.current, message.activity, message.sources, message.feed)
             turn.followups = message.followups ?? []
             turn.questions = message.questions ?? []
+            turn.actions = message.actions ?? []
             turn.pages = pagesFrom(message.activity, message.sources)
             turn.usage = usageFrom(message.spend)
           }
