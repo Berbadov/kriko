@@ -132,6 +132,51 @@ so a run's kinds can be filtered and read rather than guessed at. The in-house
 search chooses its kinds the same way and logs the same shapes; see
 `local_search_plan.choose_kinds` for how a question becomes a set of kinds.
 
+## The plan before the spend, and the record after it
+
+A turn used to spend the Settings dial the same way on every question, took any
+page a search returned as evidence about the product, and kept every result for
+fifteen minutes. `app/providers/agentplan.py` is the small deterministic layer
+that replaces those three habits, with no model call and no category: it reads
+the reader's own words (`converse(question=…)`, set by `chat_ask` from the
+message) against the closed vocabularies the app already keeps.
+
+- **Effort by uncertainty.** `make_plan` reads which kinds of source the question
+  asks for (`local_search_plan.choose_kinds`). A question that asks only for a
+  maker's figures or a review is a lookup and is worth `LOOKUP_CALLS` (4)
+  retrievals; one that asks for owner reports or recalls, or for two kinds, is a
+  hunt for failures and gets the dial's whole ceiling. A question that names no
+  kind fails open to the dial untouched, and the plan never exceeds it. The run
+  logs `plan: searching kinds: forums, recalls`.
+- **Identity beside the evidence.** The question is reduced to the words that name
+  the product — model codes and proper names, never a bare number — and every
+  result and fetched page the model is shown carries `about_product`: whether the
+  page's text has them (every model code, spaces and hyphens ignored; two thirds
+  of the plain names). The system prompt tells the agent a page that is not about
+  the product supports no claim about it. It is a signal, not a gate, and `null`
+  when the question named nothing to check; it is computed for each question and
+  never stored in the cache, because the cached row belongs to a query and the
+  next question may be about another product.
+- **Coverage, in-band.** When the question asked for a kind no search has gone to
+  and retrievals remain, the last result of the round carries `coverage`
+  (`still_asked`, with each kind's own word). Asking again after a finished draft
+  would cost a model call and throw away words the reader watched stream in; a
+  note beside the evidence is read before the agent decides to answer. A kind
+  still unsearched at the end is reported as missing, never hidden.
+- **Freshness by kind.** A search result is reused for as long as its kind stays
+  true (`agentplan.FRESHNESS_SECONDS`): recalls five minutes, news ten, forums
+  thirty, reviews and video an hour, the maker's documentation a day. A search
+  that names no kind, or asks for none, keeps the fifteen-minute default.
+- **The record.** `reply.record` says what the turn did, from what it actually
+  retrieved: `searches`, `pages` (with readable text), `unreadable`, `cached`,
+  `retrieved`, the `kinds` covered and the kinds `missing`, and — when a product
+  was named — `on_product` and `off_product` pages. `ApiAgentResearcher` merges
+  it across the turn's calls, `chat_ask` carries it with the usage fields so the
+  saved message reads it back under `spend.record`, and the answer shows one
+  quiet line: `3 searches · 5 pages read · forums, reviews · not searched: recalls`.
+  The tooltip says how many pages had no readable text, how many were not about
+  the product, and how many came from this computer's recent searches.
+
 ## What it may change in the app
 
 The agent has three named actions, and no others. They arrive as tool calls, and

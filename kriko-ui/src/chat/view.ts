@@ -1,5 +1,5 @@
-import type { ApiActivity, ApiUsage } from '../engine/api'
-import type { Product, SourcePage, Usage } from '../activity/run'
+import type { ApiActivity, ApiRecord, ApiUsage } from '../engine/api'
+import type { Product, ResearchRecord, SourcePage, Usage } from '../activity/run'
 
 /** What the right-hand column and the bars read. Nothing here is a second copy:
  *  every value is drawn from what a turn already carries (`activity`, `sources`,
@@ -64,6 +64,41 @@ export function pagesFrom(activity: ApiActivity[] = [], sources: string[] = []):
 
 const count = (value: unknown): number | null => (typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null)
 
+/** What the research did, or nothing when the agent kept no record of it. */
+export function recordFrom(raw?: ApiRecord): ResearchRecord | undefined {
+  if (!raw || typeof raw !== 'object') return undefined
+  const words = (value: unknown) => (Array.isArray(value) ? value.filter((one): one is string => typeof one === 'string') : [])
+  return {
+    searches: count(raw.searches) ?? 0,
+    pages: count(raw.pages) ?? 0,
+    unreadable: count(raw.unreadable) ?? 0,
+    cached: count(raw.cached) ?? 0,
+    kinds: words(raw.kinds),
+    missing: words(raw.missing),
+    offProduct: 'off_product' in raw ? count(raw.off_product) : null,
+  }
+}
+
+/** The record as one quiet line: how much was looked at, where, and what was not. */
+export function recordLine(record?: ResearchRecord): string {
+  if (!record || (record.searches === 0 && record.pages === 0)) return ''
+  const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
+  const parts = [plural(record.searches, 'search', 'searches'), plural(record.pages, 'page read', 'pages read')]
+  if (record.kinds.length) parts.push(record.kinds.join(', '))
+  if (record.missing.length) parts.push(`not searched: ${record.missing.join(', ')}`)
+  return parts.join(' · ')
+}
+
+/** What the line cannot say in a few words, for its tooltip. */
+export function recordNote(record?: ResearchRecord): string {
+  if (!record) return ''
+  const notes: string[] = []
+  if (record.unreadable) notes.push(`${record.unreadable} result${record.unreadable === 1 ? '' : 's'} had no readable text`)
+  if (record.offProduct) notes.push(`${record.offProduct} page${record.offProduct === 1 ? '' : 's'} did not carry the product's own name or model`)
+  if (record.cached) notes.push(`${record.cached} answered from this computer's recent searches`)
+  return notes.join('. ')
+}
+
 /** The usage a job recorded, or nothing when it recorded none. */
 export function usageFrom(raw?: ApiUsage): Usage | undefined {
   if (!raw || !raw.context) return undefined
@@ -83,6 +118,7 @@ export function usageFrom(raw?: ApiUsage): Usage | undefined {
     trimmed: context.history?.trimmed === true,
     droppedReplies: count(context.history?.dropped_replies) ?? 0,
     omittedRequests: count(context.history?.omitted_requests) ?? 0,
+    record: recordFrom(raw.record),
   }
 }
 

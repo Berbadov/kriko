@@ -4397,6 +4397,15 @@ def chat_ask(settings, params: dict, progress: Progress) -> dict:
         #: Named app changes the agent made or proposed this turn, in order.
         #: The screen draws these; the answer's words never create one.
         actions: list[dict] = []
+        #: What the turn's research did, merged across its calls: the searches,
+        #: the pages, the kinds of source. Carried with the usage fields so the
+        #: saved message reads it back from the job (`routers/chat.USAGE_FIELDS`).
+        turn_record: dict = {}
+
+        def take_record(record: dict) -> None:
+            from app.providers import agentplan
+
+            turn_record.update(agentplan.merge_records(turn_record, record))
 
         def usage_fields() -> dict:
             """What the turn has spent so far and how full the model's window is,
@@ -4409,7 +4418,8 @@ def chat_ask(settings, params: dict, progress: Progress) -> dict:
                 window = 0
             return {**meter.snapshot(),
                     "context": meter.context(str(agent.get("model") or ""), history=history,
-                                             home=KRIKO_HOME, local_window=window or None)}
+                                             home=KRIKO_HOME, local_window=window or None),
+                    **({"record": dict(turn_record)} if turn_record else {})}
         #: Whether this turn's plane can answer with its web tools off, and the
         #: label to name in the log. The local model always can (the same
         #: completer answers with a smaller budget); the paid branch settles it
@@ -4516,7 +4526,8 @@ def chat_ask(settings, params: dict, progress: Progress) -> dict:
                             # whole-job deadline and cancellation separately.
                             timeout=timeout, effort="low" if quick else "",
                             on_usage=meter.record,
-                            on_action=None if quick else actions.append)
+                            on_action=None if quick else actions.append,
+                            on_record=None if quick else take_record)
                         # What the agent's own tools opened this turn, as it
                         # opens it: the turn counts these as pages Kriko has
                         # read, so an answer that cites one is not sent back for
@@ -4841,7 +4852,8 @@ def _ask_about_checks(settings, params: dict, progress: Progress, brief: str, *,
                       follow_up: bool = False, product: str = "",
                       question: str = "", fallback_brief: str = "",
                       on_usage: Callable[[dict], None] | None = None,
-                      on_action: Callable[[dict], None] | None = None) -> tuple[str, list[dict]]:
+                      on_action: Callable[[dict], None] | None = None,
+                      on_record: Callable[[dict], None] | None = None) -> tuple[str, list[dict]]:
     """The reader's plane answers one brief. Returns the reply and the pages behind it.
 
     A `follow_up` answer is written into the job as the agent writes it
@@ -4904,6 +4916,11 @@ def _ask_about_checks(settings, params: dict, progress: Progress, brief: str, *,
         _wire_researcher_text(researcher, progress)
         researcher.check_cancelled = progress.check
         _apply_source_options(researcher, params, settings.app_state_path)
+        if hasattr(researcher, "agent_record"):
+            # The reader's own words, apart from the brief: the built-in stack
+            # plans its searches and checks each page against the product from
+            # them (`app/providers/agentplan.py`).
+            researcher.question = str(params.get("question") or question or "")
     # Read the resolved researcher: a requested CLI can fall back to a
     # different one. CLI `model` is its id, whereas API/local `model`
     # names the model; only show the CLI's explicitly selected model.
@@ -4989,6 +5006,10 @@ def _ask_about_checks(settings, params: dict, progress: Progress, brief: str, *,
         for action in getattr(researcher, "agent_actions", []) or []:
             if isinstance(action, dict):
                 on_action(action)
+    if on_record is not None:
+        record = getattr(researcher, "agent_record", None)
+        if isinstance(record, dict) and record:
+            on_record(dict(record))
     if follow_up:
         from app.workcontract import empty_offer, repair_prompt
         if empty_offer(reply):
