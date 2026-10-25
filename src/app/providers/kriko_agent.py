@@ -46,11 +46,23 @@ TEMPERATURE = 0.5
 MAX_OUTPUT_TOKENS = 131_072
 #: One answer's default allowance. A truncated final answer is an error, not a
 #: shorter answer, so the old 3,072 turned a long buying answer into no answer.
-DEFAULT_MAX_TOKENS = 8_192
+#: The model's reasoning counts against the ceiling, and a turn that read
+#: seventeen pages reasons for most of 8,192 tokens: a quick look's answer was
+#: cut off at about 2,000 tokens of JSON. Output is billed by use, so the
+#: ceiling bounds a runaway turn and a typical one never reaches it.
+DEFAULT_MAX_TOKENS = 16_384
+#: The ceiling for a turn whose answer is a whole catalog: eighty claims, each
+#: with its quote, do not fit in `DEFAULT_MAX_TOKENS` once the model has
+#: reasoned. Output is billed by use, so a higher ceiling costs nothing a short
+#: answer does not already save.
+AUTHORING_MAX_TOKENS = 32_768
 TIMEOUT_SECONDS = 120.0
 MAX_TURN_SECONDS = TIMEOUT_SECONDS
 MAX_TOOL_ROUNDS = 4
-MAX_TOOL_CALLS = 8
+#: One more round when a scoped plan asks for more retrievals than four rounds
+#: of four at once can make.
+SCOPED_TOOL_ROUNDS = MAX_TOOL_ROUNDS + 1
+MAX_TOOL_CALLS = agentplan.MAX_SCOPED_CALLS
 MAX_RESULTS = 5
 MAX_SOURCE_CHARS = 8_000
 #: Page text shown to the model in a tool result. The full `MAX_SOURCE_CHARS`
@@ -430,7 +442,7 @@ def _repack_tool_context(messages: list[dict], records: list[tuple[int, str, dic
 def _completion(*, model: str, timeout: float, api_key: str,
                 messages: list[dict], tools: list[dict], cancel_event=None,
                 on_text=None, tool_choice: str = "auto", max_tokens: int = DEFAULT_MAX_TOKENS,
-                reasoning_effort: str = "low") -> tuple[dict, str]:
+                reasoning_effort: str = "low", keep_partial: bool = False) -> tuple[dict, str]:
     payload = {
         "model": model or MODEL,
         "messages": messages,
@@ -506,7 +518,16 @@ def _completion(*, model: str, timeout: float, api_key: str,
     if stream_error:
         return {}, stream_error
     if finish_reason == "length":
-        return {}, "Mercury reached the response token limit before completing its answer"
+        text = "".join(pieces)
+        if not (keep_partial and text.strip() and not tool_calls):
+            return {}, "Mercury reached the response token limit before completing its answer"
+        # A caller that reads structured output with a repair of its own asked
+        # to keep a cut-off answer: what was written before the limit is paid
+        # for, and `packauthor.read_payload` closes it at its last whole entry.
+        # A cut-off tool call is never kept, and a caller that did not ask
+        # still gets the refusal, because a half sentence is not an answer.
+        return {"message": {"role": "assistant", "content": text}, "usage": usage,
+                "truncated": True}, ""
     if finish_reason not in ("stop", "tool_calls"):
         return {}, "Mercury stream ended before a complete response"
     message: dict[str, object] = {"role": "assistant", "content": "".join(pieces) or None}
@@ -545,8 +566,19 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
              trial_reservation_id: str = "", max_tokens: int | None = None,
              reasoning_effort: str = "",
              app_action: Callable[[str, dict], dict] | None = None,
-             question: str = "") -> mistral.Reply:
+             question: str = "", keep_partial: bool = False,
+             scope: agentplan.Scope | None = None) -> mistral.Reply:
     """Run one grounded Mercury turn, executing DeepSeek calls through APIs.
+
+    `scope` is what the subject is worth, read before this call
+    (`agentplan.Scope`): the retrieval budget is sized to its aspects, bounded
+    by the dial's reach for this complexity and by the reader's money cap, and
+    the agent is handed the aspects as a checklist. Without one the turn runs
+    on the dial alone.
+
+    `keep_partial` keeps a final answer that reached the response limit instead
+    of failing the turn, and says so on `reply.truncated`. Only a caller whose
+    answer is structured and has a repair for a cut-off one should ask.
 
     `question` is the reader's own words, apart from the brief around them. With
     it the turn is planned (`agentplan.make_plan`): the kinds of source it asks
@@ -670,6 +702,8 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
     cache_hits = 0
     actions: list[dict] = []
     requested_calls, max_results_per_search = thoroughness_limits(thoroughness)
+    if scope is not None and search:
+        requested_calls = agentplan.scoped_calls(scope, requested_calls)
     try:
         budget_calls = int(max_tool_calls)
     except (TypeError, ValueError):
@@ -697,6 +731,10 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
              f"{turn_timeout:.0f} s")
         if plan is not None and plan.kinds:
             step(f"plan: {local_search_plan.kinds_line(plan.kinds)}")
+        if scope is not None and calls_left > 0:
+            messages[0]["content"] += agentplan.scope_checklist(scope, calls_left)
+            step(f"scope: {scope.complexity}, {len(scope.aspects)} aspect(s) to cover: "
+                 + ", ".join(one.name for one in scope.aspects))
     else:
         # No tools were offered, so there is no research budget to announce. The
         # line claimed "7 retrieval(s)" on calls that could not retrieve
@@ -958,9 +996,11 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
         with _UnjoinedPool(
                 max_workers=MAX_PARALLEL_RETRIEVALS,
                 thread_name_prefix="kriko-deepseek") as current_pool:
-            for round_number in range(MAX_TOOL_ROUNDS + 1):
+            tool_rounds = (SCOPED_TOOL_ROUNDS if scope is not None and calls_left > 8
+                           else MAX_TOOL_ROUNDS)
+            for round_number in range(tool_rounds + 1):
                 check_cancelled()
-                has_tools = (bool(search) and round_number < MAX_TOOL_ROUNDS
+                has_tools = (bool(search) and round_number < tool_rounds
                              and (calls_left > 0 or bool(app_tools)))
                 if (search and round_number == 0 and not has_tools and not calls_left
                         and not app_tools):
@@ -1006,10 +1046,15 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
                     ),
                     max_tokens=max_tokens,
                     reasoning_effort=reasoning_effort,
+                    keep_partial=keep_partial,
                 )
                 if why:
                     reply.error = why
                     break
+                if result.get("truncated"):
+                    reply.truncated = True
+                    step("the answer reached the response limit and was cut; what was "
+                         "written is kept")
                 usage = result.get("usage") or {}
                 tokens_in = _count(usage.get("prompt_tokens"))
                 tokens_out = _count(usage.get("completion_tokens"))

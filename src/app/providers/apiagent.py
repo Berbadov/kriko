@@ -47,6 +47,9 @@ from kriko.research.base import Document, ResearchTask
 #: `mistral-large-latest` (nine). This covers the first with room for a
 #: repair, and stops a runaway before it is a surprise.
 DEFAULT_BUDGET_USD = 0.50
+#: Longest the scoping call may take. It reads one title and writes a few lines;
+#: a model that needs longer is skipped and the turn runs on the dial.
+SCOPE_TIMEOUT_SECONDS = 20.0
 
 #: Said to every request, research or not: what the tool is, and that a
 #: quote is checked against what it returned.
@@ -440,6 +443,14 @@ class ApiAgentResearcher(harness.HarnessResearcher):
         #: The reader's own words, apart from the brief around them. The caller
         #: sets it before asking; the built-in stack plans the turn from it.
         self.question = ""
+        #: Keep a final answer that reached the response limit, flagged, instead
+        #: of failing the turn. Set by a caller whose answer is structured and
+        #: has a repair for a cut-off one (authoring, the quick look).
+        self.keep_partial = False
+        #: What the subject is worth, read before the first search
+        #: (`scope_for`); the built-in stack sizes its retrievals from it.
+        self.scope: agentplan.Scope | None = None
+        self._scope_tried = False
         self._app_action: Callable[[str, dict], dict] | None = None
         if agent.id == KRIKO_AGENT.id and app_state_path is not None:
             from app import agentactions
@@ -496,6 +507,8 @@ class ApiAgentResearcher(harness.HarnessResearcher):
                 reasoning_effort=self.reasoning_effort,
                 app_action=self._app_action,
                 question=self.question,
+                keep_partial=self.keep_partial,
+                scope=self.scope,
                 **kw))
         else:
             self._stream_converse = (mistral.converse_stream
@@ -564,6 +577,39 @@ class ApiAgentResearcher(harness.HarnessResearcher):
                                  format_repaired=False)
         self._refresh_research_coverage()
 
+    def scope_for(self, subject: str) -> agentplan.Scope | None:
+        """Read what `subject` is worth before the first search, or `None`.
+
+        One cheap call with no tools: how many independent parts can fail on it
+        and which aspects need evidence of their own. The turn that follows
+        sizes its retrievals from the answer. It fails open on purpose: a
+        subject that cannot be scoped is researched on the dial alone, and a
+        reader's cancel still ends the job.
+        """
+        self.scope = None
+        self._scope_tried = True
+        subject = str(subject or "").strip()
+        if self.agent.id != KRIKO_AGENT.id or not subject:
+            return None
+        if self.check_cancelled is not None:
+            self.check_cancelled()
+        kept = (self.on_text, self.timeout, self.keep_partial)
+        # Not a draft for the reader's screen, and not worth a research ceiling.
+        self.on_text, self.timeout, self.keep_partial = (
+            None, min(float(self.timeout), SCOPE_TIMEOUT_SECONDS), False)
+        try:
+            self.scope = agentplan.parse_scope(
+                self.ask(agentplan.scope_prompt(subject), allow_tools=False))
+        except Exception:  # noqa: BLE001 — no scope is the dial's answer, not a failed run
+            self.scope = None
+        finally:
+            self.on_text, self.timeout, self.keep_partial = kept
+        if self.check_cancelled is not None:
+            self.check_cancelled()
+        if self.scope is None:
+            self._echo("could not scope the subject before searching; researching on the dial")
+        return self.scope
+
     def ask_quick(self, product: str, *, principle: str = "", page=None,
                   packs: str = "", attributes: str = "") -> str:
         """Run and, if needed, repair the Quick Look JSON without more browsing."""
@@ -574,12 +620,16 @@ class ApiAgentResearcher(harness.HarnessResearcher):
 
         from app import quicklook
 
+        scope = self.scope_for(product)
         prompt = quicklook.brief(
             product, principle, page, packs, attributes,
             max_sources=max(1, self.max_documents or 5),
             language=str(getattr(self, "output_language", "") or "auto"),
+            scope=scope,
         ) + getattr(self, "source_instructions", "") + self._own_search_note()
         quicklook_deadline = time.monotonic() + max(0.0, float(self.timeout))
+        # `quicklook.parse` closes a cut-off answer at its last whole risk.
+        self.keep_partial = True
         first = self.ask(prompt, allow_tools=True)
         self._refresh_research_coverage()
         if self._quicklook_shape(first):
@@ -676,6 +726,10 @@ class ApiAgentResearcher(harness.HarnessResearcher):
         `web_search` tool to Mistral. Prompt wording alone is not a permission
         boundary.
         """
+        if (allow_tools and self.agent.id == KRIKO_AGENT.id and not self._scope_tried
+                and self.question and agentplan.asks_for_failures(self.question)):
+            # A question about what goes wrong is scoped like a quick look is.
+            self.scope_for(self.question)
         if allow_tools:
             # Kriko Agent has its own search/fetch protocol. Appending the
             # generic API-agent contract tells Mercury to call a web_search
@@ -824,6 +878,8 @@ class ApiAgentResearcher(harness.HarnessResearcher):
             self._titles.setdefault(url, row["title"])
         self.searched += [one for one in reply.queries if one not in self.searched]
         self.telemetry["model_calls"] = int(self.telemetry.get("model_calls") or 0) + 1
+        if getattr(reply, "truncated", False):
+            self.telemetry["truncated"] = True
         self._refresh_research_coverage()
         cost = f"${self.spent:.2f}" if self.spent is not None else "cost unknown"
         billed_calls = (reply.billed_tool_calls

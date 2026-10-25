@@ -26,6 +26,9 @@ from kriko.research.agent import REFUSED_PAGE
 
 #: Enough to be worth reading on a listing, few enough to be done in the time.
 MAX_RISKS = 6
+#: How many risks `parse` reads before it stops, so a runaway reply stays bounded
+#: while the cap for the subject (`agentplan.risk_cap`) picks which are kept.
+MAX_PARSED_RISKS = 40
 
 #: Specifications kept, for the same reason: a line to read, not a datasheet.
 MAX_SPECS = 10
@@ -212,7 +215,7 @@ REPLY_SCHEMA: dict = {
 def brief(product: str, principle: str = "", page: dict | None = None,
           packs: str = "", attributes: str = "", *, compact: bool = False,
           max_sources: int = 5, language: str = "auto",
-          market_region: str = "auto") -> str:
+          market_region: str = "auto", scope=None) -> str:
     """The quick pass, as instructions. Fast on purpose: a few searches, no essay.
 
     `page` is what the listing itself says (`app.pagefacts`, B150): the
@@ -227,8 +230,27 @@ def brief(product: str, principle: str = "", page: dict | None = None,
     one per line, so the figures come back under the pack's own words (B173).
     """
     from app import pagefacts
+    from app.providers import agentplan
 
     max_sources = max(1, min(50, int(max_sources)))
+    #: How many risks this subject may carry, and the paragraph that says how
+    #: long the report is. A scoped subject has a plan above it and a cap sized
+    #: to it; an unscoped one keeps the old, shorter guidance.
+    cap = agentplan.risk_cap(scope)
+    length_rule = (
+        "The research plan lists this product's aspects. Report every sourced fault "
+        "you found for every aspect that had one, most serious first. Do not leave "
+        "a finding out because the list is getting long, and do not pad it: an "
+        "aspect whose pages carried nothing sourced for this variant has no line."
+        if scope is not None else
+        "There is no target number of lines: choose a concise report length that\n"
+        "fits the product's complexity and the strength of the evidence. Use fewer findings\n"
+        "for a simple product or thin evidence, and explain the decisive constraints\n"
+        "when a compatibility question has several independent dimensions. Do not add\n"
+        "speculative or generic padding to make the report longer."
+    )
+    aspect_field = (',\n      "aspect": "the research plan\'s aspect this belongs to, '
+                    'copied exactly, or an empty string"' if scope is not None else "")
     rule = language_rule(language)
     listing = pagefacts.block(page)
     offer = offer_block(page)
@@ -333,13 +355,9 @@ an empty `price` object, not a guess.
 
 ## Reply
 
-There is no target number of lines: choose a concise report length that
-fits the product's complexity and the strength of the evidence. Use fewer findings
-for a simple product or thin evidence, and explain the decisive constraints
-when a compatibility question has several independent dimensions. Do not add
-speculative or generic padding to make the report longer.
+{length_rule}
 
-At most {MAX_RISKS} risks, as one JSON object in a ```json fence, as the last
+At most {cap} risks, as one JSON object in a ```json fence, as the last
 thing you say. `category` is what kind of product this is, in two to four
 words, with no brand or model in it (for example "wireless earbuds").
 
@@ -361,14 +379,56 @@ words, with no brand or model in it (for example "wireless earbuds").
       "check": "what to look or ask for before buying, or \\"\\"",
       "severity": "high",
       "url": "https://the page you read",
-      "quote": "a sentence copied from that page"}}
+      "quote": "a sentence copied from that page"{aspect_field}}}
   ]}}
 ```
 """
 
 
+#: Shortest quote worth looking for on a page it did not cite: a short one is a
+#: phrase that many pages share.
+MIN_RELOCATED_QUOTE_CHARS = 25
+
+
+def ground(sources: dict[str, str], url: str, quote: str) -> tuple[str, str]:
+    """The page and its own words for a quote, or `("", "")` when no page has it.
+
+    A model that cites an address the search never returned (retyped, cut short,
+    its tracking tail dropped) has still copied its words from a page we hold:
+    every finding two live runs lost to the grounding check had exactly this
+    fault. So a cited address that is not one of the pages is not the end of
+    it: the quote is looked for on the pages, and the one that carries it, with
+    the nearest address, is where the finding is kept. The words are still
+    checked against a page's own text, so nothing ungrounded gets in. An
+    address that *is* a page whose text lacks the quote stays refused: the
+    model read that page, and moving the claim would change what it says.
+    """
+    from kriko.extract.grounding import loose_span
+
+    text = sources.get(url)
+    if text:
+        found = loose_span(text, quote)
+        return (url, found) if found else ("", "")
+    if len(quote) < MIN_RELOCATED_QUOTE_CHARS:
+        return "", ""
+    carriers = [(other, found) for other, body in sources.items()
+                if body and (found := loose_span(body, quote))]
+    if not carriers:
+        return "", ""
+    return max(carriers, key=lambda carrier: _shared_prefix(url, carrier[0]))
+
+
+def _shared_prefix(one: str, other: str) -> int:
+    count = 0
+    for a, b in zip(one, other):
+        if a != b:
+            break
+        count += 1
+    return count
+
+
 def parse(reply: str, sources: dict[str, str] | None = None,
-          page: dict | None = None) -> dict:
+          page: dict | None = None, max_risks: int = MAX_RISKS) -> dict:
     """The agent's answer as cards, or an honest nothing. Never raises.
 
     `sources` is url -> the text a search tool returned for it, when the
@@ -382,7 +442,6 @@ def parse(reply: str, sources: dict[str, str] | None = None,
     should not turn a known price into an unknown one.
     """
     from app.packauthor import _payload  # the one fence reader every door uses
-    from kriko.extract.grounding import loose_span
 
     found = _payload(reply)
     if isinstance(found, dict) and "risks" not in found and "specs" not in found:
@@ -413,14 +472,13 @@ def parse(reply: str, sources: dict[str, str] | None = None,
             url = str(ref.get("url") or "").strip()
             quote = str(ref.get("quote") or "").strip()
             host = urlparse(url).hostname if url.startswith(("http://", "https://")) else ""
-            if not host or not quote:
-                continue
             checked = False
             if sources is not None:
-                quote = loose_span(sources.get(url, ""), quote)
-                if not quote:
-                    continue
-                checked = True
+                url, quote = ground(sources, url, quote)
+                host = urlparse(url).hostname if url else ""
+                checked = bool(quote)
+            if not host or not quote:
+                continue
             key = (url, quote)
             if key in seen:
                 continue
@@ -431,7 +489,7 @@ def parse(reply: str, sources: dict[str, str] | None = None,
         if not title or not refs:
             dropped += 1
             continue
-        if len(risks) == MAX_RISKS:
+        if len(risks) == MAX_PARSED_RISKS:
             break
         severity = str(raw.get("severity") or "").strip().lower()
         # Conservative publisher count, never inflation from subdomains or URLs.
@@ -447,7 +505,14 @@ def parse(reply: str, sources: dict[str, str] | None = None,
             "domain": refs[0]["domain"],
             "quick": True,
             "sources": refs,
+            **({"aspect": aspect} if (aspect := " ".join(
+                str(raw.get("aspect") or "").split())[:40]) else {}),
         })
+    if len(risks) > max_risks:
+        # Past the cap the most serious findings stay, not the first written:
+        # the sort is stable, so equal severities keep the agent's own order.
+        rank = {name: index for index, name in enumerate(SEVERITIES)}
+        risks = sorted(risks, key=lambda one: rank.get(one["severity"], len(rank)))[:max_risks]
 
     specs: list[dict] = []
     for raw in found.get("specs") or []:
@@ -457,12 +522,13 @@ def parse(reply: str, sources: dict[str, str] | None = None,
         url = str(raw.get("url") or "").strip()
         host = (urlparse(url).hostname or "") if url.startswith(("http://", "https://")) else ""
         quote = str(raw.get("quote") or "").strip()
-        if not name or not value or not host or not quote:
+        if not name or not value or not quote:
             continue
         if sources is not None:
-            quote = loose_span(sources.get(url, ""), quote)
-            if not quote:
-                continue
+            url, quote = ground(sources, url, quote)
+            host = (urlparse(url).hostname or "") if url else ""
+        if not host or not quote:
+            continue
         specs.append({"name": name, "value": value, "url": url,
                       "domain": host.removeprefix("www."), "quote": quote,
                       **({"grounded": True} if sources is not None else {})})

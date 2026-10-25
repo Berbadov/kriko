@@ -19,6 +19,13 @@ category:
   goes stale in minutes, a maker's manual in a day.
 - **record**: what a turn did, in numbers and kinds, merged across the calls of
   one turn and carried to the reader's screen beside the answer.
+- **scope**: what a subject is worth before the first search. A model call that
+  reads only the subject names how many independent parts can fail on it and
+  the aspects that each need their own evidence; this module turns that into a
+  retrieval budget, a finding cap and a checklist. The dial said "five
+  retrievals" to a keyboard and to a car alike, and a car's five went on the
+  gearbox. The scope is data from a model: unreadable means no scope, and a
+  turn without one runs on the dial as it always did.
 
 The vocabularies here are the engine's closed ones: kinds of source and
 function words. No product, make or model appears in this file.
@@ -26,6 +33,7 @@ function words. No product, make or model appears in this file.
 
 from __future__ import annotations
 
+import json
 import math
 import re
 from dataclasses import dataclass
@@ -143,6 +151,12 @@ def make_plan(question: str, *, ceiling: int) -> Plan:
     )
 
 
+def asks_for_failures(question: str) -> bool:
+    """Whether the reader's words ask what goes wrong (forums, recalls)."""
+    return any(kind in FAILURE_KINDS
+               for kind in local_search_plan.choose_kinds(str(question or ""), limit=3))
+
+
 def missing_kinds(plan: Plan, searched) -> list[str]:
     """The kinds the question asked for that no search has gone to yet."""
     return [kind for kind in plan.kinds if kind not in searched]
@@ -246,3 +260,217 @@ def record_line(record: dict) -> str:
     if record.get("missing"):
         parts.append("not searched: " + ", ".join(record["missing"]))
     return "record: " + " · ".join(parts)
+
+
+# ── scope: think before searching ────────────────────────────────────────────
+
+COMPLEXITIES = ("simple", "moderate", "complex")
+MAX_ASPECTS = 8
+MIN_SCOPED_CALLS = 3
+MAX_SCOPED_CALLS = 12
+#: Retrievals a subject may use beyond the dial, by how many independent parts
+#: can fail on it. The dial is what the reader said a typical question is worth.
+EXTRA_CALLS = {"simple": 0, "moderate": 2, "complex": 4}
+DEFAULT_RISK_CAP = 6
+#: Findings a quick look may keep, by the same measure: a subject with many
+#: independent parts cannot say what is known in six lines.
+RISK_CAPS = {"simple": 4, "moderate": 6, "complex": 10}
+_NAME_CHARS = 40
+_QUERY_CHARS = 100
+
+
+@dataclass(frozen=True)
+class Aspect:
+    """One part, system or topic of a subject that needs evidence of its own."""
+
+    name: str
+    query: str
+
+
+@dataclass(frozen=True)
+class Scope:
+    """What a subject is worth, read from the subject alone before any search."""
+
+    complexity: str
+    aspects: tuple[Aspect, ...]
+
+
+def scope_prompt(subject: str) -> str:
+    """The instruction that scopes a subject; the reply is a small JSON object."""
+    return (
+        "Before anything is searched, scope this research job. Do not answer it.\n\n"
+        f"Subject: {str(subject or '').strip()[:600]}\n\n"
+        "The reader wants to know what is known to go wrong with this exact thing. "
+        "Decide two things.\n\n"
+        '1. `complexity`: "simple" when few independent parts can fail on it and little is '
+        'written about it; "moderate" for a handful of parts or a fair amount of owner '
+        'reports; "complex" when many independent systems can fail, it comes in several '
+        "generations or variants, or a great deal is written about it.\n"
+        "2. `aspects`: the separate parts, systems or topics that each need their own "
+        f"evidence for this exact variant, at most {MAX_ASPECTS}, the likeliest to matter "
+        "first. Each has a short `name` and a `query` of at most eight words that names the "
+        "variant (make, model, year, engine or version, whenever the subject gives them) "
+        "and the aspect. Split by what fails, never by where it is written.\n\n"
+        "Reply with one JSON object and nothing else:\n"
+        '{"complexity": "simple|moderate|complex", '
+        '"aspects": [{"name": "...", "query": "..."}]}'
+    )
+
+
+def _json_object(text: str) -> dict | None:
+    """The first JSON object in a reply, fenced or bare; `None` when there is none."""
+    text = str(text or "")
+    decoder = json.JSONDecoder()
+    for match in re.finditer(r"\{", text):
+        try:
+            found, _ = decoder.raw_decode(text[match.start():])
+        except ValueError:
+            continue
+        if isinstance(found, dict):
+            return found
+    return None
+
+
+def _line(value: object, limit: int) -> str:
+    """One line of plain text: no control characters, backticks or runs of space."""
+    text = re.sub(r"[\x00-\x1f\x7f`]+", " ", str(value or ""))
+    return " ".join(text.split())[:limit].strip()
+
+
+def parse_scope(reply: str) -> Scope | None:
+    """The scope a model replied with, or `None`: no scope is not an error.
+
+    An aspect needs a name and a query; a repeated name is kept once. A
+    complexity the reply did not give, or gave in other words, is read from how
+    many aspects it listed.
+    """
+    found = _json_object(reply)
+    if not found or not isinstance(found.get("aspects"), list):
+        return None
+    aspects: list[Aspect] = []
+    seen: set[str] = set()
+    for raw in found["aspects"]:
+        if not isinstance(raw, dict):
+            continue
+        name = _line(raw.get("name"), _NAME_CHARS)
+        query = _line(raw.get("query"), _QUERY_CHARS)
+        key = fold(name)
+        if not name or not query or key in seen:
+            continue
+        seen.add(key)
+        aspects.append(Aspect(name, query))
+        if len(aspects) == MAX_ASPECTS:
+            break
+    if not aspects:
+        return None
+    complexity = str(found.get("complexity") or "").strip().casefold()
+    if complexity not in COMPLEXITIES:
+        complexity = ("complex" if len(aspects) >= 6
+                      else "moderate" if len(aspects) >= 3 else "simple")
+    return Scope(complexity, tuple(aspects))
+
+
+def scoped_calls(scope: Scope, dial_calls: int) -> int:
+    """Retrievals a scoped subject is worth, on top of what the dial gives.
+
+    One per aspect and one more for what the aspects miss. A subject with few
+    parts uses fewer than the dial; one with many may use more, but never past
+    `EXTRA_CALLS` over the dial or `MAX_SCOPED_CALLS`. The caller still holds
+    the result under the reader's money cap.
+    """
+    dial = max(MIN_SCOPED_CALLS, int(dial_calls))
+    ceiling = min(MAX_SCOPED_CALLS, dial + EXTRA_CALLS.get(scope.complexity, 0))
+    return max(MIN_SCOPED_CALLS, min(len(scope.aspects) + 1, ceiling))
+
+
+def risk_cap(scope: Scope | None) -> int:
+    """How many findings a quick look keeps for this scope."""
+    return RISK_CAPS.get(scope.complexity, DEFAULT_RISK_CAP) if scope else DEFAULT_RISK_CAP
+
+
+def scope_checklist(scope: Scope, calls: int) -> str:
+    """The plan, as the section the research agent reads before its first search."""
+    reachable = min(len(scope.aspects), max(1, int(calls) - 1))
+    listed = "\n".join(f"{n}. {one.name}: `{one.query}`"
+                       for n, one in enumerate(scope.aspects, 1))
+    short = ("" if reachable == len(scope.aspects) else
+             f" You cannot reach all of them: do the first {reachable} and say which you left.")
+    return (
+        "\n\n## Research plan, scoped before searching\n\n"
+        f"This subject is **{scope.complexity}**. You have {int(calls)} retrievals. Give each "
+        "aspect below at least one search, with the query given or a better one for this "
+        "exact variant, and start several independent searches in the same round (up to "
+        f"four at once) so the plan fits.{short} Keep one retrieval for what the aspects "
+        "miss, such as a recall or a service notice.\n\n"
+        f"{listed}\n\n"
+        "Tag every finding with the aspect it belongs to: the name only, copied from the "
+        "list, without its query. Report a "
+        "finding for each aspect whose pages carried one for this variant; leave an aspect "
+        "out when its pages carried nothing sourced.\n"
+    )
+
+
+def _aspect_key(scope: Scope, tag: str) -> str:
+    """The folded name of the aspect a finding's tag points at, or "".
+
+    The model is asked to copy the aspect's name and often writes more: the query
+    it searched, or the name and a separator and a note. So a tag is the aspect
+    when it is the name or the query, or when it begins with the name as a whole
+    word (the longest name wins, so `Key` does not take `Keycap wear`).
+    """
+    folded = fold(tag).strip()
+    if not folded:
+        return ""
+    for one in scope.aspects:
+        if folded in (fold(one.name), fold(one.query)):
+            return fold(one.name)
+    best = ""
+    for one in scope.aspects:
+        name = fold(one.name)
+        if (len(name) > len(best) and folded.startswith(name)
+                and not folded[len(name):][:1].isalnum()):
+            best = name
+    return best
+
+
+def scope_record(scope: Scope | None, risks, calls: int = 0) -> dict:
+    """What the scope was and which aspects came back with a finding.
+
+    `findings` counts the risks tagged with each aspect. An aspect with none is
+    not "no problem": the search may not have reached it, or its pages may have
+    carried nothing sourced. The record says which, to anyone reading the run.
+    """
+    if scope is None:
+        return {}
+    counts = {fold(one.name): 0 for one in scope.aspects}
+    untagged = 0
+    for risk in risks or ():
+        key = _aspect_key(scope, str(risk.get("aspect") or "")) if isinstance(risk, dict) else ""
+        if key in counts:
+            counts[key] += 1
+        else:
+            untagged += 1
+    return {
+        "complexity": scope.complexity,
+        "calls": max(0, int(calls)),
+        "risk_cap": risk_cap(scope),
+        "aspects": [{"name": one.name, "findings": counts[fold(one.name)]}
+                    for one in scope.aspects],
+        "untagged": untagged,
+    }
+
+
+def scope_line(record: dict) -> str:
+    """The scope record as one job-log line."""
+    if not isinstance(record, dict) or not record.get("aspects"):
+        return ""
+    aspects = record["aspects"]
+    covered = [one for one in aspects if one.get("findings")]
+    quiet = [one["name"] for one in aspects if not one.get("findings")]
+    line = (f"scope: {record.get('complexity')} · {len(covered)} of {len(aspects)} aspects "
+            "have a sourced finding")
+    if covered:
+        line += " (" + ", ".join(f"{one['name']} {one['findings']}" for one in covered) + ")"
+    if quiet:
+        line += " · none for: " + ", ".join(quiet)
+    return line

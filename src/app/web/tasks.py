@@ -560,6 +560,24 @@ def _cap_agent(researcher, params: dict) -> None:
         researcher.budget_usd = named
 
 
+def _for_authoring(researcher) -> None:
+    """Size a built-in API agent for a reply that is a whole catalog.
+
+    The default response ceiling cut a Golf catalog off mid-claim and failed
+    the turn after its searches were paid for. An authoring reply is large by
+    design, so it gets a ceiling to match, and a reply that still reaches it is
+    kept cut off for `packauthor.read_payload` to close at its last whole
+    entry. A CLI or a local model has neither setting and is left alone.
+    """
+    if not hasattr(researcher, "keep_partial"):
+        return
+    from app.providers import kriko_agent
+
+    researcher.keep_partial = True
+    if not getattr(researcher, "max_tokens", None):
+        researcher.max_tokens = kriko_agent.AUTHORING_MAX_TOKENS
+
+
 def _budget(params: dict, app_state_path=None) -> float:
     """The ceiling, with the paid plane's floor applied.
 
@@ -1968,6 +1986,7 @@ def pack_author(settings, params: dict, progress: Progress) -> dict:
                 params.get("timeout_seconds") or harness.AUTHOR_TIMEOUT_SECONDS),
         )
         _cap_agent(researcher, params)
+        _for_authoring(researcher)
         # The forty-minute silence this job used to be (B121). A pack author is
         # the longest-running thing in the app and the one whose log most needed
         # to say something before it finished.
@@ -2183,7 +2202,7 @@ def quick_look(settings, params: dict, progress: Progress) -> dict:
     product belongs in, from the installed ones it is shown.
     """
     from app import categorizer, quicklook
-    from app.providers import harness_researcher
+    from app.providers import agentplan, harness_researcher
     from kriko.research import pack_asset
 
     product = str(params.get("product") or "").strip()
@@ -2271,8 +2290,10 @@ def quick_look(settings, params: dict, progress: Progress) -> dict:
     progress.check()
     # The API agent keeps what its search returned per url; a CLI keeps
     # nothing, and `None` tells the parser there is nothing to check against.
+    scope = getattr(researcher, "scope", None)
     found = quicklook.parse(reply, getattr(researcher, "sources", None),
-                            page=params.get("page") if isinstance(params.get("page"), dict) else None)
+                            page=params.get("page") if isinstance(params.get("page"), dict) else None,
+                            max_risks=agentplan.risk_cap(scope))
     answer_readable = (quicklook.answer_payload(reply) is not None
                        or bool(found.get("risks") or found.get("specs")))
     found = quicklook.without_listing_echo(found, str(params.get("page_url") or ""))
@@ -2377,12 +2398,19 @@ def quick_look(settings, params: dict, progress: Progress) -> dict:
     result_message = quicklook.outcome(
         reply, found, finish_reason=str(getattr(researcher, "last_finish_reason", "")),
         coverage=coverage)
+    # Which of the aspects the subject was scoped into came back with a sourced
+    # finding: the check that a car's three findings are not one gearbox's.
+    scope_summary = agentplan.scope_record(
+        scope, found["risks"], calls=int(coverage.get("retrieval_requests") or 0))
+    if line := agentplan.scope_line(scope_summary):
+        progress.log(line)
     progress.set(1.0, result_message
         + (f", {found['dropped']} unsourced dropped" if found["dropped"] else "")
         + ((f", ${spent:.2f}" if spent is not None else ", cost unknown") if billed else ""))
     return {
         **found,
         "product": str(found.get("product") or product),
+        "scope": scope_summary,
         "listing": listing,
         "evidence_pages": evidence_pages,
         "verification": verification,
@@ -3161,6 +3189,7 @@ def pack_amend(settings, params: dict, progress: Progress) -> dict:
                 params.get("timeout_seconds") or harness.AUTHOR_TIMEOUT_SECONDS),
         )
         _cap_agent(researcher, params)
+        _for_authoring(researcher)
         researcher.on_action = progress.log
         _wire_researcher_text(researcher, progress)
         researcher.check_cancelled = progress.check
