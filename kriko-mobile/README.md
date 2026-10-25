@@ -172,7 +172,7 @@ as bullets before it is shown.
 ## Build it
 
 Requires Node 24, JDK 17, the Android SDK (platform 36+), and an Android signing
-configuration. The current app version is **0.9.2** (Android version code **9**).
+configuration. The current app version is **0.10.0** (Android version code **10**).
 This build uses the debug keystore, so the APK installs and
 updates locally but is not a Play Store artifact.
 
