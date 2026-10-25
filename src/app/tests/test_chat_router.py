@@ -790,6 +790,19 @@ def test_what_the_agent_searches_reaches_the_log_while_the_call_is_still_running
         on_event({"choices": [{"delta": {"content": payload}, "finish_reason": "stop"}]})
         on_event({"choices": [], "usage": {"prompt_tokens": 100, "completion_tokens": 20}})
 
+    def look_once_published(prefix: str) -> None:
+        # The job thread publishes a queued step within 50 ms, so the line is
+        # normally there at the first look. On a machine busy with a whole
+        # gate it can take longer, and a fixed sleep then read the log a
+        # moment before the line was written. Wait for the line, bounded, and
+        # keep the look inside the call it is meant to be inside.
+        deadline = time.monotonic() + 5.0
+        seen = log_now()
+        while time.monotonic() < deadline and not any(line.startswith(prefix) for line in seen):
+            time.sleep(0.02)
+            seen = log_now()
+        seen_mid_call.append(seen)
+
     def stream(url, payload, headers, timeout, on_event, *, cancel_event=None):
         if not url.endswith("/chat/completions"):
             return 0, "unexpected endpoint"
@@ -806,8 +819,7 @@ def test_what_the_agent_searches_reaches_the_log_while_the_call_is_still_running
             # The answer round, after the search returned. The search's own
             # result line is queued by the retrieval thread and published by the
             # job thread within 50 ms, so it is on screen before this round ends.
-            time.sleep(0.15)
-            seen_mid_call.append(log_now())
+            look_once_published("searched: Samsung 850 EVO firmware")
         emit(on_event, "The 850 EVO is the pick. [https://forum.example/evo]")
         return 1, ""
 
@@ -816,8 +828,7 @@ def test_what_the_agent_searches_reaches_the_log_while_the_call_is_still_running
             # Still inside the search: the reader's screen must already say so.
             # The search takes longer than the 50 ms the job thread uses to
             # publish a queued step, as any real one does.
-            time.sleep(0.2)
-            seen_mid_call.append(log_now())
+            look_once_published("searching: Samsung 850 EVO firmware")
             return {"results": [{"url": "https://forum.example/evo",
                                  "title": "850 EVO thread", "content": page,
                                  "summary": "Thread", "snippet": "Firmware"}]}, ""

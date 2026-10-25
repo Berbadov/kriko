@@ -75,6 +75,20 @@ export interface Usage {
   trimmed: boolean
   droppedReplies: number
   omittedRequests: number
+  /** What the research did, when the agent kept a record of it. */
+  record?: ResearchRecord
+}
+
+/** What a turn's research did, as the reader reads it. */
+export interface ResearchRecord {
+  searches: number
+  pages: number
+  unreadable: number
+  cached: number
+  kinds: string[]
+  missing: string[]
+  /** Pages that did not carry the product's own name or model; null when nothing was checked. */
+  offProduct: number | null
 }
 
 /** Which agent answered: the id picks its mark, the label is what the reader reads. */

@@ -109,6 +109,22 @@ test('the context bar warns from 70% and 90%, and a turn with no report says so 
   assert.equal(view.formatTokens(18400), '18.4K')
 })
 
+test('an answer says how much its research looked at, and what it did not', () => {
+  const record = view.recordFrom({ searches: 3, pages: 5, unreadable: 1, cached: 2, kinds: ['forums', 'reviews'], missing: ['recalls'], on_product: 4, off_product: 1 })
+  assert.equal(view.recordLine(record), '3 searches · 5 pages read · forums, reviews · not searched: recalls')
+  assert.match(view.recordNote(record), /1 result had no readable text/)
+  assert.match(view.recordNote(record), /1 page did not carry the product's own name or model/)
+  // A turn that checked no product has no verdict about pages, never a zero.
+  assert.equal(view.recordFrom({ searches: 1, pages: 1, kinds: [], missing: [] }).offProduct, null)
+  assert.equal(view.recordLine(view.recordFrom({ searches: 1, pages: 1 })), '1 search · 1 page read')
+  // No research, no line; an agent that kept no record leaves nothing to draw.
+  assert.equal(view.recordLine(view.recordFrom({ searches: 0, pages: 0 })), '')
+  assert.equal(view.recordFrom(undefined), undefined)
+  const usage = view.usageFrom({ tokens: 10, context: { state: 'measured' }, record: { searches: 2, pages: 3, kinds: ['forums'], missing: [] } })
+  assert.equal(usage.record.pages, 3)
+  assert.equal(view.usageFrom({ tokens: 10, context: { state: 'measured' } }).record, undefined)
+})
+
 test('a claim source keeps where the engine stands it, and one it could not place carries none', async () => {
   globalThis.fetch = async () => reply({ label: 'Model C', created_at: '2026-10-19T12:00:00Z', response: {
     claims: [{ title: 'Heat under load', body: 'Only at full load', sources: [

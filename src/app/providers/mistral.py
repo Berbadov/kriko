@@ -82,6 +82,10 @@ class Reply:
     #: Named app changes this reply proposed or made (`app/agentactions.py`):
     #: the same objects the screen draws, so "I saved it" is never prose only.
     actions: list[dict] = field(default_factory=list)
+    #: What the turn did, for the screen beside the answer (`agentplan.build_record`):
+    #: searches, pages read and unreadable, the kinds of source covered and the
+    #: ones asked for and not searched. `{}` for an adapter that keeps no record.
+    record: dict = field(default_factory=dict)
     #: Why there is no answer, in words a reader can act on. `""` on success.
     error: str = ""
     #: False when a completion response omitted either token count.
