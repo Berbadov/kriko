@@ -75,6 +75,34 @@ Playwright and Pillow are only needed for this step; the site itself needs
 neither. Commit the new pictures in `assets/examples/`. The sky pictures are made
 the same way (`python3 site/tools/dither_sky.py`) and live in `assets/sky/`.
 
+## The desktop app's pictures
+
+The pictures in the app section are the real desktop interface too.
+`tools/capture-app.mjs` starts a real engine in an empty home folder of its own,
+fills its saved checks, queue and comparison with the invented e-bikes
+(`tools/seed_app_examples.py`, from `examples.json` and `app_examples.json`),
+opens the built window (`kriko-ui/dist`) on it and photographs three screens.
+Nothing of the machine it runs on reaches a picture: the engine's home is a
+temporary folder, its extension port is off, and the agents it lists are not
+read from this machine's PATH when `PYTHON` is a full path. The two provider
+keys it holds are placeholders, so the window offers the Kriko Agent; nothing
+runs a search.
+
+The sources carry the `tier` a catalog would give them, and the Solid, Partial
+and Thin marks on each finding are the engine's own grading of them
+(`app/evidence.py`), not a label written for the picture.
+
+```sh
+npm ci --prefix kriko-ui && npm run build --prefix kriko-ui
+PYTHON=/full/path/to/python PLAYWRIGHT_MODULE=/path/to/playwright/index.mjs node site/tools/capture-app.mjs
+python3 site/tools/optimise_images.py
+```
+
+Commit the pictures in `assets/desktop/`. The comparison is drawn wide, for a
+desktop screen, and narrow, for a phone. The checked product and the start
+screen are only shown narrow, so they are drawn only at that size. `ONLY=compare`
+draws one picture.
+
 ## Readability
 
 Body text is 19px with 1.7 line height, lines stay under about 70 characters,

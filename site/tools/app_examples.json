@@ -1,0 +1,199 @@
+{
+  "note": "Invented products and invented findings for the desktop pictures, beside the e-bike in examples.json. E-bike K and E-bike T are the two that sit next to it in Compare; where a title repeats a finding of the first e-bike it is the same finding, so Compare can say it is shared. Nothing here assesses a real brand.",
+  "draft": "Three e-bikes to choose from",
+  "others": [
+    {
+      "key": "k",
+      "title": "E-bike K · 2021",
+      "label": "E-bike K",
+      "url": "https://shop.example/e-bike-k-2021",
+      "pack": "example.bikes",
+      "claims": [
+        {
+          "title": "Battery range drops by a third after two winters",
+          "severity": "high",
+          "strength": "reported",
+          "domain": "battery",
+          "body": "Owners of the 2021 model report the same loss of range after two winters outdoors. The cells are the same ones the 2022 model uses.",
+          "advice": "Ask for the charge-cycle count and the range on the last ride.",
+          "sources": [
+            {
+              "title": "Owner forum thread",
+              "domain": "example.org",
+              "url": "https://example.org/forum/ebike-k-battery",
+              "quote": "Lost about a third of the range by the second spring. Stored outside."
+            },
+            {
+              "title": "Bike magazine long-term test",
+              "domain": "example.net",
+              "url": "https://example.net/tests/ebike-k-battery",
+              "quote": "Two winters in, the range was down by about a third."
+            }
+          ]
+        },
+        {
+          "title": "Frame cracks beside the rear rack weld",
+          "severity": "high",
+          "strength": "reported",
+          "domain": "frame",
+          "body": "Several owners found a hairline crack where the rack bracket is welded to the frame, usually after carrying a heavy load. A cracked frame is not repairable.",
+          "advice": "Look closely at the weld under the rack, and ask whether the bike carried loads.",
+          "sources": [
+            {
+              "title": "Safety notice",
+              "domain": "example.org",
+              "url": "https://example.org/notices/ebike-k-frame",
+              "quote": "Inspect the rack bracket weld for cracks before each ride."
+            },
+            {
+              "title": "Owner forum thread",
+              "domain": "example.net",
+              "url": "https://example.net/forum/ebike-k-frame",
+              "quote": "Found a hairline crack at the rack weld. The shop would not repair the frame."
+            },
+            {
+              "title": "Used-bike buying guide",
+              "domain": "example.com",
+              "url": "https://example.com/guides/ebike-k",
+              "quote": "Check the rack weld on a 2021 K for cracks, especially if it carried loads."
+            }
+          ]
+        },
+        {
+          "title": "Brake pads are a six-month item",
+          "severity": "medium",
+          "strength": "documented",
+          "domain": "brakes",
+          "body": "The service manual calls for new pads every six months of daily commuting. Original pads on a two-year-old bike mean the brakes were not serviced.",
+          "advice": "Ask which pads are on it and when the brakes were last bled.",
+          "sources": [
+            {
+              "title": "Service manual",
+              "domain": "example.org",
+              "url": "https://example.org/manual/ebike-k",
+              "quote": "Replace the brake pads every six months of daily use."
+            },
+            {
+              "title": "Dealer notice",
+              "domain": "example.com",
+              "url": "https://example.com/notices/ebike-k-brakes",
+              "quote": "Pads are a six-month item for daily commuting."
+            }
+          ]
+        },
+        {
+          "title": "The charger stops working after about a year",
+          "severity": "low",
+          "strength": "reported",
+          "domain": "electrical",
+          "body": "A few owners report the original charger failing around the first anniversary. A replacement is sold separately.",
+          "advice": "Ask whether the original charger comes with it, and that it still works.",
+          "sources": [
+            {
+              "title": "Review",
+              "domain": "example.org",
+              "url": "https://example.org/reviews/ebike-k-charger",
+              "quote": "The charger died after eleven months. A new one was not cheap."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "t",
+      "title": "E-bike T · 2023",
+      "label": "E-bike T",
+      "url": "https://shop.example/e-bike-t-2023",
+      "pack": "example.bikes",
+      "claims": [
+        {
+          "title": "Brake pads are a six-month item",
+          "severity": "medium",
+          "strength": "documented",
+          "domain": "brakes",
+          "body": "The service manual calls for new pads every six months of daily commuting. Original pads on a two-year-old bike mean the brakes were not serviced.",
+          "advice": "Ask which pads are on it and when the brakes were last bled.",
+          "sources": [
+            {
+              "title": "Service manual",
+              "domain": "example.org",
+              "url": "https://example.org/manual/ebike-t",
+              "quote": "Replace the brake pads every six months of daily use."
+            },
+            {
+              "title": "Dealer notice",
+              "domain": "example.com",
+              "url": "https://example.com/notices/ebike-t-brakes",
+              "quote": "Pads are a six-month item for daily commuting."
+            }
+          ]
+        },
+        {
+          "title": "Display shows a sensor error on cold starts",
+          "severity": "low",
+          "strength": "reported",
+          "domain": "electrical",
+          "body": "On the first cold start of the day the display can show a sensor error that clears after a restart.",
+          "advice": "Ask to see it start from cold.",
+          "sources": [
+            {
+              "title": "Owner forum thread",
+              "domain": "example.org",
+              "url": "https://example.org/forum/ebike-t-display",
+              "quote": "Sensor error on the first start when it is under five degrees. Switch it off and on and it is fine."
+            }
+          ]
+        },
+        {
+          "title": "The kickstand bolt works loose",
+          "severity": "low",
+          "strength": "reported",
+          "domain": "frame",
+          "body": "The kickstand bolt loosens with vibration and can drop out. It is a five-minute fix with thread-lock.",
+          "advice": "Check the bolt is tight and ask whether thread-lock was used.",
+          "sources": [
+            {
+              "title": "Review",
+              "domain": "example.org",
+              "url": "https://example.org/reviews/ebike-t-stand",
+              "quote": "Lost the kickstand bolt on a bumpy road. Easy fix, annoying."
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "first_extra_sources": [
+    [
+      {
+        "title": "Bike magazine long-term test",
+        "domain": "example.net",
+        "url": "https://example.net/tests/ebike-m-battery",
+        "quote": "After two winters the battery gave us roughly two thirds of its original range."
+      },
+      {
+        "title": "Used-bike buying guide",
+        "domain": "example.com",
+        "url": "https://example.com/guides/ebike-m",
+        "quote": "Ask for the range on the last ride. The 2022 pack fades if it sat cold and full."
+      }
+    ],
+    [
+      {
+        "title": "Forum thread",
+        "domain": "example.net",
+        "url": "https://example.net/forum/ebike-m-rain",
+        "quote": "Same thing here: the motor stops in the wet until the plug under the rack has dried."
+      }
+    ],
+    [
+      {
+        "title": "Dealer notice",
+        "domain": "example.com",
+        "url": "https://example.com/notices/ebike-m-brakes",
+        "quote": "Pads on this model are a six-month item for daily commuting."
+      }
+    ],
+    []
+  ]
+}

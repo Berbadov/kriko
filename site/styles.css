@@ -129,6 +129,14 @@ h2 { font-size: clamp(2.5rem, 5.4vw, 4.2rem); max-width: 14em; }
 .shot.wide img { max-width: 440px; border-radius: 6px; border: 1px solid var(--line); }
 
 /* Examples */
+/* The desktop app, drawn as a window: the whole picture, a hairline and a shadow. */
+.window { margin: clamp(32px, 5vw, 52px) 0 0; }
+.window img { display: block; width: 100%; height: auto; border-radius: 12px; border: 1px solid var(--line); box-shadow: 0 24px 60px -26px rgba(11, 16, 32, .4), 0 2px 8px rgba(11, 16, 32, .08); }
+.window figcaption { margin-top: 14px; max-width: 46em; font-size: 1rem; line-height: 1.6; color: var(--muted); }
+.window-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(20px, 3vw, 36px); }
+.window-pair .window { margin-top: clamp(24px, 4vw, 40px); }
+.window-pair .window img { max-width: 560px; margin-inline: auto; }
+.window-pair .window figcaption { max-width: 560px; margin-inline: auto; }
 .gallery { list-style: none; margin: clamp(32px, 5vw, 52px) 0 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: clamp(20px, 3vw, 36px); }
 .gallery h3 { margin-top: 20px; font-size: 1.9rem; }
 .gallery li > p:not(.tag) { margin-top: 8px; font-size: 1.0625rem; line-height: 1.55; color: var(--muted); }
@@ -184,6 +192,7 @@ h2 { font-size: clamp(2.5rem, 5.4vw, 4.2rem); max-width: 14em; }
 @media (max-width: 980px) {
   .gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .hero-grid, .get-grid, .two { grid-template-columns: minmax(0, 1fr); }
+  .window-pair { grid-template-columns: minmax(0, 1fr); }
   .stage { max-width: 520px; }
 }
 
