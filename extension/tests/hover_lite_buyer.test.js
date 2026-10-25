@@ -12,13 +12,20 @@ const BUYER = {
   watch: null, audit: null, fit: null, profile: false,
 };
 
+// Two products on the shortlist: what deciding is for.
+const TWO = { ok: true, max: 8, items: [
+  { queue_id: "q1", url: "https://a.example/kettle-a", name: "Kettle A", severities: ["low"] },
+  { queue_id: "q2", url: "https://b.example/kettle-b", name: "Kettle B", severities: [] },
+] };
+
 // What the worker's session storage holds, and what it answers the panel's buttons with.
-function panel({ buyer = BUYER, due = [], replies = {} } = {}) {
+function panel({ buyer = BUYER, due = [], replies = {}, shortlist = TWO } = {}) {
   const p = loadPanel({
     workerResponse: (message) => {
       if (replies[message.type]) return typeof replies[message.type] === "function"
         ? replies[message.type](message) : replies[message.type];
       if (message.type === "BUYER_DUE") return { ok: true, due };
+      if (message.type === "COMPARE_LIST") return shortlist;
       return { ok: true };
     },
   });
@@ -28,7 +35,7 @@ function panel({ buyer = BUYER, due = [], replies = {} } = {}) {
 
 // Messages cross the vm boundary, so compare their shape and not their prototype.
 const plain = (value) => JSON.parse(JSON.stringify(value));
-// A page the panel has read: the decide button waits for something to decide.
+// A page the panel has read.
 const READ = { ok: true, listing: {}, result: { lookup_id: "a1", claims: [], identity: {}, context: {}, coverage: "NO_CLAIMS" } };
 const tick = () => new Promise((resolve) => setImmediate(resolve));
 const text = (p, selector) => p.shadow().querySelector(selector)?.textContent.replace(/\s+/g, " ").trim();
@@ -172,13 +179,20 @@ test("a verdict of go interrupts nobody", () => {
   assert.equal(p.dom.window.document.querySelector("kriko-guard-host"), null);
 });
 
-test("the decide button waits for a page that was read, and is not drawn on an error", async () => {
-  const idle = panel();
-  idle.openPanel();
+test("the decide button waits for two products on the shortlist, inside the tray", async () => {
+  const alone = panel({ shortlist: { ...TWO, items: TWO.items.slice(0, 1) } });
+  alone.openPanel();
+  alone.deliverEntry(READ);
   await tick();
-  assert.equal(idle.shadow().querySelector('[data-act="decide"]'), null);
-  idle.deliverEntry(READ);
-  assert.ok(idle.shadow().querySelector('[data-act="decide"]'));
+  assert.equal(alone.shadow().querySelector('[data-act="decide"]'), null, "one product has nothing to decide between");
+
+  const two = panel();
+  two.openPanel();
+  two.deliverEntry(READ);
+  await tick();
+  const button = two.shadow().querySelector('.lite-compare-tray [data-act="decide"]');
+  assert.ok(button, "with two it is offered, in the shortlist");
+  assert.match(button.textContent, /Help me decide/);
 });
 
 test("a due question on a page Kriko reads is a card of its own that can be answered or ignored", async () => {
