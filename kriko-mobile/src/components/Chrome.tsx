@@ -44,7 +44,7 @@ export function HeroArt(_props: { height?: number }) { return null; }
 export function Hero({ crumb, title, subtitle }: { crumb: string; title: string; subtitle?: string }) {
   const styles = useStyles();
   return <MotionView style={styles.hero}>
-    <Txt variant="crumb" tone="ink3" style={styles.crumb}>{crumb.replace('kriko / ', '')}</Txt>
+    <Txt variant="crumb" tone="ink3" caps style={styles.crumb}>{crumb.replace('kriko / ', '')}</Txt>
     <Txt variant="headline" style={styles.heroTitle}>{title}</Txt>
     {subtitle ? <Txt variant="heroSub" tone="ink2" style={styles.heroSub}>{subtitle}</Txt> : null}
   </MotionView>;
@@ -147,7 +147,7 @@ const useStyles = makeStyles((color) => StyleSheet.create({
   action: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: radius.m },
   scroll: { flex: 1 }, content: { paddingBottom: 28 },
   hero: { paddingHorizontal: PAGE_X, paddingTop: 18, paddingBottom: 26 },
-  crumb: { fontSize: 11, letterSpacing: 1.3, textTransform: 'uppercase' },
+  crumb: { fontSize: 11, letterSpacing: 1.3 },
   heroTitle: { marginTop: 10 }, heroSub: { marginTop: 10, maxWidth: 320, lineHeight: 22 },
   footer: { paddingHorizontal: PAGE_X, paddingTop: 12, paddingBottom: 12, backgroundColor: color.ground },
   note: { paddingHorizontal: PAGE_X, paddingVertical: 8 },

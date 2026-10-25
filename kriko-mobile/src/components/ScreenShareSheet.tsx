@@ -9,6 +9,7 @@ import { ActivityDots, MotionPressable, MotionView } from './Motion';
 import { Divider } from './Chrome';
 import { Button } from './Primitives';
 import { ScanIcon, XIcon } from './Icon';
+import { moveAppToBack } from '../engine/overlay';
 import { useOverlaySession } from './OverlaySession';
 import { AnimatedSheet } from './AnimatedSheet';
 
@@ -26,9 +27,16 @@ export function ScreenShareSheet({ onClose, onFallback }: { onClose: () => void;
     setBusy(true);
     setError('');
     try {
-      if (active) await stop();
-      else await start();
-      dismiss();
+      if (active) {
+        await stop();
+        dismiss();
+      } else {
+        await start();
+        dismiss();
+        // Step aside once the sheet has folded, so the reader lands on the page
+        // they meant to scan with the K already floating over it.
+        setTimeout(() => { void moveAppToBack(); }, 380);
+      }
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : tr('Screen sharing could not start. Try again.'));
     } finally {
@@ -62,12 +70,12 @@ export function ScreenShareSheet({ onClose, onFallback }: { onClose: () => void;
             <Divider inset={38} />
             <Step n="2" title="Approve Android’s screen sharing prompt." />
             <Divider inset={38} />
-            <Step n="3" title="Browse and tap the floating Kriko button to scan." />
+            <Step n="3" title="Open the page you want, then tap the K and Scan this page." />
           </MotionView>
 
           <MotionView key={`${busy}-${active}-${error}`} delay={0} style={styles.note}>
             <Txt variant="bodyTight" tone="ink3">
-              Only frames you request are sent for reading. Stop from the floating panel or Android notification.
+              Only screens you scan are sent for reading. Stop from the K’s tray or the Android notification.
             </Txt>
             {!available ? (
               <Txt variant="bodyTight" tone="risk">

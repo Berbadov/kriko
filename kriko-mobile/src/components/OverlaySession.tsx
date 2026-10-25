@@ -1,11 +1,11 @@
 /** Keeps the Android scanner connected to the research queue while other apps are visible. */
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { useColorScheme } from 'react-native';
+import { AppState, useColorScheme } from 'react-native';
 
 import {
   isOverlayActive, overlayAvailable, startOverlaySession, stopOverlaySession,
   subscribeOverlayAction, subscribeOverlayScan, subscribeOverlaySession,
-  updateOverlayJobs, updateOverlayUi, type OverlayJob, type OverlayLabels, type OverlayScan,
+  setOverlayAppForeground, updateOverlayJobs, updateOverlayUi, type OverlayJob, type OverlayLabels, type OverlayScan,
 } from '../engine/overlay';
 import { readingTitle } from '../engine/prompt';
 import { useStore } from '../engine/store';
@@ -42,6 +42,10 @@ export function OverlaySessionProvider({ children }: { children: React.ReactNode
   // memo's dependency, so switching it rebuilds every word and resends them.
   const labels = useMemo<OverlayLabels>(() => ({
     scan: tr('Scan', language),
+    scanPage: tr('Scan this page', language),
+    scanAgain: tr('Scan again', language),
+    results: tr('Results', language),
+    siteComments: tr('Site comments', language),
     queue: tr('Queue', language),
     stop: tr('Stop', language),
     now: tr('Now', language),
@@ -146,6 +150,17 @@ export function OverlaySessionProvider({ children }: { children: React.ReactNode
       void stopOverlaySession().catch(() => {});
     };
   }, [drain]);
+
+  // The scanner floats over the reader's own page, so it stands down while Kriko
+  // itself is showing. Resent when the session becomes active: the native side
+  // ignores a report that arrives before there is a session to receive it.
+  useEffect(() => {
+    setOverlayAppForeground(AppState.currentState === 'active');
+    const subscription = AppState.addEventListener('change', (state) => {
+      setOverlayAppForeground(state === 'active');
+    });
+    return () => subscription.remove();
+  }, [active]);
 
   // Palette and words go first: the native side applies them to a live bubble
   // and keeps the last payload so the next session opens already themed.

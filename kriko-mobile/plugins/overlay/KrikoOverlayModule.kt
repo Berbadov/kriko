@@ -176,6 +176,36 @@ class KrikoOverlayModule(private val appContext: ReactApplicationContext) :
     startHeadlessSession()
   }
 
+  /**
+   * Put Kriko's own task behind the page the reader came from. The scanner is
+   * its own window and stays on top, so this is what turns "start" into
+   * "now scan the page" without a manual trip to the home screen.
+   */
+  @ReactMethod
+  fun moveToBack(promise: Promise) {
+    val activity = getCurrentActivity()
+    if (activity == null) {
+      promise.resolve(false)
+      return
+    }
+    UiThreadUtil.runOnUiThread {
+      promise.resolve(try { activity.moveTaskToBack(true) } catch (_: Exception) { false })
+    }
+  }
+
+  /**
+   * Whether Kriko's own screen is in front. The scanner stands down while it is
+   * and returns the moment the reader moves to another page.
+   */
+  @ReactMethod
+  fun setAppForeground(foreground: Boolean) {
+    if (!KrikoOverlayService.isActive) return
+    appContext.startService(Intent(appContext, KrikoOverlayService::class.java).apply {
+      action = KrikoOverlayService.ACTION_APP
+      putExtra(KrikoOverlayService.EXTRA_FOREGROUND, foreground)
+    })
+  }
+
   @ReactMethod
   fun updateJobs(json: String) {
     if (!KrikoOverlayService.isActive) return
