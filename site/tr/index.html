@@ -9,7 +9,7 @@
   <meta property="og:type" content="website">
   <meta property="og:image" content="https://kriko.cc/assets/icon-128.png">
   <link rel="icon" href="../assets/icon-32.png">
-  <link rel="stylesheet" href="../styles.css?v=8716cde50e4b">
+  <link rel="stylesheet" href="../styles.css?v=52f941e17802">
   <script src="../script.js?v=bf129bb57352" defer=""></script>
   <link rel="canonical" href="https://kriko.cc/tr/">
   <link rel="alternate" href="https://kriko.cc/" hreflang="en">
@@ -29,6 +29,7 @@
       <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="main-nav">Menü</button>
       <nav class="main-nav" id="main-nav" aria-label="Ana gezinme">
         <a href="#how">Nasıl çalışır</a>
+        <a href="#app">Uygulama</a>
         <a href="#examples">Örnekler</a>
         <a href="#get">Kurulum</a>
         <a href="#data">Sorular</a>
@@ -115,9 +116,43 @@
       </div>
     </section>
 
+    <section class="section" id="app">
+      <div class="wrap">
+        <p class="label"><span class="index">02</span>Uygulama</p>
+        <h2>Bulguların tutulduğu yer.</h2>
+        <p class="section-lead">Windows uygulaması her kontrolü bilgisayarında saklar, kısa listeni yan yana dizer ve takip sorularını kaynaklarla yanıtlar. Tarayıcındaki panel oraya açılan kapıdır.</p>
+        <figure class="window">
+          <picture>
+            <source srcset="../assets/desktop/compare-compact-dark.webp" media="(max-width: 760px) and (prefers-color-scheme: dark)" width="760" height="1000">
+            <source srcset="../assets/desktop/compare-compact-light.webp" media="(max-width: 760px)" width="760" height="1000">
+            <source srcset="../assets/desktop/compare-dark.webp" media="(prefers-color-scheme: dark)">
+            <img src="../assets/desktop/compare-light.webp" width="1440" height="900" loading="lazy" alt="Kriko uygulaması üç kurgusal elektrikli bisikleti yan yana karşılaştırıyor. Birden fazla bisikletin paylaştığı bulgu işaretli ve her bulgu ne kadar iyi desteklendiğini gösteriyor.">
+          </picture>
+          <figcaption>Yan yana üç kurgusal elektrikli bisiklet. İkisinin paylaştığı bir bulgu işaretlenir ve her bulgu ne kadar iyi desteklendiğini söyler.</figcaption>
+        </figure>
+        <div class="window-pair">
+          <figure class="window">
+            <picture>
+              <source srcset="../assets/desktop/product-compact-dark.webp" media="(prefers-color-scheme: dark)">
+              <img src="../assets/desktop/product-compact-light.webp" width="760" height="1000" loading="lazy" alt="Kriko uygulaması kurgusal bir elektrikli bisiklet için tek bir kontrolü gösteriyor. Her biri Solid, Partial ya da Thin olarak işaretli dört bulguyu listeliyor ve ilkinin kaynakları açık.">
+            </picture>
+            <figcaption>Açılmış bir kontrol. Her bulgu ne kadar ciddi olduğunu ve ne kadar iyi desteklendiğini söyler. Kaynaklarını görmek için birini aç.</figcaption>
+          </figure>
+          <figure class="window">
+            <picture>
+              <source srcset="../assets/desktop/home-compact-dark.webp" media="(prefers-color-scheme: dark)">
+              <img src="../assets/desktop/home-compact-light.webp" width="760" height="1000" loading="lazy" alt="Kriko uygulamasının açılış ekranı. Bir kutuda Ask about a product yazıyor, altında üç son kontrol var.">
+            </picture>
+            <figcaption>Bir ürünü kendi sözlerinle, seçtiğin ajanla sor. Yaptığın her kontrol altta saklanır.</figcaption>
+          </figure>
+        </div>
+        <p class="note">Buradaki her ürün kurgusal, her bulgu da öyle. Uygulama şimdilik İngilizce.</p>
+      </div>
+    </section>
+
     <section class="section soft" id="examples">
       <div class="wrap">
-        <p class="label"><span class="index">02</span>Örnekler</p>
+        <p class="label"><span class="index">03</span>Örnekler</p>
         <h2>Dört kurgusal ürün, gerçek panelde.</h2>
         <p class="section-lead">Burada hiçbir şey gerçek değil; ne ürünler ne de bulgular. Bunlar yalnızca panelin nasıl göründüğünü gösteriyor. Gerçek bulguların yanında gerçek bir kaynak bağlantısı olur.</p>
         <ul class="gallery">
@@ -166,12 +201,12 @@
       <div class="wrap two split">
         <div class="split-copy">
           <div>
-            <p class="label"><span class="index">03</span>Kataloglar</p>
+            <p class="label"><span class="index">04</span>Kataloglar</p>
             <h2>Almadan önce modeli tanı.</h2>
             <p>Katalog, tek bir ürün kategorisinin kaynaklarıyla birlikte yazıya geçirilmiş hâlidir. Araba kataloğu motor, şanzıman, elektrik ve kaporta konularını İngilizce ve Türkçe olarak kapsar. Uygulamadaki <strong>Catalogs</strong> bölümünden birini kurduğunda aramalar çevrimdışı çalışır.</p>
           </div>
           <div>
-            <p class="label"><span class="index">04</span>Hızlı bakış</p>
+            <p class="label"><span class="index">05</span>Hızlı bakış</p>
             <h2>Katalog yok mu? Ajanına sor.</h2>
             <p><strong>Hızlı bakış</strong>, seçtiğin ajanı hiçbir katalogda olmayan bir ürünü araştırmaya gönderir ve kaynakları saklar. İnternet bağlantısı gerekir. Hiçbir şey bulamazsa Kriko bunu söyler. Bir ürünün sorunsuz olduğunu asla söylemez.</p>
           </div>
@@ -187,7 +222,7 @@
 
     <section class="section" id="get">
       <div class="wrap">
-        <p class="label"><span class="index">05</span>Kurulum</p>
+        <p class="label"><span class="index">06</span>Kurulum</p>
         <h2>Bir kerelik dört adım.</h2>
         <div class="get-grid">
           <ol class="setup">
@@ -211,7 +246,7 @@
 
     <section class="section soft" id="data">
       <div class="wrap narrow">
-        <p class="label"><span class="index">06</span>Sorular</p>
+        <p class="label"><span class="index">07</span>Sorular</p>
         <h2>Verilerin, maliyet ve sınırlar.</h2>
         <div class="faq">
           <details open="">
