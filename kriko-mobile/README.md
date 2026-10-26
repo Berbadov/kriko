@@ -173,6 +173,9 @@ Expo Go. Android's screen-capture indicator remains visible during capture.
   the question is optional.
 - There is no Kriko account, no Kriko server, no analytics. Chats live in the
   app's storage on this phone.
+- A look for updates asks GitHub's public list of this repository's releases
+  (`api.github.com`, no account, nothing about you or your chats), at most
+  twice a day. A download starts only when you press Update.
 
 The access code carries the owner's keys sealed with AES-256-GCM under a key
 derived by scrypt from the password **and a pepper baked into this build**. A
@@ -180,6 +183,41 @@ code and its password open nothing outside a Kriko build. Anybody who can run
 this app and inspect it can still recover the keys — that is what sharing them
 means, and the owner's real protection is rotation at the providers. The ten
 free questions are a courtesy kept on the phone, not a wall.
+
+## Updates from GitHub
+
+Settings, Updates (and a dot on the Settings tab, and a slim line on the home
+screen) tells you when a newer build is on GitHub, what changed, and how big it
+is. **Update now** downloads it, checks it, and hands it to Android's installer;
+Android asks once more, then Kriko restarts on the new version with everything
+still on the phone.
+
+- The first time, Android sends you to a page to allow Kriko to install apps.
+  Turn it on and come back; the update carries on by itself.
+- Three checks come before the installer sees the file: its size and SHA-256 as
+  GitHub states them, that it is `app.kriko.mobile`, and that it is signed with
+  the key already on the phone (`plugins/overlay/KrikoUpdater.kt`).
+  A build signed with another key could never replace this app, so that is said
+  in words instead of left to a failed install.
+- Phone builds have a tag family of their own, `mobile-v<version>`, each with
+  one `kriko-agent-<version>.apk`. The repository's *Latest* release is the
+  desktop installer and the site's download links read it, so a phone release
+  must never be Latest.
+  `tools/publish-apk.ps1 -Apk ..\release\kriko-agent-0.12.1.apk` checks the file,
+  writes its `.sha256`, and (with `-Publish`) creates the release with
+  `--latest=false` and verifies Latest is still the desktop one.
+- The very first build with this feature has to be installed by hand once; every
+  one after it can come from the app.
+- The signing key is the debug keystore (see Limits). Changing it later means
+  one uninstall, which erases the keys and chats on the phone, so that is a
+  decision to take before many people have the app, not after.
+
+The pure parts (which release counts as an update, the whole check-download-
+permission-install flow with every failure) are `src/engine/appupdate.ts` and
+`src/engine/updatecore.ts`, tested without a phone by `tools/test-appupdate.ts`
+and `tools/test-updatecore.ts`. Two build-time variables, `EXPO_PUBLIC_KRIKO_UPDATE_FEED`
+and `EXPO_PUBLIC_KRIKO_UPDATE_ASSETS`, point a test build at a local server;
+neither is set in a release build.
 
 ## Where the pieces are
 
@@ -217,7 +255,7 @@ as bullets before it is shown.
 ## Build it
 
 Requires Node 24, JDK 17, the Android SDK (platform 36+), and an Android signing
-configuration. The current app version is **0.12.0** (Android version code **12**).
+configuration. The current app version is **0.12.1** (Android version code **13**).
 This build uses the debug keystore, so the APK installs and
 updates locally but is not a Play Store artifact.
 

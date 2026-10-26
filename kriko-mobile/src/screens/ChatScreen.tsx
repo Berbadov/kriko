@@ -23,6 +23,7 @@ import {
 
 import { AccessSheet } from '../components/AccessSheet';
 import { AppHeader, HeaderAction } from '../components/Chrome';
+import { UpdateNotice } from '../components/UpdateCard';
 import { Composer } from '../components/Composer';
 import { useDock } from '../components/dock';
 import { PlusIcon } from '../components/Icon';
@@ -326,6 +327,8 @@ export function ChatScreen() {
           ) : null
         }
       />
+
+      {empty ? <UpdateNotice onOpen={() => router.push('/settings' as Href)} /> : null}
 
       {overlay.active ? (
         <MotionView delay={80} style={styles.shareBanner}>

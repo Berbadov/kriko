@@ -14,6 +14,7 @@ import {
   ClipboardPaste,
   Clock,
   Copy,
+  Download,
   FileText,
   Focus,
   Globe,
@@ -80,3 +81,4 @@ export const PasteIcon = make(ClipboardPaste);
 export const PlusIcon = make(Plus);
 export const KeyIcon = make(KeyRound);
 export const ScanIcon = make(Focus);
+export const DownloadIcon = make(Download);

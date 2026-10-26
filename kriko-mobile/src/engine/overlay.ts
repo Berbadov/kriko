@@ -106,6 +106,12 @@ type KrikoOverlayNative = {
   openOverlaySettings(): Promise<boolean>;
   updateJobs(json: string): void;
   updateUi(json: string): void;
+  appVersion(): Promise<{ versionName: string; versionCode: number }>;
+  canInstallPackages(): Promise<boolean>;
+  openInstallSettings(): Promise<boolean>;
+  downloadUpdate(version: string, url: string, sha256: string, bytes: number): Promise<{ sha256: string; bytes: number }>;
+  cancelUpdate(): void;
+  installUpdate(version: string): Promise<boolean>;
   addListener(eventName: string): void;
   removeListeners(count: number): void;
 };
@@ -263,5 +269,65 @@ export function subscribeOverlaySession(callback: (session: OverlaySession) => v
 export function subscribeOverlayAction(callback: (action: OverlayAction) => void): () => void {
   if (!events) return () => undefined;
   const subscription = events.addListener("onAction", (payload) => callback(payload as OverlayAction));
+  return () => subscription.remove();
+}
+
+/** What the phone itself says is installed: `versionName` as shown, `versionCode` as Android orders builds. */
+export function installedVersion(): Promise<{ versionName: string; versionCode: number } | null> {
+  if (!overlayAvailable()) return Promise.resolve(null);
+  return native!.appVersion().catch(() => null);
+}
+
+/** Whether the phone lets Kriko install an app. Off until the reader allows it once. */
+export function canInstallApps(): Promise<boolean> {
+  if (!overlayAvailable()) return Promise.resolve(false);
+  return native!.canInstallPackages().catch(() => false);
+}
+
+/** Open the phone's own page for allowing Kriko to install apps. */
+export function openInstallAppsSettings(): Promise<boolean> {
+  if (!overlayAvailable()) return Promise.resolve(false);
+  return native!.openInstallSettings().catch(() => false);
+}
+
+const noInstaller = () => Object.assign(new Error(), { code: 'unavailable' });
+
+/**
+ * Download one version into the app's own cache and verify it. Rejects with the
+ * native failure kind as `code`: network, checksum, size, storage, cancelled, busy.
+ */
+export function downloadUpdateFile(version: string, url: string, sha256: string, bytes: number): Promise<{ sha256: string; bytes: number }> {
+  if (!overlayAvailable()) return Promise.reject(noInstaller());
+  return native!.downloadUpdate(version, url, sha256, bytes);
+}
+
+export function cancelUpdateDownload(): void {
+  if (overlayAvailable()) native!.cancelUpdate();
+}
+
+/**
+ * Hand the downloaded version to Android's installer. Rejects with `permission`
+ * (not yet allowed), `signature` (another key), `older`, `invalid`, `missing`, `storage`.
+ */
+export function installUpdateFile(version: string): Promise<boolean> {
+  if (!overlayAvailable()) return Promise.reject(noInstaller());
+  return native!.installUpdate(version);
+}
+
+export type UpdateProgress = { received: number; total: number };
+export type UpdateInstall = {
+  state: 'confirm' | 'installed' | 'cancelled' | 'blocked' | 'signature' | 'storage' | 'failed';
+  message: string;
+};
+
+export function subscribeUpdateProgress(callback: (progress: UpdateProgress) => void): () => void {
+  if (!events) return () => undefined;
+  const subscription = events.addListener("onUpdateProgress", (payload) => callback(payload as UpdateProgress));
+  return () => subscription.remove();
+}
+
+export function subscribeUpdateInstall(callback: (install: UpdateInstall) => void): () => void {
+  if (!events) return () => undefined;
+  const subscription = events.addListener("onUpdateInstall", (payload) => callback(payload as UpdateInstall));
   return () => subscription.remove();
 }
