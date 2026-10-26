@@ -58,6 +58,8 @@ export type OverlayLabels = {
   sources: string;
   queueFull: string;
   dragHint: string;
+  /** The label of the drop target shown while the floating K is being dragged. */
+  dropToStop: string;
   notificationTitle: string;
   notificationText: string;
   stopSharing: string;
@@ -80,9 +82,14 @@ export type OverlayLabels = {
   assistScanning: string;
   assistNoShot: string;
   assistTitle: string;
+  /** Toast when a phone-assistant scan is folded away while it is still being read. */
+  assistKeeps: string;
 };
 
-/** `puckOpacity` is a percentage: how solid the floating K rests, 20 to 100. */
+/**
+ * `puckOpacity` is a percentage, 20 to 100: how solid the floating K and the
+ * glass panels around it are drawn.
+ */
 export type OverlayUi = { theme: OverlayTheme; labels: OverlayLabels; puckOpacity: number };
 
 type KrikoOverlayNative = {
@@ -95,6 +102,8 @@ type KrikoOverlayNative = {
   setUiReady(ready: boolean): void;
   isDefaultAssistant(): Promise<boolean>;
   openAssistantSettings(): Promise<boolean>;
+  canDrawOverlays(): Promise<boolean>;
+  openOverlaySettings(): Promise<boolean>;
   updateJobs(json: string): void;
   updateUi(json: string): void;
   addListener(eventName: string): void;
@@ -207,6 +216,21 @@ export function isDefaultAssistant(): Promise<boolean> {
 export function openAssistantSettings(): Promise<boolean> {
   if (!overlayAvailable()) return Promise.resolve(false);
   return native!.openAssistantSettings().catch(() => false);
+}
+
+/**
+ * Whether Kriko may draw over other apps. The phone assistant needs it to show
+ * its answer over the reader's own page; without it the answer opens in the app.
+ */
+export function canDrawOverApps(): Promise<boolean> {
+  if (!overlayAvailable()) return Promise.resolve(false);
+  return native!.canDrawOverlays().catch(() => false);
+}
+
+/** Open the phone's own page for allowing Kriko to draw over other apps. */
+export function openDrawOverAppsSettings(): Promise<boolean> {
+  if (!overlayAvailable()) return Promise.resolve(false);
+  return native!.openOverlaySettings().catch(() => false);
 }
 
 export function updateOverlayJobs(jobs: OverlayJob[]): void {

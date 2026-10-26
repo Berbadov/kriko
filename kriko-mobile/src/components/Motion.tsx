@@ -112,14 +112,22 @@ export function MotionPressable({
   );
 }
 
-/** A short opacity/lift reveal; children remain visible while motion loads. */
+/**
+ * A short opacity/lift reveal; children remain visible while motion loads.
+ * `duration` and `rise` shorten and flatten it for things that arrive in a
+ * stream, where the default would still be rising when the next one lands.
+ */
 export function MotionView({
   children,
   delay = 0,
+  duration = motion.duration.considered,
+  rise = 10,
   style,
 }: {
   children: ReactNode;
   delay?: number;
+  duration?: number;
+  rise?: number;
   style?: StyleProp<ViewStyle>;
 }) {
   const reduced = useReducedMotion();
@@ -133,14 +141,14 @@ export function MotionView({
     }
     const animation = Animated.timing(progress, {
       toValue: 1,
-      duration: motion.duration.considered,
+      duration,
       delay: Math.max(0, Math.min(delay, 320)),
       easing: Easing.bezier(...motion.easing.enter),
       useNativeDriver: true,
     });
     animation.start();
     return () => animation.stop();
-  }, [progress, delay, reduced]);
+  }, [progress, delay, duration, reduced]);
 
   return (
     <Animated.View
@@ -149,7 +157,7 @@ export function MotionView({
         {
           opacity: progress,
           transform: [
-            { translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) },
+            { translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [rise, 0] }) },
           ],
         },
       ]}

@@ -2,6 +2,7 @@
 
 import { StyleSheet, View } from 'react-native';
 
+import { plainPreview } from '../engine/preview';
 import type { QueueJob } from '../engine/types';
 import { tr } from '../i18n';
 import { press } from '../theme/feedback';
@@ -99,7 +100,7 @@ export function Landing({
                 <View style={styles.recentText}>
                   <Txt variant="rowTitle" tone="ink" numberOfLines={1}>{title}</Txt>
                   <Txt variant="bodyTight" tone="ink3" numberOfLines={1}>
-                    {job.text || job.error || job.reading.note || 'Open the saved scan'}
+                    {plainPreview(job.text) || job.error || job.reading.note || 'Open the saved scan'}
                   </Txt>
                 </View>
                 <ChevronRightIcon size={17} color={color.ink3} />

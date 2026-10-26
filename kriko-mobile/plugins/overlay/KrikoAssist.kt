@@ -12,6 +12,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.provider.Settings
 import android.service.voice.VoiceInteractionService
 import android.service.voice.VoiceInteractionSession
 import android.service.voice.VoiceInteractionSessionService
@@ -157,7 +158,38 @@ class KrikoCaptureActivity : Activity() {
  * when the reader long-presses the power or home button (or says the gesture
  * their phone uses). The service itself does nothing; the session is the work.
  */
-class KrikoAssistService : VoiceInteractionService()
+class KrikoAssistService : VoiceInteractionService() {
+  override fun onReady() {
+    super.onReady()
+    instance = this
+  }
+
+  override fun onShutdown() {
+    if (instance === this) instance = null
+    super.onShutdown()
+  }
+
+  companion object {
+    @Volatile private var instance: KrikoAssistService? = null
+
+    /**
+     * Summon the assistant again from inside Kriko (the answer sheet's Scan
+     * again). False when Kriko is not the phone's chosen assistant right now.
+     */
+    fun rescan(): Boolean {
+      val service = instance ?: return false
+      return try {
+        service.showSession(
+          Bundle(),
+          VoiceInteractionSession.SHOW_WITH_ASSIST or VoiceInteractionSession.SHOW_WITH_SCREENSHOT,
+        )
+        true
+      } catch (_: Exception) {
+        false
+      }
+    }
+  }
+}
 
 /** Hands Android a fresh session each time the assistant is summoned. */
 class KrikoAssistSessionService : VoiceInteractionSessionService() {
@@ -208,18 +240,22 @@ internal class KrikoAssistSession(private val host: Context) : VoiceInteractionS
     val widthPx = min(host.dp(404), host.resources.displayMetrics.widthPixels - host.dp(16))
     val column = LinearLayout(host).apply {
       orientation = LinearLayout.VERTICAL
-      background = KrikoDraw.capsule(host, p.panel, 26, p.edge)
-      elevation = host.dp(20).toFloat()
+      outlineProvider = android.view.ViewOutlineProvider.BACKGROUND
+      clipToOutline = true
       setPadding(host.dp(16), host.dp(14), host.dp(16), host.dp(14))
       isClickable = true
     }
+    column.background = GlassDrawable(
+      host, 28f, { KrikoGlassLevel.body(p) }, { KrikoGlassLevel.sheet(ui) },
+      { KrikoGlassLevel.isDark(p) }, frosted = false,
+    ).attach(column)
     val row = LinearLayout(host).apply {
       orientation = LinearLayout.HORIZONTAL
       gravity = Gravity.CENTER_VERTICAL
     }
-    val page = KrikoPuckView(host, ui, fonts)
-    puck = page
-    row.addView(page, LinearLayout.LayoutParams(host.dp(KrikoPuckView.PAGE_W_DP), host.dp(KrikoPuckView.PAGE_H_DP)).apply {
+    val chip = KrikoPuckView(host, ui, fonts)
+    puck = chip
+    row.addView(chip, LinearLayout.LayoutParams(host.dp(KrikoPuckView.SIZE_DP), host.dp(KrikoPuckView.SIZE_DP)).apply {
       marginEnd = host.dp(14)
     })
     val texts = LinearLayout(host).apply { orientation = LinearLayout.VERTICAL }
@@ -281,11 +317,38 @@ internal class KrikoAssistSession(private val host: Context) : VoiceInteractionS
       showNoShot()
       return
     }
-    message?.text = ui.label("openingKriko")
     worker.execute {
+      // Frost the page for the glass of the answer that is about to sit over it.
+      KrikoBackdrop.update(screenshot)
       val uri = KrikoHandoff.writeBitmap(host, screenshot)
-      main.post { if (uri == null) showNoShot() else open(uri) }
+      main.post { if (uri == null) showNoShot() else handOff(uri) }
     }
+  }
+
+  /**
+   * The answer belongs over the reader's own page. With permission to draw there,
+   * the overlay service takes the picture, ripples a wave of pixels across the
+   * page and hangs the answer sheet where this card is; this card then leaves.
+   * Without it (or with Kriko itself in front) the picture opens in the app.
+   */
+  private fun handOff(uri: String) {
+    if (launched) return
+    val over = Settings.canDrawOverlays(host) && !KrikoOverlayModule.appInForeground
+    if (over) {
+      try {
+        host.startService(Intent(host, KrikoOverlayService::class.java).apply {
+          action = KrikoOverlayService.ACTION_ASSIST
+          putExtra(KrikoOverlayService.EXTRA_SHOT, uri)
+        })
+        launched = true
+        main.postDelayed({ hide() }, 240L)
+        return
+      } catch (_: Exception) {
+        // Fall through to the app.
+      }
+    }
+    message?.text = ui.label("openingKriko")
+    open(uri)
   }
 
   private fun open(uri: String) {

@@ -133,7 +133,7 @@ function Tab({ label, active, onPress }: { label: string; active: boolean; onPre
   const styles = useStyles();
   return (
     <MotionPressable onPress={onPress} accessibilityRole="tab" accessibilityState={{ selected: active }} style={[styles.tab, active && styles.tabOn]}>
-      <Txt variant="actionSmall" tone={active ? 'accent' : 'muted'}>{label}</Txt>
+      <Txt variant="actionSmall" tone={active ? 'accent' : 'ink2'}>{label}</Txt>
     </MotionPressable>
   );
 }

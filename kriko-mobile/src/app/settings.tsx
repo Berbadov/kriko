@@ -9,7 +9,9 @@ import { BackIcon, ChevronRightIcon, GlobeIcon, KeyIcon, ShieldIcon, SparkIcon, 
 import { MotionPressable, MotionView } from '../components/Motion';
 import { PuckPreview } from '../components/PuckPreview';
 import { Button, Chip, SectionLabel, Segmented, Toggle } from '../components/Primitives';
-import { isDefaultAssistant, openAssistantSettings, overlayAvailable } from '../engine/overlay';
+import {
+  canDrawOverApps, isDefaultAssistant, openAssistantSettings, openDrawOverAppsSettings, overlayAvailable,
+} from '../engine/overlay';
 import { useStore } from '../engine/store';
 import { tr } from '../i18n';
 import { tap } from '../theme/feedback';
@@ -52,7 +54,8 @@ export default function Settings() {
   const styles = useStyles();
   const [sheet, setSheet] = useState(false);
   const scanner = overlayAvailable();
-  const assistant = useAssistantStatus(scanner);
+  const assistant = usePhoneSetting(scanner, isDefaultAssistant);
+  const overPage = usePhoneSetting(scanner, canDrawOverApps);
 
   const accessTitle =
     access.kind === 'trial' ? 'Free trial' : access.kind === 'shared' ? 'Shared access' :
@@ -179,7 +182,7 @@ export default function Settings() {
                 <View style={styles.puckText}>
                   <Txt variant="rowTitle" tone="ink">Transparency</Txt>
                   <Txt variant="bodyTight" tone="ink3">
-                    How solid the floating K is while it waits. A touch, a scan or an answer brings it to full strength.
+                    How see-through the floating K and its glass panels are. Faint shows the most of your page; Solid shows none.
                   </Txt>
                 </View>
               </View>
@@ -221,6 +224,23 @@ export default function Settings() {
                   In the list, choose Kriko under Digital assistant app, and keep “Use screenshot” on.
                 </Txt>
               )}
+              <View style={styles.accessRow}>
+                <View style={styles.keyMark}><GlobeIcon size={19} color={color.accent} /></View>
+                <View style={styles.accessText}>
+                  <Txt variant="rowTitle" tone="ink">Answer over your page</Txt>
+                  <Txt variant="bodyTight" tone="ink3">
+                    {overPage
+                      ? 'The answer opens over the page you scanned, so you never leave it.'
+                      : 'Allow Kriko over other apps and the answer opens over the page you scanned, instead of taking you into Kriko.'}
+                  </Txt>
+                </View>
+                <Chip label={overPage ? 'Allowed' : 'Off'} tone={overPage ? 'ok' : 'neutral'} size="sm" />
+              </View>
+              <Button
+                label={overPage ? 'Over-other-apps settings' : 'Allow over other apps'}
+                variant={overPage ? 'ghost' : 'primary'}
+                onPress={() => { void openDrawOverAppsSettings(); }}
+              />
             </MotionView>
 
             <Divider />
@@ -315,17 +335,18 @@ export default function Settings() {
  * Whether Kriko is the phone's chosen assistant. It is chosen on a system
  * screen, so it is read again every time the reader comes back to the app.
  */
-function useAssistantStatus(enabled: boolean): boolean {
-  const [chosen, setChosen] = useState(false);
+/** A phone setting the reader changes elsewhere; asked again whenever Kriko returns to the front. */
+function usePhoneSetting(enabled: boolean, read: () => Promise<boolean>): boolean {
+  const [value, setValue] = useState(false);
   useEffect(() => {
     if (!enabled) return undefined;
     let alive = true;
-    const refresh = () => { void isDefaultAssistant().then((value) => { if (alive) setChosen(value); }); };
+    const refresh = () => { void read().then((next) => { if (alive) setValue(next); }); };
     refresh();
     const subscription = AppState.addEventListener('change', (state) => { if (state === 'active') refresh(); });
     return () => { alive = false; subscription.remove(); };
-  }, [enabled]);
-  return chosen;
+  }, [enabled, read]);
+  return value;
 }
 
 function Setting({ label, description, children }: { label: string; description: string; children: React.ReactNode }) {

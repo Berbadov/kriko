@@ -14,6 +14,8 @@ const TEMPLATE_FILES = [
   'KrikoTheme.kt',
   'KrikoWidgets.kt',
   'KrikoPuckView.kt',
+  'KrikoGlass.kt',
+  'KrikoScanFx.kt',
   'KrikoMarkdown.kt',
   'KrikoAssist.kt',
 ];

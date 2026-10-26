@@ -20,6 +20,7 @@ import {
   resolvePalette,
   TEXT_SCALE,
 } from '../src/theme/preferences';
+import { toneColor } from '../src/theme/tone';
 
 const darkKeys = Object.keys(darkColors).sort();
 assert.deepEqual(Object.keys(paperColors).sort(), darkKeys, 'paper must carry every dark token');
@@ -61,5 +62,16 @@ assert.equal(nearestPuckOpacityStep(60), 55);
 assert.equal(nearestPuckOpacityStep(90), 100);
 assert.equal(nearestPuckOpacityStep(20), 35);
 for (const step of PUCK_OPACITY_STEPS) assert.equal(nearestPuckOpacityStep(step), step);
+
+// A text tone is a palette token or a raw colour. A name that is neither must not
+// reach React Native as a colour (drawn black, invisible on the dark theme): it
+// reads as ink, so a misspelt tone is seen and fixed rather than lost.
+for (const [name, palette] of Object.entries(palettes)) {
+  assert.equal(toneColor(palette, 'ink3'), palette.ink3, `${name}: a token resolves to its colour`);
+  assert.equal(toneColor(palette, '#abcdef'), '#abcdef');
+  assert.equal(toneColor(palette, 'rgba(255,255,255,0.78)'), 'rgba(255,255,255,0.78)');
+  assert.equal(toneColor(palette, 'transparent'), 'transparent');
+  assert.equal(toneColor(palette, 'muted'), palette.ink, `${name}: an unknown tone reads as ink`);
+}
 
 process.stdout.write('theme checks passed.\n');
