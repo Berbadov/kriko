@@ -8,11 +8,14 @@ import { Divider, HeaderAction, Hero, Page } from '../components/Chrome';
 import { BackIcon, ChevronRightIcon, GlobeIcon, KeyIcon, ShieldIcon, SparkIcon, TrashIcon } from '../components/Icon';
 import { MotionPressable, MotionView } from '../components/Motion';
 import { PuckPreview } from '../components/PuckPreview';
+import { UpdateCard } from '../components/UpdateCard';
 import { Button, Chip, SectionLabel, Segmented, Toggle } from '../components/Primitives';
 import {
   canDrawOverApps, isDefaultAssistant, openAssistantSettings, openDrawOverAppsSettings, overlayAvailable,
 } from '../engine/overlay';
 import { useStore } from '../engine/store';
+import { updateNeedsAttention } from '../engine/updatecore';
+import { updatesSupported, useAppUpdate } from '../engine/updater';
 import { tr } from '../i18n';
 import { tap } from '../theme/feedback';
 import {
@@ -53,6 +56,7 @@ export default function Settings() {
   const color = useColors();
   const styles = useStyles();
   const [sheet, setSheet] = useState(false);
+  const attention = updateNeedsAttention(useAppUpdate());
   const scanner = overlayAvailable();
   const assistant = usePhoneSetting(scanner, isDefaultAssistant);
   const overPage = usePhoneSetting(scanner, canDrawOverApps);
@@ -115,6 +119,9 @@ export default function Settings() {
       />
 
       <View style={styles.body}>
+        {/* A new version, or a step it needs, comes first; otherwise it waits lower down. */}
+        {attention ? <UpdateSection /> : null}
+
         <MotionView key={`${access.kind}-${trialLeft}`} delay={0} style={styles.section}>
           <SectionLabel>Access</SectionLabel>
           <View style={styles.accessRow}>
@@ -312,6 +319,8 @@ export default function Settings() {
 
         <Divider />
 
+        {attention ? null : <UpdateSection />}
+
         <MotionView delay={300} style={styles.section}>
           <SectionLabel>More</SectionLabel>
           <NavRow title="History" subtitle="Chats, scans, and the pages behind them." onPress={() => router.push('/history' as Href)} />
@@ -328,6 +337,21 @@ export default function Settings() {
 
       {sheet ? <AccessSheet visible onClose={() => setSheet(false)} /> : null}
     </Page>
+  );
+}
+
+/** The in-app update, set apart by a rule; nothing at all in a build that cannot install one. */
+function UpdateSection() {
+  const styles = useStyles();
+  if (!updatesSupported()) return null;
+  return (
+    <>
+      <MotionView delay={0} style={styles.section}>
+        <SectionLabel>Updates</SectionLabel>
+        <UpdateCard />
+      </MotionView>
+      <Divider />
+    </>
   );
 }
 

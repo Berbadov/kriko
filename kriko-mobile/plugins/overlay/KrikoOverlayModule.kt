@@ -375,6 +375,98 @@ class KrikoOverlayModule(private val appContext: ReactApplicationContext) :
     })
   }
 
+  /** What is installed now, straight from the package, so a check never trusts a stale config. */
+  @ReactMethod
+  fun appVersion(promise: Promise) {
+    try {
+      val info = appContext.packageManager.getPackageInfo(appContext.packageName, 0)
+      @Suppress("DEPRECATION")
+      val code = if (Build.VERSION.SDK_INT >= 28) info.longVersionCode else info.versionCode.toLong()
+      promise.resolve(Arguments.createMap().apply {
+        putString("versionName", info.versionName ?: "")
+        putDouble("versionCode", code.toDouble())
+      })
+    } catch (error: Exception) {
+      promise.reject("VERSION_UNAVAILABLE", error.message ?: "The installed version could not be read.")
+    }
+  }
+
+  /** Whether the phone lets Kriko install an app (an update of itself) at all. */
+  @ReactMethod
+  fun canInstallPackages(promise: Promise) {
+    promise.resolve(try {
+      Build.VERSION.SDK_INT < 26 || appContext.packageManager.canRequestPackageInstalls()
+    } catch (_: Exception) {
+      false
+    })
+  }
+
+  /** Open the phone's own page for allowing Kriko to install apps. */
+  @ReactMethod
+  fun openInstallSettings(promise: Promise) {
+    promise.resolve(try {
+      if (Build.VERSION.SDK_INT < 26) {
+        false
+      } else {
+        appContext.startActivity(
+          Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${appContext.packageName}"))
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+        )
+        true
+      }
+    } catch (_: Exception) {
+      false
+    })
+  }
+
+  /** Download one version of Kriko; progress arrives as `onUpdateProgress` events. */
+  @ReactMethod
+  fun downloadUpdate(version: String, url: String, sha256: String, bytes: Double, promise: Promise) {
+    Thread {
+      try {
+        val fetched = KrikoUpdater.download(appContext, version, url, sha256.lowercase(), bytes.toLong()) { received, total ->
+          emit("onUpdateProgress", Arguments.createMap().apply {
+            putDouble("received", received.toDouble())
+            putDouble("total", total.toDouble())
+          })
+        }
+        promise.resolve(Arguments.createMap().apply {
+          putString("sha256", fetched.sha256)
+          putDouble("bytes", fetched.bytes.toDouble())
+        })
+      } catch (failure: KrikoUpdater.Failure) {
+        promise.reject(failure.kind, failure.message ?: "The download failed.")
+      } catch (error: Exception) {
+        promise.reject("network", error.message ?: "The download failed.")
+      }
+    }.start()
+  }
+
+  @ReactMethod
+  fun cancelUpdate() {
+    KrikoUpdater.cancel()
+  }
+
+  /** Give the downloaded version to Android's installer; what it says next arrives as `onUpdateInstall`. */
+  @ReactMethod
+  fun installUpdate(version: String, promise: Promise) {
+    Thread {
+      try {
+        KrikoUpdater.install(appContext, version) { state, message ->
+          emit("onUpdateInstall", Arguments.createMap().apply {
+            putString("state", state)
+            putString("message", message)
+          })
+        }
+        promise.resolve(true)
+      } catch (failure: KrikoUpdater.Failure) {
+        promise.reject(failure.kind, failure.message ?: "The update could not be installed.")
+      } catch (error: Exception) {
+        promise.reject("failed", error.message ?: "The update could not be installed.")
+      }
+    }.start()
+  }
+
   @ReactMethod
   fun addListener(eventName: String) = Unit
 

@@ -20,6 +20,7 @@ import { StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { StoreProvider, useStore } from '../engine/store';
+import { useUpdateLifecycle } from '../engine/updater';
 import { OverlaySessionProvider } from '../components/OverlaySession';
 import { MotionProvider, useReducedMotion } from '../components/Motion';
 import { BottomNav } from '../components/Chrome';
@@ -72,6 +73,7 @@ function AppStack() {
   const reduced = useReducedMotion();
   const { dark, color } = useTheme();
   const { access } = useStore();
+  useUpdateLifecycle();
   return (
     <DockProvider>
       <View style={[styles.root, { backgroundColor: color.ground }]}>

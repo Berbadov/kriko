@@ -727,6 +727,46 @@ export const translations: Record<string, string> = {
     'Kriko telefonunun gönderdiği ekran görüntüsünü okuyamadı. Tekrar dene.',
   'Kriko did not receive a screenshot. In your phone’s assistant settings, turn on “Use screenshot”.':
     'Kriko bir ekran görüntüsü almadı. Telefonunun asistan ayarlarında “Ekran görüntüsünü kullan” seçeneğini aç.',
+
+  /* The in-app update. */
+  'Updates': 'Güncellemeler',
+  'Kriko Agent': 'Kriko Agent',
+  'Looking for a newer version…': 'Daha yeni bir sürüm aranıyor…',
+  'Downloading. Keep Kriko open.': 'İndiriliyor. Kriko’yu açık tut.',
+  'Android asks once. Turn on “Allow from this source”, then come back here.':
+    'Android bunu bir kez sorar. “Bu kaynaktan izin ver”i aç, sonra buraya dön.',
+  'Confirm on the screen Android shows. Kriko restarts when it is done.':
+    'Android’in gösterdiği ekranda onayla. Bitince Kriko yeniden açılır.',
+  'Handing it to Android…': 'Android’e veriliyor…',
+  'You have the newest version.': 'En yeni sürümdesin.',
+  'Updates come from Kriko’s releases on GitHub. Nothing installs without your press.':
+    'Güncellemeler Kriko’nun GitHub sürümlerinden gelir. Sen basmadan hiçbir şey kurulmaz.',
+  'Update now': 'Şimdi güncelle',
+  'Open the setting': 'Ayarı aç',
+  'Check again': 'Tekrar kontrol et',
+  'Check for updates': 'Güncellemeleri denetle',
+  'Not now': 'Şimdi değil',
+  'Update': 'Güncelle',
+  'Could not reach GitHub. Check your connection and try again.':
+    'GitHub’a ulaşılamadı. Bağlantını kontrol edip tekrar dene.',
+  'GitHub is limiting requests for now. Try again in a few minutes.':
+    'GitHub şimdilik istekleri sınırlıyor. Birkaç dakika sonra tekrar dene.',
+  'GitHub answered with something Kriko could not read.':
+    'GitHub, Kriko’nun okuyamadığı bir yanıt verdi.',
+  'The download did not match its checksum, so Kriko threw it away. Try again.':
+    'İndirilen dosya sağlama toplamıyla eşleşmedi, bu yüzden Kriko onu sildi. Tekrar dene.',
+  'The download stopped early. Try again.': 'İndirme erken durdu. Tekrar dene.',
+  'There is not enough room on this phone for the update.':
+    'Güncelleme için bu telefonda yeterli yer yok.',
+  'This build was signed with a different key, so Android will not let it replace this app.':
+    'Bu sürüm farklı bir anahtarla imzalanmış, bu yüzden Android bunun bu uygulamanın yerine geçmesine izin vermiyor.',
+  'Android blocked the install. Allow Kriko to install apps, then try again.':
+    'Android kurulumu engelledi. Kriko’nun uygulama kurmasına izin ver, sonra tekrar dene.',
+  'That download is older than the version on this phone.':
+    'İndirilen dosya bu telefondaki sürümden eski.',
+  'That download is not a Kriko update.': 'İndirilen dosya bir Kriko güncellemesi değil.',
+  'The download is gone. Try again.': 'İndirilen dosya kayboldu. Tekrar dene.',
+  'The update did not install. Try again.': 'Güncelleme kurulamadı. Tekrar dene.',
 };
 
 /**
@@ -741,6 +781,10 @@ const patterns: readonly (readonly [RegExp, string])[] = [
     'Mobil için Kriko Agent · $1 · Mercury ve DeepSeek üçüncü taraf hizmetlerdir.',
   ],
   [/^Open scan result for (.+)$/, '$1 için tarama sonucunu aç'],
+  [/^Kriko (\d+\.\d+\.\d+) is ready$/, 'Kriko $1 hazır'],
+  [/^Kriko Agent (\d+\.\d+\.\d+)$/, 'Kriko Agent $1'],
+  [/^Open the update to (\d+\.\d+\.\d+)$/, '$1 güncellemesini aç'],
+  [/^(\d+(?:\.\d)?) MB · from GitHub, checked on this phone$/, '$1 MB · GitHub’dan, bu telefonda doğrulanır'],
   [/^(.+) · site comments$/, '$1 · site yorumları'],
   [/^(\d+) products? in progress$/, '$1 ürün işleniyor'],
   [/^(\d+) products? (?:is|are) moving$/, '$1 ürün ilerliyor'],

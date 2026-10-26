@@ -8,6 +8,8 @@ import { router, usePathname, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useStore } from '../engine/store';
+import { updateNeedsAttention } from '../engine/updatecore';
+import { useAppUpdate } from '../engine/updater';
 import { tr } from '../i18n';
 import { motion } from '../theme/motion';
 import { HEADER_H, PAGE_X, radius, TITLE_BAR_H } from '../theme/tokens';
@@ -116,6 +118,7 @@ export function BottomNav() {
   const dock = useDock();
   const color = useColors();
   const styles = useStyles();
+  const update = updateNeedsAttention(useAppUpdate());
   const [keyboard, setKeyboard] = useState(false);
   const [trackWidth, setTrackWidth] = useState(0);
   const [indicatorX] = useState(() => new Animated.Value(0));
@@ -177,6 +180,7 @@ export function BottomNav() {
               {path === '/queue' && pending > 0 ? <View style={styles.count}>
                 <Txt variant="monoSm" tone={color.onAccent} translate={false}>{pending}</Txt>
               </View> : null}
+              {path === '/settings' && update ? <View style={styles.updateDot} /> : null}
             </View>
             {active ? <DockLabel text={label} /> : null}
           </MotionPressable>;
@@ -241,6 +245,8 @@ const useStyles = makeStyles((color) => StyleSheet.create({
   destination: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
     height: DOCK_H, zIndex: 1 },
   navIcon: { width: 24, height: 24, alignItems: 'center', justifyContent: 'center' },
+  updateDot: { position: 'absolute', top: -2, right: -3, width: 9, height: 9, borderRadius: 5,
+    backgroundColor: color.accent, borderWidth: 1.5, borderColor: color.ground },
   count: { position: 'absolute', top: -5, right: -7, minWidth: 16, height: 16, paddingHorizontal: 3,
     alignItems: 'center', justifyContent: 'center', borderRadius: 8, backgroundColor: color.accent },
 }));
