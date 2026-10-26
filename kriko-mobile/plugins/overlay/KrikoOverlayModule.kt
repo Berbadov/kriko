@@ -39,11 +39,46 @@ class KrikoOverlayModule(private val appContext: ReactApplicationContext) :
      */
     @Volatile var jsReady: Boolean = false
 
+    /** Whether Kriko's own screen is in front, as the app last reported it. */
+    @Volatile var appInForeground: Boolean = false
+
+    private class PendingScan(
+      val jpeg: ByteArray,
+      val uri: String?,
+      val mode: String,
+      val site: String,
+      val quiet: Boolean,
+    )
+
+    /** Scans that arrived while nobody was listening; the app takes them when it mounts. */
+    private val pendingScans = java.util.concurrent.ConcurrentLinkedQueue<PendingScan>()
+
     fun emit(name: String, body: com.facebook.react.bridge.WritableMap) {
       val context = reactContextRef?.get() ?: return
       if (!context.hasActiveReactInstance()) return
       context.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
         .emit(name, body)
+    }
+
+    /** One picture of the reader's screen, as the research queue expects it. */
+    fun emitScan(jpeg: ByteArray, uri: String?, mode: String, site: String) {
+      val body = Arguments.createMap().apply {
+        putString("base64", android.util.Base64.encodeToString(jpeg, android.util.Base64.NO_WRAP))
+        putString("mime", "image/jpeg")
+        putString("uri", uri ?: "")
+        putString("mode", mode)
+        if (mode == "site_reviews") putString("reviewSite", site)
+      }
+      emit("onScan", body)
+    }
+
+    /** Keep a scan until Kriko's screen is listening. `quiet` sends the app back to the page after. */
+    fun queueScan(jpeg: ByteArray, uri: String?, mode: String, site: String, quiet: Boolean) {
+      pendingScans.add(PendingScan(jpeg, uri, mode, site, quiet))
+    }
+
+    fun dropQueuedScans() {
+      pendingScans.clear()
     }
 
     fun serviceReady() {
@@ -174,6 +209,50 @@ class KrikoOverlayModule(private val appContext: ReactApplicationContext) :
   @ReactMethod
   fun setUiReady(ready: Boolean) {
     jsReady = ready
+    if (ready) flushPendingScans()
+  }
+
+  /**
+   * The assistant read the screen while Kriko's screen was not mounted, and the
+   * app was opened to take it. Hand the scan over once JavaScript has had a
+   * moment to subscribe, then put Kriko behind the page the reader was on.
+   */
+  private fun flushPendingScans() {
+    if (pendingScans.isEmpty()) return
+    val handler = android.os.Handler(android.os.Looper.getMainLooper())
+    handler.postDelayed({
+      var quiet = false
+      while (true) {
+        val scan = pendingScans.poll() ?: break
+        emitScan(scan.jpeg, scan.uri, scan.mode, scan.site)
+        quiet = quiet || scan.quiet
+      }
+      if (quiet) {
+        handler.postDelayed({
+          try { getCurrentActivity()?.moveTaskToBack(true) } catch (_: Exception) { }
+        }, 380L)
+      }
+    }, 140L)
+  }
+
+  /** Whether Kriko may draw over other apps: the assistant's answer needs it. */
+  @ReactMethod
+  fun canDrawOverlays(promise: Promise) {
+    promise.resolve(try { Settings.canDrawOverlays(appContext) } catch (_: Exception) { false })
+  }
+
+  /** Open the phone's own page for allowing Kriko over other apps. */
+  @ReactMethod
+  fun openOverlaySettings(promise: Promise) {
+    promise.resolve(try {
+      appContext.startActivity(
+        Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${appContext.packageName}"))
+          .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+      )
+      true
+    } catch (_: Exception) {
+      false
+    })
   }
 
   /** Whether Kriko is the phone's chosen digital assistant right now. */
@@ -259,16 +338,20 @@ class KrikoOverlayModule(private val appContext: ReactApplicationContext) :
    */
   @ReactMethod
   fun setAppForeground(foreground: Boolean) {
-    if (!KrikoOverlayService.isActive) return
+    appInForeground = foreground
+    if (!serviceLive()) return
     appContext.startService(Intent(appContext, KrikoOverlayService::class.java).apply {
       action = KrikoOverlayService.ACTION_APP
       putExtra(KrikoOverlayService.EXTRA_FOREGROUND, foreground)
     })
   }
 
+  /** The service has windows to keep current: a scanner session, or the assistant's answer. */
+  private fun serviceLive(): Boolean = KrikoOverlayService.isActive || KrikoOverlayService.assistRunning
+
   @ReactMethod
   fun updateJobs(json: String) {
-    if (!KrikoOverlayService.isActive) return
+    if (!serviceLive()) return
     appContext.startService(Intent(appContext, KrikoOverlayService::class.java).apply {
       action = KrikoOverlayService.ACTION_UPDATE
       putExtra(KrikoOverlayService.EXTRA_JOBS, json)
@@ -285,7 +368,7 @@ class KrikoOverlayModule(private val appContext: ReactApplicationContext) :
     uiJson = json
     // Also kept on disk: the assistant starts without this module being awake.
     KrikoUi(appContext).save(json)
-    if (!KrikoOverlayService.isActive) return
+    if (!serviceLive()) return
     appContext.startService(Intent(appContext, KrikoOverlayService::class.java).apply {
       action = KrikoOverlayService.ACTION_UI
       putExtra(KrikoOverlayService.EXTRA_UI, json)

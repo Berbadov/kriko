@@ -29,6 +29,7 @@ import android.view.animation.DecelerateInterpolator
 import android.view.animation.LinearInterpolator
 import android.widget.FrameLayout
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import java.util.WeakHashMap
@@ -162,6 +163,114 @@ internal class KrikoMotion {
       }
       false
     }
+  }
+}
+
+/**
+ * The answer sheet's frame. One swipe up from anywhere that is not scrolling
+ * content folds it away, with the sheet following the finger. The body gives way
+ * first: while it can still scroll, a swipe on it scrolls it, so reading is never
+ * fought; once it has reached its end, the same swipe folds the sheet.
+ */
+internal class SwipeSheet(context: Context) : LinearLayout(context) {
+  /** The sheet was swiped away; the owner removes it. */
+  var onMinimize: (() -> Unit)? = null
+  /** A finger took hold: stop any entrance animation so the two do not fight. */
+  var onGrab: (() -> Unit)? = null
+  /** The scrolling part, so a swipe that starts on it can be left to it. */
+  var body: ScrollView? = null
+
+  private val slop = android.view.ViewConfiguration.get(context).scaledTouchSlop
+  private var downX = 0f
+  private var downY = 0f
+  private var armed = false
+  private var dragging = false
+  private var tracker: android.view.VelocityTracker? = null
+  private val at = IntArray(2)
+
+  override fun onInterceptTouchEvent(event: MotionEvent): Boolean {
+    when (event.actionMasked) {
+      MotionEvent.ACTION_DOWN -> {
+        downX = event.rawX
+        downY = event.rawY
+        dragging = false
+        armed = startsOutsideLiveScroll(event)
+        tracker?.recycle()
+        tracker = android.view.VelocityTracker.obtain().also { it.addMovement(event) }
+      }
+      MotionEvent.ACTION_MOVE -> {
+        tracker?.addMovement(event)
+        if (beginSwipe(event)) return true
+      }
+      MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> release()
+    }
+    return false
+  }
+
+  /** A swipe up has started once the finger has travelled past the slop, mostly upward. */
+  private fun beginSwipe(event: MotionEvent): Boolean {
+    if (!armed || dragging) return false
+    val dy = event.rawY - downY
+    val dx = event.rawX - downX
+    if (dy >= -slop || kotlin.math.abs(dy) <= kotlin.math.abs(dx) * 1.3f) return false
+    dragging = true
+    onGrab?.invoke()
+    parent?.requestDisallowInterceptTouchEvent(true)
+    return true
+  }
+
+  override fun onTouchEvent(event: MotionEvent): Boolean {
+    // A touch that starts on a bare part of the sheet (the grabber, the header, the
+    // padding) has no child to take it, so the intercept hook never sees its later
+    // events: claim it here, or the swipe is lost after the first contact.
+    if (event.actionMasked == MotionEvent.ACTION_DOWN) return true
+    tracker?.addMovement(event)
+    if (!dragging) {
+      if (event.actionMasked == MotionEvent.ACTION_MOVE) beginSwipe(event)
+      if (!dragging) {
+        if (event.actionMasked == MotionEvent.ACTION_UP || event.actionMasked == MotionEvent.ACTION_CANCEL) release()
+        return super.onTouchEvent(event)
+      }
+    }
+    when (event.actionMasked) {
+      MotionEvent.ACTION_MOVE -> {
+        val dy = (event.rawY - downY).coerceAtMost(0f)
+        translationY = dy
+        alpha = (1f + dy / (height * 0.85f).coerceAtLeast(1f)).coerceIn(0.3f, 1f)
+      }
+      MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+        tracker?.computeCurrentVelocity(1000)
+        val velocity = tracker?.yVelocity ?: 0f
+        val fold = event.actionMasked == MotionEvent.ACTION_UP && (translationY < -dp(44) || velocity < -900f)
+        dragging = false
+        release()
+        if (fold) {
+          onMinimize?.invoke()
+        } else {
+          animate().translationY(0f).alpha(1f).setDuration(240L)
+            .setInterpolator(android.view.animation.OvershootInterpolator(1.1f)).start()
+        }
+      }
+    }
+    return true
+  }
+
+  private fun startsOutsideLiveScroll(event: MotionEvent): Boolean {
+    val scroller = body ?: return true
+    if (!scroller.isShown) return true
+    // The raw coordinates are the screen's. A view's global visible rect is relative to
+    // its own window, which sits well down the screen, so it would call the header
+    // "inside the body" and a swipe that starts there would never fold the sheet.
+    scroller.getLocationOnScreen(at)
+    val x = event.rawX.toInt()
+    val y = event.rawY.toInt()
+    if (x < at[0] || x > at[0] + scroller.width || y < at[1] || y > at[1] + scroller.height) return true
+    return !scroller.canScrollVertically(1)
+  }
+
+  private fun release() {
+    tracker?.recycle()
+    tracker = null
   }
 }
 

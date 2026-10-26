@@ -5,6 +5,7 @@ import { Divider, HeaderAction, Hero, Page } from '../components/Chrome';
 import { ActivityDots, MotionPressable, MotionView } from '../components/Motion';
 import { BackIcon, ClockIcon, PlusIcon, TrashIcon } from '../components/Icon';
 import { Button, Chip, SectionLabel } from '../components/Primitives';
+import { plainPreview } from '../engine/preview';
 import { useStore } from '../engine/store';
 import type { QueueJob } from '../engine/types';
 import { tr } from '../i18n';
@@ -80,7 +81,7 @@ export default function History() {
                           <Txt variant="rowTitle" tone="ink" numberOfLines={1} style={styles.title}>{thread.title}</Txt>
                           {active ? <Chip label="Open" tone="accent" size="sm" /> : null}
                         </View>
-                        {last ? <Txt variant="bodyTight" tone="ink3" numberOfLines={2}>{last.text}</Txt> : null}
+                        {last ? <Txt variant="bodyTight" tone="ink3" numberOfLines={2}>{plainPreview(last.text)}</Txt> : null}
                         <View style={styles.meta}>
                           <ClockIcon size={13} color={color.ink3} />
                           <Txt variant="monoSm" tone="ink3">{ago(thread.updatedAt)} · {tr(`${asked} question${asked === 1 ? '' : 's'}`)}</Txt>
@@ -106,7 +107,7 @@ export default function History() {
             </View>
             {[...queueJobs].reverse().map((job, index, all) => {
               const linked = Boolean(job.threadId);
-              const summary = job.text || job.error || job.reading.note || job.question;
+              const summary = plainPreview(job.text) || job.error || job.reading.note || job.question;
               const busy = job.status === 'queued' || job.status === 'running';
               return (
                 <MotionView key={`${job.id}-${job.status}`} delay={150 + Math.min(index, 4) * 35} style={styles.rowWrap}>
@@ -116,7 +117,7 @@ export default function History() {
                         <Txt variant="rowTitle" tone="ink" numberOfLines={1} style={styles.title}>{scanTitle(job)}</Txt>
                         {busy ? <ActivityDots color={color.accent} /> : <Chip label={job.status} tone={job.status === 'error' ? 'risk' : job.status === 'done' ? 'ok' : 'neutral'} size="sm" />}
                       </View>
-                      <Txt variant="bodyTight" tone={job.status === 'error' ? 'risk' : 'muted'} numberOfLines={2}>{summary}</Txt>
+                      <Txt variant="bodyTight" tone={job.status === 'error' ? 'risk' : 'ink2'} numberOfLines={2}>{summary}</Txt>
                       <Txt variant="monoSm" tone="ink3">{ago(job.updatedAt)}{linked ? ' · open result' : ''}</Txt>
                     </View>
                   </MotionPressable>

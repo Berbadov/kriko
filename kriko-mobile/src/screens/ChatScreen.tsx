@@ -9,7 +9,7 @@
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import { router, type Href } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
   FlatList,
@@ -17,18 +17,22 @@ import {
   Platform,
   StyleSheet,
   View,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
 } from 'react-native';
 
 import { AccessSheet } from '../components/AccessSheet';
 import { AppHeader, HeaderAction } from '../components/Chrome';
 import { Composer } from '../components/Composer';
+import { useDock } from '../components/dock';
 import { PlusIcon } from '../components/Icon';
 import { MessageRow } from '../components/Message';
-import { MotionPressable, MotionView } from '../components/Motion';
+import { MotionPressable, MotionView, useReducedMotion } from '../components/Motion';
 import { Landing } from './Landing';
 import { ScreenShareSheet } from '../components/ScreenShareSheet';
 import { useOverlaySession } from '../components/OverlaySession';
 import { ScreenshotSheet, type Shot } from '../components/ScreenshotSheet';
+import { ScrollScrubber, type ScrubberHandle } from '../components/ScrollScrubber';
 import { moveAppToBack } from '../engine/overlay';
 import { AccessError, useStore } from '../engine/store';
 import { keepThumbnail } from '../engine/thumbs';
@@ -37,6 +41,19 @@ import type { AppAction, Message, Reading } from '../engine/types';
 import { gap, PAGE_X, radius } from '../theme/tokens';
 import { makeStyles, useColors } from '../theme/theme';
 import { Txt } from '../theme/Txt';
+
+/** A growing answer is followed to the bottom at most this often. */
+const FOLLOW_EVERY_MS = 110;
+/** Within this of the end counts as reading the end. */
+const NEAR_END = 90;
+
+interface Place {
+  offset: number;
+  viewport: number;
+  content: number;
+}
+
+const nearEnd = (place: Place) => place.offset + place.viewport >= place.content - NEAR_END;
 
 export function ChatScreen() {
   const overlay = useOverlaySession();
@@ -53,7 +70,26 @@ export function ChatScreen() {
     trialLeft,
   } = useStore();
   const list = useRef<FlatList<Message>>(null);
-  const atBottom = useRef(true);
+  const scrubber = useRef<ScrubberHandle>(null);
+  const reduced = useReducedMotion();
+  const dock = useDock();
+  /**
+   * Where the list is and who is moving it. Kept out of state: a scroll must
+   * not re-render the conversation.
+   */
+  const flow = useRef({
+    place: { offset: 0, viewport: 0, content: 0 } as Place,
+    /** At the end, so a growing answer is followed; scrolling away lets go. */
+    stick: true,
+    /** A finger is moving the list, as opposed to the app following the answer. */
+    touching: false,
+    scrubbing: false,
+    empty: true,
+    glide: false,
+    followedAt: 0,
+    lift: null as ReturnType<typeof setTimeout> | null,
+    follow: null as ReturnType<typeof setTimeout> | null,
+  });
 
   const [draft, setDraft] = useState('');
   const [accessOpen, setAccessOpen] = useState(false);
@@ -79,18 +115,76 @@ export function ChatScreen() {
   }, [notice]);
 
   useEffect(() => {
-    atBottom.current = true;
+    flow.current.empty = empty;
+    flow.current.glide = reduced === false;
+  }, [empty, reduced]);
+
+  useEffect(() => {
+    flow.current.stick = true;
     requestAnimationFrame(() => {
       if (empty) list.current?.scrollToOffset({ offset: 0, animated: false });
       else list.current?.scrollToEnd({ animated: false });
     });
   }, [activeThread?.id, empty]);
 
-  useEffect(() => {
-    if (working && atBottom.current) {
-      requestAnimationFrame(() => list.current?.scrollToEnd({ animated: false }));
+  // A growing answer is followed to the bottom with a glide, a few times a
+  // second, and only for a reader who is still at the end. Scrolling up lets go.
+  const followEnd = useCallback(() => {
+    const state = flow.current;
+    if (!state.stick || state.scrubbing || state.empty) return;
+    const wait = FOLLOW_EVERY_MS - (Date.now() - state.followedAt);
+    if (wait > 0) {
+      if (!state.follow) {
+        state.follow = setTimeout(() => {
+          state.follow = null;
+          if (!state.stick || state.scrubbing) return;
+          state.followedAt = Date.now();
+          list.current?.scrollToEnd({ animated: state.glide });
+        }, wait);
+      }
+      return;
     }
-  }, [working, last?.text, last?.steps?.length]);
+    state.followedAt = Date.now();
+    list.current?.scrollToEnd({ animated: state.glide });
+  }, []);
+
+  useEffect(() => {
+    if (working) followEnd();
+  }, [working, last?.steps?.length, followEnd]);
+
+  useEffect(() => {
+    const state = flow.current;
+    return () => {
+      if (state.lift) clearTimeout(state.lift);
+      if (state.follow) clearTimeout(state.follow);
+    };
+  }, []);
+
+  /** The list moved: remember where, tell the rail, and let the bar decide. */
+  const onScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+    const state = flow.current;
+    state.place = { offset: contentOffset.y, viewport: layoutMeasurement.height, content: contentSize.height };
+    if (state.touching) state.stick = nearEnd(state.place);
+    scrubber.current?.update(state.place, state.touching);
+    // The rail's own scrolling is not the reader asking for room.
+    if (!state.scrubbing) dock.report(state.place, state.touching);
+  };
+
+  const letGo = () => {
+    const state = flow.current;
+    if (state.lift) clearTimeout(state.lift);
+    state.lift = null;
+    state.touching = false;
+    state.stick = nearEnd(state.place);
+  };
+
+  const touchBegan = () => {
+    const state = flow.current;
+    if (state.lift) clearTimeout(state.lift);
+    state.lift = null;
+    state.touching = true;
+  };
 
   const openAccess = () => setAccessOpen(true);
 
@@ -109,6 +203,8 @@ export function ChatScreen() {
       openAccess();
       return;
     }
+    // A new question is read where it lands, wherever the reader had scrolled to.
+    flow.current.stick = true;
     try {
       await send(text, { reading, imageUri });
     } catch (error) {
@@ -262,42 +358,80 @@ export function ChatScreen() {
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <FlatList
-          ref={list}
-          data={messages}
-          keyExtractor={(message) => message.id}
-          renderItem={({ item, index }) => (
-            <MessageRow
-              message={item}
-              scanning={working && item.role === 'user' && index === messages.length - 2}
-              onAction={openAction}
-              onOpenSources={
-                activeThread ? () => router.push(`/sources/${activeThread.id}` as Href) : undefined
-              }
-            />
-          )}
-          ListEmptyComponent={(
-            <Landing
-              onScan={readScreen}
-              onPick={() => { void pick(); }}
-              recentScans={recentScans}
-              onOpenScan={openScanResult}
-            />
-          )}
-          contentContainerStyle={[styles.listBody, empty && styles.landingBody]}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="interactive"
-          showsVerticalScrollIndicator={false}
-          scrollEventThrottle={16}
-          onScroll={(event) => {
-            const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
-            atBottom.current =
-              contentOffset.y + layoutMeasurement.height >= contentSize.height - 90;
-          }}
-          onContentSizeChange={() => {
-            if (!empty && atBottom.current) list.current?.scrollToEnd({ animated: false });
-          }}
-        />
+        <View style={styles.flex}>
+          <FlatList
+            ref={list}
+            data={messages}
+            keyExtractor={(message) => message.id}
+            renderItem={({ item, index }) => (
+              <MessageRow
+                message={item}
+                scanning={working && item.role === 'user' && index === messages.length - 2}
+                onAction={openAction}
+                onOpenSources={
+                  activeThread ? () => router.push(`/sources/${activeThread.id}` as Href) : undefined
+                }
+              />
+            )}
+            ListEmptyComponent={(
+              <Landing
+                onScan={readScreen}
+                onPick={() => { void pick(); }}
+                recentScans={recentScans}
+                onOpenScan={openScanResult}
+              />
+            )}
+            contentContainerStyle={[styles.listBody, empty && styles.landingBody]}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="interactive"
+            showsVerticalScrollIndicator={false}
+            scrollEventThrottle={16}
+            onScroll={onScroll}
+            onScrollBeginDrag={touchBegan}
+            onScrollEndDrag={() => {
+              // A lift with a fling goes straight into momentum; give it a moment.
+              const state = flow.current;
+              if (state.lift) clearTimeout(state.lift);
+              state.lift = setTimeout(letGo, 250);
+            }}
+            onMomentumScrollBegin={touchBegan}
+            onMomentumScrollEnd={letGo}
+            onLayout={(event) => {
+              const state = flow.current;
+              state.place = { ...state.place, viewport: event.nativeEvent.layout.height };
+              scrubber.current?.update(state.place, false);
+              // The list changed size (the bar left, the keyboard came): not a scroll.
+              dock.report(state.place, false);
+            }}
+            onContentSizeChange={(_width, height) => {
+              const state = flow.current;
+              state.place = { ...state.place, content: height };
+              scrubber.current?.update(state.place, false);
+              // A page that has become too short to scroll gets its bar back.
+              dock.report(state.place, false);
+              followEnd();
+            }}
+          />
+          <ScrollScrubber
+            ref={scrubber}
+            onScrub={(offset) => list.current?.scrollToOffset({ offset, animated: false })}
+            onScrubStart={() => {
+              const state = flow.current;
+              if (state.lift) clearTimeout(state.lift);
+              state.lift = null;
+              state.scrubbing = true;
+              state.touching = true;
+            }}
+            onScrubEnd={() => {
+              flow.current.scrubbing = false;
+              letGo();
+            }}
+            onNudge={(direction) => {
+              const { offset, viewport } = flow.current.place;
+              list.current?.scrollToOffset({ offset: Math.max(0, offset + direction * viewport * 0.8), animated: true });
+            }}
+          />
+        </View>
 
         <View style={styles.footer}>
           {notice ? (
@@ -307,10 +441,10 @@ export function ChatScreen() {
           ) : null}
           {exhausted ? (
             <MotionPressable onPress={openAccess} style={styles.trialBanner} accessibilityRole="button">
-              <Txt variant="body" tone="ink2">
+              <Txt variant="body" tone="ink2" style={styles.trialText}>
                 The free questions on this phone are used up.
               </Txt>
-              <Txt variant="monoSm" tone="fill" caps>
+              <Txt variant="monoSm" tone="fill" caps style={styles.trialAction}>
                 Paste an access code
               </Txt>
             </MotionPressable>
@@ -401,4 +535,7 @@ const useStyles = makeStyles((color) => StyleSheet.create({
     paddingHorizontal: 11,
     paddingVertical: 8,
   },
+  // The message gives way (it wraps) so the call to action is never pushed off the edge.
+  trialText: { flex: 1 },
+  trialAction: { flexShrink: 0 },
 }));

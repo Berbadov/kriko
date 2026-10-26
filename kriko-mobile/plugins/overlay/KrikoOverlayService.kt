@@ -33,10 +33,12 @@ import android.util.Base64
 import android.util.DisplayMetrics
 import android.view.Display
 import android.view.Gravity
+import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
 import android.view.ViewGroup
+import android.view.ViewOutlineProvider
 import android.view.WindowInsets
 import android.view.WindowManager
 import android.view.inputmethod.InputMethodManager
@@ -53,24 +55,32 @@ import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
 import java.util.concurrent.Executors
 import kotlin.math.abs
+import kotlin.math.hypot
 import kotlin.math.roundToInt
 
 /**
- * The floating scanner, in three pieces that never cover each other:
+ * The floating scanner, in pieces that never cover each other:
  *
- *  - the **puck**: a small page with a K on it that the reader drags anywhere.
- *    It snaps to the nearest screen edge, rests half-transparent (the reader
- *    sets how much), sweeps a band of light while research runs, turns over
- *    when an answer is ready and shows a green count for the ones waiting;
- *  - the **tray**: tap the puck and a small card opens beside it with one big
- *    action (Scan this page), the results, and, deliberately apart, Stop;
- *  - the **sheet**: the answer, pinned to the top of the screen under the
- *    status bar, with the picture of the scanned page beside its title, the
- *    answer set as short blocks and the other scans as chips under it.
+ *  - the **puck**: a small pane of liquid glass with the Kriko mark on it, that
+ *    the reader drags anywhere. Tap it to scan; press and hold for the menu;
+ *    drag it onto the X that appears to stop sharing. It snaps to the nearest
+ *    screen edge and rests as see-through as the reader chose;
+ *  - the **menu**: held, not tapped. One big action (Scan this page), the
+ *    results, and, deliberately apart, Stop sharing;
+ *  - the **wave**: while a scan is read, squares ripple across the page from the
+ *    button, in a window that never takes a touch;
+ *  - the **sheet**: the answer, hung from the top of the screen under the
+ *    status bar over a frosted copy of the page it is about, with the picture of
+ *    that page beside its title and the answer set as short blocks. One swipe
+ *    up folds it away.
+ *
+ * The same sheet and wave also serve the phone's assistant, with no scanner
+ * session at all: a long press of the power or home button reads the screen and
+ * the answer appears over the reader's page (see [startAssistScan]).
  *
  * The scanner outlives everything but the reader's own Stop. When Android ends
  * the screen capture (it does so when the phone locks) the puck stays, goes
- * grey, and asks for capture again the next time the reader presses Scan.
+ * grey, and asks for capture again the next time the reader taps it.
  */
 class KrikoOverlayService : Service() {
   companion object {
@@ -82,18 +92,23 @@ class KrikoOverlayService : Service() {
     /** Capture consent arrived from the re-arm screen (see [KrikoCaptureActivity]). */
     const val ACTION_PROJECTION = "__PACKAGE__.overlay.PROJECTION"
     const val ACTION_PROJECTION_DENIED = "__PACKAGE__.overlay.PROJECTION_DENIED"
+    /** The phone's assistant read the screen; its picture is a file named in [EXTRA_SHOT]. */
+    const val ACTION_ASSIST = "__PACKAGE__.overlay.ASSIST"
     const val EXTRA_FOREGROUND = "foreground"
     const val EXTRA_RESULT_CODE = "resultCode"
     const val EXTRA_RESULT_DATA = "resultData"
     const val EXTRA_JOBS = "jobs"
     const val EXTRA_UI = "ui"
+    const val EXTRA_SHOT = "shot"
     private const val CHANNEL_ID = "kriko_screen_scan"
     private const val NOTIFICATION_ID = 7406
     private const val PUCK_PAD_DP = 7
     private const val EDGE_DP = 4
     private const val TRAY_DP = 232
     private const val SETTLE_AFTER_MS = 4200L
+    private const val HOLD_MS = 380L
     private const val CAPTURE_WATCHDOG_MS = 6500L
+    private const val WAVE_LIMIT_MS = 30000L
 
     /** A scanner session exists: the puck is up, whether or not capture is live. */
     @Volatile var isActive: Boolean = false
@@ -101,6 +116,10 @@ class KrikoOverlayService : Service() {
 
     /** Android's screen-capture grant is held, so Scan can answer without asking. */
     @Volatile var captureLive: Boolean = false
+      private set
+
+    /** The assistant's answer is on screen without a scanner session behind it. */
+    @Volatile var assistRunning: Boolean = false
       private set
   }
 
@@ -127,6 +146,24 @@ class KrikoOverlayService : Service() {
   private val imageWorker = Executors.newSingleThreadExecutor()
   private var thumbPath = ""
   private var thumbBitmap: Bitmap? = null
+
+  // The wave of pixels over the page, and the drop target shown while dragging.
+  private var wave: PixelWaveView? = null
+  private var waveWanted = false
+  /** Rows that were already on the sheet when the wave began: older scans do not end it. */
+  private var waveSkip: Set<String> = emptySet()
+  private val waveTimeout = Runnable { stopWave() }
+  private var dropTarget: DismissTargetView? = null
+  private var dropParams: WindowManager.LayoutParams? = null
+  private var dropOver = false
+
+  // The assistant's answer, shown with no scanner session behind it.
+  private var assistOnly = false
+  /** Until the app reports the scan's own row, the sheet shows this stand-in. */
+  private var assistPlaceholder: JSONObject? = null
+  private var assistWaiting = false
+  /** Rows the app already had when the assistant scan began; they are not this answer's. */
+  private var baseline: Set<String> = emptySet()
 
   private val palette: Palette get() = ui.palette
 
@@ -200,7 +237,7 @@ class KrikoOverlayService : Service() {
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
     when (intent?.action) {
       ACTION_STOP -> {
-        stopSession()
+        if (assistOnly && !isActive) finishAssist() else stopSession()
         return START_NOT_STICKY
       }
       ACTION_UI -> {
@@ -213,10 +250,11 @@ class KrikoOverlayService : Service() {
       }
       ACTION_UPDATE -> {
         val json = intent.getStringExtra(EXTRA_JOBS)
-        if (json != null) {
-          jobs = try { JSONArray(json) } catch (_: Exception) { JSONArray() }
-          renderAll()
-        }
+        if (json != null) acceptJobs(json)
+        return START_NOT_STICKY
+      }
+      ACTION_ASSIST -> {
+        startAssistScan(intent)
         return START_NOT_STICKY
       }
       ACTION_START, ACTION_PROJECTION -> {
@@ -457,11 +495,12 @@ class KrikoOverlayService : Service() {
   private fun setAppForeground(value: Boolean) {
     if (appForeground == value) return
     appForeground = value
-    if (!isActive || shuttingDown) return
+    if ((!isActive && !assistOnly) || shuttingDown) return
     if (value) {
       removeTray(animated = false)
       puck?.visibility = View.GONE
       sheet?.visibility = View.GONE
+      wave?.visibility = View.GONE
     } else if (!capturePending) {
       restoreWindows()
       if (hintPending && tray == null && sheet == null) {
@@ -478,6 +517,7 @@ class KrikoOverlayService : Service() {
     if (appForeground) return
     puck?.let { motion.animateIn(it, 0.9f, 220L) }
     sheet?.let { motion.animateIn(it, 0.97f, 200L, fromTranslationY = -dp(10).toFloat()) }
+    wave?.visibility = View.VISIBLE
   }
 
   /** Hide whatever a rebuild just created if Kriko's own screen is in front. */
@@ -485,6 +525,7 @@ class KrikoOverlayService : Service() {
     if (!appForeground) return
     puck?.visibility = View.GONE
     sheet?.visibility = View.GONE
+    wave?.visibility = View.GONE
   }
 
   /**
@@ -562,8 +603,9 @@ class KrikoOverlayService : Service() {
   // --------------------------------------------------------------------- puck --
 
   /**
-   * One page-shaped K. The window is the page plus a little air for the badge;
-   * the reader drags it anywhere and it settles on the nearest edge.
+   * One glass button carrying the Kriko mark. The window is the button plus a
+   * little air for the badge; the reader drags it anywhere and it settles on
+   * the nearest edge.
    */
   private fun showPuck() {
     if (puck != null || !Settings.canDrawOverlays(this)) return
@@ -575,7 +617,7 @@ class KrikoOverlayService : Service() {
       clipToPadding = false
       contentDescription = L("dragHint")
     }
-    root.addView(view, FrameLayout.LayoutParams(dp(KrikoPuckView.PAGE_W_DP), dp(KrikoPuckView.PAGE_H_DP)).apply {
+    root.addView(view, FrameLayout.LayoutParams(dp(KrikoPuckView.SIZE_DP), dp(KrikoPuckView.SIZE_DP)).apply {
       setMargins(dp(PUCK_PAD_DP), dp(PUCK_PAD_DP), dp(PUCK_PAD_DP), dp(PUCK_PAD_DP))
     })
     val badge = TextView(this).apply {
@@ -594,7 +636,7 @@ class KrikoOverlayService : Service() {
       Gravity.TOP or Gravity.END).apply { setMargins(0, dp(1), dp(1), 0) })
 
     puck = root
-    val width = dp(KrikoPuckView.PAGE_W_DP + PUCK_PAD_DP * 2)
+    val width = dp(KrikoPuckView.SIZE_DP + PUCK_PAD_DP * 2)
     val bounds = displayBounds()
     puckParams = overlayParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
       Gravity.TOP or Gravity.START).apply {
@@ -661,7 +703,7 @@ class KrikoOverlayService : Service() {
     val view = puck ?: return
     val params = puckParams ?: return
     val bounds = displayBounds()
-    val width = if (view.width > 0) view.width else dp(KrikoPuckView.PAGE_W_DP + PUCK_PAD_DP * 2)
+    val width = if (view.width > 0) view.width else dp(KrikoPuckView.SIZE_DP + PUCK_PAD_DP * 2)
     val left = dp(EDGE_DP)
     val right = (bounds.width() - width - dp(EDGE_DP)).coerceAtLeast(left)
     val target = if (params.x + width / 2 < bounds.width() / 2) left else right
@@ -684,13 +726,27 @@ class KrikoOverlayService : Service() {
     }
   }
 
+  /**
+   * Tap scans. Press and hold opens the menu: a ring fills while the reader
+   * holds and the phone ticks when it opens. Dragging moves the button, and an X
+   * appears near the bottom; letting go of the button on it stops sharing.
+   */
   private fun installPuckTouch(view: View) {
     var downX = 0f
     var downY = 0f
     var startX = 0
     var startY = 0
     var moved = false
+    var held = false
     val touchSlop = ViewConfiguration.get(this).scaledTouchSlop
+    val holdOpen = Runnable {
+      if (moved || capturePending || shuttingDown) return@Runnable
+      held = true
+      puckView?.cancelHold()
+      puckView?.setPress(false)
+      view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+      showTray()
+    }
     view.setOnTouchListener { _, event ->
       val params = puckParams ?: return@setOnTouchListener false
       when (event.actionMasked) {
@@ -699,15 +755,26 @@ class KrikoOverlayService : Service() {
           downX = event.rawX; downY = event.rawY
           startX = params.x; startY = params.y
           moved = false
+          held = false
           mainHandler.removeCallbacks(settleRunnable)
           puckView?.awaken()
           puckView?.setPress(true)
+          if (tray == null) {
+            puckView?.startHold(HOLD_MS)
+            mainHandler.postDelayed(holdOpen, HOLD_MS)
+          }
           true
         }
         MotionEvent.ACTION_MOVE -> {
+          if (held) return@setOnTouchListener true
           val dx = (event.rawX - downX).roundToInt()
           val dy = (event.rawY - downY).roundToInt()
-          if (abs(dx) + abs(dy) > touchSlop) moved = true
+          if (!moved && abs(dx) + abs(dy) > touchSlop) {
+            moved = true
+            mainHandler.removeCallbacks(holdOpen)
+            puckView?.cancelHold()
+            showDropTarget()
+          }
           if (moved) {
             val bounds = displayBounds()
             params.x = (startX + dx).coerceIn(0, (bounds.width() - view.width).coerceAtLeast(0))
@@ -715,24 +782,37 @@ class KrikoOverlayService : Service() {
             try { windowManager.updateViewLayout(view, params) } catch (_: Exception) { }
             // The reader chose this spot; do not put the puck back when the sheet closes.
             puckYBeforeSheet = null
-            // A tray that stays behind while the puck moves points at nothing.
+            // A menu that stays behind while the puck moves points at nothing.
             if (tray != null) removeTray(animated = false)
+            updateDropTarget()
           }
           true
         }
         MotionEvent.ACTION_UP -> {
+          mainHandler.removeCallbacks(holdOpen)
+          puckView?.cancelHold()
           puckView?.setPress(false)
-          if (moved) {
-            snapPuck()
-            scheduleSettle()
-          } else {
-            view.performClick()
-            onPuckTap()
+          when {
+            held -> Unit
+            moved -> if (dropOver) {
+              dropPuck()
+            } else {
+              hideDropTarget()
+              snapPuck()
+              scheduleSettle()
+            }
+            else -> {
+              view.performClick()
+              onPuckTap()
+            }
           }
           true
         }
         MotionEvent.ACTION_CANCEL -> {
+          mainHandler.removeCallbacks(holdOpen)
+          puckView?.cancelHold()
           puckView?.setPress(false)
+          hideDropTarget()
           scheduleSettle()
           true
         }
@@ -741,20 +821,105 @@ class KrikoOverlayService : Service() {
     }
   }
 
-  /** Tap: a closed tray opens; an open one closes; a sheet folds away first. */
+  /** Tap: scan this page. An open menu closes first, and the tap that closed it does not also scan. */
   private fun onPuckTap() {
-    if (capturePending) return
-    if (sheet != null) {
-      hideSheetAnimated()
-      return
-    }
     if (tray != null) {
       removeTray(animated = true)
       return
     }
-    // The same touch that closed the tray (a tap outside it) must not reopen it.
+    // The same touch that closed the menu (a tap outside it) must not also scan.
     if (SystemClock.uptimeMillis() - trayClosedAt < 600) return
-    showTray()
+    if (capturePending) return
+    requestCapture("research")
+  }
+
+  // ------------------------------------------------------------- drop target --
+
+  /** The X that appears while the button is dragged. */
+  private fun showDropTarget() {
+    if (dropTarget != null || !Settings.canDrawOverlays(this)) return
+    val view = DismissTargetView(this, ui)
+    val bounds = displayBounds()
+    val size = dp(DismissTargetView.SIZE_DP)
+    val params = overlayParams(size, size, Gravity.TOP or Gravity.START,
+      WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS).apply {
+      x = (bounds.width() - size) / 2
+      y = bounds.height() - size - dp(104)
+    }
+    view.alpha = 0f
+    view.translationY = dp(28).toFloat()
+    view.contentDescription = L("dropToStop")
+    try { windowManager.addView(view, params) } catch (_: Exception) { return }
+    dropTarget = view
+    dropParams = params
+    dropOver = false
+    motion.animate(view, 1f, 1f, 0f, 240L, spring = true)
+  }
+
+  /** Grow and redden the X while the button is over it. */
+  private fun updateDropTarget() {
+    val target = dropTarget ?: return
+    val targetParams = dropParams ?: return
+    val params = puckParams ?: return
+    val view = puck ?: return
+    val half = dp(DismissTargetView.SIZE_DP) / 2f
+    val px = params.x + view.width / 2f
+    val py = params.y + view.height / 2f
+    val over = hypot(px - (targetParams.x + half), py - (targetParams.y + half)) < dp(88)
+    if (over == dropOver) return
+    dropOver = over
+    target.setHover(over)
+    if (over) view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+  }
+
+  private fun hideDropTarget() {
+    val view = dropTarget ?: return
+    dropTarget = null
+    dropParams = null
+    dropOver = false
+    motion.animate(view, 0f, 0.9f, dp(18).toFloat(), 160L, spring = false) {
+      motion.cancel(view)
+      try { windowManager.removeView(view) } catch (_: Exception) { }
+    }
+  }
+
+  /** The button was let go over the X: it shrinks into it, then sharing stops. */
+  private fun dropPuck() {
+    val view = puck ?: return
+    val params = puckParams ?: return
+    val targetParams = dropParams
+    if (targetParams == null || !animationsEnabled()) {
+      hideDropTarget()
+      stopSession()
+      return
+    }
+    puckSnap?.cancel()
+    val half = dp(DismissTargetView.SIZE_DP) / 2
+    val fromX = params.x
+    val fromY = params.y
+    val toX = targetParams.x + half - view.width / 2
+    val toY = targetParams.y + half - view.height / 2
+    puckSnap = android.animation.ValueAnimator.ofFloat(0f, 1f).apply {
+      duration = 220
+      interpolator = android.view.animation.AccelerateInterpolator(1.4f)
+      addUpdateListener { animation ->
+        if (puck !== view) return@addUpdateListener
+        val f = animation.animatedValue as Float
+        params.x = (fromX + (toX - fromX) * f).roundToInt()
+        params.y = (fromY + (toY - fromY) * f).roundToInt()
+        try { windowManager.updateViewLayout(view, params) } catch (_: Exception) { }
+        view.scaleX = 1f - 0.72f * f
+        view.scaleY = 1f - 0.72f * f
+        view.alpha = 1f - f
+      }
+      addListener(object : android.animation.AnimatorListenerAdapter() {
+        override fun onAnimationEnd(animation: android.animation.Animator) {
+          hideDropTarget()
+          stopSession()
+        }
+      })
+      start()
+    }
   }
 
   // --------------------------------------------------------------------- tray --
@@ -766,12 +931,14 @@ class KrikoOverlayService : Service() {
     val width = dp(TRAY_DP)
     val card = LinearLayout(this).apply {
       orientation = LinearLayout.VERTICAL
-      background = capsule(p.panel, 22, p.edge)
-      elevation = dp(16).toFloat()
-      outlineProvider = KrikoDraw.roundOutline(this@KrikoOverlayService, 22)
+      outlineProvider = ViewOutlineProvider.BACKGROUND
       clipToOutline = true
-      setPadding(dp(10), dp(10), dp(10), dp(6))
+      setPadding(dp(10), dp(6), dp(10), dp(6))
     }
+    card.background = glass(card, 24, frosted = true) { KrikoGlassLevel.menu(ui) }
+    card.addView(trayHeader(p), LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(36)).apply {
+      bottomMargin = dp(2)
+    })
     if (!captureLive) {
       card.addView(TextView(this).apply {
         text = L("paused")
@@ -791,7 +958,7 @@ class KrikoOverlayService : Service() {
       LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(52)),
     )
 
-    val results = actionRow("list", L("results"), p.raised, p.ink, tint(p.ink, 0.08f), p.edge, 46, 13.5f) {
+    val results = actionRow("list", L("results"), KrikoGlassLevel.chip(p), p.ink, tint(p.ink, 0.08f), tint(p.ink, 0.16f), 46, 13.5f) {
       removeTray(animated = false)
       openSheet()
     }
@@ -832,7 +999,7 @@ class KrikoOverlayService : Service() {
     )
     val height = card.measuredHeight
     val params = puckParams
-    val puckWidth = if (anchor.width > 0) anchor.width else dp(KrikoPuckView.PAGE_W_DP + PUCK_PAD_DP * 2)
+    val puckWidth = if (anchor.width > 0) anchor.width else dp(KrikoPuckView.SIZE_DP + PUCK_PAD_DP * 2)
     val puckCenterX = (params?.x ?: 0) + puckWidth / 2
     val opensRight = puckCenterX < bounds.width() / 2
     val gap = dp(6)
@@ -861,6 +1028,38 @@ class KrikoOverlayService : Service() {
     motion.animateIn(card, 0.92f, 220L)
     wakePuck()
     syncTray()
+  }
+
+  /** A pane of liquid glass for a window; its see-through-ness follows the reader's setting live. */
+  private fun glass(view: View, radiusDp: Int, frosted: Boolean, level: () -> Float): GlassDrawable =
+    GlassDrawable(this, radiusDp.toFloat(), { KrikoGlassLevel.body(palette) }, level,
+      { KrikoGlassLevel.isDark(palette) }, frosted).attach(view)
+
+  /** The menu's top line: the mark, the name, and an X that closes it. */
+  private fun trayHeader(p: Palette): View = LinearLayout(this).apply {
+    orientation = LinearLayout.HORIZONTAL
+    gravity = Gravity.CENTER_VERTICAL
+    addView(LogoMarkView(this@KrikoOverlayService, p.ink),
+      LinearLayout.LayoutParams(dp(15), dp(21)).apply { marginStart = dp(6); marginEnd = dp(9) })
+    addView(TextView(this@KrikoOverlayService).apply {
+      text = L("assistTitle")
+      setTextColor(p.ink)
+      textSize = 13.5f
+      typeface = fonts.semiBold
+      includeFontPadding = false
+    }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+    addView(TextView(this@KrikoOverlayService).apply {
+      text = "×"
+      setTextColor(p.ink2)
+      textSize = 22f
+      typeface = fonts.regular
+      includeFontPadding = false
+      gravity = Gravity.CENTER
+      contentDescription = L("close")
+      background = capsule(Color.TRANSPARENT, 18, Color.TRANSPARENT, tint(p.ink, 0.10f))
+      motion.pressMotion(this)
+      setOnClickListener { removeTray(animated = true) }
+    }, LinearLayout.LayoutParams(dp(36), dp(36)))
   }
 
   private fun syncTray() {
@@ -912,14 +1111,21 @@ class KrikoOverlayService : Service() {
     // The body gives way first; header, chips and buttons always stay in reach.
     val bodyCapDp = (screenHeightDp * 0.62 - 205).toInt().coerceIn(110, 470)
 
-    val root = LinearLayout(this).apply {
+    val root = SwipeSheet(this).apply {
       orientation = LinearLayout.VERTICAL
-      background = capsule(p.panel, 26, p.edge)
-      elevation = dp(20).toFloat()
-      outlineProvider = KrikoDraw.roundOutline(this@KrikoOverlayService, 26)
+      outlineProvider = ViewOutlineProvider.BACKGROUND
       clipToOutline = true
-      setPadding(dp(16), dp(14), dp(16), dp(12))
+      setPadding(dp(16), dp(8), dp(16), dp(12))
     }
+    root.background = glass(root, 28, frosted = true) { KrikoGlassLevel.sheet(ui) }
+    root.onMinimize = { minimizeSheet() }
+    root.onGrab = { motion.cancel(root) }
+    // A short bar at the top says the sheet can be swiped away.
+    root.addView(View(this).apply { background = KrikoDraw.shape(this@KrikoOverlayService, tint(p.ink, 0.26f), 2) },
+      LinearLayout.LayoutParams(dp(36), dp(4)).apply {
+        gravity = Gravity.CENTER_HORIZONTAL
+        bottomMargin = dp(9)
+      })
 
     val header = LinearLayout(this).apply {
       orientation = LinearLayout.HORIZONTAL
@@ -961,11 +1167,10 @@ class KrikoOverlayService : Service() {
       contentDescription = L("close")
       background = capsule(Color.TRANSPARENT, 22, Color.TRANSPARENT, tint(p.ink, 0.10f))
       motion.pressMotion(this)
-      setOnClickListener { hideSheetAnimated() }
+      setOnClickListener { minimizeSheet() }
     }
     header.addView(close, LinearLayout.LayoutParams(dp(44), dp(44)).apply { marginStart = dp(4); marginEnd = -dp(8) })
     root.addView(header)
-    installSheetDrag(header, root)
 
     val bar = IndeterminateBar(this, tint(p.ink, 0.08f), p.accentHi)
     bar.visibility = View.GONE
@@ -981,6 +1186,7 @@ class KrikoOverlayService : Service() {
       isVerticalScrollBarEnabled = false
     }
     sheetScroll = scroll
+    root.body = scroll
     val body = LinearLayout(this).apply {
       orientation = LinearLayout.VERTICAL
       setPadding(0, dp(4), 0, dp(4))
@@ -1037,42 +1243,6 @@ class KrikoOverlayService : Service() {
     renderSheet()
   }
 
-  /** Dragging the header upward folds the sheet away, the way a notification goes. */
-  private fun installSheetDrag(handle: View, target: View) {
-    var downY = 0f
-    var dragging = false
-    val slop = ViewConfiguration.get(this).scaledTouchSlop
-    handle.setOnTouchListener { _, event ->
-      when (event.actionMasked) {
-        MotionEvent.ACTION_DOWN -> {
-          downY = event.rawY
-          dragging = false
-          true
-        }
-        MotionEvent.ACTION_MOVE -> {
-          val dy = event.rawY - downY
-          if (!dragging && dy < -slop) dragging = true
-          if (dragging) {
-            motion.cancel(target)
-            target.translationY = dy.coerceAtMost(0f)
-            target.alpha = (1f + dy / dp(220)).coerceIn(0.35f, 1f)
-          }
-          true
-        }
-        MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-          if (dragging && target.translationY < -dp(54)) {
-            hideSheetAnimated()
-          } else if (dragging) {
-            motion.animate(target, 1f, 1f, 0f, 220L, spring = true)
-          }
-          dragging = false
-          true
-        }
-        else -> true
-      }
-    }
-  }
-
   /** If the sheet would cover the puck, move the puck just below it until the sheet closes. */
   private fun keepPuckClearOfSheet() {
     val params = puckParams ?: return
@@ -1081,7 +1251,7 @@ class KrikoOverlayService : Service() {
     val sheetTop = sheetParams?.y ?: return
     val bounds = displayBounds()
     val sheetBottom = sheetTop + shown.height + dp(8)
-    val puckHeight = if (view.height > 0) view.height else dp(KrikoPuckView.PAGE_H_DP + PUCK_PAD_DP * 2)
+    val puckHeight = if (view.height > 0) view.height else dp(KrikoPuckView.SIZE_DP + PUCK_PAD_DP * 2)
     val overlaps = params.y < sheetBottom && params.y + puckHeight > sheetTop
     if (!overlaps) return
     if (puckYBeforeSheet == null) puckYBeforeSheet = params.y
@@ -1166,6 +1336,8 @@ class KrikoOverlayService : Service() {
     }
     wrap.addView(toggle, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(38)).apply { topMargin = dp(4) })
     wrap.addView(field)
+    // Reading a review site needs the scanner's own screen capture, which the assistant does not hold.
+    if (assistOnly && !isActive) wrap.visibility = View.GONE
     return wrap
   }
 
@@ -1176,6 +1348,7 @@ class KrikoOverlayService : Service() {
     val status = item?.optString("status").orEmpty()
     // Looking at a finished answer is what clears its badge.
     if (item != null && status == "done" && seen.add(id)) syncPuck()
+    settleWave(item)
 
     val signature = buildString {
       append(id).append('|').append(status).append('|')
@@ -1260,6 +1433,7 @@ class KrikoOverlayService : Service() {
   /** Streaming text and the latest step change far more often than the layout does. */
   private fun updateLiveViews(item: JSONObject?) {
     if (item == null) return
+    settleWave(item)
     answerBox?.let { box ->
       answer.render(box, item.optString("text"), item.optJSONArray("sources") ?: JSONArray())
     }
@@ -1342,8 +1516,8 @@ class KrikoOverlayService : Service() {
     return LinearLayout(this).apply {
       orientation = LinearLayout.HORIZONTAL
       gravity = Gravity.CENTER_VERTICAL
-      background = capsule(if (selected) p.raised else Color.TRANSPARENT, 17,
-        if (selected) p.accent else p.edge, tint(p.ink, 0.08f))
+      background = capsule(if (selected) KrikoGlassLevel.chip(p) else Color.TRANSPARENT, 17,
+        if (selected) p.accent else tint(p.ink, 0.16f), tint(p.ink, 0.08f))
       setPadding(dp(11), 0, dp(13), 0)
       contentDescription = raw
       isClickable = true
@@ -1374,7 +1548,7 @@ class KrikoOverlayService : Service() {
     row.addView(
       actionRow("scan", L(if (jobs.length() == 0) "scanPage" else "scanAgain"), p.accent, KrikoTheme.ON_ACCENT,
         tint(KrikoTheme.ON_ACCENT, 0.24f), Color.TRANSPARENT, 46, 14f) {
-        requestCapture("research")
+        if (assistOnly && !isActive) rescanViaAssistant() else requestCapture("research")
       },
       LinearLayout.LayoutParams(0, dp(46), 1f),
     )
@@ -1419,14 +1593,56 @@ class KrikoOverlayService : Service() {
     for ((number, label, url) in rows) card.addView(sourceRow(number, label, url))
   }
 
-  private fun hideSheetAnimated() {
+  /**
+   * Fold the sheet away. With a scanner running it flies into the button, which
+   * pops to say where the answer went; with the assistant it slides up and out.
+   * The answers stay: the menu's Results brings the sheet back.
+   */
+  private fun minimizeSheet() {
     val target = sheet ?: return
     cancelSheetFocus()
-    motion.animate(target, 0f, 0.97f, -dp(14).toFloat(), 170L, spring = false) {
-      if (sheet === target) removeSheet()
-    }
+    motion.cancel(target)
     restorePuckHeight()
     scheduleSettle()
+    val buttonAt = puck?.takeIf { it.visibility == View.VISIBLE && puckParams != null }
+    val finish = {
+      if (sheet === target) {
+        removeSheet()
+        if (assistOnly && !isActive) {
+          if (activeCount() > 0) showToast(L("assistKeeps"))
+          finishAssist()
+        }
+      }
+    }
+    if (!animationsEnabled()) {
+      finish()
+      return
+    }
+    var dx = 0f
+    var dy = -target.height * 0.4f
+    var end = 0.94f
+    if (buttonAt != null) {
+      val bounds = displayBounds()
+      val at = puckParams!!
+      dx = at.x + buttonAt.width / 2f - bounds.width() / 2f
+      dy = at.y + buttonAt.height / 2f - ((sheetParams?.y ?: 0) + target.height / 2f)
+      end = 0.1f
+    }
+    target.pivotX = target.width / 2f
+    target.pivotY = target.height / 2f
+    target.animate().cancel()
+    target.animate().translationX(dx).translationY(dy).scaleX(end).scaleY(end).alpha(0f)
+      .setDuration(260L)
+      .setInterpolator(android.view.animation.AccelerateInterpolator(1.25f))
+      .withEndAction {
+        finish()
+        buttonAt?.let { view ->
+          view.animate().scaleX(1.16f).scaleY(1.16f).setDuration(90L)
+            .withEndAction { view.animate().scaleX(1f).scaleY(1f).setDuration(160L).start() }
+            .start()
+        }
+      }
+      .start()
   }
 
   private fun cancelSheetFocus() {
@@ -1537,6 +1753,9 @@ class KrikoOverlayService : Service() {
     capturePending = false
     mainHandler.removeCallbacks(captureWatchdog)
     display?.setSurface(null)
+    // The picture is taken, so nothing of ours can end up in it any more: the wave
+    // can leave the button now, while the frame is still being encoded and sent.
+    if (KrikoOverlayModule.jsReady) mainHandler.post { startWave() }
     try {
       val jpeg = encode(image)
       image.close()
@@ -1550,14 +1769,7 @@ class KrikoOverlayService : Service() {
       val site = reviewSite
       if (KrikoOverlayModule.jsReady) {
         mainHandler.post { afterCapture(openSheet = true) }
-        val body = Arguments.createMap().apply {
-          putString("base64", Base64.encodeToString(jpeg, Base64.NO_WRAP))
-          putString("mime", "image/jpeg")
-          putString("uri", uri ?: "")
-          putString("mode", mode)
-          if (mode == "site_reviews") putString("reviewSite", site)
-        }
-        KrikoOverlayModule.emit("onScan", body)
+        KrikoOverlayModule.emitScan(jpeg, uri, mode, site)
       } else {
         // Kriko's screen is gone (swiped away, or reclaimed). The scan is not
         // lost: it opens the app on a fresh chat that reads it.
@@ -1592,8 +1804,93 @@ class KrikoOverlayService : Service() {
     // A new scan is what the reader is waiting on: show it, not an older pick.
     selectedJob = ""
     renderedSignature = null
+    // Squares ripple out from the button while the page is read.
+    startWave()
     openSheet()
     sheet?.let { if (!appForeground) motion.animateIn(it, 0.97f, 240L, fromTranslationY = -dp(26).toFloat()) }
+  }
+
+  // --------------------------------------------------------------------- wave --
+
+  /** Leave from the button, or from the bottom edge when there is none (the assistant). */
+  private fun startWave() {
+    if (!animationsEnabled() || !Settings.canDrawOverlays(this) || shuttingDown) return
+    // Already crossing the page for this scan (started the moment the frame was
+    // grabbed): the later call from the sheet must not restart it.
+    if (waveWanted && wave != null) return
+    waveSkip = (0 until jobs.length()).mapNotNull { jobs.optJSONObject(it)?.optString("id") }.toSet()
+    val bounds = displayBounds()
+    // The button is hidden while the frame is taken, but still knows where it sits.
+    val button = puckParams?.let { puck }
+    val x: Float
+    val y: Float
+    val hole: Float
+    if (button != null) {
+      val at = puckParams!!
+      val half = dp(KrikoPuckView.SIZE_DP) / 2f
+      x = at.x + half
+      y = at.y + half
+      hole = dp(KrikoPuckView.SIZE_DP / 2 + 5).toFloat()
+    } else {
+      x = bounds.width() / 2f
+      y = bounds.height().toFloat()
+      hole = 0f
+    }
+    waveWanted = true
+    mainHandler.removeCallbacks(waveTimeout)
+    mainHandler.postDelayed(waveTimeout, WAVE_LIMIT_MS)
+    val running = wave
+    if (running != null) {
+      running.begin(x, y, hole)
+      return
+    }
+    val view = PixelWaveView(this, ui)
+    val params = overlayParams(bounds.width(), bounds.height(), Gravity.TOP or Gravity.START,
+      WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS).apply {
+      // Below Android's limit for a window that touches may pass through: the
+      // page under the wave stays usable.
+      alpha = 0.78f
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+        layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+      }
+    }
+    try { windowManager.addView(view, params) } catch (_: Exception) { return }
+    wave = view
+    view.begin(x, y, hole)
+    if (appForeground) view.visibility = View.GONE
+  }
+
+  /** Let the wave die away; the window goes once it has faded. */
+  private fun stopWave() {
+    waveWanted = false
+    mainHandler.removeCallbacks(waveTimeout)
+    val view = wave ?: return
+    wave = null
+    view.finish { try { windowManager.removeView(view) } catch (_: Exception) { } }
+  }
+
+  private fun removeWave() {
+    waveWanted = false
+    mainHandler.removeCallbacks(waveTimeout)
+    wave?.let { try { windowManager.removeView(it) } catch (_: Exception) { } }
+    wave = null
+  }
+
+  /**
+   * The wave has done its job once the answer starts to arrive, or the scan ends
+   * without one. A page that is still being read carries a progress line in its
+   * `text` ("Identifying appearance…"), which is not the answer: only a running
+   * research job with text has begun to answer.
+   */
+  private fun settleWave(item: JSONObject?) {
+    if (!waveWanted || item == null) return
+    // An older scan still on the sheet (the new row has not arrived yet) says
+    // nothing about this one.
+    if (waveSkip.contains(item.optString("id"))) return
+    val status = item.optString("status")
+    val finished = status == "done" || status == "error" || status == "cancelled"
+    val answering = status == "running" && item.optString("text").isNotBlank()
+    if (finished || answering) stopWave()
   }
 
   private fun encode(image: Image): ByteArray? {
@@ -1607,6 +1904,8 @@ class KrikoOverlayService : Service() {
     buffer.get(bytes, 0, minOf(buffer.remaining(), bytes.size))
     raw.copyPixelsFromBuffer(ByteBuffer.wrap(bytes))
     val cropped = if (paddedWidth != image.width) Bitmap.createBitmap(raw, 0, 0, image.width, image.height) else raw
+    // The page, frosted, becomes the glass of the answer that will sit over it.
+    KrikoBackdrop.update(cropped)
     val out = ByteArrayOutputStream()
     cropped.compress(Bitmap.CompressFormat.JPEG, 86, out)
     if (cropped !== raw) cropped.recycle()
@@ -1624,6 +1923,174 @@ class KrikoOverlayService : Service() {
       refreshUi()
     }
     restoreWindows()
+  }
+
+  // ---------------------------------------------------------------- assistant --
+
+  /**
+   * The phone's assistant read the screen (a long press of the power or home
+   * button). The answer comes up over the reader's own page, with no scanner
+   * session and no trip into Kriko:
+   *
+   *  - Kriko's screen is mounted: the picture goes to it as a scan, like the
+   *    floating button's, and the answer returns through the same sheet;
+   *  - it is not (swiped away): the app opens once, takes the scan the moment it
+   *    is listening, and steps back to the page.
+   *
+   * Without permission to draw over other apps, or with Kriko itself in front,
+   * the old route stands: the app opens on a new chat that reads the picture.
+   */
+  private fun startAssistScan(intent: Intent) {
+    val shot = intent.getStringExtra(EXTRA_SHOT)
+    if (shot.isNullOrBlank()) {
+      stopIfIdle()
+      return
+    }
+    val canShow = Settings.canDrawOverlays(this) && !KrikoOverlayModule.appInForeground
+    if (!canShow) {
+      openApp(shot, "research", "")
+      stopIfIdle()
+      return
+    }
+    if (isActive) {
+      // A scanner session is running: the picture joins it, drawn by its own puck and sheet.
+      imageWorker.execute {
+        val bytes = readShotBytes(shot) ?: run {
+          showToast(L("captureFailed"))
+          return@execute
+        }
+        mainHandler.post { deliverAssistShot(bytes, shot) }
+      }
+      return
+    }
+    assistOnly = true
+    assistRunning = true
+    appForeground = false
+    assistWaiting = true
+    baseline = emptySet()
+    assistPlaceholder = JSONObject().apply {
+      put("id", "assist-pending")
+      put("title", L("assistScanning"))
+      put("status", "reading")
+      put("image", shot)
+    }
+    jobs = JSONArray().put(assistPlaceholder)
+    selectedJob = ""
+    renderedSignature = null
+    imageWorker.execute {
+      val bytes = readShotBytes(shot) ?: run {
+        mainHandler.post {
+          showToast(L("captureFailed"))
+          finishAssist()
+        }
+        return@execute
+      }
+      mainHandler.post { deliverAssistShot(bytes, shot) }
+    }
+    // The card and wave are up before the picture has even been read.
+    startWave()
+    openSheet()
+    sheet?.let { motion.animateIn(it, 0.97f, 240L, fromTranslationY = -dp(26).toFloat()) }
+  }
+
+  private fun readShotBytes(shot: String): ByteArray? = try {
+    val path = if (shot.startsWith("file:")) Uri.parse(shot).path.orEmpty() else shot
+    java.io.File(path).readBytes()
+  } catch (_: Exception) {
+    null
+  }
+
+  private fun deliverAssistShot(bytes: ByteArray, uri: String) {
+    if (shuttingDown) return
+    if (KrikoOverlayModule.jsReady) {
+      KrikoOverlayModule.emitScan(bytes, uri, "research", "")
+      if (isActive) afterCapture(openSheet = true)
+    } else {
+      // Nobody is listening yet: keep the scan, open the app, and let it step
+      // back to the page once the scan is taken.
+      KrikoOverlayModule.queueScan(bytes, uri, "research", "", quiet = true)
+      openAppQuietly()
+    }
+  }
+
+  /** Bring Kriko up just long enough for its screen to mount and take the queued scan. */
+  private fun openAppQuietly() {
+    try {
+      val launch = packageManager.getLaunchIntentForPackage(packageName)
+        ?: throw IllegalStateException("no launcher")
+      launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
+      startActivity(launch)
+    } catch (_: Exception) {
+      KrikoOverlayModule.dropQueuedScans()
+      showToast(L("resumeFailed"))
+      finishAssist()
+    }
+  }
+
+  /** While the assistant is the only thing running, rows from before this scan are not its answer. */
+  private fun acceptJobs(json: String) {
+    val incoming = try { JSONArray(json) } catch (_: Exception) { JSONArray() }
+    if (!assistOnly || isActive) {
+      jobs = incoming
+      renderAll()
+      return
+    }
+    val rows = (0 until incoming.length()).mapNotNull { incoming.optJSONObject(it) }
+    if (assistWaiting) {
+      // Hold the stand-in until the app reports this scan's own row.
+      if (rows.none { isActiveStatus(it.optString("status")) }) return
+      baseline = rows.filterNot { isActiveStatus(it.optString("status")) }.map { it.optString("id") }.toSet()
+      assistWaiting = false
+      assistPlaceholder = null
+    }
+    jobs = JSONArray().apply {
+      rows.filterNot { baseline.contains(it.optString("id")) }.forEach { put(it) }
+    }
+    if (jobs.length() == 0) return
+    renderAll()
+  }
+
+  /** "Scan again" from an assistant answer: fold the sheet away, then summon the assistant again. */
+  private fun rescanViaAssistant() {
+    val target = sheet
+    if (target != null) {
+      motion.cancel(target)
+      target.visibility = View.INVISIBLE
+    }
+    wave?.visibility = View.INVISIBLE
+    // Let the sheet leave the screen before the picture is taken.
+    mainHandler.postDelayed({
+      if (!KrikoAssistService.rescan()) {
+        target?.visibility = View.VISIBLE
+        wave?.visibility = View.VISIBLE
+        showToast(L("assistNoShot"))
+        return@postDelayed
+      }
+      // The new summoning starts a fresh service command; this answer is done.
+      if (sheet === target) removeSheet()
+      finishAssist()
+    }, 260L)
+  }
+
+  /** The assistant's answer is closed (or nothing could be shown): nothing is left to run. */
+  private fun finishAssist() {
+    if (!assistOnly) {
+      stopIfIdle()
+      return
+    }
+    assistOnly = false
+    assistRunning = false
+    assistWaiting = false
+    assistPlaceholder = null
+    baseline = emptySet()
+    removeSheet()
+    removeWave()
+    jobs = JSONArray()
+    stopIfIdle()
+  }
+
+  private fun stopIfIdle() {
+    if (!isActive && !assistOnly) stopSelf()
   }
 
   private fun openSource(url: String) {
@@ -1678,7 +2145,7 @@ class KrikoOverlayService : Service() {
   private fun iconButton(glyph: String, description: String, onClick: () -> Unit): View {
     val p = palette
     return FrameLayout(this).apply {
-      background = capsule(p.raised, 23, p.edge, tint(p.ink, 0.08f))
+      background = capsule(KrikoGlassLevel.chip(p), 23, tint(p.ink, 0.16f), tint(p.ink, 0.08f))
       isClickable = true
       contentDescription = description
       motion.pressMotion(this)
@@ -1864,7 +2331,19 @@ class KrikoOverlayService : Service() {
     tearDownCapture(stopProjection)
     removeTray(animated = false)
     removeSheet()
+    removeWave()
+    removeDropTarget()
     removePuck()
+  }
+
+  private fun removeDropTarget() {
+    dropTarget?.let {
+      motion.cancel(it)
+      try { windowManager.removeView(it) } catch (_: Exception) { }
+    }
+    dropTarget = null
+    dropParams = null
+    dropOver = false
   }
 
   override fun onDestroy() {
@@ -1874,6 +2353,13 @@ class KrikoOverlayService : Service() {
       isActive = false
       sendSession(false)
       KrikoOverlayModule.finishHeadlessSession()
+    }
+    if (assistOnly) {
+      assistOnly = false
+      assistRunning = false
+      mainHandler.removeCallbacksAndMessages(null)
+      removeSheet()
+      removeWave()
     }
     imageWorker.shutdown()
     super.onDestroy()

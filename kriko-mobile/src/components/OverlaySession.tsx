@@ -65,7 +65,8 @@ export function OverlaySessionProvider({ children }: { children: React.ReactNode
     productScan: tr('Product scan', language),
     sources: tr('Sources', language),
     queueFull: tr('Queue is full', language),
-    dragHint: tr('Drag Kriko, or tap it to open the scan panel', language),
+    dragHint: tr('Tap Kriko to scan this page. Press and hold for more.', language),
+    dropToStop: tr('Drop here to stop sharing', language),
     notificationTitle: tr('Kriko screen scan is active', language),
     notificationText: tr('Tap the floating K to scan one screen when you choose.', language),
     stopSharing: tr('Stop screen sharing', language),
@@ -86,6 +87,7 @@ export function OverlaySessionProvider({ children }: { children: React.ReactNode
     assistNoShot: tr('Kriko could not see your screen. In your phone’s assistant settings, turn on “Use screenshot”.', language),
     // The brand reads the same in every language.
     assistTitle: 'Kriko',
+    assistKeeps: tr('Kriko keeps reading. The answer will be in History.', language),
   }), [language]);
 
   // `system` follows the phone, exactly as the in-app theme provider resolves it.
@@ -134,9 +136,6 @@ export function OverlaySessionProvider({ children }: { children: React.ReactNode
 
   useEffect(() => {
     mounted.current = true;
-    // The scanner outlives this screen. While we are mounted it hands scans to
-    // us; once we are gone it opens the app with the picture instead.
-    setOverlayUiReady(true);
     void isOverlayActive().then((value) => { if (mounted.current) setActive(value); }).catch(() => {});
     const offScan = subscribeOverlayScan((shot) => {
       if (waiting.current.length + (readingAbort.current ? 1 : 0) + current.current.queueJobs.filter((job) =>
@@ -166,6 +165,11 @@ export function OverlaySessionProvider({ children }: { children: React.ReactNode
         current.current.cancelQueue(id);
       }
     });
+    // The scanner outlives this screen. While we are mounted it hands scans to
+    // us; once we are gone it opens the app with the picture instead. Announced
+    // last: a scan the phone assistant queued while the app was closed is
+    // delivered the moment this is true, so the listener above must exist.
+    setOverlayUiReady(true);
     return () => {
       mounted.current = false;
       waiting.current = [];

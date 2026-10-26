@@ -23,6 +23,7 @@ import { StoreProvider, useStore } from '../engine/store';
 import { OverlaySessionProvider } from '../components/OverlaySession';
 import { MotionProvider, useReducedMotion } from '../components/Motion';
 import { BottomNav } from '../components/Chrome';
+import { DockProvider } from '../components/dock';
 import { ThemeProvider, useTheme } from '../theme/theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -72,27 +73,29 @@ function AppStack() {
   const { dark, color } = useTheme();
   const { access } = useStore();
   return (
-    <View style={[styles.root, { backgroundColor: color.ground }]}>
-      <StatusBar style={dark ? 'light' : 'dark'} />
-      <View style={styles.stack}>
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: color.ground },
-            animation: reduced === false ? 'fade_from_bottom' : 'none',
-          }}
-        >
-          <Stack.Screen name="index" />
-          <Stack.Screen name="assist" />
-          <Stack.Screen name="history" />
-          <Stack.Screen name="queue" />
-          <Stack.Screen name="sources/[id]" />
-          <Stack.Screen name="settings" />
-          <Stack.Screen name="about" />
-        </Stack>
+    <DockProvider>
+      <View style={[styles.root, { backgroundColor: color.ground }]}>
+        <StatusBar style={dark ? 'light' : 'dark'} />
+        <View style={styles.stack}>
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: color.ground },
+              animation: reduced === false ? 'fade_from_bottom' : 'none',
+            }}
+          >
+            <Stack.Screen name="index" />
+            <Stack.Screen name="assist" />
+            <Stack.Screen name="history" />
+            <Stack.Screen name="queue" />
+            <Stack.Screen name="sources/[id]" />
+            <Stack.Screen name="settings" />
+            <Stack.Screen name="about" />
+          </Stack>
+        </View>
+        {access.kind === 'none' ? null : <BottomNav />}
       </View>
-      {access.kind === 'none' ? null : <BottomNav />}
-    </View>
+    </DockProvider>
   );
 }
 
