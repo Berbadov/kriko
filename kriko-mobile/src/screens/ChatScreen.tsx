@@ -317,6 +317,7 @@ export function ChatScreen() {
   return (
     <View style={styles.page}>
       <AppHeader
+        title={!empty ? activeThread?.title || 'Conversation' : undefined}
         actions={
           !empty ? (
             <HeaderAction label="New chat" onPress={startNewChat}>
@@ -332,7 +333,8 @@ export function ChatScreen() {
             <View style={styles.liveDot} />
             <View style={styles.shareCopy}>
               <Txt variant="monoSm" tone="ink" caps>{tr('Screen sharing is on')}</Txt>
-              <Txt variant="stepMeta" tone="ink3">{tr('Floating scanner ready · requested scans only')}</Txt>
+              {/* The reassurance line is for the home screen; an open chat keeps its room. */}
+              {empty ? <Txt variant="stepMeta" tone="ink3">{tr('Floating scanner ready · requested scans only')}</Txt> : null}
             </View>
           </View>
           <MotionPressable
@@ -343,14 +345,6 @@ export function ChatScreen() {
           >
             <Txt variant="monoSm" tone="risk" caps>{tr('Stop')}</Txt>
           </MotionPressable>
-        </MotionView>
-      ) : null}
-
-      {!empty ? (
-        <MotionView delay={40} style={styles.threadBar}>
-          <Txt variant="rowTitle" tone="ink" numberOfLines={1} style={styles.threadTitle}>
-            {activeThread?.title || 'Conversation'}
-          </Txt>
         </MotionView>
       ) : null}
 
@@ -487,19 +481,11 @@ export function ChatScreen() {
 const useStyles = makeStyles((color) => StyleSheet.create({
   page: { flex: 1, backgroundColor: color.ground },
   flex: { flex: 1 },
-  threadBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: PAGE_X,
-    paddingVertical: 11,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: color.edge,
-  },
   shareBanner: {
     marginHorizontal: PAGE_X,
-    marginTop: 8,
+    marginBottom: 4,
     paddingHorizontal: 12,
-    paddingVertical: 9,
+    paddingVertical: 6,
     borderRadius: radius.m,
     borderWidth: 1,
     borderColor: color.edgeStrong,
@@ -512,13 +498,12 @@ const useStyles = makeStyles((color) => StyleSheet.create({
   shareStatus: { flexDirection: 'row', alignItems: 'center', gap: 9, flex: 1 },
   liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: color.ok },
   shareCopy: { flex: 1, gap: 2 },
-  stopShare: { paddingHorizontal: 11, paddingVertical: 7, backgroundColor: color.riskWash, borderRadius: radius.s },
-  threadTitle: { flex: 1 },
+  stopShare: { paddingHorizontal: 11, paddingVertical: 5, backgroundColor: color.riskWash, borderRadius: radius.s },
   landingBody: { paddingHorizontal: 0 },
   listBody: { paddingHorizontal: PAGE_X, paddingBottom: gap[4], flexGrow: 1 },
   footer: {
-    paddingHorizontal: PAGE_X,
-    paddingTop: 8,
+    paddingHorizontal: PAGE_X - 8,
+    paddingTop: 4,
     backgroundColor: 'transparent',
     gap: 6,
   },
