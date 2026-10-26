@@ -1,0 +1,193 @@
+<!DOCTYPE html><html lang="tr"><head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Kriko nasıl kullanılır</title>
+  <meta name="description" content="Kriko'yu adım adım, her adımın kısa bir filmiyle kullan: ilanı kontrol et, yeni bir ürünü araştır, kayıtlı bir kontrolü bul, ürünleri karşılaştır ve ne kadar şüphe göreceğini seç.">
+  <meta property="og:title" content="Kriko nasıl kullanılır, adım adım">
+  <meta property="og:description" content="Her adımın kısa bir filmi: ilanı kontrol et, yeni bir ürünü araştır, ürünleri karşılaştır ve ne kadar şüphe göreceğini seç.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://kriko.cc/assets/icon-128.png">
+  <link rel="icon" href="../../assets/icon-32.png">
+  <link rel="stylesheet" href="../../styles.css?v=21e6481025a5">
+  <script src="../../script.js?v=8b8abf59128c" defer=""></script>
+  <link rel="canonical" href="https://kriko.cc/tr/guide/">
+  <link rel="alternate" href="https://kriko.cc/guide/" hreflang="en">
+  <link rel="alternate" href="https://kriko.cc/tr/guide/" hreflang="tr">
+  <link rel="alternate" href="https://kriko.cc/guide/" hreflang="x-default">
+</head>
+<body>
+  <a class="skip-link" href="#main">İçeriğe geç</a>
+  <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" width="0" height="0">
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12m-5-5 5 5 5-5M5 17v4h14v-4"></path></symbol>
+    <symbol id="i-external" viewBox="0 0 24 24"><path d="M14 4h6v6m0-6L10 14M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"></path></symbol>
+  </svg>
+
+  <header class="topbar">
+    <div class="wrap bar">
+      <a class="brand" href="/tr/" aria-label="Kriko ana sayfası"><picture><source srcset="../../assets/kriko-wordmark-white.svg" media="(prefers-color-scheme: dark)"><img src="../../assets/kriko-wordmark.svg" alt="Kriko" width="96" height="32"></picture></a>
+      <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="main-nav">Menü</button>
+      <nav class="main-nav" id="main-nav" aria-label="Ana gezinme">
+        <a href="/tr/#how">Nasıl çalışır</a>
+        <a href="/tr/#app">Uygulama</a>
+        <a href="/tr/#examples">Örnekler</a>
+        <a href="/tr/guide/" aria-current="page">Rehber</a>
+        <a href="/tr/#get">Kurulum</a>
+        <a href="/tr/#data">Sorular</a>
+        <span class="language-switch" role="group" aria-label="Dil"><a href="/guide/" lang="en" hreflang="en">EN</a><a href="/tr/guide/" lang="tr" hreflang="tr" aria-current="page">TR</a></span>
+        <a class="button small" href="/tr/#get">Kriko'yu indir</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="hero guide-hero" id="top">
+      <div class="wrap">
+        <p class="label">Rehber</p>
+        <h1>Kriko, <span>adım adım.</span></h1>
+        <p class="lead">Her bölüm gerçek uygulamada, kurgusal bir ürünle filme alındı; gördüğün, kullandığındır. Burada hiçbir şey için hesap gerekmez.</p>
+        <p class="fine">Henüz kurmadın mı? <a href="/tr/#get">Ana sayfadaki dört adım</a> seni başlatır.</p>
+        <nav class="toc" aria-label="Bu sayfada">
+          <ol>
+            <li><a href="#check">İlanı kontrol et</a></li>
+            <li><a href="#research">Yeni bir ürünü araştır</a></li>
+            <li><a href="#saved">Bir kontrolü yeniden bul</a></li>
+            <li><a href="#compare">Karşılaştır</a></li>
+            <li><a href="#doubt">Ne kadar şüphe görmek istersin</a></li>
+            <li><a href="#current">Güncel tut</a></li>
+            <li><a href="#yours">Verilerin ve anahtarların</a></li>
+          </ol>
+        </nav>
+      </div>
+    </section>
+
+    <div class="wrap guide-list">
+      <section class="guide-step" id="check">
+        <div class="guide-copy">
+          <p class="label"><span class="index">01</span>İlanı kontrol et</p>
+          <h2>Bir ürün sayfası aç.</h2>
+          <p>Herhangi bir mağazada ya da pazar yerinde <span class="keys"><kbd>Alt</kbd> + <kbd>K</kbd></span> tuşlarına ya da araç çubuğu düğmesine bas. Kriko'nun paneli sayfanın yanında açılır ve tam o ürün için bilinen sorunları listeler.</p>
+          <ul>
+            <li>En üst satır bilinenleri sayar: ciddi (serious), kontrol edilecek (to check) ve küçük (minor).</li>
+            <li>Her bulgu ne kadar desteklendiğini söyler: Solid (sağlam), Partial (kısmi) ya da Thin (zayıf).</li>
+            <li>Bulguyu açıp ne bulunduğunu, kaynağını ve satıcıya yöneltebileceğin bir soru olan <strong>What to ask</strong> (sorulacak) satırını oku.</li>
+          </ul>
+          <p class="note">Bulgu olmaması, bir sorun olmadığının kanıtı değildir. Yalnızca henüz kaynaklı bir şey bilinmediği anlamına gelir.</p>
+        </div>
+        <figure class="demo" data-demo="İlanı kontrol et">
+          <picture><source media="(prefers-reduced-motion: reduce)" srcset="../../assets/guide/check-a-listing-poster.webp"><img src="../../assets/guide/check-a-listing.gif" width="600" height="632" loading="lazy" alt="Kurgusal bir elektrikli bisiklet için bir mağaza sayfası. Kriko'nun paneli yanında kayarak açılır ve dört bulguyu listeler. Bir imleç ilkini açar; açılan bulgu ne bulunduğunu, kaynağını ve satıcıya sorulacak bir soruyu gösterir."></picture>
+          <figcaption>Panel ilanın yanında açılır ve bir bulgu kaynağını göstermek için açılır. Ürün kurgusaldır.</figcaption>
+        </figure>
+      </section>
+
+      <section class="guide-step tall" id="research">
+        <div class="guide-copy">
+          <p class="label"><span class="index">02</span>Yeni bir ürünü araştır</p>
+          <h2>Kriko'nun tanımadığı bir ürünü sor.</h2>
+          <p>Hiçbir katalog ürünü kapsamıyorsa panel <q>Not in your catalogs yet</q> (henüz kataloglarında yok) der ve <strong>Research this product</strong> (bu ürünü araştır) düğmesini sunar. Okumayı yapacak Quick Look aracısını seç, ilan bir şeyi atlıyorsa bağlam ekle ve başlat.</p>
+          <ul>
+            <li>Kriko tam o ürünle ilgili sayfaları okur ve bulduklarını gösterir; her bulgu, alıntıladığı sözlerle ve nereden alıntıladığıyla birlikte gelir.</li>
+            <li>Yerel bir aracı ücretsizdir ve bu bilgisayarda çalışır. Çevrimiçi bir aracıya sorun ve okuduğu sayfalar gönderilir; ücretli bir hizmetse ücret kendi hesabına yansır.</li>
+            <li>Biten bir hızlı bakış bilgisayarında saklanır, geri geldiğinde orada olur.</li>
+          </ul>
+        </div>
+        <figure class="demo tall" data-demo="Yeni bir ürünü araştır">
+          <picture><source media="(prefers-reduced-motion: reduce)" srcset="../../assets/guide/quick-look-poster.webp"><img src="../../assets/guide/quick-look.gif" width="432" height="800" loading="lazy" alt="Kurgusal bir hava fritözü sayfasında Kriko'nun paneli. Ürünün henüz kataloglarında olmadığını söyler. Bir imleç Research this product düğmesine basar, sonra araştırmayı başlatır ve her biri kaynağından bir alıntı taşıyan üç bulgu belirir."></picture>
+          <figcaption>Hiçbir katalogda olmayan bir ürün, panelden araştırılıyor. Ürün kurgusaldır.</figcaption>
+        </figure>
+      </section>
+
+      <section class="guide-step" id="saved">
+        <div class="guide-copy">
+          <p class="label"><span class="index">03</span>Bir kontrolü yeniden bul</p>
+          <h2>Kontrollerin saklanır.</h2>
+          <p>Her kontrol bilgisayarında saklanır. Uygulamayı aç; son kontrolların başlangıç ekranında durur. Birini açıp tüm bulgularını gör, sonra her kaynağı ve alıntısını okumak için <strong>Evidence</strong> (kanıt) bölümünü aç.</p>
+          <ul>
+            <li>Bulguların altından ürün hakkında soru sor ya da güncel fiyat ve stok durumu için tam o ürünü yeniden araştırmak üzere <strong>Ask for fresh evidence</strong> (güncel kanıt iste) düğmesini seç.</li>
+          </ul>
+        </div>
+        <figure class="demo" data-demo="Bir kontrolü yeniden bul">
+          <picture><source media="(prefers-reduced-motion: reduce)" srcset="../../assets/guide/saved-check-poster.webp"><img src="../../assets/guide/saved-check.gif" width="720" height="464" loading="lazy" alt="Kriko masaüstü uygulaması. Bir imleç kurgusal bir elektrikli bisiklet için kayıtlı bir kontrolü açar, sonra ilk bulgusunun arkasındaki kanıtı açar; kanıt üç kaynak listeler."></picture>
+          <figcaption>Kayıtlı bir kontrol ve bir bulgunun arkasındaki kanıt. Ürün kurgusaldır.</figcaption>
+        </figure>
+      </section>
+
+      <section class="guide-step" id="compare">
+        <div class="guide-copy">
+          <p class="label"><span class="index">04</span>Karşılaştır</p>
+          <h2>Arada kaldıklarını yan yana diz.</h2>
+          <p>Her üründe panelde <strong>Add to compare</strong> (karşılaştırmaya ekle) düğmesine bas, sonra uygulamada <strong>Compare</strong> ekranını aç. Her ürün bir sütundur. Birden fazla üründe görünen bir bulgu bunu belirtir, örneğin <q>Also in 1 of 2 others</q> (diğer 2 üründen 1'inde de var).</p>
+          <ul>
+            <li>Ürünlerin ortak yanlarını gizlemek için <strong>Differences only</strong> (yalnızca farklar) anahtarını aç.</li>
+            <li><strong>Rank these for me</strong> (bunları benim için sırala), aracından riskleri, fiyat geçmişini, satıcıyı ve Kriko'ya ihtiyacın olarak söylediklerini tartıp birini seçmesini ister.</li>
+            <li>Önce her sütunun kapsamına bak: eksik bir bulgu, sorun olmadığı değil, hiçbir şeyin bilinmediği anlamına gelebilir.</li>
+          </ul>
+        </div>
+        <figure class="demo" data-demo="Karşılaştır">
+          <picture><source media="(prefers-reduced-motion: reduce)" srcset="../../assets/guide/compare-poster.webp"><img src="../../assets/guide/compare.gif" width="720" height="464" loading="lazy" alt="Kriko masaüstü uygulamasında Compare ekranı; yan yana üç kurgusal elektrikli bisiklet. Bir imleç Differences only anahtarını açar, ortak bulgular kaybolur, sonra anahtarı yeniden kapatır."></picture>
+          <figcaption>Yan yana üç kurgusal elektrikli bisiklet; <q>Differences only</q> açılıp kapatılıyor.</figcaption>
+        </figure>
+      </section>
+
+      <section class="guide-step" id="doubt">
+        <div class="guide-copy">
+          <p class="label"><span class="index">05</span>Ne kadar şüphe görmek istersin</p>
+          <h2>Ne kadar şüphe göreceğini seç.</h2>
+          <p>Bazı bulguların dayanağı azdır: yalnızca tek bir site söylüyordur, en iyi kaynağı düşük güvenlidir, alıntısı sayfasıyla yalnızca kısmen eşleşir ya da ilanın belirtmediği bir ayrıntıya bağlıdır. Kriko bunları <strong>Thin</strong> (zayıf) diye işaretler.</p>
+          <p><strong>Settings</strong> (ayarlar) bölümünü aç ve <strong>Information sensitivity</strong> altında <strong>Show everything</strong>, <strong>Hide thin</strong> ya da <strong>Strict</strong> seçeneklerinden birini seç. Gizlenen bulgular sayılır ve onları göstermek için bir düğme bulunur. Bu, nelerin çizildiğini değiştirir, nelerin saklandığını asla.</p>
+        </div>
+        <figure class="demo" data-demo="Ne kadar şüphe görmek istersin">
+          <picture><source media="(prefers-reduced-motion: reduce)" srcset="../../assets/guide/doubt-poster.webp"><img src="../../assets/guide/doubt.gif" width="720" height="464" loading="lazy" alt="Üç bulgusu olan kurgusal bir elektrikli bisiklet kontrolü; biri Thin işaretli. Bir imleç Settings'i açar ve Hide thin'i seçer. Kontrole dönünce zayıf bulgu gitmiştir ve bir satır, bir zayıf bulgunun gizlendiğini söyler; onu göstermek için bir düğme vardır."></picture>
+          <figcaption><q>Hide thin</q> seçilince bir bulgu gizlenir ve sayılır. Ürün kurgusaldır.</figcaption>
+        </figure>
+      </section>
+
+      <section class="guide-step plain" id="current">
+        <div class="guide-copy">
+          <p class="label"><span class="index">06</span>Güncel tut</p>
+          <h2>Kataloglar ve uygulama, güncel.</h2>
+          <p>Kurduğun kataloglar kendilerini yaklaşık haftada bir günceller. Daha fazlasını eklemek için <strong>More</strong>, ardından <strong>Catalogs</strong> bölümünü aç ve <strong>Find release catalogs</strong> seçeneğini seç. Windows'ta uygulamanın yeni bir sürümü çıktığında pencerenin köşesinde bir bildirim belirir; ne zaman kuracağına sen karar verirsin.</p>
+          <p>Pencereyi kapatmak Kriko'yu durdurmaz, çünkü tarayıcı eklentisinin ona ihtiyacı vardır. Durdurmak için sistem tepsisindeki simgesinden <strong>Quit</strong> seçeneğini seç.</p>
+        </div>
+      </section>
+
+      <section class="guide-step plain" id="yours">
+        <div class="guide-copy">
+          <p class="label"><span class="index">07</span>Verilerin ve anahtarların</p>
+          <h2>Sende kalır.</h2>
+          <p>Kontrollerin, geçmişin, kısa listen ve ayarların bilgisayarında durur. Eklediğin anahtarlar da orada kalır. <strong>More</strong>, ardından <strong>Backup and restore</strong>, işinin bir kopyasını kaydeder; anahtar dosyaları bunun dışında bırakılır.</p>
+          <p>Çevrimiçi araştırma bilgisayarından çıkan tek şeydir ve yalnızca seçtiğin sağlayıcıya gider. <a href="/privacy/">Gizlilik politikası</a> her durumu kapsar.</p>
+        </div>
+      </section>
+    </div>
+
+    <section class="section soft guide-end">
+      <div class="wrap narrow">
+        <h2>Takıldın mı, ya da bir şey mi eksik?</h2>
+        <p class="section-lead">GitHub'da bir konu aç ve işler ters giderken ne yaptığını yaz.</p>
+        <div class="actions">
+          <a class="button" href="/tr/#get"><svg class="icon" aria-hidden="true"><use href="#i-download"></use></svg><span>Kriko'yu kur</span></a>
+          <a class="button ghost" href="https://github.com/Berbadov/kriko/issues"><svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg><span>Yardım ve geri bildirim</span></a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap footer-grid">
+      <div>
+        <a class="brand" href="/tr/" aria-label="Kriko ana sayfası"><picture><source srcset="../../assets/kriko-wordmark-white.svg" media="(prefers-color-scheme: dark)"><img src="../../assets/kriko-wordmark.svg" alt="Kriko" width="96" height="32"></picture></a>
+        <p>Biraz araştırma büyük fark yaratır.</p>
+      </div>
+      <nav aria-label="Alt bilgi">
+        <a href="https://github.com/Berbadov/kriko"><span>GitHub</span><svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg></a>
+        <a href="https://github.com/Berbadov/kriko/releases"><span>Sürümler</span><svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg></a>
+        <a href="https://github.com/Berbadov/kriko/issues"><span>Yardım ve geri bildirim</span><svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg></a>
+        <a href="/privacy/">Gizlilik</a>
+        <a href="https://github.com/Berbadov/kriko/blob/main/LICENSE">MIT lisansı</a>
+      </nav>
+    </div>
+  </footer>
+
+
+</body></html>
