@@ -11,6 +11,7 @@ import * as Clipboard from 'expo-clipboard';
 import { useState } from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
 
+import { motion } from '../theme/motion';
 import type { Colors } from '../theme/palettes';
 import { gap, radius } from '../theme/tokens';
 import { makeStyles, useColors } from '../theme/theme';
@@ -30,6 +31,7 @@ import { Markdown } from './Markdown';
 import { AnimatedDisclosure, DisclosureChevron } from './AnimatedDisclosure';
 import { ActivityDots, MotionPressable, MotionView } from './Motion';
 import { ProductCard } from './ProductCard';
+import { useSmoothText } from './useSmoothText';
 
 function clock(at: number): string {
   const date = new Date(at);
@@ -49,7 +51,7 @@ export function StepLine({ step }: { step: Step }) {
   const color = useColors();
   const styles = useStyles();
   return (
-    <MotionView style={styles.stepRow}>
+    <MotionView duration={motion.duration.standard} rise={6} style={styles.stepRow}>
       <View style={styles.stepIcon}>{stepIcon(step, color)}</View>
       <Txt
         variant="bodyTight"
@@ -311,6 +313,9 @@ export function MessageRow({
 }) {
   const color = useColors();
   const styles = useStyles();
+  const running = Boolean(message.pending);
+  // The answer is drawn at a steady pace, not in the chunks the network sent.
+  const drawn = useSmoothText(message.role === 'assistant' ? message.text : '', running);
   if (message.role === 'user') {
     return (
       <MotionView style={styles.userStage}>
@@ -319,8 +324,9 @@ export function MessageRow({
     );
   }
 
-  const running = Boolean(message.pending);
   const hasText = message.text.trim().length > 0;
+  // What belongs under the answer waits until the answer has finished drawing.
+  const done = drawn.settled;
 
   return (
     <MotionView delay={40} style={styles.agentStage}>
@@ -338,8 +344,8 @@ export function MessageRow({
 
       {hasText ? (
         <MotionView delay={70} style={styles.answer}>
-          <Markdown text={message.text} />
-          {!running ? (
+          <Markdown text={drawn.text} streaming={!done} />
+          {done ? (
             <View style={styles.answerFoot}>
               {message.stopped ? (
                 <Txt variant="monoSm" tone="ink4" caps>
@@ -362,7 +368,7 @@ export function MessageRow({
         </Txt>
       ) : null}
 
-      {!running && message.steps?.length ? <Research steps={message.steps} /> : null}
+      {done && message.steps?.length ? <Research steps={message.steps} /> : null}
 
       {message.error ? (
         <MotionView delay={100} style={styles.errorCard}>
@@ -373,7 +379,7 @@ export function MessageRow({
         </MotionView>
       ) : null}
 
-      {!running ? (
+      {done ? (
         <Sources
           sources={message.sources ?? []}
           unverified={message.unverified}
@@ -381,7 +387,7 @@ export function MessageRow({
         />
       ) : null}
 
-      {!running && message.actions?.length ? (
+      {done && message.actions?.length ? (
         <Actions actions={message.actions} onAction={onAction} />
       ) : null}
       </View>

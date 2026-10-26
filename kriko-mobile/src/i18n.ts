@@ -76,6 +76,10 @@ export function upper(text: string, lang: Language = current): string {
  * renders through `Txt`; names, URLs, prices and key shapes are left alone.
  */
 export const translations: Record<string, string> = {
+  /* -------------------------------------------------- chat scroll rail -- */
+  'Scroll the conversation': 'Sohbeti kaydır',
+  'Scroll down': 'Aşağı kaydır',
+  'Scroll up': 'Yukarı kaydır',
 
 
   /* ------------------------------------------------ agent settings -- */
@@ -563,8 +567,11 @@ export const translations: Record<string, string> = {
   Error: 'Hata',
   Cancelled: 'İptal edildi',
   'Queue is full': 'Sıra dolu',
-  'Drag Kriko, or tap it to open the scan panel':
-    'Kriko’yu sürükle veya tarama panelini açmak için dokun',
+  'Tap Kriko to scan this page. Press and hold for more.':
+    'Bu sayfayı taramak için Kriko’ya dokun. Daha fazlası için basılı tut.',
+  'Drop here to stop sharing': 'Paylaşımı durdurmak için buraya bırak',
+  'Kriko keeps reading. The answer will be in History.':
+    'Kriko okumaya devam ediyor. Yanıt Geçmiş’te olacak.',
   'Kriko screen scan is active': 'Kriko ekran taraması açık',
   'Tap the floating K to scan one screen when you choose.':
     'İstediğinde tek bir ekranı taramak için yüzen K’ye dokun.',
@@ -587,10 +594,10 @@ export const translations: Record<string, string> = {
   'Scan products while you browse.': 'Gezinirken ürünleri tara.',
   'Allow Kriko over other apps.': 'Kriko’nun diğer uygulamaların üzerinde görünmesine izin ver.',
   'Approve Android’s screen sharing prompt.': 'Android’in ekran paylaşımı isteğini onayla.',
-  'Open the page you want, then tap the K and Scan this page.':
-    'İstediğin sayfayı aç, sonra K’ye dokun ve Bu sayfayı tara’ya bas.',
-  'Only screens you scan are sent for reading. Stop from the K’s tray or the Android notification.':
-    'Yalnızca taradığın ekranlar okunmak üzere gönderilir. K’nin menüsünden ya da Android bildiriminden durdur.',
+  'Open the page you want, then tap the K to scan it. Press and hold for more.':
+    'İstediğin sayfayı aç, sonra taramak için K’ye dokun. Daha fazlası için basılı tut.',
+  'Only screens you scan are sent for reading. Stop by dropping the K on the ×, from its menu, or from the Android notification.':
+    'Yalnızca taradığın ekranlar okunmak üzere gönderilir. K’yi ×’in üzerine bırakarak, menüsünden ya da Android bildiriminden durdur.',
   'Scan this page': 'Bu sayfayı tara',
   'Scan again': 'Yeniden tara',
   'Results': 'Sonuçlar',
@@ -684,8 +691,17 @@ export const translations: Record<string, string> = {
     'Kriko ekranını göremedi. Telefonunun asistan ayarlarında “Ekran görüntüsünü kullan” seçeneğini aç.',
   'Floating scanner': 'Yüzen tarayıcı',
   Transparency: 'Saydamlık',
-  'How solid the floating K is while it waits. A touch, a scan or an answer brings it to full strength.':
-    'Yüzen K beklerken ne kadar belirgin olsun. Dokunuş, tarama veya yanıt onu tam belirginliğe getirir.',
+  'How see-through the floating K and its glass panels are. Faint shows the most of your page; Solid shows none.':
+    'Yüzen K ve cam panellerin ne kadar şeffaf olacağı. Silik sayfanı en çok gösterir; Tam hiç göstermez.',
+  'Answer over your page': 'Yanıt sayfanın üstünde',
+  'The answer opens over the page you scanned, so you never leave it.':
+    'Yanıt taradığın sayfanın üstünde açılır, o sayfadan hiç çıkmazsın.',
+  'Allow Kriko over other apps and the answer opens over the page you scanned, instead of taking you into Kriko.':
+    'Kriko’nun diğer uygulamaların üzerinde görünmesine izin ver; yanıt seni Kriko’ya götürmek yerine taradığın sayfanın üstünde açılır.',
+  Allowed: 'İzinli',
+  Off: 'Kapalı',
+  'Over-other-apps settings': 'Üstte gösterme ayarları',
+  'Allow over other apps': 'Diğer uygulamaların üzerinde göster',
   Faint: 'Silik',
   Soft: 'Yumuşak',
   Strong: 'Güçlü',
