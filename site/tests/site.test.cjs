@@ -11,7 +11,11 @@ const PAGES = [
   { file: 'index.html', url: 'https://kriko.cc/', lang: 'en' },
   { file: 'tr/index.html', url: 'https://kriko.cc/tr/', lang: 'tr' },
   { file: 'privacy/index.html', url: 'https://kriko.cc/privacy/', lang: 'en' },
+  { file: 'guide/index.html', url: 'https://kriko.cc/guide/', lang: 'en' },
+  { file: 'tr/guide/index.html', url: 'https://kriko.cc/tr/guide/', lang: 'tr' },
 ];
+const HOME = PAGES.slice(0, 2);
+const GUIDE = PAGES.slice(3, 5);
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const load = (page) => new JSDOM(read(page.file), { url: page.url }).window.document;
 const css = read('styles.css');
@@ -28,13 +32,43 @@ test('every page declares its language, one heading, a description and its own a
 });
 
 test('the English and Turkish pages point at each other and the language switch marks the current one', () => {
-  for (const page of PAGES.slice(0, 2)) {
+  for (const page of HOME) {
     const d = load(page);
     const alternates = Object.fromEntries([...d.querySelectorAll('link[rel="alternate"]')].map((l) => [l.hreflang, l.href]));
     assert.equal(alternates.en, 'https://kriko.cc/');
     assert.equal(alternates.tr, 'https://kriko.cc/tr/');
     assert.equal(alternates['x-default'], 'https://kriko.cc/');
     assert.equal(d.querySelector('.language-switch [aria-current="page"]').lang, page.lang);
+  }
+});
+
+test('the guide in English and Turkish points at each other, and its language switch stays on the guide', () => {
+  for (const page of GUIDE) {
+    const d = load(page);
+    const alternates = Object.fromEntries([...d.querySelectorAll('link[rel="alternate"]')].map((l) => [l.hreflang, l.href]));
+    assert.equal(alternates.en, 'https://kriko.cc/guide/');
+    assert.equal(alternates.tr, 'https://kriko.cc/tr/guide/');
+    assert.equal(alternates['x-default'], 'https://kriko.cc/guide/');
+    assert.equal(d.querySelector('.language-switch [aria-current="page"]').lang, page.lang);
+    assert.deepEqual([...d.querySelectorAll('.language-switch a')].map((a) => a.getAttribute('href')), ['/guide/', '/tr/guide/']);
+  }
+});
+
+test('a link to this site stays in the reader\'s language, and leads to a page and a place that exist', () => {
+  const ids = {};
+  const idsOf = (file) => (ids[file] ||= new Set([...load({ file, url: 'https://kriko.cc/' }).querySelectorAll('[id]')].map((el) => el.id)));
+  for (const page of PAGES) {
+    const d = load(page);
+    for (const a of d.querySelectorAll('a[href^="/"]')) {
+      const href = a.getAttribute('href');
+      const [pathname, fragment] = href.split('#');
+      const target = pathname === '/' ? 'index.html' : `${pathname.replace(/^\//, '')}index.html`;
+      assert.ok(fs.existsSync(path.join(root, target)), `${page.file} links to ${href}, which has no page`);
+      if (fragment) assert.ok(idsOf(target).has(fragment), `${page.file} links to ${href}, which names no such place`);
+      if (page.lang === 'tr' && !a.closest('.language-switch') && !pathname.startsWith('/privacy/')) {
+        assert.ok(pathname.startsWith('/tr/'), `${page.file} sends a Turkish reader to ${href}`);
+      }
+    }
   }
 });
 
@@ -54,7 +88,7 @@ test('every local file a page names exists, and nothing is loaded from another s
 
 test('the download button hands over the installer file, and GitHub is its own link', () => {
   const INSTALLER = /^https:\/\/github\.com\/Berbadov\/kriko\/releases\/latest\/download\/kriko-\d+\.\d+\.\d+-x86_64-setup\.exe$/;
-  for (const page of PAGES.slice(0, 2)) {
+  for (const page of HOME) {
     const d = load(page);
     const downloads = [...d.querySelectorAll('a[href$="-setup.exe"]')];
     assert.equal(downloads.length, 2, `${page.file} offers the installer from the hero and from the install section`);
@@ -172,7 +206,7 @@ test('the menu opens and closes on a narrow screen, and the pages work without i
 
 test('the privacy policy runs no script and both home pages link to it', () => {
   assert.equal(load(PAGES[2]).querySelectorAll('script').length, 0);
-  for (const page of PAGES.slice(0, 2)) {
+  for (const page of [...HOME, ...GUIDE]) {
     assert.ok(load(page).querySelector('footer a[href="/privacy/"]'), `${page.file} has no link to the privacy policy`);
   }
 });
@@ -182,9 +216,73 @@ test('every invented product has its pictures in both themes, and the pages say 
   for (const key of Object.keys(examples)) {
     for (const theme of ['light', 'dark']) assert.ok(fs.existsSync(path.join(root, `assets/examples/${key}-${theme}.webp`)), `${key}-${theme}`);
   }
-  for (const page of PAGES.slice(0, 2)) {
+  for (const page of HOME) {
     const d = load(page);
     assert.ok(d.querySelector('#examples .section-lead').textContent.length > 60, page.file);
     assert.ok(d.querySelector('.stage figcaption'), `${page.file}: the first picture says nothing about being an example`);
   }
+});
+
+test('every film in the guide has a still, a size small enough to load, and a caption', () => {
+  for (const page of GUIDE) {
+    const d = load(page);
+    const dir = path.dirname(path.join(root, page.file));
+    const demos = [...d.querySelectorAll('[data-demo]')];
+    assert.ok(demos.length >= 5, `${page.file} films too little of the app`);
+    for (const demo of demos) {
+      const name = demo.dataset.demo;
+      const image = demo.querySelector('picture img');
+      const still = demo.querySelector('picture source[media*="prefers-reduced-motion"]');
+      assert.ok(image && /\.gif$/.test(image.getAttribute('src')), `${page.file}: ${name} is not a GIF`);
+      assert.ok(image.getAttribute('alt').length > 60, `${page.file}: ${name} does not describe what happens`);
+      assert.ok(still && fs.existsSync(path.resolve(dir, still.getAttribute('srcset'))), `${page.file}: ${name} has no still for a reader who asked for less motion`);
+      assert.ok(demo.querySelector('figcaption').textContent.length > 20, `${page.file}: ${name} has no caption`);
+      const gif = path.resolve(dir, image.getAttribute('src'));
+      assert.ok(fs.statSync(gif).size < 2.5 * 1024 * 1024, `${page.file}: ${path.basename(gif)} is over 2.5 MB`);
+    }
+    for (const a of d.querySelectorAll('.toc a')) {
+      assert.ok(d.getElementById(a.getAttribute('href').slice(1)), `${page.file}: the contents name ${a.getAttribute('href')}, which is not there`);
+    }
+    assert.ok(!/<script(?![^>]*\bsrc=)/.test(read(page.file)), `${page.file} carries an inline script`);
+  }
+});
+
+test('the pause button swaps the film for its still and back, and starts paused for a reader who asked for less motion', () => {
+  const run = (reduced) => {
+    const dom = new JSDOM(read(GUIDE[0].file), { url: GUIDE[0].url, runScripts: 'outside-only' });
+    if (reduced) dom.window.matchMedia = () => ({ matches: true });
+    dom.window.eval(read('script.js'));
+    return dom.window.document;
+  };
+  const first = (d) => {
+    const demo = d.querySelector('[data-demo]');
+    return { image: demo.querySelector('img'), button: demo.querySelector('.demo-toggle') };
+  };
+
+  let d = run(false);
+  assert.equal(d.querySelectorAll('.demo-toggle').length, d.querySelectorAll('[data-demo]').length);
+  let { image, button } = first(d);
+  const film = image.getAttribute('src');
+  assert.equal(button.textContent, 'Pause');
+  button.click();
+  assert.match(image.getAttribute('src'), /-poster\.webp$/);
+  assert.equal(button.textContent, 'Play');
+  button.click();
+  assert.equal(image.getAttribute('src'), film);
+  assert.equal(button.textContent, 'Pause');
+
+  d = run(true);
+  ({ image, button } = first(d));
+  assert.equal(button.textContent, 'Play', 'a reader who asked for less motion starts paused');
+  button.click();
+  assert.equal(image.getAttribute('src'), film);
+  assert.equal(d.querySelector('[data-demo]').querySelector('picture source'), null, 'playing drops the still, so the film shows');
+});
+
+test('the Turkish guide has its buttons in Turkish', () => {
+  const dom = new JSDOM(read(GUIDE[1].file), { url: GUIDE[1].url, runScripts: 'outside-only' });
+  dom.window.eval(read('script.js'));
+  const button = dom.window.document.querySelector('.demo-toggle');
+  assert.equal(button.textContent, 'Duraklat');
+  assert.match(button.getAttribute('aria-label'), /^Animasyonu duraklat: /);
 });

@@ -32,9 +32,11 @@ from another site.
   written in the English page, including any `<strong>` or `<a>` inside it. A
   sentence is translated whole, never in pieces. The app's own menu names stay
   English in both languages, because the app is English.
+- `guide/index.html`: how to use Kriko, one short film per step. Also a source of
+  a Turkish page; see below.
 - `privacy/index.html`: the privacy policy. English only.
-- `styles.css`, `script.js`: shared by every page. `script.js` only runs the menu
-  on a narrow screen.
+- `styles.css`, `script.js`: shared by every page. `script.js` runs the menu on a
+  narrow screen and puts a pause button on each film in the guide.
 
 After editing the English page, the stylesheet, the script or the translations:
 
@@ -43,9 +45,37 @@ node site/tools/render-locales.cjs
 npm run test:site
 ```
 
-The renderer writes `tr/index.html`, puts a content hash on the stylesheet and
-script of every page, and fails with the list of texts that have no translation.
-A test fails if `tr/index.html` is stale.
+The renderer writes `tr/index.html` and `tr/guide/index.html`, puts a content hash
+on the stylesheet and script of every page, and fails with the list of texts that
+have no translation. A test fails if either Turkish page is stale. To give another
+page a Turkish version, add it to `PAGES` in `render-locales.cjs` and give it an
+`@meta:<name>` entry in `tr.json`. In a Turkish page a link to `/`, `/#place` or
+`/guide/` is sent to the Turkish version, and `/privacy/` stays English.
+
+## The guide
+
+`guide/index.html` walks through using Kriko with a film of each step: check a
+listing, research something new, find a saved check, compare, and choose how much
+doubt to see. The films are GIFs in `assets/guide/`, each with a poster still
+(`<name>-poster.webp`). A film plays by itself and has a Pause button; a reader who
+has asked for less motion gets the still first, through a `<source>` in the
+`<picture>`, so that works without script. Every product in them is invented.
+
+`tools/capture-guide.mjs` records the films with the real apps. A scene is a short
+script of mouse moves and presses; Playwright films the page, with a pointer drawn
+into it because a recording shows no mouse, and ffmpeg cuts the part that matters.
+The extension's panel is the real panel (`tools/panel-harness.mjs`, shared with
+`capture.mjs`) and the desktop window is the real window on a real engine
+(`tools/app-harness.mjs`, shared with `capture-app.mjs`), both on the same invented
+data as the pictures below.
+
+```sh
+npm ci --prefix kriko-ui && npm run build --prefix kriko-ui
+PYTHON=/full/path/to/python PLAYWRIGHT_MODULE=/path/to/playwright/index.mjs FFMPEG=/path/to/ffmpeg node site/tools/capture-guide.mjs
+```
+
+`ONLY=compare,doubt` records some of the scenes. A test keeps each GIF under 2.5 MB;
+a new scene needs its entry in `guide/index.html` and in `locales/tr.json`.
 
 ## Examples
 
