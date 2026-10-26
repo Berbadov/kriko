@@ -1,8 +1,8 @@
-// Builds the Turkish page from the English one and stamps asset versions.
+// Builds the Turkish pages from the English ones and stamps asset versions.
 //
 //   node site/tools/render-locales.cjs
 //
-// `index.html` is the source. `tr/index.html` is generated from it and
+// Each English page in PAGES is a source, and its Turkish page is generated from it and
 // `locales/tr.json`: every unit of text (a paragraph, a heading, a button's
 // label, a list item) is looked up whole, as written in the English page, so a
 // sentence with a bold word in it is translated as one sentence and not in
@@ -16,6 +16,16 @@ const { JSDOM } = require('jsdom');
 
 const root = path.resolve(__dirname, '..');
 const translations = JSON.parse(fs.readFileSync(path.join(root, 'locales/tr.json'), 'utf8'));
+
+// `meta` names the entry of tr.json that holds the page's title, description and share text.
+const PAGES = [
+  { source: 'index.html', output: 'tr/index.html', canonical: 'https://kriko.cc/tr/', meta: '@meta' },
+  { source: 'guide/index.html', output: 'tr/guide/index.html', canonical: 'https://kriko.cc/tr/guide/', meta: '@meta:guide' },
+];
+// Pages with no Turkish version still carry the hashes.
+const STAMPED = [...PAGES.map((page) => page.source), 'privacy/index.html'];
+// A link to one of these goes to the Turkish version of it; /privacy/ is English only.
+const LOCALISED = /^\/(?:guide\/)?(?:#.*)?$/;
 
 const hash = (file) => createHash('sha256').update(fs.readFileSync(path.join(root, file))).digest('hex').slice(0, 12);
 
@@ -32,11 +42,9 @@ function stamp(file) {
   }
   fs.writeFileSync(target, html);
 }
-for (const file of ['index.html', 'privacy/index.html']) if (fs.existsSync(path.join(root, file))) stamp(file);
+for (const file of STAMPED) if (fs.existsSync(path.join(root, file))) stamp(file);
 
 // 2. Turkish.
-const dom = new JSDOM(fs.readFileSync(path.join(root, 'index.html'), 'utf8'));
-const document = dom.window.document;
 const missing = new Set();
 const BLOCKS = 'p,h1,h2,h3,ul,ol,li,div,section,details,figure,nav,header,footer,main,table';
 
@@ -58,46 +66,58 @@ function walk(node) {
     else walk(child);
   }
 }
-walk(document.body);
 
-for (const el of document.querySelectorAll('[alt], [aria-label]')) {
-  for (const attribute of ['alt', 'aria-label']) {
-    const value = el.getAttribute(attribute);
-    if (value === null || value === '' || SAME.test(value)) continue;
-    if (translations[value] === undefined) { missing.add(value); continue; }
-    el.setAttribute(attribute, translations[value]);
+function render({ source, output, canonical, meta: metaKey }) {
+  const dom = new JSDOM(fs.readFileSync(path.join(root, source), 'utf8'));
+  const document = dom.window.document;
+  walk(document.body);
+
+  for (const el of document.querySelectorAll('[alt], [aria-label], [data-demo]')) {
+    for (const attribute of ['alt', 'aria-label', 'data-demo']) {
+      const value = el.getAttribute(attribute);
+      if (value === null || value === '' || SAME.test(value)) continue;
+      if (translations[value] === undefined) { missing.add(value); continue; }
+      el.setAttribute(attribute, translations[value]);
+    }
   }
-}
 
-const meta = translations['@meta'];
-document.documentElement.lang = 'tr';
-document.title = meta.title;
-document.querySelector('meta[name="description"]').content = meta.description;
-document.querySelector('meta[property="og:title"]').content = meta['og:title'];
-document.querySelector('meta[property="og:description"]').content = meta['og:description'];
-document.querySelector('link[rel="canonical"]').href = 'https://kriko.cc/tr/';
-const switchLinks = document.querySelectorAll('.language-switch a');
-for (const a of switchLinks) {
-  if (a.lang === 'tr') a.setAttribute('aria-current', 'page');
-  else a.removeAttribute('aria-current');
-}
-document.querySelector('.brand').setAttribute('href', '/tr/');
-for (const a of document.querySelectorAll('.brand')) a.setAttribute('href', '/tr/');
-
-// Assets are one folder down from /tr/.
-for (const el of document.querySelectorAll('[src], [href], [srcset]')) {
-  for (const attribute of ['src', 'href', 'srcset']) {
-    const value = el.getAttribute(attribute);
-    if (value && /^(assets\/|styles\.css|script\.js)/.test(value)) el.setAttribute(attribute, `../${value}`);
+  const meta = translations[metaKey];
+  if (!meta) { missing.add(metaKey); return; }
+  document.documentElement.lang = 'tr';
+  document.title = meta.title;
+  document.querySelector('meta[name="description"]').content = meta.description;
+  document.querySelector('meta[property="og:title"]').content = meta['og:title'];
+  document.querySelector('meta[property="og:description"]').content = meta['og:description'];
+  document.querySelector('link[rel="canonical"]').href = canonical;
+  for (const a of document.querySelectorAll('.language-switch a')) {
+    if (a.lang === 'tr') a.setAttribute('aria-current', 'page');
+    else a.removeAttribute('aria-current');
   }
+  // The links that stay on this site lead to its Turkish pages. The language switch is how a
+  // reader gets back, so it keeps the English address.
+  for (const a of document.querySelectorAll('a[href]')) {
+    if (a.closest('.language-switch')) continue;
+    const href = a.getAttribute('href');
+    if (LOCALISED.test(href)) a.setAttribute('href', `/tr${href}`);
+  }
+
+  // The Turkish page is one folder deeper than its source, so its relative paths go up one more.
+  for (const el of document.querySelectorAll('[src], [href], [srcset]')) {
+    for (const attribute of ['src', 'href', 'srcset']) {
+      const value = el.getAttribute(attribute);
+      if (value && /^(\.\.\/|assets\/|styles\.css|script\.js)/.test(value)) el.setAttribute(attribute, `../${value}`);
+    }
+  }
+
+  fs.mkdirSync(path.dirname(path.join(root, output)), { recursive: true });
+  fs.writeFileSync(path.join(root, output), dom.serialize());
 }
 
-fs.mkdirSync(path.join(root, 'tr'), { recursive: true });
-fs.writeFileSync(path.join(root, 'tr/index.html'), dom.serialize());
+for (const page of PAGES) render(page);
 
 if (missing.size) {
   console.error(`${missing.size} text(s) have no Turkish translation in locales/tr.json:`);
   for (const key of missing) console.error(`  ${JSON.stringify(key)}`);
   process.exit(1);
 }
-console.log('Rendered the Turkish page. All text translated.');
+console.log(`Rendered ${PAGES.length} Turkish pages. All text translated.`);
