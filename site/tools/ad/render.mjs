@@ -1,12 +1,14 @@
 // Renders the advertisement: every frame is a pure function of time (scenes.js),
-// photographed in a browser and piped to ffmpeg. Silent, 1920x1080, 30 fps.
+// photographed in a browser and piped to ffmpeg. 1920x1080, 30 fps, without sound
+// (score.py makes the sound, and the README says how the two are joined).
 //
 //   PLAYWRIGHT_MODULE=/path/to/playwright/index.mjs node site/tools/ad/render.mjs stills 1.5,6,12
 //   PLAYWRIGHT_MODULE=/path/to/playwright/index.mjs node site/tools/ad/render.mjs video
 //
 // `stills` writes one picture per time, to look at while editing; `video` writes
 // out/kriko-ad.mp4 (or the path given). Output stays out of git. Environment:
-// PLAYWRIGHT_MODULE (required unless playwright resolves), FFMPEG (default `ffmpeg`).
+// PLAYWRIGHT_MODULE (required unless playwright resolves), FFMPEG (default `ffmpeg`),
+// FPS (default 30; a lower number draws a quick draft).
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -54,7 +56,7 @@ try {
     }
   } else if (mode === 'video') {
     const outFile = path.resolve(arg || path.join(outDir, 'kriko-ad.mp4'));
-    const fps = 30;
+    const fps = Number(process.env.FPS || 30);
     const frames = Math.round((await page.evaluate(() => window.DURATION)) * fps);
     const encoder = spawn(ffmpeg, ['-y', '-f', 'image2pipe', '-framerate', String(fps), '-c:v', 'png', '-i', '-', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '14', '-preset', 'slow', '-movflags', '+faststart', outFile], { stdio: ['pipe', 'ignore', 'pipe'] });
     let log = '';

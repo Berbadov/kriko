@@ -105,22 +105,32 @@ draws one picture.
 
 ## The advertisement
 
-`tools/ad/` draws a 40-second silent advertisement, 1920x1080 at 30 fps, from
-the same invented e-bike and the pictures above. Nothing in it is a recording:
-`tools/ad/index.html` is one stage, `tools/ad/scenes.js` sets every element as a
-function of time (`render(t)`), and `tools/ad/render.mjs` photographs each frame
-in a browser and pipes the frames to ffmpeg. The same time always gives the
-same frame, so a change is checked by drawing a few stills before the render.
+`tools/ad/` draws a 28.5-second advertisement, 1920x1080 at 30 fps, with a
+soundtrack, from the same invented e-bike and the pictures above. It is loud on
+purpose: thick outlines, a dithered field that moves, a camera that punches on the
+beat, 120 BPM. Nothing in it is a recording: `tools/ad/index.html` is one stage,
+`tools/ad/scenes.js` sets every element as a function of time (`render(t)`), and
+`tools/ad/render.mjs` photographs each frame in a browser and pipes the frames to
+ffmpeg. The same time always gives the same frame, so a change is checked by
+drawing a few stills before the render.
 
 ```sh
 PLAYWRIGHT_MODULE=/path/to/playwright/index.mjs node site/tools/ad/render.mjs stills 2.6,13,24.8
 python3 site/tools/ad/sheet.py site/tools/ad/out/sheet.png 2.6 13 24.8   # from site/tools/ad
-PLAYWRIGHT_MODULE=/path/to/playwright/index.mjs FFMPEG=/path/to/ffmpeg node site/tools/ad/render.mjs video
+PLAYWRIGHT_MODULE=/path/to/playwright/index.mjs FFMPEG=/path/to/ffmpeg node site/tools/ad/render.mjs video out/kriko-ad-silent.mp4
+python3 -I site/tools/ad/score.py                                         # out/kriko-ad.wav
+ffmpeg -i out/kriko-ad-silent.mp4 -i out/kriko-ad.wav -c:v copy -c:a aac -b:a 192k -af alimiter=limit=0.89 -shortest out/kriko-ad.mp4
+ffmpeg -i out/kriko-ad.mp4 -c:v libx264 -crf 22 -preset slow -c:a copy -movflags +faststart out/kriko-ad-web.mp4
 ```
 
-The text on screen is the sound-off script, and the three promises are the
-page's own lines word for word. `out/` (stills and the video) is not committed.
-The ad says in its corner that the products and findings are invented.
+`score.py` makes the sound from sine, saw and noise (numpy and scipy), so there is
+nothing to license, and it lands its hits on the same times `scenes.js` lands the
+pictures. Change one file and change the other. The last command makes the copy for
+a page or a social post (about 26 MB); the first is 54 MB.
+
+The text on screen is the sound-off script, and the three promises are the page's
+own lines word for word. `out/` (stills and the videos) is not committed. The ad
+says in its corner that the products and findings are invented.
 
 ## Readability
 
