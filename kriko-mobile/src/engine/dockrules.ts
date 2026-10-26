@@ -13,6 +13,14 @@ export const DOCK_SHOW_AFTER = 10;
 export const DOCK_TOP_EDGE = 12;
 /** A page that scrolls less than this never hides it. */
 export const DOCK_MIN_SCROLL = 120;
+/**
+ * Once the bars are gone the page is taller by their height, so the same page
+ * scrolls that much less. Counted against `DOCK_MIN_SCROLL` it would call the
+ * page too short and bring them straight back; this is the smaller figure that
+ * applies while they are away. The two bars together give back under
+ * `DOCK_MIN_SCROLL - DOCK_KEEP_SCROLL` (104) pixels.
+ */
+export const DOCK_KEEP_SCROLL = 16;
 /** A toggle holds this long: the bar is still moving and the page resizes under it. */
 export const DOCK_SETTLE_MS = 320;
 /** One event this far apart is a jump the app made, not a finger. */
@@ -54,7 +62,7 @@ export function nextDock(state: DockState, metrics: DockMetrics, now: number, us
   const offset = Math.min(Math.max(metrics.offset, 0), range);
   const rebased: DockState = { ...state, viewport: metrics.viewport, anchor: offset, last: offset, direction: 0 };
 
-  if (range < DOCK_MIN_SCROLL) return { ...rebased, hidden: false };
+  if (range < (state.hidden ? DOCK_KEEP_SCROLL : DOCK_MIN_SCROLL)) return { ...rebased, hidden: false };
   // Hiding the bar makes the list taller, which moves the offset by itself.
   // Treating that as a scroll would show the bar again, and so on forever.
   if (Math.abs(metrics.viewport - state.viewport) > 1) return rebased;

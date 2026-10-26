@@ -10,7 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStore } from '../engine/store';
 import { tr } from '../i18n';
 import { motion } from '../theme/motion';
-import { HEADER_H, PAGE_X, radius } from '../theme/tokens';
+import { HEADER_H, PAGE_X, radius, TITLE_BAR_H } from '../theme/tokens';
 import { makeStyles, useColors } from '../theme/theme';
 import { Txt } from '../theme/Txt';
 import { useDock } from './dock';
@@ -26,20 +26,35 @@ export function HeaderAction({ onPress, children, label }: {
     style={styles.action}>{children}</MotionPressable>;
 }
 
-export function AppHeader({ actions }: { actions?: ReactNode; transparent?: boolean }) {
+/**
+ * The top bar. With a `title` (an open conversation) it is one slim row that
+ * names the thread; without, the brand. It leaves with the bottom bar while the
+ * reader moves down through text and returns with it; the status bar's own
+ * height stays, so nothing slides under the clock.
+ */
+export function AppHeader({ actions, title }: { actions?: ReactNode; title?: string; transparent?: boolean }) {
   const insets = useSafeAreaInsets();
+  const dock = useDock();
   const color = useColors();
   const styles = useStyles();
-  return <View style={[styles.bar, { paddingTop: insets.top }]}>
-    <View style={styles.barInner}>
-      <View style={styles.brand}>
-        <Wordmark height={18} tint={color.ink} />
-        <View style={styles.brandRule} />
-        <Txt variant="monoSm" tone="ink3">a closer look</Txt>
+  const full = title !== undefined ? TITLE_BAR_H : HEADER_H;
+  return <Animated.View style={[styles.bar, {
+    height: dock.progress.interpolate({ inputRange: [0, 1], outputRange: [insets.top, insets.top + full] }),
+    opacity: dock.progress,
+  }]}>
+    <View style={{ paddingTop: insets.top }}>
+      <View style={[styles.barInner, { height: full }]}>
+        {title !== undefined
+          ? <Txt variant="rowTitle" tone="ink" numberOfLines={1} style={styles.barTitle}>{title}</Txt>
+          : <View style={styles.brand}>
+            <Wordmark height={18} tint={color.ink} />
+            <View style={styles.brandRule} />
+            <Txt variant="monoSm" tone="ink3">a closer look</Txt>
+          </View>}
+        {actions ? <View style={styles.actions}>{actions}</View> : null}
       </View>
-      {actions ? <View style={styles.actions}>{actions}</View> : null}
     </View>
-  </View>;
+  </Animated.View>;
 }
 
 /** Kept for older callers; the paper redesign has no decorative hero image. */
@@ -203,8 +218,9 @@ export function FooterSurface({ children, style }: { children: ReactNode; style?
 
 const useStyles = makeStyles((color) => StyleSheet.create({
   page: { flex: 1, backgroundColor: color.ground }, flex: { flex: 1 },
-  bar: { backgroundColor: color.ground, zIndex: 2 },
-  barInner: { height: HEADER_H, paddingHorizontal: PAGE_X, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  bar: { backgroundColor: color.ground, zIndex: 2, overflow: 'hidden' },
+  barInner: { paddingHorizontal: PAGE_X, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  barTitle: { flex: 1 },
   brand: { flexDirection: 'row', alignItems: 'center', gap: 9 },
   brandRule: { width: 1, height: 15, backgroundColor: color.edgeStrong },
   actions: { flexDirection: 'row', alignItems: 'center', gap: 1 },

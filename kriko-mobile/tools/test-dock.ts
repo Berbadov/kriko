@@ -9,6 +9,7 @@ import assert from 'node:assert/strict';
 import {
   DOCK_HIDE_AFTER,
   DOCK_JUMP,
+  DOCK_KEEP_SCROLL,
   DOCK_SETTLE_MS,
   DOCK_SHOW_AFTER,
   initialDock,
@@ -96,6 +97,23 @@ function aLayoutChangeIsNotAScroll(): void {
   assert.equal(after.hidden, false);
 }
 
+function leavingNeverMakesAScrollablePageLookTooShort(): void {
+  // 150 px of travel left with the bars shown: enough to hide them. Hiding gives
+  // the list ~100 px, leaving ~50. That is still a page to scroll, not a short
+  // one, so the bars must stay away until the reader moves up.
+  const content = VIEWPORT + 150;
+  const hidden = drag(settled(60), [80, 100, 120], 1000, content);
+  assert.equal(hidden.hidden, true);
+  const taller = VIEWPORT + 100;
+  const resized = nextDock(hidden, page(60, content, taller), hidden.lockedUntil + 1000);
+  assert.equal(resized.hidden, true);
+  const again = nextDock(resized, page(60, content, taller), hidden.lockedUntil + 1100);
+  assert.equal(again.hidden, true);
+  // A page that really has become short (a new chat) still gets them back.
+  const short = nextDock(resized, page(0, taller + DOCK_KEEP_SCROLL - 1, taller), hidden.lockedUntil + 1200);
+  assert.equal(short.hidden, false);
+}
+
 function aJumpTheAppMadeIsNotTheReader(): void {
   const jumped = nextDock(settled(0), page(DOCK_JUMP + 800), 1000);
   assert.equal(jumped.hidden, false);
@@ -131,6 +149,7 @@ aTurnResetsHowFarTheReaderHasTravelled();
 theTopOfAPageAlwaysShowsIt();
 aToggleHoldsWhileTheBarMoves();
 aLayoutChangeIsNotAScroll();
+leavingNeverMakesAScrollablePageLookTooShort();
 aJumpTheAppMadeIsNotTheReader();
 theAppFollowingAnAnswerNeverCountsAsAsking();
 offsetsOutsideThePageAreClamped();
