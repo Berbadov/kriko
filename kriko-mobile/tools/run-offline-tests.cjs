@@ -22,6 +22,8 @@ try {
       path.join(__dirname, 'test-vision.ts'),
       path.join(__dirname, 'test-i18n.ts'),
       path.join(__dirname, 'test-theme.ts'),
+      path.join(__dirname, 'test-appupdate.ts'),
+      path.join(__dirname, 'test-updatecore.ts'),
     ],
     options: {
       target: ts.ScriptTarget.ES2022,
@@ -51,6 +53,8 @@ try {
     'tools/test-vision.js',
     'tools/test-i18n.js',
     'tools/test-theme.js',
+    'tools/test-appupdate.js',
+    'tools/test-updatecore.js',
   ]) {
     const result = spawnSync(process.execPath, [path.join(output, file)], {
       cwd: root,

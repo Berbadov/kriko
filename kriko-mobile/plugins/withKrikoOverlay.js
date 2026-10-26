@@ -18,6 +18,7 @@ const TEMPLATE_FILES = [
   'KrikoScanFx.kt',
   'KrikoMarkdown.kt',
   'KrikoAssist.kt',
+  'KrikoUpdater.kt',
 ];
 
 /**
