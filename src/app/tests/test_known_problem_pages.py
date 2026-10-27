@@ -85,7 +85,9 @@ def test_a_subject_with_enough_claims_gets_a_page_in_each_language_and_a_hub(tmp
     packs, site = tmp_path / "packs", _site(tmp_path)
     _write_catalog(packs, "tools", ANVIL + THIN)
     written = _load().render(packs, site)
-    assert written == ["/problems/", "/problems/anvil/", "/tr/problems/", "/tr/problems/anvil/"]
+    # A hub, a page for the catalog, and a page for each product with enough claims, in each language.
+    assert written == ["/problems/", "/problems/anvil/", "/problems/tools/",
+                       "/tr/problems/", "/tr/problems/anvil/", "/tr/problems/tools/"]
 
     english = (site / "problems" / "anvil" / "index.html").read_text(encoding="utf-8")
     turkish = (site / "tr" / "problems" / "anvil" / "index.html").read_text(encoding="utf-8")
@@ -209,11 +211,14 @@ def test_the_hub_files_a_part_under_each_whole_thing_it_is_fitted_to_grouped_by_
     (root / "research" / "templates.yaml").write_text('- "{alias} faults"\n', encoding="utf-8")
 
     _load().render(packs, site)
-    hub = (site / "problems" / "index.html").read_text(encoding="utf-8")
-    assert '<section id="rigs">' in hub and "<h3>Acme</h3>" in hub and "<h3>Borealis</h3>" in hub
+    category = (site / "problems" / "rigs" / "index.html").read_text(encoding="utf-8")
+    assert "<summary>Acme<span>" in category and "<summary>Borealis<span>" in category
     # Each make lists its own car, and that car links to the engine page it shares.
-    acme = hub.split("<h3>Acme</h3>")[1].split("<h3>")[0]
+    acme = category.split("<summary>Acme<span>")[1].split("</details>")[0]
     assert "Acme Roadster 2.0" in acme and 'href="/problems/zeta-engine/"' in acme and "Borealis" not in acme
+    # The hub is the front door: a card for the catalog, and no list of every product.
+    hub = (site / "problems" / "index.html").read_text(encoding="utf-8")
+    assert 'href="/problems/rigs/"' in hub and "Acme Roadster 2.0" not in hub
     # The engine's own page says which cars it is found on.
     page = (site / "problems" / "zeta-engine" / "index.html").read_text(encoding="utf-8")
     assert "Acme Roadster 2.0" in page and "Borealis Cruiser 1.6" in page
@@ -242,3 +247,21 @@ def test_a_claim_with_no_source_page_is_never_published(tmp_path):
     assert "Head loosens" in english and "Unproven rumour" not in english
     # Four proposals and no source is still a subject with nothing to publish.
     assert not (site / "problems" / "widget").exists()
+
+
+def test_a_long_page_opens_with_its_problems_listed_and_a_short_one_does_not(tmp_path):
+    packs, site = tmp_path / "packs", _site(tmp_path)
+    _write_catalog(packs, "tools", ANVIL + _claim("anvil", "Grip wears", "medium", "Tutamak aşınır", "https://forum.invalid/e"))
+    _load().render(packs, site)
+    page = (site / "problems" / "anvil" / "index.html").read_text(encoding="utf-8")
+    # Four claims: a list of their titles, each linked to its own card, worst first.
+    glance = page.split('<nav class="glance"')[1].split("</nav>")[0]
+    assert glance.count("<li") == 4 and glance.index("Head loosens") < glance.index("Paint chips")
+    anchors = re.findall(r'href="#(c-[0-9a-f]+)"', glance)
+    assert len(anchors) == 4 and all(f'id="{anchor}"' in page for anchor in anchors)
+    # The page says where it sits, so a reader who landed on it can climb back out.
+    assert '<a href="/problems/">Known problems</a> › <a href="/problems/tools/">Tools</a>' in page
+
+    _write_catalog(packs, "tools", ANVIL)
+    _load().render(packs, site)
+    assert 'class="glance"' not in (site / "problems" / "anvil" / "index.html").read_text(encoding="utf-8")

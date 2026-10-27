@@ -20,6 +20,7 @@ import argparse
 import json
 import re
 import sys
+import tomllib
 import urllib.request
 from pathlib import Path
 from typing import Callable
@@ -90,10 +91,26 @@ def _translate(batch: list[dict], language: str, translator: Translator) -> list
         return _translate(batch[:middle], language, translator) + _translate(batch[middle:], language, translator)
 
 
+def _name_in(text: str, to: str, language: str, translator: Translator) -> str:
+    """The manifest with the catalog's own name added in `to` under `[names]`, unless it is there.
+
+    A page in the second language names the catalog in that language; the manifest's `name`
+    stays what the catalog calls itself.
+    """
+    found = re.search(r'^name\s*=\s*"([^"]+)"', text, re.M)
+    if not found or tomllib.loads(text).get("names", {}).get(to):
+        return text
+    name = _translate([{"title": found.group(1)}], language, translator)[0]["title"]
+    line = f"{to} = {json.dumps(name, ensure_ascii=False)}\n"
+    if "[names]" in text:
+        return text.replace("[names]\n", "[names]\n" + line, 1)
+    return text.rstrip("\n") + "\n\n# The catalog's name in each other language its pages are written in.\n[names]\n" + line
+
+
 def translate_file(root: Path, to: str, translator: Translator = deepseek) -> int:
     """Translate the claims under `root` that lack `to`; returns how many were added."""
     path = root / "data" / "claims.yaml"
-    raw = path.read_text(encoding="utf-8")
+    raw = path.read_text(encoding="utf-8") if path.exists() else ""  # a catalog with its own builder has none
     preamble = "".join(line for line in raw.splitlines(keepends=True) if line.startswith("#"))
     claims = yaml.safe_load(raw) or []
     todo = [c for c in claims if isinstance(c, dict) and (c.get("text") or {}).get("en") and not (c["text"].get(to))]
@@ -107,11 +124,13 @@ def translate_file(root: Path, to: str, translator: Translator = deepseek) -> in
         with open(path, "w", encoding="utf-8", newline="\n") as handle:
             handle.write(preamble + yaml.safe_dump(claims, allow_unicode=True, sort_keys=False, width=100))
     manifest = root / "pack.toml"
-    text = manifest.read_text(encoding="utf-8")
+    original = text = manifest.read_text(encoding="utf-8")
+    text = _name_in(text, to, language, translator)
     found = re.search(r"^languages\s*=\s*\[(.*?)\]", text, re.M)
     if found and f'"{to}"' not in found.group(1):
         kept = [part.strip() for part in found.group(1).split(",") if part.strip()]
         text = text[:found.start()] + "languages = [" + ", ".join(kept + [f'"{to}"']) + "]" + text[found.end():]
+    if text != original:
         with open(manifest, "w", encoding="utf-8", newline="\n") as handle:
             handle.write(text)
     return len(todo)

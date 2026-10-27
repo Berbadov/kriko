@@ -45,3 +45,7 @@ review = 0.6
 held = 0.6
 draft = 0.0      # 0 means: not exported at all
 rejected = 0.0
+
+# The catalog's name in each other language its pages are written in.
+[names]
+tr = "Arabalar"
