@@ -125,6 +125,65 @@ test('the stylesheet and script carry the hash of their own content, on every pa
   }
 });
 
+// A link pasted into X, Bluesky, Slack or a chat unfurls into this picture; a 128px icon there
+// reads as a broken link. It is also what the page promises, so the page must name one that exists.
+test('a shared link to a page unfurls into a large picture that exists, with a description and the page\'s own address', () => {
+  for (const page of [...HOME, ...GUIDE]) {
+    const d = load(page);
+    const meta = (key) => d.querySelector(`meta[property="${key}"], meta[name="${key}"]`);
+    assert.equal(meta('twitter:card').content, 'summary_large_image', page.file);
+    assert.equal(meta('og:url').content, page.url, `${page.file}: the shared address is not the page's own`);
+    const image = meta('og:image').content;
+    assert.match(image, /^https:\/\/kriko\.cc\/assets\/[\w-]+\.jpg$/, `${page.file}: ${image}`);
+    const file = path.join(root, image.replace('https://kriko.cc/', ''));
+    assert.ok(fs.existsSync(file), `${page.file}: ${image} is not a file`);
+    const bytes = fs.readFileSync(file);
+    // A JPEG's size sits in its start-of-frame marker.
+    const frame = bytes.indexOf(Buffer.from([0xff, 0xc0]));
+    assert.equal(bytes.readUInt16BE(frame + 5), Number(meta('og:image:height').content), `${page.file}: the stated height is not the picture's`);
+    assert.equal(bytes.readUInt16BE(frame + 7), Number(meta('og:image:width').content), `${page.file}: the stated width is not the picture's`);
+    assert.ok(bytes.length < 400 * 1024, `${page.file}: ${image} is over 400 KB, which some apps refuse`);
+    assert.ok(meta('og:image:alt').content.length > 40, `${page.file}: the share picture is not described`);
+  }
+});
+
+test('the film on the home page waits for a press, has a still and a way to save it, and is small enough to host', () => {
+  for (const page of HOME) {
+    const d = load(page);
+    const dir = path.dirname(path.join(root, page.file));
+    const video = d.querySelector('#film video');
+    assert.ok(video, `${page.file} has no film`);
+    assert.ok(video.hasAttribute('controls'), `${page.file}: the film has no controls`);
+    assert.ok(!video.hasAttribute('autoplay'), `${page.file}: the film starts with sound by itself`);
+    assert.equal(video.getAttribute('preload'), 'none', `${page.file}: the film would download before it is wanted`);
+    assert.ok(video.getAttribute('aria-label').length > 40, `${page.file}: the film is not described`);
+    const still = path.resolve(dir, video.getAttribute('poster'));
+    assert.ok(fs.existsSync(still), `${page.file}: the film's still is missing`);
+    const file = path.resolve(dir, video.querySelector('source').getAttribute('src'));
+    // Cloudflare Pages refuses a file over 25 MiB; keep well under it.
+    assert.ok(fs.statSync(file).size < 12 * 1024 * 1024, `${page.file}: the film is over 12 MB`);
+    assert.ok(video.querySelector('a[href$=".mp4"]'), `${page.file}: a browser that cannot play it has no link to the file`);
+    assert.ok(d.querySelector('#film figcaption').textContent.length > 20, `${page.file}: the film has no caption`);
+  }
+});
+
+test('robots.txt names the sitemap, the sitemap lists exactly the pages that exist, and an unknown address gets a real 404 page', () => {
+  assert.match(read('robots.txt'), /^Sitemap: https:\/\/kriko\.cc\/sitemap\.xml$/m);
+  const listed = [...read('sitemap.xml').matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[1]).sort();
+  assert.deepEqual(listed, PAGES.map((page) => page.url).sort());
+  const d = new JSDOM(read('404.html'), { url: 'https://kriko.cc/404.html' }).window.document;
+  assert.match(d.querySelector('meta[name="robots"]').content, /noindex/);
+  // It answers at any address, so a relative path would break one folder down.
+  for (const el of d.querySelectorAll('link[href], img[src], source[srcset], a[href]')) {
+    const value = el.getAttribute('href') || el.getAttribute('src') || el.getAttribute('srcset');
+    assert.ok(value.startsWith('/'), `404.html names ${value} relatively`);
+    if (!/\.(css|svg|png)(\?|$)/.test(value)) continue;
+    const [asset, query] = value.split('?');
+    const bytes = fs.readFileSync(path.join(root, asset));
+    if (asset === '/styles.css') assert.equal(new URLSearchParams(query).get('v'), crypto.createHash('sha256').update(bytes).digest('hex').slice(0, 12), 'the stylesheet hash is stale');
+  }
+});
+
 test('the Turkish page is what the English page and the translations make', () => {
   const before = Object.fromEntries(PAGES.map((p) => [p.file, read(p.file)]));
   try {
