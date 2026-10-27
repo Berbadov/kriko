@@ -1,0 +1,2888 @@
+# Claims — what is known to go wrong, each with the page it came from and the quote
+# that was read there. A claim without both is not in this file.
+- subject:
+    kind: product
+    identity:
+      brand: beko
+      series: b710elite
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: lower spray arm (alt su pervanesi) / water supply pipe (besleme borusu)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: B 710 b lower spray arm rubs against the internal water-supply part — factory defect from
+        new
+      body: An owner of a new B 710 b (B710B) reports the lower spray arm rubbing against the main water-supply
+        section; the Beko service report confirmed faulty production and said the supply pipe must be
+        replaced. A second B710 complaint on the same site (Erzurum) describes the same lower-impeller-hits-plastic-part
+        fault, which persisted after a part swap and then threw an e01 error. This is a defect present
+        from new, so the buyer's cost is a service call and part replacement (or a refused refund) in
+        the first weeks, not wear over time.
+      advice: ''
+    tr:
+      title: B 710 b alt püskürtme kolu dahili su besleme parçasına sürtüyor — sıfırdan fabrika hatası
+      body: Yeni bir B 710 b (B710B) sahibi, alt püskürtme kolunun ana su besleme bölümüne sürtündüğünü
+        bildiriyor; Beko servis raporu hatalı üretimi doğruladı ve besleme borusunun değiştirilmesi gerektiğini
+        söyledi. Aynı sitedeki (Erzurum) ikinci bir B710 şikayeti de aynı alt pervanenin plastik parçaya
+        çarpması arızasını tanımlıyor; bu arıza bir parça değişiminden sonra da devam etti ve ardından
+        e01 hatası verdi. Bu, sıfırdan mevcut olan bir kusurdur, dolayısıyla alıcının maliyeti zamanla
+        aşınma değil, ilk haftalarda bir servis çağrısı ve parça değişimi (veya reddedilen bir para iadesi)
+        olur.
+  evidence:
+  - url: https://www.sikayetvar.com/beko/beko-b710b-bulasik-makinesindeki-uretim-hatasi-icin-iade-talebi
+    quote: Vida yerini bulmak için detaylı incelediğimde, alt su pervanesinin ana su besleme bölümüne
+      sürttüğünü fark ettim.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:47:29+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: siemens
+      series: sn65zx07ce
+  kind: known_issue
+  domain: water
+  severity: high
+  consequence: ''
+  detection: ''
+  component: water protection system
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Siemens official: E31/E15/E3100 = water protection system activated'
+      body: Siemens' own German support page states E31 (along with E15, F15, E3100) means the water protection
+        system is activated. This corroborates the owner-reported E31 on the SN65ZX07CE and confirms it
+        is a water-leak safety trigger, not a software glitch.
+      advice: 'Treat E31 as a potential leak. Siemens explicitly advises against self-repair for health/safety
+        reasons: close the water tap, switch the unit off, and book a service visit. Expect a technician
+        diagnosis rather than a user fix.'
+    tr:
+      title: 'Siemens resmi: E31/E15/E3100 = su koruma sistemi devreye girdi'
+      body: Siemens'in kendi Almanca destek sayfası, E31'in (E15, F15, E3100 ile birlikte) su koruma sisteminin
+        devreye girdiği anlamına geldiğini belirtiyor. Bu, SN65ZX07CE'de sahibi tarafından bildirilen
+        E31'i doğruluyor ve bunun bir yazılım arızası değil, su kaçağı güvenlik tetikleyicisi olduğunu
+        teyit ediyor.
+      advice: 'E31''i potansiyel bir kaçak olarak değerlendirin. Siemens, sağlık/güvenlik nedenleriyle
+        kendi kendine onarımı açıkça önermiyor: su musluğunu kapatın, cihazı kapatın ve bir servis ziyareti
+        ayarlayın. Kullanıcı çözümü yerine teknisyen teşhisi bekleyin.'
+  evidence:
+  - url: https://www.siemens-home.bsh-group.com/de/kundendienst/hilfe/probleme/spuelmaschine/fehlercode-e15
+    quote: Wenn der Fehlercode E15, F15, E3100 oder E31-00 auf dem Geräte-Display angezeigt wird, heißt
+      das, dass das Wasserschutzsystem aktiviert ist.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:44:24+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: siemens
+      series: sn23hw60ce
+  kind: known_issue
+  domain: mechanical
+  severity: low
+  consequence: ''
+  detection: ''
+  component: rack rails (VarioFlex)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Professional test: rails slide well but accumulate dirt; quick-program drying weak'
+      body: The French consumer-test magazine Que Choisir (found via the 'Siemens SN23HW60CE common problems'
+        search) lists as drawbacks that the rack rails slide perfectly but accumulate grime, that the
+        quick program dries poorly, and that the Eco program is long. This is a professional review, not
+        an owner failure report.
+      advice: Plan to wipe the rack rails periodically; don't rely on the quick program for dry loads.
+    tr:
+      title: 'Profesyonel test: raylar iyi kayıyor ancak kir biriktiriyor; hızlı program kurutmada zayıf'
+      body: Fransız tüketici test dergisi Que Choisir ('Siemens SN23HW60CE common problems' aramasıyla
+        bulundu), dezavantaj olarak raf raylarının mükemmel kaydığını ancak kir biriktirdiğini, hızlı
+        programın kötü kuruttuğunu ve Eco programının uzun olduğunu listeliyor. Bu bir profesyonel incelemedir,
+        sahip arıza raporu değildir.
+      advice: Raf raylarını düzenli olarak silmeyi planlayın; kuru yükler için hızlı programa güvenmeyin.
+  evidence:
+  - url: https://www.quechoisir.org/comparatif-lave-vaisselle-n41/siemens-sn23hw60ce-p247110/
+    quote: Les rails coulissent parfaitement, mais peuvent accumuler des salissures
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:43:37+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      series: dw90f89t0umtaa
+  kind: known_issue
+  domain: water
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: drain pump (5C error)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 5C error code — drain pump problem (documented in model-specific manual FAQ)
+      body: The 5C error indicates a drain pump problem; the manual advises checking the pump cover and
+        for jams. This is a documented failure mode for this exact model.
+      advice: If 5C appears, first check the drain pump cover is correctly assembled and the pump isn't
+        jammed (often food debris). If it persists, the drain pump itself may need replacement — a service
+        visit.
+    tr:
+      title: 5C hata kodu — tahliye pompası sorunu (modele özgü kılavuz SSS'de belgelenmiş)
+      body: 5C hatası bir tahliye pompası sorununa işaret eder; kılavuz pompa kapağının ve sıkışmaların
+        kontrol edilmesini önerir. Bu, tam bu model için belgelenmiş bir arıza modudur.
+      advice: 5C görünürse, önce tahliye pompası kapağının doğru takıldığını ve pompanın sıkışmadığını
+        (genellikle yemek artıkları) kontrol edin. Devam ederse, tahliye pompasının kendisi değiştirilmesi
+        gerekebilir — bir servis ziyareti.
+  evidence:
+  - url: https://www.manua.ls/samsung/dw90f89t0umtaa/manual?p=11
+    quote: The 5C error code indicates a problem with the drain pump. Check if the drain pump cover is
+      missing or not correctly assembled, and ensure that the drain pump is not jammed.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:51:42+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      series: dw8r5061usaa
+  kind: known_issue
+  domain: water
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: drain path / door latch / leak sensor
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Samsung DW80 series common failures: not draining (~30%), door latch not engaging (~25%),
+        leak sensor false alarm (~20%)'
+      body: 'A repair technician''s guide covering the DW80 platform (including DW80R5061US) ranks the
+        most common service-call failures: drain problems at ~30%, door latch at ~25%, and leak sensor
+        false alarms at ~20%. The guide states all five DW80 variants share one platform and parts catalog.'
+      advice: If you buy this model, expect the drain path to be the most likely failure point; check
+        the drain hose and filter for blockages before calling a technician. Door latch and leak sensor
+        issues are also common.
+    tr:
+      title: 'Samsung DW80 serisi yaygın arızalar: tahliye etmeme (~%30), kapı mandalının devreye girmemesi
+        (~%25), kaçak sensörü yanlış alarmı (~%20)'
+      body: 'DW80 platformunu (DW80R5061US dahil) kapsayan bir tamir teknisyeni kılavuzu, en yaygın servis
+        çağrısı arızalarını sıralıyor: tahliye sorunları ~%30, kapı mandalı ~%25 ve kaçak sensörü yanlış
+        alarmları ~%20. Kılavuz, beş DW80 varyantının da tek bir platformu ve parça kataloğunu paylaştığını
+        belirtiyor.'
+      advice: Bu modeli alırsanız, en olası arıza noktasının tahliye yolu olmasını bekleyin; teknisyen
+        çağırmadan önce tahliye hortumunu ve filtreyi tıkanıklık açısından kontrol edin. Kapı mandalı
+        ve kaçak sensörü sorunları da yaygındır.
+  evidence:
+  - url: https://easybear-appliancerepair.com/blog/samsung-dw80-dishwasher-complete-guide
+    quote: Not draining (30%) — water stands in the bottom after a cycle.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:42:55+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: miele
+      series: g7xxx
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: AutoStart function and salt sensor
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Miele G7600 (G7xxx series) — AutoStart stops working, salt sensor false 'almost empty' reading
+      body: Independent Italian consumer association (Altroconsumo) complaint board.
+      advice: 'An independent Italian consumer complaint on the Altroconsumo board reports a Miele G7600
+        (a G7xxx-series model) developing electronic faults within about 15 months: the AutoStart function
+        stops working and the salt sensor reads ''almost empty'' right after filling. The complaint also
+        details slow warranty service. This is a single owner report, so treat it as a signal rather than
+        a pattern, but it is the only independent owner-level evidence found for the series.'
+    tr:
+      title: Miele G7600 (G7xxx serisi) — AutoStart çalışmayı durduruyor, tuz sensörü yanlış 'neredeyse
+        boş' okuması
+      body: Bağımsız İtalyan tüketici derneği (Altroconsumo) şikayet panosu.
+      advice: 'Altroconsumo panosundaki bağımsız bir İtalyan tüketici şikayeti, bir Miele G7600''ün (G7xxx
+        serisi bir model) yaklaşık 15 ay içinde elektronik arızalar geliştirdiğini bildiriyor: AutoStart
+        işlevi çalışmayı durduruyor ve tuz sensörü doldurduktan hemen sonra ''neredeyse boş'' okuyor.
+        Şikayet ayrıca yavaş garanti hizmetini ayrıntılandırıyor. Bu tek bir sahip raporudur, bu yüzden
+        bunu bir örüntüden ziyade bir sinyal olarak değerlendirin, ancak seri için bulunan tek bağımsız
+        sahip düzeyinde kanıttır.'
+  evidence:
+  - url: https://www.altroconsumo.it/reclamare/bacheca-dei-reclami/difetti-di-conformit-C3-A0-lavastov/08aae5ba32d5196616
+    quote: 1️⃣ La funzione AUTOSTART smette di funzionare 2️⃣ Il sensore del sale indica “quasi vuoto”
+      anche subito dopo il riempimento
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:37:06+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      series: dw60dg540fwq
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: stainless tub / interior
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Internal rust appeared inside the tub while under warranty
+      body: The same owner reported rust forming inside the tub; the authorized service only surface-cleaned
+        it and Samsung rejected the warranty claim as user error.
+      advice: Interior rust on a machine still under warranty is a defect worth documenting with photos,
+        as the owner reports Samsung disputed it.
+    tr:
+      title: Küvetin içinde garanti kapsamındayken iç pas oluştu
+      body: Aynı sahip küvetin içinde pas oluştuğunu bildirdi; yetkili servis yalnızca yüzey temizliği
+        yaptı ve Samsung, garanti talebini kullanıcı hatası olarak reddetti.
+      advice: Hâlâ garanti kapsamındaki bir makinede iç pas, fotoğraflarla belgelenmeye değer bir kusurdur;
+        zira sahip, Samsung'un bunu tartışmalı hale getirdiğini bildiriyor.
+  evidence:
+  - url: https://www.sikayetvar.com/samsung/garanti-kapsamindaki-bulasik-makinesi-kirli-cikti-paslanma-ve-yardim-yok
+    quote: Buna ek olarak cihazın içinde paslanmalar oluştu, yetkili servis geldi ve sadece cifleyip yüzeysel
+      bir temizlik yaparak gitti, sorunu kökten çözmedi.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:49:46+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: bosch
+      series: shp65t56uc
+  kind: known_issue
+  domain: water
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: spray arm supply tube o-rings (Bosch part 11018097)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Degraded o-rings on middle-drawer spray arm supply tube cause leaks
+      body: Owner of a SHP65T56UC/01 reports the beige o-rings at the middle-drawer spray arm connection
+        are badly degraded; a repair tech confirms they are not sold separately and the spray arm supply
+        tube (11018097) is the replacement.
+      advice: If you see leaks at the back of the middle drawer, the o-rings cannot be bought alone; budget
+        for the spray arm supply tube (11018097).
+    tr:
+      title: Orta çekmece püskürtme koluna besleme borusundaki bozulmuş o-ringler sızıntıya neden oluyor
+      body: SHP65T56UC/01 sahibi, orta çekmece püskürtme kolu bağlantısındaki bej o-ringlerin ciddi şekilde
+        bozulduğunu bildiriyor; bir tamir teknisyeni bunların ayrı satılmadığını ve püskürtme kolu besleme
+        borusunun (11018097) yedek parça olduğunu doğruluyor.
+      advice: Orta çekmecenin arkasında sızıntı görürseniz, o-ringler tek başına satın alınamaz; püskürtme
+        kolu besleme borusu (11018097) için bütçe ayırın.
+  evidence:
+  - url: https://forum.appliancepartspros.com/t/constant-beeping/410203
+    quote: On another topic, the middle drawer, that has the spray arm attached, where it connects to
+      the back of the unit, those o-rings, beige looking, are very degraded
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:41:18+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: arcelik
+      series: a600bstar
+  kind: known_issue
+  domain: water
+  severity: high
+  consequence: ''
+  detection: ''
+  component: rinse cycle / washing performance (no specific part named by owner)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: A600B leaves plates spotted and foamy, does not rinse properly, unresolved after 4 service
+        visits
+      body: Owner complaint (Esra/Salih, Samsun) on Şikayetvar, from the search 'Arçelik A 600 B Star
+        bulaşık makinesi sorun'. A new A600B left plates spotted and foamy and did not rinse properly
+        from the day of installation; switching detergents at the service's request changed nothing, and
+        the replacement request was refused after 4 service visits.
+      advice: This is a second independent owner reporting the same new-unit wash/rinse failure, so it
+        is a recurring pattern rather than a one-off. A buyer should test rinse quality early and expect
+        the manufacturer to attribute it to detergent before any part-level fix.
+    tr:
+      title: A600B tabaklarda leke ve köpük bırakıyor, düzgün durulamıyor, 4 servis ziyaretinden sonra
+        çözülmedi
+      body: Şikayetvar'da sahip şikayeti (Esra/Salih, Samsun), 'Arçelik A 600 B Star bulaşık makinesi
+        sorun' aramasından. Yeni bir A600B, kurulum gününden itibaren tabaklarda leke ve köpük bıraktı
+        ve düzgün durulamadı; servisin talebiyle deterjan değiştirmek hiçbir şeyi değiştirmedi ve 4 servis
+        ziyaretinden sonra değişim talebi reddedildi.
+      advice: Bu, aynı yeni ünite yıkama/durulama arızasını bildiren ikinci bağımsız sahiptir, dolayısıyla
+        tek seferlik değil, tekrarlayan bir örüntüdür. Bir alıcı durulama kalitesini erkenden test etmeli
+        ve üreticinin herhangi bir parça düzeyinde onarımdan önce bunu deterjana atfetmesini beklemelidir.
+  evidence:
+  - url: https://www.sikayetvar.com/arcelik/arcelik-a600b-bulasik-makinesi-kirli-tabaklar-birakiyor-degisim-istiyorum
+    quote: makine bulaşıkları hâlâ lekeli ve köpüklü bırakmaya devam etti.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:46:42+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: arcelik
+      series: a710bprestige
+  kind: known_issue
+  domain: water
+  severity: high
+  consequence: ''
+  detection: ''
+  component: base seal / hydraulic circuit
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Arçelik A 710 B — leaks water from underneath and does not wash properly
+      body: The replacement unit is identified as 'A710b'. It leaked water from underneath and washed
+        poorly for about a month.
+      advice: A buyer should check for water pooling under the machine early; combined with poor washing
+        this forced the owner to hand-wash for a month while the warranty dispute dragged on.
+    tr:
+      title: Arçelik A 710 B — altından su sızdırıyor ve düzgün yıkamıyor
+      body: Değişim ünitesi 'A710b' olarak tanımlanıyor. Yaklaşık bir ay boyunca altından su sızdırdı
+        ve kötü yıkadı.
+      advice: Bir alıcı makinenin altında su birikip birikmediğini erkenden kontrol etmelidir; kötü yıkamayla
+        birleşince bu, garanti anlaşmazlığı sürerken sahibi bir ay boyunca elde yıkamaya zorladı.
+  evidence:
+  - url: https://www.sikayetvar.com/arcelik/bulasik-makinesi/a710b
+    quote: Ancak bu makine hem doğru düzgün yıkama yapmıyor hem de altından su kaçırıyor. Yaklaşık 1 aydır
+      bu makineyle uğraşıyoruz, bulaşıkları mecburen elde yıkıyoruz.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:38:56+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: siemens
+      series: sn65zx07ce
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: bearing (motor/pump)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Bearing failure causing noise on Siemens SN65ZX07CE
+      body: In a Swedish forum thread about a noise issue on a SN65ZX07CE, another member (sessions32)
+        reports having the same problem and that it was a broken bearing that was repaired under warranty.
+        This is an owner-reported mechanical failure requiring warranty repair.
+      advice: If the unit makes unusual noises, a bearing may be failing. This was covered under warranty
+        for the reporting owner; check your warranty status early.
+    tr:
+      title: Siemens SN65ZX07CE'de gürültüye neden olan rulman arızası
+      body: SN65ZX07CE'deki bir gürültü sorunu hakkındaki bir İsveç forum başlığında, başka bir üye (sessions32)
+        aynı sorunu yaşadığını ve bunun garanti kapsamında onarılan kırık bir rulman olduğunu bildiriyor.
+        Bu, garanti onarımı gerektiren, sahip tarafından bildirilmiş bir mekanik arızadır.
+      advice: Ünite olağandışı sesler çıkarıyorsa bir rulman arızalanıyor olabilir. Bu, bildiren sahip
+        için garanti kapsamındaydı; garanti durumunuzu erkenden kontrol edin.
+  evidence:
+  - url: https://www.byggahus.se/forum/threads/smaller-ur-torktumlare.563707/
+    quote: Hade samma problem och det var ett lager som var trasigt och gick på garantin
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:50:13+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: beko
+      series: b710elite
+  kind: known_issue
+  domain: water
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: water pump (su pompası)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: B 710 bElite water pump found faulty by the service technician
+      body: A buyer of a new B 710 bElite says the service technician told them the machine's water pump
+        was faulty and the unit was to be exchanged. It is a single owner report on a retail review page,
+        so it is weaker than the Şikayetvar records, but it is a concrete water-path failure on the same
+        series and cost the buyer a service visit and replacement of a new unit.
+      advice: ''
+    tr:
+      title: B 710 bElite su pompası servis teknisyeni tarafından arızalı bulundu
+      body: Yeni bir B 710 bElite alıcısı, servis teknisyeninin kendilerine makinenin su pompasının arızalı
+        olduğunu ve ünitenin değiştirileceğini söylediğini belirtiyor. Bu, bir perakende inceleme sayfasında
+        tek bir sahip bildirimidir, dolayısıyla Şikayetvar kayıtlarından daha zayıftır, ancak aynı seride
+        somut bir su yolu arızasıdır ve alıcıya bir servis ziyaretine ve yeni bir ünitenin değişimine
+        mal olmuştur.
+  evidence:
+  - url: https://www.hepsiburada.com/beko-b-710-belite-serisi-solo-bulasik-makinesi-p-HBCV0000CY0V8K-yorumlari
+    quote: Teknisyenin söylediğine göre makinenin su pompası da arızalıymış
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:47:29+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: siemens
+      series: sn65zx07ce
+  kind: known_issue
+  domain: drying
+  severity: low
+  consequence: ''
+  detection: ''
+  component: drying system (Zeolith)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Water drops remain on plastic dishes even after intensive drying
+      body: Onliner.by reports water drops remain on plastic dishes even after intensive drying. This
+        is a common limitation of dishwasher drying systems with plastic items.
+      advice: Plastic items may come out wet despite the Zeolith drying technology; this is a known limitation,
+        not a defect.
+    tr:
+      title: Plastik bulaşıklarda yoğun kurutmadan sonra bile su damlaları kalıyor
+      body: Onliner.by, plastik bulaşıklarda yoğun kurutmadan sonra bile su damlalarının kaldığını bildiriyor.
+        Bu, plastik parçalarla bulaşık makinesi kurutma sistemlerinin yaygın bir sınırlamasıdır.
+      advice: Plastik parçalar Zeolith kurutma teknolojisine rağmen ıslak çıkabilir; bu bilinen bir sınırlamadır,
+        kusur değildir.
+  evidence:
+  - url: https://catalog.onliner.by/dishwasher/siemens/sn65zx07ce/prices?region=borisov
+    quote: Капли воды остаются на пластиковой посуде даже после интенсивной сушки
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:44:24+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: bosch
+      series: shp65t56uc
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: door switch (Hall-effect) / control board
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Dishwasher stops randomly with no error code - door switch or control board
+      body: A repair blog documents a SHP65T56UC that stops mid-cycle with no error code; the cause is
+        the door switch or control board, and parts were under $100 versus a $350 shop quote.
+      advice: If the unit stops randomly with no code, suspect the door switch/control board; it is a
+        DIY-able ~$100 parts fix.
+    tr:
+      title: Bulaşık makinesi hata kodu olmadan rastgele duruyor - kapı anahtarı veya kontrol kartı
+      body: Bir onarım blogu, döngü ortasında hata kodu olmadan duran bir SHP65T56UC'yi belgeliyor; neden
+        kapı anahtarı veya kontrol kartı ve parçalar 350 dolarlık servis teklifine karşı 100 doların altındaydı.
+      advice: Ünite kod olmadan rastgele durursa, kapı anahtarı/kontrol kartından şüphelenin; bu, kendiniz
+        yapabileceğiniz ~100 dolarlık bir parça onarımıdır.
+  evidence:
+  - url: https://www.titam.ca/2025/06/bosch-shp65t56uc-dishwasher-stops.html
+    quote: The machine thinks that the door is being opened during the cycle, hence no error codes.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:41:18+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: arcelik
+      series: 62113iwf
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: door latch and spray arm
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Door not closing and noisy spray arm on 62113
+      body: The complaint page is titled 'Arçelik 62113 Model Bulaşık Makinesinde Kapanmayan Kapak Ve
+        Gürültülü Pervane Sorunları' (door not closing and noisy spray arm problems); the owner states
+        they had repeated problems over 1.5 years.
+      advice: Door-closing faults and a noisy spray arm are reported on this model. A door that does not
+        latch will stop the cycle; a noisy spray arm may indicate a worn bearing or debris. Check the
+        door latch and spray-arm bearings early, as repeated service visits are common.
+    tr:
+      title: 62113'te kapı kapanmıyor ve gürültülü püskürtme kolu
+      body: Şikayet sayfasının başlığı 'Arçelik 62113 Model Bulaşık Makinesinde Kapanmayan Kapak Ve Gürültülü
+        Pervane Sorunları' (kapı kapanmama ve gürültülü püskürtme kolu sorunları); sahibi 1,5 yıl boyunca
+        tekrarlanan sorunlar yaşadığını belirtiyor.
+      advice: Bu modelde kapı kapanma arızaları ve gürültülü püskürtme kolu bildiriliyor. Kilitlenmeyen
+        bir kapı döngüyü durduracaktır; gürültülü bir püskürtme kolu aşınmış bir yatak veya kalıntıya
+        işaret edebilir. Tekrarlanan servis ziyaretleri yaygın olduğundan kapı kilidini ve püskürtme kolu
+        yataklarını erken kontrol edin.
+  evidence:
+  - url: https://www.sikayetvar.com/arcelik/62113-i-wf/urun-degisimi
+    quote: Arçelik marka 62113 model bulaşık makinesini 1,5 yıllık evliliğim sürecinde... defalarca sorun
+      yaşayarak kullanmak zorunda kaldım.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:45:22+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: arcelik
+      series: 6667wfi
+  kind: known_issue
+  domain: water
+  severity: high
+  consequence: ''
+  detection: ''
+  component: water intake / E20 error
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: E20 error code and failure to take in water
+      body: Same owner reports an E20 error code and the machine failing to draw water, alongside the
+        drying and Wi-Fi faults.
+      advice: E20 is a water-intake fault; combined with the other complaints it suggests this unit had
+        multiple systemic faults. Ask a seller about the E20 code and water-intake history before buying.
+    tr:
+      title: E20 hata kodu ve su almama
+      body: Aynı sahip, kurutma ve Wi-Fi arızalarının yanı sıra bir E20 hata kodu ve makinenin su çekememesi
+        bildiriyor.
+      advice: E20 bir su alma arızasıdır; diğer şikayetlerle birleştiğinde bu ünitenin birden fazla sistemik
+        arızası olduğunu düşündürür. Satın almadan önce bir satıcıya E20 kodu ve su alma geçmişini sorun.
+  evidence:
+  - url: https://www.sikayetvar.com/arcelik/wifi-karti-uc-kez-degistirildigi-halde-sorun-cozulmedi-ve-ucret-iadesi-talep-ediyorum
+    quote: Ayrıca makine kurutma yapmıyor ve zaman zaman e20 hata kodu ile su alamama sorunu da yaşıyorum.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:46:17+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: siemens
+      series: sn23hw60ce
+  kind: known_issue
+  domain: general
+  severity: low
+  consequence: ''
+  detection: ''
+  component: salt sensor / salt indicator
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Salt indicator stays lit permanently despite filling the reservoir
+      body: On the Darty SAV community index for this model (found via the 'Siemens SN23HW60CE reliability
+        forum' search), an owner reports the salt-missing indicator stays on permanently even after filling
+        the reservoir with recommended salt and setting the water hardness. It's an annoyance, not a failure
+        that stops the machine.
+      advice: If the salt light won't clear, suspect the salt sensor rather than the reservoir fill.
+    tr:
+      title: Hazne doldurulmasına rağmen tuz göstergesi kalıcı olarak yanık kalıyor
+      body: Bu model için Darty SAV topluluk dizininde ('Siemens SN23HW60CE reliability forum' aramasıyla
+        bulundu), bir sahip hazneyi önerilen tuzla doldurup su sertliğini ayarladıktan sonra bile tuz
+        eksik göstergesinin kalıcı olarak açık kaldığını bildiriyor. Bu bir can sıkıcı durumdur, makineyi
+        durduran bir arıza değildir.
+      advice: Tuz ışığı sönmüyorsa, hazne dolumundan ziyade tuz sensöründen şüphelenin.
+  evidence:
+  - url: https://sav.darty.com/forum/SIEMENS/SN23HW60CE/588100
+    quote: Témoin sel manquant allumé en permanence
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:43:37+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: arcelik
+      series: a600bstar
+  kind: known_issue
+  domain: general
+  severity: high
+  consequence: ''
+  detection: ''
+  component: entire unit / serviceability
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: A600B requires five service visits in two months without resolution
+      body: The same owner reports five service visits in two months with no resolution, and a service
+        technician's replacement request was denied by Arçelik, leaving the owner unable to use the machine.
+      advice: Even when service is called, the manufacturer may not approve replacement. This means a
+        defective unit could leave you without a working dishwasher for months while disputes continue.
+        Factor in this risk when buying.
+    tr:
+      title: A600B iki ayda çözüm olmadan beş servis ziyareti gerektiriyor
+      body: Aynı sahip, iki ayda çözüm olmadan beş servis ziyareti bildiriyor ve bir servis teknisyeninin
+        değişim talebi Arçelik tarafından reddedildi, bu da sahibini makineyi kullanamaz halde bıraktı.
+      advice: Servis çağrılsa bile üretici değişimi onaylamayabilir. Bu, arızalı bir ünitenin anlaşmazlıklar
+        sürerken sizi aylarca çalışan bir bulaşık makinesinden yoksun bırakabileceği anlamına gelir. Satın
+        alırken bu riski hesaba katın.
+  evidence:
+  - url: https://www.sikayetvar.com/arcelik/arcelik-a600b-bulasik-makinesi-temiz-yikama-yapmiyor-surekli-servis-gerekiyor
+    quote: yaklaşık 2 aydır kullanıyorum ve bu süre içinde tam 5 kez servis gelmesine rağmen sorun hiçbir
+      şekilde çözülmedi
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:46:42+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: beko
+      series: dis15022
+  kind: known_issue
+  domain: water
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: water inlet / overflow detection system
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: E:01 overflowing warning signals a leak or excess water intake (DIS15022)
+      body: 'This is Beko''s own manual for the DIS15022 documenting the E:01 overflowing error code:
+        the machine detects excess water intake or a leak and flashes E:01. If the code does not clear,
+        the manual says there is a permanent fault requiring authorised service. This is the documented
+        fault path for a water leak on this model.'
+      advice: If a DIS15022 flashes E:01, the machine is detecting a leak or excess water intake. If the
+        code clears on its own the safety algorithm has discharged the water; if it persists, the manual
+        directs you to contact authorised service, which implies a paid repair visit.
+    tr:
+      title: E:01 taşma uyarı sinyali bir sızıntıya veya aşırı su alımına işaret eder (DIS15022)
+      body: 'Bu, Beko''nun DIS15022 için E:01 taşma hata kodunu belgeleyen kendi kılavuzudur: makine aşırı
+        su alımı veya sızıntı tespit eder ve E:01 yanıp söner. Kod geçmezse, kılavuz yetkili servis gerektiren
+        kalıcı bir arıza olduğunu söyler. Bu, bu modeldeki bir su sızıntısı için belgelenmiş arıza yoludur.'
+      advice: Bir DIS15022 E:01 yanıp sönerse, makine bir sızıntı veya aşırı su alımı tespit ediyor demektir.
+        Kod kendiliğinden geçerse güvenlik algoritması suyu tahliye etmiştir; devam ederse, kılavuz yetkili
+        servisle iletişime geçmenizi yönlendirir, bu da ücretli bir onarım ziyareti anlamına gelir.
+  evidence:
+  - url: https://www.manualowl.com/m/Beko/DIS15022/Manual/651264?page=32
+    quote: If the machine intakes too much water or there is leakage at any of the components then the
+      machine will detect this and E:01 icon will flash on the Programme indicator.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:39:28+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: arcelik
+      series: 6667wfi
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: Wi-Fi module
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Wi-Fi connection cannot be established
+      body: The same owner could not connect the machine's Wi-Fi at all and got no solution.
+      advice: Wi-Fi connectivity problems appear on this model in multiple independent complaints, so
+        treat the smart features as unreliable rather than a selling point.
+    tr:
+      title: Wi-Fi bağlantısı kurulamıyor
+      body: Aynı sahip makinenin Wi-Fi'sine hiç bağlanamadı ve hiçbir çözüm alamadı.
+      advice: Wi-Fi bağlantı sorunları bu modelde birden fazla bağımsız şikayette görülüyor, bu nedenle
+        akıllı özellikleri satış noktası olarak değil güvenilmez olarak değerlendirin.
+  evidence:
+  - url: https://www.sikayetvar.com/arcelik/bulasik-makinesinde-temiz-yikama-sorunu-ve-wifi-baglanti-problemi
+    quote: Ayrıca cihazın Wi‑Fi bağlantısını da bir türlü sağlayamıyorum, bu konuda da çözüm üretilmedi.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:50:50+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: arcelik
+      series: 6667wfi
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: WiFi main PCB (ana kart)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: WiFi main card burned out three times, never paired; E20 water intake error
+      body: Owner complaint from July 2025 on Şikayetvar reporting the WiFi main card burned out and was
+        replaced three times without ever pairing with the device, plus drying not working and intermittent
+        E20 error code for water intake failure. This came from the search query 'Arçelik 6667 WF I arıza'.
+      advice: The WiFi main board is a recurring electrical failure point on this model; if the smart
+        features matter, expect possible repeated service visits. The E20 error indicates a water intake
+        fault that also recurred.
+    tr:
+      title: WiFi ana kartı üç kez yandı, hiç eşleşmedi; E20 su alım hatası
+      body: Temmuz 2025'te Şikayetvar'da WiFi ana kartının yandığını ve cihazla hiç eşleşmeden üç kez
+        değiştirildiğini, ayrıca kurutmanın çalışmadığını ve su alım arızası için aralıklı E20 hata kodunu
+        bildiren sahip şikayeti. Bu, 'Arçelik 6667 WF I arıza' arama sorgusundan geldi.
+      advice: WiFi ana kartı bu modelde tekrarlayan bir elektriksel arıza noktasıdır; akıllı özellikler
+        önemliyse olası tekrarlanan servis ziyaretlerini bekleyin. E20 hatası, yine tekrarlayan bir su
+        alım arızasına işaret eder.
+  evidence:
+  - url: https://www.sikayetvar.com/arcelik/wifi-karti-uc-kez-degistirildigi-halde-sorun-cozulmedi-ve-ucret-iadesi-talep-ediyorum
+    quote: 3 ay önce satın aldığım Arçelik 6667 wfı bulaşık makinesini aldığım günden beri sorunsuz kullanamadım.
+      Ürünün Wi-Fi ana kartının yandığı gerekçesiyle şu ana kadar 3 kez kart değişimi yapıldı ancak hiçbirinde
+      Wi-Fi ana kart cihazla eşleşmedi ve problem çözülemedi. Ayrıca makine kurutma yapmıyor ve zaman
+      zaman e20 hata kodu ile su alamama sorunu da yaşıyorum.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:46:17+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      series: dw60dg540fwq
+  kind: known_issue
+  domain: water
+  severity: high
+  consequence: ''
+  detection: ''
+  component: water inlet / sump seal
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Machine leaked 2-3 litres of clean water from underneath while switched off
+      body: A unit leaked roughly 2-3 litres of clean water from underneath even while switched off; the
+        owner was quoted a 2200 TL service fee due to technician distance.
+      advice: A leak while off points to a water-path or seal fault, not user loading; this can be costly
+        to diagnose if the nearest authorized service is far.
+    tr:
+      title: Makine kapalıyken altından 2-3 litre temiz su sızdırdı
+      body: Bir ünite kapalıyken bile altından yaklaşık 2-3 litre temiz su sızdırdı; sahibine teknisyen
+        mesafesi nedeniyle 2200 TL servis ücreti teklif edildi.
+      advice: Kapalıyken sızıntı, kullanıcı yüklemesi değil su yolu veya conta arızasına işaret eder;
+        en yakın yetkili servis uzaksa bunun teşhisi maliyetli olabilir.
+  evidence:
+  - url: https://www.sikayetvar.com/samsung/ariza/musteri?page=23
+    quote: Samsung DW60dg540FWQ model bulaşık makinem, cihaz kapalı olmasına rağmen alt kısmından yaklaşık
+      2-3 litre temiz su sızdırmıştır.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:49:46+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      series: dw90f89t0umtaa
+  kind: known_issue
+  domain: water
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: filter cap / leak sensor (LC error)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Leak control error (LC) triggered by filter cap not seated — owner report on Samsung's own
+        product page
+      body: The owner reports an LC (leak control) error triggered by the filter cap not being clicked
+        in correctly, and says the unit then 'spirals' and cannot be made to work normally. The same reviewer
+        also reported the first delivered unit wouldn't work once installed.
+      advice: If an LC error appears, first check the filter cap is fully seated — this owner found a
+        mis-seated cap triggered the leak sensor even with no actual leak. If the error persists after
+        reseating, the leak sensor or control board may need service; this owner's unit never recovered.
+    tr:
+      title: Filtre kapağı yerine oturmadığı için tetiklenen sızıntı kontrol hatası (LC) — Samsung'un
+        kendi ürün sayfasında sahip bildirimi
+      body: Sahip, filtre kapağının doğru şekilde yerine oturmaması nedeniyle tetiklenen bir LC (sızıntı
+        kontrol) hatası bildiriyor ve ünitenin ardından 'sarmal yaptığını' ve normal şekilde çalıştırılamadığını
+        söylüyor. Aynı değerlendirici ayrıca ilk teslim edilen ünitenin kurulduktan sonra çalışmadığını
+        bildirdi.
+      advice: Bir LC hatası görünürse, önce filtre kapağının tamamen yerine oturduğunu kontrol edin —
+        bu sahip, gerçek bir sızıntı olmasa bile yanlış oturmuş bir kapağın sızıntı sensörünü tetiklediğini
+        buldu. Yeniden yerleştirdikten sonra hata devam ederse, sızıntı sensörü veya kontrol kartı servis
+        gerektirebilir; bu sahibin ünitesi hiç düzelmedi.
+  evidence:
+  - url: https://www.samsung.com/ca/dishwashers/built-in/dw90f24t-dw90f89t0usraa-dishwasher-ai-wash-3rd-rack-washing-system-16-place-settings-black-dw90f89t0umtaa/
+    quote: Some cap for the filter was not clicked in correctly and it starting throwing a leak control
+      error. It’s a sensor problem cuz there isn’t a leak!
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:51:42+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: arcelik
+      series: 6667wfi
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: control board / electronics
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: New unit stopped running two minutes into a normal program
+      body: A brand-new unit would not run at all, then stopped two minutes into a normal program.
+      advice: A new unit failing to run points to an electronics/control fault; verify the machine completes
+        a full cycle right after installation.
+    tr:
+      title: Yeni ünite normal bir programın iki dakikasında çalışmayı durdurdu
+      body: Yepyeni bir ünite hiç çalışmadı, ardından normal bir programın iki dakikasında durdu.
+      advice: Yeni bir ünitenin çalışmaması elektronik/kontrol arızasına işaret eder; kurulumdan hemen
+        sonra makinenin tam bir döngüyü tamamladığını doğrulayın.
+  evidence:
+  - url: https://www.sikayetvar.com/arcelik/6667-wf-i/ekran
+    quote: Yeni satın aldığım Arçelik 6667 model bulaşık makinesinin 8 Nisan’da kurulumu yapıldı. Ancak
+      makine hiç çalışmadı.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:50:50+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      series: dw60dg540fwq
+  kind: known_issue
+  domain: general
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: tub / general build
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Abnormal noise and an obvious manufacturing defect within the first week
+      body: A brand-new unit showed abnormal running noise and an obvious interior manufacturing defect
+        within a week; Samsung offered a paid replacement instead of a free one.
+      advice: Inspect a new unit immediately and report noise/defects within the warranty window; the
+        owner reports Samsung proposed a paid exchange for a factory-defective machine.
+    tr:
+      title: İlk hafta içinde anormal gürültü ve belirgin bir üretim hatası
+      body: Yepyeni bir ünite bir hafta içinde anormal çalışma gürültüsü ve belirgin bir iç üretim hatası
+        gösterdi; Samsung ücretsiz yerine ücretli değişim teklif etti.
+      advice: Yeni bir üniteyi hemen inceleyin ve garanti süresi içinde gürültü/hataları bildirin; sahibi,
+        Samsung'un fabrika hatası olan bir makine için ücretli değişim önerdiğini bildiriyor.
+  evidence:
+  - url: https://www.sikayetvar.com/samsung/yeni-samsung-bulasik-makinesi-uretim-hatasi-icin-ucretsiz-degisim-talebi
+    quote: daha 1 haftalıkken hem çalışırken çıkan anormal sesten hem de iç haznesindeki bariz üretim
+      hatasından dolayı ciddi bir problem olduğunu fark ettim.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:49:46+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: siemens
+      series: sn65zx07ce
+  kind: known_issue
+  domain: electrical
+  severity: low
+  consequence: ''
+  detection: ''
+  component: touch control panel
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Sensitive touch control can trigger with delay or error
+      body: Onliner.by notes the sensitive touch control can trigger with delay or error. This is a usability
+        annoyance rather than a critical failure.
+      advice: Expect occasional touch control lag or mis-triggers; this is a minor annoyance, not a reason
+        to avoid the model.
+    tr:
+      title: Hassas dokunmatik kontrol gecikmeyle veya hatayla tetiklenebilir
+      body: Onliner.by, hassas dokunmatik kontrolün gecikmeyle veya hatayla tetiklenebileceğini belirtiyor.
+        Bu, kritik bir arıza değil, kullanım açısından bir rahatsızlıktır.
+      advice: Ara sıra dokunmatik kontrol gecikmesi veya yanlış tetiklenme bekleyin; bu küçük bir rahatsızlıktır,
+        modelden kaçınmak için bir neden değildir.
+  evidence:
+  - url: https://catalog.onliner.by/dishwasher/siemens/sn65zx07ce/prices?region=borisov
+    quote: Чувствительный сенсор управления может срабатывать с задержкой или ошибкой
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:44:24+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: arcelik
+      series: 62113iwf
+  kind: known_issue
+  domain: water
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: spray arm (pervane)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Spray arm (pervane) replacement does not fix dirty dishes
+      body: Owner reports dishes coming out dirty within the first year; service cleaned then replaced
+        the spray arms, but the problem persisted and the machine was eventually taken to the workshop.
+      advice: Dirty dishes on a 62113 I WF are not reliably fixed by cleaning or replacing the spray arms.
+        Before paying for a spray-arm swap, ask the service to check the circulation pump, wash motor
+        and water inlet path, as the spray arm alone may not be the root cause.
+    tr:
+      title: Püskürtme kolunun (pervane) değiştirilmesi kirli bulaşıkları düzeltmiyor
+      body: Sahibi, ilk yıl içinde bulaşıkların kirli çıktığını bildiriyor; servis püskürtme kollarını
+        temizledi, ardından değiştirdi, ancak sorun devam etti ve makine sonunda atölyeye götürüldü.
+      advice: 62113 I WF'de kirli bulaşıklar, püskürtme kollarının temizlenmesi veya değiştirilmesiyle
+        güvenilir şekilde düzeltilmez. Püskürtme kolu değişimi için ödeme yapmadan önce, servisten sirkülasyon
+        pompasını, yıkama motorunu ve su giriş yolunu kontrol etmesini isteyin, çünkü tek başına püskürtme
+        kolu kök neden olmayabilir.
+  evidence:
+  - url: https://www.sikayetvar.com/arcelik/yeni-alinan-bulasik-makinesi-surekli-arizali-garanti-kapsaminda-sorun-cozulemiyor-ve-degisim-talebi-reddediliyor
+    quote: Makine daha 1 sene geçmeden bulaşıkları kirli çıkartmaya başladı.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:45:22+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: arcelik
+      series: a600bstar
+  kind: known_issue
+  domain: water
+  severity: high
+  consequence: ''
+  detection: ''
+  component: water inlet valve / flow sensor
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: A600B shows E02 (no water) error within first month of use
+      body: Owner complaint on Şikayetvar dated June 2026 reports the A600B displayed E02 (no water) error
+        within the first month, despite the machine washing fine after installation and after a service
+        visit, ruling out weak mains pressure.
+      advice: E02 (no water) error appearing within the first month suggests a defective water inlet component,
+        not a plumbing issue. This is a high-severity early failure that may require warranty service
+        or replacement.
+    tr:
+      title: A600B, kullanımın ilk ayında E02 (su yok) hatası gösteriyor
+      body: Şikayetvar'da Haziran 2026 tarihli sahip şikayeti, A600B'nin ilk ay içinde E02 (su yok) hatası
+        gösterdiğini bildiriyor; makine kurulumdan sonra ve bir servis ziyaretinden sonra sorunsuz yıkamasına
+        rağmen, bu da zayıf şebeke basıncını dışlıyor.
+      advice: İlk ay içinde ortaya çıkan E02 (su yok) hatası, tesisat sorunu değil, arızalı bir su giriş
+        bileşenine işaret eder. Bu, garanti servisi veya değişim gerektirebilecek yüksek önem dereceli
+        bir erken arızadır.
+  evidence:
+  - url: https://www.sikayetvar.com/arcelik/cihaz/ekran
+    quote: 11.05.2026 tarihinde montajı yapılan Arçelik A600B model bulaşık makinem, daha ilk ayında e02
+      (su yok) hatası vermeye ba...şladı.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:51:19+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: beko
+      series: b600classic
+  kind: known_issue
+  domain: water
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: upper spray arm (üst pervane)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Upper spray arm drips water onto clean dishes after the cycle ends (B 600 b Classic)
+      body: A new B 600 b Classic owner reports that after the door auto-opens at cycle end, water drips
+        from the upper spray arm onto the lower basket and re-wets clean dishes; the authorized service
+        called it normal for this series. It is a recurring, user-visible flaw on this exact model, though
+        the owner could not get a replacement.
+      advice: Expect water to drip from the upper arm and re-wet the lower load after the cycle, and know
+        the authorized service may dismiss it as normal for this series rather than fix or replace it.
+    tr:
+      title: Üst püskürtme kolu, program bittikten sonra temiz bulaşıkların üzerine su damlatıyor (B 600
+        b Classic)
+      body: Yeni bir B 600 b Classic sahibi, program sonunda kapak otomatik olarak açıldıktan sonra üst
+        püskürtme kolundan alt sepete su damladığını ve temiz bulaşıkları yeniden ıslattığını bildiriyor;
+        yetkili servis bunu bu seri için normal olarak nitelendirdi. Bu, tam olarak bu modelde tekrarlayan,
+        kullanıcı tarafından görülebilen bir kusurdur, ancak sahibi bir değişim alamadı.
+      advice: Programdan sonra üst koldan su damlamasını ve alt sepetteki yükü yeniden ıslatmasını bekleyin
+        ve yetkili servisin bunu düzeltmek veya değiştirmek yerine bu seri için normal olarak reddedebileceğini
+        bilin.
+  evidence:
+  - url: https://www.sikayetvar.com/beko/yeni-beko-bulasik-makinesinde-su-damlama-yetkili-servis-cozum-sunmadi
+    quote: program bitip kapak otomatik olarak açıldıktan sonra bir süre beklememize rağmen üst pervaneden
+      su damlacıklarının alt sepete damlayarak alttaki yıkanan bulaşıkları tekrar ıslattığını gördük
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:37:44+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: siemens
+      series: sn65zx07ce
+  kind: known_issue
+  domain: mechanical
+  severity: low
+  consequence: ''
+  detection: ''
+  component: cutlery basket
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Poorly thought-out cutlery basket fixation system
+      body: Onliner.by notes the cutlery basket fixation system is poorly designed and causes inconvenience.
+        This is a usability complaint.
+      advice: The cutlery basket may not stay firmly in place; this is a minor ergonomic issue.
+    tr:
+      title: Kötü düşünülmüş çatal bıçak sepeti sabitleme sistemi
+      body: Onliner.by, çatal bıçak sepeti sabitleme sisteminin kötü tasarlandığını ve rahatsızlığa neden
+        olduğunu belirtiyor. Bu bir kullanılabilirlik şikayetidir.
+      advice: Çatal bıçak sepeti sağlam bir şekilde yerinde durmayabilir; bu küçük bir ergonomik sorundur.
+  evidence:
+  - url: https://catalog.onliner.by/dishwasher/siemens/sn65zx07ce/prices?region=borisov
+    quote: Непродуманная система фиксации корзины для столовых приборов вызывает неудобства
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:44:24+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: beko
+      series: b600classic
+  kind: known_issue
+  domain: water
+  severity: high
+  consequence: ''
+  detection: ''
+  component: wash system / spray performance
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Dishes come out dirty despite four service visits (Beko b600 b)
+      body: A Beko b600 b owner reports dishes and the tub interior come out dirty/uncleaned; after four
+        authorized service visits (salt setting, software update, glass-wash test, water test) the service
+        blamed the water and refused a replacement. This is the most consequential failure reported on
+        this model — cleaning performance not resolved by service.
+      advice: There are reports of this model leaving dishes visibly dirty, with the authorized service
+        unable to resolve it after multiple visits and refusing replacement; budget for the possibility
+        of a persistent cleaning defect.
+    tr:
+      title: Dört servis ziyaretine rağmen bulaşıklar kirli çıkıyor (Beko b600 b)
+      body: Bir Beko b600 b sahibi, bulaşıkların ve hazne içinin kirli/temizlenmemiş çıktığını bildiriyor;
+        dört yetkili servis ziyaretinden (tuz ayarı, yazılım güncellemesi, cam yıkama testi, su testi)
+        sonra servis suyu suçladı ve değişim talebini reddetti. Bu, bu modelde bildirilen en önemli arıza
+        — temizleme performansı servis tarafından çözülemedi.
+      advice: Bu modelin bulaşıkları gözle görülür şekilde kirli bıraktığına dair bildirimler var; yetkili
+        servis birden fazla ziyaretten sonra bunu çözemedi ve değişimi reddetti; kalıcı bir temizleme
+        kusuru olasılığını hesaba katın.
+  evidence:
+  - url: https://www.sikayetvar.com/beko/ayipli-beko-bulasik-makinesi-ve-servisin-degisim-reddetmesi
+    quote: Ancak makine yıkama yaptıktan sonra bardakları, tabakları ve makinenin içini kirli bırakıyor,
+      bulaşıklar temizlenmemiş gibi çıkıyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:37:44+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: arcelik
+      series: a600bstar
+  kind: known_issue
+  domain: water
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: rinse/detergent system
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: A600B leaves detergent residue and causes glass spotting/matting
+      body: Same owner complaint reports persistent detergent residue and glass spotting/matting, with
+        the owner trying multiple detergent brands (Asperox, Finish, Bingo, Fairy) without improvement.
+      advice: Detergent residue and glass matting persisted across multiple detergent brands, suggesting
+        a machine-side rinse issue rather than user error. If you buy this model, expect possible ongoing
+        spotting issues that may not be resolved by service.
+    tr:
+      title: A600B deterjan kalıntısı bırakıyor ve camlarda leke/matlaşmaya neden oluyor
+      body: Aynı sahibin şikayeti, kalıcı deterjan kalıntısı ve camlarda leke/matlaşma bildiriyor; sahip
+        birden fazla deterjan markası (Asperox, Finish, Bingo, Fairy) denemiş ancak iyileşme olmamış.
+      advice: Deterjan kalıntısı ve cam matlaşması birden fazla deterjan markasında devam etti; bu, kullanıcı
+        hatasından çok makine tarafındaki bir durulama sorununa işaret ediyor. Bu modeli alırsanız, servis
+        tarafından çözülemeyebilecek olası sürekli lekelenme sorunlarını bekleyin.
+  evidence:
+  - url: https://www.sikayetvar.com/arcelik/arcelik-a600b-bulasik-makinesi-temiz-yikama-yapmiyor-surekli-servis-gerekiyor
+    quote: Bardaklarda ciddi lekelenmeler ve matlaşmalar oluştu, deterjan kalıntıları da sıkça kalıyor
+      ve makineyi neredeyse hiç kullanamıyoruz.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:46:42+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: beko
+      series: b600classic
+  kind: known_issue
+  domain: general
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: interior tub / plastic components
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Strong plastic smell on every wash cycle (B600B Classic 4 programlı)
+      body: A B600B Classic 4-program owner reports a strong, unpleasant plastic smell on every wash from
+        day one, persisting after repeated use; Beko support said it was normal and would fade, but it
+        did not. This is a comfort/health concern specific to this model's materials.
+      advice: If you are sensitive to chemical smells, know this model has been reported to emit a strong
+        plastic odor that did not fade with use, and that Beko may treat it as normal.
+    tr:
+      title: Her yıkama programında güçlü plastik kokusu (B600B Classic 4 programlı)
+      body: Bir B600B Classic 4 programlı sahibi, ilk günden itibaren her yıkamada güçlü, hoş olmayan
+        bir plastik kokusu bildiriyor; bu koku tekrarlanan kullanımdan sonra da devam ediyor; Beko desteği
+        bunun normal olduğunu ve geçeceğini söyledi, ancak geçmedi. Bu, bu modelin malzemelerine özgü
+        bir konfor/sağlık endişesidir.
+      advice: Kimyasal kokulara hassassanız, bu modelin kullanımla geçmeyen güçlü bir plastik koku yaydığının
+        bildirildiğini ve Beko'nun bunu normal karşılayabileceğini bilin.
+  evidence:
+  - url: https://www.sikayetvar.com/beko/beko-bulasik-makinesinde-yogun-plastik-kokusundan-sikayet-ve-degisim-talebi
+    quote: Makineyi aldığım günden beri her çalıştırdığımda yoğun ve rahatsız edici bir plastik kokusu
+      oluşuyor
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:37:44+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: bosch
+      series: shp65t56uc
+  kind: known_issue
+  domain: mechanical
+  severity: low
+  consequence: ''
+  detection: ''
+  component: spray arm plug / spray arm
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Spray arm plug into water source wears out and is difficult to engage
+      body: An owner repair story on PartSelect reports the spray arm plug into the water source wore
+        out and became hard to engage, requiring spray arm replacement.
+      advice: A worn spray arm plug is a straightforward, low-cost replacement that resolves engagement/leak
+        issues at the drawer connection.
+    tr:
+      title: Su kaynağına takılan püskürtme kolu tıkacı aşınıyor ve takılması zorlaşıyor
+      body: PartSelect'teki bir sahip onarım hikayesi, su kaynağına takılan püskürtme kolu tıkacının aşındığını
+        ve takılmasının zorlaştığını, püskürtme kolunun değiştirilmesi gerektiğini bildiriyor.
+      advice: Aşınmış bir püskürtme kolu tıkacı, çekmece bağlantısındaki takma/sızıntı sorunlarını çözen
+        basit ve düşük maliyetli bir değişimdir.
+  evidence:
+  - url: https://www.partselect.com/Models/SHP65T56UC/MFGModelNumber/09/Instructions/?start=3
+    quote: Spray arm plug into water source became worn out and difficult to engage
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:41:18+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: arcelik
+      series: 6667wfi
+  kind: known_issue
+  domain: general
+  severity: low
+  consequence: ''
+  detection: ''
+  component: delivery / handling
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Unit delivered damaged twice, replacement request delayed
+      body: Owner reports the unit was delivered damaged, then a replacement was also delivered damaged,
+        with the exchange process dragged out.
+      advice: Inspect the delivered unit carefully on arrival and photograph any damage immediately, since
+        damaged deliveries and slow exchanges are reported on this model.
+    tr:
+      title: Ürün iki kez hasarlı teslim edildi, değişim talebi geciktirildi
+      body: Sahip, ürünün hasarlı teslim edildiğini, ardından bir değişim ürününün de hasarlı teslim edildiğini
+        ve değişim sürecinin uzatıldığını bildiriyor.
+      advice: Teslim edilen ürünü varışta dikkatlice inceleyin ve herhangi bir hasarı hemen fotoğraflayın;
+        çünkü bu modelde hasarlı teslimatlar ve yavaş değişimler bildiriliyor.
+  evidence:
+  - url: https://www.sikayetvar.com/arcelik/bulasik-makinesi/6667-wf
+    quote: Arçelik’ten 6667 wf model bulaşık makinesi satın aldım. Ürünümün teslimatı sırasında servis,
+      hasarlı bir ürünü alışveriş...ten 20 gün sonra getirdi.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:50:50+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: arcelik
+      series: a600bstar
+  kind: known_issue
+  domain: water
+  severity: high
+  consequence: ''
+  detection: ''
+  component: washing/rinse system (no specific part named by owner)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: A600B fails to wash clean on fast/intense programmes, detergent residue on glasses, unresolved
+        after 5 service visits
+      body: Owner complaint (Alper, İzmir) on Şikayetvar, from the search 'Arçelik A 600 B Star arıza
+        forum'. A new A600B left food residue on dishes on fast and intense programmes and detergent residue
+        on glasses; 5 service visits in ~2 months did not resolve it, and the owner was pushed toward
+        a replacement/refund claim.
+      advice: 'A buyer should treat wash performance as the main risk on this model: verify on a fast/intense
+        cycle early in the warranty period, and keep service visit records, because owners report the
+        fault persisting through multiple visits.'
+    tr:
+      title: A600B hızlı/yoğun programlarda temiz yıkamıyor, bardaklarda deterjan kalıntısı var, 5 servis
+        ziyaretinden sonra çözülmedi
+      body: Şikayetvar'da 'Arçelik A 600 B Star arıza forum' aramasından gelen sahip şikayeti (Alper,
+        İzmir). Yeni bir A600B, hızlı ve yoğun programlarda bulaşıklarda yemek kalıntısı ve bardaklarda
+        deterjan kalıntısı bıraktı; ~2 ayda 5 servis ziyareti bunu çözmedi ve sahip değişim/iade talebine
+        yönlendirildi.
+      advice: 'Bir alıcı, bu modeldeki ana risk olarak yıkama performansını görmelidir: garanti süresinin
+        başlarında hızlı/yoğun bir programda doğrulayın ve servis ziyaret kayıtlarını saklayın; çünkü
+        sahipler arızanın birden fazla ziyaret boyunca devam ettiğini bildiriyor.'
+  evidence:
+  - url: https://www.sikayetvar.com/arcelik/arcelik-a600b-bulasik-makinesi-temiz-yikama-yapmiyor-surekli-servis-gerekiyor
+    quote: Makine özellikle hızlı ve yoğun programlarda bulaşıkları temiz yıkamıyor, kirler olduğu gibi
+      kalıyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:46:42+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: bosch
+      series: shp65t56uc
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: water inlet valve / heat pump low-water-level circuit
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: E-18 / E-08 low-water-level errors persist after inlet valve and drain filter replacement
+      body: The owner replaced the water inlet valve and drain filter and the constant beeping with E-18/E-08
+        codes continued, so the low-water-fill diagnosis is not a simple valve swap.
+      advice: A constant-beep/E-18 unit may not be fixed by replacing the inlet valve; check actual water
+        fill level and the inlet/outlet plastic assembly before spending.
+    tr:
+      title: E-18 / E-08 düşük su seviyesi hataları giriş valfi ve tahliye filtresi değişiminden sonra
+        da devam ediyor
+      body: Kullanıcı su giriş valfini ve tahliye filtresini değiştirdi ve E-18/E-08 kodlarıyla sürekli
+        bip sesi devam etti, bu nedenle düşük su dolum teşhisi basit bir valf değişimi değildir.
+      advice: Sürekli bip/E-18 veren bir ünite giriş valfinin değiştirilmesiyle düzelmeyebilir; harcama
+        yapmadan önce gerçek su dolum seviyesini ve giriş/çıkış plastik düzeneğini kontrol edin.
+  evidence:
+  - url: https://forum.appliancepartspros.com/t/constant-beeping/410203
+    quote: E08 is the heat pump identifies the water as being too low while the error E18 is just a general
+      low water level.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:41:18+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: arcelik
+      series: a710bprestige
+  kind: known_issue
+  domain: water
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: salt compartment / water softener
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Arçelik A 710 B — rust stains leaking from the salt compartment on a new unit
+      body: The unit is identified as 'a 710 b'. Rust leaking from the salt compartment appeared within
+        days of a replacement unit arriving.
+      advice: A buyer should watch the salt compartment area for rust staining early on; it appeared on
+        a brand-new unit and signals a corrosion/water-seal problem rather than normal use.
+    tr:
+      title: Arçelik A 710 B — yeni bir ünitede tuz bölmesinden sızan pas lekeleri
+      body: Ünite 'a 710 b' olarak tanımlanıyor. Değişim ünitesi geldikten birkaç gün içinde tuz bölmesinden
+        pas sızıntısı ortaya çıktı.
+      advice: Bir alıcı, tuz bölmesi alanını başlangıçta pas lekelenmesi açısından izlemelidir; bu, yepyeni
+        bir ünitede ortaya çıktı ve normal kullanımdan ziyade bir korozyon/su sızdırmazlığı sorununa işaret
+        ediyor.
+  evidence:
+  - url: https://www.sikayetvar.com/arcelik/a-710-b/cihazlarim
+    quote: Makine çalıştırılıp bulaşıklar yıkandıktan sonra tuz koyduğum bölümün etrafından pas lekeleri
+      akıyor ve iç kısımda paslanma görüntüsü
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:38:56+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      series: dw8r5061usaa
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: internal electrical connections / control board
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Samsung DW80R5061US dishwasher fire recall (CPSC 23-180) — moisture intrusion into electrical
+        connections
+      body: 'The CPSC recall 23-180 covers DW80R5061US (the model matching this subject). This is a critical
+        safety issue: moisture intrusion can cause overheating and fire. The remedy is a free in-home
+        repair (protective moisture barrier + firmware update).'
+      advice: If you own this model, verify your serial number against the CPSC recall and schedule the
+        free repair immediately. Do not use the unit if you notice burning smells, heat, or discoloration.
+    tr:
+      title: Samsung DW80R5061US bulaşık makinesi yangın geri çağırma (CPSC 23-180) — elektrik bağlantılarına
+        nem girişi
+      body: 'CPSC geri çağırma 23-180, DW80R5061US''u (bu konuyla eşleşen model) kapsamaktadır. Bu kritik
+        bir güvenlik sorunudur: nem girişi aşırı ısınmaya ve yangına neden olabilir. Çözüm, ücretsiz evde
+        onarımdır (koruyucu nem bariyeri + ürün yazılımı güncellemesi).'
+      advice: Bu modele sahipseniz, seri numaranızı CPSC geri çağırmasına göre doğrulayın ve ücretsiz
+        onarımı hemen planlayın. Yanık kokusu, ısı veya renk değişikliği fark ederseniz üniteyi kullanmayın.
+  evidence:
+  - url: https://easybear-appliancerepair.com/blog/samsung-dishwasher-recall-2023-fire-risk
+    quote: Moisture can intrude into the dishwasher's internal electrical connections during certain wash
+      cycles, creating a short circuit that can cause the dishwasher to overheat and potentially catch
+      fire.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:42:55+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: arcelik
+      series: 6667wfi
+  kind: known_issue
+  domain: drying
+  severity: high
+  consequence: ''
+  detection: ''
+  component: drying system / auto door-opening mechanism
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Persistent wet dishes and drying function disabled after service adjustment
+      body: Owner reports dishes always come out wet, and after a service visit the automatic door-opening
+        and extra-drying functions stopped working.
+      advice: The drying complaint recurs across owners; a service visit may itself disable the auto door-opening
+        drying feature, so check it after any repair.
+    tr:
+      title: Servis ayarından sonra kalıcı ıslak bulaşıklar ve kurutma işlevi devre dışı
+      body: Kullanıcı, bulaşıkların her zaman ıslak çıktığını ve bir servis ziyaretinden sonra otomatik
+        kapı açma ve ekstra kurutma işlevlerinin çalışmayı durdurduğunu bildiriyor.
+      advice: Kurutma şikayeti kullanıcılar arasında tekrarlanıyor; bir servis ziyareti otomatik kapı
+        açma kurutma özelliğini kendisi devre dışı bırakabilir, bu nedenle herhangi bir onarımdan sonra
+        bunu kontrol edin.
+  evidence:
+  - url: https://www.sikayetvar.com/didim-cinar-beyaz-esya/surekli-islak-bulasik-cozulmeyen-servis-ve-degisim-talebi
+    quote: Makineyi aldığım günden beri bulaşıklar sürekli ıslak çıkıyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:50:50+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      series: dw60dg540fwq
+  kind: known_issue
+  domain: water
+  severity: high
+  consequence: ''
+  detection: ''
+  component: rinse system / rinse aid circuit
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Rinse failure leaves detergent residue and film on glassware from the second wash
+      body: A new unit left detergent residue and film on glassware from the second wash on every program;
+        Samsung service refused to accept it as a fault.
+      advice: If you buy this model, verify rinse performance early and keep records; the owner reports
+        Samsung service disputed the defect and offered only a paid follow-up visit.
+    tr:
+      title: Durulama arızası, ikinci yıkamadan itibaren cam eşyalarda deterjan kalıntısı ve film bırakıyor
+      body: Yeni bir ünite, her programda ikinci yıkamadan itibaren cam eşyalarda deterjan kalıntısı ve
+        film bıraktı; Samsung servisi bunu bir arıza olarak kabul etmeyi reddetti.
+      advice: Bu modeli satın alırsanız, durulama performansını erkenden doğrulayın ve kayıt tutun; kullanıcı,
+        Samsung servisinin kusuru tartışmalı bulduğunu ve yalnızca ücretli bir takip ziyareti sunduğunu
+        bildiriyor.
+  evidence:
+  - url: https://www.sikayetvar.com/samsung/samsung-bulasik-makinesinde-durulama-sorunu-ve-yetersiz-servis
+    quote: Yaklaşık 15 günlük ve henüz ikinci yıkamadan itibaren makinenin bardak ve cam malzemeleri durulamadığını,
+      üzerinde buğu ve dalgalanmalar bıraktığını fark ettim. Kısa ya da uzun program fark etmeksizin her
+      yıkamada deterjan artığı ve lekeli şekilde bırakıyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:49:46+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: siemens
+      series: sn55zs07ce
+  kind: known_issue
+  domain: mechanical
+  severity: low
+  consequence: ''
+  detection: ''
+  component: Abdeckung der Ablenkungskammer (Teil 12042749)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Loose deflection-chamber cover (part 12042749) found inside SN55ZS07CE
+      body: An owner of this exact model found the plastic cover of the deflection chamber (part 12042749)
+        had come loose inside the machine and was lying on the floor of the tub, and could not work out
+        where or how to remount it.
+      advice: A small internal part can detach in normal use; it is a low-severity assembly defect, not
+        a functional failure, but the owner had to find the correct mounting position to refit it. Check
+        the interior after any unusual rattle.
+    tr:
+      title: SN55ZS07CE içinde gevşek sapma odası kapağı (parça 12042749) bulundu
+      body: Bu tam modelin bir sahibi, sapma odasının plastik kapağının (parça 12042749) makine içinde
+        gevşediğini ve teknenin tabanında yattığını buldu ve nereye veya nasıl yeniden takacağını çözemedi.
+      advice: Küçük bir iç parça normal kullanımda ayrılabilir; bu düşük ciddiyette bir montaj kusurudur,
+        işlevsel bir arıza değildir, ancak kullanıcı yeniden takmak için doğru montaj konumunu bulmak
+        zorunda kaldı. Olağandışı bir takırtıdan sonra iç kısmı kontrol edin.
+  evidence:
+  - url: https://www.kuechen-forum.de/forum/tags/sn55zs07ce/
+    quote: Nun habe ich im Inneren auf dem Boden die Abdeckung der Abkenkungskammer 12042749 gefunden
+      und würde sie gerne wieder montieren.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:48:55+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: arcelik
+      series: a710bprestige
+  kind: known_issue
+  domain: drying
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: wash/dry cycle performance
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Arçelik A 710 B — dishes come out dirty and wet even after the program finishes
+      body: The unit is identified as 'A710B'. From the first day the dishes came out both not fully clean
+        and wet.
+      advice: A buyer should not assume a full program means clean, dry dishes; this recurring complaint
+        means the wash and dry performance should be verified early, and it is grounds for a return request.
+    tr:
+      title: Arçelik A 710 B — program bittikten sonra bile bulaşıklar kirli ve ıslak çıkıyor
+      body: Ünite 'A710B' olarak tanımlanıyor. İlk günden itibaren bulaşıklar hem tam temiz hem de kuru
+        çıkmadı.
+      advice: Bir alıcı, tam bir programın temiz ve kuru bulaşıklar anlamına geldiğini varsaymamalıdır;
+        bu tekrarlayan şikayet, yıkama ve kurutma performansının erkenden doğrulanması gerektiği anlamına
+        gelir ve iade talebi için bir gerekçedir.
+  evidence:
+  - url: https://www.sikayetvar.com/arcelik/bulasik-makinesi/a710b
+    quote: Program bitmesine rağmen tabak, bardak ve diğer bulaşıklar hem tam temizlenmemiş hem de ıslak
+      şekilde kalıyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:38:56+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      series: dw8r5061usaa
+  kind: known_issue
+  domain: water
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: circulation pump / chopper screen
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Samsung DW8-R5061US/AA stops rinsing after wash — pump pulses but does not pump water
+      body: 'An owner of this exact model reports the rinse cycle failing: the pump pulses audibly but
+        moves no water. Cleaning filters and the chopper screen under the pump impeller did not fix it.
+        A commenter suggests checking for a 5C error code via the service manual''s inspection procedure.'
+      advice: If your unit stops rinsing, first clean all filter stages and the chopper screen; if that
+        fails, run the diagnostic check-code recall to see whether a 5C error is stored before replacing
+        the pump.
+    tr:
+      title: Samsung DW8-R5061US/AA yıkamadan sonra durulamayı durduruyor — pompa nabız atıyor ama su
+        pompalamıyor
+      body: 'Bu tam modelin bir sahibi, durulama döngüsünün başarısız olduğunu bildiriyor: pompa duyulabilir
+        şekilde nabız atıyor ancak hiç su hareket ettirmiyor. Filtrelerin ve pompa pervanesinin altındaki
+        parçalayıcı eleğin temizlenmesi sorunu çözmedi. Bir yorumcu, servis kılavuzunun inceleme prosedürü
+        aracılığıyla 5C hata kodunun olup olmadığının kontrol edilmesini öneriyor.'
+      advice: Üniteniz durulamayı durdurursa, önce tüm filtre aşamalarını ve parçalayıcı eleği temizleyin;
+        bu işe yaramazsa, pompayı değiştirmeden önce 5C hatasının kayıtlı olup olmadığını görmek için
+        tanılama kontrol kodu geri çağırmasını çalıştırın.
+  evidence:
+  - url: https://de.ifixit.com/Antworten/Ansehen/973296/Samsung+Dishwasher+does+not+rinse+after+washing
+    quote: I have a Samsung model DW8-R5061US/AA that has stopped rinsing after washing.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:42:55+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: beko
+      series: b600classic
+  kind: known_issue
+  domain: general
+  severity: low
+  consequence: ''
+  detection: ''
+  component: overall unit
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Retail reviews mostly positive (4.8/5) but some note noise and no child lock
+      body: 'The Hepsiburada retail review summary for the B 600 bClassic shows a 4.8/5 average across
+        63 reviews with praise for cleaning and value, but notes some users say it is not quiet and has
+        no child lock. This gives balance: the model is generally well rated, with the specific complaints
+        above being minority reports.'
+      advice: Overall retail sentiment is positive (4.8/5), so weigh the specific complaints against a
+        generally well-reviewed, good-value model; the main recurring negatives are noise and the lack
+        of a child lock.
+    tr:
+      title: Perakende incelemeleri çoğunlukla olumlu (4.8/5) ancak bazıları gürültü ve çocuk kilidi olmadığını
+        belirtiyor
+      body: 'B 600 bClassic için Hepsiburada perakende inceleme özeti, 63 inceleme genelinde 4.8/5 ortalama
+        gösteriyor; temizlik ve değer övgüsü var, ancak bazı kullanıcıların sessiz olmadığını ve çocuk
+        kilidi olmadığını söylediği belirtiliyor. Bu denge sağlıyor: model genel olarak iyi puan alıyor,
+        yukarıdaki özel şikayetler azınlık raporlarıdır.'
+      advice: Genel perakende duyarlılığı olumlu (4.8/5), bu nedenle özel şikayetleri genel olarak iyi
+        incelenmiş, iyi değerli bir modelle karşılaştırın; ana tekrarlayan olumsuzluklar gürültü ve çocuk
+        kilidinin olmamasıdır.
+  evidence:
+  - url: https://www.hepsiburada.com/beko-b-600-bclassic-serisi-solo-bulasik-makinesi-pm-HBC0000BRTXOE-yorumlari?magaza=KILI%C3%87LAR%20BEYAZ%20E%C5%9EYA
+    quote: Bazı kullanıcılar, makinenin çalışırken sessiz olmadığını ve çocuk kilidi bulunmadığını belirtiyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:37:44+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: siemens
+      series: sn23hw60ce
+  kind: known_issue
+  domain: drying
+  severity: low
+  consequence: ''
+  detection: ''
+  component: drying / condensation system
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Owner reports humidity traces on dishes and on the door/sides after a wash
+      body: A certified owner on the Darty SAV community (found via the 'Siemens SN23HW60CE common problems'
+        search) reports moisture traces on the dishes and on the appliance sides and door after a wash,
+        and adds that below 70°C the dishes don't come out clean. This is a recurring drying-complaint
+        pattern rather than a hard failure.
+      advice: Expect mediocre drying on low-temperature/quick cycles; use hotter programs if dry dishes
+        matter.
+    tr:
+      title: Sahip, yıkamadan sonra bulaşıklarda ve kapı/yanlarda nem izleri bildiriyor
+      body: Darty SAV topluluğunda sertifikalı bir sahip ('Siemens SN23HW60CE yaygın sorunlar' aramasıyla
+        bulundu), yıkamadan sonra bulaşıklarda ve cihazın yanlarında ve kapısında nem izleri olduğunu
+        bildiriyor ve 70°C'nin altında bulaşıkların temiz çıkmadığını ekliyor. Bu, sert bir arıza yerine
+        tekrarlayan bir kurutma şikayeti modelidir.
+      advice: Düşük sıcaklık/hızlı döngülerde vasat kurutma bekleyin; kuru bulaşıklar önemliyse daha sıcak
+        programlar kullanın.
+  evidence:
+  - url: https://sav.darty.com/forum/SIEMENS/SN23HW60CE/UTILISATION-DU-LAVE-VAISSELLE-SIEMENS-SN23HW60CE-VARIOSPEED-PLUS/4863886/588100
+    quote: je constate des traces d'humidité sur la vaisselle et surtout sur les côtés de l'appareil et
+      sur la porte lorsque je l'ouvre après un lavage.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:43:37+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: arcelik
+      series: 6667wfi
+  kind: known_issue
+  domain: general
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: wash performance / spray system
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Dishes come out dirty and spotty despite repeated service visits
+      body: Owner reports dishes come out dirty and spotty, five service visits found 'no problem', and
+        he was told to use only the intensive program.
+      advice: Cleaning complaints on this model were dismissed by service as user error; if you buy it,
+        run a normal program early to verify cleaning quality before the return window closes.
+    tr:
+      title: Tekrarlanan servis ziyaretlerine rağmen bulaşıklar kirli ve lekeli çıkıyor
+      body: Sahip, bulaşıkların kirli ve lekeli çıktığını, beş servis ziyaretinin 'sorun yok' bulduğunu
+        ve yalnızca yoğun programı kullanmasının söylendiğini bildiriyor.
+      advice: Bu modeldeki temizlik şikayetleri servis tarafından kullanıcı hatası olarak reddedildi;
+        satın alırsanız, iade süresi dolmadan önce temizlik kalitesini doğrulamak için erkenden normal
+        bir program çalıştırın.
+  evidence:
+  - url: https://www.sikayetvar.com/arcelik/bulasik-makinesinde-temiz-yikama-sorunu-ve-wifi-baglanti-problemi
+    quote: Aldığım günden beri bulaşıkları temiz yıkamıyor, tabaklar ve bardaklar sürekli kirli ve lekeli
+      çıkıyor, çoğu zaman aynı bulaşığı iki kez yıkatmak zorunda kalıyorum.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:50:50+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: siemens
+      series: sn55zs07ce
+  kind: known_issue
+  domain: general
+  severity: low
+  consequence: ''
+  detection: ''
+  component: Siebsystem (filter system)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Food residue on dishes in SN55ZS07CE traced to incorrectly seated filters (manual)
+      body: From the manufacturer's own user manual for the iQ500 SN55ZS07CE (page 53). The official troubleshooting
+        table lists food residue on dishes with the cause 'filters incorrectly seated and/or not latched'
+        — the brand's own documented recurring issue for this model.
+      advice: 'A routine, user-fixable cause: if dishes come out with residue, first check the filters
+        are correctly seated and latched before assuming a bigger fault. This is the brand''s own first-line
+        diagnosis for this model.'
+    tr:
+      title: SN55ZS07CE'de bulaşıklardaki yemek artığı, yanlış yerleştirilmiş filtrelere bağlandı (kılavuz)
+      body: iQ500 SN55ZS07CE için üreticinin kendi kullanım kılavuzundan (sayfa 53). Resmi sorun giderme
+        tablosu, bulaşıklardaki yemek artığını 'filtreler yanlış yerleştirilmiş ve/veya kilitlenmemiş'
+        nedeniyle listeliyor — markanın bu model için kendi belgelediği tekrarlayan sorun.
+      advice: 'Rutin, kullanıcı tarafından düzeltilebilir bir neden: bulaşıklar artıkla çıkarsa, daha
+        büyük bir arıza varsaymadan önce filtrelerin doğru yerleştirildiğini ve kilitlendiğini kontrol
+        edin. Bu, markanın bu model için kendi ilk basamak teşhisidir.'
+  evidence:
+  - url: https://www.manualslib.de/manual/1159984/Siemens-Iq500-Sn55Zs07Ce.html?page=53
+    quote: Siebe sind falsch eingesetzt und/oder nicht verrastet.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:48:55+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: arcelik
+      series: 6667wfi
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: Wi-Fi main card (ana kart)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Wi-Fi main card replaced three times, never pairs with the unit
+      body: The Wi-Fi main card was replaced three times and still never paired with the machine; the
+        owner ultimately got a refund.
+      advice: The Wi-Fi module on this model is a recurring electrical failure that multiple card swaps
+        did not fix; if you buy it, test Wi-Fi pairing immediately and be prepared to push for a replacement
+        or refund.
+    tr:
+      title: Wi-Fi ana kartı üç kez değiştirildi, üniteyle asla eşleşmiyor
+      body: Wi-Fi ana kartı üç kez değiştirildi ve yine de makineyle asla eşleşmedi; sahibi sonunda para
+        iadesi aldı.
+      advice: Bu modeldeki Wi-Fi modülü, birden fazla kart değişiminin gideremediği tekrarlayan bir elektriksel
+        arızadır; satın alırsanız Wi-Fi eşleştirmesini hemen test edin ve değişim veya para iadesi için
+        ısrar etmeye hazır olun.
+  evidence:
+  - url: https://www.sikayetvar.com/arcelik/wifi-karti-uc-kez-degistirildigi-halde-sorun-cozulmedi-ve-ucret-iadesi-talep-ediyorum
+    quote: Ürünün Wi-Fi ana kartının yandığı gerekçesiyle şu ana kadar 3 kez kart değişimi yapıldı ancak
+      hiçbirinde Wi-Fi ana kart cihazla eşleşmedi ve problem çözülemedi.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:46:17+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      series: dw60dg540fwq
+  kind: known_issue
+  domain: water
+  severity: high
+  consequence: ''
+  detection: ''
+  component: wash pump / spray system
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Dishes come out dirty on the 3.5-hour program despite normal settings and different detergents
+      body: A 1.5-year-old unit stopped cleaning dishes on the long program despite normal salt/rinseaid
+        and several detergent brands; Samsung called it user error and refused warranty help.
+      advice: Poor wash performance is a recurring reported failure; if it appears, test with multiple
+        detergents before assuming user error, and be prepared that Samsung may reject the claim.
+    tr:
+      title: Normal ayarlara ve farklı deterjanlara rağmen 3,5 saatlik programda bulaşıklar kirli çıkıyor
+      body: 1,5 yıllık bir ünite, normal tuz/parlatıcı ve birkaç deterjan markasına rağmen uzun programda
+        bulaşıkları temizlemeyi bıraktı; Samsung bunu kullanıcı hatası olarak nitelendirdi ve garanti
+        yardımını reddetti.
+      advice: Zayıf yıkama performansı, bildirilen tekrarlayan bir arızadır; ortaya çıkarsa, kullanıcı
+        hatası olduğunu varsaymadan önce birden fazla deterjanla test edin ve Samsung'un talebi reddedebileceğine
+        hazır olun.
+  evidence:
+  - url: https://www.sikayetvar.com/samsung/garanti-kapsamindaki-bulasik-makinesi-kirli-cikti-paslanma-ve-yardim-yok
+    quote: Yaklaşık 5 aydır makine her yıkamada 3,5 saatlik programda çalışmasına rağmen bulaşıkları arıtmıyor
+      ve kirli, temizlenmemiş şekilde çıkarıyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:49:46+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: beko
+      series: dis15022
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: door lock wiring connector
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Loose door lock wiring connector stops DIS15022 from starting any cycle
+      body: 'This is an owner''s own repair record on the exact DIS15022 model: a loose door-lock wiring
+        connector inside the door panel made the machine read the door as permanently open, so it powered
+        on but refused to start any programme. The reset procedure in the thread did not fix it; the owner
+        had to open the door panel and reseat the connector.'
+      advice: If a DIS15022 powers on but will not start a cycle and shows no error code, first try the
+        cancel/reset procedure (hold Programme Selection/Programme Cancel for 3 seconds). If that fails,
+        the likely cause is the door lock wiring connector inside the door panel working loose; reseating
+        it is a DIY fix. A service call to diagnose a no-start typically costs a call-out fee before any
+        part is touched.
+    tr:
+      title: Gevşek kapı kilidi kablolama konektörü DIS15022'nin herhangi bir programı başlatmasını engelliyor
+      body: 'Bu, tam olarak DIS15022 modelinde bir sahibin kendi onarım kaydıdır: kapı panelinin içindeki
+        gevşek bir kapı kilidi kablolama konektörü, makinenin kapıyı kalıcı olarak açık okumasına neden
+        oldu, bu yüzden açılıyor ancak herhangi bir programı başlatmayı reddediyordu. Konudaki sıfırlama
+        prosedürü bunu düzeltmedi; sahibi kapı panelini açıp konektörü yeniden yerine oturtmak zorunda
+        kaldı.'
+      advice: Bir DIS15022 açılıyor ancak bir program başlatmıyor ve hata kodu göstermiyorsa, önce iptal/sıfırlama
+        prosedürünü deneyin (Program Seçimi/Program İptali'ni 3 saniye basılı tutun). Bu başarısız olursa,
+        olası neden kapı panelinin içindeki kapı kilidi kablolama konektörünün gevşemesidir; yeniden yerine
+        oturtmak bir DIY çözümüdür. Başlatmama sorununu teşhis etmek için servis çağrısı, herhangi bir
+        parçaya dokunulmadan önce genellikle bir çağrı ücretine mal olur.
+  evidence:
+  - url: https://de.ifixit.com/Antworten/Ansehen/964685/Dishwasher+won't+start+any+programmes+(after+interrupted+drain+step)
+    quote: It was a loose door lock wiring connector inside the door panel. It had somehow unplugged itself,
+      so the machine constantly thought the door was wide open.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:39:28+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: siemens
+      series: sn65zx07ce
+  kind: known_issue
+  domain: general
+  severity: low
+  consequence: ''
+  detection: ''
+  component: detergent dispensing system
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Detergent tablet sometimes left undissolved
+      body: Onliner.by aggregates verified owner reviews and notes the detergent dispensing system sometimes
+        leaves tablets undissolved. This is a recurring, user-visible quality issue.
+      advice: If tablets are left undissolved, check the detergent dispenser flap and ensure the tablet
+        is placed correctly; this may be a design limitation rather than a user error.
+    tr:
+      title: Deterjan tableti bazen çözünmemiş kalıyor
+      body: Onliner.by doğrulanmış sahip incelemelerini derliyor ve deterjan dağıtım sisteminin bazen
+        tabletleri çözünmemiş bıraktığını belirtiyor. Bu, kullanıcı tarafından görülebilen tekrarlayan
+        bir kalite sorunudur.
+      advice: Tabletler çözünmemiş kalırsa, deterjan dağıtıcı kapağını kontrol edin ve tabletin doğru
+        yerleştirildiğinden emin olun; bu, kullanıcı hatasından ziyade bir tasarım sınırlaması olabilir.
+  evidence:
+  - url: https://catalog.onliner.by/dishwasher/siemens/sn65zx07ce/prices?region=borisov
+    quote: Система дозирования моющего средства иногда оставляет таблетки недорастворенными
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:44:24+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: beko
+      series: b710elite
+  kind: known_issue
+  domain: water
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: rinse / wash cycle (foam left on load)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: B 710 b leaves detergent foam on dishes — two owners report
+      body: Two separate owners of the B 710 b report the machine leaving detergent foam on dishes and
+        on the tub floor after washing and drying, and say service offered no fix. This is a recurring
+        rinse/foam fault on the same series; the cost is re-washing loads and repeated service contact,
+        though the pack treats it as a reported failure rather than a confirmed defect.
+      advice: ''
+    tr:
+      title: B 710 b bulaşıklarda deterjan köpüğü bırakıyor — iki sahip bildiriyor
+      body: B 710 b'nin iki ayrı sahibi, makinenin yıkama ve kurutma sonrasında bulaşıklarda ve hazne
+        tabanında deterjan köpüğü bıraktığını bildiriyor ve servisin bir çözüm sunmadığını söylüyor. Bu,
+        aynı seride tekrarlayan bir durulama/köpük arızasıdır; maliyet, yüklerin yeniden yıkanması ve
+        tekrarlanan servis iletişimidir, ancak paket bunu doğrulanmış bir kusur yerine bildirilen bir
+        arıza olarak ele alıyor.
+  evidence:
+  - url: https://www.sikayetvar.com/beko/bulasik-makinesi/b710b
+    quote: Beko marka bulaşık makinesi b710b modeli köpüklü bırakıyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:47:29+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      series: dw90f89t0umtaa
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: WaterWall reflector assembly (vane, gray shuttle, guide rail)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: WaterWall reflector error 7E/7C — reflector unable to move (documented by Samsung support)
+      body: The DW90F89T0UMTAA is a WaterWall model (confirmed in the service manual for the DW90F8 AA
+        series, which lists model code DW90F89T0UMTAA). Samsung documents the 7E/7C error as the reflector
+        being blocked, mispositioned, or misinstalled. The official fix is user-level (remove obstruction,
+        reseat vane, power cycle), but if the reflector or its drive fails mechanically, the error recurs
+        and requires service.
+      advice: If this unit throws 7E/7C, first check for a blocked reflector (pot handle, large knife,
+        ladle) and reseat the vane on the gray shuttle. If the error persists after clearing obstructions
+        and power-cycling, the WaterWall drive assembly likely needs a service visit — this is the single
+        most documented failure mode for this model family.
+    tr:
+      title: WaterWall reflektör hatası 7E/7C — reflektör hareket edemiyor (Samsung destek tarafından
+        belgelenmiştir)
+      body: DW90F89T0UMTAA bir WaterWall modelidir (DW90F8 AA serisinin servis kılavuzunda doğrulanmıştır,
+        bu kılavuz DW90F89T0UMTAA model kodunu listeler). Samsung, 7E/7C hatasını reflektörün engellenmiş,
+        yanlış konumlandırılmış veya yanlış takılmış olması olarak belgeliyor. Resmi çözüm kullanıcı düzeyindedir
+        (engeli kaldırın, kanadı yerine oturtun, gücü kapatıp açın), ancak reflektör veya tahriki mekanik
+        olarak arızalanırsa hata tekrarlar ve servis gerektirir.
+      advice: Bu ünite 7E/7C hatası verirse, önce engellenmiş bir reflektör (tencere sapı, büyük bıçak,
+        kepçe) olup olmadığını kontrol edin ve kanadı gri mekik üzerine yeniden oturtun. Engeller kaldırıldıktan
+        ve güç kapatılıp açıldıktan sonra hata devam ederse, WaterWall tahrik düzeneği büyük olasılıkla
+        bir servis ziyareti gerektirir — bu, bu model ailesi için en çok belgelenen tek arıza modudur.
+  evidence:
+  - url: https://www.samsung.com/us/support/troubleshoot/TSG10007371/
+    quote: The Waterwall reflector error (7E or 7C) occurs on your dishwasher when the WaterWall reflector
+      is unable to move.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:51:42+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      series: dw90f89t0umtaa
+  kind: known_issue
+  domain: general
+  severity: low
+  consequence: ''
+  detection: ''
+  component: whole unit (model identification)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Model confirmed in DW90F8 AA Series service manual — model code DW90F89T0UMTAA
+      body: This confirms the subject is a WaterWall model in the DW90F8 series and that the service manual's
+        troubleshooting sections apply.
+      advice: This confirms the model identity and that Samsung's service documentation covers it. Use
+        this manual for repair guidance.
+    tr:
+      title: Model, DW90F8 AA Serisi servis kılavuzunda doğrulandı — model kodu DW90F89T0UMTAA
+      body: Bu, konunun DW90F8 serisindeki bir WaterWall modeli olduğunu ve servis kılavuzunun sorun giderme
+        bölümlerinin geçerli olduğunu doğrular.
+      advice: Bu, model kimliğini ve Samsung'un servis dokümantasyonunun bu modeli kapsadığını doğrular.
+        Onarım rehberliği için bu kılavuzu kullanın.
+  evidence:
+  - url: https://www.manualslib.com/manual/4206499/Samsung-Dw90f8-Aa-Series.html
+    quote: 'ModelCode: DW90F89P0USRAA DW90F89T0U12AA DW90F89T0USRAA DW90F89T0UMTAA'
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:51:42+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      series: dw8r5061usaa
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: circulation motor / internal electrical component
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Samsung DW80R5061US/AA dishwasher reportedly caught fire mid-cycle (Nov 2025); Samsung closed
+        case with 'no defect found'
+      body: A law firm's report documents a real fire incident on this exact model (DW80R5061US/AA) in
+        November 2025. Samsung's investigation took 24 days and closed with 'no defect found,' attributing
+        the fire to dirty drain hose water dripping onto the circulation motor — an explanation the report
+        says is physically unsupported.
+      advice: This corroborates the recall's fire risk on this model. If you own one, treat any unusual
+        heat, smell, or noise seriously and stop using the unit until it is inspected.
+    tr:
+      title: Samsung DW80R5061US/AA bulaşık makinesinin döngü ortasında alev aldığı bildirildi (Kas 2025);
+        Samsung davayı 'kusur bulunamadı' ile kapattı
+      body: Bir hukuk firmasının raporu, Kasım 2025'te tam bu modelde (DW80R5061US/AA) gerçek bir yangın
+        olayını belgeliyor. Samsung'un incelemesi 24 gün sürdü ve 'kusur bulunamadı' ile kapatıldı; yangın,
+        kirli tahliye hortumu suyunun sirkülasyon motoruna damlamasına bağlandı — rapor bu açıklamanın
+        fiziksel olarak desteklenmediğini söylüyor.
+      advice: Bu, geri çağırmanın bu modeldeki yangın riskini destekler. Bir tanesine sahipseniz, olağandışı
+        ısı, koku veya gürültüyü ciddiye alın ve cihaz incelenene kadar kullanmayı bırakın.
+  evidence:
+  - url: https://farzanlaw.com/samsung-dw80r5061us-aa-dishwasher-catches-fire-during-use-manufacturers-handling-questioned/
+    quote: On November 15, 2025, a Samsung DW80R5061US/AA dishwasher reportedly ignited mid-cycle.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:42:55+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: siemens
+      series: sn55zs07ce
+  kind: known_issue
+  domain: electrical
+  severity: low
+  consequence: ''
+  detection: ''
+  component: Bedienmodul / Folientastatur (control module / membrane keypad)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: CL key-lock display on SN55ZS07CE can be held on by a damaged membrane keypad
+      body: 'This error-code reference page explicitly names the iQ500 SN55ZS07CE for the CL (key-lock)
+        display. In most cases CL is just the child lock being on, but the page notes a rare electrical
+        fault: a damaged membrane keypad sends a continuous press and holds the lock on.'
+      advice: If the machine shows CL and the lock cannot be cleared by holding the key symbol for ~3
+        seconds, suspect the control-panel membrane keypad rather than the lock logic — a control-module
+        repair, not a user error.
+    tr:
+      title: SN55ZS07CE'de CL tuş kilidi göstergesi hasarlı membran tuş takımı nedeniyle açık kalabilir
+      body: 'Bu hata kodu referans sayfası, CL (tuş kilidi) göstergesi için iQ500 SN55ZS07CE modelini
+        açıkça adlandırıyor. Çoğu durumda CL yalnızca çocuk kilidinin açık olmasıdır, ancak sayfa nadir
+        bir elektriksel arızaya dikkat çekiyor: hasarlı bir membran tuş takımı sürekli basış sinyali gönderir
+        ve kilidi açık tutar.'
+      advice: Makine CL gösteriyorsa ve kilit, tuş simgesi ~3 saniye basılı tutularak temizlenemiyorsa,
+        kilit mantığı yerine kontrol paneli membran tuş takımından şüphelenin — bu bir kullanıcı hatası
+        değil, kontrol modülü onarımıdır.
+  evidence:
+  - url: https://fehlercodes.teamhack.de/geschirrspueler/siemens/cl-5/
+    quote: 'Bedienmodul: In seltenen Fällen meldet eine beschädigte Folientastatur einen Dauerdruck und
+      hält die Sperre fest.'
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:48:55+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: arcelik
+      series: a600bstar
+  kind: known_issue
+  domain: water
+  severity: high
+  consequence: ''
+  detection: ''
+  component: wash system / spray arms
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: A600B fails to clean dishes in fast and intensive programs despite five service visits
+      body: Owner complaint on Şikayetvar (Turkish consumer complaint platform) dated April 2026, reporting
+        the A600B fails to clean in fast/intensive programs, with 5 service visits over 2 months without
+        resolution.
+      advice: If buying this model, be aware that multiple owners report poor cleaning performance in
+        fast/intensive programs that service visits did not fix. Consider testing intensive-cycle cleaning
+        performance before purchase, or budget for potential replacement/refund disputes.
+    tr:
+      title: A600B, beş servis ziyaretine rağmen hızlı ve yoğun programlarda bulaşıkları temizlemiyor
+      body: Şikayetvar'da (Türk tüketici şikayet platformu) Nisan 2026 tarihli sahip şikayeti, A600B'nin
+        hızlı/yoğun programlarda temizlemediğini ve 2 ay içinde 5 servis ziyaretine rağmen sorunun çözülmediğini
+        bildiriyor.
+      advice: Bu modeli satın alıyorsanız, birden fazla sahibin servis ziyaretlerinin düzeltemediği hızlı/yoğun
+        programlarda zayıf temizleme performansı bildirdiğini unutmayın. Satın almadan önce yoğun döngü
+        temizleme performansını test etmeyi veya olası değişim/iade anlaşmazlıkları için bütçe ayırmayı
+        düşünün.
+  evidence:
+  - url: https://www.sikayetvar.com/arcelik/arcelik-a600b-bulasik-makinesi-temiz-yikama-yapmiyor-surekli-servis-gerekiyor
+    quote: Makine özellikle hızlı ve yoğun programlarda bulaşıkları temiz yıkamıyor, kirler olduğu gibi
+      kalıyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:46:42+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: siemens
+      series: sn65zx07ce
+  kind: known_issue
+  domain: general
+  severity: low
+  consequence: ''
+  detection: ''
+  component: detergent dispenser / control panel / cutlery basket
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Detergent dosing leaves tablets undissolved; touch control delays; cutlery basket fixation
+      body: 'Onliner.by''s AI-generated summary of verified reviews for the exact SN65ZX07CE lists recurring
+        minor complaints: the detergent dosing system sometimes leaves tablets undissolved, the touch
+        control can respond with delay or error, the cutlery basket fixation is poorly designed, some
+        programs run long, and plastic items stay wet even after intensive drying.'
+      advice: These are low-severity usability annoyances rather than failures. If tablets come out undissolved,
+        check loading and the detergent dispenser flap; if the touch panel misbehaves, it may be a sensor
+        sensitivity issue. None of these should stop a purchase, but they set expectations on drying of
+        plastics and program length.
+    tr:
+      title: Deterjan dozajı tabletleri çözünmemiş bırakıyor; dokunmatik kontrol gecikmeleri; çatal bıçak
+        sepeti sabitlemesi
+      body: 'Onliner.by''nin tam SN65ZX07CE için doğrulanmış yorumlara ilişkin yapay zeka tarafından oluşturulmuş
+        özeti, tekrar eden küçük şikayetleri listeliyor: deterjan dozaj sistemi bazen tabletleri çözünmemiş
+        bırakıyor, dokunmatik kontrol gecikmeli veya hatalı yanıt verebiliyor, çatal bıçak sepeti sabitlemesi
+        kötü tasarlanmış, bazı programlar uzun sürüyor ve plastik eşyalar yoğun kurutmadan sonra bile
+        ıslak kalıyor.'
+      advice: Bunlar arızalardan ziyade düşük ciddiyette kullanılabilirlik sıkıntılarıdır. Tabletler çözünmemiş
+        çıkarsa, yüklemeyi ve deterjan haznesi kapağını kontrol edin; dokunmatik panel yanlış davranırsa,
+        bu bir sensör hassasiyeti sorunu olabilir. Bunların hiçbiri satın almayı engellememeli, ancak
+        plastiklerin kuruması ve program süresi konusunda beklentileri belirliyor.
+  evidence:
+  - url: https://catalog.onliner.by/dishwasher/siemens/sn65zx07ce/prices?region=borisov
+    quote: Система дозирования моющего средства иногда оставляет таблетки недорастворенными
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:44:24+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: arcelik
+      series: 6667wfi
+  kind: known_issue
+  domain: drying
+  severity: high
+  consequence: ''
+  detection: ''
+  component: extra drying function
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Wet dishes even on intensive 70°C + extra drying program
+      body: Owner reports dishes remain wet even on the intensive 70°C program with extra drying, after
+        multiple service visits.
+      advice: If you need reliable drying, verify the extra-drying function actually works before buying;
+        this is the most repeated complaint on this model.
+    tr:
+      title: Yoğun 70°C + ekstra kurutma programında bile ıslak bulaşıklar
+      body: Sahip, birden fazla servis ziyaretinden sonra bulaşıkların ekstra kurutmalı yoğun 70°C programında
+        bile ıslak kaldığını bildiriyor.
+      advice: Güvenilir kurutmaya ihtiyacınız varsa, satın almadan önce ekstra kurutma fonksiyonunun gerçekten
+        çalıştığını doğrulayın; bu, bu modelde en sık tekrarlanan şikayettir.
+  evidence:
+  - url: https://www.sikayetvar.com/arcelik/6667-wf-i/yetkili-servis
+    quote: 24.06.2025 tarihinde Arçelik Koçaklar’dan satın aldığım ve 01.08.2025 tarihinde montajı yapılan
+      6667 wf ı model bulaşık ...makinesi, yoğun 70 derece ve ekstra kurutma programında çalıştırmama
+      rağmen bulaşıkları sürekli ıslak çıkarıyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:50:50+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: arcelik
+      series: 62113iwf
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: control board (kart)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Control board (kart) failure: water not heating, program not completing'
+      body: Owner reports the machine stopped heating water and completing its program; the service diagnosed
+        the control board, replaced it, but the replacement board was incompatible and the fault persisted
+        for 20+ days.
+      advice: If a 62113 I WF stops heating or stalls mid-cycle, the control board is a known failure
+        point. Verify the service fits a compatible board and test on site before accepting the repair;
+        a second board swap may be needed.
+    tr:
+      title: 'Kontrol kartı (kart) arızası: su ısınmıyor, program tamamlanmıyor'
+      body: Sahibi, makinenin suyu ısıtmayı ve programını tamamlamayı bıraktığını bildiriyor; servis kontrol
+        kartını teşhis edip değiştirmiş, ancak yedek kart uyumsuzmuş ve arıza 20+ gün boyunca devam etmiş.
+      advice: Bir 62113 I WF ısıtmayı durdurur veya döngü ortasında takılırsa, kontrol kartı bilinen bir
+        arıza noktasıdır. Servisin uyumlu bir kart taktığını doğrulayın ve onarımı kabul etmeden önce
+        yerinde test edin; ikinci bir kart değişimi gerekebilir.
+  evidence:
+  - url: https://www.sikayetvar.com/arcelik/bulasik-makinem-20-gun-calismiyor-ve-kart-degisimi-sorunu-cozulmedi
+    quote: Arçelik marka 62113 ı wf model bulaşık makinem 20.06.2026 tarihinden beri suyu ısıtmıyor ve
+      programı tamamlamıyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:45:22+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: beko
+      series: b710elite
+  kind: known_issue
+  domain: water
+  severity: low
+  consequence: ''
+  detection: ''
+  component: water supply / fill circuit (E02, E01)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: B 710 series E02/E01 water-supply and water-filling error codes
+      body: The B 710 series manual defines E02 as a water-supply problem and E01 as a water-filling-into-chassis
+        error (per the benservis blog covering the same B 710 series). These are diagnostic codes rather
+        than a named failing part, so they are low severity, but they tell a buyer that water-supply/fill
+        faults are the series' most common error path and that a persistent code means a service call.
+      advice: ''
+    tr:
+      title: B 710 serisi E02/E01 su besleme ve su doldurma hata kodları
+      body: B 710 serisi kılavuzu E02'yi su besleme sorunu ve E01'i gövdeye su doldurma hatası olarak
+        tanımlar (aynı B 710 serisini ele alan benservis bloguna göre). Bunlar adlandırılmış bir arızalı
+        parça yerine teşhis kodlarıdır, bu nedenle önem derecesi düşüktür, ancak bir alıcıya su besleme/doldurma
+        arızalarının serinin en yaygın hata yolu olduğunu ve kalıcı bir kodun servis çağrısı anlamına
+        geldiğini söylerler.
+  evidence:
+  - url: https://www.kullanimkilavuzu.com.tr/beko/b-710-si/k%C4%B1lavuz?p=29
+    quote: Bir E02 uyarısı, bir su tedarik sorununu gösterir.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:47:29+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: siemens
+      series: sn65zx07ce
+  kind: known_issue
+  domain: water
+  severity: high
+  consequence: ''
+  detection: ''
+  component: circulation pump
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Pump failure after one year on Siemens SN65ZX07CE
+      body: A Czech user review on Alza.cz (rated 4.0/5 from 6 users) reports the pump died after one
+        year. The reviewer notes that newer pumps from Siemens and Bosch are designed for low consumption
+        and noise but are more sensitive and fail faster. This is a verified-purchase owner report of
+        a major component failure.
+      advice: The circulation pump is a critical, expensive part. If it fails after the warranty period,
+        expect a significant repair bill. Consider extended warranty coverage for this model.
+    tr:
+      title: Siemens SN65ZX07CE'de bir yıl sonra pompa arızası
+      body: Alza.cz'deki bir Çek kullanıcı incelemesi (6 kullanıcıdan 4.0/5 puan) pompanın bir yıl sonra
+        bozulduğunu bildiriyor. İncelemeci, Siemens ve Bosch'un daha yeni pompalarının düşük tüketim ve
+        gürültü için tasarlandığını ancak daha hassas olduklarını ve daha hızlı bozulduklarını belirtiyor.
+        Bu, büyük bir bileşen arızasına ilişkin doğrulanmış satın alma sahibi raporudur.
+      advice: Sirkülasyon pompası kritik ve pahalı bir parçadır. Garanti süresinden sonra bozulursa, önemli
+        bir onarım faturası bekleyin. Bu model için uzatılmış garanti kapsamını düşünün.
+  evidence:
+  - url: https://m.alza.cz/recenze/siemens-sn65zx07ce-iq500-7978605.htm
+    quote: Po roku odislo cerpadlo. Podla vsetkeho vyssie rady od Siemens a Bosch maju nove cerpadla,
+      ktore su stavan na nizku spotrebu a hluk, za to ale su citlivejsie a rychlejsie odchadzaju
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:50:13+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: beko
+      series: dis15022
+  kind: known_issue
+  domain: water
+  severity: low
+  consequence: ''
+  detection: ''
+  component: impellers and filter system
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Clogged impeller holes and filter system leave dishes unwashed (DIS15022)
+      body: This is Beko's own owner manual troubleshooting page for the DIS15022, which treats clogged
+        impeller holes and a clogged/incorrectly installed filter as the recurring causes of poor washing.
+        These are routine, user-fixable maintenance items rather than a defect, so severity is low.
+      advice: Poor wash results on a DIS15022 are most often fixed by cleaning the impeller holes (food
+        remnants like lemon pips) and the filter system regularly. This costs nothing but time and is
+        the first thing to check before any paid service.
+    tr:
+      title: Tıkanmış pervanе delikleri ve filtre sistemi bulaşıkları yıkanmamış bırakıyor (DIS15022)
+      body: Bu, Beko'nun DIS15022 için kendi sahip kılavuzu sorun giderme sayfasıdır ve tıkanmış pervane
+        deliklerini ve tıkanmış/yanlış takılmış filtreyi zayıf yıkamanın tekrarlayan nedenleri olarak
+        ele alır. Bunlar bir kusur yerine rutin, kullanıcı tarafından düzeltilebilir bakım kalemleridir,
+        bu nedenle önem derecesi düşüktür.
+      advice: Bir DIS15022'de zayıf yıkama sonuçları çoğunlukla pervane deliklerinin (limon çekirdeği
+        gibi yemek artıkları) ve filtre sisteminin düzenli olarak temizlenmesiyle giderilir. Bu, zamandan
+        başka hiçbir şeye mal olmaz ve herhangi bir ücretli servisten önce kontrol edilmesi gereken ilk
+        şeydir.
+  evidence:
+  - url: https://www.manualowl.com/m/Beko/DIS15022/Manual/651264?page=36
+    quote: Impeller holes are clogged. >>> Lower and upper impeller holes might be clogged with food remnants
+      such as lemon pips.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:39:28+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: arcelik
+      series: 6551hi
+  kind: known_issue
+  domain: water
+  severity: high
+  consequence: ''
+  detection: ''
+  component: water intake system / motor / cable
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Water intake fault persists through multiple service repairs (6551 HI)
+      body: A 6551 HI owner reports a water intake fault that was not resolved after several service visits
+        (side board, motor, and cable replaced), and paid ₺650 in service fees.
+      advice: Water-intake faults on the 6551 HI have proven hard to resolve, with multiple part replacements
+        (motor, cable) not fixing it and a ₺650 service fee; expect possible repeat visits if this symptom
+        appears.
+    tr:
+      title: Su alma arızası birden fazla servis onarımına rağmen devam ediyor (6551 HI)
+      body: Bir 6551 HI sahibi, birkaç servis ziyaretinden (yan kart, motor ve kablo değiştirildi) sonra
+        çözülmeyen bir su alma arızası bildiriyor ve ₺650 servis ücreti ödemiş.
+      advice: 6551 HI'de su alma arızalarının çözülmesi zor olmuştur; birden fazla parça değişimi (motor,
+        kablo) sorunu gidermemiş ve ₺650 servis ücreti alınmıştır; bu belirti ortaya çıkarsa olası tekrarlayan
+        ziyaretler bekleyin.
+  evidence:
+  - url: https://www.sikayetvar.com/en/arcelik-us/arcelik-6551-hi-dishwasher-not-fixed-after-weeks-of-service-and-still-broken
+    quote: For about the last two weeks, I have been experiencing a water intake problem with my Arçelik
+      6551 HI dishwasher and I contacted Arçelik technical service immediately to create a record.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:52:33+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: arcelik
+      series: 6551hi
+  kind: known_issue
+  domain: water
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: upper spray arm / upper water pipe
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Upper spray arm stops turning after water pipe to it is replaced (6551 HI)
+      body: Owner reports the upper spray arm (üst pervane) stops turning and upper-rack dishes come out
+        dirty; a service visit replaced the water pipe to the upper spray arm but the fault persisted.
+      advice: If upper-rack dishes come out dirty on a 6551 HI, check the upper spray arm and its feed
+        pipe before assuming a wash-program fault; a single pipe replacement did not fix this owner's
+        unit.
+    tr:
+      title: Üst püskürtme koluna giden su borusu değiştirildikten sonra üst püskürtme kolu dönmeyi bırakıyor
+        (6551 HI)
+      body: Sahibi, üst püskürtme kolunun (üst pervane) dönmeyi bıraktığını ve üst sepetteki bulaşıkların
+        kirli çıktığını bildiriyor; bir servis ziyareti üst püskürtme koluna giden su borusunu değiştirmiş
+        ancak arıza devam etmiş.
+      advice: Bir 6551 HI'de üst sepetteki bulaşıklar kirli çıkarsa, yıkama programı arızası varsaymadan
+        önce üst püskürtme kolunu ve besleme borusunu kontrol edin; tek bir boru değişimi bu sahibin ünitesini
+        düzeltmemiştir.
+  evidence:
+  - url: https://fatihbank.com/sorular/arcelik-6551-hi-bulasik-makinesi/
+    quote: ARÇELİK 6551 HI bulaşık makinası üst pervane borusu sepete tam oturmuyordu üst sepetteki bulaşıklar
+      kirli çıkıyordu servis çağırdık üst pervaneye giden su borusunu değiştirdi başka herhangi bir şey
+      yapmadan gitti deneme lüzumu bile görmedi pervaneler çalışıyor mu diye ama yine sorun çözülmedi
+      şu anda alt pervane dönüyor üst pervane dönmüyor
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:52:33+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: arcelik
+      series: 6551hi
+  kind: known_issue
+  domain: drying
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: wash performance / spray system
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Poor cleaning: dishes come out greasy, pots never washed (6551)'
+      body: A 6551 owner reports dishes coming out greasy and pots/tava never getting clean despite four
+        service calls; the service attributed it to loading rather than a fault.
+      advice: If a 6551 leaves dishes greasy and fails on pots, the service may blame loading; verify
+        spray-arm function and loading before accepting a 'no fault' verdict, since this owner saw no
+        improvement after four visits.
+    tr:
+      title: 'Kötü temizlik: bulaşıklar yağlı çıkıyor, tencereler asla yıkanmıyor (6551)'
+      body: Bir 6551 sahibi, dört servis çağrısına rağmen bulaşıkların yağlı çıktığını ve tencere/tavanın
+        asla temizlenmediğini bildiriyor; servis bunu arızaya değil yüklemeye bağladı.
+      advice: Eğer bir 6551 bulaşıkları yağlı bırakıyor ve tencerelerde başarısız oluyorsa, servis yüklemeyi
+        suçlayabilir; bu sahip dört ziyaretten sonra hiçbir iyileşme görmediğinden, 'arıza yok' kararını
+        kabul etmeden önce püskürtme kolunun işlevini ve yüklemeyi doğrulayın.
+  evidence:
+  - url: https://www.sikayetvar.com/arcelik/6551
+    quote: Arçelik 6551 bulaşık makinesini 1,5 yıldır kullanıyorum ve 4 kere servis çağırdım. Makine ürünleri
+      yağlı çıkarıyor. Tencere tava asla yıkanmıyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:52:33+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: arcelik
+      series: 6551hi
+  kind: known_issue
+  domain: general
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: dish racks/baskets (sepet)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Baskets rust and go mouldy after years of use (6551)
+      body: Multiple 6551-series owners report the baskets rusting and going black; the service response
+        is a full basket replacement quoted at 4-5 thousand TL.
+      advice: 'Basket rust is a recurring, expensive failure on the 6551 series: replacement is quoted
+        at 4-5k TL, so factor that into a used-unit purchase or a repair decision.'
+    tr:
+      title: Sepetler yıllar süren kullanımdan sonra paslanıyor ve küfleniyor (6551)
+      body: Birden fazla 6551 serisi sahibi sepetlerin paslandığını ve karardığını bildiriyor; servisin
+        yanıtı 4-5 bin TL olarak fiyatlandırılan tam sepet değişimi.
+      advice: 'Sepet paslanması 6551 serisinde tekrarlayan ve pahalı bir arızadır: değişim 4-5 bin TL
+        olarak fiyatlandırılıyor, bu yüzden bunu ikinci el bir ünite alımında veya onarım kararında hesaba
+        katın.'
+  evidence:
+  - url: https://www.sikayetvar.com/arcelik/6551
+    quote: Arçelik 6551 model bulaşık makinesi kullanıyorum. Makinemin sepetleri yaklaşık 6 yıldır paslanıyor
+      ve küfleniyor, şu anda tamamen simsiyah durumda.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:52:33+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: arcelik
+      series: 6551hi
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: main control board / power circuit
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Machine randomly powers off and restarts mid-cycle (6551)
+      body: A 6551 owner reports the machine randomly switching off and restarting mid-cycle every wash;
+        a related 6155 complaint in the same thread points to a faulty main board (ana kart).
+      advice: Random mid-cycle power off/on on the 6551 series points to the control board; a sibling-model
+        complaint in the same thread links the same symptom to a faulty main board that was replaced without
+        curing it.
+    tr:
+      title: Makine rastgele kapanıyor ve program ortasında yeniden başlıyor (6551)
+      body: Bir 6551 sahibi, makinenin her yıkamada rastgele kapandığını ve program ortasında yeniden
+        başladığını bildiriyor; aynı başlıktaki ilgili bir 6155 şikayeti arızalı ana karta (ana kart)
+        işaret ediyor.
+      advice: 6551 serisinde rastgele program ortasında kapanma/açılma kontrol kartına işaret eder; aynı
+        başlıktaki kardeş model şikayeti aynı belirtiyi, düzeltilmeden değiştirilen arızalı bir ana karta
+        bağlıyor.
+  evidence:
+  - url: https://www.sikayetvar.com/arcelik/bulasik-makinesi-yikama-sirasinda-kendiliginden-kapaniyor-ve-yeniden-basliyor
+    quote: Arçelik 6551 model bulaşık makinemde son 2 haftadır her yıkamada aynı sorunu yaşıyorum. Makine
+      yıkama sırasında kendiliğinden kapanıyor, yaklaşık 1 dakika sonra tekrar çalışıp kaldığı yerden
+      devam ediyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:52:33+00:00'

@@ -1,0 +1,3097 @@
+# Claims — what is known to go wrong, each with the page it came from and the quote
+# that was read there. A claim without both is not in this file.
+- subject:
+    kind: product
+    identity:
+      brand: arzum
+      series: airtasty x large
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: removable basket plastic handle
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Plastic basket handle tends to break or come off
+      body: Same 1,396-review aggregation reports the removable basket's plastic handle tends to break
+        or come loose, and some units' outer surface gets excessively hot. This is a structural/mechanical
+        complaint, not a cooking-performance one.
+      advice: Handle the basket by the grip firmly; a broken handle makes the hot basket unsafe to lift,
+        and it is a consumable part you would have to source separately.
+    tr:
+      title: Plastik sepet sapı kırılmaya veya çıkmaya eğilimlidir
+      body: Aynı 1.396 incelemeli toplu değerlendirme, çıkarılabilir sepetin plastik sapının kırılmaya
+        veya gevşemeye eğilimli olduğunu ve bazı birimlerin dış yüzeyinin aşırı derecede ısındığını bildiriyor.
+        Bu, pişirme performansıyla ilgili değil, yapısal/mekanik bir şikayettir.
+      advice: Sepeti tutamağından sıkıca tutun; kırık bir sap, sıcak sepeti kaldırmayı güvensiz hale getirir
+        ve ayrıca temin etmeniz gereken bir sarf parçasıdır.
+  evidence:
+  - url: https://yorumlarnasil.com/incele/arzum-ar2074(ar2091)-b-airtasty-xl-yagsiz-fritoz-airfryer-yorumlar
+    quote: Çıkarılabilir sepetin plastik kulp kısmının kırılma eğilimi olduğu veya yerinden çıktığına
+      dair şikayetler mevcuttur.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:53:09+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: philips
+      series: na352/00
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: basket sensor / control board
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Large basket stops cooking and beeps days after purchase — basket sensor suspected
+      body: A certified owner reports the large 6L compartment stopped cooking and beeps only days after
+        purchase while the small basket works; a reply attributes it to a defective basket sensor (capteur
+        de bac).
+      advice: If the large basket beeps and refuses to cook, first check the basket is fully seated; if
+        it persists, this points to a sensor/control fault that will need a warranty service call rather
+        than a user fix. It failed within days of purchase, so it is covered by the 2-year warranty —
+        do not try to repair it yourself.
+    tr:
+      title: Büyük sepet satın alımdan günler sonra pişirmeyi durduruyor ve bip sesi veriyor — sepet sensöründen
+        şüpheleniliyor
+      body: Sertifikalı bir sahip, büyük 6L bölmenin satın alımdan sadece günler sonra pişirmeyi durdurduğunu
+        ve bip sesi verdiğini, küçük sepetin ise çalıştığını bildiriyor; bir yanıt bunu arızalı bir sepet
+        sensörüne (capteur de bac) bağlıyor.
+      advice: Büyük sepet bip sesi verip pişirmeyi reddederse, önce sepetin tam oturduğunu kontrol edin;
+        sorun devam ederse bu, kullanıcı müdahalesi yerine garanti servis çağrısı gerektirecek bir sensör/kontrol
+        arızasına işaret eder. Satın alımdan günler sonra arızalandı, yani 2 yıllık garanti kapsamındadır
+        — kendiniz tamir etmeye çalışmayın.
+  evidence:
+  - url: https://sav.darty.com/forum/PHILIPS/NA352-00-AIRFRYER-A-DOUBLE-PANIER/BIP-ET-JE-FONCTIONNE-PAS/5307584/607352
+    quote: j'ai acheté mon air Fryer samedi et aujourd'hui donc lundi le gros compartiment ne fonctionne
+      plus j'ai le air Fryer Philips na352 Le gros bac ne fonctionne plus. Il bip donc ne veut plus cuire
+      le bac numéro un fonctionne parfaitement.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:58:41+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: fakir
+      series: airfry
+  kind: known_issue
+  domain: surface
+  severity: high
+  consequence: ''
+  detection: ''
+  component: interior plastic coating
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Fakir Airfryer interior plastic coating flakes into the food
+      body: Owner of a dual-basket model reports the interior plastic lining crumbling like flour into
+        the food after about 4 years of use.
+      advice: 'A health-relevant surface failure: degraded interior coating contaminating food. This appears
+        after years of use, so it is a longevity concern rather than a first-use fault.'
+    tr:
+      title: Fakir Airfryer iç plastik kaplaması yemeğe pul pul dökülüyor
+      body: Çift sepetli bir modelin sahibi, yaklaşık 4 yıllık kullanımdan sonra iç plastik astarın un
+        gibi yemeğe döküldüğünü bildiriyor.
+      advice: 'Sağlıkla ilgili bir yüzey arızası: bozulmuş iç kaplama yemeği kirletiyor. Bu, yıllarca
+        kullanımdan sonra ortaya çıkıyor, dolayısıyla ilk kullanım arızası değil, dayanıklılık endişesidir.'
+  evidence:
+  - url: https://www.sikayetvar.com/fakir-ev-aletleri/fritoz/fatura
+    quote: Son zamanlarda iç plastik kaplamasının un gibi ufalanıp yemeklerimin içine karıştığını fark
+      ettim.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:55:29+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: arzum
+      series: airtasty x large
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: control board / timer
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Airtasty X Large shuts itself off mid-cycle with no warning
+      body: 'Owner complaint on Şikayetvar (12 Dec 2025) naming the exact Airtasty X Large model: the
+        unit stops itself without any warning mid-cooking, so food is undercooked and the owner must babysit
+        and restart it. The owner says it is a brand-new unit and notes other users report the same. This
+        matches the pack''s mid-cycle shutdown claim for Arzum.'
+      advice: If you buy this model, test a full-length cycle immediately and keep the box; a self-stopping
+        unit is a warranty/return case, not a repair.
+    tr:
+      title: Airtasty X Large döngü ortasında uyarı vermeden kendini kapatıyor
+      body: 'Şikayetvar''da (12 Aralık 2025) tam Airtasty X Large modelini adlandıran sahip şikayeti:
+        cihaz pişirme sırasında hiçbir uyarı vermeden kendini durduruyor, bu yüzden yemek az pişiyor ve
+        sahibin başında bekleyip yeniden başlatması gerekiyor. Sahip, cihazın yepyeni olduğunu ve diğer
+        kullanıcıların da aynı şeyi bildirdiğini söylüyor. Bu, paketin Arzum için döngü ortası kapanma
+        iddiasıyla örtüşüyor.'
+      advice: Bu modeli satın alırsanız hemen tam süreli bir döngü test edin ve kutuyu saklayın; kendini
+        durduran bir cihaz tamir değil, garanti/iade meselesidir.
+  evidence:
+  - url: https://www.sikayetvar.com/arzum/arzum-airtasty-x-large-air-fryer-kendi-kendine-duruyor-guvenle-kullanamiyorum
+    quote: Arzum airtasty X Large Air Fryer cihazım pişirme esnasında kendi kendine durduğu için ürünü
+      güvenle kullanamıyorum.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:53:09+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      series: smart air fryer 6.5l
+  kind: known_issue
+  domain: surface
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: teflon grill
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Teflon grill on Xiaomi 6.5L air fryer peels despite hand washing
+      body: A Turkish owner of the 6.5L reports the teflon grill began peeling despite hand washing, and
+        the service center attributed it to consumer use and quoted a 12,000₺ replacement fee.
+      advice: The peeling teflon grill may be treated as consumer-caused rather than a defect, so the
+        cost of replacement can fall on the buyer; document the condition early.
+    tr:
+      title: Xiaomi 6.5L air fryer'daki teflon ızgara elde yıkamaya rağmen soyuluyor
+      body: 6.5L modelinin Türk sahibi, elde yıkamaya rağmen teflon ızgaranın soyulmaya başladığını ve
+        servis merkezinin bunu tüketici kullanımına bağlayarak 12.000₺ değişim ücreti talep ettiğini bildiriyor.
+      advice: Soyulan teflon ızgara, kusur yerine tüketici kaynaklı olarak değerlendirilebilir, bu yüzden
+        değişim maliyeti alıcıya düşebilir; durumu erkenden belgeleyin.
+  evidence:
+  - url: https://www.sikayetvar.com/xiaomi/xiaomi-air-fryer-plastik-parca-sorunu-ve-musteri-hizmetleri-ilgisizligi
+    quote: teflon ızgarası daima Elle temizlememe rağmen soyulmaya başladı
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:01:51+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: philips
+      series: hd9243/90
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: electronic control board
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Electronic control board fails after only five uses
+      body: An owner reports the unit would not power on after only five uses, and the authorised service
+        diagnosed a failed electronic board and ordered a spare part.
+      advice: Control-board failure can occur very early, leaving the unit dead and requiring a service
+        visit and spare part. This is a high-severity electrical failure; a buyer should keep warranty
+        documents and expect possible service delays.
+    tr:
+      title: Elektronik kontrol kartı yalnızca beş kullanımdan sonra arızalanıyor
+      body: Bir sahip, cihazın yalnızca beş kullanımdan sonra açılmadığını bildiriyor; yetkili servis
+        arızalı elektronik kart teşhisi koymuş ve yedek parça sipariş etmiş.
+      advice: Kontrol kartı arızası çok erken ortaya çıkabilir, cihazı çalışamaz halde bırakabilir ve
+        servis ziyareti ile yedek parça gerektirebilir. Bu, yüksek ciddiyette bir elektriksel arızadır;
+        alıcı garanti belgelerini saklamalı ve olası servis gecikmelerini beklemelidir.
+  evidence:
+  - url: https://www.sikayetvar.com/philips-ev-aletleri/hd924390-l-essential/yetkili-servis
+    quote: Arızasının da elektronik kartının bozulması olduğunu söylediler.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:03:34+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: arzum
+      series: ar2076-s
+  kind: known_issue
+  domain: general
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: unit (general quality)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Hepsiburada review summary: some AR2076-S units arrive defective'
+      body: Hepsiburada's AI-generated summary of 87 verified-purchase reviews notes some users were disappointed
+        because the product arrived defective ('arızalı çıkması'). This corroborates the Şikayetvar DOA
+        report. Note this is an aggregated summary, not a single owner's verbatim words, so it is weaker
+        evidence.
+      advice: Buy from a seller with a clear return policy and test the unit immediately on arrival.
+    tr:
+      title: 'Hepsiburada inceleme özeti: bazı AR2076-S birimleri arızalı geliyor'
+      body: Hepsiburada'nın 87 doğrulanmış satın alma incelemesinden oluşturduğu yapay zeka özeti, bazı
+        kullanıcıların ürünün 'arızalı çıkması' nedeniyle hayal kırıklığına uğradığını belirtiyor. Bu,
+        Şikayetvar DOA raporunu destekliyor. Bunun tek bir sahibin birebir sözleri değil, toplu bir özet
+        olduğunu unutmayın; bu nedenle daha zayıf bir kanıttır.
+      advice: Net bir iade politikası olan bir satıcıdan satın alın ve ürünü geldiğinde hemen test edin.
+  evidence:
+  - url: https://www.hepsiburada.com/arzum-ar2076-s-airtasty-smart-7-5-l-sicak-hava-fritozu-p-HBCV00005SJWYT-yorumlari
+    quote: Ancak, bazı kullanıcılar ürünün arızalı çıkmasından dolayı hayal kırıklığı yaşamıştır.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:04:16+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: philips
+      series: hd9280/70
+  kind: known_issue
+  domain: general
+  severity: low
+  consequence: ''
+  detection: ''
+  component: ''
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: No Turkish-language owner complaints found for HD9280/70 despite targeted searches
+      body: Searches in Turkish (şikayet, arıza, sorun) returned no owner complaint threads for the HD9280/70
+        on şikayetvar or similar Turkish platforms within this run's budget. The only Turkish-language
+        result was the official manual.
+      advice: If you are a Turkish buyer, check local retailer reviews and şikayetvar directly for additional
+        owner reports.
+    tr:
+      title: Hedefli aramalara rağmen HD9280/70 için Türkçe sahip şikayeti bulunamadı
+      body: Türkçe yapılan aramalar (şikayet, arıza, sorun), bu çalışmanın bütçesi dahilinde şikayetvar
+        veya benzeri Türk platformlarında HD9280/70 için hiçbir sahip şikayet başlığı döndürmedi. Tek
+        Türkçe sonuç resmi kılavuzdu.
+      advice: Türk bir alıcıysanız, ek sahip bildirimleri için yerel perakendeci incelemelerini ve şikayetvar'ı
+        doğrudan kontrol edin.
+  evidence:
+  - url: https://www.kullanimkilavuzu.com.tr/philips/airfryer-xl-essential-hd9280/k%C4%B1lavuz?p=2
+    quote: Philips Airfryer XL Essential HD9280 kılavuz
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:07:35+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: fakir
+      series: airfry
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: control board / motor
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Fakir Airfry stops mid-cycle and will not restart; two service visits did not fix it
+      body: Owner reports the unit stops mid-cycle and will not restart, and that two service visits failed
+        to resolve it.
+      advice: This is the most-reported Fakir Airfry fault. If buying, expect that a mid-cycle shutdown
+        may not be fixed by warranty service; keep the receipt and be prepared to push for replacement
+        rather than repair.
+    tr:
+      title: Fakir Airfry döngü ortasında duruyor ve yeniden başlamıyor; iki servis ziyareti sorunu çözmedi
+      body: Sahip, cihazın döngü ortasında durduğunu ve yeniden başlamadığını, iki servis ziyaretinin
+        bunu çözemediğini bildiriyor.
+      advice: Bu, en çok bildirilen Fakir Airfry arızasıdır. Satın alırsanız, döngü ortası kapanmanın
+        garanti servisi tarafından düzeltilemeyebileceğini bekleyin; fişi saklayın ve onarım yerine değişim
+        için ısrar etmeye hazır olun.
+  evidence:
+  - url: https://www.sikayetvar.com/fakir-ev-aletleri/fakir-airfry-surekli-duruyor-servis-cozum-getirmedi-urun-degisimi-istiyorum
+    quote: Cihaz çalışırken bir anda takılıyor, duruyor ve tekrar çalışmamaya başlıyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:55:29+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: ninja
+      series: flip toaster oven air fryer
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: thermal sensor / control board (Err2)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Error code 2 (Err2) on Flip Toaster Oven — thermal sensor fault, unit dead within months
+      body: The manual (manualslib SP150 Series) corroborates that Err2/Err3/Err4 are not user-serviceable
+        and require calling customer service.
+      advice: If you buy this unit and it throws Err2, it is not a DIY fix — the manual directs you to
+        call Ninja service, so the failure typically means a warranty claim or replacement. Confirm the
+        warranty terms before buying.
+    tr:
+      title: Flip Toaster Oven'da hata kodu 2 (Err2) — termal sensör arızası, cihaz aylar içinde ölü
+      body: Kılavuz (manualslib SP150 Serisi), Err2/Err3/Err4'ün kullanıcı tarafından servis edilebilir
+        olmadığını ve müşteri hizmetlerini aramanın gerektiğini doğruluyor.
+      advice: Bu cihazı satın alırsanız ve Err2 verirse, bu kendin yap düzeltmesi değildir — kılavuz Ninja
+        servisini aramanızı söyler, bu nedenle arıza genellikle bir garanti talebi veya değişim anlamına
+        gelir. Satın almadan önce garanti koşullarını doğrulayın.
+  evidence:
+  - url: https://www.bestbuy.com/site/reviews/ninja-flip-toaster-oven-air-fryer-gray/6582907?rating=1
+    quote: Bought this air fryer Dec 10th 2025 .. tried to use it this morning, april 5th 2026 and it
+      would not work. Error code 2. Googled this and it is more than likely a thermal sensor fault. A
+      death sentence for an air fryer.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:06:31+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: fakir
+      series: chefry mono
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: control board / power supply
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Fakir Chefry Mono self-stops repeatedly during use, unusable
+      body: Owner Samet reports the unit repeatedly stops and restarts by itself, making it unusable.
+      advice: This is the same mid-cycle shutdown pattern reported by multiple owners. The unit cannot
+        complete a cooking cycle, so food will be undercooked or the process is interrupted entirely.
+    tr:
+      title: Fakir Chefry Mono kullanım sırasında tekrar tekrar kendi kendine duruyor, kullanılamaz
+      body: Sahip Samet, cihazın tekrar tekrar kendi kendine durup yeniden başladığını ve bunun cihazı
+        kullanılamaz hale getirdiğini bildiriyor.
+      advice: Bu, birden fazla sahibin bildirdiği aynı döngü ortası kapanma örüntüsüdür. Cihaz bir pişirme
+        döngüsünü tamamlayamaz, bu nedenle yemek az pişmiş olur veya süreç tamamen kesintiye uğrar.
+  evidence:
+  - url: https://www.sikayetvar.com/fakir-ev-aletleri/fakir-mono-airfry-sorunu-video
+    quote: Sürekli kendiliğinden durup durup başlıyor lütfen yardımcı olun kullanamıyorum.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:55:29+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      series: smart air fryer 6.5l
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: rotary control knob
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Rotary cooking-time knob on Xiaomi 6.5L (MAF09) broke after ~10 months
+      body: The same MAF09 owner reports the rotary knob that sets cooking time broke after about 10 months,
+        forcing her to operate the timer with pliers.
+      advice: The rotary control is a mechanical weak point; if it fails, the unit is hard to operate
+        and likely needs service rather than a cheap part.
+    tr:
+      title: Xiaomi 6.5L (MAF09) üzerindeki döner pişirme süresi düğmesi ~10 ay sonra kırıldı
+      body: Aynı MAF09 sahibi, pişirme süresini ayarlayan döner düğmenin yaklaşık 10 ay sonra kırıldığını
+        ve zamanlayıcıyı pense ile çalıştırmak zorunda kaldığını bildiriyor.
+      advice: Döner kontrol mekanik bir zayıf noktadır; arızalanırsa cihazın çalıştırılması zorlaşır ve
+        muhtemelen ucuz bir parça yerine servis gerekir.
+  evidence:
+  - url: https://market.yandex.ru/offers/aerogril-xiaomi-smart-air-fryer-5-5-l-12-programm/6110414452/reviews?offerId=D72BkqTvwqrgT3HqACOA7g&oskuId=4537331036&isComfortPlus=false&isWowOffersFlow=false&langPath=ru&page=5
+    quote: Сломалась крутилка которая включает время готовки.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:01:51+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: philips
+      series: hd9280/70
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: Wi-Fi module (2.4GHz only)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Wi-Fi module on HD9280/70 only supports 2.4GHz band, causing connection failures
+      body: 'Philips'' own support page confirms the HD9280 is a Wi-Fi-capable model but the module is
+        2.4GHz-only. A user review on Google Shopping for the HD9280/70 confirms the pain: ''De connectie
+        met Philips setup kan "niet gemaakt" worden. Mijn toestel is een PHILIPS, HD9280/70..'' and the
+        user had to disable their 5GHz signal to get it to connect. Home routers set to 5GHz-only will
+        not work with this unit.'
+      advice: Before buying, confirm your home router broadcasts a 2.4GHz network; if it is 5GHz-only,
+        the app-connect features will not work.
+    tr:
+      title: HD9280/70 üzerindeki Wi-Fi modülü yalnızca 2.4GHz bandını destekler ve bağlantı hatalarına
+        neden olur
+      body: 'Philips''in kendi destek sayfası, HD9280''nin Wi-Fi özellikli bir model olduğunu ancak modülün
+        yalnızca 2.4GHz olduğunu doğruluyor. Google Shopping''de HD9280/70 için bir kullanıcı yorumu bu
+        sıkıntıyı doğruluyor: ''De connectie met Philips setup kan "niet gemaakt" worden. Mijn toestel
+        is een PHILIPS, HD9280/70..'' ve kullanıcının bağlanması için 5GHz sinyalini devre dışı bırakması
+        gerekmiş. Yalnızca 5GHz''e ayarlı ev yönlendiricileri bu üniteyle çalışmayacaktır.'
+      advice: Satın almadan önce ev yönlendiricinizin 2.4GHz ağı yayınladığını doğrulayın; yalnızca 5GHz
+        ise uygulama bağlantı özellikleri çalışmayacaktır.
+  evidence:
+  - url: https://www.philips.pt/c-t/XC000019878/o-meu-aparelho-de-cozinha-da-philips-n%C3%A3o-consegue-encontrar-a-rede-wi-fi-dom%C3%A9stica
+    quote: 'Certifique-se de que a sua Airfryer é compatível com ligação Wi-Fi: HD9255, HD9280, HD9285,
+      HD9880.'
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:07:35+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: arzum
+      series: ar2074-g
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: fan/motor
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Unit heats but does not cook; no fan sound — fan/motor failure
+      body: A Şikayetvar complaint (May 2025) reports a unit bought March 2025 that only heats but never
+        cooks — display works but no fan sound, indicating the fan/motor is not running.
+      advice: If the unit heats but produces no fan noise, it will not cook food; this is a service-level
+        failure, not a user error, and should be covered under warranty if within the period.
+    tr:
+      title: Ünite ısınıyor ancak pişirmiyor; fan sesi yok — fan/motor arızası
+      body: Bir Şikayetvar şikayeti (Mayıs 2025), Mart 2025'te satın alınan ve yalnızca ısınan ancak hiç
+        pişirmeyen bir üniteyi bildiriyor — ekran çalışıyor ancak fan sesi yok, bu da fanın/motorun çalışmadığını
+        gösteriyor.
+      advice: Ünite ısınıyor ancak fan gürültüsü çıkarmıyorsa yiyecek pişirmez; bu kullanıcı hatası değil
+        servis düzeyinde bir arızadır ve süre içindeyse garanti kapsamında olmalıdır.
+  evidence:
+  - url: https://www.sikayetvar.com/arzum/ar2074-airtasty-xl/rezistans
+    quote: Arzum AR207420 airtasty XL pişirme yapmıyor. 18.03.2025 de satın alındı, manuel ve otomatik
+      olarak iki defa pişirme yapm...ayı denedik ama maalesef ürünler pişmedi. Cihaz ürünleri sadece ısıtıyor,
+      gösterge fonksiyonları normal çalışıyor fakat cihazda hiç fan sesi ya da pişirme ile alaka ses duyulmuyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:53:09+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: tefal
+      series: fw2018
+  kind: known_issue
+  domain: performance
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: grill program / timer
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Grill mode timer does not stop and restarts at 10 minutes (TR)
+      body: Found via 'Tefal FW2018 Easy Fry arıza sorun'. Turkish owner reports that after selecting
+        3-5 minutes in grill mode the unit does not stop and restarts a 10-minute grill cycle.
+      advice: Independent Turkish corroboration of the grill-timer fault, reported while still under warranty.
+        The grill mode does not honor the selected time, so grilled food can be overcooked.
+    tr:
+      title: Izgara modu zamanlayıcısı durmuyor ve 10 dakikada yeniden başlıyor (TR)
+      body: '''Tefal FW2018 Easy Fry arıza sorun'' üzerinden bulundu. Türk sahibi, ızgara modunda 3-5
+        dakika seçtikten sonra ünitenin durmadığını ve 10 dakikalık bir ızgara döngüsünü yeniden başlattığını
+        bildiriyor.'
+      advice: Izgara zamanlayıcı arızasının bağımsız Türkçe doğrulaması, henüz garanti kapsamındayken
+        bildirilmiş. Izgara modu seçilen süreye uymuyor, bu nedenle ızgara yiyecekler fazla pişebilir.
+  evidence:
+  - url: https://www.sikayetvar.com/tefal/easy-fry-grill-steam-plus-fw2018/urun
+    quote: grill modunu açtıktan sonra dakika olarak örnek olarak 3 4 5 dakika seçince cihaz seçili dakika
+      sonrası otomatik olarak durmuyor ve tekrar 10dk lik bir grill moduna başlıyor
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:01:25+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: tefal
+      series: fw2018
+  kind: known_issue
+  domain: surface
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: cooking chamber non-stick coating
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Cooking chamber coating deforms and peels (non-stick)
+      body: Found via 'Tefal FW2018 Easy Fry arıza sorun'. Turkish owner reports the cooking chamber deformed
+        and the black coating began peeling shortly after purchase.
+      advice: This matches the pack's known Tefal non-stick peeling theme. A peeling coating means food
+        can stick and particles can enter food; it typically appears within the first year.
+    tr:
+      title: Pişirme haznesi kaplaması deforme oluyor ve soyuluyor (yapışmaz)
+      body: '''Tefal FW2018 Easy Fry arıza sorun'' üzerinden bulundu. Türk sahibi, pişirme haznesinin
+        deforme olduğunu ve siyah kaplamanın satın alımdan kısa süre sonra soyulmaya başladığını bildiriyor.'
+      advice: Bu, paketin bilinen Tefal yapışmaz kaplama soyulması temasıyla örtüşüyor. Soyulan kaplama,
+        yiyeceklerin yapışabileceği ve parçacıkların yiyeceğe girebileceği anlamına gelir; genellikle
+        ilk yıl içinde ortaya çıkar.
+  evidence:
+  - url: https://www.sikayetvar.com/tefal/easy-fry-grill-steam-plus-fw2018/urun
+    quote: hazne kısmı deforme olmaya başladı. Haznedeki siyah kısım soyulmaya başl
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:01:25+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: arzum
+      series: ar2074-g
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: hazne sapı (basket handle)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Basket handle breaks; smoke from edges and steam on the digital display
+      body: 'The Hepsiburada review summary (550 ratings) aggregates owner reports: the basket handle
+        breaks, and the unit emits smoke from its edges and steam on the digital display.'
+      advice: Check the basket handle for stress cracks before purchase; if buying, treat the handle as
+        a fragile part and inspect it within the return window.
+    tr:
+      title: Sepet sapı kırılıyor; kenarlardan duman ve dijital ekranda buhar
+      body: 'Hepsiburada yorum özeti (550 değerlendirme) sahip bildirimlerini topluyor: sepet sapı kırılıyor
+        ve ünite kenarlarından duman ve dijital ekranında buhar çıkarıyor.'
+      advice: Satın almadan önce sepet sapında gerilme çatlakları olup olmadığını kontrol edin; satın
+        alıyorsanız sapı kırılgan bir parça olarak değerlendirin ve iade süresi içinde inceleyin.
+  evidence:
+  - url: https://www.hepsiburada.com/arzum-ar2074-g-airtasty-xl-air-fryer-sicak-hava-fritozu-p-HBCV00003FXNP9-yorumlari?magaza=BSTBili%C5%9Fim
+    quote: Ancak, bazı kullanıcılar ürünün kenarlarından duman çıktığını ve dijital ekranın buhar yaptığını
+      belirtmiş. Ayrıca, hazne sapının kırılması gibi sorunlar da yaşanabiliyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:53:09+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: cosori
+      series: caf-r901-aeu
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: temperature monitor (left/right basket)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Temperature monitor open/short circuit error codes E1/E2/E21/E22 documented in official manual
+      body: This is official documentation of sensor/control-board failure modes.
+      advice: If the display shows E1/E2/E21/E22/E3, the unit needs service; these are not user-fixable
+        and point to a sensor or control-board fault. Check warranty coverage before buying, as these
+        failures require contacting Cosori support.
+    tr:
+      title: Sıcaklık izleyici açık/kısa devre hata kodları E1/E2/E21/E22 resmi kılavuzda belgelenmiş
+      body: Bu, sensör/kontrol kartı arıza modlarının resmi belgeleridir.
+      advice: Ekranda E1/E2/E21/E22/E3 görünüyorsa ünite servis gerektirir; bunlar kullanıcı tarafından
+        düzeltilemez ve bir sensör veya kontrol kartı arızasına işaret eder. Bu arızalar Cosori desteğiyle
+        iletişime geçmeyi gerektirdiğinden satın almadan önce garanti kapsamını kontrol edin.
+  evidence:
+  - url: https://cosori.site/it/wp-content/uploads/sites/5/2024/02/Dual-Basket-Manual.pdf
+    quote: There is an open circuit in the temperature monitor of the left basket.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:54:40+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: philips
+      series: hd9280/70
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: power/control board
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: HD9280/90 stopped turning on after 15 minutes of use; owner had to return it
+      body: 'A verified purchaser on Alza.at reports the HD9280/90 (the same 5000 Series XL Connected
+        family as the /70) failed completely after 15 minutes of frying: it would not switch on again.
+        The owner had to claim a return and did not buy a replacement. This is a total unit failure shortly
+        into use.'
+      advice: Keep the receipt and be ready to exercise warranty rights; a sudden total power failure
+        can occur without warning.
+    tr:
+      title: HD9280/90, 15 dakikalık kullanımdan sonra açılmamaya başladı; sahibi iade etmek zorunda kaldı
+      body: 'Alza.at''te doğrulanmış bir alıcı, HD9280/90''ın (/70 ile aynı 5000 Series XL Connected ailesi)
+        15 dakikalık kızartmadan sonra tamamen arızalandığını bildiriyor: cihaz bir daha açılmadı. Sahibi
+        iade talebinde bulunmak zorunda kaldı ve yerine yenisini almadı. Bu, kullanıma başladıktan kısa
+        süre sonra cihazın tamamen arızalanmasıdır.'
+      advice: Fişi saklayın ve garanti haklarınızı kullanmaya hazır olun; ani ve tam bir güç kesintisi
+        uyarı vermeden meydana gelebilir.
+  evidence:
+  - url: https://m.alza.at/bewertungen/philips-5000-series-airfryer-62l-xl-connected-14in1-hd928090-7304104.htm
+    quote: Nach 15. Minuten Braten und Betriebsende ließ er sich nicht mehr einschalten, ich musste reklamieren
+      und habe keinen neuen gekauft.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:07:35+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: fakir
+      series: chefry mono
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: control board / power supply
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Fakir Chefry Mono mid-cycle shutdowns: unit stops and restarts on its own, never runs continuously'
+      body: Owner Erol reports the unit stops and restarts by itself from the first use, never running
+        continuously; authorized service claimed repair but the problem persisted unchanged.
+      advice: If buying, expect a real risk the unit will not run a full cycle. If owning, the failure
+        appears within warranty in this case, but service did not resolve it — push for replacement rather
+        than repair.
+    tr:
+      title: 'Fakir Chefry Mono döngü ortasında kapanmalar: cihaz kendi kendine durup yeniden başlıyor,
+        hiç sürekli çalışmıyor'
+      body: Sahibi Erol, cihazın ilk kullanımdan itibaren kendi kendine durup yeniden başladığını, hiç
+        sürekli çalışmadığını bildiriyor; yetkili servis onarım yaptığını iddia etti ancak sorun değişmeden
+        devam etti.
+      advice: Satın alacaksanız, cihazın tam bir döngüyü tamamlayamama riskinin gerçek olduğunu hesaba
+        katın. Sahipseniz, bu durumda arıza garanti süresi içinde ortaya çıkmış görünüyor, ancak servis
+        sorunu çözemedi — onarım yerine değişim için ısrar edin.
+  evidence:
+  - url: https://www.sikayetvar.com/fakir-ev-aletleri/airfryer-hediye-alindi-ilk-gunden-arizali-ve-tamir-sonrasi-da-calismiyor
+    quote: Cihaz çalışmaya başlıyor, bir süre sonra kendiliğinden duruyor, ardından yeniden çalışıp tekrar
+      duruyor ve hiçbir zaman kesintisiz, sağlıklı bir şekilde çalışmıyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:05:49+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: ninja
+      series: r-ad300co
+  kind: known_issue
+  domain: mechanical
+  severity: low
+  consequence: ''
+  detection: ''
+  component: power supply / standby circuit
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: R-AD300CO emits high-pitched noise when powered off but plugged in
+      body: An owner reports a persistent high-pitched noise even when the unit is off but still plugged
+        in. This indicates standby power draw and possibly a failing transformer or capacitor; it is a
+        nuisance rather than a functional failure.
+      advice: Unplug the unit when not in use to eliminate the noise and standby power draw; if the noise
+        becomes louder or the unit fails, it points to a power-supply issue.
+    tr:
+      title: R-AD300CO kapalıyken ama fişe takılıyken yüksek perdeli ses çıkarıyor
+      body: Bir sahibi, cihaz kapalı ama hâlâ fişe takılıyken sürekli yüksek perdeli bir ses duyduğunu
+        bildiriyor. Bu, bekleme modunda güç tüketimine ve muhtemelen arızalı bir transformatör veya kondansatöre
+        işaret eder; işlevsel bir arıza olmaktan çok bir rahatsızlık kaynağıdır.
+      advice: Sesi ve bekleme modu güç tüketimini ortadan kaldırmak için kullanmadığınızda cihazın fişini
+        çekin; ses yükselirse veya cihaz arızalanırsa bu, güç kaynağı sorununa işaret eder.
+  evidence:
+  - url: https://sellout.woot.com/review/B0DLJJN124?offerid=32ac7563-d0f4-48b1-b83d-0745fa32daee&itemid=fc9f418d-760b-4902-af97-3954cf20d740&filter=4&isVerified=false&page=1&sort=0
+    quote: Works really well and fries things really quick, the only thing bad I have noticed is the air
+      fryer makes a high pitched noise even when powered off but still plugged in.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:56:54+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      series: smart double stack air fryer 12l
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: fuse / electronics housing
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Fuse blew within a month; official service blamed grease ingress
+      body: Owner review on Onliner.by. The device failed within a month; the official service center
+        said splashes/grease had entered the housing and tripped the fuse, which the owner calls a design
+        flaw for a kitchen appliance.
+      advice: A grease-seal failure that kills the fuse is a repair/return event within the first month.
+        If you cook fatty foods, this is the most likely early electrical failure mode.
+    tr:
+      title: Sigorta bir ay içinde attı; resmi servis yağ girişini suçladı
+      body: Onliner.by'deki sahip incelemesi. Cihaz bir ay içinde arızalandı; resmi servis merkezi gövdeye
+        sıçrama/yağ girdiğini ve sigortayı attırdığını söyledi; sahibi bunu bir mutfak aleti için tasarım
+        hatası olarak nitelendiriyor.
+      advice: Sigortayı attıran bir yağ sızdırmazlık arızası, ilk ay içinde onarım/iade gerektiren bir
+        durumdur. Yağlı yiyecekler pişiriyorsanız, bu en olası erken elektriksel arıza modudur.
+  evidence:
+  - url: https://catalog.onliner.by/aerogrill/xiaomi/mafds1201bl/reviews?boost=shop.20622
+    quote: Прибор не проработал и месяца — просто взял и сломался. Сдали по гарантии, и ответ официального
+      сервиса меня просто поразил. Заявили, что внутрь попали брызги/жир, из-за чего сработал и вышел
+      из строя предохранитель.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:03:12+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: philips
+      series: hd9243/90
+  kind: known_issue
+  domain: surface
+  severity: high
+  consequence: ''
+  detection: ''
+  component: inner basket and grill non-stick coating
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Inner basket and grill non-stick coating peels within 3 months
+      body: An owner reports the internal basket and grill coating peeling and changing colour at month
+        3 despite following cleaning instructions, and stopped using the unit over health concerns.
+      advice: 'Buyer should treat the non-stick coating as the main wear risk: it can peel within the
+        first months, making the unit unusable and raising health worries. Check warranty/service response
+        before purchase, since some owners report service refusing replacement.'
+    tr:
+      title: İç sepet ve ızgara yapışmaz kaplaması 3 ay içinde soyuluyor
+      body: Bir sahibi, temizlik talimatlarına uyulmasına rağmen 3. ayda iç sepet ve ızgara kaplamasının
+        soyulduğunu ve renk değiştirdiğini, sağlık endişeleri nedeniyle cihazı kullanmayı bıraktığını
+        bildiriyor.
+      advice: 'Alıcı, yapışmaz kaplamayı ana aşınma riski olarak görmelidir: ilk aylar içinde soyulabilir,
+        bu da cihazı kullanılamaz hale getirir ve sağlık endişelerini artırır. Bazı sahipler servisin
+        değişim talebini reddettiğini bildirdiğinden, satın almadan önce garanti/servis yanıtını kontrol
+        edin.'
+  evidence:
+  - url: https://www.sikayetvar.com/philips-ev-aletleri/ucuncu-ayda-ic-kaplamada-soyulma-trendyol-destek-yanit-vermedi
+    quote: Ancak ürün daha 3. Ayındayken iç haznede ve ızgarada ciddi şekilde soyulma ve renk değişimleri
+      oluştu.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:03:34+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: arzum
+      series: airtasty x large
+  kind: known_issue
+  domain: performance
+  severity: low
+  consequence: ''
+  detection: ''
+  component: housing seal / display
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Smoke from the edges and display fogging during cooking
+      body: Hepsiburada's AI summary of 550 buyer reviews of the Ar2074-G Airtasty XL notes some users
+        report smoke escaping from the unit's edges, the digital display fogging up, and the basket handle
+        breaking. This is a lower-severity performance/quality complaint.
+      advice: Expect some edge smoke and display fogging in normal use; if smoke is heavy or persistent,
+        check for food debris and stop using the unit.
+    tr:
+      title: Pişirme sırasında kenarlardan duman ve ekranda buğulanma
+      body: Hepsiburada'nın Ar2074-G Airtasty XL hakkındaki 550 alıcı incelemesinin AI özeti, bazı kullanıcıların
+        cihazın kenarlarından duman çıktığını, dijital ekranın buğulandığını ve sepet sapının kırıldığını
+        bildirdiğini belirtiyor. Bu, daha düşük ciddiyette bir performans/kalite şikayetidir.
+      advice: Normal kullanımda bir miktar kenar dumanı ve ekran buğulanması bekleyin; duman yoğunsa veya
+        sürekliyse yiyecek kalıntısı olup olmadığını kontrol edin ve cihazı kullanmayı bırakın.
+  evidence:
+  - url: https://www.hepsiburada.com/arzum-ar2074-g-airtasty-xl-air-fryer-sicak-hava-fritozu-p-HBCV00003FXNP9-yorumlari?magaza=BSTBili%C5%9Fim
+    quote: Ancak, bazı kullanıcılar ürünün kenarlarından duman çıktığını ve dijital ekranın buhar yaptığını
+      belirtmiş. Ayrıca, hazne sapının kırılması gibi sorunlar da yaşanabiliyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:53:09+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: ninja
+      series: r-ad300co
+  kind: known_issue
+  domain: performance
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: heating element / basket assembly
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: R-AD300CO produces heavy smoke within first uses
+      body: A verified Amazon purchaser reports heavy smoke after only a couple of uses. The HomeAndTome
+        long-term review notes this may be factory residue burning off, but the owner was considering
+        a return, so the buyer should expect smoke on early runs and decide whether that is acceptable.
+      advice: Run several empty preheat cycles in a ventilated area before first real use; if smoke persists
+        beyond the first few cycles, treat it as a defect and return.
+    tr:
+      title: R-AD300CO ilk kullanımlarda yoğun duman çıkarıyor
+      body: Doğrulanmış bir Amazon alıcısı, yalnızca birkaç kullanımdan sonra yoğun duman bildiriyor.
+        HomeAndTome uzun vadeli incelemesi bunun fabrika kalıntısının yanması olabileceğini belirtiyor,
+        ancak sahibi iadeyi düşünüyordu, bu nedenle alıcı ilk çalıştırmalarda duman beklemeli ve bunun
+        kabul edilebilir olup olmadığına karar vermelidir.
+      advice: İlk gerçek kullanımdan önce havalandırılan bir alanda birkaç boş ön ısıtma döngüsü çalıştırın;
+        duman ilk birkaç döngüden sonra devam ederse bunu bir kusur olarak değerlendirin ve iade edin.
+  evidence:
+  - url: https://sellout.woot.com/review/B0DLJJN124?offerid=09d87bff-6f36-468d-8b2a-419bf50ed2f2&itemid=fd130b4a-a4f2-49d0-a900-2c0117e387d4&filter=1&isVerified=false&page=1&sort=0
+    quote: I’ve only used it a couple times and it’s smoking a lot. I’m gonna give it a little more time
+      because it works and I don’t wanna have to deal with the hassle of a return.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:56:54+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: arzum
+      series: ar2076-s
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: control panel / buttons
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: AR2076 screen/button problems reported in Şikayetvar aggregate
+      body: Şikayetvar's product page for the AR2076 aggregates user-reported disadvantages including
+        'Ekran-düğme sorunlu' (screen/button problematic) and 'Yavaş kızartma-pişirme' (slow frying/cooking).
+        This is an aggregate tag rather than a single owner's verbatim account, so it is weaker evidence,
+        but it aligns with the control-board failure pattern the pack tracks for Arzum.
+      advice: Check the touch controls and display thoroughly during the return window; control-panel
+        faults are among the reported issues.
+    tr:
+      title: AR2076 ekran/düğme sorunları Şikayetvar derlemesinde bildirildi
+      body: Şikayetvar'ın AR2076 ürün sayfası, kullanıcılar tarafından bildirilen 'Ekran-düğme sorunlu'
+        ve 'Yavaş kızartma-pişirme' gibi dezavantajları bir araya getiriyor. Bu, tek bir sahibin birebir
+        anlatımı yerine bir toplu etiket olduğundan daha zayıf bir kanıttır, ancak paketin Arzum için
+        izlediği kontrol kartı arıza örüntüsüyle uyumludur.
+      advice: İade süresi içinde dokunmatik kontrolleri ve ekranı iyice kontrol edin; kontrol paneli arızaları
+        bildirilen sorunlar arasındadır.
+  evidence:
+  - url: https://www.sikayetvar.com/arzum/ar2076-airtasty-smart
+    quote: Ekran-düğme sorunlu
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:04:16+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      series: smart air fryer 6.5l
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: temperature sensor
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Temperature sensor disconnection/short-circuit triggers E1/E2 error codes on Xiaomi 6.5L
+        air fryer
+      body: Xiaomi's own FAQ for the 6.5L states E1 = sensor disconnection, E2 = sensor short-circuit,
+        and directs the user to after-sales service, so the fault is not user-fixable.
+      advice: If the display shows E1/E2, the unit needs service; the sensor is not a user-replaceable
+        part, so expect a repair or exchange under warranty.
+    tr:
+      title: Sıcaklık sensörünün bağlantısının kesilmesi/kısa devre Xiaomi 6.5L hava fritözünde E1/E2
+        hata kodlarını tetikliyor
+      body: Xiaomi'nin 6.5L için kendi SSS'si E1 = sensör bağlantısının kesilmesi, E2 = sensör kısa devresi
+        olduğunu belirtir ve kullanıcıyı satış sonrası servise yönlendirir, dolayısıyla arıza kullanıcı
+        tarafından düzeltilemez.
+      advice: Ekranda E1/E2 görünüyorsa cihazın servise ihtiyacı vardır; sensör kullanıcı tarafından değiştirilebilir
+        bir parça değildir, bu nedenle garanti kapsamında onarım veya değişim bekleyin.
+  evidence:
+  - url: https://www.mi.com/es/support/faq/details/KA-65957/
+    quote: E1 indica una desconexión del sensor y E2 indica un cortocircuito del sensor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:01:51+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      series: smart air fryer 6.5l
+  kind: known_issue
+  domain: surface
+  severity: high
+  consequence: ''
+  detection: ''
+  component: bowl non-stick coating
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Non-stick coating on Xiaomi 6.5L (MAF09) bowl peels off in pieces, rust underneath
+      body: An owner of the MAF09 (6.5L, EU version) reports after ~10 months that the non-stick coating
+        peeled off in pieces and rust appeared underneath, within the first year of ownership.
+      advice: Check the bowl coating early; peeling exposes bare metal that rusts, and the bowl is a consumable
+        that may need replacing out of warranty.
+    tr:
+      title: Xiaomi 6.5L (MAF09) haznesindeki yapışmaz kaplama parçalar halinde soyuluyor, altında pas
+        var
+      body: MAF09 (6.5L, AB versiyonu) sahibi yaklaşık 10 ay sonra yapışmaz kaplamanın parçalar halinde
+        soyulduğunu ve altında pas oluştuğunu, bunun da sahipliğin ilk yılı içinde gerçekleştiğini bildiriyor.
+      advice: Hazne kaplamasını erken kontrol edin; soyulma paslanan çıplak metali açığa çıkarır ve hazne
+        garanti dışında değiştirilmesi gerekebilecek bir sarf malzemesidir.
+  evidence:
+  - url: https://market.yandex.ru/offers/aerogril-xiaomi-smart-air-fryer-5-5-l-12-programm/6110414452/reviews?offerId=D72BkqTvwqrgT3HqACOA7g&oskuId=4537331036&isComfortPlus=false&isWowOffersFlow=false&langPath=ru&page=5
+    quote: И просто кусками отваливается антипригарное покрытие в самой чаше. После готовки пригорел сок
+      от курицы ,а когда начала мыть ,то в этих местах просто отошло покрытие ,а под ним ржавчина
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:01:51+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      series: smart air fryer pro
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: kapı kontrol işlevi (door/safety interlock sensor)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Door-control function failure blocks operation on Pro 4L (official FAQ)
+      body: The official FAQ describes a scenario where the unit refuses to run, displaying 'close the
+        pot to continue' even when the basket is correctly seated — the door-control function is faulty
+        and requires after-sales service.
+      advice: If the fryer shows the 'close the pot' error with the basket fully seated, the door interlock
+        sensor is faulty. This is a service-level fault per Xiaomi's own FAQ; it will stop the unit from
+        running entirely.
+    tr:
+      title: Pro 4L'de kapı kontrolü işlevi arızası çalışmayı engelliyor (resmi SSS)
+      body: Resmi SSS, sepet doğru şekilde yerleştirilmiş olsa bile cihazın 'devam etmek için hazneyi
+        kapatın' mesajını göstererek çalışmayı reddettiği bir senaryoyu açıklar — kapı kontrolü işlevi
+        arızalıdır ve satış sonrası servis gerektirir.
+      advice: Sepet tamamen yerleştirilmişken fritöz 'hazneyi kapatın' hatasını gösteriyorsa kapı kilidi
+        sensörü arızalıdır. Bu, Xiaomi'nin kendi SSS'sine göre servis düzeyinde bir arızadır; cihazın
+        tamamen çalışmasını durduracaktır.
+  evidence:
+  - url: https://www.mi.com/tr/support/faq/details/KA-32510/
+    quote: Kızartma tepsisinin yerine itildiği doğrulanırsa, ürün kapısı kontrol işlevi arızalıysa, lütfen
+      bununla başa çıkmak için satış sonrası servise başvurun.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:02:38+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: arzum
+      series: ar2076-s
+  kind: known_issue
+  domain: performance
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: heating element / cooking chamber
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: AR2076-S bakes cakes unevenly — top cooks, bottom stays raw dough
+      body: Owner of the exact AR2076-S 7.5L model reports cakes and dough items come out with the top
+        cooked but the bottom still raw dough at the recipe's stated temperature/time, while the same
+        recipes work on other brands' fryers.
+      advice: If you bake cakes or dough items, test a dense batter early in the return window. A bottom
+        that stays raw while the top cooks is the reported symptom; return/exchange within the iade (return)
+        period rather than waiting, since the owner found the return window had lapsed by the time they
+        tried.
+    tr:
+      title: AR2076-S kekleri eşit olmayan şekilde pişiriyor — üst pişiyor, alt çiğ hamur kalıyor
+      body: Tam olarak AR2076-S 7.5L modelinin sahibi, tarifte belirtilen sıcaklık/sürede keklerin ve
+        hamur ürünlerinin üstü pişmiş ancak altı hâlâ çiğ hamur olarak çıktığını, aynı tariflerin diğer
+        markaların fritözlerinde ise işe yaradığını bildiriyor.
+      advice: Kek veya hamur ürünleri pişiriyorsanız iade süresi içinde yoğun bir hamuru erken test edin.
+        Üst pişerken altın çiğ kalması bildirilen belirtidir; sahibi denediğinde iade süresinin geçtiğini
+        fark ettiğinden beklemek yerine iade (return) süresi içinde iade/değişim yapın.
+  evidence:
+  - url: https://www.sikayetvar.com/arzum/arzum-airfryer-kek-pisirme-sorunu-ve-degisim-talebi
+    quote: ancak ürün, tariflerde belirtilen derece ve sürelerde asla doğru düzgün pişirme yapmıyor. Özellikle
+      kek ve hamur işlerinde üstü pişmiş gibi görünse de altı tamamen hamur kalıyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:52:34+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: philips
+      series: na352/00
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: fan / blower (Gebläse)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Fan/blower stops working after a few meals — two units replaced
+      body: One reviewer says both units they owned were replaced because the fan/blower stopped working
+        after a few cooked meals, and would not recommend the model.
+      advice: 'This is the most serious reported failure: the hot-air blower dying after a handful of
+        uses makes the appliance unusable and forces a warranty exchange. If you buy, keep the receipt
+        and test the fan early; be ready to exercise the 2-year warranty quickly.'
+    tr:
+      title: Fan/blower birkaç yemekten sonra çalışmayı durduruyor — iki ünite değiştirildi
+      body: Bir yorumcu, sahip olduğu her iki ünitenin de fan/blower birkaç pişirilmiş yemekten sonra
+        çalışmayı durdurduğu için değiştirildiğini ve modeli önermeyeceğini söylüyor.
+      advice: 'Bu, bildirilen en ciddi arıza: sıcak hava üfleyicisinin birkaç kullanımdan sonra bozulması
+        cihazı kullanılamaz hale getiriyor ve garanti değişimini zorunlu kılıyor. Satın alırsanız fişi
+        saklayın ve fanı erkenden test edin; 2 yıllık garantiyi hızlıca kullanmaya hazır olun.'
+  evidence:
+  - url: https://www.galaxus.at/de/s2/product/ratings/philips-airfryer-dual-basket-na35200-9-l-fritteuse-44678894?loadNextPage=true&productReviewsSortOrder=MOST_HELPFUL
+    quote: Ich habe bereits zwei Friteusen ausgetauscht. Beide hatten ein Problem mit dem Gebläse, das
+      nach ein paar zubereiteten Mahlzeiten nicht mehr funktionierte. Ich würde nicht empfehlen
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:58:41+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: philips
+      series: na352/00
+  kind: known_issue
+  domain: performance
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: overall cooking performance
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Stiftung Warentest ranks NA352/00 18th of 20 hot-air fryers (score 67/100)
+      body: The independent German test body scored the NA352/00 'Good 67/100' and ranked it 18th of 20
+        hot-air fryers tested.
+      advice: Independent testing places this model near the bottom of the hot-air fryer field despite
+        its high retail rating, so treat marketing scores with caution. If even cooking across both baskets
+        matters to you, this ranking suggests comparing against higher-ranked dual-basket models before
+        buying.
+    tr:
+      title: Stiftung Warentest, NA352/00'ı 20 sıcak hava fritözü arasında 18. sıraya koyuyor (puan 67/100)
+      body: Bağımsız Alman test kuruluşu NA352/00'a 'İyi 67/100' puanı verdi ve test edilen 20 sıcak hava
+        fritözü arasında 18. sıraya koydu.
+      advice: Bağımsız testler, yüksek perakende puanına rağmen bu modeli sıcak hava fritözleri alanında
+        neredeyse en alta yerleştiriyor, bu yüzden pazarlama puanlarına dikkatle yaklaşın. Her iki sepette
+        eşit pişirme sizin için önemliyse, bu sıralama satın almadan önce daha yüksek sıralı çift sepetli
+        modellerle karşılaştırma yapmanızı öneriyor.
+  evidence:
+  - url: https://www.galaxus.it/en/s2/product/philips-airfryer-dual-basket-na35200-9-l-fryers-44678894?imageIndex=7
+    quote: Ranking 18 out of 20
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:58:41+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: philips
+      series: hd9280/70
+  kind: known_issue
+  domain: electrical
+  severity: low
+  consequence: ''
+  detection: ''
+  component: touchscreen / control panel
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Display responds slowly; start/stop button unclear
+      body: The owner reports the display responds slowly and the start/stop button is not clear. This
+        is a control-panel usability fault, not a safety issue.
+      advice: Expect a slightly laggy touchscreen; not a deal-breaker but worth knowing if you want crisp
+        tactile controls.
+    tr:
+      title: Ekran yavaş yanıt veriyor; başlat/durdur düğmesi belirsiz
+      body: Sahip, ekranın yavaş yanıt verdiğini ve başlat/durdur düğmesinin belirsiz olduğunu bildiriyor.
+        Bu bir güvenlik sorunu değil, kontrol paneli kullanılabilirlik hatası.
+      advice: Biraz gecikmeli bir dokunmatik ekran bekleyin; anlaşmayı bozan bir şey değil ama net dokunsal
+        kontroller istiyorsanız bilmeye değer.
+  evidence:
+  - url: https://www.bol.com/nl/nl/p/philips-essential-rapid-air-technologie-1-2-kg-6-2-l-zwart-airfryer-xl/9300000027501034/
+    quote: Een klein minpuntje is dat het display soms traag reageert, wat enige gewenning vereist.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:59:32+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: ninja
+      series: r-ad300co
+  kind: known_issue
+  domain: performance
+  severity: low
+  consequence: ''
+  detection: ''
+  component: heating element / internal coatings
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: EU-market Ninja Foodi MAX Dual Zone (AF400EUCP) emitted strong chemical smell on first heating
+      body: A German Amazon reviewer of the EU-market AF400EUCP (same Foodi Dual Zone family) reports
+        a strong chemical smell on first heating that took about five 20-minute cycles to dissipate and
+        ruined the first batch of food. This is relevant to EU buyers of the same product family, though
+        the exact model code differs from R-AD300CO.
+      advice: EU buyers should plan for several empty preheat cycles with windows open before first use,
+        and discard the first cooked batch if the chemical smell persists.
+    tr:
+      title: AB pazarı Ninja Foodi MAX Dual Zone (AF400EUCP) ilk ısıtmada güçlü kimyasal koku yaydı
+      body: AB pazarı AF400EUCP'nin (aynı Foodi Dual Zone ailesi) bir Alman Amazon yorumcusu, ilk ısıtmada
+        yaklaşık beş adet 20 dakikalık döngüde dağılan ve ilk yemek partisini mahveden güçlü bir kimyasal
+        koku bildiriyor. Bu, tam model kodu R-AD300CO'dan farklı olsa da aynı ürün ailesinin AB alıcıları
+        için geçerlidir.
+      advice: AB alıcıları, ilk kullanımdan önce pencereler açıkken birkaç boş ön ısıtma döngüsü planlamalı
+        ve kimyasal koku devam ederse ilk pişirilen partiyi atmalıdır.
+  evidence:
+  - url: https://www.amazon.de/dp/B09ZYLM43B/?_encoding=UTF8&aref=k8Jiq0FaOB&pd_rd_i=B09ZYLM43B&pd_rd_i=B09ZYLM43B&ref_=sbx_be_s_sparkle_ssd_bkg&pd_rd_w=uXXgA&content-id=amzn1.sym.5f48dd2b-900b-4810-ac42-3d84e7cd4fa3&pf_rd_p=5f48dd2b-900b-4810-ac42-3d84e7cd4fa3&pf_rd_r=3F6WWEC08JCBBHR3T0DE&pd_rd_wg=FSjoR&pd_rd_r=3ce9ef2d-c40b-4696-95bd-b8d5ab3332b7&pf_rd_p=5f48dd2b-900b-4810-ac42-3d84e7cd4fa3&pf_rd_r=3F6WWEC08JCBBHR3T0DE&pd_rd_wg=FSjoR&pd_rd_w=uXXgA&pd_rd_r=3ce9ef2d-c40b-4696-95bd-b8d5ab3332b7
+    quote: Einen Stern Abzug gibt es, weil der Airfryer am Anfang trotz gründlicher Reinigung und Entfernung
+      aller Folien gottlos nach Chemie gestunken hat, wenn er aufgeheizt hatte.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:56:54+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: ninja
+      series: r-ad300co
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: control board / power supply
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: R-AD300CO stopped working within a year
+      body: An owner reports the unit failed completely in under a year despite being loved while it worked.
+        This is a total-loss failure within the typical warranty window, meaning the buyer should verify
+        warranty coverage and keep proof of purchase.
+      advice: Confirm the warranty term (typically 1–2 years) and register the product at purchase; keep
+        the receipt in case of early total failure.
+    tr:
+      title: R-AD300CO bir yıl içinde çalışmayı durdurdu
+      body: Bir sahip, çalışırken çok sevilmesine rağmen ünitenin bir yıldan kısa sürede tamamen arızalandığını
+        bildiriyor. Bu, tipik garanti penceresi içinde tam kayıp arızasıdır, yani alıcı garanti kapsamını
+        doğrulamalı ve satın alma kanıtını saklamalıdır.
+      advice: Garanti süresini (genellikle 1–2 yıl) doğrulayın ve satın alırken ürünü kaydedin; erken
+        tam arıza durumunda fişi saklayın.
+  evidence:
+  - url: https://sellout.woot.com/review/B0DLJJN124?offerid=09d87bff-6f36-468d-8b2a-419bf50ed2f2&itemid=fd130b4a-a4f2-49d0-a900-2c0117e387d4&filter=1&isVerified=false&page=1&sort=0
+    quote: It lasted less than a year and doesn't work. While it worked we loved it!
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:56:54+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: philips
+      series: hd9280/70
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: basket closure sensor
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Basket closure detection sensor fails on HD9280/70, unit stops detecting basket seating
+      body: 'Owner report on Trustpilot for the exact subject model HD9280/70: after purchase, the device
+        stopped detecting that the basket is closed, and parts broke. The owner describes a frustrating
+        after-sales experience being bounced between Philips and the retailer. This is a safety-relevant
+        failure because the unit will not operate if it cannot confirm the basket is seated.'
+      advice: Check the basket closure mechanism and sensor early in ownership; if it fails, pursue warranty
+        immediately as replacement parts may not be readily available.
+    tr:
+      title: Sepet kapanma algılama sensörü HD9280/70'te arızalanıyor, ünite sepetin yerleştiğini algılamayı
+        durduruyor
+      body: 'Tam konu modeli HD9280/70 için Trustpilot''ta sahip raporu: satın alma sonrası cihaz sepetin
+        kapalı olduğunu algılamayı durdurdu ve parçalar kırıldı. Sahip, Philips ile perakendeci arasında
+        sürüklenen sinir bozucu bir satış sonrası deneyim tanımlıyor. Bu güvenlikle ilgili bir arızadır
+        çünkü ünite sepetin yerleştiğini doğrulayamazsa çalışmayacaktır.'
+      advice: Sahipliğin başlarında sepet kapanma mekanizmasını ve sensörünü kontrol edin; arızalanırsa
+        yedek parçalar kolayca bulunamayabileceği için derhal garantiye başvurun.
+  evidence:
+  - url: https://ch.trustpilot.com/review/philips.fr?page=2
+    quote: plus de détection de la fermeture panier pièces casse
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:07:35+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: arzum
+      series: airtasty x large
+  kind: known_issue
+  domain: surface
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: non-stick bowl coating
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Non-stick bowl coating scratches and wears easily
+      body: The same review aggregation reports the non-stick bowl surface scratches and wears easily.
+        This matches the pack's surface/coating concern for air fryers, though it is a lower-frequency
+        complaint for this model than the control-panel issues.
+      advice: Use only soft utensils and avoid abrasive cleaning; once the coating is scratched, the non-stick
+        benefit degrades and food sticks.
+    tr:
+      title: Yapışmaz kase kaplaması kolayca çiziliyor ve aşınıyor
+      body: Aynı inceleme toplaması, yapışmaz kase yüzeyinin kolayca çizildiğini ve aşındığını bildiriyor.
+        Bu, hava fritözleri için paketin yüzey/kaplama endişesiyle örtüşüyor, ancak bu model için kontrol
+        paneli sorunlarına kıyasla daha düşük sıklıkta bir şikayettir.
+      advice: Yalnızca yumuşak mutfak gereçleri kullanın ve aşındırıcı temizlikten kaçının; kaplama çizildiğinde
+        yapışmazlık avantajı bozulur ve yiyecekler yapışır.
+  evidence:
+  - url: https://yorumlarnasil.com/incele/arzum-ar2074(ar2091)-b-airtasty-xl-yagsiz-fritoz-airfryer-yorumlar
+    quote: Hazne yüzeyinin (teflon/yapışmaz kaplama) kolay çizildiği ve yıprandığı yönünde eleştiriler
+      bulunmaktadır.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:53:09+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: arzum
+      series: ar2074-g
+  kind: known_issue
+  domain: performance
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: ön kapak (front door); kontrol paneli (control panel)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Steam and smoke from the front door; control panel software fault
+      body: An Amazon.eg review (Turkey, Jan 2023) reports steam and smoke escaping from the front door,
+        filling the kitchen with burnt-oil smell, plus a control panel software fault where pause/cancel
+        and temperature changes don't respond properly.
+      advice: Expect smoke/steam leakage from the front door when cooking, and verify the control panel
+        responds to pause/cancel and temperature inputs before relying on it.
+    tr:
+      title: Ön kapıdan buhar ve duman; kontrol paneli yazılım arızası
+      body: Bir Amazon.eg incelemesi (Türkiye, Ocak 2023), ön kapıdan buhar ve duman kaçtığını, mutfağı
+        yanık yağ kokusuyla doldurduğunu, ayrıca duraklat/iptal ve sıcaklık değişikliklerinin düzgün yanıt
+        vermediği bir kontrol paneli yazılım arızası olduğunu bildiriyor.
+      advice: Pişirme sırasında ön kapıdan duman/buhar sızıntısı bekleyin ve kontrol panelinin duraklat/iptal
+        ve sıcaklık girişlerine yanıt verdiğini güvenmeden önce doğrulayın.
+  evidence:
+  - url: https://www.amazon.eg/-/en/Arzum-Airtasty-Air-Fryer-Copper-AR2074-B/dp/B0BQ2RV7ZQ
+    quote: urun on kapaktan disari dogru buhar ve duman saliyor, tavuk pisiriyorsunuzbutun mutfak yanik
+      yag kokusuyla doluyor
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:05:10+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: arzum
+      series: ar2074-g
+  kind: known_issue
+  domain: general
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: rezistans (heating element)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Warranty denied as 'user error' citing oil use after failure
+      body: A Şikayetvar complaint (Dec 2025) reports a 3-year-old AR2074-B sent to service after failure;
+        the service classified it as 'user error' and denied warranty coverage, citing oil use during
+        cooking.
+      advice: Be aware that Arzum service may deny warranty claims by attributing failures to oil use;
+        if you use any oil, document your usage and be prepared to dispute a denial.
+    tr:
+      title: Arıza sonrası yağ kullanımı gerekçesiyle garanti 'kullanıcı hatası' denilerek reddedildi
+      body: Bir Şikayetvar şikayeti (Aralık 2025), arıza sonrası servise gönderilen 3 yıllık bir AR2074-B'yi
+        bildiriyor; servis, pişirme sırasında yağ kullanımını gerekçe göstererek bunu 'kullanıcı hatası'
+        olarak sınıflandırdı ve garanti kapsamını reddetti.
+      advice: Arzum servisinin arızaları yağ kullanımına bağlayarak garanti taleplerini reddedebileceğini
+        unutmayın; herhangi bir yağ kullanırsanız kullanımınızı belgeleyin ve bir reddi itiraz etmeye
+        hazır olun.
+  evidence:
+  - url: https://www.sikayetvar.com/arzum/arzum-air-fryer-cihazinda-yag-kullanimi-gerekcesiyle-garanti-disi-birakilma-ve-musteri-memnuniyetsizligi
+    quote: Arzum AR2074-B Airtasty XL Air Fryer cihazım yaklaşık 3 yıl önce bir beyaz eşya mağazasından
+      alındı. Kısa süre önce cihaz arızalandığı için servise gönderdim ve 5901*****1208001 numaralı servis
+      kaydı oluşturuldu. İnceleme sonrasında arızanın “kullanıcı hatası” olduğu ve garanti kapsamına girmediği
+      tarafıma iletildi.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:05:10+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      series: smart air fryer 6.5l
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: mainboard/heating element
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Xiaomi 6.5L air fryer (MAF10) burned out two weeks after purchase
+      body: A retail reviewer of the MAF10 (6.5L) reports the unit burned out two weeks after purchase
+        and advises against the brand, an electrical failure well inside any warranty.
+      advice: A unit that dies this early should be covered by warranty exchange; keep the receipt and
+        test the unit promptly after purchase.
+    tr:
+      title: Xiaomi 6.5L hava fritözü (MAF10) satın alımdan iki hafta sonra yandı
+      body: MAF10'un (6.5L) bir perakende incelemecisi, cihazın satın alımdan iki hafta sonra yandığını
+        bildiriyor ve markayı önermiyor; bu, herhangi bir garanti süresi içinde gerçekleşen bir elektrik
+        arızası.
+      advice: Bu kadar erken bozulan bir cihaz garanti değişimi kapsamında olmalıdır; fişi saklayın ve
+        cihazı satın alımdan hemen sonra test edin.
+  evidence:
+  - url: https://www.mvideo.ru/products/400374023/reviews
+    quote: Сгорела через 2 недели
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:01:51+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: arzum
+      series: airtasty x large
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: heating element / fan motor
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Heating element heats but fan does not run, so food never cooks
+      body: 'Şikayetvar complaint (5 May 2025) on the AR2074 Airtasty XL: the display works and the unit
+        heats, but no fan sound is heard, so food does not cook. A second complaint on the same page describes
+        a 3-year-old AR2074-B being declared ''user error'' and out of warranty by service.'
+      advice: If the basket gets hot but there is no fan noise and food stays raw, the fan motor or its
+        connection has failed; check warranty coverage before paying for service.
+    tr:
+      title: Isıtma elemanı ısınıyor ama fan çalışmıyor, bu yüzden yiyecek asla pişmiyor
+      body: 'AR2074 Airtasty XL hakkında Şikayetvar şikayeti (5 Mayıs 2025): ekran çalışıyor ve cihaz
+        ısınıyor, ancak fan sesi duyulmuyor, bu yüzden yiyecek pişmiyor. Aynı sayfadaki ikinci bir şikayet,
+        3 yıllık bir AR2074-B''nin servis tarafından ''kullanıcı hatası'' ilan edildiğini ve garanti kapsamı
+        dışında olduğunu anlatıyor.'
+      advice: Sepet ısınıyor ancak fan sesi yoksa ve yiyecek çiğ kalıyorsa, fan motoru veya bağlantısı
+        arızalanmıştır; servis için ödeme yapmadan önce garanti kapsamını kontrol edin.
+  evidence:
+  - url: https://www.sikayetvar.com/arzum/ar2074-airtasty-xl/rezistans
+    quote: Cihaz ürünleri sadece ısıtıyor, gösterge fonksiyonları normal çalışıyor fakat cihazda hiç fan
+      sesi ya da pişirme ile alaka ses duyulmuyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:53:09+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: arzum
+      series: ar2076-s
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: indicator lamp / control board
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: AR2076-S indicator lamp dead on arrival — service replacement required
+      body: Same owner reports the unit arrived with the lamp not working before any use, requiring a
+        service replacement. Because the return window had passed, they could not return it. This is a
+        quality-control failure at delivery.
+      advice: Test the unit immediately on arrival, including the lamp and display, and keep the return
+        window in mind before relying on service replacement.
+    tr:
+      title: AR2076-S gösterge lambası teslimatta arızalı — servis değişimi gerekli
+      body: Aynı sahip, cihazın herhangi bir kullanımdan önce lambası çalışmaz halde geldiğini ve servis
+        değişimi gerektiğini bildiriyor. İade süresi geçtiği için iade edemediler. Bu, teslimatta bir
+        kalite kontrol hatasıdır.
+      advice: Cihazı geldiğinde hemen, lamba ve ekran dahil test edin ve servis değişimine güvenmeden
+        önce iade süresini aklınızda tutun.
+  evidence:
+  - url: https://www.sikayetvar.com/arzum/arzum-airfryer-kek-pisirme-sorunu-ve-degisim-talebi
+    quote: Ürünü ilk aldığımda, daha hiç kullanmadan cihazın lambasının yanmadığını fark ettim ve doğrudan
+      serviste değişim yaptırmak zorunda kaldım.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:52:34+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: ninja
+      series: r-ad300co
+  kind: known_issue
+  domain: general
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: left basket / heating element
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: R-AD300CO left basket arrived damaged with burnt-rubber smell
+      body: A verified Amazon purchaser reports the left side arrived damaged and emits a strong burnt-rubber
+        smell. This suggests possible QC issues in the left chamber specifically, and a smell that may
+        indicate overheating insulation or wiring.
+      advice: Inspect both baskets and the left chamber immediately on delivery; a burnt-rubber smell
+        should trigger an immediate return, not a wait-and-see.
+    tr:
+      title: R-AD300CO sol sepet hasarlı geldi ve yanık kauçuk kokusu var
+      body: Doğrulanmış bir Amazon alıcısı, sol tarafın hasarlı geldiğini ve güçlü bir yanık kauçuk kokusu
+        yaydığını bildiriyor. Bu, özellikle sol hazmede olası kalite kontrol sorunlarına ve aşırı ısınan
+        yalıtım veya kablolamaya işaret edebilecek bir kokuya işaret ediyor.
+      advice: Teslimat sırasında her iki sepeti ve sol hazneyi hemen inceleyin; yanık kauçuk kokusu bekleyip
+        görmek yerine derhal iadeyi tetiklemelidir.
+  evidence:
+  - url: https://sellout.woot.com/review/B0DLJJN124?offerid=09d87bff-6f36-468d-8b2a-419bf50ed2f2&itemid=fd130b4a-a4f2-49d0-a900-2c0117e387d4&filter=1&isVerified=false&page=1&sort=0
+    quote: Me salió dañada el lado izquierdo y huele mucho a hule quemado
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:56:54+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      series: smart double stack air fryer 12l
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: NTC temperature sensor / AD sampling chip
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Manufacturer documents NTC sensor and AD sampling chip error codes
+      body: Xiaomi's own FAQ for this exact model lists NTC short-circuit/disconnected and AD sampling
+        chip failure as error states that require after-sales service — confirming sensor and control-board
+        faults are recognized failure modes.
+      advice: These error codes mean a board/sensor fault, not user error; the unit will need service.
+        A buyer should know a display error is a service trip, not a reset.
+    tr:
+      title: Üretici NTC sensörü ve AD örnekleme çipi hata kodlarını belgeliyor
+      body: Xiaomi'nin bu tam model için kendi SSS'si, NTC kısa devre/kopuk ve AD örnekleme çipi arızasını
+        satış sonrası servis gerektiren hata durumları olarak listeliyor — sensör ve kontrol kartı arızalarının
+        tanınan arıza modları olduğunu doğruluyor.
+      advice: Bu hata kodları kullanıcı hatası değil, kart/sensör arızası anlamına gelir; cihaz servis
+        gerektirecektir. Bir alıcı, ekran hatasının sıfırlama değil servis ziyareti olduğunu bilmelidir.
+  evidence:
+  - url: https://www.mi.com/global/support/faq/details/KA-621627/
+    quote: The sensor has a short circuit. Please contact the after-sales service team.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:03:12+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: philips
+      series: hd9280/70
+  kind: known_issue
+  domain: surface
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: removable basket (non-stick coating)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Removable basket rusts and coating peels after ~3 years on HD9280/91
+      body: Multiple owners of the HD9280/91 report the removable basket rusting and the coating peeling
+        after about three years. Crucially, the manufacturer does not sell the basket as a spare part,
+        so the only remedy is replacing the whole fryer. This is a long-term durability issue with no
+        affordable repair path.
+      advice: If you plan to keep the unit long-term, be aware the basket is not replaceable; treat it
+        gently and hand-wash to extend its life.
+    tr:
+      title: HD9280/91'de çıkarılabilir sepet ~3 yıl sonra paslanıyor ve kaplama soyuluyor
+      body: HD9280/91'in birden fazla sahibi, çıkarılabilir sepetin yaklaşık üç yıl sonra paslandığını
+        ve kaplamanın soyulduğunu bildiriyor. Daha da önemlisi, üretici sepeti yedek parça olarak satmıyor,
+        bu nedenle tek çözüm tüm fritözü değiştirmek. Bu, uygun fiyatlı bir onarım yolu olmayan uzun vadeli
+        bir dayanıklılık sorunudur.
+      advice: Cihazı uzun vadeli kullanmayı planlıyorsanız, sepetin değiştirilebilir olmadığını bilin;
+        ömrünü uzatmak için nazik kullanın ve elde yıkayın.
+  evidence:
+  - url: https://www.galaxus.nl/en/s2/questionandanswer/hello-togetheris-the-removable-basket-also-available-as-a-separate-part-after-approx-3-years-it-is-a-875300?referrerProductId=16210802
+    quote: After approx. 3 years it is already quite worn and has unfortunately started to rust in places
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:07:35+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      series: smart double stack air fryer 12l
+  kind: known_issue
+  domain: surface
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: basket
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Basket burst/cracked after two weeks of use
+      body: Owner review on DNS-shop listing 'burst after 2 weeks of use' as the only drawback. A structural
+        failure of the basket in the first weeks.
+      advice: A basket that cracks in two weeks is a warranty/return event. Check the basket's coating
+        and seams early, before the return window closes.
+    tr:
+      title: İki haftalık kullanımdan sonra sepet patladı/çatladı
+      body: DNS-shop listesindeki sahip incelemesi, tek dezavantaj olarak 'iki haftalık kullanımdan sonra
+        patladı' diyor. İlk haftalarda sepetin yapısal arızası.
+      advice: İki haftada çatlayan bir sepet garanti/iade olayıdır. İade süresi dolmadan önce sepetin
+        kaplamasını ve dikişlerini erken kontrol edin.
+  evidence:
+  - url: https://dns-shop.uz/ru/product/5654b463d71fd9cb/aerogril-xiaomi-smart-double-stack-air-fryer-12l-cernyj/opinions/
+    quote: Лопнул через 2 недели использования
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:03:12+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      series: smart double stack air fryer 12l
+  kind: known_issue
+  domain: performance
+  severity: low
+  consequence: ''
+  detection: ''
+  component: heating elements
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Uneven temperature distribution across the stacked baskets
+      body: Les Numériques (French professional review) lists 'temperature homogeneity could be better'
+        among the cons, alongside noise and no viewing window. A second owner on DNS-shop reported 'Готовит
+        плохо' (cooks poorly) with uneven results.
+      advice: Expect uneven browning between the two baskets; you may need to shake or swap baskets mid-cycle.
+        Not a defect claim, but a performance compromise.
+    tr:
+      title: Üst üste sepetler arasında eşit olmayan sıcaklık dağılımı
+      body: Les Numériques (Fransız profesyonel inceleme), gürültü ve görüntüleme penceresi olmamasının
+        yanı sıra eksiler arasında 'sıcaklık homojenliği daha iyi olabilir' diyor. DNS-shop'taki ikinci
+        bir sahip, eşit olmayan sonuçlarla 'Готовит плохо' (kötü pişiriyor) bildirdi.
+      advice: İki sepet arasında eşit olmayan kızarma bekleyin; döngü ortasında sepetleri sallamanız veya
+        değiştirmeniz gerekebilir. Bir kusur iddiası değil, bir performans ödünü.
+  evidence:
+  - url: https://www.lesnumeriques.com/airfryer/xiaomi-smart-double-stack-air-fryer-12l-p77782/test.html
+    quote: Homogénéité des températures perfectibles.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:03:12+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      series: smart air fryer pro
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: iç kablo (internal wiring harness)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Internal wiring failure documented in official Xiaomi Turkey FAQ for Pro 4L
+      body: The official FAQ describes a scenario where the unit runs (motor active, hot air blowing)
+        but the display is blank, and attributes this to faulty internal wiring requiring service.
+      advice: If the fryer heats and runs but the screen stays blank, the internal wiring harness is suspect
+        per Xiaomi's FAQ. This is a high-severity electrical fault — stop using the unit and seek service,
+        as it involves internal mains-voltage wiring.
+    tr:
+      title: Pro 4L için resmi Xiaomi Türkiye SSS'sinde belgelenen dahili kablolama arızası
+      body: Resmi SSS, cihazın çalıştığı (motor aktif, sıcak hava üflüyor) ancak ekranın boş olduğu bir
+        senaryoyu açıklıyor ve bunu servis gerektiren hatalı dahili kablolamaya bağlıyor.
+      advice: Fritöz ısınıyor ve çalışıyorsa ancak ekran boş kalıyorsa, Xiaomi'nin SSS'sine göre dahili
+        kablo demeti şüphelidir. Bu yüksek ciddiyette bir elektrik arızasıdır — dahili şebeke voltajı
+        kablolamasını içerdiğinden cihazı kullanmayı bırakın ve servise başvurun.
+  evidence:
+  - url: https://www.mi.com/tr/support/faq/details/KA-32510/
+    quote: Ekran yoksa, ürünün iç kablosu arızalıysa
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:02:38+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: fakir
+      series: airfry
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: control board / motor
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Fakir Mono Airfry repeatedly stops and restarts on its own
+      body: An independent second owner report of the same stop-start behaviour on the Mono model, corroborating
+        the mid-cycle shutdown finding.
+      advice: Confirms the shutdown fault is not an isolated unit; it recurs across models in the Airfry
+        line.
+    tr:
+      title: Fakir Mono Airfry kendi kendine tekrar tekrar durup yeniden başlıyor
+      body: Mono modelinde aynı dur-kalk davranışına ilişkin bağımsız bir ikinci sahip raporu, döngü ortası
+        kapanma bulgusunu destekliyor.
+      advice: Kapanma arızasının izole bir birim olmadığını doğruluyor; Airfry serisindeki modellerde
+        tekrarlanıyor.
+  evidence:
+  - url: https://www.sikayetvar.com/fakir-ev-aletleri/fakir-mono-airfry-sorunu-video
+    quote: Sürekli kendiliğinden durup durup başlıyor lütfen yardımcı olun kullanamıyorum.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:55:29+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: arzum
+      series: ar2076-s
+  kind: known_issue
+  domain: performance
+  severity: low
+  consequence: ''
+  detection: ''
+  component: heating / air circulation
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Şikayetvar aggregate: slow frying/cooking reported'
+      body: Şikayetvar's aggregate disadvantage list includes 'Yavaş kızartma-pişirme' (slow frying/cooking).
+        This is an aggregate tag, weaker than a single owner's account, and low severity — it affects
+        convenience, not safety.
+      advice: Expect longer cooking times than advertised if this pattern holds; budget extra time for
+        meals.
+    tr:
+      title: 'Şikayetvar toplu verisi: yavaş kızartma/pişirme bildirildi'
+      body: Şikayetvar'ın toplu dezavantaj listesi 'Yavaş kızartma-pişirme' (yavaş kızartma/pişirme) içeriyor.
+        Bu bir toplu etiket olup tek bir sahibin anlatımından daha zayıftır ve düşük ciddiyettedir — güvenliği
+        değil kullanım kolaylığını etkiler.
+      advice: Bu örüntü geçerliyse reklamı yapılandan daha uzun pişirme süreleri bekleyin; yemekler için
+        ekstra zaman ayırın.
+  evidence:
+  - url: https://www.sikayetvar.com/arzum/ar2076-airtasty-smart
+    quote: Yavaş kızartma-pişirme
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:04:16+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: ninja
+      series: r-ad300co
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: fan motor
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Ninja Foodi DualZone fan failed after 6 months, causing loud noise and improper air frying
+      body: An owner of the Ninja Foodi 7-in-1 DualZone (same DualZone family, different model code) reports
+        the fan failed after 6 months, producing a very loud noise and making the unit unable to air fry
+        properly. This is a known failure mode in the DualZone family and should be watched for on the
+        R-AD300CO.
+      advice: If the unit suddenly becomes very loud or stops circulating air properly, the fan motor
+        has likely failed; seek warranty service immediately rather than continuing to use it.
+    tr:
+      title: Ninja Foodi DualZone fanı 6 ay sonra arızalandı, yüksek gürültüye ve düzgün olmayan sıcak
+        hava kızartmasına neden oldu
+      body: Ninja Foodi 7-in-1 DualZone (aynı DualZone ailesi, farklı model kodu) sahibi, fanın 6 ay sonra
+        arızalandığını, çok yüksek bir gürültü oluşturduğunu ve cihazın düzgün sıcak hava kızartması yapamamasına
+        neden olduğunu bildiriyor. Bu, DualZone ailesinde bilinen bir arıza modudur ve R-AD300CO'da da
+        gözlenmelidir.
+      advice: Cihaz aniden çok gürültülü hale gelirse veya havayı düzgün sirküle etmeyi durdurursa, fan
+        motoru büyük olasılıkla arızalanmıştır; kullanmaya devam etmek yerine derhal garanti servisine
+        başvurun.
+  evidence:
+  - url: https://sellout.woot.com/review/B0CK9HL44D?offerid=34a41656-57d1-457d-98d3-2aab729748e8&itemid=f1f62c52-19d4-4a93-a256-f5714652e5fd&filter=0&isVerified=false&page=1&sort=0
+    quote: One of the fans went out and it makes the loudest noise now and will not air fry properly .
+      A total waste of money .
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:56:54+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: fakir
+      series: airfry
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: contact / basket sensor
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Fakir Airfryer never enters heating mode, gives a constant contact warning
+      body: Owner reports the unit refuses to enter heating/cooking mode and repeatedly shows a contact
+        (temassızlık) warning even with the basket seated.
+      advice: A sensor/contact fault that stops cooking entirely; likely needs a service visit, and may
+        recur.
+    tr:
+      title: Fakir Airfryer hiçbir zaman ısıtma moduna geçmiyor, sürekli temas uyarısı veriyor
+      body: Sahip, cihazın ısıtma/pişirme moduna geçmeyi reddettiğini ve sepet yerinde olsa bile tekrar
+        tekrar bir temas (temassızlık) uyarısı gösterdiğini bildiriyor.
+      advice: Pişirmeyi tamamen durduran bir sensör/temas arızası; muhtemelen bir servis ziyareti gerektirir
+        ve tekrarlayabilir.
+  evidence:
+  - url: https://www.sikayetvar.com/fakir-ev-aletleri/fakir-airfryer-isik-yanip-sonme-arizasi-video
+    quote: sürekli temassızlık uyarısı veriyor
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:55:29+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: ninja
+      series: flip toaster oven air fryer
+  kind: known_issue
+  domain: general
+  severity: high
+  consequence: ''
+  detection: ''
+  component: heating elements / factory coating offgassing
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Burning chemicals/rubber smell persists after repeated burn-off runs — fills the house
+      body: This is a single-owner report but severe if it happens; the manufacturer instructs a burn-off,
+        and this owner says it did not clear.
+      advice: If the unit smells strongly of chemicals/rubber on first use, run the burn-off as instructed;
+        if it persists after several runs, this owner's experience suggests it may not clear and the unit
+        may be unusable indoors.
+    tr:
+      title: Tekrarlanan yakma çalıştırmalarından sonra yanık kimyasal/lastik kokusu devam ediyor — evi
+        dolduruyor
+      body: Bu tek sahip raporudur ancak gerçekleşirse ciddidir; üretici bir yakma işlemi talimatı veriyor
+        ve bu sahip kokunun geçmediğini söylüyor.
+      advice: Cihaz ilk kullanımda güçlü kimyasal/lastik kokuyorsa, talimat verildiği gibi yakma işlemini
+        çalıştırın; birkaç çalıştırmadan sonra devam ederse, bu sahibin deneyimi kokunun geçmeyebileceğini
+        ve cihazın iç mekânda kullanılamaz olabileceğini gösteriyor.
+  evidence:
+  - url: https://www.bestbuy.com/site/reviews/ninja-flip-toaster-oven-air-fryer-gray/6582907?rating=1
+    quote: The burning chemicals and rubber smell never went away. It's so toxic and the smell will make
+      you ill. Fills the whole house.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:06:31+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: philips
+      series: hd9280/70
+  kind: known_issue
+  domain: performance
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: cooking performance / heating element
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: HD9280/90 produces limp, nearly black fries and requires much longer cooking times
+      body: 'A detailed Dutch owner review of the HD9280/90 reports significantly worse cooking results
+        than the older Philips Airfryer models: much longer baking times, limp and nearly black fries.
+        The same reviewer also flags safety concerns with the hot pan-and-basket design (no drawer) and
+        a cheap, weak feel. A Google Shopping review of the /70 independently confirms the crispiness
+        problem: ''het word gewoonweg niet knapperig, ja al ik de aangegeven baktijd op de zak minimaal
+        verdubbel.'''
+      advice: If crispy results are your priority, be prepared to experiment with longer times; this series
+        underperforms compared to older Philips models.
+    tr:
+      title: HD9280/90 sarkık, neredeyse siyah patates kızartması üretiyor ve çok daha uzun pişirme süreleri
+        gerektiriyor
+      body: 'HD9280/90 hakkında ayrıntılı bir Hollandalı sahip incelemesi, eski Philips Airfryer modellerine
+        göre önemli ölçüde daha kötü pişirme sonuçları bildiriyor: çok daha uzun pişirme süreleri, sarkık
+        ve neredeyse siyah patates kızartması. Aynı inceleyici ayrıca sıcak tava-ve-sepet tasarımıyla
+        (çekmece yok) güvenlik endişelerini ve ucuz, zayıf bir hissi işaret ediyor. /70 hakkında bir Google
+        Shopping incelemesi çıtırlık sorununu bağımsız olarak doğruluyor: ''het word gewoonweg niet knapperig,
+        ja al ik de aangegeven baktijd op de zak minimaal verdubbel.'''
+      advice: Çıtır sonuçlar önceliğinizse, daha uzun sürelerle deneme yapmaya hazır olun; bu seri eski
+        Philips modellerine kıyasla daha düşük performans gösteriyor.
+  evidence:
+  - url: https://www.bol.com/nl/nl/p/philips-airfryer-xl-essential-hd9280-90-hetelucht-friteuse-app-connect/9300000020588257/?Referrer=ADVNLPPcef75c00cdbf92970065bba51d680038409&utm_source=38409&utm_medium=Affiliates&utm_campaign=CPS&utm_content=txl
+    quote: (veel) langere baktijd, slappe en bijna zwarte frietjes etc. als resultaat
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:07:35+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      series: smart air fryer 6.5l
+  kind: known_issue
+  domain: performance
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: fan/motor
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Xiaomi 6.5L air fryer runs loud and produces strong odor
+      body: A Turkish owner of the 6.5L white model reports it makes excessive noise and a strong odor,
+        which she did not experience with the smaller 6.5L sibling model.
+      advice: Loud operation and odor may indicate a fan or motor issue; check whether it persists after
+        the first few uses before accepting it as normal.
+    tr:
+      title: Xiaomi 6.5L hava fritözü yüksek sesle çalışıyor ve güçlü koku üretiyor
+      body: 6.5L beyaz modelin Türk sahibi, daha küçük 6.5L kardeş modelde yaşamadığı aşırı gürültü ve
+        güçlü koku sorununu bildiriyor.
+      advice: Yüksek sesli çalışma ve koku fan veya motor sorununa işaret edebilir; normal olarak kabul
+        etmeden önce ilk birkaç kullanımdan sonra devam edip etmediğini kontrol edin.
+  evidence:
+  - url: https://www.sikayetvar.com/xiaomi/smart/air-fryer
+    quote: bu ürün çok fazla ses çıkarıyor ve çok koku yapıyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:01:51+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: fakir
+      series: chefry mono
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: control board / power supply
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Fakir Chefry Mono starts cycling on/off shortly after purchase; authorized service did not
+        resolve it
+      body: Owner Beren reports the unit worked initially but began cycling on/off by itself shortly after
+        purchase, becoming unusable; the complaint title states service did not resolve the problem.
+      advice: Even when the unit works at first, the cycling fault can appear within weeks. The complaint
+        title indicates authorized service failed to fix it, so a repair may not be a reliable remedy.
+    tr:
+      title: Fakir Chefry Mono satın alındıktan kısa süre sonra kendi kendine açılıp kapanmaya başlıyor;
+        yetkili servis sorunu çözmedi
+      body: Sahibi Beren, cihazın başlangıçta çalıştığını ancak satın alındıktan kısa süre sonra kendi
+        kendine açılıp kapanmaya başladığını ve kullanılamaz hale geldiğini bildiriyor; şikayet başlığı
+        servisin sorunu çözmediğini belirtiyor.
+      advice: Cihaz başlangıçta çalışsa bile açılıp kapanma arızası haftalar içinde ortaya çıkabilir.
+        Şikayet başlığı yetkili servisin sorunu gideremediğini gösteriyor, bu nedenle onarım güvenilir
+        bir çözüm olmayabilir.
+  evidence:
+  - url: https://www.sikayetvar.com/fakir-ev-aletleri/mono
+    quote: İlk kullanımda bir sorun yoktu ancak kısa süre sonra cihaz sürekli kendi kendine kapanıp açılmaya
+      başladı ve ürünü doğru düzgün kullanamaz hale geldik.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:05:49+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: arzum
+      series: airtasty x large
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: digital control panel
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Digital control panel defects: unlit, hard-to-read, sometimes installed upside down'
+      body: 'Aggregated review of 1,396 user reviews of the AR2074/AR2091 Airtasty XL: the most-reported
+        problem is a poor or mis-assembled digital control panel (unlit, hard to read, sometimes installed
+        upside down), plus steam leaking into the panel during cooking.'
+      advice: Check the display works and is readable at purchase; steam ingress into the panel is a known
+        weak point, so avoid letting condensation pool around it.
+    tr:
+      title: 'Dijital kontrol paneli kusurları: ışık vermiyor, okunması zor, bazen ters takılmış'
+      body: 'AR2074/AR2091 Airtasty XL için 1.396 kullanıcı yorumunun derlemesi: en çok bildirilen sorun,
+        kötü veya yanlış monte edilmiş dijital kontrol paneli (ışık vermiyor, okunması zor, bazen ters
+        takılmış) ve pişirme sırasında panele buhar sızması.'
+      advice: Satın alırken ekranın çalıştığını ve okunabilir olduğunu kontrol edin; panele buhar girişi
+        bilinen bir zayıf noktadır, bu nedenle yoğuşmanın çevresinde birikmesine izin vermeyin.
+  evidence:
+  - url: https://yorumlarnasil.com/incele/arzum-ar2074(ar2091)-b-airtasty-xl-yagsiz-fritoz-airfryer-yorumlar
+    quote: En sık rapor edilen sorun, dijital kontrol panelinin kalitesizliği veya hatalı montajıdır.
+      Ekranın ışıksız olması, rakamların zor okunması, hatta bazı durumlarda panonun ters takılmış olması
+      gibi ciddi kalite kontrol hataları tespit edilmiştir.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:53:09+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: philips
+      series: hd9280/70
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: Wi-Fi module (802.11 b/g/n, 2.4GHz)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Wi-Fi module limited to the 2.4GHz band — connection failures on 5GHz-only routers
+      body: Philips confirms the HD9280 carries a 2.4GHz-only Wi-Fi module, so on a 5GHz-only home router
+        the 'Connected' feature fails to pair until the router is switched to dual-band. For a product
+        whose headline feature is app control, this is a real, documented limitation.
+      advice: Before buying, confirm your router broadcasts a 2.4GHz band; if it is 5GHz-only, the app/Wi-Fi
+        features will not work without changing router settings.
+    tr:
+      title: Wi-Fi modülü 2.4GHz bandıyla sınırlı — yalnızca 5GHz yönlendiricilerde bağlantı hataları
+      body: Philips, HD9280'nin yalnızca 2.4GHz Wi-Fi modülü taşıdığını doğruluyor, bu nedenle yalnızca
+        5GHz yayın yapan bir ev yönlendiricisinde yönlendirici çift banda alınana kadar 'Connected' özelliği
+        eşleşemiyor. Ana özelliği uygulama kontrolü olan bir ürün için bu gerçek ve belgelenmiş bir sınırlamadır.
+      advice: Satın almadan önce yönlendiricinizin 2.4GHz bandı yayınladığını doğrulayın; yalnızca 5GHz
+        ise yönlendirici ayarlarını değiştirmeden uygulama/Wi-Fi özellikleri çalışmayacaktır.
+  evidence:
+  - url: https://www.philips.co.kr/c-t/XC000019878/wifi
+    quote: 에어프라이어 HD9255, HD9280, HD9285, HD9880 및 에어 쿠커 NX0960에는 2.4GHz 대역의 WiFi 모듈 802.11 b/g/n이 장착되어
+      있습니다.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:59:32+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: philips
+      series: hd9243/90
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: power/control electronics
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Unit goes completely dead after a power cut, recurring fault
+      body: An owner reports the unit died completely after a power cut during use, showing no light or
+        warning even after unplugging; the same fault had happened before and required a replacement unit
+        from service.
+      advice: A power cut during operation can leave the unit completely dead with no indicator, and this
+        fault recurred on the same owner. This points to fragile power/control electronics; a buyer should
+        ensure surge protection and warranty coverage.
+    tr:
+      title: Elektrik kesintisinden sonra cihaz tamamen ölüyor, tekrarlayan arıza
+      body: Bir sahip, kullanım sırasında elektrik kesintisinin ardından cihazın tamamen öldüğünü, fişten
+        çekildikten sonra bile hiçbir ışık veya uyarı vermediğini bildiriyor; aynı arıza daha önce de
+        yaşanmış ve servisten değişim cihazı gerektirmiş.
+      advice: Çalışma sırasında elektrik kesintisi cihazı hiçbir gösterge olmadan tamamen ölü bırakabilir
+        ve bu arıza aynı sahipte tekrarladı. Bu, kırılgan güç/kontrol elektroniğine işaret eder; alıcı
+        dalgalanma koruması ve garanti kapsamını sağlamalıdır.
+  evidence:
+  - url: https://www.sikayetvar.com/hepsiburada/philips-airfry-cihazim-tekrar-arizalandi-kalici-cozum-istiyorum
+    quote: Cihazı tekrar çalıştırmak için fişi çıkarıp taktım ancak hiçbir şekilde çalışmadı ve herhangi
+      bir ışık ya da uyarı da vermiyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:03:34+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: ninja
+      series: flip toaster oven air fryer
+  kind: known_issue
+  domain: surface
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: heating bars / bottom tray / drip rack / air fry basket
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'EU model SP101UK: interior heating bars and bottom plate impossible to clean; flimsy build'
+      body: This is the EU/UK model (SP101UK), directly relevant to the TR/EU market. Cleaning difficulty
+        and a 'tinny' build are the recurring complaints.
+      advice: For the EU/UK market, expect the interior (heating bars, bottom plate) to be very hard to
+        clean and the build to feel light/tinny; the drip rack and roasting tin are not dishwasher-safe.
+        Cleaning effort is the main ongoing cost.
+    tr:
+      title: 'AB modeli SP101UK: iç ısıtma çubukları ve alt plaka temizlenemiyor; dayanıksız yapı'
+      body: Bu, TR/AB pazarıyla doğrudan ilgili AB/BK modelidir (SP101UK). Temizleme zorluğu ve 'teneke
+        gibi' yapı tekrarlayan şikayetlerdir.
+      advice: AB/BK pazarı için iç kısmın (ısıtma çubukları, alt plaka) temizlenmesinin çok zor ve yapının
+        hafif/teneke gibi hissettirmesi beklenmelidir; damlama rafı ve kızartma tepsisi bulaşık makinesinde
+        yıkanamaz. Temizleme zahmeti ana sürekli maliyettir.
+  evidence:
+  - url: https://www.amazon.ae/product-reviews/B08LDV22LK/ref=acr_dp_hist_2?ie=UTF8&filterByStar=two_star&reviewerType=all_reviews
+    quote: Whilst the sliding racks are easy to pop into the dishwasher, the bottom plate, the heating
+      bars and the rear of the oven inside are impossible to clean, either when they are warm, shortly
+      after cooking, or when they are cold.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:06:31+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: arzum
+      series: ar2076-s
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: temperature sensor
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Official manual: temperature sensor failure locks the device (error code + 10 beeps)'
+      body: 'Arzum''s own manual (German version, AR2076-S/B/K) documents a sensor-fault protection mode:
+        if the temperature sensor fails, the display shows an error code, the unit beeps 10 times, and
+        the device or buttons stop working — the hardware no longer responds to button presses. This is
+        the manufacturer''s own acknowledgment of a failure mode that makes the unit unusable until serviced.'
+      advice: If the unit beeps 10 times and shows an error code, the temperature sensor has failed; this
+        requires authorized service, not a user fix.
+    tr:
+      title: 'Resmi kılavuz: sıcaklık sensörü arızası cihazı kilitler (hata kodu + 10 bip)'
+      body: 'Arzum''un kendi kılavuzu (Almanca sürüm, AR2076-S/B/K) bir sensör arızası koruma modunu belgeliyor:
+        sıcaklık sensörü arızalanırsa ekran bir hata kodu gösterir, ünite 10 kez bip sesi çıkarır ve cihaz
+        veya düğmeler çalışmayı durdurur — donanım artık düğme basışlarına yanıt vermez. Bu, ünitenin
+        servise verilene kadar kullanılamaz hale gelmesine yol açan bir arıza modunun üretici tarafından
+        kabul edilmesidir.'
+      advice: Ünite 10 kez bip sesi çıkarır ve bir hata kodu gösterirse, sıcaklık sensörü arızalanmıştır;
+        bu, kullanıcı tarafından düzeltilemez ve yetkili servis gerektirir.
+  evidence:
+  - url: https://www.arzum.com.tr/Data/EditorFiles/KULLANIM%20KILAVUZLARI/Airtasty%20Smart%20AR2076_KK-G%C3%9CNCEL.pdf
+    quote: Wenn der Temperatursensor ausfällt, zeigt die digitale Röhre den Fehlercode an und piept 10
+      Mal; das Gerät oder die Tasten funktionieren nicht.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:04:16+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      series: smart air fryer pro
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: OLED ekran (OLED display)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: OLED screen failure documented in official Xiaomi Turkey FAQ for Pro 4L
+      body: The manufacturer's own Turkish troubleshooting FAQ for the Pro 4L instructs users to contact
+        after-sales service when the unit powers on (audible tone) but the OLED screen shows nothing —
+        a documented screen-failure mode.
+      advice: If the unit hums/beeps but the OLED display is blank, the screen is faulty and requires
+        service — there is no user fix. This is a known failure path per the manufacturer's own FAQ, so
+        budget for an out-of-warranty repair if it occurs after the guarantee.
+    tr:
+      title: OLED ekran arızası, Pro 4L için resmi Xiaomi Türkiye SSS'de belgelenmiş
+      body: Üreticinin Pro 4L için kendi Türkçe sorun giderme SSS'si, ünite açıldığında (sesli ton) OLED
+        ekran hiçbir şey göstermiyorsa kullanıcılara satış sonrası servisle iletişime geçmelerini söylüyor
+        — belgelenmiş bir ekran arızası modu.
+      advice: Ünite uğultu/bip sesi çıkarıyor ama OLED ekran boşsa, ekran arızalıdır ve servis gerektirir
+        — kullanıcı tarafından düzeltilemez. Bu, üreticinin kendi SSS'sine göre bilinen bir arıza yoludur;
+        garanti sonrası ortaya çıkarsa garanti dışı onarım için bütçe ayırın.
+  evidence:
+  - url: https://www.mi.com/tr/support/faq/details/KA-32510/
+    quote: ses, ekran yok, ardından ürün OLED ekran arızası, lütfen satış sonrası işleme ile iletişime
+      geçin
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:02:38+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: philips
+      series: hd9243/90
+  kind: known_issue
+  domain: surface
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: oil collector part
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Oil collector part lifts/peels, raising health concern
+      body: An owner reports the oil collector part lifting/peeling on the HD9243 while still under warranty,
+        and describes it as a possible health risk.
+      advice: The oil collector's coating can lift over time, which the owner saw as a health risk. A
+        buyer should inspect this part and note that service may treat it as normal wear rather than a
+        defect.
+    tr:
+      title: Yağ toplayıcı parça kalkıyor/soyuluyor, sağlık endişesi yaratıyor
+      body: Bir sahip, HD9243'te yağ toplayıcı parçanın henüz garanti kapsamındayken kalktığını/soyulduğunu
+        bildiriyor ve bunu olası bir sağlık riski olarak tanımlıyor.
+      advice: Yağ toplayıcının kaplaması zamanla kalkabilir; sahip bunu sağlık riski olarak gördü. Alıcı
+        bu parçayı kontrol etmeli ve servisin bunu kusur yerine normal aşınma olarak değerlendirebileceğini
+        unutmamalıdır.
+  evidence:
+  - url: https://www.sikayetvar.com/philips-ev-aletleri/hd924390-l-essential/yetkili-servis
+    quote: Philips 3000 Serisi Airfryer l HD9243 model ürünümde, yağ toplayıcı parçasında kalkmalar meydana
+      geldi.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:03:34+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: arzum
+      series: ar2074-g
+  kind: known_issue
+  domain: performance
+  severity: high
+  consequence: ''
+  detection: ''
+  component: üst tavan (top interior ceiling)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Stains on the top interior ceiling with smoke and smell on every use
+      body: A Şikayetvar complaint (Oct 2025) reports the top interior ceiling accumulates stains and
+        the unit emits smoke and smell on every use, with no cleaning instructions in the manual for that
+        area.
+      advice: If you cook fatty foods, expect smoke and residue buildup in the top interior that the manual
+        doesn't cover; this may be a persistent nuisance rather than a one-off defect.
+    tr:
+      title: Her kullanımda duman ve koku ile üst iç tavanda lekeler
+      body: Bir Şikayetvar şikayeti (Ekim 2025), üst iç tavanın leke biriktirdiğini ve ünitenin her kullanımda
+        duman ve koku yaydığını, kılavuzda bu alan için temizlik talimatı bulunmadığını bildiriyor.
+      advice: Yağlı yiyecekler pişirirseniz, kılavuzun kapsamadığı üst iç kısımda duman ve kalıntı birikmesi
+        bekleyin; bu, tek seferlik bir kusur yerine sürekli bir sıkıntı olabilir.
+  evidence:
+  - url: https://www.sikayetvar.com/arzum/airfryerda-leke-ve-koku-sorunu-cozulmuyor-destek-yetersiz
+    quote: Evkur Sarıgazi şubesinden yaklaşık birkaç ay önce 9.000 TL ödeyerek almış olduğum Arzum AR2074-G
+      / AR2074-B Airfryer airtasty XL cihazında, üst tavanda oluşan leke ve pislik sorunu yaşıyorum. Ürünü
+      her kullandığımda koku ve duman problemiyle karşılaşıyorum.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:05:10+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      series: smart air fryer 6.5l
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: internal plastic part
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Internal plastic part inside Xiaomi 6.5L air fryer tore during normal use
+      body: A Turkish owner of the 6.5L reports an internal plastic part tore after about 14 months of
+        use, and the store refused help, claiming it was consumer-caused.
+      advice: The plastic component is not sold separately by the maker, so a torn internal part can leave
+        the unit unusable without a full repair.
+    tr:
+      title: Xiaomi 6.5L air fryer içindeki dahili plastik parça normal kullanım sırasında yırtıldı
+      body: 6.5L'nin bir Türk sahibi, yaklaşık 14 aylık kullanımdan sonra dahili bir plastik parçanın
+        yırtıldığını ve mağazanın bunun tüketici kaynaklı olduğunu iddia ederek yardımı reddettiğini bildiriyor.
+      advice: Plastik bileşen üretici tarafından ayrı satılmıyor, bu nedenle yırtılan dahili bir parça,
+        tam onarım olmadan üniteyi kullanılamaz bırakabilir.
+  evidence:
+  - url: https://www.sikayetvar.com/xiaomi/xiaomi-air-fryer-plastik-parca-sorunu-ve-musteri-hizmetleri-ilgisizligi
+    quote: 27/03/2025 tarihinde içinde ki plastik parçanın yırtıldığını gördüm.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:01:51+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: fakir
+      series: airfry
+  kind: known_issue
+  domain: performance
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: heating / cooking performance
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Fakir Airfryer leaves potatoes raw / undercooked
+      body: Owner reports potatoes staying raw and not browning across three attempts, and requested a
+        refund/replacement.
+      advice: Uneven/under-cooking reported on a new unit. If you buy, test with a simple batch (e.g.
+        frozen fries) within the return window, since the seller directed this owner to service rather
+        than a refund.
+    tr:
+      title: Fakir Airfryer patatesleri çiğ / az pişmiş bırakıyor
+      body: Sahip, üç denemede patateslerin çiğ kaldığını ve kızarmadığını bildiriyor ve para iadesi/değişim
+        talep etti.
+      advice: Yeni bir ünitede dengesiz/az pişirme bildirildi. Satın alırsanız, satıcı bu sahibi para
+        iadesi yerine servise yönlendirdiği için iade süresi içinde basit bir partiyle (ör. dondurulmuş
+        patates) test edin.
+  evidence:
+  - url: https://www.sikayetvar.com/fakir-ev-aletleri/media-markt-manavgat-subesinde-fakir-airfryer-kizartma-sorunu-ve-iade-talebi
+    quote: patateslerin çiğ kaldığını, tam olarak kızarmadığını fark ettim
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:55:29+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: arzum
+      series: ar2076-s
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: inner light / lamp
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Interior lamp dead on arrival, unit swapped at service
+      body: The same AR2076-S owner reports the unit's interior lamp did not light before first use and
+        required a service replacement, i.e. a dead-on-arrival electrical defect.
+      advice: Check the inner light immediately on delivery. A lamp that never lights is a DOA electrical
+        defect that requires a service swap; do this before the iade/return window closes, as the owner
+        could not return the unit once that window passed.
+    tr:
+      title: İç lamba geldiğinde arızalı, serviste ünite değiştirildi
+      body: Aynı AR2076-S sahibi, ünitenin iç lambasının ilk kullanımdan önce yanmadığını ve servis değişimi
+        gerektirdiğini, yani geldiğinde arızalı bir elektrik kusuru olduğunu bildiriyor.
+      advice: Teslimatta iç lambayı hemen kontrol edin. Hiç yanmayan bir lamba, servis değişimi gerektiren
+        bir DOA elektrik kusurudur; bunu iade/return penceresi kapanmadan önce yapın, çünkü sahip o pencere
+        geçtikten sonra üniteyi iade edemedi.
+  evidence:
+  - url: https://www.sikayetvar.com/arzum/arzum-airfryer-kek-pisirme-sorunu-ve-degisim-talebi
+    quote: Ürünü ilk aldığımda, daha hiç kullanmadan cihazın lambasının yanmadığını fark ettim ve doğrudan
+      serviste değişim yaptırmak zorunda kaldım.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:52:34+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: philips
+      series: hd9280/70
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: basket contact pin / sensor
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Contact pin that detects basket seating broke on HD9280/90, preventing operation
+      body: An owner of the HD9280/90 describes the contact pin that signals the basket is correctly seated
+        breaking off; the unit beeps but does nothing. The broken piece had to be fished out. This matches
+        the Trustpilot report of basket-closure detection failure on the /70 — a recurring mechanical
+        weakness in this series.
+      advice: Handle the basket insertion gently; if the unit beeps but won't start, inspect the contact
+        pin area for breakage.
+    tr:
+      title: Sepet oturmasını algılayan kontak pimi HD9280/90'da kırıldı, çalışmayı engelliyor
+      body: Bir HD9280/90 sahibi, sepetin doğru oturduğunu bildiren kontak piminin kırıldığını anlatıyor;
+        ünite bip sesi çıkarıyor ama hiçbir şey yapmıyor. Kırık parçanın çıkarılması gerekti. Bu, /70'te
+        sepet kapanma algılama arızasına ilişkin Trustpilot raporuyla örtüşüyor — bu seride tekrarlayan
+        bir mekanik zayıflık.
+      advice: Sepeti nazikçe yerleştirin; ünite bip sesi çıkarıp başlamıyorsa kontak pimi bölgesini kırık
+        açısından inceleyin.
+  evidence:
+  - url: https://www.justanswer.de/elektronik/tma9u-unser-airfryer-xl-essential-hat-eben-seine-geistaufgegeben.html
+    quote: ist der Kontaktstift bam gerät gebrochen, der anzeigt, dass der Korb richtig sitzt., das Bruchstück
+      konnte ich rausfischen.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:07:35+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: fakir
+      series: chefry mono
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: control board / power supply
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Fakir Chefry Mono rapid on/off cycling since day one, then total failure to power on after
+        ~2 years
+      body: Owner reports rapid on/off cycling from the first use, and after roughly 2 years the unit
+        completely stopped powering on — now out of warranty.
+      advice: This pattern suggests the cycling is not a transient defect but a progressive failure of
+        the control/power circuitry. If you own one that cycles, expect it may eventually fail entirely;
+        replacement parts after warranty will likely cost more than a new unit.
+    tr:
+      title: Fakir Chefry Mono ilk günden hızlı açma/kapama döngüsü, ardından ~2 yıl sonra tamamen açılmama
+      body: Sahip, ilk kullanımdan itibaren hızlı açma/kapama döngüsü olduğunu ve yaklaşık 2 yıl sonra
+        ünitenin tamamen açılmaz hale geldiğini bildiriyor — artık garanti dışı.
+      advice: Bu örüntü, döngünün geçici bir kusur değil kontrol/güç devresinde ilerleyici bir arıza olduğunu
+        düşündürüyor. Döngü yapan bir üniteniz varsa, sonunda tamamen arızalanabileceğini bekleyin; garanti
+        sonrası yedek parçalar muhtemelen yeni bir üniteden daha pahalıya gelecektir.
+  evidence:
+  - url: https://www.sikayetvar.com/fakir-ev-aletleri/fritoz/fatura
+    quote: Ürünü ilk aldığımızdan beri her çalıştırma...da hızlı hızlı açılıp kapanma sorunu yaşıyorduk.
+      Şu anda ise cihaz tamamen çalışmıyor, hiç açılmıyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:55:29+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: fakir
+      series: chefry mono
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: control board / power supply
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Fakir Chefry Mono fails out of the box: ticking sound, cycling on/off on first use'
+      body: Owner Selma reports the unit cycled on/off with a ticking sound on the very first day of use,
+        immediately after purchase.
+      advice: A brand-new unit exhibiting this behavior indicates a quality-control or design fault in
+        the control circuitry, not user error. Test the unit immediately on delivery and return it if
+        it cycles.
+    tr:
+      title: 'Fakir Chefry Mono kutudan çıkar çıkmaz arızalanıyor: tıkırtı sesi, ilk kullanımda açma/kapama
+        döngüsü'
+      body: Sahip Selma, ünitenin satın alımdan hemen sonra, kullanımın ilk gününde tıkırtı sesiyle açılıp
+        kapandığını bildiriyor.
+      advice: Yepyeni bir ünitenin bu davranışı göstermesi, kullanıcı hatası değil kontrol devresinde
+        bir kalite kontrol veya tasarım hatasına işaret eder. Üniteyi teslimatta hemen test edin ve döngü
+        yapıyorsa iade edin.
+  evidence:
+  - url: https://www.sikayetvar.com/fakir-ev-aletleri/fakir-mono-chefry-acilip-kapaniyor-video
+    quote: Ürünü bugün aldık ve önce boş çalıştırdık sonra yemek yapmak istedik ama böyle tik tak ses
+      çıkarıp açılıp kapanıyor arızalı ürün galiba yani
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:05:49+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      series: smart air fryer pro
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: ayar tuşu (setting/adjustment button)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Setting button (ayar tuşu) time-skipping fault on Smart Air Fryer Pro 4L
+      body: Same owner complaint as the rust finding; the control button skips time values, indicating
+        a control-board or encoder fault.
+      advice: If the time setting jumps or skips values, the control knob/encoder is faulty. This appeared
+        alongside the rust issue within warranty on the same unit, so test the controls early and treat
+        any control fault as warranting service or exchange.
+    tr:
+      title: Smart Air Fryer Pro 4L'de ayar tuşu zaman atlama arızası
+      body: Pas bulgusuyla aynı sahip şikayeti; kontrol düğmesi zaman değerlerini atlıyor, bu da kontrol
+        kartı veya enkoder arızasına işaret ediyor.
+      advice: Zaman ayarı atlıyor veya değerleri atlıyorsa kontrol düğmesi/enkoder arızalıdır. Bu, aynı
+        ünitede garanti kapsamında pas sorunuyla birlikte ortaya çıktı, bu yüzden kontrolleri erken test
+        edin ve herhangi bir kontrol arızasını servis veya değişim gerektiren bir durum olarak değerlendirin.
+  evidence:
+  - url: https://www.sikayetvar.com/hepsiburada/hepsiburada-ve-saticida-onaysiz-tamir-ve-tekrarlanan-arizalar-nedeniyle-urun-degisimi-talebi
+    quote: ayar tuşunda süre atlama arızası ortaya çıktı
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:02:38+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: arzum
+      series: ar2076-s
+  kind: known_issue
+  domain: performance
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: heating element / air circulation
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: AR2076-S bakes unevenly — top done, bottom raw dough
+      body: 'Owner complaint on Şikayetvar (March 2025) for the AR2076-S: cakes and dough items come out
+        with a cooked top but raw bottom even when following Arzum''s own recipes at the stated temperature
+        and time. The owner contrasts with other brands'' air fryers producing good results with the same
+        recipes. Cost to buyer: wasted food and a device they describe as unusable for baking.'
+      advice: If baking is a primary use, verify performance early; the complaint suggests the unit's
+        heat distribution is inadequate for dough/batter items.
+    tr:
+      title: AR2076-S eşit olmayan pişiriyor — üst pişmiş, alt çiğ hamur
+      body: 'Şikayetvar''da (Mart 2025) AR2076-S için sahip şikayeti: kekler ve hamur ürünleri, Arzum''un
+        kendi tariflerine belirtilen sıcaklık ve sürede uyulduğunda bile üstü pişmiş altı çiğ çıkıyor.
+        Sahip, aynı tariflerle iyi sonuç veren diğer markaların air fryer''larıyla karşılaştırıyor. Alıcıya
+        maliyeti: boşa giden yiyecek ve fırınlama için kullanılamaz olarak tanımladıkları bir cihaz.'
+      advice: Fırınlama birincil kullanımsa, performansı erken doğrulayın; şikayet, ünitenin ısı dağılımının
+        hamur/batter ürünleri için yetersiz olduğunu düşündürüyor.
+  evidence:
+  - url: https://www.sikayetvar.com/arzum/arzum-airfryer-kek-pisirme-sorunu-ve-degisim-talebi
+    quote: Özellikle kek ve hamur işlerinde üstü pişmiş gibi görünse de altı tamamen hamur kalıyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:52:34+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: ninja
+      series: sl400me
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: control board / error system
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: E error code — unit not functioning properly, requires service contact
+      body: The official SL400 manual (Azerbaijani edition) states an 'E' message on the display means
+        the unit is not functioning properly and directs the user to contact customer service — indicating
+        a recognized fault state requiring service.
+      advice: If 'E' appears on the display, do not attempt reset loops — contact SharkNinja customer
+        service directly, as the manual itself directs service contact for this error.
+    tr:
+      title: E hata kodu — ünite düzgün çalışmıyor, servis ile iletişim gerektiriyor
+      body: Resmi SL400 kılavuzu (Azerbaycan baskısı), ekranda bir 'E' mesajının, ünitenin düzgün çalışmadığını
+        gösterdiğini ve kullanıcıyı müşteri hizmetleriyle iletişime geçmeye yönlendirdiğini belirtir —
+        bu, servis gerektiren tanınmış bir arıza durumuna işaret eder.
+      advice: Ekranda 'E' görünürse, sıfırlama döngüleri denemeyin — kılavuzun kendisi bu hata için servis
+        ile iletişimi yönlendirdiğinden doğrudan SharkNinja müşteri hizmetleriyle iletişime geçin.
+  evidence:
+  - url: https://az.manuals.plus/ninja/sl400-double-stack-xl-9-5l-air-fryer-manual
+    quote: The unit is not functioning properly. Please contact Customer Service at 1-877-646-5288.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:24:18+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: ninja
+      series: sl400me
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: control panel / knob mechanism
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Control panel/knob defect at 8 months — air fry mode won't set
+      body: An owner of an 8-month-old Double Stack reports the knob will not set air fry mode; the expert
+        concludes a defect in the control panel or knob mechanism after standard troubleshooting failed.
+      advice: If the mode-select knob stops responding within the first year, do not attempt DIY repair
+        — file a warranty claim with SharkNinja promptly, as this appears to be a control-board/knob defect
+        rather than user error.
+    tr:
+      title: 8. ayda kontrol paneli/düğme arızası — air fry modu ayarlanamıyor
+      body: 8 aylık bir Double Stack sahibi, düğmenin air fry modunu ayarlamadığını bildiriyor; uzman,
+        standart sorun giderme başarısız olduktan sonra kontrol panelinde veya düğme mekanizmasında bir
+        arıza olduğu sonucuna varıyor.
+      advice: Mod seçme düğmesi ilk yıl içinde yanıt vermeyi durdurursa, kendin yap onarımı denemeyin
+        — bu, kullanıcı hatasından ziyade kontrol kartı/düğme arızası gibi göründüğünden derhal SharkNinja'ya
+        garanti talebi dosyalayın.
+  evidence:
+  - url: https://www.justanswer.co.uk/small-appliance/rd3yj-ninja-dual-air-fryer-won-t-work-when-press-turn.html
+    quote: Since the previous troubleshooting steps haven't resolved the problem, and considering that
+      your air fryer is only eight months old, it's possible that there's a defect with the control panel
+      or the knob mechanism.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:24:18+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: ninja
+      series: sl400me
+  kind: known_issue
+  domain: surface
+  severity: high
+  consequence: ''
+  detection: ''
+  component: non-stick drawer coating
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Non-stick coating wears away rapidly even with plastic utensils and hand washing
+      body: A Spanish-market reviewer of the SL400EUCP (same Double Stack XL platform) reports the non-stick
+        coating wearing away rapidly even with plastic utensils and hand washing only, including at the
+        drawer edges that slide into the housing.
+      advice: 'Treat the non-stick surface as fragile: avoid metal utensils, avoid dishwasher use, and
+        inspect drawer edges regularly. If coating peels within warranty, claim replacement — this is
+        a known surface-wear complaint on the Double Stack XL platform.'
+    tr:
+      title: Plastik gereçler ve elde yıkama ile bile yapışmaz kaplama hızla aşınıyor
+      body: SL400EUCP'nin (aynı Double Stack XL platformu) İspanya pazarındaki bir incelemecisi, yalnızca
+        plastik gereçler ve elde yıkama kullanılmasına rağmen, yapışmaz kaplamanın, gövdeye kayan çekmece
+        kenarları dahil olmak üzere hızla aşındığını bildiriyor.
+      advice: 'Yapışmaz yüzeyi hassas olarak değerlendirin: metal gereçlerden kaçının, bulaşık makinesi
+        kullanımından kaçının ve çekmece kenarlarını düzenli olarak inceleyin. Kaplama garanti süresi
+        içinde soyulursa, değişim talep edin — bu, Double Stack XL platformunda bilinen bir yüzey aşınması
+        şikayetidir.'
+  evidence:
+  - url: https://www.amazon.es/Ninja-Antiadherente-Lavavajillas-Exclusiva-AF150EUCP/dp/B0C58QXM9K
+    quote: 'THE NONE STICK COATING IS TISSUE THIN AND IF YOU LEFT IT IN THE WIND IT WOULD BLOW AWAY!
+
+      We have only used plastic utensils in or near the compartments and washed them in warm soapy water
+      not the dishwasher but the none stick coating is wearing away rapidly. Even where the top edge of
+      the compartment slides into the oven housing it''s wearing off. Not Good!'
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:24:18+00:00'

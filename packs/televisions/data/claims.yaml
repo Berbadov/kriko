@@ -1,0 +1,1965 @@
+# Claims — what is known to go wrong, each with the page it came from and the quote
+# that was read there. A claim without both is not in this file.
+- subject:
+    kind: product
+    identity:
+      brand: lg
+      series: C1
+  kind: known_issue
+  domain: software
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: firmware 03.41.05
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Firmware 03.41.05 broke Wi-Fi streaming apps, power control and Bluetooth on C1
+      body: 'Russian webOS forum aggregating Reddit reports on firmware 03.41.05: after the update the
+        C1''s Wi-Fi connects but all streaming apps stop working, power on/off becomes unreliable, and
+        Bluetooth pairing fails; users advise not installing the update.'
+      advice: Firmware 03.41.05 is reported to break Wi-Fi streaming apps, power control and Bluetooth
+        on the C1; owners advise against installing it.
+    tr:
+      title: C1'de Firmware 03.41.05, Wi-Fi yayın uygulamalarını, güç kontrolünü ve Bluetooth'u bozdu
+      body: 'Reddit raporlarını derleyen Rus webOS forumu, firmware 03.41.05 hakkında: güncellemeden sonra
+        C1''in Wi-Fi''si bağlanıyor ancak tüm yayın uygulamaları çalışmayı durduruyor, açma/kapama güvenilmez
+        hale geliyor ve Bluetooth eşleştirmesi başarısız oluyor; kullanıcılar güncellemeyi yüklememeyi
+        tavsiye ediyor.'
+      advice: Firmware 03.41.05'in C1'de Wi-Fi yayın uygulamalarını, güç kontrolünü ve Bluetooth'u bozduğu
+        bildiriliyor; sahipleri yüklenmemesini tavsiye ediyor.
+  evidence:
+  - url: https://webos-forums.ru/post184362.html
+    quote: После обновления LG C1 Wi-Fi подключается к маршрутизатору FastWeb Nexxt, но потоковые приложения
+      (все) больше не работают.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:16:46+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      series: Q60B
+  kind: known_issue
+  domain: display
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: LCD panel
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Horizontal black lines appear on Q60B LCD panel after ~2 years
+      body: These are owner reviews on Samsung's own Italian product page for the QE50Q60BAUXZT.
+      advice: Several owners report horizontal black lines appearing on the panel after roughly two years,
+        after the warranty has lapsed, leaving the owner to pay for a panel that is usually uneconomic
+        to replace. This is a display-panel defect specific to the series.
+    tr:
+      title: Q60B LCD panelinde yaklaşık 2 yıl sonra yatay siyah çizgiler çıkıyor
+      body: Bunlar, QE50Q60BAUXZT için Samsung'un kendi İtalyan ürün sayfasındaki sahip yorumlarıdır.
+      advice: Birkaç sahip, yaklaşık iki yıl sonra, garanti süresi dolduktan sonra panelde yatay siyah
+        çizgiler çıktığını, sahibinin genellikle değiştirilmesi ekonomik olmayan bir panelin parasını
+        ödemek zorunda kaldığını bildiriyor. Bu, seriye özgü bir ekran paneli kusurudur.
+  evidence:
+  - url: https://www.samsung.com/it/tvs/qled-tv/q60b-50-inch-qled-4k-smart-tv-qe50q60bauxzt/
+    quote: Dopo però due anni e 4 mesi è comparsa una sottile linea orizzontale nera sul pannello LCD.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:18:12+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      series: Q60B
+  kind: known_issue
+  domain: hardware
+  severity: high
+  consequence: ''
+  detection: ''
+  component: main board (scheda madre)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Q60B main board failure quoted at €249 repair by Samsung service
+      body: An owner review on Samsung's Italian product page for the QE50Q60BAUXZT.
+      advice: An owner was quoted €249 by Samsung service to replace the main board on a Q60B bought in
+        2022, a cost close to the price of a new budget TV. This shows the main board is a costly, common
+        failure point that can make repair uneconomic.
+    tr:
+      title: Q60B ana kart arızası için Samsung servisi 249 € onarım fiyatı verdi
+      body: QE50Q60BAUXZT için Samsung'un İtalyan ürün sayfasındaki bir sahip yorumu.
+      advice: Bir sahibe, 2022'de satın alınan bir Q60B'nin ana kartını değiştirmek için Samsung servisi
+        tarafından 249 € fiyat verildi; bu, yeni bir bütçe TV'nin fiyatına yakın bir maliyettir. Bu, ana
+        kartın onarımı ekonomik olmaktan çıkarabilen maliyetli ve yaygın bir arıza noktası olduğunu gösteriyor.
+  evidence:
+  - url: https://www.samsung.com/it/tvs/qled-tv/q60b-50-inch-qled-4k-smart-tv-qe50q60bauxzt/
+    quote: oggi il mio tv si trova dall'assitenza che generosamente mi ha chiesto 249 di riparazione per
+      la sostituzione della scheda madre.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:18:12+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: vestel
+      series: 58UT9850
+  kind: known_issue
+  domain: hardware
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: remote control (kumanda)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 58ut9850 rechargeable remote ignores most button presses within 2 months
+      body: An owner of the 58ut9850 reports the bundled rechargeable remote stops registering most button
+        presses within about two months of purchase, despite a full battery; only the Netflix and power
+        keys respond.
+      advice: Before buying, budget for a possible remote replacement or service visit; the remote is
+        the most-reported problem specific to this model. Verify the remote works fully during the return
+        window.
+    tr:
+      title: 58ut9850 şarj edilebilir kumandası 2 ay içinde çoğu tuş basışını yok sayıyor
+      body: 58ut9850 sahibi, kutudan çıkan şarj edilebilir kumandanın, pil tam dolu olmasına rağmen satın
+        almadan yaklaşık iki ay sonra çoğu tuş basışını kaydetmeyi durdurduğunu bildiriyor; yalnızca Netflix
+        ve güç tuşları yanıt veriyor.
+      advice: Satın almadan önce olası bir kumanda değişimi veya servis ziyareti için bütçe ayırın; kumanda
+        bu modele özgü en çok bildirilen sorundur. İade süresi içinde kumandanın tam olarak çalıştığını
+        doğrulayın.
+  evidence:
+  - url: https://www.sikayetvar.com/vestel/cihaz/tv-kumandasi
+    quote: Vestel 58ut9850 model Smart TV’yi yaklaşık 2 ay önce aldım. Cihaz uzaktan bağlantılı şarjlı
+      bir kumanda ile birlikte geldi fakat daha şimdiden ciddi bir kumanda sorunu yaşıyorum. Kumandanın
+      şarjı dolu olmasına rağmen TV çoğu tuşu algılamıyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:22:30+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: lg
+      series: C1
+  kind: known_issue
+  domain: hardware
+  severity: high
+  consequence: ''
+  detection: ''
+  component: mainboard / power supply (Netzteil)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: LG C1 random restarts under gaming load — LG cites possible mainboard/power-supply overheating
+      body: 'German owner forum (EU market): the C1 restarts by itself under high load during gaming on
+        both PS5 and Xbox Series X; LG''s own reply to the owner suggested a possible overheating problem
+        on the mainboard or power supply. A forum member notes the LG exchange program for power-supply
+        faults covers only 2016-2019 models, so the C1 is not covered by it.'
+      advice: If a C1 restarts only under gaming load, suspect the mainboard or power supply rather than
+        the cable or firmware; this is a hardware fault not covered by LG's older power-supply exchange
+        program.
+    tr:
+      title: LG C1 oyun yükü altında rastgele yeniden başlıyor — LG olası ana kart/güç kaynağı aşırı ısınmasına
+        işaret ediyor
+      body: 'Alman sahip forumu (AB pazarı): C1, PS5 ve Xbox Series X''te oyun sırasında yüksek yük altında
+        kendi kendine yeniden başlıyor; LG''nin sahibe kendi yanıtı ana kartta veya güç kaynağında olası
+        bir aşırı ısınma sorununa işaret etti. Bir forum üyesi, güç kaynağı arızaları için LG değişim
+        programının yalnızca 2016-2019 modellerini kapsadığını, dolayısıyla C1''in bunun kapsamında olmadığını
+        belirtiyor.'
+      advice: Bir C1 yalnızca oyun yükü altında yeniden başlıyorsa kablodan veya firmware'den değil ana
+        karttan veya güç kaynağından şüphelenin; bu, LG'nin eski güç kaynağı değişim programı kapsamında
+        olmayan bir donanım arızasıdır.
+  evidence:
+  - url: https://www.computerbase.de/forum/threads/lg-c1-2021-sporadische-neustarts-bei-ps5-xbox-series-x-unter-last.2261879/
+    quote: LG hat mir geantwortet, dass es ein Überhitzungsproblem am Mainboard oder Netzteil sein könnte.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:16:46+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: sony
+      series: 8m2
+  kind: known_issue
+  domain: software
+  severity: high
+  consequence: ''
+  detection: ''
+  component: firmware / HDMI eARC
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Firmware v114.602.050/080 breaks Dolby Vision and HDMI eARC audio on Bravia 8 II
+      body: 'The Bravia 8 II is explicitly named among models hit by Sony''s v114.602.050.1 / v114.602.080.1
+        firmware: Dolby Vision playback failure, audio desync worsening over time, and complete audio
+        dropouts via eARC. Sony''s fix v114.603.100.1 was rolled out to US owners, but the article states
+        UK and European owners were still waiting — directly relevant to this EU-market subject.'
+      advice: If buying an 8 II in the EU, check the installed firmware version before relying on Dolby
+        Vision/eARC; the buggy v114.602.x builds shipped in 2025 and the European fix lagged the US one.
+    tr:
+      title: Firmware v114.602.050/080, Bravia 8 II'de Dolby Vision ve HDMI eARC sesini bozuyor
+      body: 'Bravia 8 II, Sony''nin v114.602.050.1 / v114.602.080.1 firmware''inden etkilenen modeller
+        arasında açıkça adlandırılıyor: Dolby Vision oynatma hatası, zamanla kötüleşen ses senkronizasyon
+        sorunu ve eARC üzerinden tam ses kesintileri. Sony''nin düzeltmesi v114.603.100.1 ABD''li sahiplere
+        dağıtıldı, ancak makale Birleşik Krallık ve Avrupalı sahiplerin hâlâ beklediğini belirtiyor —
+        bu AB pazarı konusuyla doğrudan ilgili.'
+      advice: AB'de bir 8 II satın alıyorsanız, Dolby Vision/eARC'ye güvenmeden önce yüklü firmware sürümünü
+        kontrol edin; hatalı v114.602.x sürümleri 2025'te piyasaya sürüldü ve Avrupa düzeltmesi ABD'dekini
+        geriden takip etti.
+  evidence:
+  - url: https://www.hdtvtest.co.uk/news/sony-rolls-out-firmware-to-fix-dolby-vision-hdr-and-audio-sync-issues
+    quote: The bug appears to have caused fundamental problems with eARC, resulting in some users not
+      being able to play Dolby Vision content on their TVs at all, sound that gradually desyncs from the
+      content viewed on screen, getting worse the longer you watch, and complete audio dropouts.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:19:59+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: lg
+      series: C1
+  kind: known_issue
+  domain: hardware
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: power supply / panel
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: LG C1 power cycles when a bright game flash appears on screen
+      body: 'TechRadar/Yahoo news report: a bright muzzle flash in Resident Evil Requiem caused an LG
+        C1 to power-cycle (turn off and back on); the report notes the cause is unclear, either a power
+        unit failure or a panel problem, and that no obvious fix exists yet.'
+      advice: A C1 that shuts off and restarts on bright on-screen flashes points to a power-supply or
+        panel fault; owners report no reliable fix, only workarounds like dimming or changing HDMI cable.
+    tr:
+      title: LG C1, ekranda parlak bir oyun flaşı belirdiğinde güç döngüsüne giriyor
+      body: 'TechRadar/Yahoo haber raporu: Resident Evil Requiem''deki parlak bir namlu flaşı bir LG C1''in
+        güç döngüsüne girmesine (kapanıp yeniden açılmasına) neden oldu; rapor nedeni belirsiz olarak
+        belirtiyor, ya bir güç ünitesi arızası ya da bir panel sorunu, ve henüz belirgin bir çözümün bulunmadığını
+        ekliyor.'
+      advice: Ekrandaki parlak flaşlarda kapanıp yeniden başlayan bir C1, güç kaynağı veya panel arızasına
+        işaret eder; sahipler güvenilir bir çözüm olmadığını, yalnızca parlaklığı azaltmak veya HDMI kablosunu
+        değiştirmek gibi geçici çözümler olduğunu bildiriyor.
+  evidence:
+  - url: https://tech.yahoo.com/home-entertainment/tvs/articles/seems-im-not-alone-more-134505807.html
+    quote: with the bright flash from the gun seemingly causing a power cycling issue on their LG C1.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:16:46+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: tcl
+      series: C805
+  kind: known_issue
+  domain: connectivity
+  severity: high
+  consequence: ''
+  detection: ''
+  component: main board (placa base) / HDMI-eARC port
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: TCL 65C805 HDMI/eARC signal loss persists after main board replacement
+      body: 'A Spanish owner''s formal complaint to the OCU consumer association: a 65C805 bought July
+        2024 lost HDMI/eARC signal; the official TCL service replaced the main board in October 2025,
+        but the defect persisted identically. The service technician reportedly warned the set was irreparable
+        if the board swap did not fix it, and the owner is seeking a declaration of irreparability for
+        a refund.'
+      advice: If HDMI/eARC drops out on a C805, a main-board replacement may not fix it; the defect can
+        persist after official repair. Buyers should verify HDMI/eARC function early in the warranty period
+        and be prepared for a repair that may not resolve the issue.
+    tr:
+      title: TCL 65C805 HDMI/eARC sinyal kaybı ana kart değişiminden sonra da sürüyor
+      body: 'İspanyol bir sahibin OCU tüketici derneğine resmi şikayeti: Temmuz 2024''te satın alınan
+        bir 65C805 HDMI/eARC sinyalini kaybetti; resmi TCL servisi Ekim 2025''te ana kartı değiştirdi,
+        ancak arıza birebir aynı şekilde devam etti. Servis teknisyeninin, kart değişimi sorunu çözmezse
+        cihazın onarılamaz olduğu uyarısında bulunduğu bildiriliyor ve sahip, para iadesi için onarılamazlık
+        beyanı talep ediyor.'
+      advice: Bir C805'te HDMI/eARC kesilirse, ana kart değişimi bunu çözmeyebilir; arıza resmi onarımdan
+        sonra da sürebilir. Alıcılar HDMI/eARC işlevini garanti süresinin başlarında doğrulamalı ve sorunu
+        çözmeyebilecek bir onarıma hazırlıklı olmalıdır.
+  evidence:
+  - url: https://www.ocu.org/reclamar/lista-reclamaciones-publicas/producto-defectuoso-irreparabl/e1bd4fec36ddf12127
+    quote: Adquirí un TV TCL 65C805 el 18/07/2024 con número de serie Z2409018825. Presentó fallos de
+      conformidad (pérdida señal HDMI/eARC) y el Servicio Técnico Oficial TCL intervino el 01/10/2025
+      sustituyendo la placa base (adjunto parte de trabajo).
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:21:14+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      series: QN90A
+  kind: known_issue
+  domain: hardware
+  severity: high
+  consequence: ''
+  detection: ''
+  component: panel
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: QN90A 85-inch owner reports bootloop after 3 years; another panel failure after 2.5 years
+      body: On Samsung's own Danish product page for the 85-inch QN90A, a German customer review reports
+        a bootloop after 3 years, and another review reports the panel defective after 2.5 years with
+        repair uneconomical. These are on the manufacturer's official page, so they are first-party customer
+        reports.
+      advice: This is independent corroboration from the manufacturer's own site, in the EU market, of
+        the boot-loop and panel-failure pattern at 2.5–3 years.
+    tr:
+      title: QN90A 85 inç sahibi 3 yıl sonra bootloop bildiriyor; bir başka panel arızası 2,5 yıl sonra
+      body: Samsung'un 85 inç QN90A için kendi Danca ürün sayfasında, bir Alman müşteri yorumu 3 yıl sonra
+        bir bootloop bildiriyor ve bir başka yorum 2,5 yıl sonra panelin arızalı olduğunu ve onarımın
+        ekonomik olmadığını bildiriyor. Bunlar üreticinin resmi sayfasında yer aldığından, birinci taraf
+        müşteri bildirimleridir.
+      advice: Bu, AB pazarında, üreticinin kendi sitesinden, 2,5–3 yılda boot-loop ve panel arızası örüntüsüne
+        dair bağımsız bir doğrulamadır.
+  evidence:
+  - url: https://www.samsung.com/dk/tvs/qled-tv/qn90a-85-inch-neo-qled-4k-smart-tv-qe85qn90aatxxc/
+    quote: Nach bereits 3 Jahren Bootloop. Anfangs sehr vielversprechend aber dennoch sehr enttäuschend!
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:19:03+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: sony
+      series: A80C
+  kind: known_issue
+  domain: hardware
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: mainboard A-5026-264-A
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'XR-55A80CJ mainboard repair service symptom list: boot loop, white standby light no picture,
+        HDMI dead, 8-blink'
+      body: 'A repair seller''s listing for the exact XR-55A80CJ mainboard (A-5026-264-A) lists the failures
+        its service covers: boot-loop cycling, white standby light with no picture, dead/no power, non-working
+        HDMI ports, the 8-blink error code, and pink/green bars. This corroborates the iFixit main-board
+        failure, but as a seller page it is a weaker source.'
+      advice: The seller's symptom list matches the owner-reported main-board failure, reinforcing that
+        a dead/boot-looping A80C is most likely a main-board problem rather than a panel problem.
+    tr:
+      title: 'XR-55A80CJ ana kart onarım hizmeti belirti listesi: boot loop, görüntü yok beyaz bekleme
+        ışığı, HDMI ölü, 8 kez yanıp sönme'
+      body: 'Bir onarım satıcısının tam olarak XR-55A80CJ ana kartı (A-5026-264-A) için listelemesi, hizmetinin
+        kapsadığı arızaları sıralıyor: boot-loop döngüsü, görüntü olmadan beyaz bekleme ışığı, ölü/güç
+        yok, çalışmayan HDMI portları, 8 kez yanıp sönme hata kodu ve pembe/yeşil çubuklar. Bu, iFixit
+        ana kart arızasını doğruluyor, ancak bir satıcı sayfası olarak daha zayıf bir kaynaktır.'
+      advice: Satıcının belirti listesi, sahiplerin bildirdiği ana kart arızasıyla örtüşüyor ve ölü/boot-loop
+        yapan bir A80C'nin panel sorunundan ziyade büyük olasılıkla bir ana kart sorunu olduğunu pekiştiriyor.
+  evidence:
+  - url: https://nickselectronics.com/products/xr-55a80cj
+    quote: TV cycles on and off at boot up or intermittently (boot loop failure)
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:20:25+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: tcl
+      series: C845
+  kind: known_issue
+  domain: hardware
+  severity: high
+  consequence: ''
+  detection: ''
+  component: Mini-LED backlight zone driver / LED strip
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Mini-LED backlight zone driver failure causes dark patches / sound but no picture
+      body: A component-level repair shop lists the C845 among models where the Mini-LED zone drivers
+        or LED strips give up, causing dark zones, uneven backlight/blooming, or 'sound but no picture'.
+      advice: 'This is a hardware failure mode specific to the Mini-LED backlight array: zones can go
+        fully dark or the backlight can fail while audio continues. It is a panel-level repair, likely
+        expensive and outside warranty.'
+    tr:
+      title: Mini-LED arka ışık bölge sürücüsü arızası karanlık lekeler / ses var görüntü yok durumuna
+        yol açıyor
+      body: Bileşen düzeyinde bir onarım atölyesi, C845'i Mini-LED bölge sürücülerinin veya LED şeritlerinin
+        pes ettiği, karanlık bölgelere, düzensiz arka ışığa/blooming'e veya 'ses var görüntü yok' durumuna
+        yol açtığı modeller arasında listeliyor.
+      advice: 'Bu, Mini-LED arka ışık dizisine özgü bir donanım arıza modudur: bölgeler tamamen kararabilir
+        veya ses devam ederken arka ışık arızalanabilir. Bu bir panel düzeyinde onarımdır, muhtemelen
+        pahalıdır ve garanti kapsamı dışındadır.'
+  evidence:
+  - url: https://sater.lv/en/services/tv-repair/tcl
+    quote: Sound but no picture — Mini-LED backlight zone driver failure on the C-series, several zones
+      fully dark
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:22:03+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: lg
+      series: C1
+  kind: known_issue
+  domain: software
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: webOS firmware / boot sequence
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: OLED65C1 screen goes black with an update logo seconds after power-on
+      body: 'French Darty SAV community (EU market), OLED65C1: seconds after power-on the screen goes
+        black and shows an update logo; a second certified owner confirms the same problem and says a
+        factory reset did not fix it ("J''ai réinitialisé la tv").'
+      advice: A C1 that shows an update logo and black screen shortly after power-on may not be cured
+        by a reset; owners report it recurring after every power cycle.
+    tr:
+      title: OLED65C1 açıldıktan saniyeler sonra ekran bir güncelleme logosuyla kararıyor
+      body: 'Fransız Darty SAV topluluğu (AB pazarı), OLED65C1: açıldıktan saniyeler sonra ekran kararıyor
+        ve bir güncelleme logosu gösteriyor; ikinci bir sertifikalı sahip aynı sorunu doğruluyor ve fabrika
+        ayarlarına sıfırlamanın sorunu çözmediğini söylüyor ("J''ai réinitialisé la tv").'
+      advice: Açıldıktan kısa süre sonra bir güncelleme logosu ve siyah ekran gösteren bir C1, sıfırlama
+        ile düzelmeyebilir; sahipler bunun her güç döngüsünden sonra tekrarladığını bildiriyor.
+  evidence:
+  - url: https://sav.darty.com/forum/LG/OLED65C1-2021/LOGO-DE-RECHERCHE/5639538/592446
+    quote: quelques secondes après l'écran devient noir avec un logo comme si elle cherchait à faire une
+      mise à jour.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:16:46+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: lg
+      series: QNED87
+  kind: known_issue
+  domain: software
+  severity: low
+  consequence: ''
+  detection: ''
+  component: tuner / channel list UI
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: LG 43QNED87A6D cannot move or confirm channel numbers in the channel list
+      body: An owner of the 43QNED87A6D reports the channel list lacks move/confirm options, only lock/unlock/skip/restore,
+        forcing repeated auto-retunes.
+      advice: 'A minor but annoying software limitation on the 43QNED87A6D: you cannot reorder or confirm
+        channel numbers, only skip/restore them, which matters if you rely on a custom channel order for
+        free-to-air viewing.'
+    tr:
+      title: LG 43QNED87A6D kanal listesinde kanal numaralarını taşıyamıyor veya onaylayamıyor
+      body: 43QNED87A6D sahibi, kanal listesinde taşıma/onaylama seçeneklerinin bulunmadığını, yalnızca
+        kilitle/kilit aç/atla/geri yükle seçeneklerinin olduğunu ve bunun tekrarlanan otomatik yeniden
+        ayarlamalara yol açtığını bildiriyor.
+      advice: '43QNED87A6D''de küçük ama can sıkıcı bir yazılım kısıtlaması: kanal numaralarını yeniden
+        sıralayamıyor veya onaylayamıyorsunuz, yalnızca atlayabiliyor/geri yükleyebiliyorsunuz; bu, ücretsiz
+        yayın izlemek için özel bir kanal sırasına güveniyorsanız önem taşır.'
+  evidence:
+  - url: https://www.lgwebos.com/profile/50815-kevin-from-south-essex/
+    quote: Just purchase a LG 43QNED87A6D for the bedroom. I can Lock/Unlock Skip/Restore. No option to
+      Move or Confirm Channel Numbers.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:17:50+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: tcl
+      series: C845
+  kind: known_issue
+  domain: connectivity
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: eARC / HDMI-CEC handshake
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Firmware V617 corrupted AV receiver settings via the eARC port
+      body: A user reports firmware V8-T615T03-LF1V617.000879 corrupted AV-receiver settings through the
+        eARC port, changing the receiver's HDMI input and causing 'Access Error' on the receiver's internet
+        radio.
+      advice: If you rely on eARC to a soundbar or AV receiver, a firmware update can change/corrupt the
+        receiver's input settings. Verify eARC behavior after any update and be ready to re-set the receiver
+        input.
+    tr:
+      title: V617 ürün yazılımı eARC bağlantı noktası üzerinden AV alıcı ayarlarını bozdu
+      body: Bir kullanıcı, V8-T615T03-LF1V617.000879 ürün yazılımının eARC bağlantı noktası üzerinden
+        AV alıcı ayarlarını bozduğunu, alıcının HDMI girişini değiştirdiğini ve alıcının internet radyosunda
+        'Access Error' hatasına neden olduğunu bildiriyor.
+      advice: Bir soundbar veya AV alıcıya eARC ile bağlanmaya güveniyorsanız, bir ürün yazılımı güncellemesi
+        alıcının giriş ayarlarını değiştirebilir/bozabilir. Her güncellemeden sonra eARC davranışını doğrulayın
+        ve alıcı girişini yeniden ayarlamaya hazır olun.
+  evidence:
+  - url: https://forums.whirlpool.net.au/thread/9z4y1plm?p=124
+    quote: It has screwed my AV receiver big time and corrupted the settings via the Earc port.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:22:03+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: vestel
+      series: 58UT9850
+  kind: known_issue
+  domain: general
+  severity: low
+  consequence: ''
+  detection: ''
+  component: installation/service
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 58ut9850 installation/service mishandling reported by owner
+      body: An owner reports the authorized service technician logged the 58ut9850 as installed without
+        completing setup, blaming a satellite line that was not the cause; the owner fixed it themselves.
+      advice: This is a service-quality report rather than a product defect, but it suggests you should
+        verify installation is genuinely completed and not just logged.
+    tr:
+      title: 58ut9850 kurulum/servis yanlış işleyişi sahibi tarafından bildirildi
+      body: Bir sahip, yetkili servis teknisyeninin 58ut9850'yi kurulumu tamamlamadan kurulmuş olarak
+        kaydettiğini, suçun nedeni olmayan bir uydu hattını suçladığını; sahibin sorunu kendisinin çözdüğünü
+        bildiriyor.
+      advice: Bu bir ürün kusuru değil, hizmet kalitesi raporudur; ancak kurulumun yalnızca kaydedilmediğinden,
+        gerçekten tamamlandığından emin olmanız gerektiğini gösterir.
+  evidence:
+  - url: https://www.sikayetvar.com/vestel/bize-bir-sey-olmaz
+    quote: 28.11.2025 tarihinde Kırıkkale’deki Vestel bayisinden Vestel 58ut9850 4K Smart TV satın aldım.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:22:30+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: tcl
+      series: C805
+  kind: known_issue
+  domain: display
+  severity: high
+  consequence: ''
+  detection: ''
+  component: display panel
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'TCL 75C805 panel failure: vertical stripe and flickering after two months'
+      body: A Ukrainian buyer of a 75C805 reports the TV broke after two months — a stripe down the middle
+        of the screen and flickering — and it spent three weeks in service. Another review on the same
+        page reports a vertical stripe appearing on the right side of the screen in dark tones after 8
+        months of use. A third notes stuck pixels as a defect risk.
+      advice: Panel failures (vertical stripes, flickering, stuck pixels) have been reported on C805 units
+        within months of purchase. Buyers should check for panel defects early and be aware that a panel
+        failure may mean a lengthy service visit.
+    tr:
+      title: 'TCL 75C805 panel arızası: iki ay sonra dikey şerit ve titreme'
+      body: 75C805'in Ukraynalı bir alıcısı, televizyonun iki ay sonra bozulduğunu — ekranın ortasında
+        bir şerit ve titreme — ve üç hafta serviste kaldığını bildiriyor. Aynı sayfadaki başka bir inceleme,
+        8 ay kullanımdan sonra ekranın sağ tarafında koyu tonlarda dikey bir şerit oluştuğunu bildiriyor.
+        Üçüncüsü, sıkışmış pikselleri bir kusur riski olarak belirtiyor.
+      advice: C805 birimlerinde satın almadan sonraki aylar içinde panel arızaları (dikey şeritler, titreme,
+        sıkışmış pikseller) bildirilmiştir. Alıcılar panel kusurlarını erken kontrol etmeli ve bir panel
+        arızasının uzun bir servis ziyareti anlamına gelebileceğini bilmelidir.
+  evidence:
+  - url: https://comfy.ua/televizor-tcl-75c805-ucenka-1-1-otzyvy.html?p=3
+    quote: Дуже розчарований брендом TCL . Купив телевізор за 33 тисячі а він через два місяці зламався
+      , полоса по середині екрану і мерцає . Три неділі телевізор в сервісі , ні грошей не телевізора,
+      і незрозуміло що ще за морока буде с сервісом. Нікому не совітую TCL.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:21:14+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: lg
+      series: QNED87
+  kind: known_issue
+  domain: hardware
+  severity: low
+  consequence: ''
+  detection: ''
+  component: panel / chassis assembly
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: LG QNED87B6A (TR) delivered with a gap between the bottom panel and screen, technician dismissed
+        it
+      body: A Turkish buyer of the QNED87B6A reports a visible gap between the bottom panel and the screen
+        from delivery, and that the LG technician dismissed it as not affecting the picture and offered
+        no remedy.
+      advice: In Turkey, a QNED87B6A can arrive with a panel-to-chassis gap that LG's service refuses
+        to treat; a buyer should inspect the set at installation and push for a written report, since
+        the seller's technician may decline to record the defect.
+    tr:
+      title: LG QNED87B6A (TR) alt panel ile ekran arasında boşlukla teslim edildi, teknisyen bunu önemsemedi
+      body: QNED87B6A'nın Türk alıcısı, teslimattan itibaren alt panel ile ekran arasında görünür bir
+        boşluk olduğunu ve LG teknisyeninin bunu görüntüyü etkilemediğini söyleyerek önemsemediğini ve
+        hiçbir çözüm sunmadığını bildiriyor.
+      advice: Türkiye'de bir QNED87B6A, LG'nin servisinin müdahale etmeyi reddettiği panel ile şasi arasında
+        bir boşlukla gelebilir; alıcı, cihazı kurulum sırasında incelemeli ve yazılı bir rapor için ısrar
+        etmelidir, çünkü satıcının teknisyeni kusuru kaydetmeyi reddedebilir.
+  evidence:
+  - url: https://www.sikayetvar.com/lg/alt-panel-ve-ekran-arasindaki-aciklik-nedeniyle-ayipli-tv-degisimi-talebi
+    quote: Ürün kurulumu yapıldığında televizyonun alt paneli ile ekranı arasında açıklık olduğunu fark
+      ettim
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:17:50+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: sony
+      series: 8m2
+  kind: known_issue
+  domain: software
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: firmware / motion processing
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Live-TV stuttering/judder on Bravia 8 II after firmware 114.602.030.1 / .080.1
+      body: Two owners of the 8 II (K-65XR8M2 and K-55XR8M2) report persistent motion judder/stuttering
+        on live terrestrial TV after the 114.602.030.1 / 114.602.080.1 firmware updates, with streaming
+        unaffected. This is a firmware regression specific to the 8 II model codes.
+      advice: Live-TV motion stuttering appeared after a specific firmware update; owners report workarounds
+        (changing channel, Motionflow tweaks) but no clean fix yet, and Sony support had not marked it
+        as a known post-update issue.
+    tr:
+      title: Bravia 8 II'de 114.602.030.1 / .080.1 ürün yazılımından sonra canlı TV takılması/titremesi
+      body: 8 II'nin (K-65XR8M2 ve K-55XR8M2) iki sahibi, 114.602.030.1 / 114.602.080.1 ürün yazılımı
+        güncellemelerinden sonra canlı karasal TV'de kalıcı hareket titremesi/takılması olduğunu, akışın
+        etkilenmediğini bildiriyor. Bu, 8 II model kodlarına özgü bir ürün yazılımı gerilemesidir.
+      advice: Canlı TV hareket takılması belirli bir ürün yazılımı güncellemesinden sonra ortaya çıktı;
+        sahipler geçici çözümler (kanal değiştirme, Motionflow ayarlamaları) bildiriyor ancak henüz temiz
+        bir düzeltme yok ve Sony desteği bunu güncelleme sonrası bilinen bir sorun olarak işaretlememişti.
+  evidence:
+  - url: https://community.sony.fi/t5/android-tv/bravia-8-stuttering-since-firmware-114-602-030-1-update/m-p/4002292
+    quote: I have a 65-inch Sony BRAVIA 8 II (K-65XR8M2). The TV had been performing perfectly, but shortly
+      after the most recent Sony software/firmware update I began noticing subtle but persistent motion
+      judder/stuttering on live television.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:19:59+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: lg
+      series: C1
+  kind: known_issue
+  domain: display
+  severity: high
+  consequence: ''
+  detection: ''
+  component: panel / T-Con board
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: After a system update LG OLED48C1 developed horizontal lines and repeated shutdowns
+      body: 'Reclame Aqui consumer complaint: an OLED48C1 that worked until November 2025 developed horizontal
+        black lines across the image and sudden continuous shutdowns after a system update; the authorized
+        LG repair quote (R$ 5,790) exceeded the TV''s original price (R$ 4,107).'
+      advice: A C1 that develops horizontal lines and repeated shutdowns after an update can be expensive
+        to repair — one owner's authorized repair quote exceeded the TV's purchase price.
+    tr:
+      title: Bir sistem güncellemesinden sonra LG OLED48C1 yatay çizgiler geliştirdi ve tekrarlanan kapanmalar
+        yaşadı
+      body: 'Reclame Aqui tüketici şikayeti: Kasım 2025''e kadar çalışan bir OLED48C1, bir sistem güncellemesinden
+        sonra görüntü boyunca yatay siyah çizgiler ve ani sürekli kapanmalar geliştirdi; yetkili LG onarım
+        teklifi (R$ 5,790) TV''nin orijinal fiyatını (R$ 4,107) aştı.'
+      advice: Bir güncellemeden sonra yatay çizgiler ve tekrarlanan kapanmalar geliştiren bir C1'in onarımı
+        pahalı olabilir — bir sahibin yetkili onarım teklifi TV'nin satın alma fiyatını aştı.
+  evidence:
+  - url: https://www.reclameaqui.com.br/lg-electronics/tv-oled-com-defeito-apos-atualiza_zknT4bj1zib_d1uT/
+    quote: após uma atualização indicada pro próprio sistema da tv, apareceram linhas horizontais de na
+      tela e também o desligamento repentino e contínuo da mesma.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:16:46+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: lg
+      series: C1
+  kind: known_issue
+  domain: software
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: firmware 03.53.45
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Firmware 03.53.45 update caused black-screen startup loop on LG C1 65"
+      body: 'Spanish forum (EU market), LG C1 65" 2021 on firmware 03.53.45: about 28 seconds after power-on
+        the TV shows an update screen and then goes fully black, requiring a power-off/on; the owner solved
+        it with a factory reset, which also added new settings options.'
+      advice: On firmware 03.53.45 a C1 can fall into a black-screen update loop at startup; a factory
+        reset (advanced reset) is reported to resolve it, at the cost of reconfiguring the TV.
+    tr:
+      title: Ürün yazılımı 03.53.45 güncellemesi LG C1 65" üzerinde siyah ekran başlatma döngüsüne neden
+        oldu
+      body: 'İspanyol forumu (AB pazarı), ürün yazılımı 03.53.45 üzerinde LG C1 65" 2021: açıldıktan yaklaşık
+        28 saniye sonra TV bir güncelleme ekranı gösteriyor ve ardından tamamen kararıyor, kapatıp açmayı
+        gerektiriyor; sahibi bunu fabrika sıfırlamasıyla çözdü, bu da yeni ayar seçenekleri ekledi.'
+      advice: Ürün yazılımı 03.53.45 üzerinde bir C1, başlangıçta siyah ekran güncelleme döngüsüne düşebilir;
+        fabrika sıfırlamasının (gelişmiş sıfırlama) bunu çözdüğü bildiriliyor, bunun bedeli TV'yi yeniden
+        yapılandırmaktır.
+  evidence:
+  - url: https://forocoches.com/foro/showthread.php?t=10671104
+    quote: Me da que LG ha arreglado algún fallo y se ha cargado a la vez el inicio ejecutando una actualización
+      que hace que la pantalla quede totalmente negra.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:16:46+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      series: QN90A
+  kind: known_issue
+  domain: hardware
+  severity: high
+  consequence: ''
+  detection: ''
+  component: panel
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: QE55QN90AATXK enters boot loop after warranty; service quotes 35,750 TL panel replacement
+      body: Turkish owner of a 55-inch QE55QN90AATXK reports spontaneous boot loop shortly after warranty
+        expiry; authorized service diagnosed 'panel arızası' (panel failure) without any inspection and
+        quoted 35,750 TL — more than the TV's second-hand value.
+      advice: A buyer should treat the QN90A panel as a known failure point after the warranty window.
+        The repair quote is near the cost of a new TV, so an extended warranty or a different series is
+        worth considering.
+    tr:
+      title: QE55QN90AATXK garanti sonrası önyükleme döngüsüne giriyor; servis 35,750 TL panel değişimi
+        teklif ediyor
+      body: 55 inç QE55QN90AATXK'nın Türk sahibi, garanti süresinin dolmasından kısa süre sonra kendiliğinden
+        önyükleme döngüsü bildiriyor; yetkili servis herhangi bir inceleme yapmadan 'panel arızası' teşhisi
+        koydu ve TV'nin ikinci el değerinden daha fazla olan 35,750 TL teklif etti.
+      advice: Bir alıcı, QN90A panelini garanti süresinden sonra bilinen bir arıza noktası olarak görmelidir.
+        Onarım teklifi yeni bir TV'nin maliyetine yakın, bu nedenle uzatılmış garanti veya farklı bir
+        seri düşünülmeye değer.
+  evidence:
+  - url: https://www.sikayetvar.com/samsung/samsung-qn90a-serisi-televizyonda-kronik-panel-arizasi-ve-fahis-onarim-ucreti
+    quote: Samsung QE55QN90AATXK model televizyonum, garanti süresi bittikten kısa bir süre sonra, herhangi
+      bir darbe, sıvı teması veya kullanıcı hatası olmaksızın kendi kendine arızalandı. Cihaz açılıp kapanma
+      döngüsüne (boot loop) girdi ve kullanılamaz hale geldi.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:19:03+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      series: QN90F
+  kind: known_issue
+  domain: display
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: backlight
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: QN90F screen dims darker and brighter on its own and shows halo on subtitles/football; possible
+        backlight fault
+      body: An owner reports the screen autonomously dimming darker and brighter despite disabling local
+        dimming, contrast and power-saving settings, plus halo on football and subtitle text. Another
+        member notes this could be a backlight fault if it also happens on SDR content.
+      advice: If brightness fluctuates on its own even on SDR content with all power-saving and local-dimming
+        settings off, treat it as a possible backlight fault and get it checked under warranty rather
+        than assuming a setting issue.
+    tr:
+      title: QN90F ekranı kendi kendine daha koyu ve daha parlak kararıyor ve altyazılarda/futbolda hale
+        gösteriyor; olası arka ışık arızası
+      body: Bir sahip, yerel karartma, kontrast ve güç tasarrufu ayarlarını devre dışı bırakmasına rağmen
+        ekranın otonom olarak daha koyu ve daha parlak karardığını, ayrıca futbol ve altyazı metninde
+        hale olduğunu bildiriyor. Başka bir üye, bunun SDR içerikte de meydana gelmesi durumunda arka
+        ışık arızası olabileceğini belirtiyor.
+      advice: Tüm güç tasarrufu ve yerel karartma ayarları kapalıyken bile SDR içerikte parlaklık kendi
+        kendine dalgalanıyorsa, bunu olası bir arka ışık arızası olarak değerlendirin ve bir ayar sorunu
+        olduğunu varsaymak yerine garanti kapsamında kontrol ettirin.
+  evidence:
+  - url: https://www.avforums.com/threads/samsung-qn90f-neo-qled-owners.2543400/page-14
+    quote: Just started getting screen dimming darker and brighter and can't seem to stop it.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:19:27+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: sony
+      series: A80C
+  kind: known_issue
+  domain: hardware
+  severity: high
+  consequence: ''
+  detection: ''
+  component: main board (A-5026-264-A)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'XR-55A80CJ main board failure: no screen, 8 red flashes error code'
+      body: 'Owner''s repair thread on iFixit for the exact XR-55A80CJ model: TV shows no screen, random
+        power behavior, diagnosed as faulty main board; after a replacement main board the standby LED
+        still flashes the 8-red-flashes error code. This is a hardware failure that leaves the TV unusable
+        and requires main-board replacement or repair (~£187/$190 repair service on the seller listing).'
+      advice: If an A80C shows no picture with a flashing red standby LED (8 blinks), suspect the main
+        board, not the panel. A main-board repair/replacement is the likely fix and is a significant cost;
+        check warranty coverage before paying.
+    tr:
+      title: 'XR-55A80CJ ana kart arızası: ekran yok, 8 kırmızı yanıp sönme hata kodu'
+      body: 'iFixit''te tam XR-55A80CJ modeli için sahibinin onarım başlığı: TV ekran göstermiyor, rastgele
+        güç davranışı, arızalı ana kart olarak teşhis edildi; bir yedek ana karttan sonra bekleme LED''i
+        hâlâ 8 kırmızı yanıp sönme hata kodunu yanıp söndürüyor. Bu, TV''yi kullanılamaz bırakan ve ana
+        kart değişimi veya onarımı gerektiren bir donanım arızasıdır (satıcı listesinde ~£187/$190 onarım
+        hizmeti).'
+      advice: Bir A80C, yanıp sönen kırmızı bekleme LED'i (8 kez yanıp sönme) ile görüntü göstermiyorsa,
+        paneli değil ana kartı şüphelenin. Ana kart onarımı/değişimi muhtemel çözümdür ve önemli bir maliyettir;
+        ödeme yapmadan önce garanti kapsamını kontrol edin.
+  evidence:
+  - url: https://it.ifixit.com/Risposte/Visualizza/931560/Help+determining+cause+of+issues+8+Red+Flashes
+    quote: And after some time the Standby LED starts flashing 8 red flashes.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:20:25+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: sony
+      series: 8m2
+  kind: known_issue
+  domain: display
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: OLED panel / Dolby Vision processing
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Falling scan lines visible in Dolby Vision on Bravia 8 II after firmware v114.602.050.1
+      body: The thread title names the Bravia 8 II specifically; the OP reports falling scan lines in
+        dark Dolby Vision scenes after the v114.602.050.1 update, present regardless of gradation settings.
+        Other owners confirm the same on the 9 II and A95L, pointing to a firmware-introduced artifact
+        rather than a per-unit fault.
+      advice: A visible picture artifact in dark Dolby Vision scenes that appeared after a specific firmware
+        update; buyers should be aware it may be present on current firmware and is a software artifact,
+        not a panel defect.
+    tr:
+      title: Ürün yazılımı v114.602.050.1 sonrası Bravia 8 II'de Dolby Vision'da düşen tarama çizgileri
+        görülüyor
+      body: Başlık özellikle Bravia 8 II'yi adlandırıyor; konu sahibi, v114.602.050.1 güncellemesinden
+        sonra karanlık Dolby Vision sahnelerinde düşen tarama çizgileri bildiriyor, bu gradasyon ayarlarından
+        bağımsız olarak mevcut. Diğer sahipler 9 II ve A95L'de aynısını doğruluyor, bu da birim bazlı
+        bir arıza yerine ürün yazılımı kaynaklı bir yapaylığa işaret ediyor.
+      advice: Belirli bir ürün yazılımı güncellemesinden sonra ortaya çıkan karanlık Dolby Vision sahnelerinde
+        görülebilir bir görüntü yapaylığı; alıcılar bunun mevcut ürün yazılımında mevcut olabileceğini
+        ve panel kusuru değil yazılım yapaylığı olduğunu bilmelidir.
+  evidence:
+  - url: https://www.avsforum.com/threads/falling-scan-lines-now-visible-in-dolby-vision-on-sony-bravia-8-ii-after-recent-update.3345915/page-2?nested_view=1
+    quote: Avoid the latest software update (v114.602.050.1) for Sony tv's. In dark scenes when watching
+      Dolby Vision, falling scan lines are now visible
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:19:59+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: tcl
+      series: C805
+  kind: known_issue
+  domain: software
+  severity: high
+  consequence: ''
+  detection: ''
+  component: firmware / bootloader
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: TCL C805 bricked by failed USB firmware update (V8-T653T01-LF1V486.002129)
+      body: A Spanish owner reports a USB firmware update (V8-T653T01-LF1V486.002129) hung mid-process;
+        after powering off, the TV never booted again — no LED, no USB activity, no network port activity.
+        The user is seeking a recovery image (update.img) to attempt a hard reset, indicating the set
+        is effectively bricked by the failed update.
+      advice: A failed USB firmware update can permanently brick a C805 with no visible sign of life.
+        Owners should not power off during an update, and should treat USB firmware flashing as risky;
+        recovery may require a hard-reset image that is not readily available.
+    tr:
+      title: TCL C805, başarısız USB ürün yazılımı güncellemesiyle tuğlalandı (V8-T653T01-LF1V486.002129)
+      body: İspanyol bir sahip, bir USB ürün yazılımı güncellemesinin (V8-T653T01-LF1V486.002129) işlem
+        ortasında takıldığını bildiriyor; güç kapatıldıktan sonra TV bir daha açılmadı — LED yok, USB
+        etkinliği yok, ağ bağlantı noktası etkinliği yok. Kullanıcı, sabit sıfırlama denemesi için bir
+        kurtarma imajı (update.img) arıyor ve bu da cihazın başarısız güncellemeyle fiilen tuğlandığını
+        gösteriyor.
+      advice: Başarısız bir USB ürün yazılımı güncellemesi, C805'i görünür hiçbir yaşam belirtisi olmadan
+        kalıcı olarak tuğlayabilir. Sahipler güncelleme sırasında gücü kapatmamalı ve USB ürün yazılımı
+        yüklemeyi riskli olarak değerlendirmelidir; kurtarma, kolayca bulunmayan bir sabit sıfırlama imajı
+        gerektirebilir.
+  evidence:
+  - url: https://foro.avpasion.com/t/error-update-firmware-c805-tv-no-arranca.8051/
+    quote: cuando estaba realizandose el proceso de Update con el firmware V8-T653T01-LF1V486.002129 no
+      finalizó correctamente y se quedó colgada, tuve que apagarlo y nunca más arrancó. Ahora mismo no
+      se enciende ninguna luz, si conectas algo por USB tampoco hace nada, si conectas el cable de red
+      RJ45 tampoco se enciende ninguna luz.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:21:14+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: lg
+      series: QNED87
+  kind: known_issue
+  domain: software
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: webOS 25 firmware (V33.22.75)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: webOS 25 update on QNED87xxx breaks 4K HDR video output (audio only) in Kodi
+      body: An owner of the QNED87xxx series reports that after the 1.5 GB webOS 25 update, media playback
+        regressed, including no video output for 4K HDR files in Kodi while Full HD HDR still works.
+      advice: If you rely on local media playback (Plex/Emby/Kodi), the webOS 25 update is a known regression
+        point on the QNED87 series; a buyer may want to hold off on the update or check for a patch (e.g.
+        33.22.85) before upgrading, since the fix can take longer to reach the cheaper QNED line than
+        the OLEDs.
+    tr:
+      title: QNED87xxx'te webOS 25 güncellemesi Kodi'de 4K HDR video çıkışını bozuyor (yalnızca ses)
+      body: QNED87xxx serisinin bir sahibi, 1,5 GB'lık webOS 25 güncellemesinden sonra medya oynatımının
+        gerilediğini, bunlar arasında Kodi'de 4K HDR dosyalar için video çıkışının olmadığını, Full HD
+        HDR'nin ise hâlâ çalıştığını bildiriyor.
+      advice: Yerel medya oynatımına (Plex/Emby/Kodi) güveniyorsanız, webOS 25 güncellemesi QNED87 serisinde
+        bilinen bir gerileme noktasıdır; bir alıcı, yükseltmeden önce güncellemeyi ertelemek veya bir
+        yama (ör. 33.22.85) olup olmadığını kontrol etmek isteyebilir, çünkü düzeltmenin daha ucuz QNED
+        hattına ulaşması OLED'lere göre daha uzun sürebilir.
+  evidence:
+  - url: https://emby.media/community/topic/146025-webos-25-update-question/
+    quote: For instance, on the QNED87 series, some Kodi users note no video output (only audio) for 4K
+      HDR files, while Full HD HDR works fine.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:17:50+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      series: QN90F
+  kind: known_issue
+  domain: display
+  severity: high
+  consequence: ''
+  detection: ''
+  component: panel / main board
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: QE85QN90FATXTK repeatedly powers on and off due to screen fault, replacement unit shows the
+        same fault
+      body: An owner of the 85" QE85QN90FATXTK reports the TV constantly powering on and off since July;
+        the set was replaced under warranty but the replacement exhibited the same fault. Service later
+        claimed no fault and advised using the TV with no HDMI cable connected.
+      advice: If you buy a QN90F and it power-cycles, do not accept a single replacement as proof of resolution
+        — this owner's replacement repeated the same fault. Keep the complaint record and push for a refund
+        or different model.
+    tr:
+      title: QE85QN90FATXTK ekran arızası nedeniyle tekrar tekrar açılıp kapanıyor, değiştirilen cihaz
+        aynı arızayı gösteriyor
+      body: 85" QE85QN90FATXTK'nın bir sahibi, TV'nin Temmuz'dan beri sürekli açılıp kapandığını bildiriyor;
+        cihaz garanti kapsamında değiştirildi ancak değiştirilen cihaz aynı arızayı gösterdi. Servis daha
+        sonra arıza olmadığını iddia etti ve TV'nin HDMI kablosu bağlı olmadan kullanılmasını önerdi.
+      advice: Bir QN90F alırsanız ve açılıp kapanma döngüsüne girerse, tek bir değişimi sorunun çözüldüğünün
+        kanıtı olarak kabul etmeyin — bu sahibin değiştirilen cihazı aynı arızayı tekrarladı. Şikâyet
+        kaydını tutun ve para iadesi veya farklı bir model için ısrar edin.
+  evidence:
+  - url: https://www.sikayetvar.com/samsung/yeni-televizyonumda-tekrarlayan-ekran-arizasi-ve-cozum-eksikligi
+    quote: Samsung QE85QN90FATXTK model televizyonumda Temmuz başından beri ekran arızası nedeniyle sürekli
+      olarak açılıp kapanma sorunu yaşıyorum.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:19:27+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      series: QN90F
+  kind: known_issue
+  domain: hardware
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: power regulation / motherboard
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: QN90F powers on but screen stays blank — suspected power-regulation or motherboard fault
+      body: An owner describes the set powering on with a completely blank screen and unusual startup
+        behavior, and the repair guidance points to checking the main power input (~19 V) and nearby input
+        MOSFETs on the main board. This is an owner/repairer report, not a manufacturer bulletin.
+      advice: A blank screen with the set powered on points to the power-regulation stage or main board
+        rather than the panel. If you see this, a repair shop can measure the main-board rails; decide
+        whether to repair or claim warranty before spending on parts.
+    tr:
+      title: QN90F açılıyor ancak ekran boş kalıyor — güç regülasyonu veya ana kart arızasından şüpheleniliyor
+      body: Bir sahip, cihazın tamamen boş bir ekranla ve olağandışı başlatma davranışıyla açıldığını
+        anlatıyor ve onarım kılavuzu, ana güç girişinin (~19 V) ve ana karttaki yakındaki giriş MOSFET'lerinin
+        kontrol edilmesine işaret ediyor. Bu, üretici bülteni değil, bir sahip/onarımcı raporudur.
+      advice: Cihaz açıkken boş bir ekran, panele değil güç regülasyonu aşamasına veya ana karta işaret
+        eder. Bunu görürseniz, bir onarım atölyesi ana kart raylarını ölçebilir; parçalara para harcamadan
+        önce onarım mı yoksa garanti talebi mi yapacağınıza karar verin.
+  evidence:
+  - url: https://www.diy-laptoprepair.com/forum-tv/fix-Samsung-QN90F-repair-guide-schematics.php
+    quote: The TV powers on, but the screen stays completely blank, and there is unusual behavior at startup,
+      which suggests a possible problem with power regulation or a faulty sensor/component on the motherboard.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:19:27+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: tcl
+      series: C845
+  kind: known_issue
+  domain: software
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: eMMC storage / Google TV OS
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Google TV stuck on boot logo after interrupted update / eMMC wear
+      body: The repairer attributes boot-logo hangs on the C-series to corrupted eMMC storage or broken
+        Play Services after an interrupted update, matching owner reports of boot loops on the 2023 TCL
+        Google TV platform.
+      advice: An interrupted or failed firmware update can leave the TV stuck on the boot logo. Recovery
+        usually needs a factory reset via recovery mode or a USB IMG reflash, which is not a simple user
+        fix.
+    tr:
+      title: Google TV, kesintiye uğrayan güncelleme / eMMC aşınması sonrası önyükleme logosunda takılı
+        kalıyor
+      body: Onarımcı, C serisindeki önyükleme logosu takılmalarını bozulmuş eMMC depolamaya veya kesintiye
+        uğrayan bir güncellemeden sonra bozulan Play Services'e bağlıyor; bu, 2023 TCL Google TV platformunda
+        önyükleme döngülerine ilişkin sahip raporlarıyla örtüşüyor.
+      advice: Kesintiye uğrayan veya başarısız bir ürün yazılımı güncellemesi, TV'yi önyükleme logosunda
+        takılı bırakabilir. Kurtarma genellikle kurtarma modu üzerinden fabrika sıfırlaması veya bir USB
+        IMG yeniden yüklemesi gerektirir; bu basit bir kullanıcı çözümü değildir.
+  evidence:
+  - url: https://sater.lv/en/services/tv-repair/tcl
+    quote: Google TV stuck on the boot logo — corrupted eMMC storage or broken Play Services after an
+      interrupted update
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:22:03+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      series: QN90A
+  kind: known_issue
+  domain: general
+  severity: low
+  consequence: ''
+  detection: ''
+  component: chassis
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: QN90A from 2021 emits loud cracking noises from the TV after 2.5 years
+      body: A German owner of a 2021 QN90A reports loud cracking noises coming from the TV after ~2.5
+        years, with no picture faults. This is a low-severity cosmetic/mechanical concern, not a functional
+        failure.
+      advice: Cracking noises from the chassis are annoying but not a functional failure; the owner reports
+        no picture issues. Low priority for a buyer.
+    tr:
+      title: 2021 model QN90A, 2,5 yıl sonra TV'den yüksek çatırdama sesleri çıkarıyor
+      body: 2021 model QN90A'nın Alman bir sahibi, ~2,5 yıl sonra TV'den yüksek çatırdama sesleri geldiğini,
+        görüntü arızası olmadığını bildiriyor. Bu, düşük önem dereceli kozmetik/mekanik bir endişedir,
+        işlevsel bir arıza değildir.
+      advice: Şasiden gelen çatırdama sesleri can sıkıcıdır ancak işlevsel bir arıza değildir; sahip görüntü
+        sorunu bildirmiyor. Bir alıcı için düşük öncelik.
+  evidence:
+  - url: https://www.computerbase.de/forum/threads/tv-knackt-nach-2-jahren.2248586/
+    quote: Letzte Woche ist mir 2 x ein relativ lautes Knacken von Richtung des TV aufgefallen.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:19:03+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: sony
+      series: A80C
+  kind: known_issue
+  domain: display
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: OLED panel
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'XR65A80CJ OLED panel: rectangular dark spots classified as burn-in, warranty denied'
+      body: Owner thread on Sony's own community for the XR65A80CJ reports two rectangular darker spots
+        visible on grayscale (5-40%), which Sony told the owner were burn-in and not covered by warranty;
+        the owner argues it is a uniformity/panel defect. If the panel is judged burn-in, replacement
+        is out-of-pocket and costly.
+      advice: Check the panel for dark rectangular patches on low grayscale early, and confirm what the
+        warranty covers, because Sony may classify the defect as burn-in and decline coverage.
+    tr:
+      title: 'XR65A80CJ OLED paneli: yanma olarak sınıflandırılan dikdörtgen koyu lekeler, garanti reddedildi'
+      body: XR65A80CJ için Sony'nin kendi topluluğundaki sahip başlığı, gri tonlamada (%5-40) görünen
+        iki dikdörtgen daha koyu leke bildiriyor; Sony sahibine bunların yanma olduğunu ve garanti kapsamında
+        olmadığını söylemiş; sahip bunun bir tekdüzelik/panel kusuru olduğunu savunuyor. Panel yanma olarak
+        değerlendirilirse, değişim cepten ve maliyetli olur.
+      advice: Paneli düşük gri tonlamada koyu dikdörtgen yamalar için erken kontrol edin ve garantinin
+        neleri kapsadığını teyit edin, çünkü Sony kusuru yanma olarak sınıflandırıp kapsamı reddedebilir.
+  evidence:
+  - url: https://us.community.sony.com/s/question/0D5Dp000020fjhUKAQ/sony-claims-burnin-on-my-tv-and-refusing-to-provide-solution?language=en_US
+    quote: They just called me and let me know that those spots are burn in and not covered under the
+      warranty.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:20:25+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      series: QN90F
+  kind: known_issue
+  domain: display
+  severity: high
+  consequence: ''
+  detection: ''
+  component: panel / speakers
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 75QN90F panel develops growing spots/blemishes; Samsung service calls it user error; speakers
+        crackle
+      body: The buyer reports two small spots on the panel at purchase that grew over time and attracted
+        dust; Samsung's service inspected, photographed, then declared it user error and refused to intervene.
+        The same owner also reports intermittent speaker crackling.
+      advice: Photograph any panel blemish immediately on delivery and register it before the return window
+        closes. This owner's claim was refused as 'user error' despite the spots growing untouched, so
+        early documentation is the only protection.
+    tr:
+      title: 75QN90F panelinde büyüyen lekeler/izler oluşuyor; Samsung servisi bunu kullanıcı hatası olarak
+        adlandırıyor; hoparlörler cızırdıyor
+      body: Alıcı, satın alma sırasında panelde bulunan ve zamanla büyüyüp toz çeken iki küçük leke bildiriyor;
+        Samsung'un servisi inceledi, fotoğrafladı, ardından kullanıcı hatası ilan etti ve müdahale etmeyi
+        reddetti. Aynı sahip ayrıca aralıklı hoparlör cızırtısı bildiriyor.
+      advice: Teslimatta herhangi bir panel izini hemen fotoğraflayın ve iade süresi kapanmadan kayda
+        geçirin. Bu sahibin talebi, lekeler dokunulmadan büyümesine rağmen 'kullanıcı hatası' olarak reddedildi,
+        bu yüzden erken belgeleme tek korumadır.
+  evidence:
+  - url: https://www.hepsiburada.com/samsung-75qn90f-75-190-ekran-uydu-alicili-4k-ultra-hd-tizen-smart-qled-tv-p-HBCV00008RB7J2-yorumlari
+    quote: İlk aldığım günlerde iki ufak leke vardı ekranda. Silince hafif bir iz kalıyordu ama ekranın
+      yapısından dedim sorun. Zamanla bu lekeler büyümeye ve bütün tozu kiri üstüne çekmeye başladı.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:19:27+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: tcl
+      series: C845
+  kind: known_issue
+  domain: connectivity
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: HDMI input / handshake
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: HDMI input locked at 720p, fixed only by a hidden service-menu factory reset
+      body: An owner's C845 HDMI input locked at 720p and could only be cleared by a factory reset through
+        the hidden service menu; the same owner also reports Dolby Vision at 4K/60Hz not working via Chromecast.
+      advice: HDMI handshake faults (resolution lock, Dolby Vision at 4K/60Hz not passing) are reported.
+        A hidden service-menu factory reset is the reported fix, which is not a normal user procedure.
+    tr:
+      title: HDMI girişi 720p'de kilitli, yalnızca gizli servis menüsünden fabrika sıfırlamasıyla düzeltildi
+      body: Bir sahibin C845 HDMI girişi 720p'de kilitlendi ve yalnızca gizli servis menüsü üzerinden
+        fabrika sıfırlamasıyla temizlenebildi; aynı sahip ayrıca Chromecast üzerinden 4K/60Hz'de Dolby
+        Vision'ın çalışmadığını bildiriyor.
+      advice: HDMI el sıkışma arızaları (çözünürlük kilidi, 4K/60Hz'de Dolby Vision'ın geçmemesi) bildiriliyor.
+        Bildirilen düzeltme gizli servis menüsünden fabrika sıfırlamasıdır, ki bu normal bir kullanıcı
+        prosedürü değildir.
+  evidence:
+  - url: https://forums.whirlpool.net.au/thread/9z4y1plm?p=124
+    quote: When i first got my c845 it had a hdmi fault where it got locked at 720p. Was only fixed by
+      a factory reset through the service (hidden) menu.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:22:03+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: tcl
+      series: C845
+  kind: known_issue
+  domain: software
+  severity: high
+  consequence: ''
+  detection: ''
+  component: built-in subwoofer / Onkyo audio system
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Firmware V8-0012T01-LF1V509.002303 degrades bass / subwoofer response
+      body: An owner of a 65C845 reports the bass response collapsed after updating to V8-0012T01-LF1V509.002303,
+        and a warranty replacement unit showed the same problem, pointing to the firmware rather than
+        the hardware.
+      advice: Before buying, be aware a widely-reported firmware version (V509) is tied to a degraded
+        bass/subwoofer output that survives a hardware swap. Check the installed firmware version and
+        consider whether a downgrade is possible before accepting the unit.
+    tr:
+      title: V8-0012T01-LF1V509.002303 ürün yazılımı bas/subwoofer yanıtını bozuyor
+      body: Bir 65C845 sahibi, V8-0012T01-LF1V509.002303 sürümüne güncelledikten sonra bas yanıtının çöktüğünü
+        ve garanti kapsamında değiştirilen bir birimin aynı sorunu gösterdiğini bildiriyor; bu da donanımdan
+        ziyade ürün yazılımına işaret ediyor.
+      advice: Satın almadan önce, yaygın olarak bildirilen bir ürün yazılımı sürümünün (V509) donanım
+        değişiminden sonra da süren bozulmuş bas/subwoofer çıkışıyla bağlantılı olduğunu bilin. Yüklü
+        ürün yazılımı sürümünü kontrol edin ve birimi kabul etmeden önce sürüm düşürmenin mümkün olup
+        olmadığını değerlendirin.
+  evidence:
+  - url: https://www.avforums.com/threads/tcl-65c845-sound-bass-problem-after-software-update.2543737/
+    quote: Over time, I noticed how the sound, or rather the bass response, deteriorated rapidly. It's
+      as if the TV lost its subwoofer. So they replaced it under warranty, but it's still the same.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:22:03+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: vestel
+      series: 58UT9850
+  kind: known_issue
+  domain: software
+  severity: low
+  consequence: ''
+  detection: ''
+  component: remote control voice feature (sihirli kumanda)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 58ut9850 'magic remote' voice features not working as advertised
+      body: A buyer of the 58ut9850 says the dealer sold the TV on the 'magic remote' voice features (channel
+        change, voice app entry), which the owner reports do not work as promised.
+      advice: If voice/remote control matters to you, test those features at the store before purchase;
+        this is a reported gap between advertising and actual behavior on this model.
+    tr:
+      title: 58ut9850 'sihirli kumanda' ses özellikleri reklamı yapıldığı gibi çalışmıyor
+      body: Bir 58ut9850 alıcısı, satıcının TV'yi 'sihirli kumanda' ses özellikleri (kanal değiştirme,
+        sesle uygulama girişi) üzerinden sattığını, ancak sahibin bu özelliklerin vaat edildiği gibi çalışmadığını
+        bildirdiğini söylüyor.
+      advice: Ses/kumanda kontrolü sizin için önemliyse, satın almadan önce bu özellikleri mağazada test
+        edin; bu, bu modelde reklam ile gerçek davranış arasında bildirilen bir farktır.
+  evidence:
+  - url: https://www.sikayetvar.com/vestel/kumanda/kanal
+    quote: Bursa Korupark Vestel bayisinden 4 gün önce Vestel 58ut9850 4K Smart TV satın aldım. Satın
+      alma sırasında özellikle “sihirli kumanda” olduğu, bu kumanda ile kanal değiştirme ve uygulamalara
+      sesle giriş yapılabileceği söylendi.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:22:30+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: lg
+      series: QNED87
+  kind: known_issue
+  domain: hardware
+  severity: high
+  consequence: ''
+  detection: ''
+  component: power supply / motherboard
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: LG 55QNED87 powers on with blank screen and abnormal startup, suspected power regulation/motherboard
+        fault
+      body: An owner of the 55QNED87 describes a blank screen with abnormal startup behaviour and suspects
+        a power-regulation or motherboard fault, and is seeking schematics to repair it.
+      advice: A blank-screen-on-power-on failure on the 55QNED87 points to the power supply or motherboard
+        rather than the panel; an owner facing this should expect a board-level repair or replacement,
+        and should check warranty coverage before paying out of pocket.
+    tr:
+      title: LG 55QNED87 boş ekran ve anormal açılışla açılıyor, güç regülasyonu/anakart arızasından şüpheleniliyor
+      body: Bir 55QNED87 sahibi, anormal açılış davranışıyla birlikte boş ekran tanımlıyor ve güç regülasyonu
+        veya anakart arızasından şüpheleniyor; onarım için şemalar arıyor.
+      advice: 55QNED87'de açılışta boş ekran arızası panelden ziyade güç kaynağına veya anakarta işaret
+        eder; bununla karşılaşan bir sahip kart düzeyinde onarım veya değişim beklemeli ve cepten ödemeden
+        önce garanti kapsamını kontrol etmelidir.
+  evidence:
+  - url: https://www.diy-laptoprepair.com/forum-tv/fix-LG-55QNED87-repair-guide-schematics.php
+    quote: The TV powers on, but the screen stays completely blank, and there is unusual behavior at startup,
+      which suggests a possible problem with power regulation or a faulty sensor/component on the motherboard.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:17:50+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: lg
+      series: C1
+  kind: known_issue
+  domain: display
+  severity: high
+  consequence: ''
+  detection: ''
+  component: OLED panel
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: LG C1 burn-in after long static image; Pixel Cleaning did not remove it
+      body: 'Hardware.com.br article: a 55" LG C1 owner left a Fire TV static home screen on overnight
+        and found a large visible mark; Pixel Cleaning did not remove it. The article cites RTINGS'' accelerated
+        long-duration test in which a C1 showed permanent retention in static-element regions after thousands
+        of hours of repetitive content.'
+      advice: Burn-in on the C1's OLED panel is cumulative and permanent; a single static image left on
+        can reveal it, and the built-in Pixel Cleaning may not remove it. Static content should be avoided
+        for long periods.
+    tr:
+      title: Uzun statik görüntü sonrası LG C1 yanması; Pixel Cleaning bunu gidermedi
+      body: 'Hardware.com.br makalesi: 55" LG C1 sahibi bir Fire TV statik ana ekranını gece boyunca açık
+        bıraktı ve büyük, görünür bir iz buldu; Pixel Cleaning bunu gidermedi. Makale, RTINGS''in hızlandırılmış
+        uzun süreli testine atıfta bulunuyor; bu testte bir C1, binlerce saatlik tekrarlayan içerikten
+        sonra statik öğe bölgelerinde kalıcı tutunma gösterdi.'
+      advice: C1'in OLED panelindeki yanma birikimlidir ve kalıcıdır; açık bırakılan tek bir statik görüntü
+        bunu ortaya çıkarabilir ve yerleşik Pixel Cleaning bunu gidermeyebilir. Statik içerikten uzun
+        süreler kaçınılmalıdır.
+  evidence:
+  - url: https://www.hardware.com.br/noticias/fire-tv-tela-parada-burn-in-tv-oled/
+    quote: uma LG C1 submetida durante milhares de horas a conteúdo extremamente repetitivo apresentou
+      retenção permanente nas regiões com elementos estáticos.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:16:46+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: tcl
+      series: C845
+  kind: known_issue
+  domain: display
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: LCD panel / backlight uniformity
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Panel defects in TR market: clouding, black spots, and flickering on moving scenes'
+      body: Turkish consumer complaints (Şikayetvar) on the 65C845 report image flickering/waving on moving
+        scenes, black spots and darkening appearing within days, and clouding on one side of the panel;
+        one case led to a replacement approval.
+      advice: In the Turkish market, panel-uniformity and moving-image artifacts are reported on the 65C845,
+        some within the first days of ownership. These are panel-level issues that typically require service
+        inspection or replacement.
+    tr:
+      title: 'TR pazarında panel kusurları: bulutlanma, siyah noktalar ve hareketli sahnelerde titreme'
+      body: 65C845 hakkında Türk tüketici şikayetleri (Şikayetvar), hareketli sahnelerde görüntü titremesi/dalgalanması,
+        günler içinde ortaya çıkan siyah noktalar ve kararma ile panelin bir tarafında bulutlanma bildiriyor;
+        bir vakada değişim onayı ile sonuçlandı.
+      advice: Türk pazarında, 65C845'te panel tekdüzeliği ve hareketli görüntü artefaktları bildiriliyor;
+        bazıları sahipliğin ilk günlerinde. Bunlar genellikle servis incelemesi veya değişim gerektiren
+        panel düzeyinde sorunlardır.
+  evidence:
+  - url: https://www.sikayetvar.com/tcl-televizyon/65c845/tcl-65c845
+    quote: TCL 65C845 televizyonumda hareketli sahnelerde görüntü dalgalanması problemi sebebiyle 24.02.2024
+      tarihinde arıza kaydı ...oluşturdum.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:22:03+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      series: Q60B
+  kind: known_issue
+  domain: hardware
+  severity: high
+  consequence: ''
+  detection: ''
+  component: main board / panel (logic board)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Q60B series bootloop with black screen reported as serial panel/logic-board defect (QE50Q60BAU)
+      body: This is a consumer-association complaint board (Altroconsumo) with multiple independent QE50Q60BAU
+        complaints describing the same failure.
+      advice: Multiple owners report the TV suddenly entering an infinite reboot loop with a black screen,
+        often just after the legal warranty ends (~2-3 years), and Samsung refusing free repair and quoting
+        a fully owner-paid intervention. A buyer should treat this series as carrying a real risk of a
+        catastrophic, out-of-warranty failure and should consider extended warranty or a different model.
+    tr:
+      title: Q60B serisi siyah ekranla önyükleme döngüsü, seri panel/logic-board kusuru olarak bildirildi
+        (QE50Q60BAU)
+      body: Bu, aynı arızayı tanımlayan birden fazla bağımsız QE50Q60BAU şikayeti içeren bir tüketici
+        derneği şikayet panosudur (Altroconsumo).
+      advice: Birden fazla sahip, TV'nin aniden siyah ekranla sonsuz yeniden başlatma döngüsüne girdiğini,
+        genellikle yasal garanti sona erdikten hemen sonra (~2-3 yıl) ve Samsung'un ücretsiz onarımı reddedip
+        tamamen sahip tarafından ödenen bir müdahale teklif ettiğini bildiriyor. Bir alıcı bu seriyi,
+        garanti dışı felaket niteliğinde bir arıza riski taşıyan bir seri olarak değerlendirmeli ve uzatılmış
+        garanti veya farklı bir model düşünmelidir.
+  evidence:
+  - url: https://www.altroconsumo.it/reclamare/bacheca-dei-reclami/difetto-seriale-pannello-bootl/204c7fbb8df4a92a38
+    quote: In data 19/01/2026, il dispositivo ha improvvisamente smesso di funzionare, entrando in un
+      ciclo infinito di riavvio (bootloop) con schermo nero, rendendo il prodotto totalmente inutilizzabile.
+      Nonostante il televisore sia fuori dalla garanzia legale da soli 8 mesi, ritengo che il guasto non
+      sia imputabile alla normale usura del bene, bensì a un vizio di conformità originario/vizio occulto.
+      Numerose testimonianze presenti sui forum ufficiali Samsung e su community di consumatori confermano
+      che la serie Q60B è affetta da un difetto seriale relativo al pannello o alla scheda logica che
+      si manifesta con queste esatte modalità
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:18:12+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: lg
+      series: QNED87
+  kind: known_issue
+  domain: display
+  severity: high
+  consequence: ''
+  detection: ''
+  component: LED backlight / panel (claimed MiniLED FALD)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: LG 75QNED87A6B (2025 EU) sold as MiniLED FALD but engineering report finds edge-lit panel
+      body: An owner of the 2025 European 75QNED87A6B hired a professional engineer who concluded the
+        set is edge-lit, not MiniLED FALD, despite LG advertising 2,040 local dimming zones; the owner
+        filed with the Spanish Consumer Arbitration Board.
+      advice: Before buying a QNED87 in the EU, verify the actual backlight architecture for your specific
+        size/model year, since the advertised MiniLED spec may not match the delivered panel; a buyer
+        who relies on the spec could pay a premium for an edge-lit panel and face a long dispute to get
+        a replacement.
+    tr:
+      title: LG 75QNED87A6B (2025 EU) MiniLED FALD olarak satıldı ancak mühendislik raporu edge-lit panel
+        buldu
+      body: 2025 Avrupa 75QNED87A6B sahibi, LG'nin 2.040 yerel karartma bölgesi reklamına rağmen cihazın
+        MiniLED FALD değil edge-lit olduğu sonucuna varan profesyonel bir mühendis tuttu; sahip İspanyol
+        Tüketici Tahkim Kurulu'na başvurdu.
+      advice: AB'de bir QNED87 satın almadan önce, reklamı yapılan MiniLED özelliği teslim edilen panelle
+        eşleşmeyebileceğinden, belirli boyutunuz/model yılınız için gerçek arka aydınlatma mimarisini
+        doğrulayın; özelliğe güvenen bir alıcı edge-lit bir panel için prim ödeyebilir ve değişim almak
+        için uzun bir anlaşmazlıkla karşılaşabilir.
+  evidence:
+  - url: https://www.avsforum.com/threads/warning-lg-selling-edge-lit-qned-as-miniled-fald-verified-by-engineering-report-model-75qned87a.3342770/?post_id=64520695&nested_view=1
+    quote: The report concludes that this model is NOT a MiniLED FALD display. It is, in fact, an Edge-lit
+      LED panel.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:17:50+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      series: QN90F
+  kind: known_issue
+  domain: display
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: panel / pixels
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: QN90F panel found with dead/stuck pixels at install; Samsung service counts them as not a
+        fault
+      body: A QN90F bought from Media Markt had a fixed image defect spotted at install (called 'çapaklanma',
+        burring) plus three dead/stuck pixels found later. The authorized service acknowledged the pixels
+        on its form but stated they are 'not evaluated as a fault', and the complaint record was closed
+        with no report given to the owner.
+      advice: Dead/stuck pixels are treated by Samsung service as not a fault, so a panel with a few bad
+        pixels may not qualify for exchange. Check the panel for dead pixels within the first days and
+        know your local consumer-law threshold before relying on warranty.
+    tr:
+      title: QN90F panelinde kurulumda ölü/sıkışmış pikseller bulundu; Samsung servisi bunları arıza olarak
+        saymıyor
+      body: Media Markt'tan alınan bir QN90F'te kurulumda sabit bir görüntü kusuru ('çapaklanma' olarak
+        adlandırılan) ve daha sonra bulunan üç ölü/sıkışmış piksel vardı. Yetkili servis pikselleri formunda
+        kabul etti ancak 'arıza olarak değerlendirilmediğini' belirtti ve şikayet kaydı sahibine rapor
+        verilmeden kapatıldı.
+      advice: Ölü/sıkışmış pikseller Samsung servisi tarafından arıza olarak değerlendirilmez, bu nedenle
+        birkaç kötü pikseli olan bir panel değişim için uygun olmayabilir. İlk günlerde paneli ölü pikseller
+        için kontrol edin ve garantiye güvenmeden önce yerel tüketici hukuku eşiğinizi bilin.
+  evidence:
+  - url: https://www.sikayetvar.com/samsung/kusurlu-panel-ve-iletisimsiz-servis-nedeniyle-samsung-tv-degisim-talebi
+    quote: 19.04.2026 tarihinde yapılan kontrollerde ilk kusura ilave olarak ölü pixel/sabit nokta kusuru
+      niteliğinde 3 adet ekran kusuru tarafımca tespit edilmiştir.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:19:27+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      series: QN90A
+  kind: known_issue
+  domain: hardware
+  severity: high
+  consequence: ''
+  detection: ''
+  component: panel
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 50QN90A boot loop with blinking red light; owner reports chronic panel/power design defect
+      body: A 50-inch QE50QN90AATXTK owner describes the same boot-loop symptom (red light blinks twice,
+        stays on black screen) after ~4 years, and states the authorized service and his own research
+        attribute it to a chronic panel/power-supply design defect in the series.
+      advice: This corroborates the boot-loop pattern across screen sizes in the series. The owner reports
+        the panel replacement quote was near the price of a new TV, making out-of-warranty repair uneconomical.
+    tr:
+      title: 50QN90A kırmızı ışık yanıp sönerken önyükleme döngüsü; sahip kronik panel/güç tasarım kusuru
+        bildiriyor
+      body: 50 inç QE50QN90AATXTK sahibi, ~4 yıl sonra aynı önyükleme döngüsü semptomunu (kırmızı ışık
+        iki kez yanıp söner, siyah ekranda kalır) tanımlıyor ve yetkili servisin ve kendi araştırmasının
+        bunu serideki kronik bir panel/güç kaynağı tasarım kusuruna bağladığını belirtiyor.
+      advice: Bu, serideki ekran boyutları arasında önyükleme döngüsü modelini doğruluyor. Sahip, panel
+        değişim teklifinin yeni bir TV fiyatına yakın olduğunu ve garanti dışı onarımı ekonomik olmaktan
+        çıkardığını bildiriyor.
+  evidence:
+  - url: https://www.sikayetvar.com/samsung/samsung-50qn90a-tvde-kapanip-acilma-ve-gizli-ayip-sikayeti
+    quote: boot loop denilen bu sorun sırasında cihaz kırmızı ışığı 2 kere yanıp söndürerek siyah ekranda
+      kalıyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:19:03+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: sony
+      series: 8m2
+  kind: known_issue
+  domain: display
+  severity: high
+  consequence: ''
+  detection: ''
+  component: OLED panel
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Vertical white line at center of Bravia 8 II OLED panel; Sony swaps TV rather than repairing
+        panel
+      body: An owner reports a ~1-pixel vertical white line at the center of a Bravia 8 II panel; a reply
+        states Sony does not repair or replace panels but swaps the whole TV (new or refurbished) at its
+        discretion. This is a panel-level defect with a replacement-only resolution path.
+      advice: A vertical line on the panel is a hardware defect; Sony's policy is to exchange the whole
+        TV rather than repair the panel, so a buyer should act within the warranty/return window (14 days
+        online in the EU) rather than wait.
+    tr:
+      title: Bravia 8 II OLED panelinin ortasında dikey beyaz çizgi; Sony paneli onarmak yerine TV'yi
+        değiştiriyor
+      body: Bir sahip, bir Bravia 8 II panelinin ortasında yaklaşık 1 piksellik dikey beyaz bir çizgi
+        bildiriyor; bir yanıt, Sony'nin panelleri onarmadığını veya değiştirmediğini, bunun yerine kendi
+        takdirine bağlı olarak tüm TV'yi (yeni veya yenilenmiş) değiştirdiğini belirtiyor. Bu, yalnızca
+        değişimle çözülebilen panel düzeyinde bir kusurdur.
+      advice: Paneldeki dikey bir çizgi donanım kusurudur; Sony'nin politikası paneli onarmak yerine tüm
+        TV'yi değiştirmektir, bu nedenle bir alıcı beklemek yerine garanti/iade süresi içinde (AB'de çevrimiçi
+        14 gün) harekete geçmelidir.
+  evidence:
+  - url: https://www.avmagazine.it/forum/threads/bravia-8-ii-linea-verticale-al-centro-del-pannello.344824/
+    quote: Sapete se è possibile risolvere il problema della linea bianca verticale di spessore credo
+      1 pixel, su un Bravia 8 II evitando di chiamare l'assistenza?
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:19:59+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: tcl
+      series: C845
+  kind: known_issue
+  domain: software
+  severity: high
+  consequence: ''
+  detection: ''
+  component: Google TV / system software
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Whole TV locks up and becomes unresponsive, needing a wall power cycle
+      body: Owners report the C845 randomly locks up solid and becomes unresponsive, requiring a power
+        pull at the wall; one owner can reproduce it consistently via the Kodi app, and it persists after
+        firmware updates.
+      advice: Expect occasional full-system freezes that require unplugging the TV. This is a software/UI
+        reliability issue, not a panel defect, and it did not go away with updates.
+    tr:
+      title: Tüm TV kilitleniyor ve yanıt vermiyor, prizden güç kesintisi gerekiyor
+      body: Sahipler, C845'in rastgele tamamen kilitlendiğini ve yanıt vermez hale geldiğini, prizden
+        fişin çekilmesinin gerektiğini bildiriyor; bir sahip bunu Kodi uygulaması aracılığıyla tutarlı
+        biçimde yeniden üretebiliyor ve yazılım güncellemelerinden sonra da devam ediyor.
+      advice: TV'nin fişinin çekilmesini gerektiren ara sıra tam sistem donmaları bekleyin. Bu bir yazılım/arayüz
+        güvenilirliği sorunudur, panel kusuru değildir ve güncellemelerle ortadan kalkmamıştır.
+  evidence:
+  - url: https://forums.whirlpool.net.au/archive/9z4y1plm
+    quote: The Lockups where the whole TV becomes unresponsive and you have to turn off at the wall and
+      turn back on is still there!
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:22:03+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      series: QN90A
+  kind: known_issue
+  domain: connectivity
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: CEC
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: QN90A CEC control with receiver stops working after firmware update, later resolves itself
+      body: An AVS Forum owner reports CEC (HDMI-CEC) control between the QN90A and an Onkyo receiver
+        stopped working, possibly after a firmware update, but resolved itself without any changes. This
+        is a transient connectivity annoyance, not a persistent defect.
+      advice: CEC glitches after firmware updates are common and here self-resolved. Low concern for buyers;
+        a firmware update or power cycle usually restores it.
+    tr:
+      title: QN90A'nın alıcıyla CEC kontrolü yazılım güncellemesinden sonra çalışmayı durduruyor, sonra
+        kendiliğinden düzeliyor
+      body: Bir AVS Forum sahibi, QN90A ile bir Onkyo alıcı arasındaki CEC (HDMI-CEC) kontrolünün çalışmayı
+        durdurduğunu, muhtemelen bir yazılım güncellemesinden sonra, ancak herhangi bir değişiklik olmadan
+        kendiliğinden düzeldiğini bildiriyor. Bu geçici bir bağlantı can sıkıcılığıdır, kalıcı bir kusur
+        değildir.
+      advice: Yazılım güncellemelerinden sonra CEC aksaklıkları yaygındır ve burada kendiliğinden çözülmüştür.
+        Alıcılar için düşük endişe; bir yazılım güncellemesi veya güç kesintisi genellikle bunu geri getirir.
+  evidence:
+  - url: https://www.avsforum.com/threads/samsung-qn90a-ces-issue.3331478/?sortby=newest
+    quote: Now there was a Samsung firmware update recently but can't remember if issue occurred prior
+      to.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:19:03+00:00'

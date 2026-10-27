@@ -1,0 +1,72 @@
+lineup:
+- Apple Watch Series 10
+- Apple Watch Series 9
+- Apple Watch SE (2nd gen)
+- Apple Watch Ultra 2
+- Samsung Galaxy Watch 7
+- Samsung Galaxy Watch 6 Classic
+- Samsung Galaxy Watch 6
+- Samsung Galaxy Watch 5
+- Garmin Fenix 8
+- Garmin Forerunner 965
+- Garmin Venu 3
+- Garmin Instinct 2
+- Xiaomi Smart Band 9
+- Xiaomi Smart Band 8
+- Xiaomi Smart Band 11 Active
+- Xiaomi Redmi Watch 5
+- Huawei Watch GT 5
+- Huawei Watch GT 4
+- Huawei Watch Fit 3
+- Huawei Band 9
+- Amazfit GTR 4
+- Amazfit GTS 4
+- Amazfit Bip 5
+- Amazfit Active
+covered:
+- amazfit bip 5
+- apple watch series 10
+- apple watch series 9
+- garmin fenix 8
+- huawei watch fit 3
+- huawei watch gt 5
+- product brand amazfit model bip 5
+- product brand apple model series 10
+- product brand apple model series 9
+- product brand garmin model fenix 8
+- product brand huawei model watch fit 3
+- product brand huawei model watch gt 5
+- product brand samsung model galaxy watch 6 classic
+- product brand samsung model galaxy watch 7
+- product brand xiaomi model smart band 11 active
+- product brand xiaomi model smart band 8
+- samsung galaxy watch 6 classic
+- samsung galaxy watch 7
+- xiaomi smart band 11 active
+- xiaomi smart band 8
+uncovered:
+- Apple Watch SE (2nd gen)
+- Apple Watch Ultra 2
+- Samsung Galaxy Watch 5
+- Garmin Forerunner 965
+- Garmin Venu 3
+- Garmin Instinct 2
+- Xiaomi Smart Band 9
+- Xiaomi Redmi Watch 5
+- Huawei Watch GT 4
+- Huawei Band 9
+- Amazfit GTR 4
+- Amazfit GTS 4
+- Amazfit Active
+note: Claims are written for the best-selling model in each brand (Apple Watch Series
+  9, Galaxy Watch 7/6 Classic, Fenix 8, Smart Band 8, Watch GT 5, GTR 3 Pro, Bip 5).
+  The rest of the line-up is named but not yet researched, so those subjects ship
+  with no claims.
+out_of_scope:
+- HONOR MagicWatch 2 (Honor, a separate brand, kept appearing in Huawei support pages)
+- companion smartphone apps (Mi Fitness, Amazfit Watch app, Huawei Health)
+quarantined:
+- kind: product
+  label: Amazfit GTR 3 Pro
+  reason: not named anywhere in this pack's own line-up — likely a different category
+    (an accessory, or a different device from the same brand)

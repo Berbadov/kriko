@@ -1,0 +1,168 @@
+lineup:
+- Tesla Model Y
+- Tesla Model 3
+- Tesla Model S
+- Tesla Model X
+- Volkswagen ID.3
+- Volkswagen ID.4
+- Volkswagen ID.5
+- Volkswagen ID.7
+- Audi e-tron
+- Audi Q4 e-tron
+- Audi Q6 e-tron
+- Audi e-tron GT
+- Mercedes EQA
+- Mercedes EQB
+- Mercedes EQE
+- Mercedes EQS
+- Mercedes EQE SUV
+- Mercedes EQS SUV
+- BMW i3
+- BMW i4
+- BMW i5
+- BMW i7
+- BMW iX
+- BMW iX1
+- BMW iX2
+- BMW iX3
+- Hyundai Kona Electric
+- Hyundai Ioniq 5
+- Hyundai Ioniq 6
+- Kia EV6
+- Kia EV9
+- Kia Niro EV
+- Ford Mustang Mach-E
+- Ford Explorer EV
+- Renault Zoe
+- Renault Megane E-Tech
+- Renault Scenic E-Tech
+- Renault 5 E-Tech
+- Chevrolet Bolt EV
+- Chevrolet Bolt EUV
+- Nissan Leaf
+- Nissan Ariya
+- Peugeot e-208
+- Peugeot e-2008
+- Opel Corsa-e
+- Opel Mokka-e
+- Citroën ë-C4
+- Fiat 500e
+- Dacia Spring
+- Skoda Enyaq
+- Cupra Born
+- Polestar 2
+- Porsche Taycan
+- Volvo EX30
+- Volvo EX40
+- Jaguar I-Pace
+- MG4
+- BYD Atto 3
+- BYD Dolphin
+- BYD Seal
+- Toyota bZ4X
+- Honda e
+- Mini Cooper SE
+- 'Smart #1'
+- Mazda MX-30
+- Togg T10X
+- Lexus RZ
+- Genesis GV60
+- XPeng G9
+- Nio ET5
+- Leapmotor T03
+- Omoda 5 EV
+- VinFast VF8
+- Zeekr 001
+- Aiways U5
+covered:
+- audi e tron
+- chevrolet bolt ev
+- ford mustang mach e
+- hyundai kona electric
+- kia ev6
+- mercedes eqb
+- product brand audi series e tron
+- product brand chevrolet series bolt ev
+- product brand ford series mustang mach e
+- product brand hyundai series kona electric
+- product brand kia series ev6
+- product brand mercedes benz series eqb
+- product brand renault series zoe
+- product brand tesla series model y
+- renault zoe
+- tesla model y
+uncovered:
+- Tesla Model 3
+- Tesla Model S
+- Tesla Model X
+- Volkswagen ID.3
+- Volkswagen ID.4
+- Volkswagen ID.5
+- Volkswagen ID.7
+- Mercedes EQA
+- Mercedes EQE
+- Mercedes EQS
+- Mercedes EQE SUV
+- Mercedes EQS SUV
+- BMW i3
+- BMW i4
+- BMW i5
+- BMW i7
+- BMW iX
+- BMW iX1
+- BMW iX2
+- BMW iX3
+- Hyundai Ioniq 5
+- Hyundai Ioniq 6
+- Kia EV9
+- Kia Niro EV
+- Ford Explorer EV
+- Renault Megane E-Tech
+- Renault Scenic E-Tech
+- Renault 5 E-Tech
+- Chevrolet Bolt EUV
+- Nissan Leaf
+- Nissan Ariya
+- Peugeot e-208
+- Peugeot e-2008
+- Opel Corsa-e
+- Opel Mokka-e
+- Citroën ë-C4
+- Fiat 500e
+- Dacia Spring
+- Skoda Enyaq
+- Cupra Born
+- Polestar 2
+- Porsche Taycan
+- Volvo EX30
+- Volvo EX40
+- Jaguar I-Pace
+- MG4
+- BYD Atto 3
+- BYD Dolphin
+- BYD Seal
+- Toyota bZ4X
+- Honda e
+- Mini Cooper SE
+- 'Smart #1'
+- Mazda MX-30
+- Togg T10X
+- Lexus RZ
+- Genesis GV60
+- XPeng G9
+- Nio ET5
+- Leapmotor T03
+- Omoda 5 EV
+- VinFast VF8
+- Zeekr 001
+- Aiways U5
+note: Only the nine focus models were targeted for research. Togg T10X and all other
+  EVs in the lineup remain unresearched because the tool budget was exhausted before
+  their queries could run.
+out_of_scope:
+- Volkswagen ID.4 battery fire recall (appeared in Audi Q4 e-tron coverage; not a
+  focus model)
+- Audi Q4 e-tron battery fire recall (appeared in e-tron coverage; not a focus model)
+- Hyundai Ioniq 5 battery cell recall (appeared in Kia EV6 coverage; not a focus model)
+- Kia EV9 battery cell recall (appeared in Kia EV6 coverage; not a focus model)
+quarantined: []

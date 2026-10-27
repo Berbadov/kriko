@@ -1,0 +1,8 @@
+# Search templates for this pack. One query per line.
+#
+# Written by the agent that authored the pack, in the words
+# and the language its sources use.
+- '{label} recall'
+- '{label} swollen battery'
+- '{label} fire'
+- '{label} overheating'

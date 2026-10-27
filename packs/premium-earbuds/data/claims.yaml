@@ -1,0 +1,1637 @@
+# Claims — what is known to go wrong, each with the page it came from and the quote
+# that was read there. A claim without both is not in this file.
+- subject:
+    kind: product
+    identity:
+      brand: Jabra
+      series: Elite 8 Active
+  kind: known_issue
+  domain: audio
+  severity: high
+  consequence: ''
+  detection: ''
+  component: right earbud ANC/hear-through microphone path
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Right earbud emits constant black noise in ANC and hear-through modes
+      body: Amazon AU verified-purchase review (April 2024). Owner reports persistent static/white noise
+        in the right earbud whenever ANC or hear-through is active, persisting after firmware reinstall.
+        The reviewer notes this appears to be a common issue online.
+      advice: If buying, expect that ANC/hear-through modes may produce audible static in one earbud.
+        Test ANC immediately within the return window; firmware reinstall does not fix it per this owner.
+        Jabra customer support reportedly did not resolve it.
+    tr:
+      title: Sağ kulaklık ANC ve şeffaf modda sürekli siyah gürültü yayıyor
+      body: Amazon AU doğrulanmış satın alma incelemesi (Nisan 2024). Sahibi, ANC veya şeffaf mod aktif
+        olduğunda sağ kulaklıkta kalıcı statik/beyaz gürültü olduğunu ve yazılım yeniden yüklendikten
+        sonra da devam ettiğini bildiriyor. İnceleyen, bunun internette yaygın bir sorun olduğunu belirtiyor.
+      advice: Satın alacaksanız, ANC/şeffaf modların bir kulaklıkta duyulabilir statik üretebileceğini
+        bekleyin. ANC'yi iade süresi içinde hemen test edin; bu sahibe göre yazılım yeniden yükleme sorunu
+        çözmüyor. Jabra müşteri desteğinin bunu çözmediği bildiriliyor.
+  evidence:
+  - url: https://www.amazon.com.au/gp/customer-reviews/R25PYUDBAT7JP3/ref=cm_cr_arp_d_rvw_ttl?ie=UTF8&ASIN=B0CFVFCMVP
+    quote: There is constant black noise coming from the right earbud in hear-through and ANC modes. Have
+      tried reinstalling the firmware, nothing from customer support despite seeing this looking to be
+      a common issue from what I can see online.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:31:37+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Apple
+      series: AirPods Pro
+  kind: known_issue
+  domain: audio
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: external microphones / active noise cancellation
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Apple officially acknowledges AirPods Pro 2 ANC audio problems from blocked microphones
+      body: Apple's official support document for AirPods Pro 2 (and other ANC models) states that blocked
+        or covered external microphones can temporarily cause high-pitched sounds, feedback, or other
+        audio-performance problems under ANC — official acknowledgment that ANC-related audio faults occur
+        on this model.
+      advice: Apple itself documents ANC audio faults (high-pitched sounds, feedback) on AirPods Pro 2
+        tied to the external microphones. If you hear such noise, first check/clean the mic openings and
+        run the ear-tip fit test before assuming a hardware defect — but a persistent fault in a quiet
+        room is the documented owner-reported defect above.
+    tr:
+      title: Apple, AirPods Pro 2'de tıkanmış mikrofonlardan kaynaklanan ANC ses sorunlarını resmen kabul
+        ediyor
+      body: Apple'ın AirPods Pro 2 (ve diğer ANC modelleri) için resmi destek belgesi, tıkanmış veya kapatılmış
+        harici mikrofonların ANC altında geçici olarak yüksek perdeli seslere, geri beslemeye veya diğer
+        ses performansı sorunlarına neden olabileceğini belirtiyor — bu modelde ANC ile ilgili ses arızalarının
+        oluştuğuna dair resmi kabul.
+      advice: Apple'ın kendisi, AirPods Pro 2'de harici mikrofonlara bağlı ANC ses arızalarını (yüksek
+        perdeli sesler, geri besleme) belgeliyor. Böyle bir gürültü duyarsanız, önce mikrofon açıklıklarını
+        kontrol edin/temizleyin ve donanım arızası olduğunu varsaymadan önce kulak ucu uyum testini çalıştırın
+        — ancak sessiz bir odada kalıcı bir arıza, yukarıda belgelenen sahip bildirimli arızadır.
+  evidence:
+  - url: https://support.apple.com/ja-jp/111108
+    quote: マイクが塞がれていたり覆われていたりすると、一時的に、マイクから鋭い高音や甲高い音がしたり、音響フィードバックが起きたり、その他のオーディオパフォーマンスの問題が引き起こされる可能性があります。
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:32:51+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Jabra
+      series: Elite 10 Gen 2
+  kind: known_issue
+  domain: general
+  severity: high
+  consequence: ''
+  detection: ''
+  component: right earbud charging contacts
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Right earbud stops charging entirely after ~3.5 months of use
+      body: Found via Best Buy customer review (rated 2/5). Owner reports the right earbud progressively
+        failed to charge and then stopped charging entirely within 3.5 months of purchase, with no fix
+        from re-seating or re-pairing.
+      advice: If buying, verify the charging behavior of both earbuds within the return window. If the
+        right earbud fails to charge, this is a documented hardware failure, not user error.
+    tr:
+      title: Sağ kulaklık yaklaşık 3,5 ay kullanımdan sonra tamamen şarj olmayı bırakıyor
+      body: Best Buy müşteri incelemesiyle bulundu (2/5 olarak derecelendirildi). Sahibi, sağ kulaklığın
+        giderek şarj olmadığını ve satın almadan sonraki 3,5 ay içinde tamamen şarj olmayı bıraktığını,
+        yeniden yerleştirme veya yeniden eşleştirmenin çözüm olmadığını bildiriyor.
+      advice: Satın alacaksanız, iade süresi içinde her iki kulaklığın şarj davranışını doğrulayın. Sağ
+        kulaklık şarj olmuyorsa, bu kullanıcı hatası değil, belgelenmiş bir donanım arızasıdır.
+  evidence:
+  - url: https://www.bestbuy.com/site/reviews/jabra-elite-10-gen-2-dolby-atmos-noise-cancelling-wireless-in-ear-headphones-with-smart-case-denim/6582103?rating=2
+    quote: Around late Feb-March 2025, the right earphone wasn't charging past 70-80%. I re-seated it
+      multiple times, but figured out the only way to get it to charge all the way was to remove the left
+      earphone from the charging case. I've also tried re-pairing the bluetooth Starting in late March,
+      the right earphone won't charge at all.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:31:03+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Jabra
+      series: Elite 8 Active
+  kind: known_issue
+  domain: audio
+  severity: high
+  consequence: ''
+  detection: ''
+  component: left earbud driver/electronics
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Left earbud emits terrible static sound triggered by walking or bus vibration within 3 months
+      body: Amazon SG customer review from Japan (Oct 2024). Owner reports the left earbud produced painful
+        static noise triggered by physical movement (walking, bus vibration) within 3 months of careful
+        use. This is the owner's second Jabra pair to fail within a year.
+      advice: The static is triggered by physical motion, suggesting a loose internal connection or defective
+        driver. This failure appeared within 3 months — well inside a typical warranty — so test under
+        movement (walking, public transport) early and claim warranty if it occurs.
+    tr:
+      title: Sol kulaklık 3 ay içinde yürüme veya otobüs titreşimiyle tetiklenen korkunç statik ses yayıyor
+      body: Japonya'dan Amazon SG müşteri incelemesi (Ekim 2024). Sahibi, sol kulaklığın dikkatli kullanımın
+        3 ayı içinde fiziksel hareketle (yürüme, otobüs titreşimi) tetiklenen acı verici statik gürültü
+        ürettiğini bildiriyor. Bu, sahibin bir yıl içinde arızalanan ikinci Jabra çifti.
+      advice: Statik, fiziksel hareketle tetikleniyor; bu da gevşek bir iç bağlantıya veya arızalı sürücüye
+        işaret ediyor. Bu arıza 3 ay içinde ortaya çıktı — tipik bir garanti süresinin oldukça içinde
+        — bu yüzden hareket altında (yürüme, toplu taşıma) erken test edin ve olursa garanti talebinde
+        bulunun.
+  evidence:
+  - url: https://www.amazon.sg:443/product-reviews/B0CGDX3F63/ref=pd_sbs_d_sccl_2_1_cr/357-7362661-1790536?pd_rd_w=Xvr1i&content-id=amzn1.sym.3cdd08be-a5f7-4ba6-af25-e5fb2bb96dba&pf_rd_p=3cdd08be-a5f7-4ba6-af25-e5fb2bb96dba&pf_rd_r=RDRZAZDZ0TYPAGMD9CVX&pd_rd_wg=dVL3z&pd_rd_r=5926ff91-4ca6-4831-ab01-a3f088ab69e8&pd_rd_i=B0CGDX3F63
+    quote: I was extremely careful with this pair, but within less than 3 months the left earphone started
+      blowing up my ear with terrible static sound when on the bus and even if I walk too firmly.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:33:26+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Sony
+      series: WF-1000X
+  kind: known_issue
+  domain: audio
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: Active Noise Canceling (ANC)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Sony acknowledges white noise/static under Active Noise Canceling on WF-1000XM5
+      body: Sony's own documentation confirms that a continuous static/white noise is heard whenever the
+        Noise Canceling function is on, and the only remedy it gives is to turn ANC off.
+      advice: Expect a faint hiss/static whenever ANC is enabled; Sony documents this as inherent to the
+        ANC implementation rather than a per-unit defect. If that hiss bothers you, the only remedy Sony
+        offers is to disable ANC, which defeats the main selling point.
+    tr:
+      title: Sony, WF-1000XM5'te Aktif Gürültü Engelleme altında beyaz gürültü/statik olduğunu kabul ediyor
+      body: Sony'nin kendi belgeleri, Gürültü Engelleme işlevi açık olduğunda sürekli statik/beyaz gürültü
+        duyulduğunu doğruluyor ve sunduğu tek çözüm ANC'yi kapatmak.
+      advice: ANC etkinleştirildiğinde hafif bir tıslama/statik bekleyin; Sony bunu birim bazlı bir arıza
+        değil, ANC uygulamasına özgü doğal bir durum olarak belgeliyor. Bu tıslama sizi rahatsız ediyorsa,
+        Sony'nin sunduğu tek çözüm ANC'yi devre dışı bırakmak, ki bu da ana satış noktasını ortadan kaldırıyor.
+  evidence:
+  - url: https://www.sony.com.au/electronics/support/audio-systems-mhc-series/mhc-nxm3/articles/00298368
+    quote: 'White noise (a small electrical noise with continuous static sound) is heard
+
+
+      This happens because of the Noise Canceling function. To avoid white noise, turn off the Noise Canceling
+      function.'
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:34:18+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Jabra
+      series: Elite 10
+  kind: known_issue
+  domain: audio
+  severity: low
+  consequence: ''
+  detection: ''
+  component: active noise cancellation (ANC) / microphones
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Jabra firmware updates address wind noise and ANC-on-call performance
+      body: Jabra's own support page lists firmware updates specifically for wind noise reduction in ANC/HearThrough
+        and ANC-on-call performance, confirming these were acknowledged issues being patched.
+      advice: Keep the firmware updated via the Jabra Sound+ app; some ANC/wind-noise complaints may already
+        be improved in current firmware, so check for updates before judging the unit.
+    tr:
+      title: Jabra yazılım güncellemeleri rüzgar gürültüsünü ve arama sırasında ANC performansını ele
+        alıyor
+      body: Jabra'nın kendi destek sayfası, özellikle ANC/HearThrough'ta rüzgar gürültüsü azaltma ve arama
+        sırasında ANC performansı için yazılım güncellemelerini listeliyor; bu da bunların yamalanan kabul
+        edilmiş sorunlar olduğunu doğruluyor.
+      advice: Yazılımı Jabra Sound+ uygulaması üzerinden güncel tutun; bazı ANC/rüzgar gürültüsü şikayetleri
+        mevcut yazılımda zaten iyileştirilmiş olabilir, bu yüzden birimi değerlendirmeden önce güncellemeleri
+        kontrol edin.
+  evidence:
+  - url: https://www.jabra.com/en-sg/supportpages/jabra-elite-10
+    quote: '• Updated: wind noise reduction in ANC and HearThrough mode, having the microphones work better
+      together to detect wind noise levels.'
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:30:25+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Bose
+      series: QuietComfort Ultra Earbuds
+  kind: known_issue
+  domain: audio
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: ANC microphones
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Bose confirms crackling/static under ANC in loud environments is 'normal'
+      body: Bose's own support bulletin states that crackling or distortion under noise cancellation in
+        loud environments is expected behaviour of the ANC microphones and 'normal', not a defect.
+      advice: If the buyer uses these in loud settings (commutes, transit, construction), they should
+        expect intermittent crackling/static from the ANC microphones. Bose will treat it as normal and
+        not a warranty fault, so it cannot be fixed by replacement.
+    tr:
+      title: Bose, gürültülü ortamlarda ANC altında çıtırtı/statik sesin 'normal' olduğunu doğruluyor
+      body: Bose'un kendi destek bülteni, gürültülü ortamlarda gürültü engelleme altında çıtırtı veya
+        bozulmanın ANC mikrofonlarının beklenen davranışı ve 'normal' olduğunu, kusur olmadığını belirtiyor.
+      advice: Alıcı bunları gürültülü ortamlarda (işe gidiş-geliş, toplu taşıma, inşaat) kullanırsa, ANC
+        mikrofonlarından aralıklı çıtırtı/statik ses beklemelidir. Bose bunu normal sayacak ve garanti
+        arızası olarak değerlendirmeyecek, bu nedenle değişimle düzeltilemez.
+  evidence:
+  - url: https://support.bose.com.au/article/quietcomfort-ultra-earbuds-noise-cancellation-is-not-working
+    quote: In very loud settings—such as airplane takeoffs, concerts, emergency sirens, or construction
+      zones—your headphones' noise-cancelling microphones can become overwhelmed, which may cause brief
+      crackling or distortion.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:32:11+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Bose
+      series: QuietComfort Earbuds (2024)
+  kind: known_issue
+  domain: audio
+  severity: high
+  consequence: ''
+  detection: ''
+  component: right earbud / Bluetooth connection
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Right earbud drops out; Bluetooth Multipoint causes stutters and dropouts (2024 model)
+      body: Professional lab review of the 2024 model (model number 888507-0100, firmware 1.1.2), scoring
+        Connectivity 5.0/10.
+      advice: A professional test unit dropped the right earbud repeatedly and stuttered when Bluetooth
+        Multipoint was enabled. A buyer can disable Multipoint in the app, but a single-bud dropout is
+        not fixable by the user and is the main reason the reviewer withheld a stronger recommendation.
+    tr:
+      title: Sağ kulaklık düşüyor; Bluetooth Multipoint takılmalara ve bağlantı kopmalarına neden oluyor
+        (2024 modeli)
+      body: 2024 modelinin (model numarası 888507-0100, yazılım 1.1.2) profesyonel laboratuvar incelemesi,
+        Bağlantı puanı 5.0/10.
+      advice: Profesyonel bir test birimi sağ kulaklığı defalarca düşürdü ve Bluetooth Multipoint etkinleştirildiğinde
+        takıldı. Alıcı uygulamada Multipoint'i devre dışı bırakabilir, ancak tek kulaklığın düşmesi kullanıcı
+        tarafından düzeltilemez ve incelemecinin daha güçlü bir öneriyi esirgemesinin ana nedenidir.
+  evidence:
+  - url: https://www.soundguys.com/bose-quietcomfort-earbuds-2024-review-124327/
+    quote: Often, one earbud, particularly the right earbud, would inexplicably drop out.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:35:04+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Jabra
+      series: Elite 8 Active Gen 2
+  kind: known_issue
+  domain: audio
+  severity: high
+  consequence: ''
+  detection: ''
+  component: right earbud (ANC/hear-through microphone path)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Constant black noise in right earbud in hear-through and ANC modes
+      body: Owner of a third pair of Jabra earbuds reports persistent black/static noise in the right
+        earbud in both hear-through and ANC modes; firmware reinstall did not fix it and customer support
+        was unhelpful. The reviewer notes this appears to be a common issue online.
+      advice: If you buy these, test ANC and hear-through modes on both earbuds within the return window;
+        a defective unit may show static noise in one bud that firmware cannot fix.
+    tr:
+      title: Şeffaflık ve ANC modlarında sağ kulaklıkta sürekli siyah gürültü
+      body: Üçüncü bir Jabra kulaklık çiftinin sahibi, hem şeffaflık hem de ANC modlarında sağ kulaklıkta
+        kalıcı siyah/statik gürültü bildiriyor; yazılımı yeniden yüklemek sorunu düzeltmedi ve müşteri
+        desteği yardımcı olmadı. İncelemeci bunun çevrimiçi olarak yaygın bir sorun gibi göründüğünü belirtiyor.
+      advice: Bunları satın alırsanız, iade süresi içinde her iki kulaklıkta ANC ve şeffaflık modlarını
+        test edin; arızalı bir birim, yazılımın düzeltemeyeceği bir kulaklıkta statik gürültü gösterebilir.
+  evidence:
+  - url: https://www.amazon.com.au/gp/customer-reviews/R25PYUDBAT7JP3/ref=cm_cr_arp_d_rvw_ttl?ie=UTF8&ASIN=B0CFVFCMVP
+    quote: There is constant black noise coming from the right earbud in hear-through and ANC modes. Have
+      tried reinstalling the firmware, nothing from customer support despite seeing this looking to be
+      a common issue from what I can see online.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:31:37+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Jabra
+      series: Elite 8 Active
+  kind: known_issue
+  domain: audio
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: left earbud ANC
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Left earbud hisses in ANC mode; suspected firmware problem
+      body: Alza.cz verified-purchase review (Czech, Feb 2024). Owner reports the left earbud hisses in
+        ANC mode and notes other reviews attribute it to a firmware problem. Same owner also reports handsfree
+        microphone failure (other party cannot hear) and earbuds falling out during sweaty exercise.
+      advice: Corroborates the ANC static/hissing fault reported by other owners. The reviewer also flags
+        a handsfree microphone issue and sweat-related fit failure during exercise — relevant for a product
+        marketed for sports use. Test ANC and call quality within the return window.
+    tr:
+      title: Sol kulaklık ANC modunda tıslıyor; yazılım sorunundan şüpheleniliyor
+      body: Alza.cz doğrulanmış satın alma incelemesi (Çekçe, Şubat 2024). Sahibi, sol kulaklığın ANC
+        modunda tısladığını bildiriyor ve diğer incelemelerin bunu bir yazılım sorununa bağladığını belirtiyor.
+        Aynı sahip ayrıca kulaklığın eller serbest mikrofon arızasını (karşı taraf duyamıyor) ve terli
+        egzersiz sırasında kulaklıkların düşmesini bildiriyor.
+      advice: Diğer sahipler tarafından bildirilen ANC statik/tıslama arızasını doğruluyor. İncelemeci
+        ayrıca bir eller serbest mikrofon sorununu ve egzersiz sırasında terle ilgili uyum başarısızlığını
+        işaret ediyor — spor kullanımı için pazarlanan bir ürün için önemli. İade süresi içinde ANC ve
+        arama kalitesini test edin.
+  evidence:
+  - url: https://m.alza.cz/recenze/jabra-elite-8-active-cerne-7885077.htm
+    quote: produkt nedoporučuji. cena poměr výkon tristní. při anc levé sluchátko šumí, údajně problém
+      firmware dle různých recenzí.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:33:26+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Jabra
+      series: Elite 10
+  kind: known_issue
+  domain: audio
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: active noise cancellation (ANC) / eartip seal
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: ANC picks up wind sound and sound seal is poor (owner reviews)
+      body: Aggregated owner reviews report the ANC picks up wind noise when windy and that the sound
+        seal is poor across all eartip sizes, making the buds hard to use without ANC.
+      advice: If you use these outdoors or on public transport, expect wind noise to leak through ANC
+        and a weak passive seal; try all eartip sizes, but be prepared that the seal may still be insufficient
+        for your ear shape.
+    tr:
+      title: ANC rüzgar sesini alıyor ve ses sızdırmazlığı zayıf (sahip incelemeleri)
+      body: Toplanan sahip incelemeleri, rüzgarlı havada ANC'nin rüzgar gürültüsünü aldığını ve ses sızdırmazlığının
+        tüm kulak içi uç boyutlarında zayıf olduğunu, bu da kulaklıkların ANC olmadan kullanılmasını zorlaştırdığını
+        bildiriyor.
+      advice: Bunları açık havada veya toplu taşımada kullanırsanız, rüzgar gürültüsünün ANC'den sızmasını
+        ve zayıf bir pasif sızdırmazlığı bekleyin; tüm kulak içi uç boyutlarını deneyin, ancak sızdırmazlığın
+        kulak şekliniz için hâlâ yetersiz olabileceğine hazırlıklı olun.
+  evidence:
+  - url: https://www.google.com.do/shopping/product/851405659932621967/reviews?sca_esv=92608ac12c65487e&hl=zh-CN&q=bibliogroup:%22LEA's+communication+series%22&prds=pid:9517903007082336960,rate:1,rnum:10,rsk:PC_15466069837562184362&sa=X&ved=0ahUKEwizioKfoP6IAxUi1jgGHaAcLxEQn08ITCgE
+    quote: The ANC is also horribly designed and does not do its job well. It even picks up wind sound
+      when it is slightly windy when ANC is on.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:30:25+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: apple
+      series: airpods pro 3
+  kind: known_issue
+  domain: audio
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: Active Noise Cancellation / Transparency mode
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Only workaround reported is disabling ANC and Transparency entirely
+      body: The October 29, 2025 MacRumors report (the first on this issue) says the only way owners found
+        to fully eliminate the static is to turn off ANC and Transparency, which disables the earbuds'
+        headline features.
+      advice: If the noise affects your unit, the only reliable workaround reported is disabling ANC and
+        Transparency — which removes the main reason to buy Pro earbuds. This is a meaningful functional
+        compromise for a premium product.
+    tr:
+      title: Bildirilen tek geçici çözüm ANC ve Şeffaflığı tamamen devre dışı bırakmak
+      body: 29 Ekim 2025 tarihli MacRumors raporu (bu konudaki ilk rapor), sahiplerin statiği tamamen
+        ortadan kaldırmak için bulduğu tek yolun ANC ve Şeffaflığı kapatmak olduğunu, bunun da kulaklıkların
+        öne çıkan özelliklerini devre dışı bıraktığını söylüyor.
+      advice: Gürültü sizin biriminizi etkiliyorsa, bildirilen tek güvenilir geçici çözüm ANC ve Şeffaflığı
+        devre dışı bırakmaktır — bu da Pro kulaklık satın almanın ana nedenini ortadan kaldırır. Bu, premium
+        bir ürün için anlamlı bir işlevsel ödündür.
+  evidence:
+  - url: https://www.macrumors.com/2025/10/29/airpods-pro-3-static-complaints/
+    quote: The only option for eliminating the static entirely appears to be turning ANC and Transparency
+      off, which can be done in the Settings app when wearing the AirPods.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:29:28+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Bose
+      series: QuietComfort Ultra Earbuds
+  kind: known_issue
+  domain: audio
+  severity: high
+  consequence: ''
+  detection: ''
+  component: left earbud (ANC)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Left earbud emits constant hissing/static noise
+      body: A Best Buy owner review reports a constant, ever-present hissing/static noise from the left
+        earbud that could not be resolved, which the reviewer rated as a 2-star defect despite praising
+        sound and ANC.
+      advice: A persistent hiss/static in one earbud is a reported unit-level defect that the owner could
+        not eliminate; the buyer may need a replacement unit, and should test both buds in a quiet room
+        before relying on them.
+    tr:
+      title: Sol kulaklık sürekli tıslama/statik gürültü yayıyor
+      body: Bir Best Buy sahibi incelemesi, sol kulaklıktan giderilemeyen sürekli, her zaman var olan
+        bir tıslama/statik gürültü bildiriyor; inceleyen kişi ses ve ANC övgüsüne rağmen bunu 2 yıldızlı
+        bir kusur olarak değerlendirdi.
+      advice: Tek bir kulaklıkta kalıcı tıslama/statik, sahibinin gideremediği bildirilmiş bir birim düzeyinde
+        kusurdur; alıcının yedek bir birime ihtiyacı olabilir ve bunlara güvenmeden önce her iki kulaklığı
+        sessiz bir odada test etmelidir.
+  evidence:
+  - url: https://www.google.com.tw/shopping/product/16535663568639244528/reviews?sca_esv=ad6f04eae533dd67&hl=en&q=site:global-control.ru&prds=eto:7987299480994058759_0,pid:11356312515892800886,rate:2,rnum:10,rsk:PC_9604285017158151144&sa=X&ved=0ahUKEwisoJ6ezpOJAxUJzTgGHQYyCxwQn08IOCgD
+    quote: There's an incessant, annoying, and ever present hissing/static noise that comes from the left
+      ear-bud, no matter how hard I try to ...
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:32:11+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Jabra
+      series: Elite 8 Active
+  kind: known_issue
+  domain: audio
+  severity: high
+  consequence: ''
+  detection: ''
+  component: both earbuds, audio output
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Both earbuds emit painfully loud high-pitched ringing noise after ~4 months
+      body: Best Buy customer review (1-star). Owner reports both earbuds intermittently emit a very loud
+        high-pitched ringing noise regardless of volume setting, painful to the ear, appearing after ~4
+        months — past the return period.
+      advice: 'This is a safety-relevant fault: loud unexpected tones at full amplitude regardless of
+        volume. It appeared after the return window, so the owner was stuck with a defective product.
+        Buyers should be aware that defects may surface after the return period and require warranty claims.'
+    tr:
+      title: Her iki kulaklık ~4 ay sonra acı verici derecede yüksek tiz çınlama sesi yayıyor
+      body: Best Buy müşteri incelemesi (1 yıldız). Sahip, her iki kulaklığın ses ayarından bağımsız olarak
+        aralıklı olarak çok yüksek tiz çınlama sesi yaydığını, kulağa acı verdiğini ve ~4 ay sonra ortaya
+        çıktığını bildiriyor — iade süresi geçmiş.
+      advice: 'Bu güvenlikle ilgili bir arızadır: ses seviyesinden bağımsız olarak tam genlikte yüksek
+        beklenmedik tonlar. İade penceresinden sonra ortaya çıktı, bu yüzden sahip kusurlu bir ürünle
+        baş başa kaldı. Alıcılar kusurların iade süresinden sonra ortaya çıkabileceğini ve garanti talepleri
+        gerektirebileceğini bilmelidir.'
+  evidence:
+  - url: https://www.bestbuy.com/site/reviews/jabra-elite-8-active-gen-2-military-grade-wireless-in-ear-headphones-with-smart-case-navy/6582104?rating=1
+    quote: 'After about 4 months of using (which is already longer than the return period): This earphone
+      (both left and right) sometimes would make a REALLY LOUD high-pitched ringing noise when it''s near
+      my ear. Even when I already set the volume to very low or 0. It actually hurts my ear'
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:31:37+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Bose
+      series: QuietComfort Ultra Earbuds
+  kind: known_issue
+  domain: audio
+  severity: high
+  consequence: ''
+  detection: ''
+  component: earbud hardware / Bluetooth
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Multiple owners report static, crackling and thumping noises plus connectivity faults
+      body: A detailed Amazon UK owner account describes connectivity failures within a week, loud thumping
+        noises during movement, and static in the right earbud after three weeks; the replacement unit
+        reportedly showed the same crackling and connectivity faults.
+      advice: This owner experienced faults on the original and replacement units, requiring multiple
+        exchanges. The buyer should keep proof of purchase and be prepared for possible returns/replacements;
+        the report also notes refunds were refused after the return window passed.
+    tr:
+      title: Birden fazla sahip statik, çıtırtı ve gümbürtü sesleri ile bağlantı arızaları bildiriyor
+      body: Ayrıntılı bir Amazon UK sahip hesabı, bir hafta içinde bağlantı arızalarını, hareket sırasında
+        yüksek gümbürtü seslerini ve üç hafta sonra sağ kulaklıkta statiği tanımlıyor; yedek birimin aynı
+        çıtırtı ve bağlantı arızalarını gösterdiği bildiriliyor.
+      advice: Bu sahip, orijinal ve yedek birimlerde arızalar yaşadı ve birden fazla değişim gerekti.
+        Alıcı satın alma kanıtını saklamalı ve olası iade/değişimlere hazırlıklı olmalıdır; rapor ayrıca
+        iade süresi geçtikten sonra para iadelerinin reddedildiğini de belirtiyor.
+  evidence:
+  - url: https://www.amazon.co.uk/dp/B0CN9H2PLY?m=A3P5ROKL5A1OLE&tag=idealocouk-21&ascsubtag=2025-11-25_797d4f143022474f680fabacc07ced3f2036d71ea957a35ae925e6281067f0a9&th=1&psc=1
+    quote: Most of these earbuds will be faulty and you will experience connectivity issues, static and
+      crackling noises and loud thumping noises that will ruin any attempt to enjoy your audio content.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:32:11+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Samsung
+      series: Galaxy Buds
+  kind: known_issue
+  domain: audio
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: Sub-microphone (outer upper edge)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Samsung official notice: covering the sub-microphone makes Buds3 Pro screech'
+      body: Samsung's own support page (updated 31 August 2024) confirms that touching or covering the
+        sub-microphone while ANC, adaptive sound or ambient sound is on makes the microphone pick up the
+        contact and generate a beep or screeching sound. This is the manufacturer's official acknowledgement
+        of a screeching/static behaviour tied to the microphone placement.
+      advice: 'The screeching is partly a design interaction: covering the sub-microphone while adjusting
+        the buds triggers it. If you hear it, reposition without touching the outer upper edge; but if
+        it persists without contact, it may be the ANC fault reported by owners.'
+    tr:
+      title: 'Samsung resmi bildirimi: alt mikrofonu kapatmak Buds3 Pro''nun çığlık atmasına neden oluyor'
+      body: Samsung'un kendi destek sayfası (31 Ağustos 2024'te güncellendi), ANC, uyarlanabilir ses veya
+        ortam sesi açıkken alt mikrofona dokunmanın veya onu kapatmanın, mikrofonun teması algılamasına
+        ve bir bip veya çığlık sesi üretmesine neden olduğunu doğruluyor. Bu, üreticinin mikrofon yerleşimine
+        bağlı bir çığlık/statik davranışının resmi kabulüdür.
+      advice: 'Çığlık kısmen bir tasarım etkileşimidir: kulaklıkları ayarlarken alt mikrofonu kapatmak
+        bunu tetikler. Bunu duyarsanız, dış üst kenara dokunmadan yeniden konumlandırın; ancak temas olmadan
+        devam ederse, sahiplerin bildirdiği ANC arızası olabilir.'
+  evidence:
+  - url: https://www.samsung.com/africa_fr/support/mobile-devices/why-your-galaxy-buds3-buds3-pro-make-a-screeching-sound-when-you-hold-them/
+    quote: si vous touchez ou couvrez la zone autour du sous-microphone en mettant, retirant ou ajustant
+      vos Galaxy Buds, le microphone peut capter ce contact et générer un bip ou un bruit strident.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:28:32+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Bose
+      series: QuietComfort Ultra Earbuds
+  kind: known_issue
+  domain: general
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: connection / volume balance
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Unit broke quickly with connection problems and uneven volume between buds
+      body: A Galaxus owner review reports the unit broke quickly, with constant connection problems and
+        a volume imbalance between left and right buds, which the owner attributed to poor quality control
+        and returned.
+      advice: Reliability complaints include connection drops and a left/right volume imbalance. The buyer
+        should check both buds' volume and connection stability early in the return window, since these
+        faults may appear shortly after purchase.
+    tr:
+      title: Birim bağlantı sorunları ve kulaklıklar arasında dengesiz ses seviyesi ile hızla bozuldu
+      body: Bir Galaxus sahip incelemesi, birimin hızla bozulduğunu, sürekli bağlantı sorunları ve sol
+        ile sağ kulaklıklar arasında ses seviyesi dengesizliği olduğunu bildiriyor; sahip bunu kötü kalite
+        kontrolüne bağladı ve iade etti.
+      advice: Güvenilirlik şikayetleri arasında bağlantı kopmaları ve sol/sağ ses seviyesi dengesizliği
+        bulunur. Alıcı, bu arızalar satın almadan kısa süre sonra ortaya çıkabileceğinden, iade penceresi
+        içinde erken dönemde her iki kulaklığın ses seviyesini ve bağlantı kararlılığını kontrol etmelidir.
+  evidence:
+  - url: https://www.galaxus.de/en/productrating/ging-schnell-kaputt-10428578
+    quote: It broke after a very short time. The connection quality is poor and the volume is different
+      on both sides, which is maddening.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:32:11+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Jabra
+      series: Elite 10 Gen 2
+  kind: known_issue
+  domain: general
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: right earbud power/connection logic
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Right earbud randomly turns off and frequent re-pairing required
+      body: Found via Best Buy customer review (rated 2/5, owned 3 months). Owner reports the right earbud
+        randomly powers off or fails to activate when removed from the case, and the buds require frequent
+        re-pairing with phone and laptop.
+      advice: Expect possible intermittent right-bud dropouts and re-pairing hassle. This is a reliability
+        issue that may require warranty support.
+    tr:
+      title: Sağ kulaklık rastgele kapanıyor ve sık sık yeniden eşleştirme gerekiyor
+      body: Best Buy müşteri incelemesi aracılığıyla bulundu (5 üzerinden 2 olarak derecelendirildi, 3
+        aydır sahip). Sahip, sağ kulaklığın rastgele kapandığını veya kutudan çıkarıldığında etkinleşmediğini
+        ve kulaklıkların telefon ve dizüstü bilgisayarla sık sık yeniden eşleştirilmesi gerektiğini bildiriyor.
+      advice: Olası aralıklı sağ kulaklık kopmaları ve yeniden eşleştirme zahmeti bekleyin. Bu, garanti
+        desteği gerektirebilecek bir güvenilirlik sorunudur.
+  evidence:
+  - url: https://www.bestbuy.com/site/reviews/jabra-elite-10-gen-2-dolby-atmos-noise-cancelling-wireless-in-ear-headphones-with-smart-case-denim/6582103?rating=2
+    quote: These have been a big disappointment because 1) the right earbud randomly turns off or doesn't
+      activate when taken out of the case for use, 2) the "case as transmitter function" doesn't work
+      at all on planes, and 3) I have to regularly re-pair them with both my phone and laptop. I don't
+      know if I just got a "lemon" pair or it all of them are just as lousy. When they work, they sound
+      great. I just wish they'd work more often and with greater predictability.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:31:03+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: apple
+      series: airpods pro 3
+  kind: known_issue
+  domain: general
+  severity: low
+  consequence: ''
+  detection: ''
+  component: Firmware 8B30 / audio latency
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Static/white-noise reports also include latency and audio-video sync problems in later firmware
+      body: A Chinese-language report (citing MacRumors via Huanqiu) says after installing the updates
+        some users also reported new latency and audio-video sync problems when watching video, in addition
+        to the unresolved static.
+      advice: Beyond the static, buyers watching video on the AirPods Pro 3 may also encounter audio delay/sync
+        issues reported after the firmware updates.
+    tr:
+      title: Statik/beyaz gürültü raporları ayrıca sonraki ürün yazılımlarında gecikme ve ses-video senkronizasyon
+        sorunlarını da içeriyor
+      body: Çince bir rapor (Huanqiu aracılığıyla MacRumors'a atıfta bulunarak), güncellemeleri yükledikten
+        sonra bazı kullanıcıların çözülmemiş statiğe ek olarak video izlerken yeni gecikme ve ses-video
+        senkronizasyon sorunları da bildirdiğini söylüyor.
+      advice: Statiğin ötesinde, AirPods Pro 3'te video izleyen alıcılar, ürün yazılımı güncellemelerinden
+        sonra bildirilen ses gecikmesi/senkronizasyon sorunlarıyla da karşılaşabilir.
+  evidence:
+  - url: https://finance.sina.com.cn/roll/2025-12-19/doc-inhchwwp5982721.shtml
+    quote: 安装更新后的用户表示，噪音问题不仅未消除，部分场景下播放媒体时也会出现静电噪音，同时还新增了视频观看时的延迟、音画不同步等问题。
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:34:33+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: apple
+      series: airpods pro 3
+  kind: known_issue
+  domain: audio
+  severity: high
+  consequence: ''
+  detection: ''
+  component: Active Noise Cancellation / microphone array
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: AirPods Pro 3 emits static/white-noise hiss under Active Noise Cancellation
+      body: Owners report a static/hiss/white-noise sound, most noticeable with ANC on and nothing playing,
+        and it also appears in Adaptive and Transparency modes. The only reported way to silence it is
+        turning ANC and Transparency off entirely.
+      advice: If the buyer relies on ANC for quiet (office, flights), this is the central defect to weigh.
+        It is a documented, recurring owner complaint, not a one-off, and no firmware fix was confirmed
+        at the time of reporting.
+    tr:
+      title: AirPods Pro 3, Aktif Gürültü Önleme açıkken statik/beyaz gürültü tıslaması yayıyor
+      body: Sahipler, en çok ANC açıkken ve hiçbir şey çalmıyorken fark edilen bir statik/tıslama/beyaz
+        gürültü sesi bildiriyor ve bu ses Uyarlanabilir ve Şeffaflık modlarında da ortaya çıkıyor. Sesi
+        susturmanın bildirilen tek yolu ANC ve Şeffaflık'ı tamamen kapatmak.
+      advice: Alıcı sessizlik için ANC'ye güveniyorsa (ofis, uçuşlar), bu, değerlendirilmesi gereken temel
+        kusurdur. Bu, belgelenmiş, tekrarlayan bir sahip şikayetidir, tek seferlik bir durum değildir
+        ve raporlama sırasında hiçbir ürün yazılımı düzeltmesi doğrulanmamıştır.
+  evidence:
+  - url: https://www.macrumors.com/2025/10/29/airpods-pro-3-static-complaints/
+    quote: Some AirPods Pro 3 owners have been experiencing a problem with a static-like sound when Active
+      Noise Cancellation is on but no media is playing, according to complaints on Reddit and the MacRumors
+      forums.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:29:28+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Jabra
+      series: Elite 8 Active Gen 2
+  kind: known_issue
+  domain: audio
+  severity: low
+  consequence: ''
+  detection: ''
+  component: ANC (high-frequency attenuation)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Residual hissing/static in treble range under ANC
+      body: CHIP.de's professional test notes that while ANC effectively reduces bass and midrange noise,
+        a residual hissing/static (Rauschen) remains audible in the treble range. This is a professional
+        measurement-based observation, not an owner complaint.
+      advice: If you are sensitive to high-frequency hiss, note that ANC does not fully eliminate treble
+        noise; this is a characteristic of the ANC implementation rather than a defect.
+    tr:
+      title: ANC altında tiz aralığında kalan tıslama/statik
+      body: CHIP.de'nin profesyonel testi, ANC'nin bas ve orta frekans gürültüsünü etkili biçimde azaltmasına
+        rağmen tiz aralığında duyulabilir bir kalan tıslama/statik (Rauschen) kaldığını belirtiyor. Bu,
+        sahip şikayeti değil, profesyonel ölçüme dayalı bir gözlemdir.
+      advice: Yüksek frekanslı tıslamaya duyarlıysanız, ANC'nin tiz gürültüsünü tamamen ortadan kaldırmadığını
+        unutmayın; bu, bir kusur değil ANC uygulamasının bir özelliğidir.
+  evidence:
+  - url: https://www.chip.de/test/Jabra-Elite-8-active-Gen-2-Test_185389131.html
+    quote: Mit aktiver Geräuschunterdrückung werden laute Umgebungsgeräusche vor allem im Bass- und Mittenbereich
+      reduziert, im Höhenbereich bleibt aber ein Rauschen zu hören.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:31:37+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Jabra
+      series: Elite 10 Gen 2
+  kind: known_issue
+  domain: audio
+  severity: low
+  consequence: ''
+  detection: ''
+  component: firmware/software audio DSP
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Software bug: bass automatically reduced in very quiet environments; no fix expected'
+      body: Found via Galaxus customer Q&A. An owner reports a software bug where bass is automatically
+        reduced in very quiet environments, noticeably changing sound in spaces like elevators. The owner
+        notes that since Jabra discontinued the product line, a fix is unlikely.
+      advice: If you listen in very quiet environments, expect the sound signature to change (bass drop).
+        This is a firmware behavior unlikely to be patched given Jabra's exit from the earbud market.
+    tr:
+      title: 'Yazılım hatası: çok sessiz ortamlarda bas otomatik olarak azaltılıyor; düzeltme beklenmiyor'
+      body: Galaxus müşteri Soru-Cevap bölümünde bulundu. Bir sahip, çok sessiz ortamlarda basın otomatik
+        olarak azaltıldığı ve asansör gibi mekanlarda sesi belirgin biçimde değiştirdiği bir yazılım hatası
+        bildiriyor. Sahip, Jabra ürün hattını durdurduğu için bir düzeltmenin olası olmadığını belirtiyor.
+      advice: Çok sessiz ortamlarda dinliyorsanız, ses imzasının değişmesini (bas düşüşü) bekleyin. Bu,
+        Jabra'nın kulaklık pazarından çekilmesi göz önüne alındığında yamalanması olası olmayan bir ürün
+        yazılımı davranışıdır.
+  evidence:
+  - url: https://www.galaxus.at/en/s1/questionandanswer/what-was-the-reason-for-returning-these-elite-10-gen2-and-why-does-it-say-mono-for-the-number-of-ear-829780
+    quote: For me, the best in-ear headphones in terms of sound, BUT there is a bug in the software. In
+      a very quiet environment, the bass is automatically reduced very much. This is not noticeable in
+      normal use, but in a lift, for example, the sound changes significantly. As the headphones are the
+      last of their kind developed by Jabra, it is unlikely that there will be a software update.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:31:03+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Jabra
+      series: Elite 10
+  kind: known_issue
+  domain: general
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: eartip fit / retention
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Earbuds fall out during movement / fit instability (owner reviews)
+      body: Amazon UK customer reviews report the buds fall out with slight movement and that the eartip
+        material is not grippy, making them unreliable for sports or active use.
+      advice: If you plan to exercise or move around with these, the fit may not hold; consider whether
+        a more secure earbud design suits your use before buying.
+    tr:
+      title: Kulaklıklar hareket sırasında düşüyor / oturma dengesizliği (sahip incelemeleri)
+      body: Amazon UK müşteri incelemeleri, kulaklıkların hafif hareketle düştüğünü ve kulak ucu malzemesinin
+        kaydırıcı olmadığını, bunun da onları spor veya aktif kullanım için güvenilmez kıldığını bildiriyor.
+      advice: Bunlarla egzersiz yapmayı veya hareket etmeyi planlıyorsanız, oturma sağlam mayabilir; satın
+        almadan önce daha güvenli bir kulaklık tasarımının kullanımınıza uygun olup olmadığını düşünün.
+  evidence:
+  - url: https://website-g7g.amazon.co.uk:443/Jabra-Wireless-Bluetooth-Cancellation-Microphones/dp/B0CB6F24J3/ref=pd_day0fbt_img_d_sccl_1/258-5718259-2396769?pd_rd_w=z2qz8&content-id=amzn1.sym.bfe06781-69ca-4a3a-9842-e535d2f2ae0e&pf_rd_p=bfe06781-69ca-4a3a-9842-e535d2f2ae0e&pf_rd_r=Z2759B5210FPXA9CR3QK&pd_rd_wg=tjBIw&pd_rd_r=f4521547-b16b-429b-bf87-f22419aba894&pd_rd_i=B0CB6F24J3&psc=1
+    quote: They fall out with the slightest movement....
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:30:25+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Jabra
+      series: Elite 10
+  kind: known_issue
+  domain: audio
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: active noise cancellation (ANC)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Slight masking hiss in noise cancellation mode (professional review)
+      body: PCMag's professional review lists a 'slight masking hiss in noise cancellation mode' as a
+        con, independently corroborating an audible artifact in ANC mode.
+      advice: Expect a faint hiss under ANC; if you are sensitive to background hiss in quiet environments
+        this may bother you, and it is a known characteristic rather than a defect you can fix.
+    tr:
+      title: Gürültü önleme modunda hafif maskeleme tıslaması (profesyonel inceleme)
+      body: PCMag'in profesyonel incelemesi, 'gürültü önleme modunda hafif maskeleme tıslaması'nı bir
+        eksi olarak listeliyor ve ANC modunda duyulabilir bir artefaktı bağımsız olarak doğruluyor.
+      advice: ANC altında hafif bir tıslama bekleyin; sessiz ortamlarda arka plan tıslamasına duyarlıysanız
+        bu sizi rahatsız edebilir ve bu, düzeltebileceğiniz bir kusur değil bilinen bir özelliktir.
+  evidence:
+  - url: https://www.pcmag.com/reviews/jabra-elite-10
+    quote: Slight masking hiss in noise cancellation mode
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:30:25+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Samsung
+      series: Galaxy Buds
+  kind: known_issue
+  domain: general
+  severity: high
+  consequence: ''
+  detection: ''
+  component: Charging pin / left earbud
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Galaxy Buds3 Pro left bud fails to charge, with burn mark on charging pin
+      body: PhoneArena aggregates Reddit and Samsung forum reports of a charging defect where the left
+        bud refuses to charge, with some units showing a burn mark where the charging pin connects. It
+        notes the affected units cluster in an October production batch, pointing to a manufacturing rather
+        than software fault, and that workarounds (cleaning contacts, pressing the bud down) do not always
+        work.
+      advice: This is a hardware fault concentrated in certain production batches. Check the batch date
+        under the barcode before buying, and verify both buds charge fully from the case within the return
+        window.
+    tr:
+      title: Galaxy Buds3 Pro sol kulaklık şarj olmuyor, şarj piminde yanık izi var
+      body: PhoneArena, Reddit ve Samsung forum bildirimlerini derleyerek sol kulaklığın şarj olmadığı
+        bir şarj kusurunu aktarıyor; bazı birimlerde şarj piminin bağlandığı yerde yanık izi görülüyor.
+        Etkilenen birimlerin Ekim üretim partisinde yoğunlaştığını, bunun yazılım değil üretim hatasına
+        işaret ettiğini ve geçici çözümlerin (kontakları temizlemek, kulaklığa bastırmak) her zaman işe
+        yaramadığını belirtiyor.
+      advice: Bu, belirli üretim partilerinde yoğunlaşan bir donanım arızasıdır. Satın almadan önce barkodun
+        altındaki parti tarihini kontrol edin ve iade süresi içinde her iki kulaklığın da kutudan tam
+        şarj olduğunu doğrulayın.
+  evidence:
+  - url: https://www.phonearena.com/news/samsung-galaxy-buds-3-pro-charging-issues_id167999
+    quote: One reddit user claims they’re already at their second pair of Buds 3 Pro, and while they perform
+      and sound great, the left bud refuses to charge. It also seems to have a burn charge where the charging
+      pin connects, as seen in the image below.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:28:32+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Sony
+      series: WF-1000X
+  kind: known_issue
+  domain: general
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: Charging case
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: WF-1000XM5 charging case intermittent charging failure reported
+      body: The same long-term owner reports an intermittent charging problem that a service-centre claim
+        did not resolve.
+      advice: One owner reports intermittent charging problems where the service-centre claim came back
+        unresolved and dirty. Verify the charging case actually tops up the earbuds before relying on
+        it, since a failed case leaves the buds unusable.
+    tr:
+      title: WF-1000XM5 şarj kutusunda aralıklı şarj arızası bildirildi
+      body: Aynı uzun süreli sahip, servis merkezi talebinin çözemediği aralıklı bir şarj sorunu bildiriyor.
+      advice: Bir sahip, servis merkezi talebinin çözülmeden ve kirli şekilde geri döndüğü aralıklı şarj
+        sorunları bildiriyor. Şarj kutusunun kulaklıkları gerçekten şarj ettiğini doğrulayın, çünkü arızalı
+        bir kutu kulaklıkları kullanılamaz bırakır.
+  evidence:
+  - url: https://m.alza.cz/EN/reviews/sony-noise-cancelling-wf-1000xm5-silver-7759246.htm
+    quote: Sometimes had a problem with charging, I made a claim, the headphones were returned from the
+      service centre without comment and dirty.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:34:18+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Apple
+      series: AirPods Pro
+  kind: known_issue
+  domain: general
+  severity: high
+  consequence: ''
+  detection: ''
+  component: left earbud lithium-ion battery (~50 mAh cell)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: AirPods Pro 2 left earbud battery dies within 45 minutes at month 13, after warranty
+      body: 'A reliability engineer''s documented failure and component-level Weibull analysis: the left
+        bud''s battery degraded to under 45 minutes of life one month after Apple''s one-year warranty
+        expired, and the analysis identifies the bud batteries (not the ANC/H2 chip) as the dominant failure
+        mode, with system reliability dropping to ~56% by year three.'
+      advice: Battery degradation is the main long-term failure risk on AirPods Pro 2 and typically shows
+        up just after the one-year warranty ends, so a replacement is out-of-pocket. If you plan to keep
+        them past a year, weigh AppleCare+ or a retailer's extended warranty against this known battery
+        wear-out profile.
+    tr:
+      title: AirPods Pro 2 sol kulaklık pili 13. ayda, garanti sonrası 45 dakika içinde bitiyor
+      body: 'Bir güvenilirlik mühendisinin belgelenmiş arızası ve bileşen düzeyinde Weibull analizi: sol
+        kulaklığın pili, Apple''ın bir yıllık garantisinin bitmesinden bir ay sonra 45 dakikanın altına
+        düştü ve analiz, baskın arıza modu olarak (ANC/H2 çipi değil) kulaklık pillerini tanımlıyor; sistem
+        güvenilirliği üçüncü yıla kadar ~%56''ya düşüyor.'
+      advice: Pil bozulması AirPods Pro 2'de ana uzun vadeli arıza riskidir ve genellikle bir yıllık garanti
+        bittikten hemen sonra ortaya çıkar, bu nedenle değişim cepten yapılır. Bir yıldan uzun süre kullanmayı
+        planlıyorsanız, AppleCare+ veya satıcının genişletilmiş garantisini bu bilinen pil aşınma profiline
+        karşı tartın.
+  evidence:
+  - url: https://accendoreliability.com/my-airpods-died-at-month-13-so-i-did-the-maths-on-failure-risk-and-whether-applecare-is-worth-it/
+    quote: My AirPods Pro 2 failed exactly one month after the standard warranty expired. The left earbud’s
+      battery had degraded to the point where it would die within 45 minutes, rendering a $249 product
+      functionally useless.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:32:51+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Apple
+      series: AirPods Pro
+  kind: known_issue
+  domain: audio
+  severity: high
+  consequence: ''
+  detection: ''
+  component: left earbud / ANC and transparency microphones
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: AirPods Pro 2 left bud emits wind-like static noise under ANC/transparency, replacement refused
+      body: 'A consumer complaint filed with the Korea Consumer Agency (한국소비자연맹): about two months after
+        purchase the left unit intermittently produced wind-like noise under noise-cancelling/transparency
+        even in a quiet room; an authorized Apple service center inspected only the exterior, found no
+        fault, and refused exchange, and the noise later became continuous.'
+      advice: 'If you buy AirPods Pro 2 and hear wind/static noise in one bud under ANC in a quiet room,
+        treat it as a documented defect, not a fitment quirk. Expect pushback at service: the owner here
+        was refused a replacement on first visit and had to escalate to a consumer agency. Verify the
+        unit''s behavior early within the warranty window.'
+    tr:
+      title: AirPods Pro 2 sol kulaklık ANC/şeffaflık altında rüzgar benzeri statik gürültü yayıyor, değişim
+        reddedildi
+      body: 'Kore Tüketici Ajansı''na (한국소비자연맹) yapılan bir tüketici şikayeti: satın alımdan yaklaşık
+        iki ay sonra sol birim, sessiz bir odada bile gürültü engelleme/şeffaflık altında aralıklı olarak
+        rüzgar benzeri gürültü üretti; yetkili bir Apple servis merkezi yalnızca dış görünümü inceledi,
+        kusur bulamadı ve değişimi reddetti, gürültü daha sonra sürekli hale geldi.'
+      advice: 'AirPods Pro 2 alıp sessiz bir odada ANC altında bir kulaklıkta rüzgar/statik gürültü duyarsanız,
+        bunu bir uyum sorunu değil belgelenmiş bir kusur olarak değerlendirin. Serviste direnç bekleyin:
+        buradaki sahip ilk ziyarette değişim reddedildi ve bir tüketici ajansına başvurmak zorunda kaldı.
+        Birimin davranışını garanti süresi içinde erken doğrulayın.'
+  evidence:
+  - url: https://www.ccn.go.kr/contents/include.ccn?gSiteCode=2&gMenuCode=4&nMenuCode=76&seq=19987584
+    quote: 구매한지 두 달 쯤 되었을 무렵, 왼쪽 에어팟 유닛에서 주변음 허용/노이즈 캔슬링 기능을 사용할 때 간헐적으로 바람 소리 같은 잡음이 들려서 (조용한 실내에서도)
+      사용하는 데 불편함을 겪고 있습니다.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:32:51+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Jabra
+      series: Elite 8 Active
+  kind: known_issue
+  domain: general
+  severity: low
+  consequence: ''
+  detection: ''
+  component: firmware / ANC processing
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Jabra firmware updates address ANC call performance, wind noise reduction, and microphone
+        noise cancellation
+      body: Official Jabra support page listing firmware update contents. The update log shows Jabra has
+        shipped fixes for ANC call performance, wind noise reduction in ANC/HearThrough, and microphone
+        noise cancellation — consistent with owner-reported ANC-related noise issues.
+      advice: The manufacturer has been patching ANC and noise-related behavior via firmware. Buyers should
+        ensure the latest firmware is installed, but note that owner reports (e.g., the Amazon AU review)
+        indicate firmware reinstall did not resolve the static issue for some.
+    tr:
+      title: Jabra ürün yazılımı güncellemeleri ANC arama performansını, rüzgar gürültüsü azaltmayı ve
+        mikrofon gürültü engellemeyi ele alıyor
+      body: Ürün yazılımı güncelleme içeriklerini listeleyen resmi Jabra destek sayfası. Güncelleme günlüğü,
+        Jabra'nın ANC arama performansı, ANC/HearThrough'ta rüzgar gürültüsü azaltma ve mikrofon gürültü
+        engelleme için düzeltmeler yayınladığını gösteriyor — sahiplerin bildirdiği ANC ile ilgili gürültü
+        sorunlarıyla tutarlı.
+      advice: Üretici, ANC ve gürültüyle ilgili davranışları ürün yazılımı aracılığıyla yamalıyor. Alıcılar
+        en son ürün yazılımının yüklü olduğundan emin olmalı, ancak sahip bildirimlerinin (ör. Amazon
+        AU incelemesi) bazıları için ürün yazılımı yeniden yüklemesinin statik sorunu çözmediğini gösterdiğini
+        unutmayın.
+  evidence:
+  - url: https://www.jabra.com/en-au/supportpages/jabra-elite-8-active
+    quote: 'Updated: wind noise reduction in ANC and HearThrough mode, having the microphones work better
+      together to detect wind noise levels.'
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:33:26+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: apple
+      series: airpods pro 3
+  kind: known_issue
+  domain: audio
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: ANC pressure/vent system
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Static noise also triggered by pressure changes (e.g. airplane) and can impair music playback
+      body: German outlet heise reports the static can be triggered by pressure changes (airplane) and,
+        in some cases, can cover music playback. heise also notes Apple exchanges affected devices under
+        warranty but the problem sometimes reappears.
+      advice: For travellers, the airplane pressure-change trigger is a specific scenario where the static
+        is likely to surface, and it can interfere with listening to music, not just silence.
+    tr:
+      title: Statik gürültü basınç değişiklikleriyle (ör. uçak) de tetikleniyor ve müzik çalmayı bozabiliyor
+      body: Alman yayın organı heise, statiğin basınç değişiklikleriyle (uçak) tetiklenebildiğini ve bazı
+        durumlarda müzik çalmayı örtebildiğini bildiriyor. heise ayrıca Apple'ın etkilenen cihazları garanti
+        kapsamında değiştirdiğini ancak sorunun bazen tekrar ortaya çıktığını belirtiyor.
+      advice: Seyahat edenler için uçak basınç değişikliği tetikleyicisi, statiğin ortaya çıkma olasılığının
+        yüksek olduğu belirli bir senaryodur ve yalnızca sessizliği değil müzik dinlemeyi de engelleyebilir.
+  evidence:
+  - url: https://www.heise.de/en/news/Problems-with-ANC-User-reports-of-audio-errors-with-AirPods-Pro-3-11068087.html
+    quote: This is said to occur, among other things, when pressure changes occur—for example, on an airplane—and,
+      interestingly, primarily when no music is playing.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:34:33+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Sony
+      series: WF-1000X
+  kind: known_issue
+  domain: audio
+  severity: high
+  consequence: ''
+  detection: ''
+  component: Left earbud driver
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: WF-1000XM5 left earbud failed within a month with static/buzzing/popping
+      body: A verified owner reports the left earbud failed within a month of purchase, with very low
+        volume and static/buzzing/popping.
+      advice: A buyer should test both earbuds immediately on arrival and keep proof of purchase, because
+        one owner's unit failed within the first month with static/buzzing/popping and very low volume.
+        This is a unit-level failure, so check the warranty/return window early.
+    tr:
+      title: WF-1000XM5 sol kulaklık bir ay içinde statik/vızıltı/patlama ile arızalandı
+      body: Doğrulanmış bir sahip, sol kulaklığın satın alımdan sonraki bir ay içinde çok düşük ses seviyesi
+        ve statik/vızıltı/patlama ile arızalandığını bildiriyor.
+      advice: Bir alıcı, geldiğinde her iki kulaklığı hemen test etmeli ve satın alma kanıtını saklamalıdır,
+        çünkü bir sahibin ünitesi ilk ay içinde statik/vızıltı/patlama ve çok düşük ses seviyesi ile arızalandı.
+        Bu ünite düzeyinde bir arızadır, bu nedenle garanti/iade süresini erken kontrol edin.
+  evidence:
+  - url: https://www.sony.com.ar/headphones/products/wf-1000xm5/reviews-ratings?sku=wf1000xm5p.sola
+    quote: Within a month of purchase, the left earbud broke. Very low volume and static/buzzing/popping.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:34:18+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Samsung
+      series: Galaxy Buds
+  kind: known_issue
+  domain: audio
+  severity: high
+  consequence: ''
+  detection: ''
+  component: Active Noise Cancellation system
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Galaxy Buds3 Pro ANC produces constant white noise and pops/clicks
+      body: An owner review on Samsung's own review feed (aggregated on Google Shopping) reports that
+        with ANC on the Buds3 Pro emit constant white noise plus pops, clicks and snaps, and that ANC
+        amplifies rather than cancels ambient sound. A second review on the same page reports a high-pitched
+        whining sound from both buds and a bad static-like sound.
+      advice: If you buy these for noise cancellation, be aware that a documented owner complaint is that
+        ANC adds constant white noise and crackling instead of silencing the environment. Test ANC in
+        a quiet room within the return window before committing.
+    tr:
+      title: Galaxy Buds3 Pro ANC sürekli beyaz gürültü ve patlama/tıklama üretiyor
+      body: Samsung'un kendi inceleme akışındaki (Google Shopping'de toplanan) bir sahip incelemesi, ANC
+        açıkken Buds3 Pro'nun sürekli beyaz gürültü ile birlikte patlamalar, tıklamalar ve çıtırtılar
+        yaydığını ve ANC'nin ortam sesini iptal etmek yerine yükselttiğini bildiriyor. Aynı sayfadaki
+        ikinci bir inceleme, her iki kulaklıktan yüksek perdeli bir uğultu sesi ve kötü bir statik benzeri
+        ses bildiriyor.
+      advice: Bunları gürültü engelleme için alıyorsanız, belgelenmiş bir sahip şikayetinin ANC'nin ortamı
+        susturmak yerine sürekli beyaz gürültü ve çıtırtı eklediği olduğunu bilin. Taahhütte bulunmadan
+        önce iade süresi içinde sessiz bir odada ANC'yi test edin.
+  evidence:
+  - url: https://www.google.com.tw/shopping/product/8479430570591486056/reviews?prds=pid:18397394869847356026,rate:1,rnum:10,rsk:PC_15312271977504339044&sa=X&ved=0ahUKEwioh-eEv_aIAxW0SWwGHVeBJtYQn08ILCgE
+    quote: And you'll get all kinds of crazy pops and clicks and snaps and whips and constant white noise
+      The white noise never stops.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:28:32+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Jabra
+      series: Elite 8 Active Gen 2
+  kind: known_issue
+  domain: audio
+  severity: high
+  consequence: ''
+  detection: ''
+  component: both earbuds (audio driver/amplifier)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Loud high-pitched ringing noise in both earbuds after ~4 months
+      body: Best Buy customer reports a loud high-pitched ringing noise from both earbuds starting about
+        4 months after purchase — beyond the return period. This is a hardware failure that appears after
+        the return window closes.
+      advice: The failure emerged after the return period, so check warranty coverage (Jabra typically
+        offers 2 years with registration) and test thoroughly early; a ringing noise at ~4 months means
+        you may need a warranty claim.
+    tr:
+      title: Yaklaşık 4 ay sonra her iki kulaklıkta yüksek perdeli çınlama sesi
+      body: Best Buy müşterisi, satın alımdan yaklaşık 4 ay sonra başlayan, her iki kulaklıktan yüksek
+        perdeli yüksek bir çınlama sesi bildiriyor — iade süresinin ötesinde. Bu, iade süresi kapandıktan
+        sonra ortaya çıkan bir donanım arızasıdır.
+      advice: Arıza iade süresinden sonra ortaya çıktı, bu nedenle garanti kapsamını kontrol edin (Jabra
+        genellikle kayıtla 2 yıl sunar) ve erken kapsamlı test yapın; yaklaşık 4 ayda bir çınlama sesi,
+        garanti talebinde bulunmanız gerekebileceği anlamına gelir.
+  evidence:
+  - url: https://www.bestbuy.com/site/reviews/jabra-elite-8-active-gen-2-military-grade-wireless-in-ear-headphones-with-smart-case-navy/6582104?rating=1
+    quote: 'After about 4 months of using (which is already longer than the return period): This earphone
+      (both left and right) sometimes would make a REALLY LOUD high-pitched ringing noise when it''s near
+      my ear.'
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:31:37+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Jabra
+      series: Elite 10 Gen 2
+  kind: known_issue
+  domain: audio
+  severity: low
+  consequence: ''
+  detection: ''
+  component: semi-open acoustic design / ANC isolation
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Semi-open design leaks more ambient noise than competitors' flagship ANC earbuds
+      body: Found via Norwegian professional review (Lyd & Bilde). The reviewer notes the Elite 10 Gen
+        2's semi-open, ventilated design lets more ambient sound through than the top ANC models from
+        Sony, Sennheiser, Technics, and Bose — a design trade-off for comfort.
+      advice: If maximum noise isolation is critical, this model's semi-open design will leak more ambient
+        sound than competitors' sealed designs. Comfort comes at the cost of ANC effectiveness.
+    tr:
+      title: Yarı açık tasarım, rakiplerin amiral gemisi ANC kulaklıklarından daha fazla ortam gürültüsü
+        sızdırıyor
+      body: Norveçli profesyonel inceleme (Lyd & Bilde) aracılığıyla bulundu. İncelemeci, Elite 10 Gen
+        2'nin yarı açık, havalandırmalı tasarımının Sony, Sennheiser, Technics ve Bose'un en iyi ANC modellerinden
+        daha fazla ortam sesi geçirdiğini belirtiyor — konfor için bir tasarım ödünleşimi.
+      advice: Maksimum gürültü yalıtımı kritikse, bu modelin yarı açık tasarımı rakiplerin kapalı tasarımlarından
+        daha fazla ortam sesi sızdıracaktır. Konfor, ANC etkinliği pahasına gelir.
+  evidence:
+  - url: https://www.lydogbilde.no/test/hodetelefoner/ni-premium-orepropper-sommeren-2024/jabra-elite-10-gen-2
+    quote: Men siden disse er av semiåpen type, altså ventilert for økt komfort, så lekker det mer fra
+      omgivelsene enn fra toppmodellene til Sony, Sennheiser, Technics og Bose.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:31:03+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Jabra
+      series: Elite 10
+  kind: known_issue
+  domain: audio
+  severity: high
+  consequence: ''
+  detection: ''
+  component: active noise cancellation (ANC)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: ANC on Jabra Elite 10 appears to make no audible difference (owner reports possible defect)
+      body: An owner on the ComputerBase forum reports hearing no difference between ANC on and off on
+        the Elite 10, and a fellow poster concludes such units are defective and should be exchanged.
+      advice: If you buy and ANC seems to do nothing, verify the app firmware is current and try a firm
+        reseat; if there is still no audible difference between ANC on/off, treat it as a likely defective
+        unit and exchange under warranty rather than accepting it.
+    tr:
+      title: Jabra Elite 10'da ANC duyulabilir bir fark yaratmıyor gibi görünüyor (sahip olası kusur bildiriyor)
+      body: ComputerBase forumunda bir sahip, Elite 10'da ANC açık ve kapalı arasında hiçbir fark duymadığını
+        bildiriyor ve bir başka gönderici bu tür ünitelerin kusurlu olduğu ve değiştirilmesi gerektiği
+        sonucuna varıyor.
+      advice: Satın alırsanız ve ANC hiçbir şey yapmıyor gibi görünüyorsa, uygulama yazılımının güncel
+        olduğunu doğrulayın ve sıkıca yeniden oturtmayı deneyin; ANC açık/kapalı arasında hâlâ duyulabilir
+        bir fark yoksa, bunu kabul etmek yerine muhtemelen kusurlu bir ünite olarak değerlendirin ve garanti
+        kapsamında değiştirin.
+  evidence:
+  - url: https://www.computerbase.de/forum/threads/anc-jabra-elite-10-anwenderfehler-oder-defekt.2216258/
+    quote: Aber zwischen ANC On und Off spüre ich keinen Unterschied, d.h. der Straßenverkehr und andere
+      Geräusche sind unverändert laut.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:30:25+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Bose
+      series: QuietComfort Earbuds (2024)
+  kind: known_issue
+  domain: audio
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: microphone / call connection
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Occasional dropouts during phone calls; call quality weak (2024 model)
+      body: Independent review of the 2024 QuietComfort Earbuds listing 'Occasional dropouts during phone
+        calls' as a con.
+      advice: A second independent review independently flags call dropouts, corroborating the owner reports.
+        A buyer who relies on the buds for calls should expect intermittent dropouts and weak call quality.
+    tr:
+      title: Telefon görüşmeleri sırasında ara sıra kopmalar; arama kalitesi zayıf (2024 modeli)
+      body: 2024 QuietComfort Earbuds'un bağımsız incelemesi, 'Telefon görüşmeleri sırasında ara sıra
+        kopmalar'ı bir eksi olarak listeliyor.
+      advice: İkinci bir bağımsız inceleme, sahip raporlarını destekleyerek arama kopmalarını bağımsız
+        olarak işaretliyor. Kulaklıkları aramalar için kullanan bir alıcı, aralıklı kopmalar ve zayıf
+        arama kalitesi beklemelidir.
+  evidence:
+  - url: https://tech.yahoo.com/audio/articles/bose-quietcomfort-earbuds-2024-review-100012328.html
+    quote: Occasional dropouts during phone calls
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:35:04+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Sony
+      series: WF-1000X
+  kind: known_issue
+  domain: audio
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: Right earbud
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: WF-1000XM5 right earbud stopped working completely after ~2.5 years
+      body: A long-term owner reports the right earbud stopped working completely after about 2.5 years
+        of use.
+      advice: A long-term owner reports one earbud dying completely after ~2.5 years, which is past the
+        typical warranty period, so the replacement cost falls on the buyer. Treat the earbuds as a consumable
+        with a limited lifespan rather than a permanent purchase.
+    tr:
+      title: WF-1000XM5 sağ kulaklık ~2,5 yıl sonra tamamen çalışmayı durdurdu
+      body: Uzun süreli bir sahip, sağ kulaklığın yaklaşık 2,5 yıllık kullanımdan sonra tamamen çalışmayı
+        durdurduğunu bildiriyor.
+      advice: Uzun süreli bir sahip, bir kulaklığın ~2,5 yıl sonra tamamen öldüğünü bildiriyor; bu, tipik
+        garanti süresini aştığı için değiştirme maliyeti alıcıya düşüyor. Kulaklıkları kalıcı bir satın
+        alma yerine sınırlı ömre sahip bir sarf malzemesi olarak değerlendirin.
+  evidence:
+  - url: https://m.alza.cz/EN/reviews/sony-noise-cancelling-wf-1000xm5-silver-7759246.htm
+    quote: After 2.5 years, the right earbud stopped working completely.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:34:18+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: apple
+      series: airpods pro 3
+  kind: known_issue
+  domain: audio
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: AirPods Pro 3 hardware unit
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Some owners went through multiple replacement pairs with the static issue persisting
+      body: TechRadar/Yahoo reports owners who exchanged units multiple times (one user through four pairs)
+        still hit the same static problem, indicating the fault is not fixed by swapping hardware.
+      advice: If the buyer gets a defective unit, a warranty exchange is not a reliable fix; the problem
+        reportedly recurs on replacements.
+    tr:
+      title: Bazı sahipler, statik sorunu devam ederken birden fazla yedek çift kullandı
+      body: TechRadar/Yahoo, birden fazla kez ünite değiştiren (bir kullanıcı dört çift boyunca) sahiplerin
+        hâlâ aynı statik sorunla karşılaştığını bildiriyor; bu, arızanın donanımı değiştirerek giderilmediğini
+        gösteriyor.
+      advice: Alıcı kusurlu bir ünite alırsa, garanti değişimi güvenilir bir çözüm değildir; sorunun yedek
+        ünitelerde tekrarlandığı bildiriliyor.
+  evidence:
+  - url: https://tech.yahoo.com/audio/articles/thought-only-one-airpods-pro-040000129.html
+    quote: One user on Reddit even shared they have been through a staggering four different pairs of
+      the AirPods Pro 3 in search of a resolution, airing their anger at Apple for "pretending it's not
+      a thing."
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:34:33+00:00'

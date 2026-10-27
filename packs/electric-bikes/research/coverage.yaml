@@ -1,0 +1,35 @@
+lineup:
+- Xiaomi Himo Z20
+- Xiaomi Himo C20
+- Xiaomi Himo C26
+- Xiaomi Himo T1
+- Xiaomi Qicycle EF1
+- Xiaomi Mi Electric Bike
+- Xiaomi Hifree 5th Wheel
+covered:
+- xiaomi hifree 5th wheel
+- xiaomi himo c20
+- xiaomi himo c26
+- xiaomi himo t1
+- xiaomi himo z20
+- xiaomi mi electric bike
+- xiaomi qicycle ef1
+uncovered: []
+note: Could not confirm EU Safety Gate or UK OPSS recalls for the four new products;
+  searches returned no official recall entries. Owner complaints for Hifree 5th Wheel
+  were found on Turkish platform Sikayetvar. No owner-reported failures were found
+  for Himo C26, Himo T1, or Mi Electric Bike in the search results.
+out_of_scope:
+- Bafang motor controllers KT24WSH-BF08 and KT36WSH-BFZ13504 — recalled components
+  used in Hill Topper conversion kits, not a Xiaomi bike, but relevant because the
+  pack's motor scope is Bafang
+- UPP U004 / U004-1 lithium batteries — aftermarket conversion-kit batteries compatible
+  with Bafang kits, warned by UK OPSS for fire risk; not OEM Xiaomi
+- Xiaomi Electric Scooter charger model SLS-4202 — recalled under EU Safety Gate SR/02322/26;
+  described as for 'Xiaomi Electric Scooter E-Bike', so it touches this category
+- Xiaomi Mi Electric Scooter M365 (recall is for the scooter, not the bike)
+quarantined:
+- kind: motor
+  label: Bafang motor controller
+  reason: not named anywhere in this pack's own line-up — likely a different category
+    (an accessory, or a different device from the same brand)
