@@ -77,7 +77,7 @@ class CatalogDraftRequest(BaseModel):
 @router.post("/packs/author")
 def author_catalog(body: CatalogDraftRequest, runner=Depends(get_jobs)):
     """Research a data-only draft. Installing it is a separate reader action."""
-    params = {"category": body.category.strip(), "harness": body.harness}
+    params: dict[str, str | float] = {"category": body.category.strip(), "harness": body.harness}
     if body.budget_usd:
         params["budget_usd"] = body.budget_usd
     return _submit(runner, "pack_author", params)
