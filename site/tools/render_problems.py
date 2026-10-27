@@ -2,13 +2,13 @@
 
     PYTHONPATH=src python site/tools/render_problems.py
 
-Search is the one free way to reach a person who is about to buy a car with a
-known weak engine, so each catalog is also published as pages on kriko.cc: one
+Search is the one free way to reach a person who is about to buy something with a
+known weak part, so each catalog is also published as pages on kriko.cc: one
 for each subject it holds enough claims about, in each language the claims are
 written in, plus a hub that lists them. Nothing here names a category. The pages
 are read from the catalog the way the app reads it (`kriko.pack.build` turns
 `packs/<name>` into a catalog file, and this reads that), so a new catalog or a
-new car in an old one gets its pages with no edit here.
+new product in an old one gets its pages with no edit here.
 
 What a page carries: the claim's title, body and advice, how it is found, and a
 link to each page it was reported on. It never carries the quote the claim was
@@ -52,13 +52,13 @@ UI = {
         "home": "/",
         "get": "/#get",
         "switch": "Türkçe",
-        "back": "All cars and parts",
+        "back": "All known problems",
         "title": "{label}: known problems",
         "lead": "{n} sourced reports, with what to check before you buy. Each one links to the page it was reported on.",
         "desc": "{n} sourced problems reported for {label}, with what to check before you buy. {top}",
         "check": "What to check",
         "sources": "Reported on",
-        "fits": "Found on these cars",
+        "fits": "Found on these models",
         "high": "Costly or dangerous",
         "medium": "Worth checking",
         "low": "Minor",
@@ -69,14 +69,14 @@ UI = {
             "test_drive": "Noticed on a test drive",
             "history_check": "Shown by the service history",
         },
-        "cta_h": "Check the exact car on the listing",
-        "cta_p": "Kriko reads a listing and tells you which of these apply to that car. It runs on your computer, needs no account and is free.",
+        "cta_h": "Check the one you are about to buy",
+        "cta_p": "Kriko reads a listing and tells you which of these apply to that exact product. It runs on your computer, needs no account and is free.",
         "cta_b": "Get Kriko",
-        "note": "These reports come from the pages linked under each item: owner forums, repair guides and workshops. They are not a diagnosis of any one car, and a pre-purchase inspection still applies.",
+        "note": "These reports come from the pages linked under each item: owner forums, repair guides and workshops. They are not a diagnosis of any one unit, and a careful check of the one you are buying still applies.",
         "licence": "Text from the Kriko {name} catalog, version {version}, under the {license} license.",
-        "hub_title": "Known problems, by car and part",
-        "hub_lead": "What is known to go wrong with a specific car, engine or gearbox, each report linked to the page it came from.",
-        "hub_desc": "Sourced known problems for specific cars, engines and gearboxes, with what to check before you buy.",
+        "hub_title": "Known problems, by product and part",
+        "hub_lead": "What is known to go wrong with a specific product, part or model, each report linked to the page it came from.",
+        "hub_desc": "Sourced known problems for specific products and parts, with what to check before you buy.",
         "hub_other": "Other",
         "reports": "{n} reports",
         "footer_home": "kriko.cc",
@@ -89,13 +89,13 @@ UI = {
         "home": "/tr/",
         "get": "/tr/#get",
         "switch": "English",
-        "back": "Tüm araçlar ve parçalar",
+        "back": "Tüm bilinen sorunlar",
         "title": "{label}: bilinen sorunlar",
         "lead": "{n} kaynaklı rapor ve satın almadan önce neye bakmanız gerektiği. Her biri, bildirildiği sayfaya bağlantı verir.",
         "desc": "{label} için bildirilen {n} kaynaklı sorun ve satın almadan önce neye bakılacağı. {top}",
         "check": "Neye bakmalı",
         "sources": "Bildirildiği yer",
-        "fits": "Bu araçlarda bulunur",
+        "fits": "Şu modellerde görülür",
         "high": "Pahalı ya da tehlikeli",
         "medium": "Bakmaya değer",
         "low": "Küçük",
@@ -106,14 +106,14 @@ UI = {
             "test_drive": "Test sürüşünde fark edilir",
             "history_check": "Servis geçmişinden anlaşılır",
         },
-        "cta_h": "İlandaki aracı bu listeyle karşılaştırın",
-        "cta_p": "Kriko bir ilanı okur ve bu sorunlardan hangilerinin o araca uyduğunu söyler. Bilgisayarınızda çalışır, hesap gerektirmez ve ücretsizdir.",
+        "cta_h": "Satın alacağınız ürünü bu listeyle karşılaştırın",
+        "cta_p": "Kriko bir ilanı okur ve bu sorunlardan hangilerinin o ürüne uyduğunu söyler. Bilgisayarınızda çalışır, hesap gerektirmez ve ücretsizdir.",
         "cta_b": "Kriko'yu indir",
-        "note": "Bu maddeler, her birinin altında bağlantısı verilen sayfalardan derlenmiştir: kullanıcı forumları, onarım rehberleri ve servisler. Belirli bir aracın teşhisi değildir; ekspertiz yine de gereklidir.",
+        "note": "Bu maddeler, her birinin altında bağlantısı verilen sayfalardan derlenmiştir: kullanıcı forumları, onarım rehberleri ve servisler. Belirli bir ürünün teşhisi değildir; satın alacağınız ürünü dikkatle kontrol etmeniz yine de gerekir.",
         "licence": "Metin, Kriko {name} kataloğundan (sürüm {version}) alınmıştır, {license} lisansıyla.",
-        "hub_title": "Bilinen sorunlar: araç ve parça bazında",
-        "hub_lead": "Belirli bir araç, motor ya da şanzımanda bilinen arızalar; her rapor, geldiği sayfaya bağlantı verir.",
-        "hub_desc": "Belirli araç, motor ve şanzımanlar için kaynaklı bilinen sorunlar ve satın almadan önce neye bakılacağı.",
+        "hub_title": "Bilinen sorunlar: ürün ve parça bazında",
+        "hub_lead": "Belirli bir ürün, parça ya da modelde bilinen arızalar; her rapor, geldiği sayfaya bağlantı verir.",
+        "hub_desc": "Belirli ürün ve parçalar için kaynaklı bilinen sorunlar ve satın almadan önce neye bakılacağı.",
         "hub_other": "Diğer",
         "reports": "{n} rapor",
         "footer_home": "kriko.cc",
