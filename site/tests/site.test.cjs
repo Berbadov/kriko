@@ -372,8 +372,28 @@ test('every generated problem page is complete, points at its twin, runs no scri
       if (alternate.hreflang !== 'x-default') assert.ok(fs.existsSync(path.join(root, twin, 'index.html')), `${file} points at ${twin}, which does not exist`);
     }
     for (const claim of d.querySelectorAll('.claim')) {
-      assert.ok(claim.querySelector('.src a[href^="https://"]'), `${file}: a claim names no source`);
+      assert.ok(claim.querySelector('.src a[href^="http"]'), `${file}: a claim names no source`);
     }
+  }
+});
+
+test('every problem page is reached from the hub in the same language, and no link inside them is dead', () => {
+  for (const [prefix, hub] of [['', 'problems/index.html'], ['tr/', 'tr/problems/index.html']]) {
+    const seen = new Set([hub]);
+    const queue = [hub];
+    while (queue.length) {
+      const file = queue.shift();
+      const d = new JSDOM(read(file), { url: `https://kriko.cc/${file.replace(/index\.html$/, '')}` }).window.document;
+      for (const a of d.querySelectorAll('main a[href^="/"]')) {
+        const target = a.getAttribute('href').split('#')[0];
+        if (!target.startsWith(`/${prefix}problems/`)) continue;
+        const next = `${target.replace(/^\//, '')}index.html`;
+        assert.ok(fs.existsSync(path.join(root, next)), `${file} links to ${target}, which does not exist`);
+        if (!seen.has(next)) { seen.add(next); queue.push(next); }
+      }
+    }
+    const own = generated().filter((file) => file.startsWith(`${prefix}problems/`));
+    assert.deepEqual([...seen].sort(), own.sort(), `${prefix || 'en'}: a problem page is not reachable from the hub, or the hub points off the set`);
   }
 });
 

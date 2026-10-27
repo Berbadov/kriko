@@ -43,6 +43,9 @@ ORIGIN = "https://kriko.cc"
 MIN_CLAIMS = 3
 LANGS = ("en", "tr")
 SEVERITY_ORDER = ("high", "medium", "low")
+MORE_LINKS = 8  # other products of the same catalog linked from a product page
+GLANCE_FROM = 4  # a page with this many claims opens with a list of their titles
+OPEN_UP_TO = 12  # a group of more products than this starts folded
 
 # The site's own words, per language. The claims' words come from the catalog.
 UI = {
@@ -52,16 +55,20 @@ UI = {
         "home": "/",
         "get": "/#get",
         "switch": "Türkçe",
-        "back": "All known problems",
+        "crumb": "Known problems",
+        "glance": "At a glance",
+        "more": "More in {category}",
+        "all_in": "All {category}",
+        "cat_title": "{name}: known problems",
+        "cat_lead": "{n} products with sourced known problems. Pick one to see what to check before you buy.",
+        "cat_desc": "Sourced known problems for {n} products in {name}, with what to check before you buy.",
+        "products": "{n} products",
         "title": "{label}: known problems",
         "lead": "{n} sourced reports, with what to check before you buy. Each one links to the page it was reported on.",
         "desc": "{n} sourced problems reported for {label}, with what to check before you buy. {top}",
         "check": "What to check",
         "sources": "Reported on",
         "fits": "Found on these models",
-        "high": "Costly or dangerous",
-        "medium": "Worth checking",
-        "low": "Minor",
         "group": {"high": "Costly or dangerous", "medium": "Worth checking", "low": "Minor"},
         "detect": {
             "diagnostic": "Found with a diagnostic scan",
@@ -75,7 +82,7 @@ UI = {
         "note": "These reports come from the pages linked under each item: owner forums, repair guides and workshops. They are not a diagnosis of any one unit, and a careful check of the one you are buying still applies.",
         "licence": "Text from the Kriko {name} catalog, version {version}, under the {license} license.",
         "hub_title": "Known problems, by product and part",
-        "hub_lead": "What is known to go wrong with a specific product, part or model, each report linked to the page it came from.",
+        "hub_lead": "Pick a category. Each product page lists what owners and repairers report going wrong with it, every report linked to the page it came from.",
         "hub_desc": "Sourced known problems for specific products and parts, with what to check before you buy.",
         "hub_other": "Other",
         "reports": "{n} reports",
@@ -89,16 +96,20 @@ UI = {
         "home": "/tr/",
         "get": "/tr/#get",
         "switch": "English",
-        "back": "Tüm bilinen sorunlar",
+        "crumb": "Bilinen sorunlar",
+        "glance": "Bir bakışta",
+        "more": "{category} içinde diğerleri",
+        "all_in": "Tüm {category}",
+        "cat_title": "{name}: bilinen sorunlar",
+        "cat_lead": "Kaynaklı bilinen sorunları olan {n} ürün. Satın almadan önce neye bakacağınızı görmek için birini seçin.",
+        "cat_desc": "{name} kategorisinde {n} ürün için kaynaklı bilinen sorunlar ve satın almadan önce neye bakılacağı.",
+        "products": "{n} ürün",
         "title": "{label}: bilinen sorunlar",
         "lead": "{n} kaynaklı rapor ve satın almadan önce neye bakmanız gerektiği. Her biri, bildirildiği sayfaya bağlantı verir.",
         "desc": "{label} için bildirilen {n} kaynaklı sorun ve satın almadan önce neye bakılacağı. {top}",
         "check": "Neye bakmalı",
         "sources": "Bildirildiği yer",
         "fits": "Şu modellerde görülür",
-        "high": "Pahalı ya da tehlikeli",
-        "medium": "Bakmaya değer",
-        "low": "Küçük",
         "group": {"high": "Pahalı ya da tehlikeli", "medium": "Bakmaya değer", "low": "Küçük"},
         "detect": {
             "diagnostic": "Arıza tarama ile bulunur",
@@ -112,7 +123,7 @@ UI = {
         "note": "Bu maddeler, her birinin altında bağlantısı verilen sayfalardan derlenmiştir: kullanıcı forumları, onarım rehberleri ve servisler. Belirli bir ürünün teşhisi değildir; satın alacağınız ürünü dikkatle kontrol etmeniz yine de gerekir.",
         "licence": "Metin, Kriko {name} kataloğundan (sürüm {version}) alınmıştır, {license} lisansıyla.",
         "hub_title": "Bilinen sorunlar: ürün ve parça bazında",
-        "hub_lead": "Belirli bir ürün, parça ya da modelde bilinen arızalar; her rapor, geldiği sayfaya bağlantı verir.",
+        "hub_lead": "Bir kategori seçin. Her ürün sayfası, sahiplerin ve tamircilerin neyin bozulduğunu bildirdiğini listeler; her rapor, geldiği sayfaya bağlantı verir.",
         "hub_desc": "Belirli ürün ve parçalar için kaynaklı bilinen sorunlar ve satın almadan önce neye bakılacağı.",
         "hub_other": "Diğer",
         "reports": "{n} rapor",
@@ -174,6 +185,7 @@ def read_catalog(path: Path) -> dict:
     try:
         name, version, license_, manifest = conn.execute(
             "SELECT name, version, license, manifest_json FROM packs").fetchone()
+        declared = yaml.safe_load(manifest) or {}
         subjects = {sid: {"label": label, "kind": kind, "claims": [], "products": [], "group": ""}
                     for sid, label, kind in conn.execute("SELECT subject_id, label, kind FROM subjects")}
         sources: dict[str, list[tuple[str, str]]] = {}
@@ -199,7 +211,7 @@ def read_catalog(path: Path) -> dict:
                 parts.add(oid)
         # A whole thing is browsed by its first identity key (the make, the brand): the one
         # the pack lists first. A part has no such key worth grouping by, so it gets none.
-        first_key = {kind: keys[0] for kind, keys in (yaml.safe_load(manifest) or {}).get("identity", {}).items() if keys}
+        first_key = {kind: keys[0] for kind, keys in declared.get("identity", {}).items() if keys}
         for sid, key, value in conn.execute(
             "SELECT subject_id, key, value_text FROM attributes WHERE is_identity = 1 AND value_text IS NOT NULL"
         ):
@@ -210,7 +222,8 @@ def read_catalog(path: Path) -> dict:
         by_label = {s["label"]: s for s in subjects.values()}
         groups = {label: by_label[label]["group"]
                   for label in {l for s in subjects.values() for l in s["products"]} if label in by_label}
-        return {"name": name, "version": version, "license": license_, "subjects": subjects, "groups": groups}
+        return {"name": name, "names": declared.get("names") or {}, "version": version, "license": license_,
+                "subjects": subjects, "groups": groups}
     finally:
         conn.close()
 
@@ -273,18 +286,17 @@ def _chrome(lang: str, *, title: str, description: str, path: str, alternates: d
 def _claim_html(claim: dict, lang: str) -> str:
     ui = UI[lang]
     text = claim["text"][lang]
+    severity = claim["severity"] if claim["severity"] in SEVERITY_ORDER else "low"
     detect = ui["detect"].get(claim["detection"], "")
-    meta = f'<span class="sev sev-{_e(claim["severity"])}">{_e(ui.get(claim["severity"], ""))}</span>'
-    if detect:
-        meta += f' <span class="how">{_e(detect)}</span>'
     sources = ", ".join(f'<a href="{_e(url)}" rel="noopener">{_e(domain or url)}</a>' for url, domain in claim["sources"])
-    parts = [f'      <article class="claim" id="c-{_e(claim["id"][:8])}">',
-             f'        <h3>{_e(text["title"])}</h3>',
-             f'        <p class="meta">{meta}</p>']
+    parts = [f'      <article class="claim sev-{severity}" id="c-{_e(claim["id"][:8])}">',
+             f'        <h3>{_e(text["title"])}</h3>']
+    if detect:
+        parts.append(f'        <p class="how">{_e(detect)}</p>')
     if text["body"]:
         parts.append(f'        <p>{_e(text["body"])}</p>')
     if text["advice"]:
-        parts.append(f'        <p><strong>{_e(ui["check"])}.</strong> {_e(text["advice"])}</p>')
+        parts.append(f'        <p class="check"><strong>{_e(ui["check"])}.</strong> {_e(text["advice"])}</p>')
     if sources:
         parts.append(f'        <p class="src">{_e(ui["sources"])}: {sources}</p>')
     parts.append("      </article>")
@@ -308,25 +320,56 @@ def _subject_claims(subject: dict, lang: str) -> list[dict]:
     return picked
 
 
-def _subject_page(catalog: dict, subject: dict, slug: str, lang: str, claims: list[dict], css: str, have: set[str]) -> str:
+def _chip(entry: dict, lang: str) -> str:
+    return (f'<li><a href="{UI[lang]["prefix"]}/problems/{entry["slug"]}/">{_e(entry["label"])}'
+            f'<small>{entry["counts"][lang]}</small></a></li>')
+
+
+def _category_name(entry: dict, lang: str) -> str:
+    return entry["names"].get(lang) or entry["catalog"]
+
+
+def _neighbours(entry: dict, entries: list[dict], lang: str) -> list[dict]:
+    """Up to MORE_LINKS other products of the same catalog: its own make or brand first."""
+    same = sorted((e for e in entries if e["catalog"] == entry["catalog"] and e is not entry and lang in e["have"]),
+                  key=lambda e: (e["group"] != entry["group"] or not entry["group"], e["label"]))
+    return same[:MORE_LINKS]
+
+
+def _subject_page(catalog: dict, entry: dict, subject: dict, lang: str, claims: list[dict], css: str,
+                  entries: list[dict]) -> str:
     ui = UI[lang]
     label = subject["label"]
-    path = f'{ui["prefix"]}/problems/{slug}/'
-    alternates = {code: f'{UI[code]["prefix"]}/problems/{slug}/' for code in LANGS if code in have}
+    path = f'{ui["prefix"]}/problems/{entry["slug"]}/'
+    alternates = {code: f'{UI[code]["prefix"]}/problems/{entry["slug"]}/' for code in LANGS if code in entry["have"]}
     top = "; ".join(c["text"][lang]["title"] for c in claims[:2])
+    category = _category_name(entry, lang)
     sections = []
     for severity in SEVERITY_ORDER:
         group = [c for c in claims if c["severity"] == severity]
         if group:
             sections.append(f'      <h2>{_e(ui["group"][severity])}</h2>\n' + "\n".join(_claim_html(c, lang) for c in group))
+    glance = ""
+    if len(claims) >= GLANCE_FROM:
+        items = "".join(
+            f'<li class="sev-{c["severity"] if c["severity"] in SEVERITY_ORDER else "low"}">'
+            f'<a href="#c-{_e(c["id"][:8])}">{_e(c["text"][lang]["title"])}</a></li>' for c in claims)
+        glance = f'      <nav class="glance" aria-label="{_e(ui["glance"])}"><h2>{_e(ui["glance"])}</h2><ul>{items}</ul></nav>\n'
     fits = ""
     if subject["products"]:
         items = "".join(f"<li>{_e(p)}</li>" for p in sorted(set(subject["products"])))
         fits = f'      <h2>{_e(ui["fits"])}</h2>\n      <ul>{items}</ul>\n'
-    body = (f'      <p class="crumb"><a href="{ui["prefix"]}/problems/">{_e(ui["back"])}</a></p>\n'
+    near = _neighbours(entry, entries, lang)
+    more = ""
+    if near:
+        chips = "".join(_chip(e, lang) for e in near)
+        more = (f'      <h2>{_e(ui["more"].format(category=category))}</h2>\n      <ul class="chips">{chips}</ul>\n'
+                f'      <p><a href="{ui["prefix"]}/problems/{entry["catalog_slug"]}/">{_e(ui["all_in"].format(category=category))}</a></p>\n')
+    body = (f'      <p class="crumb"><a href="{ui["prefix"]}/problems/">{_e(ui["crumb"])}</a> › '
+            f'<a href="{ui["prefix"]}/problems/{entry["catalog_slug"]}/">{_e(category)}</a></p>\n'
             f'      <h1>{_e(ui["title"].format(label=label))}</h1>\n'
             f'      <p class="lead">{_e(ui["lead"].format(n=len(claims)))}</p>\n'
-            + "\n".join(sections) + "\n" + fits +
+            + glance + "\n".join(sections) + "\n" + fits + more +
             f'      <div class="short"><h2>{_e(ui["cta_h"])}</h2><p>{_e(ui["cta_p"])}</p>'
             f'<p><a class="button" href="{ui["get"]}">{_e(ui["cta_b"])}</a></p></div>\n'
             f'      <p class="fine">{_e(ui["note"])}</p>\n'
@@ -337,44 +380,68 @@ def _subject_page(catalog: dict, subject: dict, slug: str, lang: str, claims: li
                    alternates=alternates, depth=3 if lang == "tr" else 2, css=css, body=body)
 
 
+def _category_page(lang: str, items: list[dict], css: str, have: set[str]) -> str:
+    """One catalog's page: its products under their make or brand, a part under each product it fits."""
+    ui = UI[lang]
+    first = items[0]
+    name = _category_name(first, lang)
+    path = f'{ui["prefix"]}/problems/{first["catalog_slug"]}/'
+    alternates = {code: f'{UI[code]["prefix"]}/problems/{first["catalog_slug"]}/' for code in LANGS if code in have}
+    groups: dict[str, list[tuple[str, str]]] = {}
+    # A whole thing with a page of its own sits under its make or brand, as a chip...
+    for entry in items:
+        if entry["group"]:
+            groups.setdefault(entry["group"], []).append((entry["label"], _chip(entry, lang)))
+    # ...and a part is reached through each whole thing it is fitted to, one line for each.
+    fitted: dict[str, list[dict]] = {}
+    for entry in items:
+        for product in entry["products"]:
+            fitted.setdefault(product, []).append(entry)
+    for product, parts in fitted.items():
+        group = first["groups"].get(product) or ui["hub_other"]
+        links = ", ".join(f'<a href="{ui["prefix"]}/problems/{p["slug"]}/">{_e(p["label"])}</a>'
+                          for p in sorted(parts, key=lambda p: p["label"]))
+        groups.setdefault(group, []).append((product, f"<li><strong>{_e(product)}</strong>: {links}</li>"))
+    placed = {e["slug"] for e in items if e["group"] or e["products"]} | {p["slug"] for ps in fitted.values() for p in ps}
+    for entry in items:
+        if entry["slug"] not in placed:
+            groups.setdefault(ui["hub_other"], []).append((entry["label"], _chip(entry, lang)))
+    sections = []
+    for group, rows in sorted(groups.items()):
+        rows.sort()
+        kind = "chips" if all(row.startswith("<li><a") for _, row in rows) else "rows"
+        opened = " open" if len(rows) <= OPEN_UP_TO else ""
+        sections.append(f'      <details class="group"{opened}><summary>{_e(group)}<span>{_e(ui["products"].format(n=len(rows)))}</span></summary>\n'
+                        f'      <ul class="{kind}">{"".join(row for _, row in rows)}</ul></details>')
+    body = (f'      <p class="crumb"><a href="{ui["prefix"]}/problems/">{_e(ui["crumb"])}</a></p>\n'
+            f'      <h1>{_e(ui["cat_title"].format(name=name))}</h1>\n'
+            f'      <p class="lead">{_e(ui["cat_lead"].format(n=len(items)))}</p>\n'
+            + "\n".join(sections) + "\n"
+            f'      <div class="short"><h2>{_e(ui["cta_h"])}</h2><p>{_e(ui["cta_p"])}</p>'
+            f'<p><a class="button" href="{ui["get"]}">{_e(ui["cta_b"])}</a></p></div>\n'
+            f'      <p class="fine">{_e(ui["note"])}</p>')
+    return _chrome(lang, title=ui["cat_title"].format(name=name), description=ui["cat_desc"].format(n=len(items), name=name),
+                   path=path, alternates=alternates, depth=3 if lang == "tr" else 2, css=css, body=body)
+
+
 def _hub_page(lang: str, entries: list[dict], css: str) -> str:
+    """The front door: one card for each catalog, with what it holds."""
     ui = UI[lang]
     path = f'{ui["prefix"]}/problems/'
     alternates = {code: f'{UI[code]["prefix"]}/problems/' for code in LANGS}
-
-    def link(entry: dict) -> str:
-        return f'<a href="{ui["prefix"]}/problems/{entry["slug"]}/">{_e(entry["label"])}</a>'
-
     by_catalog: dict[str, list[dict]] = {}
     for entry in entries:
-        by_catalog.setdefault(entry["catalog"], []).append(entry)
-    blocks = []
-    if len(by_catalog) > 1:
-        jump = "".join(f'<li><a href="#{_e(slugify(name))}">{_e(name)}</a></li>' for name in sorted(by_catalog))
-        blocks.append(f'      <ul class="jump">{jump}</ul>')
-    for name, items in sorted(by_catalog.items()):
-        groups: dict[str, list[str]] = {}
-        # A whole thing with a page of its own sits under its make or brand...
-        for entry in items:
-            if entry["group"]:
-                count = _e(ui["reports"].format(n=entry["counts"][lang]))
-                groups.setdefault(entry["group"], []).append(f"<li>{link(entry)} ({count})</li>")
-        # ...and a part is reached through each whole thing it is fitted to.
-        fitted: dict[str, list[dict]] = {}
-        for entry in items:
-            for product in entry["products"]:
-                fitted.setdefault(product, []).append(entry)
-        for product, parts in fitted.items():
-            group = items[0]["groups"].get(product) or ui["hub_other"]
-            groups.setdefault(group, []).append(
-                f"<li><strong>{_e(product)}</strong>: " + ", ".join(link(p) for p in sorted(parts, key=lambda p: p["label"])) + "</li>")
-        for entry in items:
-            if not entry["group"] and not entry["products"] and not any(entry in parts for parts in fitted.values()):
-                groups.setdefault(ui["hub_other"], []).append(f"<li>{link(entry)}</li>")
-        lists = "\n".join(f"      <h3>{_e(group)}</h3>\n      <ul>{''.join(sorted(rows))}</ul>" for group, rows in sorted(groups.items()))
-        blocks.append(f'      <section id="{_e(slugify(name))}">\n      <h2>{_e(name)}</h2>\n{lists}\n      </section>')
+        by_catalog.setdefault(entry["catalog_slug"], []).append(entry)
+    cards = []
+    for slug, items in sorted(by_catalog.items(), key=lambda kv: (-len(kv[1]), kv[0])):
+        reports = sum(e["counts"][lang] for e in items)
+        best = sorted(items, key=lambda e: (-e["counts"][lang], e["label"]))[:3]
+        cards.append(
+            f'<li><a class="card" href="{ui["prefix"]}/problems/{slug}/"><strong>{_e(_category_name(items[0], lang))}</strong>'
+            f'<span>{_e(ui["products"].format(n=len(items)))} · {_e(ui["reports"].format(n=reports))}</span>'
+            f'<small>{_e(", ".join(e["label"] for e in best))}…</small></a></li>')
     body = (f'      <h1>{_e(ui["hub_title"])}</h1>\n      <p class="lead">{_e(ui["hub_lead"])}</p>\n'
-            + "\n".join(blocks) + "\n"
+            f'      <ul class="cards">{"".join(cards)}</ul>\n'
             f'      <div class="short"><h2>{_e(ui["cta_h"])}</h2><p>{_e(ui["cta_p"])}</p>'
             f'<p><a class="button" href="{ui["get"]}">{_e(ui["cta_b"])}</a></p></div>\n'
             f'      <p class="fine">{_e(ui["note"])}</p>')
@@ -401,13 +468,14 @@ def _sitemap(pages: list[tuple[str, dict[str, str]]]) -> str:
 def render(packs_dir: Path, site_dir: Path) -> list[str]:
     """Rewrite the generated pages under `site_dir`; returns every address written."""
     css = stylesheet_hash(site_dir)
-    entries: list[dict] = []
-    written: dict[str, str] = {}
+    records: list[tuple[dict, dict, dict, dict]] = []  # (catalog, entry, subject, claims by language)
     slugs: set[str] = set()
     with tempfile.TemporaryDirectory() as scratch:
         for root, manifest in real_catalogs(packs_dir):
             catalog = read_catalog(build_catalog(root, Path(scratch) / f"{root.name}.kpack"))
             languages = [code for code in LANGS if code in manifest.get("languages", LANGS)]
+            catalog_slug = slugify(catalog["name"])
+            slugs.add(catalog_slug)  # a catalog's own page keeps its address; a product never takes it
             for subject in sorted(catalog["subjects"].values(), key=lambda s: (s["label"], s["kind"])):
                 per_lang = {code: _subject_claims(subject, code) for code in languages}
                 have = {code for code, picked in per_lang.items() if len(picked) >= MIN_CLAIMS}
@@ -417,12 +485,25 @@ def render(packs_dir: Path, site_dir: Path) -> list[str]:
                 while slug in slugs:
                     slug = f"{base}-{len(slugs)}"
                 slugs.add(slug)
-                for code in have:
-                    written[f'{UI[code]["prefix"]}/problems/{slug}/'] = _subject_page(
-                        catalog, subject, slug, code, per_lang[code], css, have)
-                entries.append({"slug": slug, "label": subject["label"], "products": sorted(set(subject["products"])),
-                                "catalog": catalog["name"], "group": subject["group"], "groups": catalog["groups"],
-                                "counts": {code: len(per_lang[code]) for code in languages}, "have": have})
+                entry = {"slug": slug, "label": subject["label"], "products": sorted(set(subject["products"])),
+                         "catalog": catalog["name"], "catalog_slug": catalog_slug, "names": catalog["names"],
+                         "group": subject["group"], "groups": catalog["groups"],
+                         "counts": {code: len(per_lang[code]) for code in languages}, "have": have}
+                records.append((catalog, entry, subject, per_lang))
+    entries = [entry for _, entry, _, _ in records]
+    written: dict[str, str] = {}
+    for catalog, entry, subject, per_lang in records:
+        for code in entry["have"]:
+            written[f'{UI[code]["prefix"]}/problems/{entry["slug"]}/'] = _subject_page(
+                catalog, entry, subject, code, per_lang[code], css, entries)
+    by_catalog: dict[str, list[dict]] = {}
+    for entry in entries:
+        by_catalog.setdefault(entry["catalog_slug"], []).append(entry)
+    for slug, items in by_catalog.items():
+        have = {code for entry in items for code in entry["have"]}
+        for code in have:
+            written[f'{UI[code]["prefix"]}/problems/{slug}/'] = _category_page(
+                code, [e for e in items if code in e["have"]], css, have)
     for code in LANGS:
         shown = [e for e in entries if code in e["have"]]
         if shown:

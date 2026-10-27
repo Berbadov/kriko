@@ -8,6 +8,7 @@ twice costs nothing.
 
 import importlib.util
 import textwrap
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -52,7 +53,7 @@ def _load():
 def catalog(tmp_path):
     (tmp_path / "data").mkdir()
     (tmp_path / "data" / "claims.yaml").write_text(CLAIMS, encoding="utf-8")
-    (tmp_path / "pack.toml").write_text('[pack]\nid = "tools"\nlanguages = ["en"]\n', encoding="utf-8")
+    (tmp_path / "pack.toml").write_text('[pack]\nid = "tools"\nname = "Tools"\nlanguages = ["en"]\n', encoding="utf-8")
     return tmp_path
 
 
@@ -76,6 +77,9 @@ def test_the_missing_translations_are_written_beside_the_english_and_the_rest_le
     assert claims[0]["evidence"] == [{"url": "https://forum.invalid/a", "quote": "Mine cracked after a year."}]
     assert (catalog / "data" / "claims.yaml").read_text(encoding="utf-8").startswith("# Claims")
     assert 'languages = ["en", "tr"]' in (catalog / "pack.toml").read_text(encoding="utf-8")
+    # The catalog's own name is written in the language too, beside its English name.
+    manifest = tomllib.loads((catalog / "pack.toml").read_text(encoding="utf-8"))
+    assert manifest["names"] == {"tr": "Turkish: Tools"} and manifest["pack"]["name"] == "Tools"
 
 
 def test_asking_twice_translates_nothing_and_changes_no_file(catalog):
@@ -98,7 +102,7 @@ def test_a_batch_the_translator_gets_wrong_is_asked_again_in_smaller_pieces(cata
         return shout(items, language)[:-1] if len(items) > 1 else shout(items, language)
 
     assert _load().translate_file(catalog, "tr", flaky) == 2
-    assert asked == [2, 1, 1]
+    assert asked == [2, 1, 1, 1]  # the last one is the catalog's name
     assert all("tr" in claim["text"] for claim in _read(catalog))
 
 
