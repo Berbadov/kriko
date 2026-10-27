@@ -156,3 +156,64 @@ def test_the_pages_in_the_repo_are_what_the_catalogs_say_today(tmp_path):
         stale = [str(name) for name in fresh if fresh[name] != shipped[name]]
         assert not stale, f"run site/tools/render_problems.py, these pages are out of date: {stale[:3]}"
     assert (site / "sitemap-problems.xml").read_bytes() == (REPO / "site" / "sitemap-problems.xml").read_bytes()
+
+
+def test_the_hub_files_a_part_under_each_whole_thing_it_is_fitted_to_grouped_by_make(tmp_path):
+    # Readers search for the thing they are about to buy, not for its gearbox: the hub is
+    # organised by catalog, then by make, and a part's page is reached through the cars it fits.
+    packs, site = tmp_path / "packs", _site(tmp_path)
+    root = packs / "rigs"
+    for sub in ("vocabulary", "data", "research"):
+        (root / sub).mkdir(parents=True)
+    (root / "pack.toml").write_text(
+        '[pack]\nid = "rigs"\nname = "Rigs"\nversion = "1.0.0"\nlicense = "CC0-1.0"\nlanguages = ["en", "tr"]\n'
+        '[identity]\nproduct = ["make", "model"]\nengine = ["code"]\n', encoding="utf-8")
+    (root / "vocabulary" / "terms.yaml").write_text(textwrap.dedent("""
+        - {term_id: product, role: subject_kind}
+        - {term_id: engine, role: subject_kind}
+        - {term_id: part_of, role: predicate}
+        - {term_id: make, role: attribute, datatype: text, match: {required: true}}
+        - {term_id: model, role: attribute, datatype: text, match: {required: true}}
+        - {term_id: code, role: attribute, datatype: text, match: {required: true}}
+        - {term_id: mech, role: domain}
+    """), encoding="utf-8")
+    (root / "data" / "subjects.yaml").write_text(textwrap.dedent("""
+        - kind: engine
+          label: Zeta Engine
+          identity: {code: zeta}
+        - kind: product
+          label: Acme Roadster 2.0
+          identity: {make: acme, model: roadster}
+          relations:
+            - {predicate: part_of, object: {kind: engine, identity: {code: zeta}}}
+        - kind: product
+          label: Borealis Cruiser 1.6
+          identity: {make: borealis, model: cruiser}
+          relations:
+            - {predicate: part_of, object: {kind: engine, identity: {code: zeta}}}
+    """), encoding="utf-8")
+    claims = "".join(
+        f"""
+    - subject: {{kind: engine, identity: {{code: zeta}}}}
+      kind: known_issue
+      domain: mech
+      severity: high
+      text:
+        en: {{title: "Problem {n}", body: b, advice: a}}
+        tr: {{title: "Sorun {n}", body: b, advice: a}}
+      evidence:
+        - {{url: "https://forum.invalid/{n}", quote: Reported {n}.}}
+""" for n in (1, 2, 3))
+    (root / "data" / "claims.yaml").write_text(textwrap.dedent(claims), encoding="utf-8")
+    (root / "research" / "principle.md").write_text("Only the expensive.", encoding="utf-8")
+    (root / "research" / "templates.yaml").write_text('- "{alias} faults"\n', encoding="utf-8")
+
+    _load().render(packs, site)
+    hub = (site / "problems" / "index.html").read_text(encoding="utf-8")
+    assert '<section id="rigs">' in hub and "<h3>Acme</h3>" in hub and "<h3>Borealis</h3>" in hub
+    # Each make lists its own car, and that car links to the engine page it shares.
+    acme = hub.split("<h3>Acme</h3>")[1].split("<h3>")[0]
+    assert "Acme Roadster 2.0" in acme and 'href="/problems/zeta-engine/"' in acme and "Borealis" not in acme
+    # The engine's own page says which cars it is found on.
+    page = (site / "problems" / "zeta-engine" / "index.html").read_text(encoding="utf-8")
+    assert "Acme Roadster 2.0" in page and "Borealis Cruiser 1.6" in page

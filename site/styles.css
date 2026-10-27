@@ -200,6 +200,11 @@ h2 { font-size: clamp(2.5rem, 5.4vw, 4.2rem); max-width: 14em; }
 .problems .sev { color: var(--ink); font-weight: 700; }
 .problems .src { font-size: .95rem; overflow-wrap: anywhere; }
 .problems .short .button { margin-top: 4px; }
+.problems .jump { display: flex; flex-wrap: wrap; gap: 8px 22px; list-style: none; padding: 0; margin: 28px 0 0; }
+.problems .jump li { margin: 0; }
+.problems h3 { margin-top: 24px; }
+.problems section ul { list-style: none; padding: 0; }
+.problems section li { color: var(--ink); max-width: none; }
 
 /* Guide: one step beside one short film, each film a GIF the reader can pause */
 .guide-hero { padding-bottom: clamp(28px, 4vw, 48px); }
