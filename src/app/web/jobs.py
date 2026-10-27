@@ -300,6 +300,15 @@ class Cancelled(Exception):
     cancelled = True
 
 
+class Refused(ValueError):
+    """A refusal written for the reader, shown as written.
+
+    Any other failure reaches the reader as `ValueError: …`, which names a Python
+    class and means nothing to someone who asked a question and got no agent. The
+    class name still goes to the job's log, where an operator looks for it.
+    """
+
+
 @dataclass
 class Progress:
     """What a handler is given to report with.
@@ -814,7 +823,8 @@ class JobRunner:
             log.exception("job %s (%s) failed", job_id, kind)
             state.update_job(conn, job_id, line=_failure_line(exc))
             state.finish_job(
-                conn, job_id, state.FAILED, message=f"{type(exc).__name__}: {exc}"
+                conn, job_id, state.FAILED,
+                message=str(exc) if isinstance(exc, Refused) else f"{type(exc).__name__}: {exc}",
             )
             if run_id:
                 kept = state.partial_of(conn, job_id)

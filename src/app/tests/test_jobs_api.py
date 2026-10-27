@@ -16,7 +16,7 @@ from fastapi.testclient import TestClient
 
 from app.web import state
 from app.web.app import create_app
-from app.web.jobs import Cancelled, JobRunner
+from app.web.jobs import Cancelled, JobRunner, Refused
 from app.web.routers.jobs import list_jobs
 from app.web.routers.queue import list_queue
 from app.web.settings import Settings
@@ -174,6 +174,26 @@ def test_a_failing_job_says_why_instead_of_vanishing(settings):
     # The traceback belongs in the row, not in whichever terminal started the
     # server — an operator reading the dashboard should not have to find it.
     assert "ValueError" in row["log"]
+    runner.shutdown(wait=True)
+
+
+def test_a_refusal_written_for_the_reader_is_not_prefixed_with_a_python_class(settings):
+    # A shopper who asked a question with no agent set up read "ValueError: No agent
+    # to run: no coding-agent CLI on PATH ...". The sentence is the answer; the
+    # class name is for the operator, and stays in the log.
+    sentence = "Kriko needs an AI agent for this, and none is ready."
+
+    def handler(_settings, _params, _progress):
+        raise Refused(sentence)
+
+    runner = runner_with(settings, handler)
+    job_id = runner.submit("probe", {})
+    conn = state.connect(settings.app_state_path)
+    row = wait_for_done(conn, job_id)
+
+    assert row["state"] == state.FAILED
+    assert row["message"] == sentence
+    assert "Refused" in row["log"]
     runner.shutdown(wait=True)
 
 
