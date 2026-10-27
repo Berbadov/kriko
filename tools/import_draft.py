@@ -30,8 +30,13 @@ LICENSE = "CC-BY-SA-4.0"
 PUBLISHER = "kriko"
 ORIGIN = "https://github.com/kriko/kriko"
 SHORTEST_BODY = 60
-#: The sentence an agent writes about its own search, not about the product.
-NARRATION = re.compile(r"^(found via|came from|surfaced (?:in|by|via|from)|sourced (?:via|from) the .*search)\b", re.I)
+#: The sentence an agent writes about its own search, not about the product: it opens by saying where
+#: the claim came from and, before its first full stop or semicolon, names a search, query or seed.
+NARRATION = re.compile(r"^(?:found via|came from|surfaced|sourced|retrieved|from|via)\b(?:[^.;]|\.(?=\S))*\b(?:search(?:es)?|quer(?:y|ies)|seeds?|rewrites?)\b", re.I)
+#: A sentence in which the agent talks about its own tools, wherever it stands in the body.
+OWN_TOOLS = re.compile(r"\b(?:my fetcher|the fetcher|search-returned|search tool)\b", re.I)
+#: What follows a semicolon in such a sentence is kept when it is long enough to be a sentence of its own.
+REMAINDER = 40
 SKIPPED = {".installed", "__pycache__", "adapters"}
 HEADER = ("# Claims — what is known to go wrong, each with the page it came from and the quote\n"
           "# that was read there. A claim without both is not in this file.\n")
@@ -39,8 +44,17 @@ HEADER = ("# Claims — what is known to go wrong, each with the page it came fr
 
 def plain(body: str) -> str:
     """The body without the sentences that narrate how it was found."""
-    sentences = re.split(r"(?<=[.!?])\s+", " ".join(str(body).split()))
-    return " ".join(s for s in sentences if not NARRATION.match(s)).strip()
+    kept = []
+    for sentence in re.split(r"(?<=[.!?])\s+", " ".join(str(body).split())):
+        if OWN_TOOLS.search(sentence):
+            continue
+        if not NARRATION.match(sentence):
+            kept.append(sentence)
+            continue
+        tail = sentence.partition(";")[2].strip()
+        if len(tail) >= REMAINDER:
+            kept.append(tail[0].upper() + tail[1:])
+    return " ".join(kept).strip()
 
 
 def keep(claims: list) -> list:
