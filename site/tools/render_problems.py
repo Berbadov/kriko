@@ -37,6 +37,8 @@ import tempfile
 import tomllib
 from pathlib import Path
 
+import yaml
+
 ORIGIN = "https://kriko.cc"
 MIN_CLAIMS = 3
 LANGS = ("en", "tr")
@@ -75,8 +77,7 @@ UI = {
         "hub_title": "Known problems, by car and part",
         "hub_lead": "What is known to go wrong with a specific car, engine or gearbox, each report linked to the page it came from.",
         "hub_desc": "Sourced known problems for specific cars, engines and gearboxes, with what to check before you buy.",
-        "hub_cars": "Cars",
-        "hub_parts": "Parts",
+        "hub_other": "Other",
         "reports": "{n} reports",
         "footer_home": "kriko.cc",
         "footer_help": "Help and feedback",
@@ -113,8 +114,7 @@ UI = {
         "hub_title": "Bilinen sorunlar: araç ve parça bazında",
         "hub_lead": "Belirli bir araç, motor ya da şanzımanda bilinen arızalar; her rapor, geldiği sayfaya bağlantı verir.",
         "hub_desc": "Belirli araç, motor ve şanzımanlar için kaynaklı bilinen sorunlar ve satın almadan önce neye bakılacağı.",
-        "hub_cars": "Araçlar",
-        "hub_parts": "Parçalar",
+        "hub_other": "Diğer",
         "reports": "{n} rapor",
         "footer_home": "kriko.cc",
         "footer_help": "Yardım ve geri bildirim",
@@ -172,8 +172,9 @@ def read_catalog(path: Path) -> dict:
     """Everything a page needs from one built catalog file, as plain data."""
     conn = sqlite3.connect(f"file:{path.as_posix()}?mode=ro", uri=True)
     try:
-        name, version, license_ = conn.execute("SELECT name, version, license FROM packs").fetchone()
-        subjects = {sid: {"label": label, "kind": kind, "claims": [], "products": []}
+        name, version, license_, manifest = conn.execute(
+            "SELECT name, version, license, manifest_json FROM packs").fetchone()
+        subjects = {sid: {"label": label, "kind": kind, "claims": [], "products": [], "group": ""}
                     for sid, label, kind in conn.execute("SELECT subject_id, label, kind FROM subjects")}
         sources: dict[str, list[tuple[str, str]]] = {}
         for claim_id, url, domain in conn.execute(
@@ -191,10 +192,25 @@ def read_catalog(path: Path) -> dict:
             "SELECT claim_id, lang, title, body, advice FROM claim_text"
         ):
             claims[claim_id]["text"][lang] = {"title": clean(title), "body": clean(body), "advice": clean(advice)}
+        parts = set()
         for sid, oid in conn.execute("SELECT subject_id, object_id FROM relations WHERE predicate = 'part_of'"):
             if oid in subjects and sid in subjects:
                 subjects[oid]["products"].append(subjects[sid]["label"])
-        return {"name": name, "version": version, "license": license_, "subjects": subjects}
+                parts.add(oid)
+        # A whole thing is browsed by its first identity key (the make, the brand): the one
+        # the pack lists first. A part has no such key worth grouping by, so it gets none.
+        first_key = {kind: keys[0] for kind, keys in (yaml.safe_load(manifest) or {}).get("identity", {}).items() if keys}
+        for sid, key, value in conn.execute(
+            "SELECT subject_id, key, value_text FROM attributes WHERE is_identity = 1 AND value_text IS NOT NULL"
+        ):
+            subject = subjects.get(sid)
+            if subject and sid not in parts and key == first_key.get(subject["kind"]) and value:
+                label = subject["label"]
+                subject["group"] = label[:len(value)] if label.lower().startswith(value.lower()) else value.title()
+        by_label = {s["label"]: s for s in subjects.values()}
+        groups = {label: by_label[label]["group"]
+                  for label in {l for s in subjects.values() for l in s["products"]} if label in by_label}
+        return {"name": name, "version": version, "license": license_, "subjects": subjects, "groups": groups}
     finally:
         conn.close()
 
@@ -322,21 +338,38 @@ def _hub_page(lang: str, entries: list[dict], css: str) -> str:
     ui = UI[lang]
     path = f'{ui["prefix"]}/problems/'
     alternates = {code: f'{UI[code]["prefix"]}/problems/' for code in LANGS}
-    blocks = []
-    by_product: dict[str, list[dict]] = {}
+
+    def link(entry: dict) -> str:
+        return f'<a href="{ui["prefix"]}/problems/{entry["slug"]}/">{_e(entry["label"])}</a>'
+
+    by_catalog: dict[str, list[dict]] = {}
     for entry in entries:
-        for product in entry["products"]:
-            by_product.setdefault(product, []).append(entry)
-    if by_product:
-        items = "".join(
-            f'<li><strong>{_e(product)}</strong>: ' + ", ".join(
-                f'<a href="{ui["prefix"]}/problems/{e["slug"]}/">{_e(e["label"])}</a>' for e in sorted(parts, key=lambda e: e["label"]))
-            + "</li>" for product, parts in sorted(by_product.items()))
-        blocks.append(f'      <h2>{_e(ui["hub_cars"])}</h2>\n      <ul>{items}</ul>')
-    items = "".join(
-        f'<li><a href="{ui["prefix"]}/problems/{e["slug"]}/">{_e(e["label"])}</a> ({_e(ui["reports"].format(n=e["counts"][lang]))})</li>'
-        for e in sorted(entries, key=lambda e: e["label"]))
-    blocks.append(f'      <h2>{_e(ui["hub_parts"])}</h2>\n      <ul>{items}</ul>')
+        by_catalog.setdefault(entry["catalog"], []).append(entry)
+    blocks = []
+    if len(by_catalog) > 1:
+        jump = "".join(f'<li><a href="#{_e(slugify(name))}">{_e(name)}</a></li>' for name in sorted(by_catalog))
+        blocks.append(f'      <ul class="jump">{jump}</ul>')
+    for name, items in sorted(by_catalog.items()):
+        groups: dict[str, list[str]] = {}
+        # A whole thing with a page of its own sits under its make or brand...
+        for entry in items:
+            if entry["group"]:
+                count = _e(ui["reports"].format(n=entry["counts"][lang]))
+                groups.setdefault(entry["group"], []).append(f"<li>{link(entry)} ({count})</li>")
+        # ...and a part is reached through each whole thing it is fitted to.
+        fitted: dict[str, list[dict]] = {}
+        for entry in items:
+            for product in entry["products"]:
+                fitted.setdefault(product, []).append(entry)
+        for product, parts in fitted.items():
+            group = items[0]["groups"].get(product) or ui["hub_other"]
+            groups.setdefault(group, []).append(
+                f"<li><strong>{_e(product)}</strong>: " + ", ".join(link(p) for p in sorted(parts, key=lambda p: p["label"])) + "</li>")
+        for entry in items:
+            if not entry["group"] and not entry["products"] and not any(entry in parts for parts in fitted.values()):
+                groups.setdefault(ui["hub_other"], []).append(f"<li>{link(entry)}</li>")
+        lists = "\n".join(f"      <h3>{_e(group)}</h3>\n      <ul>{''.join(sorted(rows))}</ul>" for group, rows in sorted(groups.items()))
+        blocks.append(f'      <section id="{_e(slugify(name))}">\n      <h2>{_e(name)}</h2>\n{lists}\n      </section>')
     body = (f'      <h1>{_e(ui["hub_title"])}</h1>\n      <p class="lead">{_e(ui["hub_lead"])}</p>\n'
             + "\n".join(blocks) + "\n"
             f'      <div class="short"><h2>{_e(ui["cta_h"])}</h2><p>{_e(ui["cta_p"])}</p>'
@@ -385,6 +418,7 @@ def render(packs_dir: Path, site_dir: Path) -> list[str]:
                     written[f'{UI[code]["prefix"]}/problems/{slug}/'] = _subject_page(
                         catalog, subject, slug, code, per_lang[code], css, have)
                 entries.append({"slug": slug, "label": subject["label"], "products": sorted(set(subject["products"])),
+                                "catalog": catalog["name"], "group": subject["group"], "groups": catalog["groups"],
                                 "counts": {code: len(per_lang[code]) for code in languages}, "have": have})
     for code in LANGS:
         shown = [e for e in entries if code in e["have"]]
