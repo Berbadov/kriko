@@ -1,0 +1,118 @@
+# Subjects — the things this pack knows about.
+#
+# `identity` carries exactly the keys `pack.toml` declares for the
+# kind: that dictionary is hashed to the subject id.
+- kind: product
+  label: GeForce RTX 4090
+  identity:
+    brand: nvidia
+    series: rtx 4090
+  aliases:
+  - RTX 4090
+- kind: product
+  label: GeForce RTX 5090
+  identity:
+    brand: nvidia
+    series: rtx 5090
+  aliases:
+  - RTX 5090
+- kind: product
+  label: GeForce RTX 5080
+  identity:
+    brand: nvidia
+    series: rtx 5080
+  aliases:
+  - RTX 5080
+- kind: product
+  label: GeForce RTX 5070 Ti
+  identity:
+    brand: nvidia
+    series: rtx 5070 ti
+  aliases:
+  - RTX 5070 Ti
+- kind: product
+  label: Radeon RX 7900 XT
+  identity:
+    brand: amd
+    series: rx 7900 xt
+  aliases:
+  - RX 7900 XT
+- kind: product
+  label: Radeon RX 7900 XTX
+  identity:
+    brand: amd
+    series: rx 7900 xtx
+  aliases:
+  - RX 7900 XTX
+- kind: product
+  label: Intel Arc B580
+  identity:
+    brand: intel
+    series: arc b580
+  aliases:
+  - Arc B580
+  - B580
+- kind: product
+  label: GeForce RTX 3060
+  identity:
+    brand: NVIDIA
+    series: GeForce RTX 30 Series
+  attributes:
+    vram_gb:
+      value: '12'
+      source: https://www.clubedohardware.com.br/forums/topic/1711921-placa-de-v%C3%ADdeo-rtx-3060-inno3d-parou-de-dar-imagem-ap%C3%B3s-atualizar-drivers/
+  aliases:
+  - RTX 3060
+- kind: product
+  label: GeForce RTX 3060 Ti
+  identity:
+    brand: NVIDIA
+    series: GeForce RTX 30 Series
+  aliases:
+  - RTX 3060 Ti
+- kind: product
+  label: GeForce RTX 3070
+  identity:
+    brand: NVIDIA
+    series: GeForce RTX 30 Series
+  aliases:
+  - RTX 3070
+- kind: product
+  label: GeForce RTX 3080
+  identity:
+    brand: NVIDIA
+    series: GeForce RTX 30 Series
+  attributes:
+    vram_gb:
+      value: '10'
+      source: https://www.digitec.ch/en/s1/questionandanswer/pourquoi-des-adaptateurs-molex-vers-8-broches-sont-ils-fournis-ce-nest-meme-pas-recommande-pour-une--325024
+    memory_type:
+      value: GDDR6X
+      source: https://www.digitec.ch/en/s1/questionandanswer/pourquoi-des-adaptateurs-molex-vers-8-broches-sont-ils-fournis-ce-nest-meme-pas-recommande-pour-une--325024
+    tdp_w:
+      value: '320'
+      source: https://ngabbs.com/read.php?tid=44778949&rand=265
+  aliases:
+  - RTX 3080
+- kind: product
+  label: GeForce RTX 3090
+  identity:
+    brand: NVIDIA
+    series: GeForce RTX 30 Series
+  attributes:
+    tdp_w:
+      value: '375'
+      source: https://en.gamegpu.com/news/zhelezo/razemy-pitaniya-asus-tuf-rtx-3090-oplavilis-nesmotrya-na-temperaturu-gpu-vsego-65
+  aliases:
+  - RTX 3090
+- kind: product
+  label: GeForce RTX 4060
+  identity:
+    brand: NVIDIA
+    series: GeForce RTX 40 Series
+  attributes:
+    vram_gb:
+      value: '8'
+      source: https://www.dell.com/community/en/conversations/xps-desktops/xps-8960-2023-gpu-only-running-at-x8-pcie-40-speed/67b30cbbe285725a69ece0ef
+  aliases:
+  - RTX 4060

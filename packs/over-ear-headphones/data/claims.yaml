@@ -1,0 +1,2109 @@
+# Claims — what is known to go wrong, each with the page it came from and the quote
+# that was read there. A claim without both is not in this file.
+- subject:
+    kind: product
+    identity:
+      brand: Bose
+      series: QuietComfort (2023)
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: earpads
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Earpads split open along the heat-sealed seam within months of purchase
+      body: An Italian consumer complaint (Altroconsumo) on the exact QC 2023 model reports the original
+        earpads opening and coming unglued along the heat-sealed seam, with foam spilling out, within
+        months of purchase.
+      advice: The QC 2023's earpads are reported to delaminate within the first year. The complainant
+        says Bose refused warranty as 'wear' and that official replacement kits are no longer sold, leaving
+        third-party sellers charging over €120 for two pads. Budget for early earpad replacement or verify
+        warranty/right-to-repair terms before buying.
+    tr:
+      title: Satın alımdan aylar sonra kulak yastıkları ısıyla yapıştırılmış dikiş boyunca yarıldı
+      body: İtalyan bir tüketici şikayeti (Altroconsumo), tam olarak QC 2023 modeliyle ilgili olarak,
+        orijinal kulak yastıklarının satın alımdan aylar sonra ısıyla yapıştırılmış dikiş boyunca açıldığını
+        ve yapışkanının çözüldüğünü, süngerinin dışarı taştığını bildiriyor.
+      advice: QC 2023'ün kulak yastıklarının ilk yıl içinde katmanlarına ayrıldığı bildiriliyor. Şikayetçi,
+        Bose'un garantiyi "aşınma" gerekçesiyle reddettiğini ve resmi yedek parça kitlerinin artık satılmadığını,
+        üçüncü taraf satıcıların iki yastık için 120 €'nun üzerinde ücret aldığını söylüyor. Erken kulak
+        yastığı değişimi için bütçe ayırın veya satın almadan önce garanti/onarım hakkı koşullarını doğrulayın.
+  evidence:
+  - url: https://www.altroconsumo.it/reclamare/bacheca-dei-reclami/cuscinetti-rotti-e-mancato-ric/6c12b9b2cabb1b8007
+    quote: i cuscinetti auricolari originali si sono aperti e scollati lungo la giuntura termosaldata,
+      aprendosi completamente e lasciando fuoriuscire la schiuma interna.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:36:07+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: JBL
+      series: Live 770NC
+  kind: known_issue
+  domain: electronic
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: left earcup driver
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Left earpiece beeps and buzzes on defective unit
+      body: An owner reports receiving a defective unit where the left earpiece beeps and buzzes, indicating
+        a driver or wiring fault in the left earcup.
+      advice: Check the left earcup for beeping/buzzing sounds on arrival. If present, this indicates
+        a defective driver or wiring and should be returned under warranty immediately.
+    tr:
+      title: Arızalı üründe sol kulaklık bip sesi çıkarıyor ve vızıldıyor
+      body: Bir sahip, sol kulaklığın bip sesi çıkardığı ve vızıldadığı arızalı bir ürün aldığını bildiriyor;
+        bu, sol kulak kabuğunda bir sürücü veya kablolama arızasına işaret ediyor.
+      advice: Ürün geldiğinde sol kulak kabuğunda bip/vızıltı sesi olup olmadığını kontrol edin. Varsa,
+        bu arızalı bir sürücüye veya kablolamaya işaret eder ve derhal garanti kapsamında iade edilmelidir.
+  evidence:
+  - url: https://m.alza.cz/EN/reviews/jbl-live-770nc-black-7927515.htm
+    quote: 'I got the headphones defective-broken
+
+
+      Left earpiece beeps and buzzes'
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:36:38+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: apple
+      series: airpods-max
+  kind: known_issue
+  domain: electronic
+  severity: high
+  consequence: ''
+  detection: ''
+  component: internal wiring / logic board
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Three amber lights of death: unit becomes unusable and cannot be fixed by reset'
+      body: Owners report a blinking-amber-LED defect that makes the headphones effectively unusable and
+        that survives restart and factory reset; a Reddit user and CNET found a temporary freezer fix,
+        suggesting microscopic cracks in internal wiring. Apple has not commented on the defect.
+      advice: The unit can fail outright with no official remedy; the only reported 'fix' is temporary.
+        This is a high-cost failure with no warranty path, so a buyer should weigh the risk of a dead
+        unit after a few years.
+    tr:
+      title: 'Üç kehribar ölüm ışığı: ünite kullanılamaz hale geliyor ve sıfırlamayla düzeltilemiyor'
+      body: Sahipler, kulaklıkları fiilen kullanılamaz hale getiren ve yeniden başlatma ile fabrika ayarlarına
+        sıfırlamadan sonra da devam eden yanıp sönen kehribar LED arızasını bildiriyor; bir Reddit kullanıcısı
+        ve CNET geçici bir dondurucu çözümü buldu, bu da iç kablolamada mikroskobik çatlaklara işaret
+        ediyor. Apple bu arıza hakkında yorum yapmadı.
+      advice: Ünite resmi bir çözüm olmaksızın tamamen arızalanabilir; bildirilen tek 'çözüm' geçicidir.
+        Bu, garanti yolu olmayan yüksek maliyetli bir arızadır, bu nedenle alıcı birkaç yıl sonra ölü
+        bir ünite riskini tartmalıdır.
+  evidence:
+  - url: https://www.notebookcheck-ru.com/Tri-jantarnykh-ognja-smerti-Neispravnye-Apple-AirPods-Max-inogda-mozhno-pochinit-cherez-morozilnuju-kameru.1160995.0.html
+    quote: В большинстве случаев эти "три янтарных огонька смерти" нельзя устранить перезагрузкой или
+      сбросом устройства к заводским настройкам.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:38:12+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: jbl
+      series: tour-one-m2
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: headband/extension arm plastic piece
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Headband/extension-arm plastic piece broke; authorized service calls it unrepairable
+      body: Owner reports the plastic piece in the headband/extension arm broke under normal use; the
+        authorized service (Aztek Teknoloji) declared it unrepairable and offered only a paid replacement.
+      advice: This is a known weak point in the headband/extension arm; if it breaks, the Turkish authorized
+        service refuses repair, so the cost is a full replacement unit.
+    tr:
+      title: Kafa bandı/uzatma kolu plastik parçası kırıldı; yetkili servis onarılamaz diyor
+      body: Sahip, kafa bandı/uzatma kolundaki plastik parçanın normal kullanım sırasında kırıldığını
+        bildiriyor; yetkili servis (Aztek Teknoloji) onarılamaz ilan etti ve yalnızca ücretli değişim
+        teklif etti.
+      advice: Bu, kafa bandı/uzatma kolunda bilinen bir zayıf noktadır; kırılırsa, Türkiye'deki yetkili
+        servis onarımı reddeder, bu nedenle maliyet tam bir yedek ünitedir.
+  evidence:
+  - url: https://www.sikayetvar.com/aztek-teknoloji/jbl-kulakligin-kirik-plastik-parcasi-icin-tamir-reddi-ve-surdurulebilirlik-ihlali
+    quote: kafa bandı/uzatma kolu kısmındaki plastik parça kırıldı
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:41:02+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: JBL
+      series: Live 770NC
+  kind: known_issue
+  domain: electronic
+  severity: high
+  consequence: ''
+  detection: ''
+  component: power/firmware
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Live 770NC fails to power on after ~3 months of use
+      body: Owner reports the unit would not power on after three months; charging overnight and hard
+        reset attempts did not help initially, then it resumed working after being left plugged in for
+        days, suggesting a firmware/software power state fault rather than a dead battery.
+      advice: If you buy this model, be aware of a reported failure to power on after a few months of
+        use. A hard reset may not recover it immediately; leaving it charged for an extended period appeared
+        to revive it in this case. This is a single owner report, not a widespread documented pattern.
+    tr:
+      title: Live 770NC yaklaşık 3 ay kullanımdan sonra açılmıyor
+      body: Sahip, ünitenin üç ay sonra açılmadığını bildiriyor; gece boyunca şarj etme ve zorla sıfırlama
+        denemeleri başlangıçta yardımcı olmadı, ardından günlerce takılı bırakıldıktan sonra çalışmaya
+        başladı, bu da ölü bir pil yerine bir firmware/yazılım güç durumu arızasına işaret ediyor.
+      advice: Bu modeli satın alırsanız, birkaç ay kullanımdan sonra açılmama bildiriminin farkında olun.
+        Zorla sıfırlama hemen kurtaramayabilir; uzun bir süre şarjda bırakmak bu durumda onu canlandırmış
+        görünüyor. Bu tek bir sahip bildirimidir, yaygın olarak belgelenmiş bir örüntü değildir.
+  evidence:
+  - url: https://electronics.woot.com/review/B0CT9XTKKM?offerid=33e9a6df-0824-42b4-8f36-01cd2a8bf3d6&itemid=2894aac5-e885-4fff-8405-8467bc0d7787&filter=2&isVerified=false&page=1&sort=0
+    quote: This was true for three months, however, in March 2026 while attempting to power them up, nothing
+      happened.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:42:30+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: bose
+      series: quietcomfort-ultra
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: hinge (Scharniere)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Owner reports QC Ultra hinges crack loudly (design flaw)
+      body: A German owner review reports the hinges crack loudly and calls it a design flaw, independently
+        corroborating the hinge failure mode.
+      advice: A second, independent owner report of hinge noise/cracking. If the hinges crack or feel
+        loose, treat it as a structural issue rather than a cosmetic one.
+    tr:
+      title: Sahip, QC Ultra menteşelerinin yüksek sesle çatladığını bildiriyor (tasarım hatası)
+      body: Bir Alman sahip incelemesi, menteşelerin yüksek sesle çatladığını bildiriyor ve bunu bir tasarım
+        hatası olarak nitelendiriyor, menteşe arıza modunu bağımsız olarak doğruluyor.
+      advice: Menteşe gürültüsü/çatlamasına dair ikinci, bağımsız bir sahip bildirimi. Menteşeler çatlarsa
+        veya gevşek hissedilirse, bunu kozmetik değil yapısal bir sorun olarak değerlendirin.
+  evidence:
+  - url: https://www.amazon.de/dp/B0CCZ1HQ39?th=1
+    quote: leider knacken die Scharniere sehr und es stört extrem. Meines Erachtens ein Design Fehler.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:38:46+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Sony
+      series: WH-1000XM3
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: Swivel/ball-and-socket joint on ear cup
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Left ear cup swivel point breaks, requiring full headband replacement at $198
+      body: Owner reports the plastic swivel joint broke about a week after the 1-year warranty expired.
+        Sony's authorized repair center quoted $198 to replace the entire headband because the swivel
+        is not sold as a separate part. This makes the repair cost nearly the price of a new pair.
+      advice: Buyers should check the swivel joints early and consider that a broken swivel effectively
+        totals the headphones since Sony only offers a full headband replacement at ~$198.
+    tr:
+      title: Sol kulaklık kabı döner noktası kırılıyor, 198 $ karşılığında tam kafa bandı değişimi gerekiyor
+      body: Sahibi, plastik döner eklemin 1 yıllık garanti süresinin dolmasından yaklaşık bir hafta sonra
+        kırıldığını bildiriyor. Sony'nin yetkili servis merkezi, döner eklem ayrı parça olarak satılmadığı
+        için tüm kafa bandını değiştirmek üzere 198 $ fiyat verdi. Bu, onarım maliyetini neredeyse yeni
+        bir çiftin fiyatına çıkarıyor.
+      advice: Alıcılar döner eklemleri erkenden kontrol etmeli ve kırık bir döner eklemin kulaklığı fiilen
+        hurdaya çıkardığını göz önünde bulundurmalıdır, çünkü Sony yalnızca yaklaşık 198 $ karşılığında
+        tam kafa bandı değişimi sunuyor.
+  evidence:
+  - url: https://www.bestbuy.com/site/reviews/sony-wh-1000xm3-wireless-noise-cancelling-over-the-ear-headphones-with-google-assistant-silver/6280545?rating=1
+    quote: On 7-24-2020, the swivel point on the left ear up broke, rendering the headphones unusable.
+      Contacted Sony for an authorized repair center, and was provided contact information for their only
+      factory authorized center in the U.S. Sent them in, and was quoted $198.00 to replace a simple piece
+      of plastic that forms a “ball and socket” type swivel connection.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:37:32+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: JBL
+      series: Live 770NC
+  kind: known_issue
+  domain: electronic
+  severity: low
+  consequence: ''
+  detection: ''
+  component: wear detection sensor
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Wear detection works only sporadically
+      body: An owner reports the wear detection (auto-pause) works only sporadically. An Alza.hu reviewer
+        similarly notes 'auto pause is unusable if you have a hood - off'.
+      advice: The auto-pause/wear detection feature may be unreliable, especially with hoods or when repositioning
+        the headphones. This is a firmware/sensor quirk rather than a physical failure.
+    tr:
+      title: Takma algılama yalnızca ara sıra çalışıyor
+      body: Bir sahip, takma algılamanın (otomatik duraklatma) yalnızca ara sıra çalıştığını bildiriyor.
+        Bir Alza.hu incelemecisi de benzer şekilde 'kapüşonunuz varsa otomatik duraklatma kullanılamaz
+        - kapalı' diyor.
+      advice: Otomatik duraklatma/takma algılama özelliği, özellikle kapüşonlarla veya kulaklıklar yeniden
+        konumlandırıldığında güvenilmez olabilir. Bu, fiziksel bir arıza değil, bir yazılım/sensör tuhaflığıdır.
+  evidence:
+  - url: https://www.amazon.de/dp/B0CJVDY442?linkCode=xm2&camp=2025&creative=165953&smid=A3JWKAKR8XB7XF&creativeASIN=B0CJVDY442&tag=preissuchmasc-21&psc=1&ascsubtag=332054730199008497&language=de_DE
+    quote: Es gibt zwar eine Trageerkennung, die aber nur sporadisch funktioniert
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:42:30+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: JBL
+      series: Live 770NC
+  kind: known_issue
+  domain: electronic
+  severity: low
+  consequence: ''
+  detection: ''
+  component: touch controls
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Touch/gesture controls unreliable
+      body: An owner reports gesture controls did not work well. An Amazon.de reviewer similarly notes
+        'the touch controls can be a little finicky at times'.
+      advice: Touch/gesture controls may be unreliable or finicky. This is an annoyance rather than a
+        hardware failure, but may affect daily usability.
+    tr:
+      title: Dokunma/jest kontrolleri güvenilmez
+      body: Bir sahip, jest kontrollerinin iyi çalışmadığını bildiriyor. Bir Amazon.de incelemecisi de
+        benzer şekilde 'dokunma kontrolleri zaman zaman biraz kaprisli olabiliyor' diyor.
+      advice: Dokunma/jest kontrolleri güvenilmez veya kaprisli olabilir. Bu, bir donanım arızası değil
+        can sıkıcı bir durumdur, ancak günlük kullanımı etkileyebilir.
+  evidence:
+  - url: https://www.alza.hu/EN/reviews/jbl-live-770nc-blue-7927514.htm
+    quote: the gesture controls didnt work well
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:42:30+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Bose
+      series: Noise Cancelling Headphones 700
+  kind: known_issue
+  domain: electronic
+  severity: low
+  consequence: ''
+  detection: ''
+  component: Bluetooth
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: NC700 intermittent audio and sporadic Bluetooth connections (official Bose troubleshooting)
+      body: Bose's own support article for the NC700 documents intermittent audio and sporadic Bluetooth
+        connections, attributing them to multipoint interference and Bluetooth memory issues.
+      advice: Intermittent audio is a recognised firmware/Bluetooth behaviour Bose itself documents, triggered
+        by multipoint connections. A buyer can mitigate it by turning off secondary Bluetooth devices
+        and clearing paired-device memory, so it is a nuisance rather than a hardware failure.
+    tr:
+      title: NC700 aralıklı ses ve ara sıra Bluetooth bağlantıları (resmi Bose sorun giderme)
+      body: Bose'un NC700 için kendi destek makalesi, aralıklı sesi ve ara sıra Bluetooth bağlantılarını
+        belgeleyerek bunları çok noktalı girişime ve Bluetooth bellek sorunlarına bağlıyor.
+      advice: Aralıklı ses, Bose'un kendisinin belgelediği, çok noktalı bağlantılarla tetiklenen tanınmış
+        bir yazılım/Bluetooth davranışıdır. Bir alıcı, ikincil Bluetooth cihazlarını kapatarak ve eşleştirilmiş
+        cihaz belleğini temizleyerek bunu hafifletebilir, dolayısıyla bu bir donanım arızası değil bir
+        sıkıntıdır.
+  evidence:
+  - url: https://support.bose.com.au/article/nc700-headphonearn-intermittent-audio-from-product---ka08c000001buk3aaa
+    quote: causing intermittent audio or sporadic Bluetooth connections
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:35:43+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: sennheiser
+      series: momentum-4
+  kind: known_issue
+  domain: electronic
+  severity: high
+  consequence: ''
+  detection: ''
+  component: Bluetooth radio / pairing state machine
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Bluetooth stuck in pairing mode, cannot power off
+      body: 'Owner review on retailer (Thomann) page: after a few weeks the headphones got stuck in pairing
+        mode and could not be powered off, rendering them useless. Another review on the same page reports
+        ''Endless Bluetooth functionality problems.'''
+      advice: A Bluetooth fault can leave the unit stuck in pairing mode with no way to power off, effectively
+        bricking it until a hard reset. This is a known, recurring failure mode, so buy from a seller
+        with a generous return/warranty window.
+    tr:
+      title: Bluetooth eşleştirme modunda takılı kalıyor, kapatılamıyor
+      body: 'Perakendeci (Thomann) sayfasındaki sahip incelemesi: birkaç hafta sonra kulaklıklar eşleştirme
+        modunda takılı kaldı ve kapatılamadı, bu da onları kullanılamaz hale getirdi. Aynı sayfadaki başka
+        bir inceleme ''Sonsuz Bluetooth işlev sorunları.'' bildiriyor.'
+      advice: Bir Bluetooth arızası, cihazı eşleştirme modunda takılı bırakabilir ve kapatmanın hiçbir
+        yolu olmayabilir, bu da sert bir sıfırlamaya kadar onu fiilen tuğlaya çevirir. Bu bilinen, tekrarlayan
+        bir arıza modudur, bu nedenle cömert bir iade/garanti süresi sunan bir satıcıdan satın alın.
+  evidence:
+  - url: https://www.thomann.co.uk/sennheiser_momentum_4_80th_anniversary_reviews.htm?rating=1
+    quote: Then it got stuck in pairing mode. Couldn't connect or even power them off.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:39:21+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Sony
+      series: WH-1000XM3
+  kind: known_issue
+  domain: general
+  severity: low
+  consequence: ''
+  detection: ''
+  component: Ear pads / cushion material
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Ear pad material flaking/tearing after ~2 years of use
+      body: An owner review on SoundGuys reports the soft parts (ear pads) started tearing after about
+        2 years of careful daily use. Another reviewer on Google Shopping also reported the material on
+        the ear cups started flaking off. This is a consumable-wear issue rather than a structural failure.
+      advice: Ear pads are a wear item expected to degrade after roughly 2 years. Buyers should budget
+        for replacement ear pads as a normal maintenance cost.
+    tr:
+      title: Yaklaşık 2 yıl kullanımdan sonra kulaklık pedi malzemesi pul pul dökülüyor/yırtılıyor
+      body: SoundGuys'teki bir sahip incelemesi, yumuşak parçaların (kulaklık pedleri) yaklaşık 2 yıl
+        dikkatli günlük kullanımdan sonra yırtılmaya başladığını bildiriyor. Google Shopping'teki başka
+        bir incemeci de kulaklık kaplarındaki malzemenin pul pul dökülmeye başladığını bildirdi. Bu, yapısal
+        bir arıza değil, sarf malzemesi aşınması sorunudur.
+      advice: Kulaklık pedleri, yaklaşık 2 yıl sonra bozulması beklenen bir aşınma parçasıdır. Alıcılar,
+        normal bir bakım maliyeti olarak yedek kulaklık pedleri için bütçe ayırmalıdır.
+  evidence:
+  - url: https://www.soundguys.com/product/sony-wh-1000xm3/
+    quote: They’re quite bulky even when folded and the soft parts started tearing after about 2 years
+      of very careful use.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:37:32+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: sennheiser
+      series: momentum-4
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: Earcup suspension / hanger
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Earcup suspension (hanger) broken on owner's unit
+      body: 'Owner on a German Q&A service reports physical damage: the earcup suspension (Aufhängung)
+        is broken on their Momentum 4.'
+      advice: A German owner reports the earcup hanger physically broken. This is a structural failure
+        of the plastic suspension that requires a parts replacement and disassembly of the headband wiring
+        to fix.
+    tr:
+      title: Sahibinin cihazında kulaklık yastığı askısı (kanca) kırıldı
+      body: 'Alman bir soru-cevap hizmetindeki sahibi, fiziksel hasar bildiriyor: Momentum 4''ünde kulaklık
+        yastığı askısı (Aufhängung) kırılmış.'
+      advice: Alman bir sahip, kulaklık yastığı kancasının fiziksel olarak kırıldığını bildiriyor. Bu,
+        plastik askının yapısal bir arızasıdır ve onarım için parça değişimi ile kafa bandı kablolarının
+        sökülmesi gerekir.
+  evidence:
+  - url: https://www.justanswer.de/elektronik/st3x4-reparatur-kopfh-hrer-fachassistent-in-es-ist-wirklich.html
+    quote: physischer schaden, aufhängung ohrmuschel ist gebrochen
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:39:21+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Sennheiser
+      series: Momentum Wireless 3
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: headband size slider (Bügel)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Headband slider loosens and slips in length over time
+      body: Found via 'Sennheiser Momentum 3 headband hinge broke forum'. A Galaxus owner review (in German)
+        advises testing right after purchase whether one headband side is slightly loose, because it does
+        not bother at first but over time the slider keeps slipping in length.
+      advice: Check both headband sliders hold their position; a loose slider makes the fit unstable and
+        worsens with use.
+    tr:
+      title: Kafa bandı sürgüsü zamanla gevşiyor ve uzunlukta kayıyor
+      body: '''Sennheiser Momentum 3 headband hinge broke forum'' aramasıyla bulundu. Almanca bir Galaxus
+        sahip incelemesi, satın alımdan hemen sonra kafa bandının bir tarafının hafifçe gevşek olup olmadığının
+        test edilmesini öneriyor, çünkü başlangıçta rahatsız etmiyor ancak zamanla sürgü uzunlukta kaymaya
+        devam ediyor.'
+      advice: Her iki kafa bandı sürgüsünün konumunu koruduğunu kontrol edin; gevşek bir sürgü uyumu dengesiz
+        hale getirir ve kullanımla birlikte kötüleşir.
+  evidence:
+  - url: https://www.galaxus.ch/de/s1/productrating/wer-diesen-kopfhoerer-kauft-der-hat-was-fuer-mindestens-10-jahre-743659
+    quote: Empfehle jedoch direkt nach dem Kauf zu testen ob ein Bügel ein wenig lockerer ist da dies
+      am anfang zwar nicht stört, mit der Zeit jedoch auf dem Wecker geht. Da dieser dann immer in der
+      länge verrutscht.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:36:58+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: bose
+      series: quietcomfort-ultra
+  kind: known_issue
+  domain: electronic
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: power management / firmware
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: QC Ultra fails to auto power off and drains battery
+      body: A German owner review reports the headphones fail to auto power off in 9 of 10 cases and run
+        the battery down.
+      advice: A second, independent report of the auto power-off fault, here manifesting as battery drain
+        because the unit stays on. Expect to manage power manually or charge more often.
+    tr:
+      title: QC Ultra otomatik kapanmıyor ve pili tüketiyor
+      body: Almanca bir sahip incelemesi, kulaklığın 10 vakadan 9'unda otomatik olarak kapanmadığını ve
+        pili tükettiğini bildiriyor.
+      advice: Otomatik kapanma arızasının ikinci, bağımsız bir bildirimi; burada cihaz açık kaldığı için
+        pil tüketimi olarak kendini gösteriyor. Gücü manuel olarak yönetmeyi veya daha sık şarj etmeyi
+        bekleyin.
+  evidence:
+  - url: https://www.amazon.de/dp/B0CCZ1HQ39?th=1
+    quote: die Kopfhörer gehen in 9 von 10 Fällen nicht Automatisch aus und laufen leer
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:38:46+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: bose
+      series: quietcomfort-ultra
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: hinge/swivel assembly
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Hinge swivel damage is the most common Bose QC Ultra failure
+      body: A repair center's own repair data names hinge swivel damage as the most common QC Ultra failure,
+        followed by hinge pins moving or falling out.
+      advice: The hinge is a high-stress area; owners report it first feels loose, then cracks, then the
+        swivel separates or the pin falls out and the ear cup dangles. Check hinge tightness early — once
+        it loosens the damage accelerates, and repair/replacement is needed.
+    tr:
+      title: Menteşe döner hasarı en yaygın Bose QC Ultra arızasıdır
+      body: Bir onarım merkezinin kendi onarım verileri, menteşe döner hasarını en yaygın QC Ultra arızası
+        olarak adlandırıyor; bunu menteşe pimlerinin hareket etmesi veya düşmesi izliyor.
+      advice: Menteşe yüksek stresli bir bölgedir; sahipler önce gevşek hissettirdiğini, sonra çatladığını,
+        ardından döner kısmın ayrıldığını veya pimin düşüp kulak yastığının sarktığını bildiriyor. Menteşe
+        sıkılığını erken kontrol edin — bir kez gevşediğinde hasar hızlanır ve onarım/değişim gerekir.
+  evidence:
+  - url: https://www.joesge.com/blogs/news/why-do-bose-qc-ultra-hinges-break-what-our-repair-center-is-seeing-in-2026
+    quote: The most common issue is hinge swivel damage, followed by hinge pins moving, protruding, or
+      falling out of position.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:38:46+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Sony
+      series: WH-1000XM3
+  kind: known_issue
+  domain: electronic
+  severity: low
+  consequence: ''
+  detection: ''
+  component: Firmware / internal electronics
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Erratic behavior in cold temperatures — official Sony acknowledgement
+      body: Sony's official Turkish support page (dated 14.05.2025) acknowledges the WH-1000XM3 can behave
+        unpredictably when subjected to sudden, significant temperature changes — symptoms include sudden
+        volume changes and track skipping. Sony states the device is designed for optimal operation between
+        0°C and 40°C and recommends a power cycle as a temporary fix.
+      advice: This is an official Sony acknowledgement of a known quirk. Buyers in cold climates (e.g.,
+        TR/EU winters) may experience erratic behavior when moving between warm indoors and cold outdoors;
+        a restart is the official workaround.
+    tr:
+      title: Soğuk sıcaklıklarda düzensiz davranış — resmi Sony kabulü
+      body: Sony'nin resmi Türkçe destek sayfası (14.05.2025 tarihli), WH-1000XM3'ün ani, önemli sıcaklık
+        değişimlerine maruz kaldığında öngörülemez davranabileceğini kabul ediyor — belirtiler arasında
+        ani ses değişimleri ve parça atlama yer alıyor. Sony, cihazın 0°C ile 40°C arasında optimum çalışma
+        için tasarlandığını belirtiyor ve geçici bir çözüm olarak güç döngüsü öneriyor.
+      advice: Bu, bilinen bir tuhaflığın resmi Sony kabulüdür. Soğuk iklimlerdeki (ör. TR/EU kışları)
+        alıcılar, sıcak iç mekan ile soğuk dış mekan arasında geçiş yaparken düzensiz davranış yaşayabilir;
+        yeniden başlatma resmi geçici çözümdür.
+  evidence:
+  - url: https://www.sony.com.tr/electronics/support/wireless-headphones-bluetooth-headphones/articles/00262963
+    quote: Yakın zamanda, WH-1000XM3 kulaklığın, ani ve önemli sıcaklık değişikliklerine maruz kaldığında
+      zaman zaman beklenmedik davranışlar gösterdiğini tespit ettik. Bunun sonucunda, ani ses seviyesi
+      değişiklikleri veya parçaların atlanması gibi semptomlarla karşılaşmış olabilirsiniz.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:37:32+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: sony
+      series: wh-1000xm5
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: earcup hinge
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Hinge breaks at headband-hinge connection, often just outside warranty
+      body: SoundGuys reader poll (2,000+ respondents) found 47% experienced some form of failure, with
+        hinge/headband breakage the most common at 24%. User reports in the same article describe hinges
+        breaking at 3-4 months and just after the one-year warranty, with Sony refusing warranty coverage.
+      advice: Hinge breakage is the most documented failure mode for the XM5. Buyers should consider extended
+        warranty or protection plans, and be aware Sony frequently denies warranty claims citing 'physical
+        damage'.
+    tr:
+      title: Menteşe, kafa bandı-menteşe bağlantısında kırılıyor, genellikle garanti süresinin hemen dışında
+      body: SoundGuys okuyucu anketi (2.000'den fazla katılımcı), %47'nin bir tür arıza yaşadığını, en
+        yaygının %24 ile menteşe/kafa bandı kırılması olduğunu buldu. Aynı makaledeki kullanıcı bildirimleri,
+        menteşelerin 3-4 ayda ve bir yıllık garantinin hemen ardından kırıldığını, Sony'nin garanti kapsamını
+        reddettiğini anlatıyor.
+      advice: Menteşe kırılması, XM5 için en çok belgelenen arıza modudur. Alıcılar uzatılmış garanti
+        veya koruma planlarını düşünmeli ve Sony'nin 'fiziksel hasar' gerekçesiyle garanti taleplerini
+        sıklıkla reddettiğinin farkında olmalıdır.
+  evidence:
+  - url: https://www.soundguys.com/sony-hinge-failure-poll-results-133002/
+    quote: 47% have experienced some form of failure, with the headband/hinge breaking being the most
+      common issue (24%).
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:40:02+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: sennheiser
+      series: momentum-4
+  kind: known_issue
+  domain: electronic
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: Left driver / earcup wiring
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Left earcup crackles or cuts out (2025-26 reports)
+      body: Reviewer-consensus site aggregating owner reports of left earcups that crackle or cut out
+        in 2025-26, plus creaking hinges at launch.
+      advice: Recent owner reports describe the left earcup crackling or cutting out. If that happens,
+        it is usually a broken internal cable or driver fault in the earcup, which requires opening the
+        cup and re-soldering or replacing the cable.
+    tr:
+      title: Sol kulaklıkta çıtırtı veya ses kesilmesi (2025-26 raporları)
+      body: 2025-26'da sol kulaklıklarda çıtırtı veya ses kesilmesi yaşandığına dair sahip raporlarını
+        bir araya getiren, ayrıca piyasaya çıkışta menteşe gıcırtısını belirten incelemeci-görüş birliği
+        sitesi.
+      advice: Son sahip raporları sol kulaklıkta çıtırtı veya ses kesilmesi olduğunu anlatıyor. Bu olursa,
+        genellikle kulaklık içindeki kopmuş bir kablodan veya sürücü arızasından kaynaklanır; bu da kulağı
+        açıp kabloyu yeniden lehimlemeyi veya değiştirmeyi gerektirir.
+  evidence:
+  - url: https://www.audiowords.net/reviews/sennheiser-momentum-4-wireless
+    quote: owners report creaking hinges at launch, connection and app bugs, and, in 2025–26, left earcups
+      that crackle or cut out.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:39:21+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Sennheiser
+      series: Momentum Wireless 3
+  kind: known_issue
+  domain: mechanical
+  severity: low
+  consequence: ''
+  detection: ''
+  component: earcup slider / spacer
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Earcups come loose; community prints a slider/spacer fix
+      body: Found via 'Sennheiser Momentum 3 earcup hinge broke headband crack'. A Printables 3D-print
+        model is explicitly made as a fix for the Momentum 3 earcups coming loose, corroborating the earcup
+        attachment looseness reported elsewhere.
+      advice: If earcups feel wobbly, a printed slider/spacer is a cheap workaround, but it signals the
+        yoke fit degrades with use.
+    tr:
+      title: Kulaklıklar gevşiyor; topluluk bir kaydırıcı/ara parça düzeltmesi basıyor
+      body: '''Sennheiser Momentum 3 earcup hinge broke headband crack'' aramasıyla bulundu. Bir Printables
+        3D baskı modeli, Momentum 3 kulaklıklarının gevşemesine yönelik bir düzeltme olarak açıkça yapılmış
+        olup başka yerlerde bildirilen kulaklık bağlantı gevşekliğini doğrulamaktadır.'
+      advice: Kulaklıklar sallanıyorsa, basılı bir kaydırıcı/ara parça ucuz bir geçici çözümdür, ancak
+        bu, çatalın oturuşunun kullanımla bozulduğuna işaret eder.
+  evidence:
+  - url: https://www.printables.com/model/434622-sennheiser-momentum-3-earcup-slider/related
+    quote: Fix for the earcups of the headphones coming loose
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:36:58+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: bose
+      series: quietcomfort-45
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: earcup hinge (ear cup to headband)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: QC45 earcup hinge breaks when replacing earpads
+      body: A repeat owner (second pair) reports the QC45's earcup hinge breaks under the physical manipulation
+        needed to fit replacement earpads, and that the earpad retention tabs break too. The existence
+        of aftermarket replacement headband-hinge parts for the QC45 (e.g. headsethut.co.uk listing 'Replacement
+        Headband Hinge / End Caps' compatible with QC45) corroborates hinge cracking as a known failure
+        point.
+      advice: The QC45's hinge and earpad retention tabs are fragile; forcing replacement pads risks snapping
+        the hinge where the cup meets the headband. Treat earpad replacement as delicate and expect the
+        hinge to be a weak point.
+    tr:
+      title: QC45 kulaklık menteşesi kulak yastıkları değiştirilirken kırılıyor
+      body: Tekrarlayan bir sahip (ikinci çift) QC45'in kulaklık menteşesinin, yedek kulak yastıklarını
+        takmak için gereken fiziksel müdahale altında kırıldığını ve kulak yastığı tutma tırnaklarının
+        da kırıldığını bildiriyor. QC45 için satış sonrası yedek kafa bandı-menteye parçalarının varlığı
+        (ör. headsethut.co.uk'de QC45 ile uyumlu 'Replacement Headband Hinge / End Caps' ilanı) menteşe
+        çatlamasının bilinen bir arıza noktası olduğunu doğrulamaktadır.
+      advice: QC45'in menteşesi ve kulak yastığı tutma tırnakları kırılgandır; yedek yastıkları zorlamak,
+        kulağın kafa bandıyla birleştiği yerde menteşeyi kırma riski taşır. Kulak yastığı değişimini hassas
+        bir işlem olarak görün ve menteşenin zayıf bir nokta olmasını bekleyin.
+  evidence:
+  - url: https://sellout.woot.com/review/B0BDT54SGD?offerid=322bdc71-adb7-486d-b39b-77c5ca720530&itemid=34f9492c-eb4e-49bd-a92b-59b55db64c5e&filter=0&isVerified=false&page=1&sort=0
+    quote: the amount of physical manipulation to wrestle the pads to the cups will break the hinge where
+      the ear cup connects to the headband.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:40:25+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: apple
+      series: airpods-max
+  kind: known_issue
+  domain: electronic
+  severity: high
+  consequence: ''
+  detection: ''
+  component: drivers / ear cups
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Condensation build-up migrates into speaker holes and water-damages the drivers
+      body: Owners report humidity condensing inside the aluminum ear cups during normal wear, with droplets
+        migrating into the speaker holes and damaging the drivers; a pinned subreddit post ties most hardware
+        failures to condensation. Apple has not recognized it as a widespread defect and the headphones
+        are not water-resistant.
+      advice: Expect possible driver damage, random shutdowns, connection drops and audio loss after months
+        of use, especially in warm/humid conditions. Repair is costly and Apple denies a design defect,
+        so the buyer may face out-of-warranty replacement.
+    tr:
+      title: Yoğuşma birikimi hoparlör deliklerine geçiyor ve sürücülere su hasarı veriyor
+      body: Sahipler, normal kullanım sırasında alüminyum kulaklık içinde nemin yoğuştuğunu, damlacıkların
+        hoparlör deliklerine geçerek sürücülere hasar verdiğini bildiriyor; sabitlenmiş bir subreddit
+        gönderisi çoğu donanım arızasını yoğuşmaya bağlıyor. Apple bunu yaygın bir kusur olarak kabul
+        etmemiştir ve kulaklıklar suya dayanıklı değildir.
+      advice: Aylarca kullanımdan sonra, özellikle sıcak/nemli koşullarda olası sürücü hasarı, rastgele
+        kapanmalar, bağlantı kopmaları ve ses kaybı bekleyin. Onarım pahalıdır ve Apple bir tasarım kusurunu
+        reddetmektedir, bu nedenle alıcı garanti dışı değişimle karşılaşabilir.
+  evidence:
+  - url: https://www.macrumors.com/2023/08/23/airpods-max-condensation-death-evidence/
+    quote: In some cases, users claim that the droplets have migrated inside the speaker holes, causing
+      water damage to the drivers.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:38:12+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Sony
+      series: WH-1000XM3
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: Side slider / yoke plastic piece
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Side sliders crack and break during normal use — chronic, widely reported issue
+      body: A reviewer describes the side sliders as a chronic problem with hundreds of user posts about
+        the same breakage point during normal use. The plastic piece is described as structural but designed
+        as if non-structural, breaking from fatigue. Users resort to DIY fixes like super glue, zip ties,
+        or 3D-printed replacements.
+      advice: This is a known design weakness. Buyers should expect the side sliders to potentially crack
+        with normal use and budget for aftermarket reinforcement or replacement parts.
+    tr:
+      title: Yan kaydırıcılar normal kullanım sırasında çatlıyor ve kırılıyor — kronik, yaygın olarak
+        bildirilen sorun
+      body: Bir incelemeci, yan kaydırıcıları kronik bir sorun olarak tanımlıyor ve normal kullanım sırasında
+        aynı kırılma noktası hakkında yüzlerce kullanıcı gönderisi olduğunu belirtiyor. Plastik parça
+        yapısal olarak tanımlanıyor ancak yapısal değilmiş gibi tasarlanmış, yorgunluktan kırılıyor. Kullanıcılar
+        süper yapıştırıcı, kablo bağları veya 3D baskılı yedekler gibi kendin yap çözümlerine başvuruyor.
+      advice: Bu bilinen bir tasarım zayıflığıdır. Alıcılar yan kaydırıcıların normal kullanımla potansiyel
+        olarak çatlamasını beklemeli ve satış sonrası güçlendirme veya yedek parçalar için bütçe ayırmalıdır.
+  evidence:
+  - url: https://www.google.com.sa/shopping/product/5535944593012813486/reviews?prds=pid:1146898763925027210,rate:2,rnum:10,rsk:PC_2849170866121942665&sa=X&ved=0ahUKEwih_KLAjY-IAxXscGwGHVCsAzwQn08INygD
+    quote: Side sliders bad engineered (it is a chronic problem, hundreds of posts of users having the
+      product breaking in the same place during normal use). The piece on the side is structural, but
+      was designed by the engineers as non-structural, since it is as thick as a toothpick and made out
+      of plastic - easily breakable due to fatigue.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:37:32+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: sony
+      series: wh-1000xm5
+  kind: known_issue
+  domain: electronic
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: speaker driver
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Right speaker driver stopped working after 18 months
+      body: A verified Sony customer review on Sony's official product page reports the right speaker
+        driver stopped working after 18 months, and notes this appears to be a common problem with the
+        model based on online research. This is the 'Most Helpful Critical' review on Sony's official
+        page.
+      advice: Driver failure after ~18 months is reported on Sony's official page. This is outside the
+        standard 1-year warranty, so the buyer would bear full replacement cost.
+    tr:
+      title: Sağ hoparlör sürücüsü 18 ay sonra çalışmayı durdurdu
+      body: Sony'nin resmi ürün sayfasındaki doğrulanmış bir Sony müşteri incelemesi, sağ hoparlör sürücüsünün
+        18 ay sonra çalışmayı durdurduğunu bildiriyor ve çevrimiçi araştırmaya dayanarak bunun modelde
+        yaygın bir sorun gibi göründüğünü belirtiyor. Bu, Sony'nin resmi sayfasındaki 'Most Helpful Critical'
+        incelemesidir.
+      advice: Yaklaşık 18 ay sonra sürücü arızası Sony'nin resmi sayfasında bildirilmektedir. Bu, standart
+        1 yıllık garanti dışındadır, bu nedenle alıcı tam değişim maliyetini üstlenecektir.
+  evidence:
+  - url: https://www.sony.co.id/en/electronics/headband-headphones/wh-1000xm5/reviews-ratings
+    quote: I love these headphones, they are fantastic but they died after only 18 months. For a premium
+      product that is terrible. The right speaker has stopped working and from looking online it seems
+      to be a common problem with this model.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:40:02+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: sony
+      series: wh-1000xm5
+  kind: known_issue
+  domain: electronic
+  severity: low
+  consequence: ''
+  detection: ''
+  component: Bluetooth module
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Bluetooth audio breaking/stuttering on Windows laptops (Surface Pro 9)
+      body: A Microsoft Q&A thread documents Bluetooth audio breaking/stuttering when the XM5 is paired
+        with a Surface Pro 9, while other Bluetooth headphones work fine on the same laptop. The user
+        tried driver updates, resets, and re-pairing without success. Microsoft's support specialist concluded
+        it is a compatibility issue between the Sony headset and the Surface Pro 9.
+      advice: Bluetooth compatibility issues with Windows laptops are reported. This is a firmware/compatibility
+        issue rather than a hardware failure, but it can make the headphones unusable with certain devices.
+    tr:
+      title: Windows dizüstü bilgisayarlarda Bluetooth sesi kesiliyor/takılıyor (Surface Pro 9)
+      body: Bir Microsoft Q&A başlığı, XM5 Surface Pro 9 ile eşleştirildiğinde Bluetooth sesinin kesildiğini/takıldığını
+        belgelerken, aynı dizüstü bilgisayarda diğer Bluetooth kulaklıklar sorunsuz çalışıyor. Kullanıcı
+        sürücü güncellemelerini, sıfırlamaları ve yeniden eşleştirmeyi başarısız olarak denedi. Microsoft'un
+        destek uzmanı bunun Sony kulaklık ile Surface Pro 9 arasında bir uyumluluk sorunu olduğu sonucuna
+        vardı.
+      advice: Windows dizüstü bilgisayarlarla Bluetooth uyumluluk sorunları bildiriliyor. Bu bir donanım
+        arızasından ziyade bir yazılım/uyumluluk sorunudur, ancak kulaklığı belirli cihazlarla kullanılamaz
+        hale getirebilir.
+  evidence:
+  - url: https://learn.microsoft.com/en-nz/answers/questions/2311877/sony-wh-1000xm5-wireless-noise-canceling-headphone
+    quote: after sometime sounds starts breaking and later it got so worst that I have to switch it off.
+      My other bluetooth headphones are working fine with my Surface Pro9 but Sony WH-1000XM5 give me
+      nightmare.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:43:16+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: sennheiser
+      series: momentum-4
+  kind: known_issue
+  domain: electronic
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: Internal rechargeable battery (AHB413645PCT, 700mAh)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Battery failure causes won't-power-on / constant charging
+      body: iFixit troubleshooting wiki lists battery failure as a cause of the headphones not charging
+        or needing constant charging, with a battery-replacement guide.
+      advice: If the unit will not power on or drains fast, the internal 700mAh battery may be failing.
+        The battery is replaceable (OEM part AHB413645PCT) but the repair requires opening the left earcup,
+        so it is not a user-serviceable quick fix.
+    tr:
+      title: Pil arızası açılmama / sürekli şarj etme ihtiyacına neden oluyor
+      body: iFixit sorun giderme wiki'si, kulaklığın şarj olmaması veya sürekli şarj gerektirmesinin bir
+        nedeni olarak pil arızasını listeliyor ve bir pil değiştirme kılavuzu sunuyor.
+      advice: Cihaz açılmıyorsa veya hızla boşalıyorsa, dahili 700mAh pil arızalanıyor olabilir. Pil değiştirilebilir
+        (OEM parça AHB413645PCT) ancak onarım sol kulak kabının açılmasını gerektirir, bu nedenle kullanıcı
+        tarafından yapılabilecek hızlı bir çözüm değildir.
+  evidence:
+  - url: https://zh.ifixit.com/Wiki/Sennheiser_Momentum_4_Wireless_Won%E2%80%99t_Power_On
+    quote: The headphones not charging or needing to be charged constantly can be due to a faulty battery.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:39:21+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: sennheiser
+      series: momentum-4
+  kind: known_issue
+  domain: electronic
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: Bluetooth firmware / multipoint connection
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Firmware 3.37.3 breaks multipoint Bluetooth pairing
+      body: Owner forum thread (ASR) with two independent owners reporting that firmware 3.37.3 broke
+        two-device multipoint pairing; one could not reconnect to his laptop, another lost TV connection.
+        One owner reports a hard reset fixed it, another says it did not.
+      advice: Before buying, check which firmware a unit ships with; if it is 3.37.3, multipoint pairing
+        may fail and a hard reset (hold power 20s) is the only workaround. This is a firmware fault, not
+        a hardware defect, but it can make the headphones unusable with two devices.
+    tr:
+      title: Yazılım 3.37.3 çok noktalı Bluetooth eşleştirmesini bozuyor
+      body: Sahip forumu başlığı (ASR), iki bağımsız sahibin yazılım 3.37.3'ün iki cihazlı çok noktalı
+        eşleştirmeyi bozduğunu bildirdiğini içeriyor; biri dizüstü bilgisayarına yeniden bağlanamadı,
+        bir diğeri TV bağlantısını kaybetti. Bir sahip sert sıfırlamanın sorunu çözdüğünü bildirirken,
+        bir diğeri çözmediğini söylüyor.
+      advice: Satın almadan önce bir birimin hangi yazılımla geldiğini kontrol edin; 3.37.3 ise çok noktalı
+        eşleştirme başarısız olabilir ve tek geçici çözüm sert sıfırlamadır (güç düğmesini 20 sn basılı
+        tutun). Bu bir donanım kusuru değil yazılım hatasıdır, ancak kulaklığı iki cihazla kullanılamaz
+        hale getirebilir.
+  evidence:
+  - url: https://www.audiosciencereview.com/forum/index.php?threads/sennheiser-momentum-4-bluetooth-issues-after-firmware-update.69006/
+    quote: Now the headphones only connect to my phone and refuse to connect to my laptop.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:39:21+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Bose
+      series: QuietComfort (2023)
+  kind: known_issue
+  domain: electronic
+  severity: low
+  consequence: ''
+  detection: ''
+  component: Bluetooth
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Bluetooth crackling and irregular dropouts when multiple devices are paired
+      body: A German reviewer of the QC2023 reports crackling and irregular audio dropouts when a PC and
+        smartphone are paired simultaneously, a multi-device Bluetooth behaviour.
+      advice: A German owner reports audible crackling/dropouts when the QC 2023 is paired to a PC and
+        phone at once. This is an annoyance-level firmware/Bluetooth behaviour rather than a hardware
+        failure, but it matters for buyers who run multiple paired devices.
+    tr:
+      title: Birden fazla cihaz eşleştirildiğinde Bluetooth cızırtısı ve düzensiz kopmalar
+      body: QC2023'ün bir Alman inceleme yazarı, bir PC ve akıllı telefon aynı anda eşleştirildiğinde
+        cızırtı ve düzensiz ses kopmaları bildiriyor; bu bir çok cihazlı Bluetooth davranışıdır.
+      advice: Bir Alman sahip, QC 2023 bir PC ve telefonla aynı anda eşleştirildiğinde duyulabilir cızırtı/kopmalar
+        bildiriyor. Bu bir donanım arızasından ziyade rahatsızlık düzeyinde bir yazılım/Bluetooth davranışıdır,
+        ancak birden fazla eşleştirilmiş cihaz kullanan alıcılar için önemlidir.
+  evidence:
+  - url: https://www.amazon.sg/product-reviews/B0CCZ26B5V/ref=acr_dp_hist_2?ie=UTF8&filterByStar=two_star&reviewerType=all_reviews
+    quote: es gibt ein Knacken bzw. leichte unregelmäßige Aussetzer wenn Ihr z.B. den PC und euer Smartphone
+      gekoppelt habt
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:36:07+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: sennheiser
+      series: momentum-4
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: Headband swivel joint / slider mechanism
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Headband swivel joints and slider crack under torque
+      body: Independent repair guide site (LML Repair) describing the Momentum 4's plastic chassis and
+        the swivel/slider joints as wear points that can crack under rotational torque.
+      advice: The plastic swivel joints and headband sliders are the structural weak points; repeated
+        folding into the case and daily adjustment stress them. If they crack, the earcup separates from
+        the headband and repair is not trivial.
+    tr:
+      title: Kafa bandı döner eklemleri ve kaydırıcılar burulma altında çatlıyor
+      body: Bağımsız onarım kılavuzu sitesi (LML Repair), Momentum 4'ün plastik gövdesini ve döner/kaydırıcı
+        eklemlerini burulma momenti altında çatlayabilecek aşınma noktaları olarak tanımlıyor.
+      advice: Plastik döner eklemler ve kafa bandı kaydırıcıları yapısal zayıf noktalardır; kılıfa tekrar
+        tekrar katlanması ve günlük ayar stresi onları zorlar. Çatlarlarsa, kulak kabı kafa bandından
+        ayrılır ve onarım kolay değildir.
+  evidence:
+  - url: https://www.lmlrepair.com/guides/headphone/sennheiser/sennheiser-momentum/sennheiser-momentum-4-wireless
+    quote: The headband swivel joints and sliding adjustment mechanisms bear continuous rotational torque
+      and strain, which can lead to loose pivot friction or structural cracking.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:39:21+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Bose
+      series: QuietComfort (2023)
+  kind: known_issue
+  domain: electronic
+  severity: low
+  consequence: ''
+  detection: ''
+  component: Bluetooth
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Windows 11 fails to detect the headphones over Bluetooth
+      body: A Microsoft Q&A thread from an owner of the Bose QuietComfort (2023 Model) reports the headphones
+        are not detected by a Windows 11 PC over Bluetooth despite troubleshooting.
+      advice: One owner reports the QC 2023 not being detected by a Windows 11 PC over Bluetooth. This
+        is a single report and may be PC-side, so it is low severity, but it is a concrete Bluetooth pairing
+        failure reported for this model.
+    tr:
+      title: Windows 11 kulaklığı Bluetooth üzerinden algılayamıyor
+      body: Bose QuietComfort (2023 Model) sahibinden bir Microsoft Q&A başlığı, sorun gidermeye rağmen
+        kulaklığın bir Windows 11 PC tarafından Bluetooth üzerinden algılanmadığını bildiriyor.
+      advice: Bir sahip, QC 2023'ün bir Windows 11 PC tarafından Bluetooth üzerinden algılanmadığını bildiriyor.
+        Bu tek bir bildirimdir ve PC tarafından kaynaklanıyor olabilir, bu nedenle önem derecesi düşüktür,
+        ancak bu model için bildirilen somut bir Bluetooth eşleştirme hatasıdır.
+  evidence:
+  - url: https://learn.microsoft.com/en-ie/answers/questions/5510433/my-win11-pc-wont-detect-my-bose-quietcomfort-2023
+    quote: yet it doesn't even detect them let alone connect
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:36:07+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: JBL
+      series: Live 770NC
+  kind: known_issue
+  domain: electronic
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: left driver / earpiece
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Left earpiece arrived defective, beeps and buzzes
+      body: An owner reports receiving the unit defective with the left earpiece beeping and buzzing.
+      advice: A defective left driver that beeps and buzzes is a unit-level fault that typically requires
+        a return/exchange rather than a user fix. Buyers should test both ear cups promptly on arrival
+        to catch it within the return window.
+    tr:
+      title: Sol kulaklık arızalı geldi, bip sesi ve vızıltı çıkarıyor
+      body: Bir kullanıcı, sol kulaklığı bip sesi ve vızıltı çıkaran ünitenin arızalı olarak teslim alındığını
+        bildiriyor.
+      advice: Bip sesi ve vızıltı çıkaran arızalı bir sol sürücü, kullanıcı düzeltmesi yerine genellikle
+        iade/değişim gerektiren ünite düzeyinde bir arızadır. Alıcılar, iade süresi içinde yakalamak için
+        varışta her iki kulaklık kabını da derhal test etmelidir.
+  evidence:
+  - url: https://m.alza.cz/EN/reviews/jbl-live-770nc-black-7927515.htm
+    quote: 'I got the headphones defective-broken
+
+
+      Left earpiece beeps and buzzes'
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:36:38+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Bose
+      series: QuietComfort (2023)
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: earpads
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Faux leather on the ear cups tears after 12-14 months
+      body: A German retailer (Galaxus) customer review of the Bose QuietComfort (ANC, 24 h, cable, wireless)
+        reports the ear-cup fabric coming apart repeatedly, forcing a third purchase.
+      advice: Independent corroboration that the QC 2023's ear-cup covering fails within roughly a year,
+        and the reviewer states the cups cannot be repaired or replaced, pushing owners to buy again.
+        Treat earpad durability as a recurring cost.
+    tr:
+      title: Kulaklık kaplarındaki suni deri 12-14 ay sonra yırtılıyor
+      body: Bose QuietComfort (ANC, 24 h, cable, wireless) ürününe ilişkin bir Alman perakendeci (Galaxus)
+        müşteri incelemesi, kulaklık kabı kumaşının tekrar tekrar ayrıldığını ve üçüncü satın almaya zorladığını
+        bildiriyor.
+      advice: QC 2023'ün kulaklık kabı kaplamasının yaklaşık bir yıl içinde bozulduğuna dair bağımsız
+        doğrulama ve inceleyici, kapların onarılamayacağını veya değiştirilemeyeceğini belirterek sahipleri
+        tekrar satın almaya itiyor. Kulaklık pedi dayanıklılığını tekrarlayan bir maliyet olarak değerlendirin.
+  evidence:
+  - url: https://www.galaxus.de/en/productrating/sehr-gutes-produkt-jedoch-eine-schwachstelle-10890658
+    quote: the faux leather tears after 12–14 months
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:36:07+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Bose
+      series: Noise Cancelling Headphones 700
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: hinge
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: NC700 hinge breaks at the ear-piece joint, repair shop reports
+      body: A non-warranty repair service in London documents an NC700 hinge repair where the joint to
+        the ear piece broke from a fall. Bose's own support article 'Broken headband' (bose.com.au) likewise
+        acknowledges the headband can be 'damaged or detached' and need service.
+      advice: The hinge/ear-cup joint is a known structural weak point; a drop can snap it, and it is
+        not a cheap warranty fix. A buyer should treat the 700 as fragile at the hinge and use the hard
+        case, and check whether hinge damage is covered before relying on warranty.
+    tr:
+      title: NC700 menteşesi kulaklık parçası bağlantı noktasında kırılıyor, onarım dükkanı bildiriyor
+      body: Londra'daki garanti dışı bir onarım hizmeti, kulaklık parçasına bağlantı noktasının düşme
+        sonucu kırıldığı bir NC700 menteşe onarımını belgeliyor. Bose'un kendi destek makalesi 'Broken
+        headband' (bose.com.au) de kafa bandının 'damaged or detached' olabileceğini ve servis gerektirebileceğini
+        kabul ediyor.
+      advice: Menteşe/kulaklık kabı bağlantısı bilinen bir yapısal zayıf noktadır; bir düşme onu kırabilir
+        ve ucuz bir garanti onarımı değildir. Alıcı, 700'ü menteşede kırılgan olarak değerlendirmeli ve
+        sert kılıfı kullanmalı, garantiye güvenmeden önce menteşe hasarının kapsam dahilinde olup olmadığını
+        kontrol etmelidir.
+  evidence:
+  - url: https://uk.electronic.partners/services/headphone-repair/recent-headphone-repairs/bose-700-nc700-hinge-repair-in-london-united-kingdom/
+    quote: Broken hinge due to accidental fall, the joint to the ear piece is broken
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:35:43+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: apple
+      series: airpods-max
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: headband mesh canopy
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Headband mesh sags and dissolves, and the headband cannot be replaced
+      body: An owner reports the mesh canopy stretching, sagging and partially dissolving after a few
+        years, with rubber fragments coming out of it, and says Apple does not replace the headband as
+        goodwill. SoundGuys separately notes the headband is fixed in place with no official replacement
+        part.
+      advice: The mesh degrades over a couple of years and cannot be swapped officially; owners resort
+        to DIY inserts or buy a new pair. A buyer should expect cosmetic/comfort degradation with no cheap
+        repair path.
+    tr:
+      title: Kafa bandı ağı sarkıyor ve çözülüyor, kafa bandı değiştirilemiyor
+      body: Bir kullanıcı, ağ kanopinin birkaç yıl sonra gerildiğini, sarktığını ve kısmen çözüldüğünü,
+        içinden kauçuk parçaların çıktığını ve Apple'ın kafa bandını iyi niyet olarak değiştirmediğini
+        bildiriyor. SoundGuys ayrıca kafa bandının resmi yedek parça olmadan sabitlendiğini belirtiyor.
+      advice: Ağ birkaç yıl içinde bozuluyor ve resmi olarak değiştirilemiyor; sahipler DIY ek parçalara
+        başvuruyor veya yeni bir çift satın alıyor. Alıcı, ucuz bir onarım yolu olmadan kozmetik/konfor
+        bozulması beklemelidir.
+  evidence:
+  - url: https://www.galaxus.de/en/productrating/absolutes-armutszeugnis-von-apple-10845846
+    quote: Google stretched ("sagging") mesh, after a few years the mesh has almost dissolved by itself,
+      sags, when you touch it little rubber "worms" come out of the mesh
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:38:12+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: JBL
+      series: Live 770NC
+  kind: known_issue
+  domain: electronic
+  severity: low
+  consequence: ''
+  detection: ''
+  component: ANC / firmware
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: ANC produces crackling/popping when moving head
+      body: An owner reports crackling/popping from the ANC when moving, tied to a loose fit.
+      advice: ANC-induced crackling/popping on movement is a behavior some owners hit, often linked to
+        fit/leak rather than a hard fault. It is low severity but worth checking if you move a lot while
+        ANC is on; a snug fit may reduce it.
+    tr:
+      title: ANC baş hareket ettirildiğinde çıtırtı/patlama üretiyor
+      body: Bir kullanıcı, baş hareket ettirildiğinde ANC'den gelen çıtırtı/patlamanın gevşek oturmaya
+        bağlı olduğunu bildiriyor.
+      advice: Hareket sırasında ANC kaynaklı çıtırtı/patlama, bazı kullanıcıların karşılaştığı ve genellikle
+        sert bir arıza yerine oturma/sızıntıyla ilişkili bir davranıştır. Düşük ciddiyettedir ancak ANC
+        açıkken çok hareket ediyorsanız kontrol etmeye değer; sıkı bir oturma bunu azaltabilir.
+  evidence:
+  - url: https://m.alza.cz/EN/reviews/jbl-live-770nc-black-7927515.htm
+    quote: any movement with the ANC turned on produced a crackling/popping sound
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:36:38+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: JBL
+      series: Live 770NC
+  kind: known_issue
+  domain: mechanical
+  severity: low
+  consequence: ''
+  detection: ''
+  component: headband/earcups
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Plasticky build quality and squeaking
+      body: An owner reports the headphones squeak during use. A separate Amazon.de reviewer notes 'the
+        build feels a bit plasticky'.
+      advice: The build may feel plasticky and can squeak during movement. This is a comfort/quality annoyance
+        rather than a functional failure.
+    tr:
+      title: Plastikimsi yapı kalitesi ve gıcırdama
+      body: Bir kullanıcı, kulaklıkların kullanım sırasında gıcırdadığını bildiriyor. Ayrı bir Amazon.de
+        inceleyicisi 'the build feels a bit plasticky' notunu düşüyor.
+      advice: Yapı plastikimsi hissettirebilir ve hareket sırasında gıcırdıyabilir. Bu, işlevsel bir arıza
+        yerine konfor/kalite rahatsızlığıdır.
+  evidence:
+  - url: https://m.alza.cz/EN/reviews/jbl-live-770nc-black-7927515.htm
+    quote: The headphones are squeaking
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:36:38+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: bose
+      series: quietcomfort-45
+  kind: known_issue
+  domain: electronic
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: headband internal wiring insulation
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: QC45 headband wiring insulation degrades inside the headband
+      body: The same repeat owner reports that, when opening the QC45, the insulation on the wires running
+        through the headband to both earcups is breaking off. This is a wiring-durability concern that
+        can lead to shorts or audio dropouts over time.
+      advice: The QC45's internal headband wiring is reported to lose its insulation; this can cause intermittent
+        audio or shorts and is not a user-serviceable fix.
+    tr:
+      title: QC45 kafa bandı kablolama yalıtımı kafa bandının içinde bozuluyor
+      body: Aynı tekrarlayan sahip, QC45'i açarken kafa bandından her iki kulaklık kabına uzanan kabloların
+        yalıtımının döküldüğünü bildiriyor. Bu, zamanla kısa devrelere veya ses kesintilerine yol açabilecek
+        bir kablolama dayanıklılığı endişesidir.
+      advice: QC45'in dahili kafa bandı kablolamasının yalıtımını kaybettiği bildiriliyor; bu, aralıklı
+        ses veya kısa devrelere neden olabilir ve kullanıcı tarafından onarılabilecek bir düzeltme değildir.
+  evidence:
+  - url: https://sellout.woot.com/review/B0BDT54SGD?offerid=322bdc71-adb7-486d-b39b-77c5ca720530&itemid=34f9492c-eb4e-49bd-a92b-59b55db64c5e&filter=0&isVerified=false&page=1&sort=0
+    quote: you'll see the insulation breaking off the wires that run through the headband to the cups
+      on both sides.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:40:25+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: JBL
+      series: Live 770NC
+  kind: known_issue
+  domain: electronic
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: ANC system
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: ANC produces crackling/popping sound with head movement
+      body: Two separate owners report that the ANC produces a crackling/popping sound when moving, linked
+        to a loose fit on larger heads.
+      advice: If you have a larger head or the headphones don't fit snugly, the ANC may produce crackling/popping
+        sounds during movement. This was severe enough for one owner to return the product.
+    tr:
+      title: ANC, kafa hareketiyle çıtırtı/patlama sesi üretiyor
+      body: İki ayrı sahip, ANC'nin hareket ederken çıtırtı/patlama sesi ürettiğini ve bunun daha büyük
+        kafalarda gevşek oturmayla bağlantılı olduğunu bildiriyor.
+      advice: Daha büyük bir kafanız varsa veya kulaklık sıkı oturmuyorsa, ANC hareket sırasında çıtırtı/patlama
+        sesleri üretebilir. Bu, bir sahip için ürünü iade edecek kadar ciddiydi.
+  evidence:
+  - url: https://m.alza.cz/EN/reviews/jbl-live-770nc-black-7927515.htm
+    quote: any movement with the ANC turned on produced a crackling/popping sound
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:36:38+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Sennheiser
+      series: Momentum Wireless 3
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: earcup-to-headband yoke attachment
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Earcup breaks off the headband yoke on the Momentum 3
+      body: Found via 'Sennheiser Momentum 3 earcup hinge broke headband crack'. A Russian headphone forum
+        user researching the Momentum 3 reports that on this exact model the earcups break off the headband
+        (чашки отламываются), and that the size-adjustment mechanism loosens over time.
+      advice: Inspect the earcup yokes and sliders before buying; a broken yoke is a structural, likely
+        non-repairable failure that ends the headphone's life.
+    tr:
+      title: Momentum 3'te kulaklık kabı kafa bandı çatalından kopuyor
+      body: '''Sennheiser Momentum 3 earcup hinge broke headband crack'' ile bulundu. Momentum 3''ü araştıran
+        bir Rus kulaklık forumu kullanıcısı, bu tam modelde kulaklık kaplarının kafa bandından koptuğunu
+        (чашки отламываются) ve boyut ayarlama mekanizmasının zamanla gevşediğini bildiriyor.'
+      advice: Satın almadan önce kulaklık kabı çatallarını ve sürgülerini inceleyin; kırık bir çatal,
+        kulaklığın ömrünü sona erdiren yapısal ve muhtemelen onarılamaz bir arızadır.
+  evidence:
+  - url: https://forum.doctorhead.ru/forums/topic/40906-ischu-chto-to-vrode-sennheiser-momentum-3-no-s-ogovorkami/?tab=comments
+    quote: у кого-то чашки отламываются (именно у этой модели)
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:36:58+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: bose
+      series: quietcomfort-ultra
+  kind: known_issue
+  domain: electronic
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: power management / firmware
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: QC Ultra powers off during use despite 'never' auto-off setting
+      body: An owner reports the headphones switch off after ~10 minutes of inactivity even while worn,
+        despite the 'never' auto-off setting, and that Bose support said it cannot be disabled.
+      advice: If the unit powers down mid-use, the owner was advised this may be a hardware/battery or
+        motion-sensor fault rather than a setting; check whether it correlates with low battery and use
+        warranty while it lasts.
+    tr:
+      title: QC Ultra, 'asla' otomatik kapanma ayarına rağmen kullanım sırasında kapanıyor
+      body: Bir sahip, kulaklıkların takılıyken bile ~10 dakika hareketsizlikten sonra kapandığını, 'asla'
+        otomatik kapanma ayarına rağmen bunun olduğunu ve Bose desteğinin bunun devre dışı bırakılamayacağını
+        söylediğini bildiriyor.
+      advice: Cihaz kullanım ortasında kapanıyorsa, sahibine bunun bir ayardan ziyade donanım/pil veya
+        hareket sensörü arızası olabileceği söylenmiş; bunun düşük pil ile ilişkili olup olmadığını kontrol
+        edin ve garanti sürerken kullanın.
+  evidence:
+  - url: https://www.galaxus.ch/en/s1/questionandanswer/hello-togetherive-recently-been-having-major-problems-with-the-automatic-switch-on-and-switch-off-fu-861511?referrerProductId=38631919
+    quote: In my case, they even switch off after 10 minutes of inactivity and sometimes even as long
+      as I have them on my head.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:38:46+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: bose
+      series: quietcomfort-45
+  kind: known_issue
+  domain: electronic
+  severity: high
+  consequence: ''
+  detection: ''
+  component: power switch / power indicator
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: QC45 power switch fails to boot the headphones (flashing power indicator, no startup sound)
+      body: 'Owner report on an iFixit repair forum describing their own QC45 that will not reliably power
+        on: the power indicator flashes briefly and dimly, no startup sound plays, and the unit only boots
+        roughly once every 20 tries. Contact cleaner on the switch did not fix it. This is a concrete
+        electronic failure of the power switch/boot circuit, not a settings issue.'
+      advice: If a QC45 intermittently refuses to power on or shows a dim flashing power LED, the power
+        switch/boot circuit is the suspect; this is not fixable by a reset and points toward hardware
+        repair or replacement.
+    tr:
+      title: QC45 güç düğmesi kulaklıkları başlatamıyor (yanıp sönen güç göstergesi, açılış sesi yok)
+      body: 'Bir iFixit onarım forumunda sahip raporu, kendi QC45''inin güvenilir şekilde açılmadığını
+        anlatıyor: güç göstergesi kısa ve loş bir şekilde yanıp sönüyor, açılış sesi çalmıyor ve cihaz
+        yaklaşık her 20 denemede yalnızca bir kez açılıyor. Düğmeye kontak temizleyici uygulamak sorunu
+        çözmedi. Bu, güç düğmesi/açılış devresinin somut bir elektronik arızasıdır, bir ayar sorunu değildir.'
+      advice: Bir QC45 aralıklı olarak açılmayı reddediyorsa veya loş yanıp sönen bir güç LED'i gösteriyorsa,
+        şüpheli güç düğmesi/açılış devresidir; bu bir sıfırlama ile düzeltilemez ve donanım onarımına
+        veya değişime işaret eder.
+  evidence:
+  - url: https://it.ifixit.com/Risposte/Visualizza/943241/Startup+sequence+doesn't+work+(very+irregular)
+    quote: When I try to start my headphones, the power indicator just flashes very briefly and dimly.
+      The NC activates for a little bit, but the startup sound doesn't play, and the NC sometimes shuts
+      down again.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:40:25+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: apple
+      series: airpods-max
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: headband connector socket / hinge
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Headband connector socket and plastic hinge in the earcup deform and break Bluetooth connection
+      body: An owner reports the plastic headband connector socket and hinge in the earcup deforming over
+        time, causing connection symptoms that only a hard restart clears; they replaced it twice under
+        AppleCare+ and again after warranty.
+      advice: The earcup socket/hinge is a wear point that can cause connection failures and needs replacement;
+        repeated failures can occur even under AppleCare+, and after warranty the owner pays out of pocket.
+    tr:
+      title: Kulaklık kabındaki kafa bandı bağlantı yuvası ve plastik menteşe deforme olup Bluetooth bağlantısını
+        kesiyor
+      body: Bir sahip, plastik kafa bandı bağlantı yuvasının ve kulaklık kabındaki menteşenin zamanla
+        deforme olduğunu, yalnızca zorla yeniden başlatmanın giderdiği bağlantı belirtilerine neden olduğunu;
+        bunu AppleCare+ kapsamında iki kez ve garanti sonrasında tekrar değiştirdiklerini bildiriyor.
+      advice: Kulaklık kabı yuvası/menteşesi, bağlantı arızalarına neden olabilecek ve değiştirilmesi
+        gereken bir aşınma noktasıdır; AppleCare+ kapsamında bile tekrarlanan arızalar meydana gelebilir
+        ve garanti sonrasında sahip cepten öder.
+  evidence:
+  - url: https://www.soundguys.com/community/products/apple-airpods-max-1st-gen/3791516c-6df8-4a8d-9948-0f9a078dfc0e/
+    quote: headband connector socket in earcup is a failure point. plastic socket housing + hinge will
+      deform by time, will have symptoms like cannot connect only if u hard restart, replaced 2 times
+      under AC+ and replaced the socket after warrenty
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:38:12+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: sony
+      series: wh-1000xm5
+  kind: known_issue
+  domain: electronic
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: speaker driver
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: WH-1000XM5 speaker driver fails, right side goes silent
+      body: 'Sony''s own official product review page (2,198 reviews) features this as the ''Most Helpful
+        Critical'' review: the right speaker driver died at 18 months. A third-party repair shop (Joe''s
+        Gaming & Electronics) lists ''No sound from the left or right ear cup'' as a common WH-1000XM5
+        repair, charging $140 for speaker replacement including parts and labor.'
+      advice: The speaker driver can fail silently on one side, typically after 12-18 months. A replacement
+        driver costs roughly $35 for the part alone, or ~$140 for a professional repair. This is an electronic
+        failure, not user-caused, but it is out of warranty when it typically occurs.
+    tr:
+      title: WH-1000XM5 hoparlör sürücüsü arızalanıyor, sağ taraf sessizleşiyor
+      body: 'Sony''nin kendi resmi ürün inceleme sayfasında (2.198 inceleme) bu, ''En Yararlı Kritik''
+        inceleme olarak yer alıyor: sağ hoparlör sürücüsü 18. ayda öldü. Üçüncü taraf bir onarım dükkânı
+        (Joe''s Gaming & Electronics), ''Sol veya sağ kulak kabuğundan ses gelmiyor'' durumunu yaygın
+        bir WH-1000XM5 onarımı olarak listeliyor ve parça ve işçilik dahil hoparlör değişimi için 140
+        $ ücret alıyor.'
+      advice: Hoparlör sürücüsü bir tarafta sessizce arızalanabilir, tipik olarak 12-18 ay sonra. Yedek
+        bir sürücü yalnızca parça olarak yaklaşık 35 $, profesyonel onarım ise ~140 $ tutar. Bu kullanıcı
+        kaynaklı değil, elektronik bir arızadır, ancak tipik olarak ortaya çıktığında garanti dışıdır.
+  evidence:
+  - url: https://www.sony.co.id/en/electronics/headband-headphones/wh-1000xm5/reviews-ratings
+    quote: I love these headphones, they are fantastic but they died after only 18 months. For a premium
+      product that is terrible. The right speaker has stopped working and from looking online it seems
+      to be a common problem with this model.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:40:02+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: sony
+      series: wh-1000xm5
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: headband slider
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Headband slider separating/cracking near extension point
+      body: An iFixit repair forum thread documents the headband slider separating/cracking near the extension
+        point. The user reports the slider getting loose and the gap widening, and resorted to using a
+        tie to keep it in place. A second user confirms the gap became wider over time.
+      advice: The headband slider is a separate failure point from the hinge. Users report it separating/cracking
+        with normal use, and it may lead to more serious structural issues.
+    tr:
+      title: Kafa bandı sürgüsü uzatma noktası yakınında ayrılıyor/çatlıyor
+      body: Bir iFixit onarım forumu başlığı, kafa bandı sürgüsünün uzatma noktası yakınında ayrıldığını/çatladığını
+        belgeliyor. Kullanıcı, sürgünün gevşediğini ve boşluğun genişlediğini bildiriyor ve yerinde tutmak
+        için bir bağ kullanmak zorunda kalmış. İkinci bir kullanıcı, boşluğun zamanla daha da genişlediğini
+        doğruluyor.
+      advice: Kafa bandı sürgüsü, menteşeden ayrı bir arıza noktasıdır. Kullanıcılar normal kullanımla
+        ayrıldığını/çatladığını bildiriyor ve bu daha ciddi yapısal sorunlara yol açabilir.
+  evidence:
+  - url: https://fr.ifixit.com/R%C3%A9ponses/Afficher/925102/The+headband+slider+is+separating-cracking+near+the+extension+poin
+    quote: The slider is getting loose and this side is extended to full length almost always, I'm afraid
+      it will lead to other more serious issues.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:43:16+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Sennheiser
+      series: Momentum Wireless 3
+  kind: known_issue
+  domain: electronic
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: 2.5mm analog cable port switch
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Analog cable port switch sticks, leaving the headphones stuck in airplane mode
+      body: Found via 'Sennheiser Momentum 3 Bluetooth connection drops firmware issue'. An Ars Technica
+        forum owner describes that inserting the analog cable actuates a switch inside the 2.5mm port
+        that turns Bluetooth off; after common use the switch stuck, leaving the headphones in 'airplane'
+        mode with Bluetooth disabled and no pairing.
+      advice: Use the analog cable sparingly and follow the twist-to-lock/unlock instruction; a stuck
+        port switch disables Bluetooth entirely.
+    tr:
+      title: Analog kablo bağlantı noktası anahtarı takılı kalıyor ve kulaklıkları uçak modunda bırakıyor
+      body: '''Sennheiser Momentum 3 Bluetooth connection drops firmware issue'' üzerinden bulundu. Bir
+        Ars Technica forum sahibi, analog kablonun takılmasının 2.5mm bağlantı noktası içindeki Bluetooth''u
+        kapatan bir anahtarı harekete geçirdiğini; yaygın kullanımdan sonra anahtarın takılı kaldığını
+        ve kulaklıkları Bluetooth devre dışı ve eşleştirme olmadan ''uçak'' modunda bıraktığını açıklıyor.'
+      advice: Analog kabloyu idareli kullanın ve çevirerek kilitleme/kilit açma talimatına uyun; takılı
+        kalan bir bağlantı noktası anahtarı Bluetooth'u tamamen devre dışı bırakır.
+  evidence:
+  - url: https://arstechnica.com/civis/threads/sennheiser-momentum-3-airplane-mode-issue.1469949/?thutp_user_id=64455
+    quote: The analog port has a switch in it. You plug it in with a tiny twist and remove it with a larger
+      twist, because that's natural. The twist makes a mechanical connection and actuates a switch. The
+      switch is what turns bluetooth on and off. Since I did not read the instructions on the special
+      (over-engineered and way too fragile) analog port, its stuck on (bluetooth off).
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:36:58+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: bose
+      series: quietcomfort-ultra
+  kind: known_issue
+  domain: electronic
+  severity: low
+  consequence: ''
+  detection: ''
+  component: Bluetooth firmware
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: QC Ultra Bluetooth connection takes ~60 seconds with repeated reconnects on Linux
+      body: A user documents a ~60-second, multi-reconnect Bluetooth connection process on Linux, with
+        repeated connect sounds and battery announcements before audio plays.
+      advice: 'A Bluetooth-specific annoyance rather than a hardware failure: on some systems the QC Ultra
+        takes ~60s and several reconnect cycles to deliver audio. Not fatal, but noticeable for daily
+        use.'
+    tr:
+      title: QC Ultra Bluetooth bağlantısı Linux'ta tekrarlanan yeniden bağlantılarla ~60 saniye sürüyor
+      body: Bir kullanıcı, Linux'ta ~60 saniyelik, çoklu yeniden bağlanma içeren bir Bluetooth bağlantı
+        sürecini, ses çalmadan önce tekrarlanan bağlantı sesleri ve pil duyurularıyla belgeliyor.
+      advice: 'Donanım arızasından ziyade Bluetooth''a özgü bir can sıkıcı durum: bazı sistemlerde QC
+        Ultra ses iletmek için ~60 sn ve birkaç yeniden bağlanma döngüsü gerektiriyor. Ölümcül değil ama
+        günlük kullanımda fark edilir.'
+  evidence:
+  - url: https://github.com/bluez/bluez/issues/1266
+    quote: This process takes ~60 seconds.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:38:46+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Sennheiser
+      series: Momentum Wireless 3
+  kind: known_issue
+  domain: electronic
+  severity: high
+  consequence: ''
+  detection: ''
+  component: fold-to-power hinge microswitch
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Fold-to-power hinge microswitch fails, draining the battery overnight
+      body: Found via 'Sennheiser Momentum 3 common problems'. A repair/used-buyer guide for the Momentum
+        3 says the automatic fold-to-power hinge switch is prone to mechanical wear; if the internal microswitch
+        wears out or gets debris, the headphones stay powered on in their case and drain the battery overnight.
+      advice: Test that folding the headphones shut actually powers them off; a worn hinge switch silently
+        kills the battery when stored.
+    tr:
+      title: Katla-ve-aç menteşe mikro anahtarı arızalanıyor, pili gece boyunca tüketiyor
+      body: '''Sennheiser Momentum 3 common problems'' üzerinden bulundu. Momentum 3 için bir onarım/ikinci
+        el alıcı rehberi, otomatik katla-ve-aç menteşe anahtarının mekanik aşınmaya yatkın olduğunu söylüyor;
+        iç mikro anahtar aşınırsa veya kir toplarsa, kulaklıklar kılıflarında açık kalır ve pili gece
+        boyunca tüketir.'
+      advice: Kulaklıkları katlayarak kapatmanın gerçekten onları kapatıp kapatmadığını test edin; aşınmış
+        bir menteşe anahtarı saklandığında pili sessizce öldürür.
+  evidence:
+  - url: https://www.lmlrepair.com/reviews/sennheiser-momentum-3
+    quote: If the internal microswitch inside the hinge wears out or gets contaminated with debris, the
+      headphones will stay powered on inside their case, completely draining the battery overnight.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:36:58+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: sony
+      series: wh-1000xm5
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: earcup hinge
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: WH-1000XM5 earcup hinge breaks under normal use, often just after warranty
+      body: SoundGuys reader poll of 2,000+ owners found 24% experienced hinge breakage. Reader quotes
+        in the same article describe hinges breaking at 3 months, 4 months, and just after the one-year
+        warranty, with Sony refusing coverage. This is the most commonly reported physical failure for
+        this model.
+      advice: Expect the hinge to be a weak point. If buying, consider an extended warranty or protection
+        plan, as Sony often declines coverage for hinge breakage. If you already own a pair, handle by
+        the headband, not the earcups, and inspect the hinge area for looseness that precedes failure.
+    tr:
+      title: WH-1000XM5 kulak kabuğu menteşesi normal kullanımda kırılıyor, genellikle garantiden hemen
+        sonra
+      body: SoundGuys'in 2.000'den fazla sahibiyle yaptığı okuyucu anketi, %24'ünün menteşe kırılması
+        yaşadığını buldu. Aynı makaledeki okuyucu alıntıları, menteşelerin 3. ayda, 4. ayda ve bir yıllık
+        garantiden hemen sonra kırıldığını, Sony'nin kapsamı reddettiğini anlatıyor. Bu, bu model için
+        en yaygın bildirilen fiziksel arızadır.
+      advice: Menteşenin zayıf bir nokta olmasını bekleyin. Satın alıyorsanız, Sony menteşe kırılması
+        için kapsamı sıklıkla reddettiğinden uzatılmış garanti veya koruma planı düşünün. Zaten bir çiftiniz
+        varsa, kulak kabuklarından değil kafa bandından tutun ve arızadan önce gelen gevşeklik için menteşe
+        bölgesini inceleyin.
+  evidence:
+  - url: https://www.soundguys.com/sony-hinge-failure-poll-results-133002/
+    quote: 47% have experienced some form of failure, with the headband/hinge breaking being the most
+      common issue (24%).
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:40:02+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: bose
+      series: quietcomfort-45
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: pivot axis (axe de pivot)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: QC45 pivot axis breaks after about a month of use
+      body: A French Amazon customer review for the QC45 reports the pivot axis breaking after barely
+        a month of use, and the review aggregate lists 'l'axe se brise' (the axis breaks) among durability
+        complaints. This is an EU-market owner report of a mechanical pivot failure.
+      advice: EU-market owners report the QC45's pivot axis can break early (within about a month); a
+        broken pivot is a structural failure that typically requires repair or replacement.
+    tr:
+      title: QC45 pivot ekseni yaklaşık bir aylık kullanımdan sonra kırılıyor
+      body: QC45 için bir Fransız Amazon müşteri incelemesi, pivot ekseninin neredeyse bir aylık kullanımdan
+        sonra kırıldığını bildiriyor ve inceleme özeti dayanıklılık şikayetleri arasında 'l'axe se brise'
+        (eksen kırılıyor) ifadesini listeliyor. Bu, mekanik bir pivot arızasına ilişkin AB pazarından
+        bir sahip raporudur.
+      advice: AB pazarındaki sahipler, QC45'in pivot ekseninin erken (yaklaşık bir ay içinde) kırılabildiğini
+        bildiriyor; kırık bir pivot genellikle onarım veya değişim gerektiren yapısal bir arızadır.
+  evidence:
+  - url: https://www.amazon.fr/dp/B098FKXT8L?camp=1642&creative=6746&linkCode=ur2&tag=numerama0c-21&_encoding=UTF8
+    quote: Un axe de pivot se brise après à peine un mois d'utilisation.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:40:25+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: jbl
+      series: tour-one-m2
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: holder (tutucu iskeleti) frame
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Holder (skeleton) frame broke; authorized service has no spare parts
+      body: Owner reports the holder skeleton frame broke and the authorized service said no spare parts
+        exist for this model, so it could not help.
+      advice: If the frame breaks after warranty, spare parts for the Tour One M2 are reportedly unavailable
+        through the Turkish authorized service, leaving replacement as the only option.
+    tr:
+      title: Tutucu (iskelet) çerçeve kırıldı; yetkili serviste yedek parça yok
+      body: Sahip, tutucu iskelet çerçevenin kırıldığını ve yetkili servisin bu model için yedek parça
+        bulunmadığını söyleyerek yardımcı olamadığını bildiriyor.
+      advice: Çerçeve garanti sonrası kırılırsa, Tour One M2 için yedek parçaların Türkiye'deki yetkili
+        servis aracılığıyla bulunamadığı bildiriliyor ve tek seçenek değişim olarak kalıyor.
+  evidence:
+  - url: https://www.sikayetvar.com/uye/yusuf-16821495
+    quote: JBL Tour One M2 kulaklığımın tutucu iskeleti kırıldı
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:41:02+00:00'

@@ -302,6 +302,20 @@ def test_research_refuses_to_fall_back_from_an_unavailable_named_agent(client, m
     assert "missing-agent" in response.json()["detail"]
     assert submitted == []
 
+
+def test_a_catalog_draft_can_be_started_with_a_spending_ceiling(client, monkeypatch):
+    submitted = []
+    monkeypatch.setattr(client.app.state.jobs, "submit",
+                        lambda kind, params, **k: submitted.append((kind, params)) or "job-1")
+    named = client.post("/api/packs/author", json={"category": "air fryers", "budget_usd": 0.4})
+    bare = client.post("/api/packs/author", json={"category": "air fryers"})
+    assert named.status_code == bare.status_code == 200
+    assert submitted[0] == ("pack_author", {"category": "air fryers", "harness": "", "budget_usd": 0.4})
+    # Omitting it leaves the plane's own default, never zero spent or unlimited by name.
+    assert "budget_usd" not in submitted[1][1]
+    assert client.post("/api/packs/author", json={"category": "x", "budget_usd": 500}).status_code == 422
+
+
 def test_an_unknown_job_is_a_404(client):
     assert client.get("/api/jobs/missing").status_code == 404
     assert client.post("/api/jobs/missing/cancel").status_code == 404

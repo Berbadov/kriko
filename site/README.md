@@ -188,6 +188,65 @@ The text on screen is the sound-off script, and the three promises are the page'
 own lines word for word. `out/` (stills and the videos) is not committed. The ad
 says in its corner that the products and findings are invented.
 
+## The problem pages
+
+`problems/` and `tr/problems/` are not written by hand. `tools/render_problems.py`
+builds each catalog under `packs/` the way `kriko build` does and writes one page
+for every part or product it holds at least three claims about, in each language
+the claims are written in, plus a hub that lists them and `sitemap-problems.xml`.
+It names no category, so a new catalog or a new car in an old one gets its pages
+on the next run.
+
+```sh
+PYTHONPATH=src python site/tools/render_problems.py
+```
+
+Run it after `render-locales.cjs` whenever a catalog or `styles.css` changes,
+because the pages carry the stylesheet's hash. `test_the_pages_in_the_repo_are_what_the_catalogs_say_today`
+fails until you do, so a claim the catalog has dropped does not stay on the site.
+
+A page carries a claim's title, body and advice, how it is found, and a link to
+each page it was reported on. It never carries the quote the claim was checked
+against: that text belongs to its author, and the link sends the reader there.
+A catalog that declares itself `synthetic` (the worked example) is never
+published, because a made-up claim on a real address is a false statement. The
+page text is under the catalog's own licence, which each page names.
+
+### Being found
+
+Each page carries structured data (breadcrumbs and an article for a product, a
+collection for a list), a title that names a safety risk when the page reports
+one, social tags, and a `lastmod` in the sitemap that is the day the newest
+source behind the page was read, so it moves only when the knowledge does.
+`problems/safety/` lists every product with a serious fire, explosion or shock
+report, and the hub links to it.
+
+After a deploy, once the pages answer on kriko.cc, tell the engines that take
+IndexNow (Bing, Yandex and others) what exists. The key file at the root
+(`<key>.txt`) is the proof; no account is involved:
+
+```sh
+python site/tools/indexnow.py          # what would be sent
+python site/tools/indexnow.py --send   # send it
+```
+
+Google takes its sitemaps through Search Console, which needs the owner's own
+Google account.
+
+### Sponsored placements
+
+`sponsors.json` lists the paid placements, and is empty until there is one. A
+placement is `{id, url, name: {en, tr}, text: {en, tr}, catalogs: [slug, ...]}`
+(`catalogs` is optional; without it the placement is for every catalog). The
+generator shows the first one that fits as a box labelled Sponsored, set apart
+by a dashed edge, on a product page and a catalog page, never on the hubs, the
+home pages, the guide or the policy, and never inside a finding. It is a plain
+link with `rel="sponsored nofollow noopener"`: no script, no cookie, nothing
+loaded from the advertiser. A placement whose address is not https, or that has
+no words in a page's language, is left out and named on stderr. Add the first
+one and the privacy policy already says what it is; a test fails if the policy
+stops saying so while any is listed.
+
 ## Readability
 
 Body text is 19px with 1.7 line height, lines stay under about 70 characters,

@@ -25,7 +25,7 @@ const PAGES = [
 // Pages with no Turkish version still carry the hashes.
 const STAMPED = [...PAGES.map((page) => page.source), 'privacy/index.html', '404.html'];
 // A link to one of these goes to the Turkish version of it; /privacy/ is English only.
-const LOCALISED = /^\/(?:guide\/)?(?:#.*)?$/;
+const LOCALISED = /^\/(?:guide\/|problems\/)?(?:#.*)?$/;
 
 const hash = (file) => createHash('sha256').update(fs.readFileSync(path.join(root, file))).digest('hex').slice(0, 12);
 

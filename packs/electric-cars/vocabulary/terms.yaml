@@ -1,0 +1,54 @@
+# Vocabulary — every kind, key, domain and attribute this pack uses.
+#
+# Written from the pack an agent proposed. Declared before use: the
+# builder refuses a row naming a term that is not here, which is also
+# why a domain used by a claim and never declared is added above.
+- term_id: product
+  role: subject_kind
+  label:
+    en: product
+- term_id: brand
+  role: attribute
+  datatype: text
+  label:
+    en: brand
+- term_id: series
+  role: attribute
+  datatype: text
+  label:
+    en: series
+- term_id: battery_capacity_kwh
+  role: attribute
+  datatype: number
+  label:
+    en: Battery capacity (kWh)
+- term_id: range_wltp_km
+  role: attribute
+  datatype: number
+  label:
+    en: Range WLTP (km)
+- term_id: power_kw
+  role: attribute
+  datatype: number
+  label:
+    en: Power (kW)
+- term_id: battery
+  role: domain
+  label:
+    en: Battery
+- term_id: electrical
+  role: domain
+  label:
+    en: Electrical
+- term_id: suspension
+  role: domain
+  label:
+    en: Suspension
+- term_id: software
+  role: domain
+  label:
+    en: Software
+- term_id: general
+  role: domain
+  label:
+    en: General

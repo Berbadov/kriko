@@ -1,0 +1,105 @@
+lineup:
+- Apple iPhone 14
+- Apple iPhone 14 Plus
+- Apple iPhone 14 Pro
+- Apple iPhone 14 Pro Max
+- Apple iPhone 15
+- Apple iPhone 15 Plus
+- Apple iPhone 15 Pro
+- Apple iPhone 15 Pro Max
+- Apple iPhone 16
+- Apple iPhone 16 Plus
+- Apple iPhone 16 Pro
+- Apple iPhone 16 Pro Max
+- Samsung Galaxy S23
+- Samsung Galaxy S24
+- Samsung Galaxy S25
+- Samsung Galaxy A05
+- Samsung Galaxy A15 4G
+- Samsung Galaxy A15 5G
+- Samsung Galaxy A35 5G
+- Samsung Galaxy A55 5G
+- Samsung Galaxy A56 5G
+- Xiaomi Redmi 13C 4G
+- Xiaomi Redmi Note 13
+- Xiaomi Redmi Note 13 Pro 5G
+- Xiaomi POCO X6 5G
+- Xiaomi POCO X6 Pro 5G
+- Google Pixel 8
+- Google Pixel 8a
+- Google Pixel 9
+- Google Pixel 9a
+covered:
+- apple iphone 14
+- apple iphone 14 plus
+- apple iphone 14 pro
+- apple iphone 14 pro max
+- apple iphone 15
+- apple iphone 15 plus
+- apple iphone 15 pro
+- apple iphone 15 pro max
+- apple iphone 16
+- apple iphone 16 plus
+- apple iphone 16 pro
+- apple iphone 16 pro max
+- google pixel 8
+- google pixel 8a
+- google pixel 9
+- google pixel 9a
+- product brand apple model iphone14
+- product brand apple model iphone14plus
+- product brand apple model iphone14pro
+- product brand apple model iphone14promax
+- product brand apple model iphone15
+- product brand apple model iphone15plus
+- product brand apple model iphone15pro
+- product brand apple model iphone15promax
+- product brand apple model iphone16
+- product brand apple model iphone16plus
+- product brand apple model iphone16pro
+- product brand apple model iphone16promax
+- product brand google model pixel8
+- product brand google model pixel8a
+- product brand google model pixel9
+- product brand google model pixel9a
+- product brand samsung model galaxya05
+- product brand samsung model galaxya154g
+- product brand samsung model galaxya155g
+- product brand samsung model galaxya355g
+- product brand samsung model galaxya555g
+- product brand samsung model galaxya565g
+- product brand samsung model galaxys23
+- product brand samsung model galaxys24
+- product brand samsung model galaxys25
+- product brand xiaomi model pocox65g
+- product brand xiaomi model pocox6pro5g
+- product brand xiaomi model redmi13c4g
+- product brand xiaomi model redminote13
+- product brand xiaomi model redminote13pro5g
+- samsung galaxy a05
+- samsung galaxy a15 4g
+- samsung galaxy a15 5g
+- samsung galaxy a35 5g
+- samsung galaxy a55 5g
+- samsung galaxy a56 5g
+- samsung galaxy s23
+- samsung galaxy s24
+- samsung galaxy s25
+- xiaomi poco x6 5g
+- xiaomi poco x6 pro 5g
+- xiaomi redmi 13c 4g
+- xiaomi redmi note 13
+- xiaomi redmi note 13 pro 5g
+uncovered: []
+note: All lineup models have subjects. Subjects without claims are those where no
+  solid owner-reported evidence surfaced in this research pass; they are honest gaps
+  for the research plane to fill.
+out_of_scope:
+- Samsung Galaxy Z Fold/Flip series
+- Xiaomi 14/15 flagship series
+- Huawei smartphones
+- Oppo smartphones
+- Realme smartphones
+- Motorola smartphones
+- HONOR smartphones
+quarantined: []

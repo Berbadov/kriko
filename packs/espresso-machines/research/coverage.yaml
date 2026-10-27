@@ -1,0 +1,64 @@
+lineup:
+- De'Longhi Magnifica S ECAM 22.110.B
+- De'Longhi Magnifica S ECAM 22.117.B
+- De'Longhi Magnifica Evo
+- De'Longhi Magnifica Start
+- De'Longhi Dedica EC685
+- De'Longhi Dedica Arte EC885
+- Philips Series 2200 EP2200
+- Philips Series 3200 EP3226/40
+- Philips Series 3200 LatteGo EP3246/70
+- Philips EP2124
+- Nespresso Vertuo (Next / Plus)
+- Nespresso Essenza Mini
+- Nespresso Citiz
+- Nespresso Lattissima
+- Gaggia Classic Pro
+- Gaggia Classic EVO
+- Gaggia Anima Prestige
+- Sage/Breville Barista Express BES870/BES875
+- Sage/Breville Barista Express Impress
+- Sage/Breville Bambino BES450
+covered:
+- de longhi dedica ec685
+- de longhi magnifica evo
+- de longhi magnifica s ecam 22 117 b
+- gaggia classic evo
+- gaggia classic pro
+- nespresso citiz
+- nespresso essenza mini
+- nespresso vertuo
+- philips series 2200 ep2200
+- philips series 3200 ep3226 40
+- philips series 3200 lattego ep3246 70
+- product brand delonghi series dedica ec685
+- product brand delonghi series magnifica evo
+- product brand delonghi series magnifica s
+- product brand gaggia series classic evo
+- product brand gaggia series classic pro
+- product brand nespresso series citiz
+- product brand nespresso series essenza mini
+- product brand nespresso series vertuo
+- product brand philips series ep2200
+- product brand philips series ep3226
+- product brand philips series ep3246 lattego
+- product brand sage series barista express
+- product brand sage series barista express impress
+- sage breville barista express
+- sage breville barista express impress
+uncovered:
+- De'Longhi Magnifica S ECAM 22.110.B
+- De'Longhi Magnifica Start
+- De'Longhi Dedica Arte EC885
+- Philips EP2124
+- Nespresso Lattissima
+- Gaggia Anima Prestige
+- Sage/Breville Bambino BES450
+note: Subjects with claims are the models for which owner/repair evidence was found.
+  Magnifica Start, Dedica Arte, EP2124, Lattissima, Anima Prestige and Bambino are
+  named but not yet researched, so they ship with no claims.
+out_of_scope:
+- Jura espresso machines (appear in repair cross-references)
+- coffee grinders sold separately
+- Nespresso capsules and milk frothers
+quarantined: []

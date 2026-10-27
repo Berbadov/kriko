@@ -1,0 +1,10 @@
+# Search templates for this pack. One query per line.
+#
+# Written by the agent that authored the pack, in the words
+# and the language its sources use.
+- '{label} batarya sorunu'
+- '{label} şikayet'
+- '{label} battery fire'
+- '{label} recall'
+- Bafang {label} recall
+- '{label} yangın'

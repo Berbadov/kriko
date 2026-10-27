@@ -1,0 +1,153 @@
+# Subjects — the things this pack knows about.
+#
+# `identity` carries exactly the keys `pack.toml` declares for the
+# kind: that dictionary is hashed to the subject id.
+- kind: product
+  label: Xiaomi Electric Scooter Elite
+  identity:
+    brand: xiaomi
+    series: electric scooter elite
+  attributes:
+    max_speed_kmh:
+      value: '25'
+      source: https://www.mi.com/th/product/xiaomi-electric-scooter-elite/specs/
+    range_km:
+      value: '45'
+      source: https://www.mi.com/th/product/xiaomi-electric-scooter-elite/specs/
+    motor_power_w:
+      value: '400'
+      source: https://www.mi.com/th/product/xiaomi-electric-scooter-elite/specs/
+    weight_kg:
+      value: '20'
+      source: https://www.mi.com/th/product/xiaomi-electric-scooter-elite/specs/
+    max_load_kg:
+      value: '120'
+      source: https://www.mi.com/th/product/xiaomi-electric-scooter-elite/specs/
+    wheel_size_inch:
+      value: '10'
+      source: https://www.mi.com/th/product/xiaomi-electric-scooter-elite/specs/
+    battery_capacity_wh:
+      value: '360'
+      source: https://www.mi.com/th/product/xiaomi-electric-scooter-elite/specs/
+    ip_rating:
+      value: IPX5
+      source: https://www.mi.com/th/product/xiaomi-electric-scooter-elite/specs/
+  aliases:
+  - Xiaomi Electric Scooter 4 Elite
+  - Elite 4
+  - Mi Electric Scooter Elite
+- kind: product
+  label: Xiaomi Electric Scooter 4
+  identity:
+    brand: Xiaomi
+    series: Electric Scooter 4
+  attributes:
+    max_speed_kmh:
+      value: '25'
+      source: https://www.mi.com/ae-ar/product/xiaomi-electric-scooter-4/specs/
+    range_km:
+      value: '35'
+      source: https://www.mi.com/ae-ar/product/xiaomi-electric-scooter-4/specs/
+    motor_power_w:
+      value: '300'
+      source: https://www.mi.com/ae-ar/product/xiaomi-electric-scooter-4/specs/
+    weight_kg:
+      value: '17.2'
+      source: https://www.mi.com/ae-ar/product/xiaomi-electric-scooter-4/specs/
+    max_load_kg:
+      value: '110'
+      source: https://www.mi.com/ae-ar/product/xiaomi-electric-scooter-4/specs/
+    wheel_size_inch:
+      value: '10'
+      source: https://www.mi.com/ae-ar/product/xiaomi-electric-scooter-4/specs/
+    battery_capacity_wh:
+      value: '275.4'
+      source: https://www.mi.com/ae-ar/product/xiaomi-electric-scooter-4/specs/
+    ip_rating:
+      value: IP54
+      source: https://www.mi.com/ae-ar/product/xiaomi-electric-scooter-4/specs/
+  aliases:
+  - Mi Electric Scooter 4
+  - Scooter 4
+- kind: product
+  label: Xiaomi Electric Scooter 4 Pro
+  identity:
+    brand: Xiaomi
+    series: Electric Scooter 4 Pro
+  aliases:
+  - Mi Electric Scooter 4 Pro
+  - Scooter 4 Pro
+- kind: product
+  label: Xiaomi Electric Scooter 4 Lite
+  identity:
+    brand: Xiaomi
+    series: Electric Scooter 4 Lite
+  attributes:
+    max_speed_kmh:
+      value: '25'
+      source: https://www.mi.com/ae-en/product/xiaomi-electric-scooter-4-lite/specs/
+    range_km:
+      value: '20'
+      source: https://www.mi.com/ae-en/product/xiaomi-electric-scooter-4-lite/specs/
+    motor_power_w:
+      value: '300'
+      source: https://www.mi.com/ae-en/product/xiaomi-electric-scooter-4-lite/specs/
+    weight_kg:
+      value: '15.6'
+      source: https://www.mi.com/ae-en/product/xiaomi-electric-scooter-4-lite/specs/
+    max_load_kg:
+      value: '100'
+      source: https://www.mi.com/ae-en/product/xiaomi-electric-scooter-4-lite/specs/
+    wheel_size_inch:
+      value: '8.5'
+      source: https://www.mi.com/ae-en/product/xiaomi-electric-scooter-4-lite/specs/
+    battery_capacity_wh:
+      value: '187'
+      source: https://www.mi.com/ae-en/product/xiaomi-electric-scooter-4-lite/specs/
+    ip_rating:
+      value: IP54
+      source: https://www.mi.com/ae-en/product/xiaomi-electric-scooter-4-lite/specs/
+  aliases:
+  - Mi Electric Scooter 4 Lite
+  - Scooter 4 Lite
+- kind: product
+  label: Xiaomi Electric Scooter 4 Ultra
+  identity:
+    brand: Xiaomi
+    series: Electric Scooter 4 Ultra
+  aliases:
+  - Mi Electric Scooter 4 Ultra
+  - Scooter 4 Ultra
+- kind: product
+  label: Xiaomi Electric Scooter 4 Go
+  identity:
+    brand: Xiaomi
+    series: Electric Scooter 4 Go
+  attributes:
+    max_speed_kmh:
+      value: '20'
+      source: https://www.mi.com/es/product/xiaomi-electric-scooter-4-go/specs/
+    range_km:
+      value: '18'
+      source: https://www.mi.com/es/product/xiaomi-electric-scooter-4-go/specs/
+    motor_power_w:
+      value: '250'
+      source: https://www.mi.com/es/product/xiaomi-electric-scooter-4-go/specs/
+    weight_kg:
+      value: '13.7'
+      source: https://www.mi.com/es/product/xiaomi-electric-scooter-4-go/specs/
+    max_load_kg:
+      value: '90'
+      source: https://www.mi.com/es/product/xiaomi-electric-scooter-4-go/specs/
+    wheel_size_inch:
+      value: '8.1'
+      source: https://www.mi.com/es/product/xiaomi-electric-scooter-4-go/specs/
+    battery_capacity_wh:
+      value: '165'
+      source: https://www.mi.com/es/product/xiaomi-electric-scooter-4-go/specs/
+    ip_rating:
+      value: IPX4
+      source: https://www.mi.com/es/product/xiaomi-electric-scooter-4-go/specs/
+  aliases:
+  - Mi 4 Go
+  - Xiaomi 4 Go

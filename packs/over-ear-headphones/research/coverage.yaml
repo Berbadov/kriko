@@ -1,0 +1,45 @@
+lineup:
+- Sony WH-1000XM3
+- Sony WH-1000XM4
+- Sony WH-1000XM5
+- Bose QuietComfort 45
+- Bose QuietComfort Ultra
+- Bose QuietComfort (2023)
+- Bose Noise Cancelling Headphones 700
+- Apple AirPods Max
+- Apple AirPods Max 2
+- Sennheiser Momentum 4 Wireless
+- Sennheiser Momentum Wireless 3
+- JBL Tour One M2
+- JBL Live 770NC
+- JBL Tune 770NC
+- JBL Live 660NC
+covered:
+- apple airpods max
+- bose noise cancelling headphones 700
+- bose quietcomfort 2023
+- bose quietcomfort 45
+- bose quietcomfort ultra
+- jbl live 770nc
+- jbl tour one m2
+- sennheiser momentum 4 wireless
+- sennheiser momentum wireless 3
+- sony wh 1000xm3
+- sony wh 1000xm4
+- sony wh 1000xm5
+uncovered:
+- Apple AirPods Max 2
+- JBL Tune 770NC
+- JBL Live 660NC
+note: Covered all six requested products with three sourced failure claims each. JBL
+  Tune 770NC and JBL Live 660NC remain uncovered (listed in the pack's not-covered
+  set but not researched this run). Battery/weight specs could only be sourced for
+  the WH-1000XM3 (30 h) and Bose QuietComfort 2023 (24 h); the tool budget was exhausted
+  before pages could be opened for the remaining specs, so those figures are dropped
+  per the pack rule. The Bose QuietComfort 2023 firmware-update claim comes from a
+  compiled summary of user reports rather than a single primary post.
+out_of_scope:
+- Smart Talk / Speak-to-chat features
+- Sony Headphones Connect app
+- replacement ear cushions / earpads
+quarantined: []
