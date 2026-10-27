@@ -14,14 +14,17 @@ fit for a catalog other readers install:
 This copies the draft to `packs/<name>`, keeps only claims that carry evidence, strips the
 narrating sentence, drops the adapters, writes a README that says what the catalog is, and gives
 the manifest the id, license and publisher the other catalogs declare. A claim whose words are
-too short once the narration is gone is dropped rather than published thin. Nothing here knows a
-category: the draft's own data is the input.
+too short once the narration is gone is dropped rather than published thin. A catalog that ships
+search queries also ships how to aim them (`research/skill.md`); a draft that has none gets one
+written from the identity keys its own manifest declares. Nothing here knows a category: the
+draft's own data is the input.
 """
 
 import argparse
 import re
 import shutil
 import sys
+import tomllib
 from pathlib import Path
 
 import yaml
@@ -97,6 +100,28 @@ def readme(title: str, products: int, claims: int, languages: list) -> str:
             f"Licensed {LICENSE}.\n")
 
 
+def skill(toml: str, title: str) -> str:
+    """How to identify a product of this catalog before searching, from the identity keys it declares."""
+    identity = tomllib.loads(toml).get("identity") or {}
+    told = "".join(f"   - a **{kind}**: {', '.join(f'`{key}`' for key in keys)}\n" for kind, keys in identity.items())
+    return (f"# Identifying a product in {title} before researching it\n\n"
+            "A listing's name is not a subject. Resolve what this catalog tells products apart by *before*\n"
+            "searching, and search on that.\n\n"
+            "1. **Resolve identity before searching.** This catalog tells its subjects apart by:\n\n"
+            f"{told}\n"
+            "   Read the keys from the installed catalog at run time, never from memory: the list changes\n"
+            "   when the catalog does.\n"
+            "2. **Search the discriminating attribute, not the label.** What goes wrong is reported against\n"
+            "   the model, version or configuration, not against a brand. A brand alone finds marketing,\n"
+            "   not failure reports.\n"
+            "3. **One product versus its family.** A report about a sibling product can inform a search; it\n"
+            "   is never filed as a fact about this one unless the claim says which parts the two share.\n"
+            "4. **Refuse rather than guess.** If the listing does not fix every key above, report what is\n"
+            "   missing and what would settle it, and leave the subject unresearched instead of aiming at a\n"
+            "   neighbour. A confident wrong answer is worse than none.\n"
+            "5. **The bar is `principle.md`, in full.** Read it before filing anything.\n")
+
+
 def title_of(text: str, fallback: str) -> str:
     found = re.search(r'^name\s*=\s*"([^"]+)"', text, re.M)
     return found.group(1) if found else fallback
@@ -116,6 +141,9 @@ def import_draft(draft: Path, packs: Path, name: str, icon: str = "") -> tuple[P
     toml = (target / "pack.toml").read_text(encoding="utf-8")
     with open(target / "pack.toml", "w", encoding="utf-8", newline="\n") as handle:
         handle.write(manifest(toml, name, icon))
+    if (target / "research" / "templates.yaml").exists() and not (target / "research" / "skill.md").exists():
+        with open(target / "research" / "skill.md", "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(skill(toml, title_of(toml, name)))
     languages = sorted({language for claim in kept for language in claim["text"]}) or ["en"]
     products = len(yaml.safe_load((target / "data" / "subjects.yaml").read_text(encoding="utf-8")) or [])
     with open(target / "README.md", "w", encoding="utf-8", newline="\n") as handle:
