@@ -47,3 +47,23 @@ def test_the_key_file_the_repository_ships_is_one_the_tool_accepts():
     site = SCRIPT.parents[1]
     module = _load()
     assert (site / f"{module.find_key(site)}.txt").is_file()
+
+
+def test_the_request_names_who_is_asking_and_a_refusal_is_reported_not_raised(tmp_path, monkeypatch, capsys):
+    import io
+    import sys
+    import urllib.error
+
+    module = _load()
+    sent = []
+
+    def refuse(request, timeout):
+        sent.append(request)
+        raise urllib.error.HTTPError(request.full_url, 403, "Forbidden", {}, io.BytesIO(b""))
+
+    monkeypatch.setattr(module.urllib.request, "urlopen", refuse)
+    monkeypatch.setattr(sys, "argv", ["indexnow.py", "--send", "--site", str(_site(tmp_path))])
+    assert module.main() == 1
+    # The default urllib agent is what the engine's front door answered with a 403.
+    assert not sent[0].get_header("User-agent").startswith("Python-urllib")
+    assert "HTTP 403 Forbidden" in capsys.readouterr().err
