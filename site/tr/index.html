@@ -2,14 +2,20 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
-  <title>Kriko</title>
+  <title>Kriko: baktığın ürünün bilinen sorunları</title>
   <meta name="description" content="Kriko, baktığın ürünün bilinen sorunlarını gösterir; her bulgunun yanında kaynağı vardır. Bilgisayarında çalışır ve her ilan sitesinde işe yarar.">
   <meta property="og:title" content="Kriko: İlan, hikâyenin yarısını anlatır">
   <meta property="og:description" content="Bu ürünün bilinen sorunları, ilanın hemen yanında, kontrol edebileceğin kaynaklarla.">
   <meta property="og:type" content="website">
-  <meta property="og:image" content="https://kriko.cc/assets/icon-128.png">
+  <meta property="og:site_name" content="Kriko">
+  <meta property="og:url" content="https://kriko.cc/tr/">
+  <meta property="og:image" content="https://kriko.cc/assets/share-card.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Kriko paneli, uydurma bir e-bisiklet ilanının yanında açık; başlık: İlan, hikâyenin yarısını anlatır.">
+  <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" href="../assets/icon-32.png">
-  <link rel="stylesheet" href="../styles.css?v=21e6481025a5">
+  <link rel="stylesheet" href="../styles.css?v=6eed87146023">
   <script src="../script.js?v=8b8abf59128c" defer=""></script>
   <link rel="canonical" href="https://kriko.cc/tr/">
   <link rel="alternate" href="https://kriko.cc/" hreflang="en">
@@ -46,13 +52,16 @@
         <div class="hero-copy">
           <p class="label">Almadan önce</p>
           <h1>İlan, hikâyenin <span>yarısını anlatır.</span></h1>
-          <p class="lead">Kriko, tam olarak baktığın ürünle ilgili bilinen sorunları gösterir. Her bulgu kaynağıyla birlikte gelir.</p>
+          <p class="lead">İkinci el araba, telefon ya da beyaz eşya mı alıyorsun? Kriko, baktığın modelin bilinen sorunlarını ilanın yanında gösterir; açıp okuyabileceğin kaynaklar ve satıcıya sorabileceğin sorularla.</p>
           <div class="actions">
             <a class="button" href="https://github.com/Berbadov/kriko/releases/latest/download/kriko-0.3.7-x86_64-setup.exe"><svg class="icon" aria-hidden="true"><use href="#i-download"></use></svg><span>Kriko'yu Windows için indir</span></a>
             <a class="button ghost" href="https://chromewebstore.google.com/detail/kriko/bdifnaggafjokndlpjgmlfappcoehdjb">Tarayıcı uzantısını yükle</a>
             <a class="button ghost" href="https://github.com/Berbadov/kriko"><svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg><span>GitHub</span></a>
           </div>
-          <p class="fine">Ücretsiz · Açık kaynak · Hesap gerekmez</p>
+          <p class="fine">Windows uygulaması · Ücretsiz · Açık kaynak · Hesap gerekmez</p>
+          <p class="fine">Uzantı için Windows uygulamasının açık olması gerekir. Yüklü kataloglar yapay zekâ anahtarı olmadan çevrimdışı çalışır; çevrimiçi araştırma, bağlantısı kurulmuş bir ajan gerektirir ve sağlayıcı ücreti doğurabilir.</p>
+          <p class="fine"><a href="#film">28 saniyelik tanıtımı izle</a> ya da <a href="#get">kurulum adımlarını takip et</a>.</p>
+          <p class="fine">Yükleyici henüz imzalı değil; bu yüzden Windows ilk çalıştırmada <strong>Windows bilgisayarınızı korudu</strong> diyerek durdurabilir. <strong>Daha fazla bilgi</strong> (More info), ardından <strong>Yine de çalıştır</strong> (Run anyway) seç.</p>
         </div>
         <figure class="stage">
           <div class="stage-sky">
@@ -72,6 +81,20 @@
         <li>Araştırman bilgisayarında kalır</li>
         <li>Ücretsiz ve açık kaynak</li>
       </ul>
+    </section>
+
+    <section class="section film" id="film">
+      <div class="wrap">
+        <p class="label">Film</p>
+        <h2>Yirmi sekiz saniye, sesli.</h2>
+        <figure class="window">
+          <video controls="" preload="none" playsinline="" width="1280" height="720" poster="../assets/film/kriko-ad-poster.webp" aria-label="Kriko'nun uydurma bir e-bisiklet ilanını kontrol ettiği 28 saniyelik film: bu üründe neyin ters gittiği bilinir, her bulgunun yanında kaynağıyla.">
+            <source src="../assets/film/kriko-ad.mp4" type="video/mp4">
+            <p>Tarayıcın bu filmi oynatamıyor. Onun yerine <a href="../assets/film/kriko-ad.mp4">indir</a>.</p>
+          </video>
+          <figcaption>E-bisiklet ve içindeki her bulgu uydurmadır. Film, oynat'a basmadan başlamaz.</figcaption>
+        </figure>
+      </div>
     </section>
 
     <section class="section" id="how">
@@ -229,9 +252,9 @@
         <div class="get-grid">
           <ol class="setup">
             <li><span class="step-number">01</span><div><h3>Uygulamayı kur.</h3><p>Windows yükleyicisini indir ve Kriko'yu aç. Yönetici yetkisi gerekmez. İlk açılışta kurulum gerisini adım adım gösterir. Uygulamanın menüleri şimdilik İngilizce.</p></div></li>
-            <li><span class="step-number">02</span><div><h3>Bilgi ekle.</h3><p><strong>Catalogs</strong>'u aç, <strong>Find release catalogs</strong>'u seç ve birini kur. Katalog olmadan da araştırabilirsin.</p></div></li>
+            <li><span class="step-number">02</span><div><h3>Nasıl kontrol edeceğini seç.</h3><p>Çevrimdışı sorgular için <strong>More → Catalogs → Find release catalogs</strong> yolundan bir katalog yükle. Çevrimiçi araştırma için <strong>More → Agents</strong> bölümünden bir ajan seçip <strong>Check connection</strong> düğmesine bas. Ücretli sağlayıcılar kendi hesabını ücretlendirir; araştırma katalog olmadan da çalışır.</p></div></li>
             <li><span class="step-number">03</span><div><h3>Kriko'yu tarayıcına ekle.</h3><p>Chrome, Edge ya da Brave için <a href="https://chromewebstore.google.com/detail/kriko/bdifnaggafjokndlpjgmlfappcoehdjb">Kriko’yu Chrome Web Mağazası’ndan yükle</a>. Güncellemeleri mağaza yapar. Masaüstü uygulamasını açık tut; uzantının çalışması için gereklidir.</p></div></li>
-            <li><span class="step-number">04</span><div><h3>Bir ilan aç.</h3><p>Kriko açık dursun, bir ürün sayfası aç ve <span class="keys"><kbd>Alt</kbd> + <kbd>K</kbd></span> tuşlarına ya da araç çubuğu düğmesine bas. Bulguları oku, kaynaklarını incele.</p></div></li>
+            <li><span class="step-number">04</span><div><h3>Bir ilan aç.</h3><p>Kriko açıkken bir ürün sayfası aç; <span class="keys"><kbd>Alt</kbd> + <kbd>K</kbd></span> tuşlarına ya da araç çubuğundaki düğmeye bas. Modeli ve varyantı doğrula, ardından bir bulguyu açıp kaynağını oku. Bulgu olmaması, ürünün sorunsuz olduğunun kanıtı değil, bilgi kapsamındaki bir boşluktur.</p></div></li>
           </ol>
           <div class="download-card">
             <h3>Windows için Kriko</h3>

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Kriko share card</title>
+<style>
+  /* The picture a link to kriko.cc unfurls into (X, Bluesky, Slack, a chat): 1200x630.
+     It reuses the site's own tokens, fonts and pictures, so it cannot drift from the page. */
+  @font-face { font-family: "Barlow Condensed"; font-weight: 700; src: url("../assets/fonts/barlow-condensed-latin-700-normal.woff2") format("woff2"); }
+  @font-face { font-family: "Barlow Condensed"; font-weight: 600; src: url("../assets/fonts/barlow-condensed-latin-600-normal.woff2") format("woff2"); }
+  @font-face { font-family: "Atkinson Hyperlegible Next"; font-weight: 200 800; src: url("../assets/fonts/atkinson-hyperlegible-next-latin-wght-normal.woff2") format("woff2"); }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; width: 1200px; height: 630px; overflow: hidden; background: #090c17; }
+  .card { position: relative; width: 1200px; height: 630px; color: #f3f1ea; font-family: "Atkinson Hyperlegible Next", "Segoe UI", sans-serif; }
+  .copy { position: absolute; left: 64px; top: 56px; width: 500px; }
+  .mark { height: 40px; width: auto; display: block; }
+  .label { margin: 44px 0 14px; font: 600 26px/1 "Barlow Condensed", sans-serif; letter-spacing: .09em; text-transform: uppercase; color: #b5bcd0; }
+  h1 { margin: 0; font: 700 86px/.94 "Barlow Condensed", sans-serif; letter-spacing: -.005em; }
+  h1 span { display: block; color: #6f8bff; }
+  .lead { margin: 26px 0 0; font-size: 26px; line-height: 1.4; color: #d6dae8; }
+  .foot { position: absolute; left: 64px; bottom: 44px; margin: 0; font: 600 25px/1 "Barlow Condensed", sans-serif; letter-spacing: .07em; text-transform: uppercase; color: #b5bcd0; }
+  .foot b { color: #f3f1ea; font-weight: 700; }
+  .shot { position: absolute; right: 0; top: 0; width: 598px; height: 630px; overflow: hidden; border-left: 3px solid #3d63f5; }
+  .shot img { display: block; width: 598px; height: 630px; object-fit: cover; object-position: left top; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="copy">
+    <img class="mark" src="../assets/kriko-wordmark-white.svg" alt="Kriko">
+    <p class="label">Before you buy</p>
+    <h1>The listing tells <span>half the story.</span></h1>
+    <p class="lead">What is known to go wrong with this exact product, with the source beside every finding.</p>
+  </div>
+  <p class="foot"><b>kriko.cc</b> &nbsp;·&nbsp; Free &nbsp;·&nbsp; Open source</p>
+  <div class="shot"><img src="../assets/examples/hero-dark.webp" alt=""></div>
+</div>
+</body>
+</html>
