@@ -1,0 +1,73 @@
+lineup:
+- Midea Mobile 35C
+- Comfee MPD1-12CRN7
+- KOENIC KAC 3352
+- Midea Porta Split
+- Midea Xtreme Save
+- Midea Breezeless
+- Samsung Windfree
+- LG portable LP series
+- Vestel Klima Nova Inv 122 A++
+- Daikin ATXF25F Siesta
+- Daikin FTXF71A2V1B
+- Daikin Kaira DTXR35E
+- Arçelik/Beko split AC
+- Midea split AC
+- Samsung split AC
+- Vestel split AC
+- Daikin Perfera
+- LG Dual Inverter split
+- Samsung AR9500 split
+- Vestel Vega Plus Inverter
+- Arçelik 12320 split
+covered:
+- ar elik beko split ac
+- comfee mpd1 12crn7
+- daikin atxf25f siesta
+- daikin ftxf71a2v1b
+- daikin kaira dtxr35e
+- koenic kac 3352
+- lg portable lp series
+- midea breezeless
+- midea mobile 35c
+- midea porta split
+- midea split ac
+- midea xtreme save
+- platform brand arcelik beko family split
+- platform brand midea family split
+- platform brand samsung family split
+- platform brand vestel family split
+- product brand comfee series mpd1 12crn7
+- product brand daikin series atxf25f siesta
+- product brand daikin series ftxf71a2v1b
+- product brand daikin series kaira dtxr35e
+- product brand koenic series kac 3352
+- product brand lg series lp portable
+- product brand midea series breezeless
+- product brand midea series mobile 35c
+- product brand midea series porta split
+- product brand midea series xtreme save
+- product brand samsung series windfree
+- product brand vestel series klima nova inv 122 a
+- samsung split ac
+- samsung windfree
+- vestel klima nova inv 122 a
+- vestel split ac
+uncovered:
+- Daikin Perfera
+- LG Dual Inverter split
+- Samsung AR9500 split
+- Vestel Vega Plus Inverter
+- Arçelik 12320 split
+note: The lineup lists the models and series this run found evidence for, plus well-known
+  current series (Daikin Perfera, LG Dual Inverter, Samsung AR9500, Vestel Vega Plus,
+  Arçelik 12320) that were not researched here and have no subject yet. The pack's
+  intended focus was Midea split units in Turkey 2020–2023, but age, brand, market
+  and type were assumed, not confirmed, so the pack covers the wider category of split
+  and portable units sold in Turkey and Europe.
+out_of_scope:
+- Heat pumps (Midea heat pump complaints appeared in the same sources)
+- VRF central systems (a Midea VRF distributor response appeared in a source)
+- Other appliances (Vestel and Samsung TV/washing machine complaints in the same complaint
+  sites)
+quarantined: []

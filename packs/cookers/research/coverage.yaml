@@ -1,0 +1,61 @@
+lineup:
+- Beko BSUF 5000 MEB
+- Beko HIYG64225SBOP
+- Beko HIYG64225SXOP
+- Beko built-in oven (ankastre fırın)
+- Bosch PUE611BB5E
+- Bosch/Siemens/Neff/Constructa 60 cm glass ceramic hob (2006)
+- Siemens HB557JEB6T/03
+- Siemens HB012FBW1T
+- Siemens HU717ABNOT
+- Samsung NV75N5671RS Dual Cook
+- Samsung slide-in electric range (US recall)
+- Arcelik OV 643 T
+- Arcelik built-in cooker set (ankastre set)
+- Altus cooker (Arcelik brand)
+- Vestel built-in oven (ankastre fırın)
+covered:
+- altus cooker arcelik brand
+- arcelik built in cooker set ankastre set
+- arcelik ov 643 t
+- beko bsuf 5000 meb
+- beko built in oven ankastre f r n
+- beko hiyg64225sbop
+- bosch pue611bb5e
+- bosch siemens neff constructa 60 cm glass ceramic hob 2006
+- platform brand bosch family glass ceramic hob 60cm 2006
+- product brand altus series cooker
+- product brand arcelik series built in cooker set
+- product brand arcelik series ov 643 t
+- product brand beko series bsuf 5000 meb
+- product brand beko series built in oven
+- product brand beko series hiyg64225sbop
+- product brand bosch series pue611bb5e
+- product brand samsung series nv75n5671rs
+- product brand samsung series slide in electric range
+- product brand vestel series built in oven
+- samsung nv75n5671rs dual cook
+- samsung slide in electric range us recall
+- vestel built in oven ankastre f r n
+uncovered:
+- Beko HIYG64225SXOP
+- Siemens HB557JEB6T/03
+- Siemens HB012FBW1T
+- Siemens HU717ABNOT
+note: Most current models across these six brands have no documented incident report
+  in the sources searched; the subjects below are the ones with concrete, quotable
+  evidence. Brand-level subjects (Beko/Siemens/Vestel built-in ovens) cover the model
+  numbers named inside the claims.
+out_of_scope:
+- Neff, Constructa, Balay, Lince (appear in the Bosch/Siemens hob recall but are not
+  requested brands)
+- Samsung slide-in electric range recall is a US-market CPSC action, not EU/Turkey
+quarantined:
+- kind: product
+  label: Siemens built-in oven (fırın)
+  reason: not named anywhere in this pack's own line-up — likely a different category
+    (an accessory, or a different device from the same brand)
+- kind: product
+  label: Samsung Dual Cook oven
+  reason: not named anywhere in this pack's own line-up — likely a different category
+    (an accessory, or a different device from the same brand)

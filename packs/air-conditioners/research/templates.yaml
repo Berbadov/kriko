@@ -1,0 +1,9 @@
+# Search templates for this pack. One query per line.
+#
+# Written by the agent that authored the pack, in the words
+# and the language its sources use.
+- '{label} klima arıza şikayet'
+- '{label} klima yangın'
+- '{label} air conditioner recall'
+- '{label} hata kodu'
+- '{label} common problems forum'

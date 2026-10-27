@@ -1,0 +1,127 @@
+# Subjects — the things this pack knows about.
+#
+# `identity` carries exactly the keys `pack.toml` declares for the
+# kind: that dictionary is hashed to the subject id.
+- kind: product
+  label: Whirlpool-group vented & condensing dryers (2004–2015)
+  identity:
+    brand: whirlpool
+    series: 2004-2015
+  attributes:
+    type:
+      value: vented and condensing
+      source: https://assets.publishing.service.gov.uk/media/5ca5c294e5274a77dda81f53/Whirlpool_Tumble_Dryer_Review_Risk_Statement.pdf
+  aliases:
+  - Hotpoint
+  - Indesit
+  - Creda
+  - Swan
+  - Proline
+- kind: product
+  label: Beko 8kg/9kg condenser dryers (2012)
+  identity:
+    brand: beko
+    series: 8-9kg-condenser-2012
+  attributes:
+    capacity_kg:
+      value: '9'
+      source: https://www.beko.co.uk/dryerrepair
+  aliases:
+  - DCU9330W
+  - DCU9330R
+  - DCU8230
+  - DSC85W
+  - TKF8439A
+- kind: product
+  label: Beko 6kg/7kg condenser dryers (2012)
+  identity:
+    brand: beko
+    series: 6-7kg-condenser-2012
+  attributes:
+    capacity_kg:
+      value: '7'
+      source: https://www.beko.co.uk/safety/6kg-7kg-condenser-tumble-dryers
+- kind: product
+  label: Bosch WDT67 heat pump dryers (2020–2022)
+  identity:
+    brand: bosch
+    series: wdt67
+- kind: product
+  label: Siemens WDT67 heat pump dryers (2020–2022)
+  identity:
+    brand: siemens
+    series: wdt67
+- kind: product
+  label: Siemens 2002 dryers
+  identity:
+    brand: siemens
+    series: '2002'
+- kind: product
+  label: Samsung DV90BB9445GHS1
+  identity:
+    brand: samsung
+    series: dv90bb9445ghs1
+- kind: product
+  label: Arcelik condenser dryers
+  identity:
+    brand: Arcelik
+    series: Ares Condenser
+  attributes:
+    family:
+      value: Condenser dryer
+      source: https://www.courtlistener.com/opinion/9635522/arcelik-as-v-ei-dupont-de-nemours-and-company/?court_dc=on&order_by=score+desc
+    type:
+      value: Condenser
+      source: https://www.courtlistener.com/opinion/9635522/arcelik-as-v-ei-dupont-de-nemours-and-company/?court_dc=on&order_by=score+desc
+  aliases:
+  - Arçelik Ares
+  - Arcelik Ares Condenser
+- kind: product
+  label: Hotpoint dryers (post-2015)
+  identity:
+    brand: Hotpoint
+    series: Post-2015 models
+  aliases:
+  - Hotpoint
+- kind: product
+  label: Indesit dryers (post-2015)
+  identity:
+    brand: Indesit
+    series: Post-2015 models
+  aliases:
+  - Indesit
+- kind: product
+  label: Whirlpool-brand dryers
+  identity:
+    brand: Whirlpool
+    series: Various models
+  aliases:
+  - Whirlpool
+- kind: product
+  label: Bosch other heat pump dryers
+  identity:
+    brand: Bosch
+    series: Heat pump (non-WDT67)
+  attributes:
+    family:
+      value: Heat pump dryer
+      source: https://www.ifs-ev.org/braende-an-waeschetrocknern-von-bosch-und-siemens/
+    type:
+      value: Heat pump
+      source: https://www.ifs-ev.org/braende-an-waeschetrocknern-von-bosch-und-siemens/
+  aliases:
+  - Bosch Wärmepumpentrockner
+- kind: product
+  label: Samsung EU heat pump dryers
+  identity:
+    brand: Samsung
+    series: Heat pump
+  attributes:
+    family:
+      value: Heat pump dryer
+      source: https://faultcodecheck.co.uk/tumble-dryers/samsung/hcl
+    type:
+      value: Heat pump
+      source: https://faultcodecheck.co.uk/tumble-dryers/samsung/hcl
+  aliases:
+  - Samsung
