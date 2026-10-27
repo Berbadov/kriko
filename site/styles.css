@@ -190,6 +190,17 @@ h2 { font-size: clamp(2.5rem, 5.4vw, 4.2rem); max-width: 14em; }
 .policy .short { margin-top: 28px; padding: 20px 24px; border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 4px; background: var(--soft); }
 .policy .short p { color: var(--ink); }
 
+/* Generated problem pages (site/tools/render_problems.py) */
+.problems h1 { font-size: clamp(2.2rem, 5.5vw, 3.6rem); overflow-wrap: anywhere; }
+.problems h3 { font-size: 1.25rem; line-height: 1.3; margin: 0; }
+.problems .crumb { margin: 0 0 18px; }
+.problems .claim { margin-top: 18px; padding: 18px 22px; border: 1px solid var(--line); border-radius: 4px; background: var(--soft); }
+.problems .claim p { max-width: none; margin: 8px 0 0; }
+.problems .meta { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: .95rem; }
+.problems .sev { color: var(--ink); font-weight: 700; }
+.problems .src { font-size: .95rem; overflow-wrap: anywhere; }
+.problems .short .button { margin-top: 4px; }
+
 /* Guide: one step beside one short film, each film a GIF the reader can pause */
 .guide-hero { padding-bottom: clamp(28px, 4vw, 48px); }
 .toc ol { display: flex; flex-wrap: wrap; gap: 10px 12px; margin: 36px 0 0; padding: 0; list-style: none; counter-reset: toc; }

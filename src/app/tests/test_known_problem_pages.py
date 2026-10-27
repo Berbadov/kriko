@@ -1,0 +1,158 @@
+"""kriko.cc publishes what each catalog knows, as pages a search can find.
+
+`site/tools/render_problems.py` turns every real catalog into one page for each
+subject it holds enough claims about. These tests pin what a reader of such a page
+is owed (a source to follow, none of the source's own words, nothing made up) and
+that the committed pages are what the catalogs say today.
+"""
+
+import importlib.util
+import re
+import textwrap
+from pathlib import Path
+
+REPO = Path(__file__).resolve().parents[3]
+SCRIPT = REPO / "site" / "tools" / "render_problems.py"
+
+
+def _load():
+    spec = importlib.util.spec_from_file_location("render_problems", SCRIPT)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+TERMS = """
+    - {term_id: product, role: subject_kind}
+    - {term_id: brand, role: attribute, datatype: text, match: {required: true}}
+    - {term_id: model, role: attribute, datatype: text, match: {required: true}}
+    - {term_id: mech, role: domain}
+"""
+
+
+def _claim(model, title, severity, tr_title, url, body="b", advice="a"):
+    return f"""
+    - subject: {{kind: product, identity: {{brand: acme, model: {model}}}}}
+      kind: known_issue
+      domain: mech
+      severity: {severity}
+      detection: diagnostic
+      text:
+        en: {{title: "{title}", body: {body}, advice: {advice}}}
+        tr: {{title: "{tr_title}", body: gövde, advice: öneri}}
+      evidence:
+        - {{url: "{url}", quote: Words that belong to the forum author.}}
+"""
+
+
+def _write_catalog(packs: Path, name: str, claims: str, *, synthetic=False, extra_subjects=""):
+    root = packs / name
+    for sub in ("vocabulary", "data", "research"):
+        (root / sub).mkdir(parents=True, exist_ok=True)
+    flags = "synthetic = true\n" if synthetic else ""
+    (root / "pack.toml").write_text(
+        f'[pack]\nid = "{name}"\nname = "{name.title()}"\nversion = "1.2.3"\nlicense = "CC-BY-SA-4.0"\n'
+        f'languages = ["en", "tr"]\n{flags}[identity]\nproduct = ["brand", "model"]\n',
+        encoding="utf-8",
+    )
+    (root / "vocabulary" / "terms.yaml").write_text(textwrap.dedent(TERMS), encoding="utf-8")
+    subjects = "\n".join(
+        f"- {{kind: product, label: {model.title()}, identity: {{brand: acme, model: {model}}}}}"
+        for model in ("anvil", "widget")
+    ) + extra_subjects
+    (root / "data" / "subjects.yaml").write_text(subjects + "\n", encoding="utf-8")
+    (root / "data" / "claims.yaml").write_text(textwrap.dedent(claims), encoding="utf-8")
+    (root / "research" / "principle.md").write_text("Only the expensive.", encoding="utf-8")
+    (root / "research" / "templates.yaml").write_text('- "{alias} faults"\n', encoding="utf-8")
+
+
+def _site(tmp_path: Path) -> Path:
+    site = tmp_path / "site"
+    site.mkdir()
+    (site / "styles.css").write_text("body{}", encoding="utf-8")
+    return site
+
+
+ANVIL = (
+    _claim("anvil", "Handle cracks (anvil_handle)", "medium", "Sap çatlar", "https://forum.invalid/a")
+    + _claim("anvil", "Head loosens", "high", "Kafa gevşer", "https://repair.invalid/b")
+    + _claim("anvil", "Paint chips", "low", "Boya atar", "https://forum.invalid/c")
+)
+THIN = _claim("widget", "One lonely report", "high", "Tek rapor", "https://forum.invalid/d")
+
+
+def test_a_subject_with_enough_claims_gets_a_page_in_each_language_and_a_hub(tmp_path):
+    packs, site = tmp_path / "packs", _site(tmp_path)
+    _write_catalog(packs, "tools", ANVIL + THIN)
+    written = _load().render(packs, site)
+    assert written == ["/problems/", "/problems/anvil/", "/tr/problems/", "/tr/problems/anvil/"]
+
+    english = (site / "problems" / "anvil" / "index.html").read_text(encoding="utf-8")
+    turkish = (site / "tr" / "problems" / "anvil" / "index.html").read_text(encoding="utf-8")
+    assert "<title>Anvil: known problems | Kriko</title>" in english
+    assert "<title>Anvil: bilinen sorunlar | Kriko</title>" in turkish
+    assert 'hreflang="tr" href="https://kriko.cc/tr/problems/anvil/"' in english
+    assert 'hreflang="en" href="https://kriko.cc/problems/anvil/"' in turkish
+    assert "Kafa gevşer" in turkish and "Head loosens" not in turkish
+
+    # The reader can follow each claim to the page it came from...
+    assert 'href="https://repair.invalid/b"' in english
+    # ...and is not handed that page's own words.
+    assert "belong to the forum author" not in english
+
+    # Worst first, so the first thing read is the thing that costs most.
+    assert english.index("Head loosens") < english.index("Handle cracks") < english.index("Paint chips")
+    # The catalog's own identifier means nothing to a reader.
+    assert "anvil_handle" not in english and "Handle cracks" in english
+
+    assert "CC-BY-SA-4.0" in english and "1.2.3" in english
+
+
+def test_a_subject_with_too_few_claims_gets_no_page(tmp_path):
+    packs, site = tmp_path / "packs", _site(tmp_path)
+    _write_catalog(packs, "tools", ANVIL + THIN)
+    _load().render(packs, site)
+    assert not (site / "problems" / "widget").exists()
+    assert "Widget" not in (site / "problems" / "index.html").read_text(encoding="utf-8")
+
+
+def test_a_synthetic_catalog_is_never_published(tmp_path):
+    # The worked example's claims are made up; on a real address they would be false statements.
+    packs, site = tmp_path / "packs", _site(tmp_path)
+    _write_catalog(packs, "example", ANVIL, synthetic=True)
+    assert _load().render(packs, site) == []
+    assert not (site / "problems").exists() and not (site / "sitemap-problems.xml").exists()
+
+
+def test_the_sitemap_lists_exactly_the_pages_written_with_their_alternates(tmp_path):
+    packs, site = tmp_path / "packs", _site(tmp_path)
+    _write_catalog(packs, "tools", ANVIL)
+    written = _load().render(packs, site)
+    sitemap = (site / "sitemap-problems.xml").read_text(encoding="utf-8")
+    assert sorted(re.findall(r"<loc>https://kriko\.cc([^<]+)</loc>", sitemap)) == sorted(written)
+    assert 'hreflang="tr" href="https://kriko.cc/tr/problems/anvil/"' in sitemap
+
+
+def test_a_second_run_changes_no_file(tmp_path):
+    # Nothing in a page is a date or a random value, so a diff means the knowledge changed.
+    packs, site = tmp_path / "packs", _site(tmp_path)
+    _write_catalog(packs, "tools", ANVIL)
+    render = _load().render
+    render(packs, site)
+    first = {p: p.read_bytes() for p in site.rglob("*") if p.is_file()}
+    render(packs, site)
+    assert {p: p.read_bytes() for p in site.rglob("*") if p.is_file()} == first
+
+
+def test_the_pages_in_the_repo_are_what_the_catalogs_say_today(tmp_path):
+    # A stale page would go on telling readers a claim the catalog has since dropped.
+    site = _site(tmp_path)
+    (site / "styles.css").write_bytes((REPO / "site" / "styles.css").read_bytes())
+    _load().render(REPO / "packs", site)
+    for tree in ("problems", "tr/problems"):
+        fresh = {p.relative_to(site): p.read_bytes() for p in (site / tree).rglob("*") if p.is_file()}
+        shipped = {p.relative_to(REPO / "site"): p.read_bytes() for p in (REPO / "site" / tree).rglob("*") if p.is_file()}
+        assert fresh.keys() == shipped.keys(), f"run site/tools/render_problems.py: pages differ in {tree}"
+        stale = [str(name) for name in fresh if fresh[name] != shipped[name]]
+        assert not stale, f"run site/tools/render_problems.py, these pages are out of date: {stale[:3]}"
+    assert (site / "sitemap-problems.xml").read_bytes() == (REPO / "site" / "sitemap-problems.xml").read_bytes()
