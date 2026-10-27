@@ -442,7 +442,31 @@ def test_a_catalog_with_no_safety_report_has_no_safety_page_and_a_product_cannot
     (packs / "tools" / "data" / "claims.yaml").write_text(textwrap.dedent(ANVIL + extra), encoding="utf-8")
     out = _site(tmp_path / "again")
     _load().render(packs, out)
-    assert not (out / "problems" / "safety").exists() and (out / "problems" / "safety-3" / "index.html").is_file()
+    taken = [p for p in (out / "problems").iterdir() if re.fullmatch(r"safety-\d{3}", p.name)]
+    assert not (out / "problems" / "safety").exists() and len(taken) == 1 and (taken[0] / "index.html").is_file()
+
+
+def test_a_product_that_shares_a_name_keeps_its_address_when_another_catalog_is_added(tmp_path):
+    # A page that has been indexed must not move because someone published an unrelated catalog.
+    def addresses(label, with_first):
+        root = tmp_path / label
+        root.mkdir()
+        packs = root / "packs"
+        _write_catalog(packs, "b-tools", ANVIL)
+        _write_catalog(packs, "c-tools", ANVIL)  # the same product names again: the second set needs other addresses
+        if with_first:
+            _write_catalog(packs, "a-first", "")
+            (packs / "a-first" / "data" / "subjects.yaml").write_text(
+                "- {kind: product, label: Gizmo, identity: {brand: acme, model: gizmo}}\n", encoding="utf-8")
+            (packs / "a-first" / "data" / "claims.yaml").write_text(textwrap.dedent(
+                "".join(_claim("gizmo", f"Fault {n}", "high", f"Arıza {n}", f"https://forum.invalid/g{n}") for n in range(3))),
+                encoding="utf-8")
+        out = _site(root)
+        _load().render(packs, out)
+        return sorted(p.name for p in (out / "problems").iterdir() if p.name.startswith("anvil"))
+
+    alone, after = addresses("alone", False), addresses("after", True)
+    assert len(alone) == 2 and alone == after
 
 
 def test_a_page_says_when_it_was_last_checked_and_where_it_sits_to_a_search_engine(tmp_path):

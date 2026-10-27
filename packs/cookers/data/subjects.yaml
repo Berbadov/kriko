@@ -1,0 +1,87 @@
+# Subjects — the things this pack knows about.
+#
+# `identity` carries exactly the keys `pack.toml` declares for the
+# kind: that dictionary is hashed to the subject id.
+- kind: product
+  label: Beko BSUF 5000 MEB
+  identity:
+    brand: beko
+    series: bsuf 5000 meb
+  aliases:
+  - BSUF 5000 MEB_44LT
+- kind: product
+  label: Beko HIYG64225SBOP
+  identity:
+    brand: beko
+    series: hiyg64225sbop
+  attributes:
+    fuel_type:
+      value: gas
+      source: https://www.dtest.cz/nebezpecny-vyrobek/plynova-varna-deska-beko/38698
+    mounting:
+      value: built-in
+      source: https://www.dtest.cz/nebezpecny-vyrobek/plynova-varna-deska-beko/38698
+- kind: product
+  label: Beko built-in oven (ankastre fırın)
+  identity:
+    brand: beko
+    series: built-in oven
+- kind: product
+  label: Bosch PUE611BB5E
+  identity:
+    brand: bosch
+    series: pue611bb5e
+  attributes:
+    fuel_type:
+      value: induction
+      source: https://www.sikayetvar.com/bosch/bosch-induksiyon-ocak-guc-dengesizligi-ve-yangin-riski-nedeniyle-acil-degisim-talebi
+- kind: platform
+  label: Bosch/Siemens/Neff/Constructa 60 cm glass ceramic hob (2006)
+  identity:
+    brand: bosch
+    family: glass ceramic hob 60cm 2006
+  attributes:
+    width_cm:
+      value: '60'
+      source: https://www.regmurcia.com/servlet/s.Sl?sit=a,0,c,374,m,1107&r=ReP-18097-DETALLE_REPORTAJES
+- kind: product
+  label: Samsung NV75N5671RS Dual Cook
+  identity:
+    brand: samsung
+    series: nv75n5671rs
+  attributes:
+    capacity_l:
+      value: '75'
+      source: https://sav.darty.com/forum/SAMSUNG/NV75N5671RS-DUAL-COOK-FLEX-/EXPLOSION-DE-LA-VITRE-EXTERIEURE-BASSE-DE-MON-FOUR-SAMSUNG-DUAL-COOK/5512970/556801
+    mounting:
+      value: built-in
+      source: https://sav.darty.com/forum/SAMSUNG/NV75N5671RS-DUAL-COOK-FLEX-/EXPLOSION-DE-LA-VITRE-EXTERIEURE-BASSE-DE-MON-FOUR-SAMSUNG-DUAL-COOK/5512970/556801
+- kind: product
+  label: Samsung slide-in electric range (US recall)
+  identity:
+    brand: samsung
+    series: slide-in electric range
+- kind: product
+  label: Arcelik OV 643 T
+  identity:
+    brand: arcelik
+    series: ov 643 t
+  attributes:
+    fuel_type:
+      value: electric
+      source: https://www.sikayetvar.com/arcelik/arcelik-ocaginin-kontrolsuz-yanmasi-yangin-tehdidi-olusturuyor
+- kind: product
+  label: Arcelik built-in cooker set (ankastre set)
+  identity:
+    brand: arcelik
+    series: built-in cooker set
+- kind: product
+  label: Altus cooker (Arcelik brand)
+  identity:
+    brand: altus
+    series: cooker
+- kind: product
+  label: Vestel built-in oven (ankastre fırın)
+  identity:
+    brand: vestel
+    series: built-in oven
