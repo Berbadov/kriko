@@ -73,14 +73,15 @@ def keep(claims: list) -> list:
     return kept
 
 
-def manifest(text: str, name: str) -> str:
-    """The manifest with the id a published catalog carries and the three lines it declares."""
+def manifest(text: str, name: str, icon: str = "") -> str:
+    """The manifest with the id a published catalog carries and the lines it declares; `icon` names its drawing."""
     found = re.search(r'^id\s*=\s*"([^"]+)"', text, re.M)
     pack_id = found.group(1) if found else name.replace("-", ".")
     if not pack_id.startswith("org."):
         text = re.sub(r'^id\s*=\s*"[^"]+"', f'id = "org.kriko.{pack_id}"', text, count=1, flags=re.M)
-    extra = "".join(f'{key} = "{value}"\n' for key, value in (("license", LICENSE), ("publisher", PUBLISHER), ("origin", ORIGIN))
-                    if not re.search(rf"^{key}\s*=", text, re.M))
+    extra = "".join(f'{key} = "{value}"\n' for key, value in (("license", LICENSE), ("publisher", PUBLISHER), ("origin", ORIGIN),
+                                                              ("icon", icon))
+                    if value and not re.search(rf"^{key}\s*=", text, re.M))
     version = re.search(r"^version\s*=.*\n", text, re.M)
     return text[:version.end()] + extra + text[version.end():] if version and extra else text
 
@@ -101,7 +102,7 @@ def title_of(text: str, fallback: str) -> str:
     return found.group(1) if found else fallback
 
 
-def import_draft(draft: Path, packs: Path, name: str) -> tuple[Path, int, int]:
+def import_draft(draft: Path, packs: Path, name: str, icon: str = "") -> tuple[Path, int, int]:
     """Copy `draft` to `packs/<name>`; returns the directory, the claims kept and the claims dropped."""
     target = packs / name
     if target.exists():
@@ -114,7 +115,7 @@ def import_draft(draft: Path, packs: Path, name: str) -> tuple[Path, int, int]:
         handle.write(HEADER + yaml.safe_dump(kept, allow_unicode=True, sort_keys=False, width=100))
     toml = (target / "pack.toml").read_text(encoding="utf-8")
     with open(target / "pack.toml", "w", encoding="utf-8", newline="\n") as handle:
-        handle.write(manifest(toml, name))
+        handle.write(manifest(toml, name, icon))
     languages = sorted({language for claim in kept for language in claim["text"]}) or ["en"]
     products = len(yaml.safe_load((target / "data" / "subjects.yaml").read_text(encoding="utf-8")) or [])
     with open(target / "README.md", "w", encoding="utf-8", newline="\n") as handle:
@@ -126,9 +127,10 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("draft", type=Path, help="a finished draft directory")
     parser.add_argument("--name", help="the directory under packs/ (default: the draft's own name)")
+    parser.add_argument("--icon", default="", help="the drawing its pages show, by name (ICONS in site/tools/render_problems.py)")
     parser.add_argument("--packs", type=Path, default=Path(__file__).resolve().parents[1] / "packs")
     args = parser.parse_args()
-    target, kept, dropped = import_draft(args.draft, args.packs, args.name or args.draft.name)
+    target, kept, dropped = import_draft(args.draft, args.packs, args.name or args.draft.name, args.icon)
     print(f"{target}: {kept} claim(s) kept, {dropped} dropped for want of a source or of words")
     return 0
 
