@@ -188,6 +188,30 @@ The text on screen is the sound-off script, and the three promises are the page'
 own lines word for word. `out/` (stills and the videos) is not committed. The ad
 says in its corner that the products and findings are invented.
 
+## The problem pages
+
+`problems/` and `tr/problems/` are not written by hand. `tools/render_problems.py`
+builds each catalog under `packs/` the way `kriko build` does and writes one page
+for every part or product it holds at least three claims about, in each language
+the claims are written in, plus a hub that lists them and `sitemap-problems.xml`.
+It names no category, so a new catalog or a new car in an old one gets its pages
+on the next run.
+
+```sh
+PYTHONPATH=src python site/tools/render_problems.py
+```
+
+Run it after `render-locales.cjs` whenever a catalog or `styles.css` changes,
+because the pages carry the stylesheet's hash. `test_the_pages_in_the_repo_are_what_the_catalogs_say_today`
+fails until you do, so a claim the catalog has dropped does not stay on the site.
+
+A page carries a claim's title, body and advice, how it is found, and a link to
+each page it was reported on. It never carries the quote the claim was checked
+against: that text belongs to its author, and the link sends the reader there.
+A catalog that declares itself `synthetic` (the worked example) is never
+published, because a made-up claim on a real address is a false statement. The
+page text is under the catalog's own licence, which each page names.
+
 ## Readability
 
 Body text is 19px with 1.7 line height, lines stay under about 70 characters,

@@ -345,3 +345,46 @@ test('the Turkish guide has its buttons in Turkish', () => {
   assert.equal(button.textContent, 'Duraklat');
   assert.match(button.getAttribute('aria-label'), /^Animasyonu duraklat: /);
 });
+
+// The pages under problems/ are written by tools/render_problems.py from the catalogs.
+const generated = () => ['problems', 'tr/problems'].flatMap(function walk(dir) {
+  return fs.readdirSync(path.join(root, dir), { withFileTypes: true }).flatMap((entry) => {
+    const next = `${dir}/${entry.name}`;
+    return entry.isDirectory() ? walk(next) : [next];
+  });
+}).filter((file) => file.endsWith('index.html'));
+
+test('every generated problem page is complete, points at its twin, runs no script and names a source for each claim', () => {
+  const files = generated();
+  assert.ok(files.length >= 4, 'there are no generated problem pages');
+  const stylesheet = crypto.createHash('sha256').update(fs.readFileSync(path.join(root, 'styles.css'))).digest('hex').slice(0, 12);
+  for (const file of files) {
+    const url = `https://kriko.cc/${file.replace(/index\.html$/, '')}`;
+    const d = new JSDOM(read(file), { url }).window.document;
+    assert.equal(d.documentElement.lang, file.startsWith('tr/') ? 'tr' : 'en', file);
+    assert.equal(d.querySelectorAll('h1').length, 1, `${file} needs exactly one h1`);
+    assert.ok(d.querySelector('meta[name="description"]').content.length > 40, file);
+    assert.equal(d.querySelector('link[rel="canonical"]').href, url);
+    assert.equal(d.querySelectorAll('script').length, 0, `${file} runs a script`);
+    assert.ok(d.querySelector('link[rel="stylesheet"]').href.endsWith(`/styles.css?v=${stylesheet}`), `${file}: the stylesheet hash is stale`);
+    for (const alternate of d.querySelectorAll('link[rel="alternate"][hreflang]')) {
+      const twin = new URL(alternate.href).pathname.replace(/^\//, '');
+      if (alternate.hreflang !== 'x-default') assert.ok(fs.existsSync(path.join(root, twin, 'index.html')), `${file} points at ${twin}, which does not exist`);
+    }
+    for (const claim of d.querySelectorAll('.claim')) {
+      assert.ok(claim.querySelector('.src a[href^="https://"]'), `${file}: a claim names no source`);
+    }
+  }
+});
+
+test('the problem sitemap lists exactly the generated pages, and robots.txt names it', () => {
+  assert.match(read('robots.txt'), /^Sitemap: https:\/\/kriko\.cc\/sitemap-problems\.xml$/m);
+  const listed = [...read('sitemap-problems.xml').matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[1]).sort();
+  assert.deepEqual(listed, generated().map((file) => `https://kriko.cc/${file.replace(/index\.html$/, '')}`).sort());
+});
+
+test('both home pages link to the problem pages in their own language', () => {
+  for (const [page, href] of [[PAGES[0], '/problems/'], [PAGES[1], '/tr/problems/']]) {
+    assert.ok(load(page).querySelector(`footer a[href="${href}"]`), `${page.file} has no footer link to ${href}`);
+  }
+});
