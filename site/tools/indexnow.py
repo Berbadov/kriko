@@ -15,12 +15,15 @@ import argparse
 import json
 import re
 import sys
+import urllib.error
 import urllib.request
 from pathlib import Path
 
 HOST = "kriko.cc"
 ENDPOINT = "https://api.indexnow.org/indexnow"
 BATCH = 10000  # the protocol's ceiling for one request
+#: The engine's front door turns away the default urllib agent with a 403, so the request says who is asking.
+HEADERS = {"Content-Type": "application/json; charset=utf-8", "User-Agent": "kriko-indexnow/1 (+https://kriko.cc)"}
 SITEMAPS = ("sitemap.xml", "sitemap-problems.xml")
 
 
@@ -60,9 +63,13 @@ def main() -> int:
         print(f"would send {total} addresses in {len(bodies)} request(s) to {ENDPOINT}")
         return 0
     for body in bodies:
-        request = urllib.request.Request(ENDPOINT, json.dumps(body).encode(), {"Content-Type": "application/json; charset=utf-8"})
-        with urllib.request.urlopen(request, timeout=60) as reply:
-            print(f"{len(body['urlList'])} addresses: HTTP {reply.status}")
+        request = urllib.request.Request(ENDPOINT, json.dumps(body).encode(), HEADERS)
+        try:
+            with urllib.request.urlopen(request, timeout=60) as reply:
+                print(f"{len(body['urlList'])} addresses: HTTP {reply.status}")
+        except urllib.error.HTTPError as refused:
+            print(f"{len(body['urlList'])} addresses: HTTP {refused.code} {refused.reason}", file=sys.stderr)
+            return 1
     return 0
 
 

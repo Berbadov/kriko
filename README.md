@@ -11,7 +11,8 @@ choose, and a paid provider bills your own account.
 
 **[Download the Windows installer](https://github.com/Berbadov/kriko/releases/latest/download/kriko-0.3.7-x86_64-setup.exe)** ·
 [Browser extension](https://chromewebstore.google.com/detail/kriko/bdifnaggafjokndlpjgmlfappcoehdjb) ·
-[Website](https://kriko.cc)
+[Website](https://kriko.cc) ·
+[Known problems by product](https://kriko.cc/problems/) (no app needed)
 
 <p align="center">
   <a href="https://kriko.cc/guide/"><picture>
