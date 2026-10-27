@@ -225,6 +225,27 @@ h2 { font-size: clamp(2.5rem, 5.4vw, 4.2rem); max-width: 14em; }
 .problems .chips a:hover { border-color: var(--accent); }
 .problems .chips small { margin-left: 6px; color: var(--muted); font-size: .95rem; }
 .problems .rows { list-style: none; padding: 0; margin: 8px 0 0; }
+.problems .ico { width: 1.1em; height: 1.1em; margin-right: .4em; vertical-align: -.17em; flex: none; }
+.problems .ico.big { width: 1.7rem; height: 1.7rem; vertical-align: -.2em; color: var(--accent); }
+.problems h2 .ico { color: var(--sev-low); }
+.problems .claim h3 { display: flex; align-items: baseline; }
+.problems .claim h3 .ico { margin-top: .2em; color: var(--sev-low); }
+.problems .claim.sev-high h3 .ico, .problems .glance li.sev-high .ico { color: var(--sev-high); }
+.problems .claim.sev-medium h3 .ico, .problems .glance li.sev-medium .ico { color: var(--sev-medium); }
+.problems .glance li { display: flex; align-items: baseline; }
+.problems .hazard, .problems .alert .ico, .problems .alerts .ico, .problems .serious h2 .ico { color: var(--sev-high); }
+.problems .hazard { font-weight: 700; }
+.problems .alert { display: flex; align-items: baseline; margin-top: 14px; color: var(--ink); font-weight: 700; }
+.problems .serious { margin-top: 26px; padding: 16px 18px 12px; border: 1px solid var(--line); border-left: 4px solid var(--sev-high); border-radius: 4px; background: var(--soft); }
+.problems .serious h2 { margin: 0 0 4px; font-size: 1.5rem; }
+.problems .serious p { margin: 0 0 8px; }
+.problems .alerts { list-style: none; padding: 0; margin: 0; }
+.problems .alerts li { margin: 0; max-width: none; border-top: 1px solid var(--line); }
+.problems .alerts a { display: flex; align-items: baseline; padding: 9px 0; color: var(--ink); text-decoration: none; font-weight: 600; }
+.problems .alerts a:hover span { text-decoration: underline; }
+.problems .alerts small { display: block; margin-top: 2px; color: var(--muted); font-size: .95rem; font-weight: 400; }
+.problems .card .ico.big { display: block; width: 2rem; height: 2rem; margin: 0 0 8px; }
+
 .problems .rows li { margin: 6px 0; color: var(--ink); max-width: none; }
 
 /* Guide: one step beside one short film, each film a GIF the reader can pause */

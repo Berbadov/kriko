@@ -63,6 +63,11 @@ UI = {
         "cat_lead": "{n} products with sourced known problems. Pick one to see what to check before you buy.",
         "cat_desc": "Sourced known problems for {n} products in {name}, with what to check before you buy.",
         "products": "{n} products",
+        "safety": "Safety risk",
+        "serious_h": "Safety first",
+        "serious_lead": "Reports of fire, smoke, recalls and injury, each linked to the page it came from.",
+        "serious_in": "Safety first in {name}",
+        "safety_note": "{n} of these reports describe a risk to people or property.",
         "title": "{label}: known problems",
         "lead": "{n} sourced reports, with what to check before you buy. Each one links to the page it was reported on.",
         "desc": "{n} sourced problems reported for {label}, with what to check before you buy. {top}",
@@ -104,6 +109,11 @@ UI = {
         "cat_lead": "Kaynaklı bilinen sorunları olan {n} ürün. Satın almadan önce neye bakacağınızı görmek için birini seçin.",
         "cat_desc": "{name} kategorisinde {n} ürün için kaynaklı bilinen sorunlar ve satın almadan önce neye bakılacağı.",
         "products": "{n} ürün",
+        "safety": "Güvenlik riski",
+        "serious_h": "Önce güvenlik",
+        "serious_lead": "Yangın, duman, geri çağırma ve yaralanma raporları; her biri geldiği sayfaya bağlantı verir.",
+        "serious_in": "{name} için önce güvenlik",
+        "safety_note": "Bu raporlardan {n} tanesi insanlar ya da mallar için bir risk bildiriyor.",
         "title": "{label}: bilinen sorunlar",
         "lead": "{n} kaynaklı rapor ve satın almadan önce neye bakmanız gerektiği. Her biri, bildirildiği sayfaya bağlantı verir.",
         "desc": "{label} için bildirilen {n} kaynaklı sorun ve satın almadan önce neye bakılacağı. {top}",
@@ -147,6 +157,56 @@ def slugify(label: str) -> str:
     return re.sub(r"-{2,}", "-", re.sub(r"[^a-z0-9]+", "-", folded)).strip("-") or "page"
 
 
+# A closed set of 24x24 line drawings. A catalog picks one by name in `[pack] icon`; an unknown
+# name, or none, is the box. The severity of a claim and a safety risk each have their own.
+ICONS = {
+    "box": '<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.3 7 12 12l8.7-5M12 22V12"/>',
+    "car": '<path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/>',
+    "phone": '<rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/>',
+    "laptop": '<path d="M20 16V7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v9m16 0H4m16 0 1.3 2.6a1 1 0 0 1-.9 1.4H3.6a1 1 0 0 1-.9-1.4L4 16"/>',
+    "tablet": '<rect x="4" y="2" width="16" height="20" rx="2"/><path d="M12 18h.01"/>',
+    "tv": '<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>',
+    "gamepad": '<path d="M6 11h4M8 9v4M15 12h.01M18 10h.01"/><path d="M17.3 5H6.7a4 4 0 0 0-4 3.6C2.6 9.4 2 14.5 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.4-1.4a2 2 0 0 1 1.4-.6h4.4a2 2 0 0 1 1.4.6L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.5-.6-6.6-.7-7.4A4 4 0 0 0 17.3 5z"/>',
+    "headphones": '<path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>',
+    "watch": '<circle cx="12" cy="12" r="6"/><path d="M12 10v2l1 1M16.1 7.7l-.8-4.1a2 2 0 0 0-2-1.6h-2.6a2 2 0 0 0-2 1.6l-.8 4.1m.1 8.6.8 4.1a2 2 0 0 0 2 1.6h2.6a2 2 0 0 0 2-1.6l.8-4.1"/>',
+    "printer": '<path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>',
+    "drone": '<circle cx="5" cy="5" r="2.5"/><circle cx="19" cy="5" r="2.5"/><circle cx="5" cy="19" r="2.5"/><circle cx="19" cy="19" r="2.5"/><rect x="9" y="9" width="6" height="6" rx="1"/><path d="m7 7 2 2M17 7l-2 2M7 17l2-2M17 17l-2-2"/>',
+    "chip": '<rect x="5" y="5" width="14" height="14" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/>',
+    "monitor": '<rect x="2" y="3" width="20" height="13" rx="2"/><path d="M8 21h8M12 16v5"/>',
+    "bike": '<circle cx="18.5" cy="17.5" r="3.5"/><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="15" cy="5" r="1"/><path d="M12 17.5V14l-3-3 4-3 2 3h2"/>',
+    "scooter": '<circle cx="6" cy="18" r="2.5"/><circle cx="19" cy="18" r="2.5"/><path d="M8.5 18H16.5M18 15.5 15 4h-3M6 4h3"/>',
+    "battery": '<rect x="2" y="7" width="16" height="10" rx="2"/><path d="M22 11v2M6 10v4M10 10v4"/>',
+    "coffee": '<path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><path d="M6 1v3M10 1v3M14 1v3"/>',
+    "washer": '<rect x="3" y="2" width="18" height="20" rx="2"/><circle cx="12" cy="13" r="5"/><path d="M7 6h.01M11 6h.01"/>',
+    "fridge": '<rect x="5" y="2" width="14" height="20" rx="2"/><path d="M5 10h14M9 6v1M9 13v3"/>',
+    "vacuum": '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/><path d="M12 3v2"/>',
+    "shield": '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+    "flame": '<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.4-.5-2-1-3-1.1-2.1-.2-4 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.2.4-2.3 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>',
+    "alert": '<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/>',
+    "wrench": '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.8-3.8a6 6 0 0 1-7.9 7.9l-6.9 6.9a2.1 2.1 0 0 1-3-3l6.9-6.9a6 6 0 0 1 7.9-7.9l-3.8 3.8z"/>',
+    "info": '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>',
+}
+SEVERITY_ICON = {"high": "alert", "medium": "wrench", "low": "info"}
+# What makes a claim a safety risk, whatever the product: harm to a person or a home. Matched
+# on the claim's English title alone, so it is flagged the same way in every language it is shown
+# in, and a body that mentions a fire in passing does not make a piston ring a hazard.
+HAZARD = re.compile(
+    r"\b(?:fires?|flames?|catch(?:es|ing)? fire|burst into flames|burn(?:s|ed|ing)?(?!-in)|explo(?:de|des|ded|ding|sion|sions)"
+    r"|smok(?:e|ing)|recalls?|recalled|thermal runaway|short[- ]circuit\w*|electrocut\w*|electric shock"
+    r"|swollen|swelling|brake failure|airbags?|injur\w*|choking|strangulation|carbon monoxide)\b", re.I)
+SAFETY_FIRST = 6  # claims featured on the hub, and 3 on a catalog's page
+
+
+def icon(name: str, cls: str = "ico") -> str:
+    return (f'<svg class="{cls}" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" '
+            f'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">{ICONS.get(name, ICONS["box"])}</svg>')
+
+
+def is_hazard(claim: dict) -> bool:
+    text = claim["text"].get("en") or next(iter(claim["text"].values()), {"title": ""})
+    return bool(HAZARD.search(text["title"]))
+
+
 def stylesheet_hash(site: Path) -> str:
     return hashlib.sha256((site / "styles.css").read_bytes()).hexdigest()[:12]
 
@@ -186,6 +246,7 @@ def read_catalog(path: Path) -> dict:
         name, version, license_, manifest = conn.execute(
             "SELECT name, version, license, manifest_json FROM packs").fetchone()
         declared = yaml.safe_load(manifest) or {}
+        picture = str((declared.get("pack") or {}).get("icon") or "box")
         subjects = {sid: {"label": label, "kind": kind, "claims": [], "products": [], "group": ""}
                     for sid, label, kind in conn.execute("SELECT subject_id, label, kind FROM subjects")}
         sources: dict[str, list[tuple[str, str]]] = {}
@@ -222,7 +283,8 @@ def read_catalog(path: Path) -> dict:
         by_label = {s["label"]: s for s in subjects.values()}
         groups = {label: by_label[label]["group"]
                   for label in {l for s in subjects.values() for l in s["products"]} if label in by_label}
-        return {"name": name, "names": declared.get("names") or {}, "version": version, "license": license_,
+        return {"name": name, "names": declared.get("names") or {}, "icon": picture if picture in ICONS else "box",
+                "version": version, "license": license_,
                 "subjects": subjects, "groups": groups}
     finally:
         conn.close()
@@ -290,9 +352,14 @@ def _claim_html(claim: dict, lang: str) -> str:
     detect = ui["detect"].get(claim["detection"], "")
     sources = ", ".join(f'<a href="{_e(url)}" rel="noopener">{_e(domain or url)}</a>' for url, domain in claim["sources"])
     parts = [f'      <article class="claim sev-{severity}" id="c-{_e(claim["id"][:8])}">',
-             f'        <h3>{_e(text["title"])}</h3>']
+             f'        <h3>{icon(SEVERITY_ICON[severity])}{_e(text["title"])}</h3>']
+    tags = []
+    if is_hazard(claim):
+        tags.append(f'<strong class="hazard">{icon("flame")}{_e(ui["safety"])}</strong>')
     if detect:
-        parts.append(f'        <p class="how">{_e(detect)}</p>')
+        tags.append(_e(detect))
+    if tags:
+        parts.append(f'        <p class="how">{" · ".join(tags)}</p>')
     if text["body"]:
         parts.append(f'        <p>{_e(text["body"])}</p>')
     if text["advice"]:
@@ -348,17 +415,21 @@ def _subject_page(catalog: dict, entry: dict, subject: dict, lang: str, claims: 
     for severity in SEVERITY_ORDER:
         group = [c for c in claims if c["severity"] == severity]
         if group:
-            sections.append(f'      <h2>{_e(ui["group"][severity])}</h2>\n' + "\n".join(_claim_html(c, lang) for c in group))
+            sections.append(f'      <h2>{icon(SEVERITY_ICON[severity])}{_e(ui["group"][severity])}</h2>\n'
+                            + "\n".join(_claim_html(c, lang) for c in group))
     glance = ""
     if len(claims) >= GLANCE_FROM:
         items = "".join(
             f'<li class="sev-{c["severity"] if c["severity"] in SEVERITY_ORDER else "low"}">'
+            f'{icon("flame" if is_hazard(c) else SEVERITY_ICON.get(c["severity"], "info"))}'
             f'<a href="#c-{_e(c["id"][:8])}">{_e(c["text"][lang]["title"])}</a></li>' for c in claims)
         glance = f'      <nav class="glance" aria-label="{_e(ui["glance"])}"><h2>{_e(ui["glance"])}</h2><ul>{items}</ul></nav>\n'
     fits = ""
     if subject["products"]:
         items = "".join(f"<li>{_e(p)}</li>" for p in sorted(set(subject["products"])))
         fits = f'      <h2>{_e(ui["fits"])}</h2>\n      <ul>{items}</ul>\n'
+    risky = sum(1 for c in claims if is_hazard(c))
+    risk = (f'      <p class="alert">{icon("flame")}{_e(ui["safety_note"].format(n=risky))}</p>\n') if risky else ""
     near = _neighbours(entry, entries, lang)
     more = ""
     if near:
@@ -367,9 +438,9 @@ def _subject_page(catalog: dict, entry: dict, subject: dict, lang: str, claims: 
                 f'      <p><a href="{ui["prefix"]}/problems/{entry["catalog_slug"]}/">{_e(ui["all_in"].format(category=category))}</a></p>\n')
     body = (f'      <p class="crumb"><a href="{ui["prefix"]}/problems/">{_e(ui["crumb"])}</a> › '
             f'<a href="{ui["prefix"]}/problems/{entry["catalog_slug"]}/">{_e(category)}</a></p>\n'
-            f'      <h1>{_e(ui["title"].format(label=label))}</h1>\n'
+            f'      <h1>{icon(entry["icon"], "ico big")}{_e(ui["title"].format(label=label))}</h1>\n'
             f'      <p class="lead">{_e(ui["lead"].format(n=len(claims)))}</p>\n'
-            + glance + "\n".join(sections) + "\n" + fits + more +
+            + risk + glance + "\n".join(sections) + "\n" + fits + more +
             f'      <div class="short"><h2>{_e(ui["cta_h"])}</h2><p>{_e(ui["cta_p"])}</p>'
             f'<p><a class="button" href="{ui["get"]}">{_e(ui["cta_b"])}</a></p></div>\n'
             f'      <p class="fine">{_e(ui["note"])}</p>\n'
@@ -378,6 +449,27 @@ def _subject_page(catalog: dict, entry: dict, subject: dict, lang: str, claims: 
     description = description if len(description) <= 158 else description[:155].rsplit(" ", 1)[0] + "…"
     return _chrome(lang, title=ui["title"].format(label=label), description=description, path=path,
                    alternates=alternates, depth=3 if lang == "tr" else 2, css=css, body=body)
+
+
+def _safety_first(lang: str, entries: list[dict], heading: str, limit: int) -> str:
+    """The worst safety reports of `entries`, one for each product, each linked to its own card."""
+    ui = UI[lang]
+    found = []
+    for entry in entries:
+        picked = [c for c in entry["claims"].get(lang, []) if is_hazard(c)]
+        if picked:
+            best = min(picked, key=lambda c: (SEVERITY_ORDER.index(c["severity"]) if c["severity"] in SEVERITY_ORDER else 9,
+                                              -len(c["sources"]), c["id"]))
+            found.append((SEVERITY_ORDER.index(best["severity"]) if best["severity"] in SEVERITY_ORDER else 9,
+                          -len(best["sources"]), entry["label"], entry, best))
+    if not found:
+        return ""
+    rows = "".join(
+        f'<li><a href="{ui["prefix"]}/problems/{entry["slug"]}/#c-{_e(claim["id"][:8])}">{icon("flame")}'
+        f'<span>{_e(claim["text"][lang]["title"])}<small>{_e(entry["label"])}</small></span></a></li>'
+        for *_, entry, claim in sorted(found, key=lambda f: f[:3])[:limit])
+    return (f'      <section class="serious"><h2>{icon("flame")}{_e(heading)}</h2>\n'
+            f'      <p>{_e(ui["serious_lead"])}</p>\n      <ul class="alerts">{rows}</ul></section>\n')
 
 
 def _category_page(lang: str, items: list[dict], css: str, have: set[str]) -> str:
@@ -414,8 +506,9 @@ def _category_page(lang: str, items: list[dict], css: str, have: set[str]) -> st
         sections.append(f'      <details class="group"{opened}><summary>{_e(group)}<span>{_e(ui["products"].format(n=len(rows)))}</span></summary>\n'
                         f'      <ul class="{kind}">{"".join(row for _, row in rows)}</ul></details>')
     body = (f'      <p class="crumb"><a href="{ui["prefix"]}/problems/">{_e(ui["crumb"])}</a></p>\n'
-            f'      <h1>{_e(ui["cat_title"].format(name=name))}</h1>\n'
+            f'      <h1>{icon(first["icon"], "ico big")}{_e(ui["cat_title"].format(name=name))}</h1>\n'
             f'      <p class="lead">{_e(ui["cat_lead"].format(n=len(items)))}</p>\n'
+            + _safety_first(lang, items, ui["serious_in"].format(name=name), 3)
             + "\n".join(sections) + "\n"
             f'      <div class="short"><h2>{_e(ui["cta_h"])}</h2><p>{_e(ui["cta_p"])}</p>'
             f'<p><a class="button" href="{ui["get"]}">{_e(ui["cta_b"])}</a></p></div>\n'
@@ -437,10 +530,11 @@ def _hub_page(lang: str, entries: list[dict], css: str) -> str:
         reports = sum(e["counts"][lang] for e in items)
         best = sorted(items, key=lambda e: (-e["counts"][lang], e["label"]))[:3]
         cards.append(
-            f'<li><a class="card" href="{ui["prefix"]}/problems/{slug}/"><strong>{_e(_category_name(items[0], lang))}</strong>'
+            f'<li><a class="card" href="{ui["prefix"]}/problems/{slug}/">{icon(items[0]["icon"], "ico big")}<strong>{_e(_category_name(items[0], lang))}</strong>'
             f'<span>{_e(ui["products"].format(n=len(items)))} · {_e(ui["reports"].format(n=reports))}</span>'
             f'<small>{_e(", ".join(e["label"] for e in best))}…</small></a></li>')
     body = (f'      <h1>{_e(ui["hub_title"])}</h1>\n      <p class="lead">{_e(ui["hub_lead"])}</p>\n'
+            + _safety_first(lang, entries, ui["serious_h"], SAFETY_FIRST) +
             f'      <ul class="cards">{"".join(cards)}</ul>\n'
             f'      <div class="short"><h2>{_e(ui["cta_h"])}</h2><p>{_e(ui["cta_p"])}</p>'
             f'<p><a class="button" href="{ui["get"]}">{_e(ui["cta_b"])}</a></p></div>\n'
@@ -487,7 +581,8 @@ def render(packs_dir: Path, site_dir: Path) -> list[str]:
                 slugs.add(slug)
                 entry = {"slug": slug, "label": subject["label"], "products": sorted(set(subject["products"])),
                          "catalog": catalog["name"], "catalog_slug": catalog_slug, "names": catalog["names"],
-                         "group": subject["group"], "groups": catalog["groups"],
+                         "group": subject["group"], "groups": catalog["groups"], "icon": catalog["icon"],
+                         "claims": per_lang,
                          "counts": {code: len(per_lang[code]) for code in languages}, "have": have}
                 records.append((catalog, entry, subject, per_lang))
     entries = [entry for _, entry, _, _ in records]

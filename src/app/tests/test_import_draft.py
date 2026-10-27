@@ -111,13 +111,14 @@ def test_the_sentence_about_the_agents_own_search_goes_and_the_claim_stays(body,
 def test_the_copy_carries_no_working_files_and_a_manifest_a_shared_catalog_can_stand_on(draft, tmp_path):
     packs = tmp_path / "packs"
     packs.mkdir()
-    target, _, _ = _load().import_draft(draft, packs, "tools")
+    target, _, _ = _load().import_draft(draft, packs, "tools", icon="printer")
 
     assert not (target / ".installed").exists()
     assert not (target / "adapters").exists()
     manifest = (target / "pack.toml").read_text(encoding="utf-8")
     assert 'id = "org.kriko.tools"' in manifest
     assert 'license = "CC-BY-SA-4.0"' in manifest and 'publisher = "kriko"' in manifest
+    assert 'icon = "printer"' in manifest
     readme = (target / "README.md").read_text(encoding="utf-8")
     assert "not yet installed" not in readme and "holds 1 sourced claims" in readme
 

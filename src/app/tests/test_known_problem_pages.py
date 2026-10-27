@@ -265,3 +265,52 @@ def test_a_long_page_opens_with_its_problems_listed_and_a_short_one_does_not(tmp
     _write_catalog(packs, "tools", ANVIL)
     _load().render(packs, site)
     assert 'class="glance"' not in (site / "problems" / "anvil" / "index.html").read_text(encoding="utf-8")
+
+
+FIRE = (
+    _claim("anvil", "Battery can catch fire while charging", "high", "Pil şarjda alev alabilir", "https://news.invalid/fire")
+    + _claim("anvil", "Handle cracks", "medium", "Sap çatlar", "https://forum.invalid/h")
+    + _claim("anvil", "Paint chips", "low", "Boya atar", "https://forum.invalid/p")
+    # The word is in the body only, in passing: a worn part is not a fire hazard.
+    + _claim("anvil", "Piston ring wear", "high", "Segman aşınması", "https://forum.invalid/r", body="Oil can reach a fire wall seal.")
+    + _claim("anvil", "Screen burn-in", "medium", "Ekran yanması", "https://forum.invalid/b")
+)
+
+
+def test_a_claim_about_fire_is_marked_as_a_safety_risk_and_the_hub_leads_with_it(tmp_path):
+    packs, site = tmp_path / "packs", _site(tmp_path)
+    _write_catalog(packs, "tools", FIRE)
+    _load().render(packs, site)
+    page = (site / "problems" / "anvil" / "index.html").read_text(encoding="utf-8")
+    cards = {title: card for title, card in re.findall(r"<h3>.*?</svg>(.*?)</h3>(.*?)</article>", page, re.S)}
+    assert "Safety risk" in cards["Battery can catch fire while charging"]
+    # Only the claim whose own title says so is marked: not a passing mention, not display burn-in.
+    assert [t for t, card in cards.items() if "Safety risk" in card] == ["Battery can catch fire while charging"]
+    assert "1 of these reports describe a risk" in page
+
+    hub = (site / "problems" / "index.html").read_text(encoding="utf-8")
+    featured = hub.split('class="serious"')[1].split("</section>")[0]
+    assert "Battery can catch fire while charging" in featured and "Piston ring wear" not in featured
+    # The strip links to the claim's own card, which exists on the product page.
+    anchor = re.search(r'href="/problems/anvil/#(c-[0-9a-f]+)"', featured).group(1)
+    assert f'id="{anchor}"' in page
+    # And in Turkish, the same claim is the one featured, in Turkish words.
+    turkish = (site / "tr" / "problems" / "index.html").read_text(encoding="utf-8")
+    assert "Pil şarjda alev alabilir" in turkish.split('class="serious"')[1] and "Güvenlik riski" in (
+        site / "tr" / "problems" / "anvil" / "index.html").read_text(encoding="utf-8")
+
+
+def test_a_catalog_picks_its_icon_by_name_and_an_unknown_name_is_the_box(tmp_path):
+    packs, site = tmp_path / "packs", _site(tmp_path)
+    _write_catalog(packs, "tools", ANVIL)
+    manifest = packs / "tools" / "pack.toml"
+    manifest.write_text(manifest.read_text(encoding="utf-8").replace('license = "CC-BY-SA-4.0"\n', 'license = "CC-BY-SA-4.0"\nicon = "printer"\n'),
+                        encoding="utf-8")
+    module = _load()
+    module.render(packs, site)
+    hub = (site / "problems" / "index.html").read_text(encoding="utf-8")
+    assert module.ICONS["printer"] in hub and module.ICONS["box"] not in hub
+
+    manifest.write_text(manifest.read_text(encoding="utf-8").replace('icon = "printer"', 'icon = "no-such-drawing"'), encoding="utf-8")
+    module.render(packs, site)
+    assert module.ICONS["box"] in (site / "problems" / "index.html").read_text(encoding="utf-8")
