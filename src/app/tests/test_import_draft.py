@@ -128,3 +128,34 @@ def test_importing_over_a_catalog_that_exists_is_refused(draft, tmp_path):
     (packs / "tools").mkdir(parents=True)
     with pytest.raises(FileExistsError):
         _load().import_draft(draft, packs, "tools")
+
+
+def test_a_catalog_that_ships_search_queries_ships_how_to_aim_them(draft, tmp_path):
+    # The contract every catalog meets: queries come with a method. A draft has queries and no method,
+    # so the import writes one from the identity keys the draft's own manifest declares.
+    (draft / "research").mkdir()
+    (draft / "research" / "templates.yaml").write_text("- '{label} faults'\n", encoding="utf-8")
+    (draft / "pack.toml").write_text(PACK + '\n[identity]\nproduct = ["brand", "model"]\n', encoding="utf-8")
+    packs = tmp_path / "packs"
+    packs.mkdir()
+    target, _, _ = _load().import_draft(draft, packs, "tools")
+
+    method = (target / "research" / "skill.md").read_text(encoding="utf-8")
+    assert "`brand`, `model`" in method and "a **product**" in method
+
+
+def test_a_method_the_draft_already_has_is_not_replaced(draft, tmp_path):
+    (draft / "research").mkdir()
+    (draft / "research" / "templates.yaml").write_text("- '{label} faults'\n", encoding="utf-8")
+    (draft / "research" / "skill.md").write_text("Its own method.\n", encoding="utf-8")
+    packs = tmp_path / "packs"
+    packs.mkdir()
+    target, _, _ = _load().import_draft(draft, packs, "tools")
+    assert (target / "research" / "skill.md").read_text(encoding="utf-8") == "Its own method.\n"
+
+
+def test_a_catalog_with_no_search_queries_gets_no_method_it_has_no_use_for(draft, tmp_path):
+    packs = tmp_path / "packs"
+    packs.mkdir()
+    target, _, _ = _load().import_draft(draft, packs, "tools")
+    assert not (target / "research" / "skill.md").exists()
