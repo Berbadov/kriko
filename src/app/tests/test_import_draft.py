@@ -84,6 +84,30 @@ def test_only_sourced_claims_with_words_about_the_product_are_imported(draft, tm
     assert claims[0]["evidence"] == [{"url": "https://forum.invalid/a", "quote": "Mine cracked after a year."}]
 
 
+@pytest.mark.parametrize("body, expected", [
+    # The ways an agent narrated its search in the first catalogs, each followed by the claim.
+    ("Found via the 'x y problems' search (Darty forum, FR market). The pump fails to draw water after a month.",
+     "The pump fails to draw water after a month."),
+    ("From the seed search 'x y screen flicker forum'. A report describes colour bleed and a scrambled picture.",
+     "A report describes colour bleed and a scrambled picture."),
+    ("From the 'x y reliability' search; a Best Buy owner reports battery failure within the first year of use.",
+     "A Best Buy owner reports battery failure within the first year of use."),
+    ("Came from the 'reliability forum' search. The dock seal degrades at twelve to eighteen months of use.",
+     "The dock seal degrades at twelve to eighteen months of use."),
+    ("From the Computerbase.de forum (a German thread, query: 'x y Probleme forum'). A repairer describes a broken hinge.",
+     "A repairer describes a broken hinge."),
+    ("The owner reports the hinge cracked. Note the page refused my fetcher, so this quote comes from the search-returned text.",
+     "The owner reports the hinge cracked."),
+    # What is not narration is left alone, even when it opens the same way.
+    ("From the manufacturer's official troubleshooting page: a wet filter can cause abnormal noise.",
+     "From the manufacturer's official troubleshooting page: a wet filter can cause abnormal noise."),
+    # Nothing but a pointer to the search is not a claim.
+    ("Found via the 'x y problems forum' search; Xiaomi's own FAQ.", ""),
+])
+def test_the_sentence_about_the_agents_own_search_goes_and_the_claim_stays(body, expected):
+    assert _load().plain(body) == expected
+
+
 def test_the_copy_carries_no_working_files_and_a_manifest_a_shared_catalog_can_stand_on(draft, tmp_path):
     packs = tmp_path / "packs"
     packs.mkdir()
