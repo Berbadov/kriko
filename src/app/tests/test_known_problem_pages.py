@@ -217,3 +217,28 @@ def test_the_hub_files_a_part_under_each_whole_thing_it_is_fitted_to_grouped_by_
     # The engine's own page says which cars it is found on.
     page = (site / "problems" / "zeta-engine" / "index.html").read_text(encoding="utf-8")
     assert "Acme Roadster 2.0" in page and "Borealis Cruiser 1.6" in page
+
+
+def _proposal(model, title):
+    """A claim an agent proposed that no run has found a page for yet."""
+    return f"""
+    - subject: {{kind: product, identity: {{brand: acme, model: {model}}}}}
+      kind: known_issue
+      domain: mech
+      severity: high
+      text:
+        en: {{title: "{title}", body: b, advice: a}}
+        tr: {{title: "{title} (tr)", body: b, advice: a}}
+"""
+
+
+def test_a_claim_with_no_source_page_is_never_published(tmp_path):
+    # An agent's draft arrives as proposals; only a run that finds the page makes one a finding.
+    packs, site = tmp_path / "packs", _site(tmp_path)
+    unproven_only = "".join(_proposal("widget", f"Rumour {n}") for n in range(4))
+    _write_catalog(packs, "tools", ANVIL + _proposal("anvil", "Unproven rumour") + unproven_only)
+    _load().render(packs, site)
+    english = (site / "problems" / "anvil" / "index.html").read_text(encoding="utf-8")
+    assert "Head loosens" in english and "Unproven rumour" not in english
+    # Four proposals and no source is still a subject with nothing to publish.
+    assert not (site / "problems" / "widget").exists()

@@ -292,9 +292,12 @@ def _claim_html(claim: dict, lang: str) -> str:
 
 
 def _subject_claims(subject: dict, lang: str) -> list[dict]:
-    """The subject's claims that have words in `lang`, worst first, one for each title."""
+    """The subject's claims that have words in `lang` and a source page, worst first, one for each title.
+
+    A claim nobody has found a page for is a proposal, not a finding: it stays out, whatever it says.
+    """
     seen, picked = set(), []
-    ranked = sorted((c for c in subject["claims"] if lang in c["text"] and c["text"][lang]["title"]),
+    ranked = sorted((c for c in subject["claims"] if c["sources"] and lang in c["text"] and c["text"][lang]["title"]),
                     key=lambda c: (SEVERITY_ORDER.index(c["severity"]) if c["severity"] in SEVERITY_ORDER else 9,
                                    c["text"][lang]["title"], c["id"]))
     for claim in ranked:
