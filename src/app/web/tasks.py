@@ -1636,9 +1636,11 @@ def _friendly_index_error(exc: Exception) -> str:
     import urllib.error
 
     if isinstance(exc, urllib.error.HTTPError) and exc.code == 404:
-        return "The pack index has nothing published yet."
+        return ("No catalogs are published for this version of Kriko yet. "
+                "Import a .kpack file, or research a product with an agent.")
     if isinstance(exc, (urllib.error.URLError, OSError)):
-        return "The pack download site could not be reached."
+        return ("Kriko could not reach the catalog site. Check your internet "
+                "connection and try again, or import a .kpack file.")
     return "Could not check for pack updates."
 
 
