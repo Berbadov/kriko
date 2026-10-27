@@ -1,0 +1,3 @@
+# What this pack surfaces
+
+This pack surfaces documented safety and reliability problems for split and portable air conditioners sold in Turkey and Europe: recalls and official notices (Midea/Comfee/KOENIC portable units, LG portable units), reported fires and ignition events (Samsung, Vestel, Midea), refrigerant and electrical hazards, and recurring failures (error codes, control-board failures, mechanical breakage). It does not rank brands and does not claim every unit fails; it reports what owners, forums, service bulletins and repair shops have documented. It covers the brands named in the scope (Daikin, Midea, Arcelik, Beko, Vestel, Samsung, LG). A model with no claims here means no solid evidence was found in this run, not that nothing is known.
