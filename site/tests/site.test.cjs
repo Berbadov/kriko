@@ -365,7 +365,13 @@ test('every generated problem page is complete, points at its twin, runs no scri
     assert.equal(d.querySelectorAll('h1').length, 1, `${file} needs exactly one h1`);
     assert.ok(d.querySelector('meta[name="description"]').content.length > 40, file);
     assert.equal(d.querySelector('link[rel="canonical"]').href, url);
-    assert.equal(d.querySelectorAll('script').length, 0, `${file} runs a script`);
+    // The only script is structured data for a search engine: JSON that parses, never code.
+    for (const script of d.querySelectorAll('script')) {
+      assert.equal(script.type, 'application/ld+json', `${file} runs a script`);
+      assert.ok(JSON.parse(script.textContent)['@context'], `${file}: its structured data names no context`);
+    }
+    assert.ok(d.querySelector('script[type="application/ld+json"]'), `${file} has no structured data`);
+    assert.ok(d.querySelector('meta[name="twitter:title"]') && d.querySelector('meta[property="og:locale"]'), `${file} is missing its social tags`);
     assert.ok(d.querySelector('link[rel="stylesheet"]').href.endsWith(`/styles.css?v=${stylesheet}`), `${file}: the stylesheet hash is stale`);
     for (const alternate of d.querySelectorAll('link[rel="alternate"][hreflang]')) {
       const twin = new URL(alternate.href).pathname.replace(/^\//, '');
@@ -401,6 +407,39 @@ test('the problem sitemap lists exactly the generated pages, and robots.txt name
   assert.match(read('robots.txt'), /^Sitemap: https:\/\/kriko\.cc\/sitemap-problems\.xml$/m);
   const listed = [...read('sitemap-problems.xml').matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[1]).sort();
   assert.deepEqual(listed, generated().map((file) => `https://kriko.cc/${file.replace(/index\.html$/, '')}`).sort());
+});
+
+test('a product page says where it sits, with breadcrumbs that match what a reader sees', () => {
+  const product = new JSDOM(read('problems/mercedes-eqb/index.html')).window.document;
+  const blocks = [...product.querySelectorAll('script')].map((s) => JSON.parse(s.textContent));
+  const crumbs = blocks.find((block) => block['@type'] === 'BreadcrumbList');
+  assert.deepEqual(crumbs.itemListElement.map((item) => item.name), [...product.querySelectorAll('.crumb a')].map((a) => a.textContent).concat(['Mercedes EQB']));
+  assert.match(blocks.find((block) => block['@type'] === 'Article').dateModified, /^\d{4}-\d{2}-\d{2}$/);
+  assert.match(product.title, /safety risks/, 'a page that reports a fire names the risk in its title');
+});
+
+test('the sitemap says when each page was last checked, and the page of every safety report is listed', () => {
+  const sitemap = read('sitemap-problems.xml');
+  const days = [...sitemap.matchAll(/<lastmod>([^<]+)<\/lastmod>/g)].map((match) => match[1]);
+  assert.ok(days.length > 100, 'the problem pages carry no lastmod');
+  assert.ok(days.every((day) => /^\d{4}-\d{2}-\d{2}$/.test(day)), 'a lastmod is not a date');
+  for (const url of ['https://kriko.cc/problems/safety/', 'https://kriko.cc/tr/problems/safety/']) assert.ok(sitemap.includes(`<loc>${url}</loc>`), url);
+});
+
+test('no sponsored box is on a home page, the guide or the privacy policy', () => {
+  for (const file of ['index.html', 'tr/index.html', 'guide/index.html', 'tr/guide/index.html', 'privacy/index.html']) {
+    assert.ok(!read(file).includes('class="sponsored"'), `${file} carries a sponsored box`);
+  }
+});
+
+test('the privacy policy describes the sponsored boxes whenever any is listed, and says they load nothing', () => {
+  const listed = JSON.parse(read('sponsors.json'));
+  assert.ok(Array.isArray(listed));
+  const policy = load(PAGES[2]);
+  const section = policy.querySelector('#sponsored');
+  if (listed.length) assert.ok(section, 'a sponsor is listed but the privacy policy does not name sponsored boxes');
+  if (section) assert.match(section.nextElementSibling.textContent, /runs no script and sets no cookie/);
+  assert.ok(!/no advertising\./.test(policy.querySelector('.short').textContent) || !listed.length, 'the policy still promises no advertising');
 });
 
 test('both home pages link to the problem pages in their own language', () => {

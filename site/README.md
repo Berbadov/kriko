@@ -212,6 +212,41 @@ A catalog that declares itself `synthetic` (the worked example) is never
 published, because a made-up claim on a real address is a false statement. The
 page text is under the catalog's own licence, which each page names.
 
+### Being found
+
+Each page carries structured data (breadcrumbs and an article for a product, a
+collection for a list), a title that names a safety risk when the page reports
+one, social tags, and a `lastmod` in the sitemap that is the day the newest
+source behind the page was read, so it moves only when the knowledge does.
+`problems/safety/` lists every product with a serious fire, explosion or shock
+report, and the hub links to it.
+
+After a deploy, once the pages answer on kriko.cc, tell the engines that take
+IndexNow (Bing, Yandex and others) what exists. The key file at the root
+(`<key>.txt`) is the proof; no account is involved:
+
+```sh
+python site/tools/indexnow.py          # what would be sent
+python site/tools/indexnow.py --send   # send it
+```
+
+Google takes its sitemaps through Search Console, which needs the owner's own
+Google account.
+
+### Sponsored placements
+
+`sponsors.json` lists the paid placements, and is empty until there is one. A
+placement is `{id, url, name: {en, tr}, text: {en, tr}, catalogs: [slug, ...]}`
+(`catalogs` is optional; without it the placement is for every catalog). The
+generator shows the first one that fits as a box labelled Sponsored, set apart
+by a dashed edge, on a product page and a catalog page, never on the hubs, the
+home pages, the guide or the policy, and never inside a finding. It is a plain
+link with `rel="sponsored nofollow noopener"`: no script, no cookie, nothing
+loaded from the advertiser. A placement whose address is not https, or that has
+no words in a page's language, is left out and named on stderr. Add the first
+one and the privacy policy already says what it is; a test fails if the policy
+stops saying so while any is listed.
+
 ## Readability
 
 Body text is 19px with 1.7 line height, lines stay under about 70 characters,
