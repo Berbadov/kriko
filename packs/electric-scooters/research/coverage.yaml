@@ -1,0 +1,25 @@
+lineup:
+- Xiaomi Electric Scooter 4
+- Xiaomi Electric Scooter 4 Pro
+- Xiaomi Electric Scooter 4 Lite
+- Xiaomi Electric Scooter 4 Ultra
+- Xiaomi Electric Scooter Elite
+covered:
+- xiaomi electric scooter 4
+- xiaomi electric scooter 4 go
+- xiaomi electric scooter 4 lite
+- xiaomi electric scooter 4 pro
+- xiaomi electric scooter 4 ultra
+- xiaomi electric scooter elite
+uncovered: []
+note: Added the Xiaomi Electric Scooter 4 Go, the missing entry-level sibling in the
+  4 series. I found solid spec data from Xiaomi's own pages and owner evidence for
+  range overstatement and stem/cable wear; I found no evidence of throttle, water-ingress,
+  or brake faults specific to this model, so no such claims were added.
+out_of_scope:
+- Kugoo Kirin M4 Pro / S2 Mini (different brand, surfaced in OCU complaints)
+- Segway-Ninebot F3 E / Max G3 (different brand, surfaced in European market reviews)
+- Xiaomi Electric Scooter 5
+- Xiaomi Electric Scooter 5 Max
+- Xiaomi Mi Essential / Mi Pro 4 (older Xiaomi models, not the 4-series Elite)
+quarantined: []

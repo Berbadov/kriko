@@ -1,0 +1,11 @@
+# Search templates for this pack. One query per line.
+#
+# Written by the agent that authored the pack, in the words
+# and the language its sources use.
+- '{label} common problems'
+- '{label} sorunları'
+- '{label} Probleme'
+- '{label} bootloop'
+- '{label} green line'
+- '{label} battery drain'
+- '{label} overheating'

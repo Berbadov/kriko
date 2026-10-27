@@ -1,0 +1,111 @@
+# Subjects — the things this pack knows about.
+#
+# `identity` carries exactly the keys `pack.toml` declares for the
+# kind: that dictionary is hashed to the subject id.
+- kind: product
+  label: Beko B 600 Classic
+  identity:
+    brand: beko
+    series: b600classic
+  aliases:
+  - B 600 bClassic
+- kind: product
+  label: Beko B 710 Elite
+  identity:
+    brand: beko
+    series: b710elite
+  aliases:
+  - B 710 iElite
+- kind: product
+  label: Beko DIS15022
+  identity:
+    brand: beko
+    series: dis15022
+- kind: product
+  label: Bosch SMS26DW00T
+  identity:
+    brand: bosch
+    series: sms26dw00t
+- kind: product
+  label: Bosch SHE68T56UC
+  identity:
+    brand: bosch
+    series: she68t56uc
+- kind: product
+  label: Bosch SHP65T56UC
+  identity:
+    brand: bosch
+    series: shp65t56uc
+- kind: product
+  label: Siemens SN65ZX07CE
+  identity:
+    brand: siemens
+    series: sn65zx07ce
+- kind: product
+  label: Siemens SN55ZS07CE
+  identity:
+    brand: siemens
+    series: sn55zs07ce
+- kind: product
+  label: Siemens SN23HW60CE
+  identity:
+    brand: siemens
+    series: sn23hw60ce
+  attributes:
+    capacity_place_settings:
+      value: '14'
+      source: https://sav.darty.com/forum/SIEMENS/SN23HW60CE/BLOCAGE-U-LAVE-VAISSELLE/5520828/588100
+    noise_db:
+      value: '44'
+      source: https://sav.darty.com/forum/SIEMENS/SN23HW60CE/BLOCAGE-U-LAVE-VAISSELLE/5520828/588100
+    water_consumption_l:
+      value: '9.5'
+      source: https://sav.darty.com/forum/SIEMENS/SN23HW60CE/BLOCAGE-U-LAVE-VAISSELLE/5520828/588100
+    energy_class:
+      value: D
+      source: https://sav.darty.com/forum/SIEMENS/SN23HW60CE/BLOCAGE-U-LAVE-VAISSELLE/5520828/588100
+- kind: product
+  label: Samsung DW60DG540FWQ
+  identity:
+    brand: samsung
+    series: dw60dg540fwq
+- kind: product
+  label: Samsung DW8-R5061US/AA
+  identity:
+    brand: samsung
+    series: dw8r5061usaa
+- kind: product
+  label: Samsung DW90F89T0UMTAA
+  identity:
+    brand: samsung
+    series: dw90f89t0umtaa
+- kind: product
+  label: Miele G7xxx
+  identity:
+    brand: miele
+    series: g7xxx
+- kind: product
+  label: Arçelik A 710 B Prestige
+  identity:
+    brand: arcelik
+    series: a710bprestige
+- kind: product
+  label: Arçelik A 600 B Star
+  identity:
+    brand: arcelik
+    series: a600bstar
+- kind: product
+  label: Arçelik 6551 HI
+  identity:
+    brand: arcelik
+    series: 6551hi
+- kind: product
+  label: Arçelik 6667 WF I
+  identity:
+    brand: arcelik
+    series: 6667wfi
+- kind: product
+  label: Arçelik 62113 I WF
+  identity:
+    brand: arcelik
+    series: 62113iwf

@@ -1,0 +1,72 @@
+lineup:
+- DJI Mini 2
+- DJI Mini 2 SE
+- DJI Mini 3
+- DJI Mini 3 Pro
+- DJI Mini 4K
+- DJI Mini 4 Pro
+- DJI Mini 5
+- DJI Air 2S
+- DJI Air 3
+- DJI Air 3S
+- DJI Mavic 3
+- DJI Mavic 3 Classic
+- DJI Mavic 3 Pro
+- DJI Mavic 3 Cine
+- DJI Mavic 4 Pro
+- DJI Neo
+- DJI Avata
+- DJI Avata 2
+- Autel EVO Nano
+- Autel EVO Nano+
+- Autel EVO Lite
+- Autel EVO Lite+
+- Autel EVO Max 4T
+- Potensic Atom
+- Potensic Atom SE
+- Potensic Atom 4K
+- Potensic A20
+- Potensic A30
+covered:
+- autel evo nano
+- dji air 3
+- dji avata 2
+- dji mavic 3
+- dji mini 3 pro
+- dji mini 4 pro
+- dji neo
+- potensic atom se
+- product brand autel series evo nano
+- product brand dji series air 3
+- product brand dji series avata 2
+- product brand dji series mavic 3
+- product brand dji series mini 3 pro
+- product brand dji series mini 4 pro
+- product brand dji series neo
+- product brand potensic series atom se
+uncovered:
+- DJI Mini 2
+- DJI Mini 2 SE
+- DJI Mini 4K
+- DJI Mini 5
+- DJI Air 2S
+- DJI Mavic 4 Pro
+- Autel EVO Lite
+- Autel EVO Lite+
+- Autel EVO Max 4T
+- Potensic Atom 4K
+- Potensic A20
+- Potensic A30
+note: Evidence found for DJI Mini 3 Pro, Mini 4 Pro, Air 3, Mavic 3, Neo, Avata 2,
+  Autel EVO Nano, and Potensic Atom SE. Several lineup entries lack dedicated owner-reported
+  failure evidence in the sources searched; they are named but not covered.
+out_of_scope:
+- DJI RC 2 controller
+- DJI RC-N3 controller
+- DJI Goggles 3
+- DJI Motion Controller 3
+- DJI Care Refresh plans
+- ND filter accessories
+- Propeller sets
+- Battery charging hubs
+quarantined: []

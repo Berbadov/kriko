@@ -1,0 +1,1463 @@
+# Claims — what is known to go wrong, each with the page it came from and the quote
+# that was read there. A claim without both is not in this file.
+- subject:
+    kind: product
+    identity:
+      brand: NVIDIA
+      series: GeForce RTX 30 Series
+  kind: known_issue
+  domain: software
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: NVIDIA driver / Windows driver auto-install
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: RTX 3060 black screen after Windows auto-installs driver; card no longer detected
+      body: French-language Microsoft Q&A thread (EU market) where an RTX 3060 owner reports that after
+        Windows auto-installs the driver and the PC restarts, the card is no longer detected and the screen
+        stays black, while the card works perfectly on Linux. The conflict is between Windows' auto-installed
+        driver and the NVIDIA driver.
+      advice: On Windows, the auto-installed driver can leave the 3060 undetected with a black screen
+        after reboot; owners resolve this by fully removing the driver with DDU in Safe Mode before installing
+        the NVIDIA driver. Expect this as a possible setup hurdle, not a hardware fault.
+    tr:
+      title: Windows sürücüyü otomatik yükledikten sonra RTX 3060 siyah ekran; kart artık algılanmıyor
+      body: Fransızca Microsoft Q&A başlığı (AB pazarı); bir RTX 3060 sahibi, Windows sürücüyü otomatik
+        yükleyip PC yeniden başladıktan sonra kartın artık algılanmadığını ve ekranın siyah kaldığını,
+        kartın Linux'ta ise kusursuz çalıştığını bildiriyor. Çatışma, Windows'un otomatik yüklediği sürücü
+        ile NVIDIA sürücüsü arasındadır.
+      advice: Windows'ta otomatik yüklenen sürücü, yeniden başlatma sonrası 3060'ı siyah ekranla algılanamaz
+        bırakabilir; sahipler bunu NVIDIA sürücüsünü yüklemeden önce Güvenli Mod'da DDU ile sürücüyü tamamen
+        kaldırarak çözüyor. Bunu olası bir kurulum engeli olarak bekleyin, donanım arızası olarak değil.
+  evidence:
+  - url: https://learn.microsoft.com/fr-fr/answers/questions/5904260/drivers-nvidia-gforce-rtx-3060-qui-sinstall-l-ouve
+    quote: Après avoir installé une Nvidia GeForce RTX 3060 Windows Install un drivers RTX 3060 et au
+      redémarrage la carte n'est plus reconnue par le system et ne fonctionne plus (écran Noir)
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:15:49+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: NVIDIA
+      series: GeForce RTX 30 Series
+  kind: known_issue
+  domain: thermal
+  severity: low
+  consequence: ''
+  detection: ''
+  component: MSI GeForce RTX 3060 VENTUS 2X OC cooler/thermal paste
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: MSI RTX 3060 VENTUS 2X OC reaches ~90 °C under load after two years, even after repasting
+      body: PcComponentes community thread (EU) where an owner of an MSI GeForce RTX 3060 VENTUS 2X OC
+        reports the card started overheating to ~90 °C under load after two years, with fans at maximum,
+        and that replacing thermal paste did not help. This is variant-specific and age-related rather
+        than a series-wide defect.
+      advice: A 3060 running hot after a couple of years may need new thermal pads and proper heatsink
+        re-seating, not just paste; on this MSI Ventus variant, repasting alone did not fix it. Check
+        thermals before buying a used card of this age.
+    tr:
+      title: MSI RTX 3060 VENTUS 2X OC iki yıl sonra yük altında ~90 °C'ye ulaşıyor, termal macun yenilense
+        bile
+      body: PcComponentes topluluk başlığı (AB); bir MSI GeForce RTX 3060 VENTUS 2X OC sahibi, kartın
+        iki yıl sonra yük altında fanlar maksimumdayken ~90 °C'ye aşırı ısınmaya başladığını ve termal
+        macun değişiminin yardımcı olmadığını bildiriyor. Bu, seri genelinde bir kusur değil, varyanta
+        özgü ve yaşa bağlı bir durumdur.
+      advice: Birkaç yıl sonra sıcak çalışan bir 3060, sadece macun değil yeni termal pedler ve düzgün
+        soğutucu yeniden oturtma gerektirebilir; bu MSI Ventus varyantında yalnızca macun yenilemek sorunu
+        çözmedi. Bu yaşta kullanılmış bir kart almadan önce termalleri kontrol edin.
+  evidence:
+  - url: https://www.pccomponentes.fr/wiki/thread/1efde6d7-5e31-6d06-8989-4fe67098ff27
+    quote: cuándo juego por ejemplo a New World normalmente suele ponerse a 90 grados, y con los ventiladores
+      al máximo causando mucho ruido
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:15:49+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: NVIDIA
+      series: GeForce RTX 30 Series
+  kind: known_issue
+  domain: software
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: NVIDIA display driver (nvlddmkm.sys)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: RTX 3060 recurring crashes in games tied to nvlddmkm.sys 0x116 TDR failure
+      body: Microsoft Q&A thread from an RTX 3060 owner reporting constant in-game crashes with a VIDEO_TDR_FAILURE
+        (0x116) pointing at nvlddmkm.sys. The user tried DDU clean installs of multiple driver versions
+        without success; only lowering GPU clock and memory speed in Afterburner stopped the crashes.
+      advice: If a 3060 crashes in games with a 0x116/nvlddmkm.sys error, a clean driver reinstall may
+        not fix it; undervolting/undervolting the clock and memory is the workaround owners report. This
+        is a driver-level quirk, not a hardware failure, but it costs troubleshooting time.
+    tr:
+      title: RTX 3060'ta oyunlarda tekrarlayan çökmeler nvlddmkm.sys 0x116 TDR hatasına bağlı
+      body: Bir RTX 3060 sahibinin Microsoft Q&A başlığı; nvlddmkm.sys'i işaret eden VIDEO_TDR_FAILURE
+        (0x116) ile oyun içinde sürekli çökmeler bildiriliyor. Kullanıcı birden fazla sürücü sürümünü
+        DDU ile temiz kurmayı başarısız şekilde denedi; çökmeleri yalnızca Afterburner'da GPU çekirdek
+        ve bellek hızını düşürmek durdurdu.
+      advice: Bir 3060 oyunlarda 0x116/nvlddmkm.sys hatasıyla çöküyorsa, temiz sürücü yeniden kurulumu
+        bunu düzeltmeyebilir; çekirdek ve bellek hızını düşürmek/undervolt yapmak sahiplerin bildirdiği
+        geçici çözümdür. Bu donanım arızası değil, sürücü düzeyinde bir tuhaflıktır, ancak sorun giderme
+        zamanına mal olur.
+  evidence:
+  - url: https://learn.microsoft.com/en-nz/answers/questions/4001144/several-crashes-while-gaming-with-failure-pointed
+    quote: Now i have constant crashes almost immidiately after playing any game, regardless of how demanding
+      it is, and the crash reports points out to this 0x116_IMAGE_nvlddmkm.sys error.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:15:49+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: NVIDIA
+      series: GeForce RTX 30 Series
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: 8-pin PCIe power cable/connector
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: ZOTAC RTX 3060 Twin Edge OC melted PSU-to-GPU wires (owner report)
+      body: Two-star Amazon owner review of the ZOTAC Gaming GeForce RTX 3060 Twin Edge OC 12GB. The owner
+        reports the first unit smoked the PSU and that plugging the card in melted the wires from PSU
+        to GPU, while a second card and a swapped PSU worked fine. Single anecdote on one AIB variant,
+        so treat as a possible unit-level defect rather than a series-wide issue.
+      advice: A melted PSU-to-GPU power cable is a fire hazard; if it happens, stop use immediately, replace
+        the PSU/cables, and RMA the card. This is one owner's report on a single variant, not evidence
+        of a series-wide connector problem like the RTX 4090's.
+    tr:
+      title: ZOTAC RTX 3060 Twin Edge OC PSU-GPU kablolarını eritti (sahip bildirimi)
+      body: ZOTAC Gaming GeForce RTX 3060 Twin Edge OC 12GB için iki yıldızlı Amazon sahip incelemesi.
+        Sahip, ilk ünitenin PSU'yu dumanlandırdığını ve kartı takmanın PSU'dan GPU'ya giden kabloları
+        erittiğini, ikinci bir kart ve değiştirilmiş bir PSU'nun ise sorunsuz çalıştığını bildiriyor.
+        Tek bir AIB varyantı üzerine tek anekdot, bu nedenle seri genelinde bir sorun değil olası ünite
+        düzeyinde bir kusur olarak değerlendirin.
+      advice: Erimiş bir PSU-GPU güç kablosu yangın tehlikesidir; olursa kullanımı hemen durdurun, PSU/kabloları
+        değiştirin ve kartı RMA'ya gönderin. Bu, tek bir varyant üzerine bir sahibin bildirimidir; RTX
+        4090'ınki gibi seri genelinde bir konnektör sorununun kanıtı değildir.
+  evidence:
+  - url: https://www.amazon.sg/product-reviews/B08W8DGK3X/ref=acr_dp_hist_2?ie=UTF8&filterByStar=two_star&reviewerType=all_reviews
+    quote: The other Evga worked flawlessly then pluged this one in and melted the wires from psu to the
+      gpu.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:15:49+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: NVIDIA
+      series: GeForce RTX 30 Series
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: PCI-E power connector solder joints
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: RTX 3060 PCI-E power connector broke off; insufficient soldering confirmed as warranty case
+      body: German owner forum (Computerbase) thread about a PCI-E connector that broke off an RTX 3060.
+        The user reports the manufacturer accepted it as a warranty case, stating the card was insufficiently
+        soldered and that it was not the first card with this problem.
+      advice: If the power connector on the card is loose or the card fails to power on, treat it as a
+        manufacturing defect and pursue warranty/RMA rather than attempting a solder repair; the seller
+        acknowledged this is a known recurring issue.
+    tr:
+      title: RTX 3060 PCI-E güç konnektörü koptu; yetersiz lehim garanti vakası olarak onaylandı
+      body: Alman sahip forumu (Computerbase) başlığı; bir RTX 3060'tan kopan PCI-E konnektörü hakkında.
+        Kullanıcı, üreticinin bunu garanti vakası olarak kabul ettiğini, kartın yetersiz lehimlendiğini
+        ve bunun bu sorunu yaşayan ilk kart olmadığını belirttiğini bildiriyor.
+      advice: Karttaki güç konnektörü gevşekse veya kart açılmıyorsa, bunu üretim kusuru olarak değerlendirin
+        ve lehim onarımı denemek yerine garanti/RMA sürecini takip edin; satıcı bunun bilinen ve tekrarlayan
+        bir sorun olduğunu kabul etti.
+  evidence:
+  - url: https://www.computerbase.de/forum/threads/pci-e-anschluss-abgebrochen-rtx3060.1993087/page-3
+    quote: Es war tatsächlich ein Garantiefall. Die Karte war nicht ausreichend verlötet. Es war lt. Support
+      nicht die 1. Karte mit diesem Problem.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:15:49+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: nvidia
+      series: rtx 5070 ti
+  kind: known_issue
+  domain: software
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: NVIDIA driver (576.02 / 576.28) on RTX 5070 Ti
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Owner reports repeated black screens on Gigabyte RTX 5070 Ti Windforce with two different
+        drivers
+      body: In a dedicated owner thread for 5070(Ti)/5080/5090 black-screen problems, a user reports two
+        black screens on a Gigabyte 5070 Ti Windforce across two different drivers (576.02 and 576.28),
+        with the image and mouse freezing, audio looping, then signal loss requiring a hard reset. Other
+        posters link the issues to PCIe 5.0 and DisplayPort/HDR/DSC compatibility on Blackwell.
+      advice: This is an owner-verified instance of the black-screen problem on the 5070 Ti specifically.
+        If you hit it, try PCIe 4.0, a different DisplayPort port, and the latest driver/hotfix.
+    tr:
+      title: Sahip, Gigabyte RTX 5070 Ti Windforce'ta iki farklı sürücüyle tekrarlayan siyah ekranlar
+        bildiriyor
+      body: 5070(Ti)/5080/5090 siyah ekran sorunlarına ayrılmış sahip başlığında bir kullanıcı, Gigabyte
+        5070 Ti Windforce'ta iki farklı sürücüde (576.02 ve 576.28) iki siyah ekran bildiriyor; görüntü
+        ve fare donuyor, ses döngüye giriyor, ardından sert sıfırlama gerektiren sinyal kaybı yaşanıyor.
+        Diğer göndericiler sorunları Blackwell'de PCIe 5.0 ve DisplayPort/HDR/DSC uyumluluğuna bağlıyor.
+      advice: Bu, özellikle 5070 Ti'da siyah ekran sorununun sahip tarafından doğrulanmış bir örneğidir.
+        Bununla karşılaşırsanız PCIe 4.0'ı, farklı bir DisplayPort bağlantı noktasını ve en son sürücüyü/hotfix'i
+        deneyin.
+  evidence:
+  - url: https://www.hardwareluxx.de/community/threads/5070-ti-5080-5090-blackscreen-probleme.1363814/page-34
+    quote: Meine anfängliche Begeisterung hielt sich dann aber in grenzen weil ich bis jetzt 2x einen
+      Blackscreen bekommen habe mit 2 unterschiedlichen treibern (576.02 & 576.28).
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:19:39+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: intel
+      series: arc b580
+  kind: known_issue
+  domain: electrical
+  severity: low
+  consequence: ''
+  detection: ''
+  component: VRAM idle clocking / idle power draw
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Intel Arc B580 VRAM stays clocked at full speed while idle
+      body: Intel's own knowledge base confirms the B580's VRAM stays at full 2375 MHz at idle, but frames
+        this as expected behavior and states the GPU idles under 10W once ASPM/L1/PCIe link power savings
+        are enabled.
+      advice: Idle power is not a real defect here — Intel documents it as expected and under 10W with
+        power-saving features on — so a shopper should not treat high idle draw as a reason to avoid the
+        card.
+    tr:
+      title: Intel Arc B580 VRAM boşta kalırken tam hızda saat hızında kalıyor
+      body: Intel'in kendi bilgi tabanı, B580'in VRAM'inin boşta tam 2375 MHz'de kaldığını doğruluyor,
+        ancak bunu beklenen davranış olarak çerçeveliyor ve ASPM/L1/PCIe bağlantı güç tasarrufları etkinleştirildiğinde
+        GPU'nun 10W'ın altında boşta kaldığını belirtiyor.
+      advice: Boşta güç tüketimi burada gerçek bir kusur değil — Intel bunu beklenen olarak belgeliyor
+        ve güç tasarrufu özellikleri açıkken 10W'ın altında olduğunu söylüyor — bu yüzden bir alıcı yüksek
+        boşta çekişi karttan kaçınmak için bir neden olarak görmemelidir.
+  evidence:
+  - url: https://www.intel.com/content/www/us/en/support/articles/000101330/graphics.html
+    quote: When the GPU is idle, the VRAM remains clocked at full stock speed, 2375 MHz.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:17:08+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: nvidia
+      series: rtx 4090
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: 12VHPWR power connector
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: RTX 4090 12VHPWR power connector melting
+      body: The 16-pin 12VHPWR connector is the documented failure point on the RTX 4090; repair shops
+        report receiving multiple 4090s with melted connectors in a matter of days, across brands (MSI,
+        ASUS, Gainward, NVIDIA FE). NVIDIA's revised 12V-2×6 connector is designed to reduce it, but reports
+        continue.
+      advice: 'Before buying, treat the 12VHPWR connection as the main risk: seat the plug fully, avoid
+        sharp bends, and monitor the 12V rail (a drop toward ~11.3 V under load is a warning sign). A
+        melted connector can damage the card''s PCB and voids warranty if the wrong cable/adapter is blamed.'
+    tr:
+      title: RTX 4090 12VHPWR güç konektörü erimesi
+      body: 16 pinli 12VHPWR konektörü, RTX 4090'da belgelenmiş arıza noktasıdır; tamir atölyeleri, markalar
+        arasında (MSI, ASUS, Gainward, NVIDIA FE) birkaç gün içinde erimiş konektörlü birden fazla 4090
+        aldıklarını bildiriyor. NVIDIA'nın revize edilmiş 12V-2×6 konektörü bunu azaltmak için tasarlanmıştır,
+        ancak bildirimler devam ediyor.
+      advice: 'Satın almadan önce, 12VHPWR bağlantısını ana risk olarak değerlendirin: fişi tam olarak
+        oturtun, keskin bükülmelerden kaçının ve 12V rayını izleyin (yük altında ~11,3 V''a doğru bir
+        düşüş bir uyarı işaretidir). Erimiş bir konektör kartın PCB''sine zarar verebilir ve yanlış kablo/adaptör
+        suçlanırsa garantiyi geçersiz kılar.'
+  evidence:
+  - url: https://wccftech.com/nvidia-12vhpwr-connector-repair-technicians-rtx-5090-rtx-4090/
+    quote: The 12VHPWR power connector melting on the RTX 4090 and RTX 5090 might bring a cloud of misery
+      for gamers, but for repair technicians, Christmas has come early because this major design flaw
+      gives these experts an opportunity to put their skills to the test and make a decent living.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:21:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: nvidia
+      series: rtx 5080
+  kind: known_issue
+  domain: software
+  severity: low
+  consequence: ''
+  detection: ''
+  component: GeForce Game Ready driver
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: GeForce driver 595.71 restricts voltage, lowering RTX 5080 boost clocks
+      body: Driver 595.71 imposed a GPU core voltage limit that dropped boost clocks below 3 GHz and cut
+        power draw on RTX 40/50 cards, replicated on an RTX 5080; NVIDIA had not yet responded.
+      advice: If you overclock an RTX 5080, be aware a driver update can silently cap voltage and boost
+        clocks; check whether a driver change coincides with a sudden performance drop before assuming
+        hardware failure.
+    tr:
+      title: GeForce sürücü 595.71 voltajı kısıtlıyor, RTX 5080 boost saat hızlarını düşürüyor
+      body: Sürücü 595.71, boost saat hızlarını 3 GHz'in altına düşüren ve RTX 40/50 kartlarda güç çekişini
+        azaltan bir GPU çekirdek voltaj sınırı uyguladı, bir RTX 5080'de tekrarlandı; NVIDIA henüz yanıt
+        vermemişti.
+      advice: Bir RTX 5080'i hız aşırtıyorsanız, bir sürücü güncellemesinin voltajı ve boost saat hızlarını
+        sessizce sınırlayabileceğini unutmayın; donanım arızası varsaymadan önce ani bir performans düşüşüyle
+        bir sürücü değişikliğinin çakışıp çakışmadığını kontrol edin.
+  evidence:
+  - url: https://www.tweaktown.com/news/110330/latest-geforce-game-ready-driver-reportedly-restricts-voltage-impacting-performance/index.html
+    quote: This is something we were able to replicate on a GeForce RTX 5080, where a previous 3.0+ GHz
+      overclock was now sitting at sub-3 GHz.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:19:57+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: nvidia
+      series: rtx 5080
+  kind: known_issue
+  domain: software
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: GeForce driver / PCIe 5.0 link
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: NVIDIA investigating RTX 5080 black screen and stability issues
+      body: Owners reported black screens and stability failures on RTX 5080/5090 at launch; NVIDIA confirmed
+        it was investigating. The most common workaround was downshifting PCIe 5.0 to 4.0, which did not
+        resolve it for all owners, and some suspected the GPU drivers.
+      advice: If you hit black screens, try PCIe 4.0 and a single DisplayPort monitor as troubleshooting
+        steps, and keep drivers current since NVIDIA was actively investigating a driver-side cause.
+    tr:
+      title: NVIDIA, RTX 5080 siyah ekran ve kararlılık sorunlarını araştırıyor
+      body: Sahipler, lansmanda RTX 5080/5090'da siyah ekranlar ve kararlılık arızaları bildirdi; NVIDIA
+        araştırdığını doğruladı. En yaygın geçici çözüm, PCIe 5.0'ı 4.0'a düşürmekti, bu tüm sahipler
+        için sorunu çözmedi ve bazıları GPU sürücülerinden şüphelendi.
+      advice: Siyah ekranlarla karşılaşırsanız, sorun giderme adımları olarak PCIe 4.0 ve tek bir DisplayPort
+        monitörü deneyin ve NVIDIA aktif olarak sürücü tarafı bir nedeni araştırdığı için sürücüleri güncel
+        tutun.
+  evidence:
+  - url: https://www.techpowerup.com/332383/nvidia-investigating-reported-geforce-rtx-5090-5080-black-screen-stability-issues?cp=1
+    quote: 'A company spokesperson confirmed that their team is: "investigating the reported issues with
+      the RTX 50-series."'
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:19:57+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: amd
+      series: rx 7900 xtx
+  kind: known_issue
+  domain: thermal
+  severity: high
+  consequence: ''
+  detection: ''
+  component: Thermal interface / GPU hotspot
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: RX 7900 XTX hotspot reached 110-115C until thermal interface replaced
+      body: An owner's ASRock Phantom Gaming unit hit 110-115C hotspot and only recovered after replacing
+        the factory thermal interface with a PTM pad.
+      advice: Hotspot overheating (110C+) is a documented failure on some RX 7900 XTX units; it may require
+        a thermal-interface rework, which is not a cheap or easy fix for a typical shopper.
+    tr:
+      title: RX 7900 XTX hotspot, termal arayüz değiştirilene kadar 110-115C'ye ulaştı
+      body: Bir sahibin ASRock Phantom Gaming birimi 110-115C hotspot'a ulaştı ve ancak fabrika termal
+        arayüzünü bir PTM pedi ile değiştirdikten sonra düzeldi.
+      advice: Hotspot aşırı ısınması (110C+), bazı RX 7900 XTX birimlerinde belgelenmiş bir arızadır;
+        tipik bir alıcı için ucuz veya kolay bir düzeltme olmayan bir termal arayüz yeniden işlemesi gerektirebilir.
+  evidence:
+  - url: https://en.gamegpu.com/news/zhelezo/rx-7900-xtx-poluchila-prirost-15-posle-razgona-i-zameny-termointerfejsa
+    quote: operating temperatures reached 110°C and 115°C
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:18:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: nvidia
+      series: rtx 5090
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: 12V-2x6 power connector
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: RTX 5090 12V-2x6 connector current imbalance — two wires carry 22 A+, connector reaches 150
+        °C
+      body: Der8auer measured on a 5090 Founders Edition that two of the six 12V wires carried over 22
+        A while the rest sat around 2 A, and the PSU-side connector reached 150 °C, against a per-pin
+        design of ~9.5 A.
+      advice: The 12V-2x6 connector does not balance current across its six wires, so a single high-resistance
+        pin can carry most of the load and overheat. This is the mechanism behind the melting reports;
+        a shopper cannot see it without thermal/current instrumentation, so it is a real hidden risk on
+        any 5090.
+    tr:
+      title: RTX 5090 12V-2x6 konektör akım dengesizliği — iki kablo 22 A+ taşıyor, konektör 150 °C'ye
+        ulaşıyor
+      body: Der8auer, bir 5090 Founders Edition üzerinde yaptığı ölçümde altı 12V kablosundan ikisinin
+        22 A'nın üzerinde taşıdığını, geri kalanının ise yaklaşık 2 A civarında olduğunu ve PSU tarafındaki
+        konektörün ~9,5 A'lik bir pin başına tasarıma karşı 150 °C'ye ulaştığını ölçtü.
+      advice: 12V-2x6 konektörü akımı altı kablosu arasında dengelemez, bu nedenle tek bir yüksek dirençli
+        pin yükün çoğunu taşıyabilir ve aşırı ısınabilir. Bu, erime raporlarının arkasındaki mekanizmadır;
+        bir alıcı bunu termal/akım enstrümantasyonu olmadan göremez, bu yüzden herhangi bir 5090'da gerçek
+        bir gizli risktir.
+  evidence:
+  - url: https://www.tecnoandroid.it/news/nvidia-rtx-5090-connettori-ancora-fusi-il-nodo-e-la-corrente-1983857/
+    quote: Der8auer ha misurato su una RTX 5090 Founders Edition due fili su sei oltre i 22 A, mentre
+      gli altri restavano tranquilli intorno ai 2 A. Il connettore lato alimentatore invece di tranquillo
+      aveva ben poco e toccava i 150 gradi.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:20:18+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: amd
+      series: rx 7900 xtx
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: GPU idle power state / memory clock
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: RX 7900 XTX high idle power draw reduced by VRR
+      body: ComputerBase lab testing shows the RX 7900 XTX idles high and drops 81%/71% with VRR enabled.
+      advice: High idle power is a real, documented trait of this card; enabling VRR (and lowering refresh
+        rate) is the practical mitigation.
+    tr:
+      title: RX 7900 XTX yüksek boşta güç çekimi VRR ile azaltıldı
+      body: ComputerBase laboratuvar testi, RX 7900 XTX'in boşta yüksek güç çektiğini ve VRR etkinleştirildiğinde
+        %81/%71 düştüğünü gösteriyor.
+      advice: Yüksek boşta güç, bu kartın gerçek ve belgelenmiş bir özelliğidir; VRR'yi etkinleştirmek
+        (ve yenileme hızını düşürmek) pratik hafifletmedir.
+  evidence:
+  - url: https://www.guru3d.com/story/radeon-graphics-idle-power-consumption-significantly-reduced-with-variable-refresh-rate-(vrr)-feature/?print
+    quote: It demonstrated 81% and 71% less idle power consumption in single and dual-monitor settings,
+      respectively, compared to its usual operation.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:18:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: NVIDIA
+      series: GeForce RTX 40 Series
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: idle power management / power delivery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: RTX 4060 draws ~52W at idle instead of the rated ~7W (high idle power draw)
+      body: Professional review measured ~52W at idle on a Palit RTX 4060, versus ~7W NVIDIA advertises;
+        reviewer attributes it to a driver issue and notes colleagues saw the same.
+      advice: Expect many RTX 4060 units to idle near 50W rather than the advertised ~7W, which raises
+        idle electricity cost. Verify your own unit's idle draw; a driver update or older driver may reduce
+        it, but it is not a hardware failure.
+    tr:
+      title: RTX 4060 boşta belirtilen ~7W yerine ~52W çekiyor (yüksek boşta güç çekimi)
+      body: Profesyonel inceleme, bir Palit RTX 4060'da boşta ~52W ölçtü; NVIDIA'nın reklamını yaptığı
+        ~7W'a karşılık; incelemeyi yapan kişi bunu bir sürücü sorununa bağlıyor ve meslektaşlarının da
+        aynısını gördüğünü belirtiyor.
+      advice: Birçok RTX 4060 biriminin reklamı yapılan ~7W yerine boşta 50W civarında çekmesini bekleyin,
+        bu da boşta elektrik maliyetini artırır. Kendi biriminizin boşta çekimini doğrulayın; bir sürücü
+        güncellemesi veya daha eski bir sürücü bunu azaltabilir, ancak bu bir donanım arızası değildir.
+  evidence:
+  - url: https://www.igorslab.de/en/nvidia-geforce-rtx-4060-8-gb-in-an-objective-review/8/
+    quote: The roughly 52 watts at idle is an imposition. I have already communicated the entire problem
+      of the power consumption, i.e. the significantly higher values in gaming (up to 133 watts e.g. in
+      Cyberpunk 2077 or Horizon Zero Dawn) with the non-OC card as well as the insanely high values in
+      idle, to NVIDIA last (!) week, but have not received a satisfactory answer until today. However,
+      it seems to be a homemade driver problem, because on one of my oldest systems and Windows, the card
+      was satisfied with 14 watts.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:18:41+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: intel
+      series: arc b580
+  kind: known_issue
+  domain: software
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: Linux/Mesa driver (monitor output)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Intel Arc B580 occasional system/monitor freezes on Linux (Mesa)
+      body: A Bazzite (Linux) user reports random monitor lockups/flicker on the B580 with Mesa 25.3.0.
+        This is a Linux-driver quirk, not a hardware failure, and does not affect Windows users.
+      advice: A shopper planning to run the B580 on Linux should expect possible display freezes on some
+        Mesa builds; Windows driver issues were the more prominent reports in this run.
+    tr:
+      title: Intel Arc B580 Linux'ta (Mesa) ara sıra sistem/monitör donmaları
+      body: Bir Bazzite (Linux) kullanıcısı, Mesa 25.3.0 ile B580'de rastgele monitör kilitlenmeleri/titremeleri
+        bildiriyor. Bu bir Linux sürücüsü tuhaflığıdır, donanım arızası değildir ve Windows kullanıcılarını
+        etkilemez.
+      advice: B580'i Linux'ta çalıştırmayı planlayan bir alıcı, bazı Mesa derlemelerinde olası ekran donmalarını
+        beklemelidir; bu çalışmada daha belirgin bildirimler Windows sürücü sorunlarıydı.
+  evidence:
+  - url: https://github.com/ublue-os/bazzite/issues/3682
+    quote: Sometimes while watching videos or opening apps, one of my two monitors locks up and starts
+      mirroring the other while flickering.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:17:08+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: nvidia
+      series: rtx 5080
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: 12VHPWR/16-pin power connector
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: RTX 5080 12VHPWR connector melted with MSI cable
+      body: 'A second independent documented case: an RTX 5080 with an MSI 12VHPWR cable whose connector
+        plastic melted and deformed, causing spontaneous reboots - confirming the 4090-era melting defect
+        has migrated to the 50-series.'
+      advice: Inspect the connector and cable regularly, and treat any spontaneous reboots or heat near
+        the plug as a warning sign; the article notes the small contact area makes the connector vulnerable
+        to distortion or stress regardless of revision.
+    tr:
+      title: RTX 5080 12VHPWR konektörü MSI kablosuyla eridi
+      body: 'İkinci bağımsız belgelenmiş vaka: MSI 12VHPWR kablolu bir RTX 5080''de konektör plastiği
+        eridi ve deforme oldu, kendiliğinden yeniden başlatmalara neden oldu - 4090 dönemi erime kusurunun
+        50 serisine geçtiğini doğruluyor.'
+      advice: Konektörü ve kabloyu düzenli olarak inceleyin ve herhangi bir kendiliğinden yeniden başlatmayı
+        veya fiş yakınındaki ısıyı uyarı işareti olarak değerlendirin; makale, küçük temas alanının revizyondan
+        bağımsız olarak konektörü bozulma veya strese karşı savunmasız hale getirdiğini belirtiyor.
+  evidence:
+  - url: https://en.gamegpu.com/news/zhelezo/12vhpwr-prodolzhayut-plavitsya-na-rtx-50
+    quote: A case of a melted 16-pin (12VHPWR) connector on the new GeForce RTX 5080 was reported on Reddit
+      .
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:19:57+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: nvidia
+      series: rtx 5080
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: 16-pin 12VHPWR power connector/adapter
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: RTX 5080 Gigabyte Gaming OC 16-pin power connector meltdown
+      body: A documented case of a complete 16-pin connector meltdown on an RTX 5080, even in deep undervolting
+        (230-260W average), using the included 8-pin adapter on a non-ATX 3.0 PSU.
+      advice: Prefer a native 12V-2x6 cable from an ATX 3.0 PSU over the included adapter, avoid sharp
+        bends near the plug, and monitor the 16-pin voltage line - the article advises inspecting the
+        connector if it drops below 11.4V while the PCIe slot holds 12V.
+    tr:
+      title: RTX 5080 Gigabyte Gaming OC 16 pinli güç konektörü erimesi
+      body: Bir RTX 5080'de, derin undervolting altında (ortalama 230-260W) bile, ATX 3.0 olmayan bir
+        PSU'da verilen 8 pinli adaptör kullanılarak 16 pinli konektörün tamamen erimesine dair belgelenmiş
+        bir vaka.
+      advice: Verilen adaptör yerine ATX 3.0 PSU'dan gelen yerel bir 12V-2x6 kablo tercih edin, fiş yakınında
+        keskin bükülmelerden kaçının ve 16 pinli voltaj hattını izleyin - makale, PCIe yuvası 12V tutarken
+        11.4V'un altına düşerse konektörü incelemeyi öneriyor.
+  evidence:
+  - url: https://en.gamegpu.com/news/zhelezo/geforce-rtx-5080-stolknulas-s-oplavleniem-16-kontaktnogo-razema-pitaniya
+    quote: the owner of the video card Gigabyte The GeForce RTX 5080 Gaming OC experienced a complete
+      meltdown of its 16-pin power connector.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:19:57+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: NVIDIA
+      series: GeForce RTX 40 Series
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: idle power management / power delivery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Owner reports ASUS Dual RTX 4060 drawing ~52W at idle
+      body: Independent owner report corroborates Igor'sLAB's ~52W idle measurement on a different AIB
+        card (ASUS Dual EVO OC).
+      advice: Confirms the high-idle-draw behavior is not limited to one brand; a shopper should not be
+        alarmed if their 4060 idles near 50W, but should know it contradicts NVIDIA's power-saving claims.
+    tr:
+      title: Sahip, ASUS Dual RTX 4060'ın boşta ~52W çektiğini bildiriyor
+      body: Bağımsız sahip bildirimi, Igor'sLAB'ın farklı bir AIB kartında (ASUS Dual EVO OC) ~52W boşta
+        ölçümünü doğruluyor.
+      advice: Yüksek boşta çekim davranışının tek bir markayla sınırlı olmadığını doğruluyor; bir alıcı,
+        4060'ı boşta 50W civarında çekiyorsa endişelenmemeli, ancak bunun NVIDIA'nın güç tasarrufu iddialarıyla
+        çeliştiğini bilmelidir.
+  evidence:
+  - url: https://www.techspot.com/community/topics/unusually-high-board-power-draw-on-a-rtx-4060-8gb.289410/
+    quote: My ASUS Dual GeForce RTX 4060 EVO OC Edition 8GB reports around 52W board power draw during
+      idle.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:18:41+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: NVIDIA
+      series: GeForce RTX 40 Series
+  kind: known_issue
+  domain: software
+  severity: low
+  consequence: ''
+  detection: ''
+  component: NVIDIA graphics driver
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Galax RTX 4060 image distortion/lag appears only when NVIDIA driver is installed
+      body: Single owner report (Portuguese) of a Galax RTX 4060 showing lag and image distortion only
+        after the NVIDIA driver is installed; one reply suspects a physical VRAM/BGA solder fault rather
+        than the driver.
+      advice: Treat as an isolated, contested report. If a 4060 shows artifacts only with the driver loaded,
+        rule out a hardware defect (VRAM/solder) before blaming the driver; this is not evidence of a
+        widespread driver bug.
+    tr:
+      title: Galax RTX 4060 görüntü bozulması/gecikme yalnızca NVIDIA sürücüsü yüklendiğinde ortaya çıkıyor
+      body: Galax RTX 4060'ın yalnızca NVIDIA sürücüsü yüklendikten sonra gecikme ve görüntü bozulması
+        gösterdiğine dair tek sahipli bir rapor (Portekizce); bir yanıt, sürücü yerine fiziksel bir VRAM/BGA
+        lehim arızasından şüpheleniyor.
+      advice: İzole, tartışmalı bir rapor olarak değerlendirin. Bir 4060 yalnızca sürücü yüklüyken yapaylıklar
+        gösteriyorsa, sürücüyü suçlamadan önce bir donanım arızasını (VRAM/lehim) eleyin; bu, yaygın bir
+        sürücü hatasının kanıtı değildir.
+  evidence:
+  - url: https://www.clubedohardware.com.br/forums/topic/1730844-pc-dando-lag-e-distor%C3%A7%C3%B5es-de-imagem-ao-instalar-driver-da-nvidia-rtx-4060/
+    quote: só que decidi instalar o driver da nvidia de novo e o problema VOLTOU, suspeito fortemente
+      que o problema está relacionado com drivers
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:18:41+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: nvidia
+      series: rtx 4090
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: 12V-2x6/12VHPWR power connector
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 12V-2x6/12VHPWR connector melts on RTX 4090 cards from multiple brands
+      body: A repair technician (Brother Zhang) received two RTX 4090s among eight cards in two days,
+        all with melted power connectors, damaged contacts, and blackened PCBs. The article notes any
+        brand and any model carries the risk, and that a voltage drop to ~11.3V under load is an early
+        warning sign.
+      advice: This confirms the melting is not limited to one AIB partner — any RTX 4090 can be affected.
+        A buyer should monitor 12V rail voltage (a drop to ~11.3V under load is a warning) and check connector
+        temperature by hand. Repair cost is high because the connector sits on the PCB.
+    tr:
+      title: 12V-2x6/12VHPWR konektörü birden fazla markanın RTX 4090 kartlarında eriyor
+      body: Bir onarım teknisyeni (Brother Zhang) iki günde sekiz kart arasında iki RTX 4090 aldı; hepsinde
+        erimiş güç konektörleri, hasarlı kontaklar ve kararmış PCB'ler vardı. Makale, herhangi bir markanın
+        ve herhangi bir modelin risk taşıdığını ve yük altında ~11,3V'a düşen bir voltajın erken bir uyarı
+        işareti olduğunu belirtiyor.
+      advice: Bu, erimenin tek bir AIB ortağıyla sınırlı olmadığını doğruluyor — herhangi bir RTX 4090
+        etkilenebilir. Bir alıcı 12V ray voltajını izlemeli (yük altında ~11,3V'a düşüş bir uyarıdır)
+        ve konektör sıcaklığını elle kontrol etmelidir. Onarım maliyeti yüksektir çünkü konektör PCB üzerinde
+        yer alır.
+  evidence:
+  - url: https://www.overclockers.ua/ru/news/geforce-rtx-5090-4090-burned-power-connectors-eight-gpus-two-days/
+    quote: Все имеют следы оплавления разъема питания, поврежденные контакты и почерневшие печатные платы
+      в этой зоне.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:19:08+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: intel
+      series: arc b580
+  kind: known_issue
+  domain: software
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: driver/game compatibility (Vulkan renderer)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Intel Arc B580 Vulkan crash makes Path of Exile 2 unplayable
+      body: Multiple B580 owners report the game crashing within a minute on Vulkan after a game patch,
+        even after DDU and the latest WHQL drivers; DX12 is reportedly near-unplayable. This is a driver/game
+        compatibility quirk, not hardware failure.
+      advice: A shopper should expect that some current titles break on the B580's Vulkan path until a
+        driver or game patch lands; verify the specific games you play before committing.
+    tr:
+      title: Intel Arc B580 Vulkan çökmesi Path of Exile 2'yi oynanamaz hale getiriyor
+      body: Birden fazla B580 sahibi, bir oyun yamasından sonra oyunun Vulkan'da bir dakika içinde çöktüğünü,
+        DDU ve en son WHQL sürücülerinden sonra bile bunun devam ettiğini bildiriyor; DX12'nin neredeyse
+        oynanamaz olduğu bildiriliyor. Bu bir donanım arızası değil, sürücü/oyun uyumluluk tuhaflığıdır.
+      advice: Bir alıcı, bir sürücü veya oyun yaması gelene kadar bazı güncel oyunların B580'in Vulkan
+        yolunda bozulacağını beklemelidir; taahhütte bulunmadan önce oynadığınız belirli oyunları doğrulayın.
+  evidence:
+  - url: https://www.pathofexile.com/forum/view-thread/3888463/page
+    quote: Intel arc b580 used to run Poe2 great, but now I am getting a bug where the game keeps crashing
+      when I have Vulkan turned on.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:17:08+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: nvidia
+      series: rtx 5090
+  kind: known_issue
+  domain: thermal
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: GDDR7 VRAM / memory controller
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: RTX 5090 high idle power draw (17–44 W) and temperature-dependent idle behaviour
+      body: Owners report idle draw between 17 and 44 W, and the draw rises with temperature over ~30
+        minutes as the cooler warms up; the Igor's Lab review of the MSI SUPRIM SOC measured 29–34 W idle
+        and called it a possible driver problem.
+      advice: Idle power draw is unusually high and temperature-dependent, which matters for a quiet/low-power
+        build and for electricity cost in the EU. It is not a catastrophic failure but a hidden operating-cost
+        and noise consideration; some owners reduce it with undervolting or forcing fans on.
+    tr:
+      title: RTX 5090 yüksek boşta güç tüketimi (17–44 W) ve sıcaklığa bağlı boşta davranış
+      body: Sahipler 17 ile 44 W arasında boşta tüketim bildiriyor ve soğutucu ısındıkça tüketim ~30 dakika
+        içinde sıcaklıkla birlikte artıyor; MSI SUPRIM SOC'un Igor's Lab incelemesi boşta 29–34 W ölçtü
+        ve bunu olası bir sürücü sorunu olarak nitelendirdi.
+      advice: Boşta güç tüketimi alışılmadık derecede yüksek ve sıcaklığa bağlı; bu, sessiz/düşük güçlü
+        bir sistem ve AB'de elektrik maliyeti için önemlidir. Felaket bir arıza değil, gizli bir işletme
+        maliyeti ve gürültü hususudur; bazı sahipler bunu undervolting veya fanları zorla çalıştırarak
+        azaltıyor.
+  evidence:
+  - url: https://www.hardwareluxx.de/community/threads/5090-hoher-idle-verbrauch-l%C3%B6sung.1365354/
+    quote: Der Idle Verbrauch einer 5090 ist extrem Temperaturabhängig.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:20:18+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: amd
+      series: rx 7900 xtx
+  kind: known_issue
+  domain: software
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: AMD Adrenalin driver
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: RX 7900 XTX black screens and driver freezes; only 24.12.1 stable
+      body: An owner community thread reports black screens and driver freezes on the RX 7900 XTX, with
+        only driver build 24.12.1 proving stable after a clean DDU reinstall.
+      advice: Black-screen/driver-freeze reports are common enough that you should plan on driver troubleshooting
+        (clean installs, possibly pinning an older build) after purchase.
+    tr:
+      title: RX 7900 XTX siyah ekranlar ve sürücü donmaları; yalnızca 24.12.1 kararlı
+      body: Bir sahip topluluğu başlığı, RX 7900 XTX'te siyah ekranlar ve sürücü donmaları bildiriyor;
+        temiz bir DDU yeniden yüklemesinden sonra yalnızca 24.12.1 sürücü derlemesinin kararlı olduğu
+        ortaya çıktı.
+      advice: Siyah ekran/sürücü donması raporları yeterince yaygın ki satın alma sonrasında sürücü sorun
+        gidermeyi (temiz yüklemeler, muhtemelen daha eski bir derlemeyi sabitleme) planlamalısınız.
+  evidence:
+  - url: https://en.gamegpu.com/news/zhelezo/vladeltsy-radeon-rx-7900-i-rx-9070-xt-ishchut-reshenie-problem-s-chernymi-ekranami
+    quote: Only build 24.12.1 proved stable, provided a clean reinstallation was performed using Display
+      Driver Uninstaller in Safe Mode.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:18:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: intel
+      series: arc b580
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: PCIe power connector seating
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Intel Arc B580 power connector seating issue left card unrecognized
+      body: One owner on Intel's own community forum reports the B580 not being recognized until he shimmed
+        the power connector for pressure, and that wiggling it while powered caused a crash. Single-owner
+        report in a Dell PowerEdge R730 server, so it is anecdotal and not a documented mass failure.
+      advice: This is a weak, single-source electrical report in an unusual server build; a shopper should
+        not weigh it heavily, but should seat the power connector firmly. No widespread B580 connector-melting
+        reports were found.
+    tr:
+      title: Intel Arc B580 güç konektörü oturma sorunu kartın tanınmamasına yol açtı
+      body: Intel'in kendi topluluk forumunda bir sahip, güç konektörünü baskı için destekleyene kadar
+        B580'in tanınmadığını ve güç açıkken onu oynatmanın bir çökmeye neden olduğunu bildiriyor. Bir
+        Dell PowerEdge R730 sunucusunda tek sahipli rapor, yani anekdot niteliğinde ve belgelenmiş bir
+        kitlesel arıza değil.
+      advice: Bu, alışılmadık bir sunucu yapısında zayıf, tek kaynaklı bir elektriksel rapordur; bir alıcı
+        buna fazla ağırlık vermemeli, ancak güç konektörünü sıkıca oturtmalıdır. Yaygın B580 konektör
+        erimesi raporu bulunamadı.
+  evidence:
+  - url: https://community.intel.com/t5/Intel-Arc-Discrete-Graphics/b580-power-connector/td-p/1739401?profile.language=pt
+    quote: I placed a piece of plastic under the power connector to keep pressure on power connector.
+      I was able to reboot and this time the card was recognized fully with the white LEDS lit up showing
+      power was on to the card.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:17:08+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: nvidia
+      series: rtx 5090
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: 12+4-pin (12V-2x6) power connector
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: RTX 5090 12+4-pin power connector melting — repair centre receives seven bricked cards in
+        two days
+      body: A single repair shop received seven bricked Nvidia cards in two days, mostly RTX 5090s across
+        multiple brands including the Founders Edition, all with burnt 12+4-pin interfaces, some melted
+        into the socket so the cable had to be snipped off.
+      advice: Before buying, budget for a PSU/cable with a fully seated 12V-2x6 connector and check the
+        12V readout in GPU-Z; the repairman notes that if the 12+4-pin voltage drops well below 12 V (to
+        ~11.3–11.4 V) the connector is likely failing and should be checked by hand for heat. This is
+        the highest-cost failure mode — a melted connector can brick the card and damage the PSU.
+    tr:
+      title: RTX 5090 12+4-pin güç konektörü eriyor — onarım merkezine iki günde yedi bozuk kart geldi
+      body: Tek bir onarım dükkânına iki günde yedi bozuk Nvidia kartı geldi; çoğu Founders Edition dahil
+        birden fazla markadan RTX 5090'lardı ve hepsinde yanmış 12+4-pin arayüzleri vardı, bazıları sokete
+        erimişti, bu yüzden kablonun kesilmesi gerekti.
+      advice: Satın almadan önce, tam oturmuş 12V-2x6 konektörlü bir PSU/kablo için bütçe ayırın ve GPU-Z'deki
+        12V değerini kontrol edin; tamirci, 12+4-pin voltajı 12 V'nin çok altına düşerse (~11,3–11,4 V)
+        konektörün muhtemelen arızalandığını ve elle ısı açısından kontrol edilmesi gerektiğini belirtiyor.
+        Bu, en yüksek maliyetli arıza modudur — erimiş bir konektör kartı bozabilir ve PSU'ya zarar verebilir.
+  evidence:
+  - url: https://tech.yahoo.com/computing/articles/one-repair-centre-received-awful-100007524.html
+    quote: And they're all because of burnt interfaces between the 12+4-pin power cable and the card itself.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:20:18+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: nvidia
+      series: rtx 5090
+  kind: known_issue
+  domain: general
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: ROPs (render output units)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: RTX 5090 missing ROPs — ~0.5% of cards affected, up to ~4% performance loss
+      body: NVIDIA confirmed a rare production anomaly where ~0.5% of RTX 5090/5090D and 5070 Ti cards
+        ship with one fewer ROP than specified, costing up to ~4% raster performance; NVIDIA says affected
+        consumers can contact the board maker for a replacement.
+      advice: A buyer cannot see this without checking GPU-Z (ROP count should be 176 on the 5090). If
+        the card is affected, it is a performance defect that is RMA-able, so checking ROPs on arrival
+        is a cheap way to catch it.
+    tr:
+      title: RTX 5090'da eksik ROP'lar — kartların ~%0,5'i etkileniyor, ~%4'e kadar performans kaybı
+      body: NVIDIA, RTX 5090/5090D ve 5070 Ti kartlarının ~%0,5'inin belirtilenden bir eksik ROP ile sevk
+        edildiği nadir bir üretim anomalisini doğruladı; bu, ~%4'e kadar raster performans kaybına yol
+        açıyor; NVIDIA, etkilenen tüketicilerin değişim için kart üreticisiyle iletişime geçebileceğini
+        söylüyor.
+      advice: Bir alıcı bunu GPU-Z'yi kontrol etmeden göremez (5090'da ROP sayısı 176 olmalıdır). Kart
+        etkilenmişse, bu RMA'ya uygun bir performans kusurudur, bu yüzden geldiğinde ROP'ları kontrol
+        etmek bunu yakalamanın ucuz bir yoludur.
+  evidence:
+  - url: https://www.pugetsystems.com/blog/2025/02/26/nvidia-geforce-rtx-50-series-missing-rops-issue/
+    quote: NVIDIA estimates that this affects about 0.5% of all 50-series GPUs—roughly one out of every
+      200 cards.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:20:18+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: nvidia
+      series: rtx 4090
+  kind: known_issue
+  domain: software
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: GeForce Game Ready Driver 621.01
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: GeForce Game Ready Driver 621.01 causes black screens and video freezes on RTX 4090
+      body: A driver regression in GeForce 621.01 causes video playback freezes, brief black screens,
+        and driver resets, with one RTX 4090 user reporting a second 4K display stuttering whenever a
+        game runs on the primary monitor. The issue disappeared after reverting to driver 617.42, pointing
+        to a driver regression rather than a hardware defect.
+      advice: This is a software issue, not a hardware fault — NVIDIA is investigating and a rollback
+        to 617.42 is the workaround. A buyer should not treat this as a reason to avoid the card, but
+        should know that a specific recent driver build can cause black screens until fixed.
+    tr:
+      title: GeForce Game Ready Driver 621.01, RTX 4090'da siyah ekranlara ve video donmalarına neden
+        oluyor
+      body: GeForce 621.01'deki bir sürücü regresyonu video oynatma donmalarına, kısa siyah ekranlara
+        ve sürücü sıfırlamalarına neden oluyor; bir RTX 4090 kullanıcısı, bir oyun birincil monitörde
+        çalıştığında ikinci 4K ekranın takıldığını bildiriyor. Sorun, sürücü 617.42'ye geri dönüldükten
+        sonra kayboldu; bu da donanım kusuru yerine bir sürücü regresyonuna işaret ediyor.
+      advice: Bu bir donanım arızası değil, yazılım sorunudur — NVIDIA araştırıyor ve 617.42'ye geri dönmek
+        geçici çözümdür. Bir alıcı bunu karttan kaçınmak için bir neden olarak görmemelidir, ancak belirli
+        bir son sürücü yapısının düzeltilene kadar siyah ekranlara neden olabileceğini bilmelidir.
+  evidence:
+  - url: https://www.igorslab.de/en/geforce-621-01-video-freezes-black-screens/
+    quote: Reports include users with GeForce RTX 5080 and RTX 4090 graphics cards.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:19:08+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: amd
+      series: rx 7900 xtx
+  kind: known_issue
+  domain: thermal
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: GDDR6 memory junction / VRAM
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: RX 7900 XTX memory junction temperature reaches 98C in games
+      body: An owner on the HWiNFO forum reports memory junction at 98C in games on Auto fan, far hotter
+        than the GPU core/hotspot.
+      advice: Memory junction runs hot on this card; if you care about VRAM thermals, check your specific
+        model's cooling and airflow before buying.
+    tr:
+      title: RX 7900 XTX bellek bağlantı noktası sıcaklığı oyunlarda 98C'ye ulaşıyor
+      body: HWiNFO forumunda bir sahip, Auto fan ile oyunlarda bellek bağlantı noktasının 98C olduğunu,
+        GPU çekirdeği/hotspot'tan çok daha sıcak olduğunu bildiriyor.
+      advice: Bu kartta bellek bağlantı noktası sıcak çalışır; VRAM termalleri sizin için önemliyse, satın
+        almadan önce belirli modelinizin soğutmasını ve hava akışını kontrol edin.
+  evidence:
+  - url: https://www.hwinfo.com/forum/threads/7900-xtx-higher-than-expected-memory-junction-temperature.8553/
+    quote: On Auto fan in games it reaches 98c, seems rather warm as the other temps are all much lower.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:18:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: amd
+      series: rx 7900 xtx
+  kind: known_issue
+  domain: software
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: AMD Adrenalin driver / VBIOS
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: AMD Adrenalin drivers 24.x-26.x make RX 7900 XTX/XT less stable in DX12
+      body: A Reddit-sourced report that newer AMD drivers destabilize RDNA 3 (RX 7900 XTX/XT) in DX12,
+        with rollback to 23.12.1/23.9.3 as the only fix.
+      advice: If you buy this card, expect that a current driver may crash in DX12 titles; budget for
+        the possibility of pinning an older driver version.
+    tr:
+      title: AMD Adrenalin sürücüleri 24.x-26.x, RX 7900 XTX/XT'yi DX12'de daha az kararlı hale getiriyor
+      body: Reddit kaynaklı bir rapor, daha yeni AMD sürücülerinin RDNA 3'ü (RX 7900 XTX/XT) DX12'de istikrarsızlaştırdığını
+        ve tek çözümün 23.12.1/23.9.3'e geri dönmek olduğunu belirtiyor.
+      advice: Bu kartı satın alırsanız, mevcut bir sürücünün DX12 oyunlarında çökebileceğini bekleyin;
+        daha eski bir sürücü sürümüne sabitleme olasılığı için bütçe ayırın.
+  evidence:
+  - url: https://en.gamegpu.com/news/zhelezo/novye-drajvery-amd-delayut-rdna-3-nestabilnoj-v-ugodu-rx-9000
+    quote: Driver versions 24.x, 25.x and 26.x made cards of the series RX 7900 XTX/XT are less stable
+      in a DX12 environment.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:18:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: nvidia
+      series: rtx 5070 ti
+  kind: known_issue
+  domain: thermal
+  severity: low
+  consequence: ''
+  detection: ''
+  component: GPU idle power draw (12V rails)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: RTX 5070 Ti idle power draw runs 28-30W, higher than the 10-15W some expect
+      body: Owners measured the 5070 Ti idling at 28-30W (PNY OC card) and ~64W for a whole system with
+        a Gigabyte Windforce, while some expected 10-15W. A parallel German thread reports HWiNFO showing
+        25-27W idle on a 5070 Ti.
+      advice: If idle power draw matters to you (always-on PC, electricity cost), expect roughly 25-30W
+        at idle rather than the lower figures some marketing suggests; this is a characteristic, not a
+        failure.
+    tr:
+      title: RTX 5070 Ti boşta güç tüketimi 28-30W seviyesinde, bazılarının beklediği 10-15W'tan yüksek
+      body: Sahipler, 5070 Ti'nin boşta 28-30W (PNY OC kart) ve Gigabyte Windforce ile tüm sistem için
+        ~64W çektiğini ölçtü; bazıları ise 10-15W bekliyordu. Paralel bir Almanca başlık, HWiNFO'nun bir
+        5070 Ti'de boşta 25-27W gösterdiğini bildiriyor.
+      advice: Boşta güç tüketimi sizin için önemliyse (sürekli açık PC, elektrik maliyeti), bazı pazarlama
+        söylemlerinin önerdiği daha düşük rakamlar yerine boşta yaklaşık 25-30W bekleyin; bu bir arıza
+        değil, bir özelliktir.
+  evidence:
+  - url: https://www.computerbase.de/forum/threads/gpu-stromverbrauch-2025-neue-messungen-zur-leistungs-aufnahme-von-grafik-karten.2241482/page-2
+    quote: Bei der PNY RTX 5070 ti OC, die ich kurz hatte, hat nur die Grafikkarte im Idle 28-30 W gebraucht.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:19:39+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: nvidia
+      series: rtx 4090
+  kind: known_issue
+  domain: electrical
+  severity: low
+  consequence: ''
+  detection: ''
+  component: GPU idle power management
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: RTX 4090 high idle power draw
+      body: Independent measurements put the 4090's idle draw around 33-34 W (igorslab KFA2 review; ServeTheHome
+        FE review ~33 W idle). Not a failure, but a real and recurring cost for a card that sits at idle
+        much of the day.
+      advice: If the PC runs idle for long hours, the ~33 W idle draw adds up on the electricity bill;
+        it is not a defect, just a documented efficiency characteristic of the 4090.
+    tr:
+      title: RTX 4090 yüksek boşta güç çekimi
+      body: Bağımsız ölçümler, 4090'ın boşta çekimini yaklaşık 33-34 W olarak gösteriyor (igorslab KFA2
+        incelemesi; ServeTheHome FE incelemesi ~33 W boşta). Bir arıza değil, ancak günün büyük bölümünde
+        boşta duran bir kart için gerçek ve tekrarlayan bir maliyet.
+      advice: PC uzun saatler boşta çalışıyorsa, ~33 W boşta çekim elektrik faturasında birikir; bu bir
+        kusur değil, 4090'ın belgelenmiş bir verimlilik özelliğidir.
+  evidence:
+  - url: https://www.igorslab.de/en/kfa2-geforce-rtx-4090-sg-24gb-1-click-oc-review/5/
+    quote: What is a real step backwards from my point of view is the very high power consumption at idle,
+      which rarely falls below 34 watts even when the GPU is heavily downclocked.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:21:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: nvidia
+      series: rtx 5080
+  kind: known_issue
+  domain: software
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: GeForce Game Ready driver
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: GeForce driver 621.01 causes video freezes and black screens on RTX 5080
+      body: A driver regression in 621.01 caused video playback freezes, brief black screens, and driver
+        resets, reported on RTX 5080; NVIDIA acknowledged it and asked for diagnostic data. Rolling back
+        to 617.42 resolved it.
+      advice: If you see video freezes or black screens during playback on an RTX 5080, roll back to driver
+        617.42 - the article identifies it as the comparison driver until NVIDIA fixes 621.01.
+    tr:
+      title: GeForce sürücü 621.01, RTX 5080'de video donmalarına ve siyah ekranlara neden oluyor
+      body: 621.01'deki bir sürücü regresyonu, RTX 5080'de bildirilen video oynatma donmalarına, kısa
+        siyah ekranlara ve sürücü sıfırlamalarına neden oldu; NVIDIA bunu kabul etti ve tanılama verisi
+        istedi. 617.42'ye geri dönmek sorunu çözdü.
+      advice: RTX 5080'de oynatma sırasında video donmaları veya siyah ekranlar görürseniz, 617.42 sürücüsüne
+        geri dönün - makale, NVIDIA 621.01'i düzeltene kadar bunu karşılaştırma sürücüsü olarak tanımlıyor.
+  evidence:
+  - url: https://www.igorslab.de/en/geforce-621-01-video-freezes-black-screens/
+    quote: The GeForce Game Ready Driver 621.01, released on October 21, is causing video playback to
+      freeze, brief black screens, and driver resets for several users.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:19:08+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: nvidia
+      series: rtx 5070 ti
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: 12VHPWR power connector (bundled 3x8-pin adapter)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 12VHPWR power connector melted at ~300W on MSI Vanguard RTX 5070 Ti
+      body: An owner reported a melted 12VHPWR connector on a 5070 Ti at only ~300W while using the bundled
+        adapter; commenters blamed a sharply bent cable against the case side glass misaligning contacts,
+        while others faulted the connector standard itself. A second independent source (overclockers.ru)
+        states 16-pin connector melting affects the 5080 and 5070 Ti, not just the 5090.
+      advice: Use a native straight 12V-2x6 PSU cable rather than the bundled adapter, and ensure the
+        cable is not sharply bent against the side panel. Check the connector for heat under load. This
+        is the same failure class that hit the RTX 4090.
+    tr:
+      title: MSI Vanguard RTX 5070 Ti'da 12VHPWR güç konektörü ~300W'ta eridi
+      body: Bir sahip, paketle gelen adaptörü kullanırken yalnızca ~300W'ta bir 5070 Ti'da erimiş bir
+        12VHPWR konektörü bildirdi; yorumcular, kasa yan camına karşı keskin şekilde bükülen bir kablonun
+        kontakları yanlış hizaladığını suçlarken, diğerleri konektör standardının kendisini kusurlu buldu.
+        İkinci bir bağımsız kaynak (overclockers.ru), 16 pinli konektör erimesinin yalnızca 5090'ı değil,
+        5080 ve 5070 Ti'yi de etkilediğini belirtiyor.
+      advice: Paketle gelen adaptör yerine doğrudan düz bir 12V-2x6 PSU kablosu kullanın ve kablonun yan
+        panele karşı keskin şekilde bükülmediğinden emin olun. Yük altında konektörü ısı açısından kontrol
+        edin. Bu, RTX 4090'ı vuran aynı arıza sınıfıdır.
+  evidence:
+  - url: https://en.gamegpu.com/news/zhelezo/12vhpwr-konnektor-rasplavilsya-vsego-na-300-vt-u-rtx-5070-ti
+    quote: A user shared photos of the melted connector on their MSI Vanguard RTX 5070 Ti. Interestingly,
+      the issue occurred while using the official adapter included in the graphics card box.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:19:39+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: nvidia
+      series: rtx 4090
+  kind: known_issue
+  domain: software
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: GeForce Game Ready driver 621.01
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: GeForce driver regression causes video freezes and black screens on RTX 4090
+      body: NVIDIA officially acknowledged a regression in driver 621.01 causing video freezes/black screens,
+        with RTX 4090 owners among those affected; the issue disappears after rolling back to driver 617.42.
+        A separate R570-branch thread on guru3d also reports BSODs on RTX 4090 after driver updates.
+      advice: If you buy a 4090, be ready to pin or roll back the driver — a bad driver branch can cause
+        freezes/black screens that look like a hardware fault. Check NVIDIA's known-issues list before
+        updating.
+    tr:
+      title: GeForce sürücü regresyonu, RTX 4090'da video donmalarına ve siyah ekranlara neden oluyor
+      body: NVIDIA, 621.01 sürücüsünde video donmalarına/siyah ekranlara neden olan bir regresyonu resmen
+        kabul etti ve RTX 4090 sahipleri etkilenenler arasında yer aldı; sorun 617.42 sürücüsüne geri
+        dönüldükten sonra kayboluyor. guru3d'deki ayrı bir R570 dalı konusu da sürücü güncellemelerinden
+        sonra RTX 4090'da BSOD'lar bildiriyor.
+      advice: Bir 4090 alırsanız, sürücüyü sabitlemeye veya geri almaya hazır olun - kötü bir sürücü dalı,
+        donanım arızası gibi görünen donmalara/siyah ekranlara neden olabilir. Güncellemeden önce NVIDIA'nın
+        bilinen sorunlar listesini kontrol edin.
+  evidence:
+  - url: https://www.igorslab.de/en/geforce-621-01-video-freezes-black-screens/
+    quote: Reports include users with GeForce RTX 5080 and RTX 4090 graphics cards.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:19:08+00:00'

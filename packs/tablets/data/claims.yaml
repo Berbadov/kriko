@@ -1,0 +1,2099 @@
+# Claims — what is known to go wrong, each with the page it came from and the quote
+# that was read there. A claim without both is not in this file.
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      model: pad-6
+  kind: known_issue
+  domain: connectivity
+  severity: high
+  consequence: ''
+  detection: ''
+  component: Wi-Fi radio / wireless module
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Xiaomi Pad 6 Wi-Fi fails on some units despite resets and cable fixes
+      body: A Polish review aggregation reports that on some units Wi-Fi does not work at all, even after
+        resetting settings or installing fixes via cable. This is a hardware-level connectivity failure
+        that would require service or replacement.
+      advice: If buying, verify Wi-Fi works immediately on the unit you receive; if it fails, return it
+        rather than attempting software fixes.
+    tr:
+      title: Xiaomi Pad 6 Wi-Fi bazı birimlerde sıfırlamalara ve kablo düzeltmelerine rağmen çalışmıyor
+      body: Bir Polonyalı inceleme toplayıcısı, bazı birimlerde ayarları sıfırladıktan veya kablo ile
+        düzeltmeler yükledikten sonra bile Wi-Fi'nin hiç çalışmadığını bildiriyor. Bu, servis veya değişim
+        gerektirecek donanım düzeyinde bir bağlantı arızasıdır.
+      advice: Satın alıyorsanız, aldığınız birimde Wi-Fi'nin hemen çalıştığını doğrulayın; çalışmazsa
+        yazılım düzeltmeleri denemek yerine iade edin.
+  evidence:
+  - url: https://www.mgsm.pl/pl/katalog/xiaomi/pad6/opinie/
+    quote: W niektórych egzemplarzach łączność z internetem bezprzewodowym nie funkcjonuje, mimo prób
+      resetowania ustawień czy instalowania poprawek przez kabel.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:31:31+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      model: galaxy-tab-a7-lite
+  kind: known_issue
+  domain: hardware
+  severity: high
+  consequence: ''
+  detection: ''
+  component: Mainboard / battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Galaxy Tab A7 Lite died completely just after the return window closed
+      body: An owner reports the tablet died completely at about five months, right after the return window
+        closed, unresponsive to any charging method.
+      advice: A total failure shortly after the return window is the worst-case outcome; buy from a seller
+        with a real warranty and test the unit hard in the first weeks.
+    tr:
+      title: Galaxy Tab A7 Lite iade süresi kapanır kapanmaz tamamen öldü
+      body: Bir sahip, tabletin yaklaşık beş ayda, iade süresi kapanır kapanmaz tamamen öldüğünü ve hiçbir
+        şarj yöntemine yanıt vermediğini bildiriyor.
+      advice: İade süresinden kısa süre sonra tamamen arıza en kötü senaryodur; gerçek garantisi olan
+        bir satıcıdan satın alın ve ilk haftalarda birimi zorlayıcı şekilde test edin.
+  evidence:
+  - url: https://sellout.woot.com/review/B09KKMLR4R?offerid=1de0d5f3-eb70-4a93-b9e3-46484a307440&itemid=17548020-016e-45b8-90be-9db0ef1e9d35&filter=3&isVerified=false&page=1&sort=0
+    quote: as of 5 months and right after the return window closed, the tablet died completely. No amount
+      of charging, changing ports, wall outlets etc could make it come back to life.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:28:40+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      model: galaxy-tab-a9
+  kind: known_issue
+  domain: power
+  severity: high
+  consequence: ''
+  detection: ''
+  component: charging port / battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Repeated charging failure, service cannot resolve it
+      body: An owner reports the A9 stops charging and was sent to authorized service 3–4 times, with
+        the service returning it saying 'no problem' while the fault persists. A second complaint on the
+        same site says the charging port was only blocked with dirt and cost 100 TL to fix, while an authorized
+        service quoted ~5000 TL for a case swap.
+      advice: Charging faults are common and service outcomes vary widely; before paying for a costly
+        repair, have a second service check the port for debris. A tablet that repeatedly fails to charge
+        is a real cost to discover.
+    tr:
+      title: Tekrarlanan şarj arızası, servis çözemiyor
+      body: Bir sahip, A9'un şarj olmayı kestiğini ve 3–4 kez yetkili servise gönderildiğini, servisin
+        arıza devam ederken 'sorun yok' diyerek geri gönderdiğini bildiriyor. Aynı sitedeki ikinci bir
+        şikayet, şarj portunun yalnızca kirle tıkandığını ve düzeltmenin 100 TL tuttuğunu, yetkili servisin
+        ise kasa değişimi için ~5000 TL fiyat verdiğini söylüyor.
+      advice: Şarj arızaları yaygındır ve servis sonuçları büyük ölçüde değişir; maliyetli bir onarım
+        için ödeme yapmadan önce ikinci bir servise portu kalıntı açısından kontrol ettirin. Tekrar tekrar
+        şarj olmayan bir tablet, keşfedilmesi gerçek bir maliyet olan bir durumdur.
+  evidence:
+  - url: https://www.sikayetvar.com/samsung-telefon/sarj-almayan-samsung-galaxy-tab-a9-yetkili-serviste-cozum-bulunamiyor-degisim-talebi
+    quote: Samsung Galaxy TAB a9 tabletim şarj almıyor. Bu sorun uzun süredir devam ettiği için cihazı
+      şimdiye kadar 3–4 kez yetkili servise gönderdik.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:27:34+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: lenovo
+      model: tab-m11
+  kind: known_issue
+  domain: performance
+  severity: high
+  consequence: ''
+  detection: ''
+  component: MediaTek Helio G88 SoC / RAM
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Tablet slows down and cannot handle two apps at once
+      body: Found via 'Lenovo Tab M11 problems review' (Alza.cz customer review, Czech market).
+      advice: A verified Czech buyer reports the tablet slows down a lot and cannot handle two apps at
+        once, so multitasking performance is a real limitation for this entry-tier model.
+    tr:
+      title: Tablet yavaşlıyor ve aynı anda iki uygulamayı kaldıramıyor
+      body: '''Lenovo Tab M11 problems review'' (Alza.cz müşteri incelemesi, Çek pazarı) aracılığıyla
+        bulundu.'
+      advice: Doğrulanmış bir Çek alıcı, tabletin çok yavaşladığını ve aynı anda iki uygulamayı kaldıramadığını
+        bildiriyor, bu nedenle çoklu görev performansı bu giriş seviyesi model için gerçek bir sınırlamadır.
+  evidence:
+  - url: https://m.alza.cz/EN/reviews/lenovo-tab-m11-lte-8gb-128gb-luna-grey-lenovo-active-stylus-12221369.htm
+    quote: Slows down a lot, can't handle two apps at once
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:26:25+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: huawei
+      model: matepad-11
+  kind: known_issue
+  domain: software
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: firmware / system update
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Firmware update on MatePad 11 reportedly loses sound and battery autonomy
+      body: A buyer review on Technodom for the MatePad 11 (Debussy-W09CS).
+      advice: An owner warns not to update past firmware 2.0.0.221 because the update degrades sound and
+        battery life; another reports installed apps disappearing on their own. Treat OS updates as risky
+        and keep backups.
+    tr:
+      title: MatePad 11'de ürün yazılımı güncellemesinin ses ve pil özerkliğini kaybettiği bildiriliyor
+      body: Technodom'da MatePad 11 (Debussy-W09CS) için bir alıcı incelemesi.
+      advice: Bir sahip, güncellemenin sesi ve pil ömrünü bozduğu için 2.0.0.221 ürün yazılımının ötesine
+        güncelleme yapılmaması konusunda uyarıyor; bir diğeri yüklü uygulamaların kendiliğinden kaybolduğunu
+        bildiriyor. İşletim sistemi güncellemelerini riskli olarak değerlendirin ve yedekleri koruyun.
+  evidence:
+  - url: https://www.technodom.kz/p/planshet-huawei-mate-pad-11-128gb-wifi-matte-grey-w09cs-252350/reviews
+    quote: Если у вас прошивка 2.0.0.221 и ниже, не обновляйтесь, потеряете и звук и автономность.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:30:35+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: huawei
+      model: matepad-se-11
+  kind: known_issue
+  domain: power
+  severity: low
+  consequence: ''
+  detection: ''
+  component: battery HB27G3B1EGW-12
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'MatePad SE 11 battery part: HB27G3B1EGW-12, 7600 mAh, AGS6 family'
+      body: Identifies the replacement battery part number and the AGS6 model family for the SE 11; the
+        seller lists it for fast discharge, unexpected shutdowns and irregular charging.
+      advice: If the battery fails, this is the part number to search for; the AGS6 code confirms the
+        SE 11 model identity.
+    tr:
+      title: 'MatePad SE 11 pil parçası: HB27G3B1EGW-12, 7600 mAh, AGS6 ailesi'
+      body: SE 11 için yedek pil parça numarasını ve AGS6 model ailesini tanımlar; satıcı bunu hızlı deşarj,
+        beklenmedik kapanmalar ve düzensiz şarj için listeliyor.
+      advice: Pil arızalanırsa, aranacak parça numarası budur; AGS6 kodu SE 11 model kimliğini doğrular.
+  evidence:
+  - url: https://www.spainsellers.com/en/battery-hb27g3b1egw-12-7600mah-by-huawei-matepad-115-huawei-matepad-se-11-premium-quality-p-78681.html
+    quote: HB27G3B1EGW-12 7600mAh battery for Huawei MatePad 11.5 and Huawei MatePad SE 11 in premium
+      quality
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:26:07+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      model: galaxy-tab-a7-lite
+  kind: known_issue
+  domain: performance
+  severity: high
+  consequence: ''
+  detection: ''
+  component: MediaTek Helio P22T / 3GB RAM
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Galaxy Tab A7 Lite is strangely sluggish with stutter on basic tasks
+      body: An owner review (posted on bestbuy.com) of the A7 Lite reports the tablet stutters on basic
+        navigation and app launching.
+      advice: Expect noticeable lag on everyday tasks; this is the most repeated complaint across sources.
+        Buyers wanting smooth multitasking should look above this entry tier.
+    tr:
+      title: Galaxy Tab A7 Lite temel görevlerde takılmalarla garip biçimde yavaş
+      body: A7 Lite hakkında bestbuy.com'da yayımlanan bir sahip incelemesi, tabletin temel gezinme ve
+        uygulama başlatmada takıldığını bildiriyor.
+      advice: Günlük görevlerde belirgin gecikme bekleyin; bu, kaynaklar arasında en çok tekrarlanan şikâyettir.
+        Sorunsuz çoklu görev isteyen alıcılar bu giriş seviyesinin üstüne bakmalı.
+  evidence:
+  - url: https://www.google.com.tw/shopping/product/11356979030384250120/reviews?q=site:global-control.ru&sca_esv=ad6f04eae533dd67&sca_upv=1&hl=en&prds=eto:4910409452400165691_0,pid:1926908623648579580,rate:2,rnum:10,rsk:PC_1356446327587740452&sa=X&ved=0ahUKEwilo4zXtOeIAxWqTGwGHawUCWwQn08IQSgD
+    quote: For reasons I don't understand, this model is strangely sluggish. From pulling down the toolbar
+      from the top of the screen to launching and closing apps, this tablet has an annoying stutter as
+      if it is struggling to perform basic functions.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:28:40+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      model: galaxy-tab-a7-lite
+  kind: known_issue
+  domain: general
+  severity: high
+  consequence: ''
+  detection: ''
+  component: Mainboard (unspecified fault)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Galaxy Tab A7 Lite repaired three times under warranty with the same fault persisting
+      body: A Spanish consumer complaint (OCU register, EU market) states the tablet was defective within
+        the legal warranty period and, despite being repaired three times, presented the same fault each
+        time.
+      advice: A recurring fault that survives three repairs points to a systemic issue rather than a one-off;
+        keep all repair paperwork and push for replacement or refund under EU warranty rules.
+    tr:
+      title: Galaxy Tab A7 Lite garantide üç kez onarıldı, aynı arıza sürüyor
+      body: Bir İspanyol tüketici şikâyeti (OCU kaydı, AB pazarı), tabletin yasal garanti süresi içinde
+        arızalı olduğunu ve üç kez onarılmasına rağmen her seferinde aynı arızayı gösterdiğini belirtiyor.
+      advice: Üç onarımdan sonra da süren tekrarlayan bir arıza, tek seferlik bir sorun yerine sistemik
+        bir soruna işaret eder; tüm onarım belgelerini saklayın ve AB garanti kuralları kapsamında değişim
+        veya iade için ısrar edin.
+  evidence:
+  - url: https://www.ocu.org/reclamar/lista-reclamaciones-publicas/tablet-lenta/abec845b87fe8ccc4d
+    quote: El producto resultó defectuoso durante el plazo legal de la garantía y pese a haber sido reparado
+      3 veces, presenta la misma avería.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:28:40+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: huawei
+      model: matepad-11
+  kind: known_issue
+  domain: power
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: MatePad 11 battery drains fast even at 99% max capacity; one owner stopped using it
+      body: Kakaku.com (価格.com) owner forum thread 'バッテリーの消費' for the MatePad 11.
+      advice: Owners report heavy battery consumption even with battery health at 99%, with background
+        apps restarting after screen-on; one owner says the tablet became unusable. Expect short battery
+        life and check battery health before buying used.
+    tr:
+      title: MatePad 11 pil, %99 maksimum kapasitede bile hızla tükeniyor; bir sahip kullanmayı bıraktı
+      body: Kakaku.com (価格.com) MatePad 11 için sahip forumu başlığı 'バッテリーの消費'.
+      advice: Sahipler, pil sağlığı %99 olsa bile yoğun pil tüketimi bildiriyor; ekran açıldıktan sonra
+        arka plan uygulamaları yeniden başlıyor; bir sahip tabletin kullanılamaz hale geldiğini söylüyor.
+        Kısa pil ömrü bekleyin ve ikinci el almadan önce pil sağlığını kontrol edin.
+  evidence:
+  - url: https://bbs.kakaku.com/bbs/J0000036934/SortID=26022590/
+    quote: バッテリーの最大容量が99％でも他の方と同じようにものすごいバッテリー食います。これはソフト的に改善できるかも？しれませんね
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:30:35+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      model: pad-6
+  kind: known_issue
+  domain: software
+  severity: high
+  consequence: ''
+  detection: ''
+  component: System software / firmware update
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Xiaomi Pad 6 apps stop opening after a post-warranty update (TR market)
+      body: A Turkish owner reports that after the warranty expired, a system update caused apps (Disney+,
+        Tod, HBO) to stop opening, and the authorized service center returned the tablet with the issue
+        unresolved.
+      advice: A post-warranty software update can break app compatibility; the service center did not
+        fix it. Consider delaying major updates or checking forums before installing them.
+    tr:
+      title: Xiaomi Pad 6'da garanti sonrası güncellemeden sonra uygulamalar açılmıyor (TR pazarı)
+      body: Bir Türk sahip, garanti süresi dolduktan sonra bir sistem güncellemesinin uygulamaların (Disney+,
+        Tod, HBO) açılmasını durdurduğunu ve yetkili servis merkezinin tableti sorun çözülmemiş halde
+        iade ettiğini bildiriyor.
+      advice: Garanti sonrası bir yazılım güncellemesi uygulama uyumluluğunu bozabilir; servis merkezi
+        bunu düzeltmedi. Büyük güncellemeleri geciktirmeyi veya yüklemeden önce forumları kontrol etmeyi
+        düşünün.
+  evidence:
+  - url: https://www.sikayetvar.com/xiaomi/garanti-sonrasi-yazilim-sorunu-ve-yetersiz-servis-destegi
+    quote: Gelen ilk güncelleme ile cihaz uygulamaları açmamaya başladı. Disneyplus, Tod, Hbo gibi uygulamaları
+      açmaya çalıştığımda cihaz kurulumunda hata var yanıtı veriyor ve uygulamalar açılmıyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:31:31+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      model: redmi-pad-se
+  kind: known_issue
+  domain: hardware
+  severity: high
+  consequence: ''
+  detection: ''
+  component: touchscreen digitizer
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Touchscreen digitizer failure makes typing and scrolling unusable until restart
+      body: From a Galaxus (EU retailer) Q&A thread on the Redmi Pad SE 11" 128GB. An owner describes
+        the screen registering phantom repeated keystrokes and rapid taps while scrolling; only a restart
+        temporarily fixes it and the problem recurs regularly. The owner suspects the digitizer. This
+        is a hardware fault that makes the tablet hard to use and typically needs a screen/digitizer replacement.
+      advice: Test the touchscreen thoroughly during the return window; if ghost input appears, claim
+        warranty rather than paying for a digitizer swap.
+    tr:
+      title: Dokunmatik ekran dijitalleştiricisi arızası, yeniden başlatılana kadar yazmayı ve kaydırmayı
+        kullanılamaz hale getiriyor
+      body: Galaxus (AB perakendecisi) Redmi Pad SE 11" 128GB hakkındaki Soru-Cevap başlığından. Bir sahip,
+        ekranın kaydırma sırasında hayalet tekrarlanan tuş vuruşları ve hızlı dokunuşlar kaydettiğini
+        anlatıyor; yalnızca yeniden başlatma bunu geçici olarak düzeltiyor ve sorun düzenli olarak tekrarlıyor.
+        Sahip dijitalleştiriciden şüpheleniyor. Bu, tabletin kullanımını zorlaştıran ve genellikle ekran/dijitalleştirici
+        değişimi gerektiren bir donanım arızasıdır.
+      advice: İade süresi içinde dokunmatik ekranı iyice test edin; hayalet giriş görülürse dijitalleştirici
+        değişimi için ödeme yapmak yerine garanti talep edin.
+  evidence:
+  - url: https://www.galaxus.at/en/s1/questionandanswer/hello-do-you-also-have-a-problem-with-the-screen-for-example-you-want-to-write-a-house-and-it-writes-795052
+    quote: Hello, do you also have a problem with the screen, for example you want to write "a house"
+      and it writes "uuuunnnneee mmmmaaaiissooonn" problem when trying to scroll a web page, as if you
+      were tapping quickly? The only way for it to work is to restart the tablet, but the problem recurs
+      regularly. I've seen that it could be a problem with the tablet's digitiser.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:32:02+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: lenovo
+      model: tab-m10
+  kind: known_issue
+  domain: performance
+  severity: high
+  consequence: ''
+  detection: ''
+  component: system software / mainboard
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Tab M10 3rd gen freezes, apps won't open, random shutdowns and won't charge (Lenovo official
+        forum, TR)
+      body: 'A Turkish owner of the M10 3rd gen reports severe freezing, apps not opening, random shutdowns,
+        refusal to charge, and the system UI repeatedly stopping. This is the strongest single claim:
+        it is on Lenovo''s own official forum, from a Turkey-located user, and matches the pack''s ''severe
+        lag/freezing'' and ''mainboard failures'' concerns. A buyer should expect a 3rd-gen unit to need
+        frequent restarts and possibly warranty service.'
+      advice: ''
+    tr:
+      title: Tab M10 3. nesil donuyor, uygulamalar açılmıyor, rastgele kapanıyor ve şarj olmuyor (Lenovo
+        resmi forumu, TR)
+      body: 'M10 3. nesil bir Türk sahibi şiddetli donma, uygulamaların açılmaması, rastgele kapanmalar,
+        şarj olmayı reddetme ve sistem arayüzünün tekrar tekrar durması bildiriyor. Bu en güçlü tek iddiadır:
+        Lenovo''nun kendi resmi forumunda, Türkiye''de bulunan bir kullanıcıdan geliyor ve paketin ''şiddetli
+        gecikme/donma'' ve ''anakart arızaları'' endişeleriyle örtüşüyor. Bir alıcı, 3. nesil bir birimin
+        sık yeniden başlatma ve muhtemelen garanti servisi gerektirmesini beklemelidir.'
+  evidence:
+  - url: https://forums.lenovo.com/t5/Android-Tabletleri/Cihaz%C4%B1m-durmadan-kapan%C4%B1yor-ve-uygulamalara-girmiyor-ve-%C3%A7ok-donuyor/m-p/5391690
+    quote: Cihazın Lenovo tab m10 3 nesil cihazın acayip bir şekilde donma ve kasmalar yapıyor uygulamalara
+      girmiyor uygulamaları girdikten sonra atyir kafasına göre kapanıyor birdaha açılmıyor sonra şarjda
+      almıyor sonresinda sistem arayüzü döndü diyor
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:32:58+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      model: pad-6
+  kind: known_issue
+  domain: connectivity
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: Bluetooth audio stack
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Xiaomi Pad 6 Bluetooth audio playback lags when a Bluetooth device is connected
+      body: XDA forum users report that connecting a Bluetooth audio device causes media playback to lag
+        with no audio, even after disabling Google Assistant features and doing a clean wipe.
+      advice: Bluetooth audio lag persists even after clean wipes and disabling assistant features; this
+        is a known software-level issue on the Pad 6.
+    tr:
+      title: Xiaomi Pad 6 Bluetooth ses oynatımı, bir Bluetooth cihazı bağlandığında gecikiyor
+      body: XDA forum kullanıcıları, bir Bluetooth ses cihazı bağlamanın, Google Assistant özellikleri
+        devre dışı bırakılıp temiz bir silme işlemi yapıldıktan sonra bile ses olmadan medya oynatımının
+        gecikmesine yol açtığını bildiriyor.
+      advice: Bluetooth ses gecikmesi, temiz silme işlemleri ve assistant özelliklerinin devre dışı bırakılmasından
+        sonra bile devam ediyor; bu, Pad 6'da bilinen yazılım düzeyinde bir sorundur.
+  evidence:
+  - url: https://xdaforums.com/t/a16-qpr1-stable-release-port-pipa-beta-also-avaliable.4750502/page-4
+    quote: Speaker works no problem, but the moment bluethooth audio device is connected media playback
+      starts lagging and no audio processed
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:31:31+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      model: pad-6
+  kind: known_issue
+  domain: general
+  severity: high
+  consequence: ''
+  detection: ''
+  component: System software / app compatibility
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Xiaomi Pad 6 switches off when launching apps, requires cache clear or restart
+      body: A Netherlands-based verified buyer on Back Market reports the tablet randomly switches off
+        when launching apps (YouTube, Google Earth), requiring a restart or cache clear each time.
+      advice: Random shutdowns on app launch are disruptive and recurring; only cache clearing or restart
+        helps. This is a software-level issue, not a hardware failure.
+    tr:
+      title: Xiaomi Pad 6 uygulama başlatırken kapanıyor, önbellek temizliği veya yeniden başlatma gerekiyor
+      body: Back Market'te doğrulanmış Hollanda merkezli bir alıcı, tabletin uygulama başlatırken (YouTube,
+        Google Earth) rastgele kapandığını ve her seferinde yeniden başlatma veya önbellek temizliği gerektiğini
+        bildiriyor.
+      advice: Uygulama başlatırken rastgele kapanmalar rahatsız edici ve tekrarlayıcıdır; yalnızca önbellek
+        temizleme veya yeniden başlatma yardımcı olur. Bu, donanım arızası değil, yazılım düzeyinde bir
+        sorundur.
+  evidence:
+  - url: https://www.backmarket.co.uk/en-gb/p/xiaomi-pad-6-256gb-midgnight-black-wifi/7fbd28da-2fb0-4533-8656-9a37727672f1
+    quote: 'Problem: Start an app and the product switches off. I switch the product back on and the hourglass
+      appears for at least a minute. Start the app again and same story! Restarting or emptying the cache
+      is the only thing that helps.'
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:31:31+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: lenovo
+      model: tab-m10
+  kind: known_issue
+  domain: hardware
+  severity: low
+  consequence: ''
+  detection: ''
+  component: camera
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Tab M10 3rd gen camera stopped working after 5 months
+      body: A short owner note on the M10 3rd gen says the camera stopped working after 5 months and the
+        device lags. Lower severity because it is a single brief report and cameras are secondary on this
+        class of tablet.
+      advice: ''
+    tr:
+      title: Tab M10 3. nesil kamera 5 ay sonra çalışmayı durdurdu
+      body: M10 3. nesil hakkında kısa bir sahip notu, kameranın 5 ay sonra çalışmayı durdurduğunu ve
+        cihazın geciktiğini söylüyor. Daha düşük önem derecesi çünkü tek ve kısa bir rapor ve bu sınıf
+        tabletlerde kameralar ikincildir.
+  evidence:
+  - url: https://comfy.ua/planshet-lenovo-tab-m10-3-gen-4-64-wifi-zaae0027ua-storm-grey-ucenka-1-1-otzyvy.html
+    quote: норм но перестала робити камера через 5 місяців лагає
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:32:58+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      model: galaxy-tab-a9-plus
+  kind: known_issue
+  domain: general
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: display
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Display started freezing within 18 months of purchase
+      body: Single owner report; Samsung's response routed to service center.
+      advice: One owner reports the display freezing within 18 months despite light use. This is a single
+        report, so treat it as a risk to verify rather than a widespread fault.
+    tr:
+      title: Ekran satın alımdan sonraki 18 ay içinde donmaya başladı
+      body: Tek sahip raporu; Samsung'un yanıtı servis merkezine yönlendirildi.
+      advice: Bir sahip, hafif kullanıma rağmen ekranın 18 ay içinde donduğunu bildiriyor. Bu tek bir
+        rapor, bu yüzden yaygın bir arıza olarak değil, doğrulanması gereken bir risk olarak ele alın.
+  evidence:
+  - url: https://www.samsung.com/ae_ar/tablets/galaxy-tab-a/galaxy-tab-a9-plus-wifi-graphite-64gb-sm-x210nzaamea/
+    quote: Display started freezing within 18 months of the purchase. The tablet is sprangly used.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:29:32+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      model: galaxy-tab-a9-plus
+  kind: known_issue
+  domain: power
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: charging board / USB port (Ladeplatine)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Charging board (Ladeplatine) replacement needed for slow/unreliable charging
+      body: Repair-record source confirming the charging port is a known replaceable failure point on
+        SM-X210.
+      advice: The USB charging port is a documented weak point — slow charging, intermittent connection,
+        and a loose cable point to the charging board. It is replaceable but the repair is not trivial
+        (needs heat, new adhesive).
+    tr:
+      title: Yavaş/güvenilmez şarj için şarj kartı (Ladeplatine) değişimi gerekiyor
+      body: Onarım kaydı kaynağı, şarj bağlantı noktasının SM-X210'da bilinen değiştirilebilir bir arıza
+        noktası olduğunu doğruluyor.
+      advice: USB şarj bağlantı noktası belgelenmiş bir zayıf noktadır — yavaş şarj, aralıklı bağlantı
+        ve gevşek kablo şarj kartına işaret eder. Değiştirilebilir ancak onarım önemsiz değildir (ısı,
+        yeni yapıştırıcı gerektirir).
+  evidence:
+  - url: https://de.ifixit.com/Anleitung/Samsung+Galaxy+Tab+A9+Plus+Ladeplatine+tauschen/184251
+    quote: Wenn dein Gerät nur noch langsam lädt, die Verbindung öfter unterbrochen ist, das Kabel sich
+      lose anfühlt, muss wahrscheinlich die Ladebuchse ausgetauscht werden.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:29:32+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      model: redmi-pad
+  kind: known_issue
+  domain: performance
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: MediaTek Helio G99 SoC + 4GB RAM
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Redmi Pad Helio G99 + 4GB RAM lags out of the box
+      body: An owner says the G99/4GB config lags badly even out of the box, though it remains usable
+        for light reading and undemanding games.
+      advice: The 4GB RAM variant is the weak point; choose the 6GB/8GB version if you want tolerable
+        responsiveness.
+    tr:
+      title: Redmi Pad Helio G99 + 4GB RAM kutudan çıktığı gibi gecikiyor
+      body: Bir sahip, G99/4GB yapılandırmasının kutudan çıktığı gibi bile ciddi şekilde geciktiğini,
+        ancak hafif okuma ve zorlu olmayan oyunlar için kullanılabilir kaldığını söylüyor.
+      advice: 4GB RAM varyantı zayıf noktadır; tolere edilebilir yanıt hızı istiyorsanız 6GB/8GB sürümünü
+        seçin.
+  evidence:
+  - url: https://dns-shop.kg/ru/product/3dc681463565ed20/1061-planset-xiaomi-redmi-pad-wi-fi-128-gb-seryj/opinions/
+    quote: Г99 и 4гб озу такое себе лагает как тварь ещё из коробки но смотреть и читать что-то можно
+      даже поиграть во что-то не требовательное
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:30:04+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: huawei
+      model: matepad-11
+  kind: known_issue
+  domain: software
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: HarmonyOS / system update
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: MatePad 11 OS updates are inconsistent and newer HarmonyOS versions break some apps
+      body: A GSMarena user review comparing MatePad 11 (2021) and (2023).
+      advice: Owners report inconsistent OS updates and that moving to newer HarmonyOS versions can break
+        preinstalled Huawei apps (e.g. WPS PC Software Engine) because the OS is based on older Android.
+        Check app compatibility before updating.
+    tr:
+      title: MatePad 11 işletim sistemi güncellemeleri tutarsız ve daha yeni HarmonyOS sürümleri bazı
+        uygulamaları bozuyor
+      body: MatePad 11 (2021) ve (2023) karşılaştıran bir GSMarena kullanıcı incelemesi.
+      advice: Sahipler tutarsız işletim sistemi güncellemeleri bildiriyor ve daha yeni HarmonyOS sürümlerine
+        geçmenin önceden yüklü Huawei uygulamalarını (ör. WPS PC Software Engine) bozabileceğini, çünkü
+        işletim sisteminin daha eski Android tabanlı olduğunu belirtiyor. Güncellemeden önce uygulama
+        uyumluluğunu kontrol edin.
+  evidence:
+  - url: https://m.gsmarena.com/huawei_matepad_11_(2023)-reviews-12185.php
+    quote: Harmony os 3.0 and harmony os 2.0 are base from android 10. if you are coming from harmony
+      os 3.1 above some prebuilt and huawei app will not run on your device specialy the WPS PC SOFTWARE
+      ENGINE.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:30:35+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      model: redmi-pad-se
+  kind: known_issue
+  domain: connectivity
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: Wi-Fi module
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Wi-Fi connection occasionally drops
+      body: From a kakaku.com (Japanese review site) user review of the Redmi Pad SE 4GB+128GB. The reviewer
+        notes the Wi-Fi connection occasionally drops. This is a connectivity-domain complaint, though
+        it is a single owner report and the cause is not confirmed.
+      advice: If Wi-Fi drops recur, test against multiple routers before assuming a hardware fault; a
+        weak or flaky radio may need service.
+    tr:
+      title: Wi-Fi bağlantısı ara sıra kesiliyor
+      body: kakaku.com (Japon inceleme sitesi) üzerindeki Redmi Pad SE 4GB+128GB kullanıcı incelemesinden.
+        İnceleyen kişi Wi-Fi bağlantısının ara sıra kesildiğini belirtiyor. Bu bir bağlantı alanı şikayeti
+        olsa da tek bir sahip raporudur ve nedeni doğrulanmamıştır.
+      advice: Wi-Fi kesintileri tekrarlarsa, donanım arızası olduğunu varsaymadan önce birden fazla yönlendiriciyle
+        test edin; zayıf veya dengesiz bir radyo servis gerektirebilir.
+  evidence:
+  - url: https://s.kakaku.com/item/K0001572238/
+    quote: 【ネットワーク】 たまにWi-Fiの接続が切れる。
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:33:19+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      model: galaxy-tab-a9
+  kind: known_issue
+  domain: connectivity
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: Wi-Fi radio
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Wi-Fi dropouts: tablet disconnects and reconnects 10–20s later'
+      body: A German owner reports the tablet briefly disconnects from any Wi-Fi network and reconnects
+        10–20 seconds later, annoying in games. Samsung's support reply suggests disabling 'Intelligent
+        Wi-Fi' and resetting network settings, indicating a known software-side Wi-Fi complaint.
+      advice: Expect possible Wi-Fi dropouts; a network-settings reset may help, but if it recurs it is
+        a connectivity nuisance to live with.
+    tr:
+      title: 'Wi-Fi kesintileri: tablet bağlantısı kesiliyor ve 10–20 sn sonra yeniden bağlanıyor'
+      body: Alman bir sahip, tabletin herhangi bir Wi-Fi ağından kısa süreliğine bağlantısının kesildiğini
+        ve 10–20 saniye sonra yeniden bağlandığını, bunun oyunlarda can sıkıcı olduğunu bildiriyor. Samsung'un
+        destek yanıtı 'Intelligent Wi-Fi' özelliğinin devre dışı bırakılmasını ve ağ ayarlarının sıfırlanmasını
+        öneriyor; bu da yazılım tarafında bilinen bir Wi-Fi şikayetine işaret ediyor.
+      advice: Olası Wi-Fi kesintilerini bekleyin; ağ ayarlarının sıfırlanması yardımcı olabilir, ancak
+        tekrarlarsa birlikte yaşanması gereken bir bağlantı sıkıntısıdır.
+  evidence:
+  - url: https://www.samsung.com/co/tablets/galaxy-tab-a/galaxy-tab-a9-wifi-graphite-128gb-sm-x110nzael13/
+    quote: Im Januar gekauft, eigentlich zufrieden, jedoch habe ich immer mit der W-lan-Verbindung probleme.
+      Egal in welchem Wlan Netz ich bin, das Tablet entbindet sich kurz und verbindet sich 10-20 sek später
+      wieder. DIes ist bei Spielen sehr nervig.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:27:34+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      model: redmi-pad
+  kind: known_issue
+  domain: power
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Redmi Pad battery drains suspiciously fast, losing 1% within a minute of a full charge
+      body: An owner reports the battery drains suspiciously fast, losing 1% within a minute of a full
+        charge.
+      advice: Battery life can be inconsistent between units; a fast-draining unit may need a battery
+        replacement, so check battery health early in the return window.
+    tr:
+      title: Redmi Pad pili şüpheli derecede hızlı tükeniyor, tam şarjdan sonraki bir dakika içinde %1
+        kaybediyor
+      body: Bir sahip, pilin şüpheli derecede hızlı tükendiğini, tam şarjdan sonraki bir dakika içinde
+        %1 kaybettiğini bildiriyor.
+      advice: Pil ömrü birimler arasında tutarsız olabilir; hızlı tükenen bir birim pil değişimi gerektirebilir,
+        bu yüzden iade süresi içinde pil sağlığını erken kontrol edin.
+  evidence:
+  - url: https://market.yandex.ru/offers/planshet-xiaomi-redmi-pad-2022/1774970336/reviews?page=3
+    quote: Как то подозрительно быстро батарея тает. Может у меня что-то не так с батареей. Со 100 процентной
+      зарядки планшет только запустил и через минуту минус 1% батареи схавал.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:30:04+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: apple
+      model: ipad-10th-gen
+  kind: known_issue
+  domain: power
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: iPad 10th gen battery does not last a day and needs daily charging
+      body: An eBay buyer review of the iPad 10th gen reports the battery does not last a full day and
+        requires daily charging.
+      advice: Owners report the battery drains quickly enough to need daily charging; a buyer should check
+        battery health and expect that a heavily used unit may not last a full day.
+    tr:
+      title: iPad 10. nesil pili bir gün dayanmıyor ve günlük şarj gerektiriyor
+      body: iPad 10. nesil hakkında bir eBay alıcı incelemesi, pilin tam bir gün dayanmadığını ve günlük
+        şarj gerektirdiğini bildiriyor.
+      advice: Sahipler pilin günlük şarj gerektirecek kadar hızlı tükendiğini bildiriyor; bir alıcı pil
+        sağlığını kontrol etmeli ve yoğun kullanılmış bir birimin tam bir gün dayanmayabileceğini beklemelidir.
+  evidence:
+  - url: https://pe.ebay.com/b/Apple-iPad-10th-Generation/171485/bn_7119078264
+    quote: The Only problem I see that the battery does not even last a day. and it needs daily charging.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:32:30+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: huawei
+      model: matepad-11
+  kind: known_issue
+  domain: connectivity
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: Bluetooth keyboard / Bluetooth module
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: MatePad 11 Bluetooth keyboard drops connection when detached from the tablet
+      body: A Turkish owner on the DonanımHaber MatePad 11 (HarmonyOS) owner thread.
+      advice: A Turkish owner reports the official keyboard case drops its Bluetooth link shortly after
+        being detached from the tablet, and that resets (network reset, re-pair, reboot) did not fix it.
+        Relevant to TR buyers using the keyboard case.
+    tr:
+      title: MatePad 11 Bluetooth klavye tabletten ayrıldığında bağlantıyı kesiyor
+      body: DonanımHaber MatePad 11 (HarmonyOS) sahip başlığındaki Türk bir sahip.
+      advice: Türk bir sahip, resmi klavye kılıfının tabletten ayrıldıktan kısa süre sonra Bluetooth bağlantısını
+        kestiğini ve sıfırlamaların (ağ sıfırlama, yeniden eşleştirme, yeniden başlatma) bunu düzeltmediğini
+        bildiriyor. Klavye kılıfını kullanan TR alıcıları için geçerlidir.
+  evidence:
+  - url: https://mini.donanimhaber.com/huawei-matepad-11-harmony-os-kullanicilari-ana-konu--150194952-343
+    quote: Şu aralar fiziksel klavyeyle alakalı bir sorun yaşıyorum. Cihazla fiziksel bağlıyken bir sorun
+      olmuyor ama cihazdan ayırdığım zaman klavye kısa bir süre sonra Bluetooth bağlantısını kesiyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:30:35+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      model: pad-6
+  kind: known_issue
+  domain: performance
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: Bootloader / system software
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Xiaomi Pad 6 restart takes up to 5 minutes, stuck on Mi logo
+      body: XDA forum users report restarts taking up to 5 minutes stuck on the Mi logo; a factory reset
+        improved boot speed but did not fix battery health features.
+      advice: Slow boots can be improved with a factory reset, but battery health features may remain
+        broken. This affects daily usability.
+    tr:
+      title: Xiaomi Pad 6 yeniden başlatma 5 dakikaya kadar sürüyor, Mi logosunda takılı kalıyor
+      body: XDA forum kullanıcıları, yeniden başlatmaların Mi logosunda takılı kalarak 5 dakikaya kadar
+        sürdüğünü bildiriyor; fabrika ayarlarına sıfırlama açılış hızını iyileştirdi ancak pil sağlığı
+        özelliklerini düzeltmedi.
+      advice: Yavaş açılışlar fabrika ayarlarına sıfırlama ile iyileştirilebilir, ancak pil sağlığı özellikleri
+        bozuk kalabilir. Bu, günlük kullanılabilirliği etkiler.
+  evidence:
+  - url: https://xdaforums.com/t/a16-qpr1-stable-release-port-pipa-beta-also-avaliable.4750502/page-4
+    quote: restart can take a full 5 minutes to complete. Just sits on the "Mi" logo for a long time before
+      boot.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:31:31+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      model: redmi-pad-se
+  kind: known_issue
+  domain: power
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Battery drains rapidly after a system update
+      body: From the same Turkish Şikayetvar page. An owner reports that after a system update the battery
+        began draining excessively, dropping from 100% to 80% on its own within a few hours, and after
+        a restart the charge fell from 30% to 1%. This is a power-domain complaint tied to a software
+        update rather than a hardware defect.
+      advice: If you see rapid idle drain after an update, check for a runaway background process before
+        assuming the battery is faulty.
+    tr:
+      title: Bir sistem güncellemesinden sonra pil hızla tükeniyor
+      body: Aynı Türkçe Şikayetvar sayfasından. Bir sahip, bir sistem güncellemesinden sonra pilin aşırı
+        derecede tükenmeye başladığını, birkaç saat içinde kendi kendine %100'den %80'e düştüğünü ve yeniden
+        başlatmadan sonra şarjın %30'dan %1'e düştüğünü bildiriyor. Bu, donanım arızasından ziyade bir
+        yazılım güncellemesine bağlı bir güç alanı şikayetidir.
+      advice: Bir güncellemeden sonra hızlı boşta tükenme görürseniz, pilin arızalı olduğunu varsaymadan
+        önce kontrolden çıkmış bir arka plan işlemi olup olmadığını kontrol edin.
+  evidence:
+  - url: https://www.sikayetvar.com/xiaomi/redmi-pad-se/sorunu
+    quote: Xiaomi Pad Se tablet aldım. Güncelleme sonrası şarj aşırı şekilde tüketilmeye başladı kendi
+      kendine yüzde 100 den yüzde ...80 e düştü birkaç saat içinde.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:33:19+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      model: redmi-pad
+  kind: known_issue
+  domain: performance
+  severity: low
+  consequence: ''
+  detection: ''
+  component: battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Redmi Pad lags once charge drops below 20%
+      body: An owner reports the tablet starts to lag once the charge drops below 20%.
+      advice: Keep the tablet charged above ~20% to avoid sluggish behaviour; this is a nuisance rather
+        than a defect.
+    tr:
+      title: Redmi Pad şarj %20'nin altına düştüğünde takılıyor
+      body: Bir sahip, şarj %20'nin altına düştüğünde tabletin takılmaya başladığını bildiriyor.
+      advice: Yavaş davranıştan kaçınmak için tableti ~%20'nin üzerinde şarjlı tutun; bu bir arıza değil,
+        bir sıkıntıdır.
+  evidence:
+  - url: https://market.yandex.ru/offers/planshet-xiaomi-redmi-pad-2022/1774970336/reviews?page=3
+    quote: При заряде менее 20% начинает "подтупливать"
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:30:04+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: lenovo
+      model: tab-m11
+  kind: known_issue
+  domain: general
+  severity: low
+  consequence: ''
+  detection: ''
+  component: battery / system firmware
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Tablet freezes after a complete discharge
+      body: Found via 'Lenovo Tab M11 reliability review forum' (Galaxus.de customer review, German/Swiss
+        market).
+      advice: A Galaxus buyer notes the tablet freezes and takes very long to restart after a complete
+        discharge, so letting the battery fully drain should be avoided.
+    tr:
+      title: Tablet tamamen boşaldıktan sonra donuyor
+      body: '''Lenovo Tab M11 reliability review forum'' (Galaxus.de müşteri yorumu, Alman/İsviçre pazarı)
+        aracılığıyla bulundu.'
+      advice: Bir Galaxus alıcısı, tabletin tamamen boşaldıktan sonra donduğunu ve yeniden başlatmasının
+        çok uzun sürdüğünü belirtiyor, bu nedenle pilin tamamen boşalmasına izin vermekten kaçınılmalıdır.
+  evidence:
+  - url: https://www.galaxus.de/en/productrating/super-10577237
+    quote: Sometimes it freezes after complete discharge.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:26:25+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      model: galaxy-tab-a9-plus
+  kind: known_issue
+  domain: hardware
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: touchscreen digitizer
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Two-finger touch stops registering during gaming (multi-touch failure)
+      body: A second UK review on the same product line also noted touch sensing problems holding a finger
+        on screen blocks other touches.
+      advice: If you game or use two-finger gestures, the touchscreen drops touches when a second finger
+        is held down — Samsung's own support verified it. Not a fixable software toggle per the reviewer.
+    tr:
+      title: Oyun sırasında iki parmakla dokunma algılanmayı bırakıyor (çoklu dokunma arızası)
+      body: Aynı ürün hattındaki ikinci bir Birleşik Krallık incelemesi de, ekranda bir parmağı tutmanın
+        diğer dokunuşları engellediği dokunma algılama sorunlarını kaydetti.
+      advice: Oyun oynuyorsanız veya iki parmakla hareketler kullanıyorsanız, ikinci bir parmak basılı
+        tutulduğunda dokunmatik ekran dokunuşları düşürüyor — Samsung'un kendi desteği bunu doğruladı.
+        İncelemeye göre düzeltilebilir bir yazılım anahtarı değil.
+  evidence:
+  - url: https://www.samsung.com/ie/tablets/galaxy-tab-a/galaxy-tab-a9-plus-wifi-mystic-navy-64gb-sm-x210ndbaeua/
+    quote: The MAJOR issue is when gaming. Its impossible to play games on this device as when you use
+      2 fingers it stops recognising touch.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:29:32+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      model: redmi-pad
+  kind: known_issue
+  domain: hardware
+  severity: high
+  consequence: ''
+  detection: ''
+  component: mainboard / CPU solder joints
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Redmi Pad mainboard died after 1.5 years in endless reboot loop; reballing did not fix it
+      body: An owner reports the tablet died after ~1.5 years in an endless reboot loop that ignores the
+        power button; a shop reballed the CPU and it failed again, then the shop declared it a brick/factory
+        defect.
+      advice: A mainboard failure is a total-loss event with no cheap fix; if you buy one, keep it within
+        warranty and back up data, as the failure can appear after a year or more.
+    tr:
+      title: Redmi Pad ana kartı sonsuz yeniden başlatma döngüsünde 1,5 yıl sonra öldü; reballing düzeltmedi
+      body: Bir sahip, tabletin güç düğmesini yok sayan sonsuz bir yeniden başlatma döngüsünde ~1,5 yıl
+        sonra öldüğünü bildiriyor; bir dükkan CPU'yu reballing yaptı ve tekrar başarısız oldu, ardından
+        dükkan onu tuğla/fabrika hatası ilan etti.
+      advice: Ana kart arızası, ucuz bir düzeltmesi olmayan tam kayıp olayıdır; bir tane alırsanız garanti
+        kapsamında tutun ve verileri yedekleyin, çünkü arıza bir yıl veya daha sonra ortaya çıkabilir.
+  evidence:
+  - url: https://dns-shop.kg/ru/product/3dc681463565ed20/1061-planset-xiaomi-redmi-pad-wi-fi-128-gb-seryj/opinions/
+    quote: Сдох через 1,5 года. Начал самостоятельно и бесконечно перезагружаться, не реагируя на нажатие
+      или удержание основновной кнопы. Отнес в ремонт, передули проц. 2 дня отработал - норм, потом все
+      тоже самое - бесконечная перезагрузка пока не сдохнет батарея.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:30:04+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: lenovo
+      model: tab-m10
+  kind: known_issue
+  domain: performance
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: RAM
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Tab M10 (TB311FU) lags and freezes, owner blames insufficient RAM
+      body: A Hepsiburada (Turkish retailer) buyer of the M10 4/64GB (model TB311FU) reports lag and freezing
+        and attributes it to insufficient RAM. Another review on the same page notes 'kasma oluyor bir
+        süre sonra' (lag develops after a while). This is a recurring performance complaint on the Turkish
+        market units.
+      advice: ''
+    tr:
+      title: Tab M10 (TB311FU) takılıyor ve donuyor, sahibi yetersiz RAM'i suçluyor
+      body: M10 4/64GB (model TB311FU) ürününün bir Hepsiburada (Türk perakendeci) alıcısı takılma ve
+        donma bildiriyor ve bunu yetersiz RAM'e bağlıyor. Aynı sayfadaki başka bir inceleme 'kasma oluyor
+        bir süre sonra' (bir süre sonra takılma gelişiyor) notunu düşüyor. Bu, Türkiye pazarındaki birimlerde
+        tekrarlayan bir performans şikayetidir.
+  evidence:
+  - url: https://www.hepsiburada.com/lenovo-tab-m10-4gb-64gb-10-1-tablet-kilif-zaeh0060tr-gri-pm-HBC00008OYEWR-yorumlari
+    quote: Kasma, donma yapıyor ram yetersiz benim zannımca
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:32:58+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      model: redmi-pad-se
+  kind: known_issue
+  domain: hardware
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: touchscreen / digitiser
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Redmi Pad SE touchscreen/digitiser ghost input: wrong characters typed, recurring until
+        restart'
+      body: 'Owner question on the Galaxus (EU retailer) Q&A for the 11-inch Redmi Pad SE describing a
+        recurring touchscreen fault: typing produces repeated wrong characters and scrolling registers
+        as rapid taps, and the only fix is restarting the tablet, with the problem returning regularly.
+        The owner suspects the digitiser. Other owners in the thread report no such issue, so this appears
+        to be a unit-level hardware defect rather than universal.'
+      advice: If you see ghost input/repeated characters on a Redmi Pad SE, restart first, then check
+        whether it recurs; if it does, file a warranty claim early since the owner suggests a digitiser
+        fault, and note that some units are unaffected.
+    tr:
+      title: 'Redmi Pad SE dokunmatik/dijitizer hayalet giriş: yanlış karakterler yazılıyor, yeniden başlatılana
+        kadar tekrarlıyor'
+      body: '11 inç Redmi Pad SE için Galaxus (AB perakendeci) Soru-Cevap bölümünde bir sahibin sorusu,
+        tekrarlayan bir dokunmatik arızasını tanımlıyor: yazma işlemi tekrarlanan yanlış karakterler üretiyor
+        ve kaydırma hızlı dokunuşlar olarak algılanıyor, tek çözüm tableti yeniden başlatmak ve sorun
+        düzenli olarak geri dönüyor. Sahip dijitizerden şüpheleniyor. Konudaki diğer sahipler böyle bir
+        sorun bildirmiyor, bu nedenle bu evrensel değil birim düzeyinde bir donanım arızası gibi görünüyor.'
+      advice: Bir Redmi Pad SE'de hayalet giriş/tekrarlanan karakterler görürseniz, önce yeniden başlatın,
+        ardından tekrarlanıp tekrarlanmadığını kontrol edin; tekrarlıyorsa, sahip bir dijitizer arızası
+        önerdiği için erken bir garanti talebinde bulunun ve bazı birimlerin etkilenmediğini unutmayın.
+  evidence:
+  - url: https://www.galaxus.at/en/s1/questionandanswer/hello-do-you-also-have-a-problem-with-the-screen-for-example-you-want-to-write-a-house-and-it-writes-795052
+    quote: Hello, do you also have a problem with the screen, for example you want to write "a house"
+      and it writes "uuuunnnneee mmmmaaaiissooonn" problem when trying to scroll a web page, as if you
+      were tapping quickly? The only way for it to work is to restart the tablet, but the problem recurs
+      regularly. I've seen that it could be a problem with the tablet's digitiser.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:32:02+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      model: galaxy-tab-a7-lite
+  kind: known_issue
+  domain: power
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: Charging port / charger / battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Galaxy Tab A7 Lite charges slowly even on a fast charger
+      body: An Amazon owner review reports slow charging (over an hour to full) even with a fast charger,
+        plus a broken included charger.
+      advice: Slow charging is a recurring theme (also echoed in eBay and Best Buy reviews); budget for
+        a replacement charger and expect long top-up times.
+    tr:
+      title: Galaxy Tab A7 Lite hızlı şarj cihazında bile yavaş şarj oluyor
+      body: Bir Amazon sahip incelemesi, hızlı şarj cihazıyla bile yavaş şarj (tam dolması bir saatten
+        fazla) ve ayrıca kırık bir dahili şarj cihazı bildiriyor.
+      advice: Yavaş şarj tekrarlayan bir tema (eBay ve Best Buy incelemelerinde de yankılanıyor); yedek
+        bir şarj cihazı için bütçe ayırın ve uzun şarj sürelerini bekleyin.
+  evidence:
+  - url: https://sellout.woot.com/review/B09KKMLR4R?offerid=1de0d5f3-eb70-4a93-b9e3-46484a307440&itemid=17548020-016e-45b8-90be-9db0ef1e9d35&filter=3&isVerified=false&page=1&sort=0
+    quote: Charging is slow, taking over an hour to fully charge, even with a fast charger
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:28:40+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: lenovo
+      model: tab-m10
+  kind: known_issue
+  domain: software
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: system software
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Tab M10 3rd gen started glitching and kicking user out of apps within months
+      body: An owner of the M10 3rd gen reports the tablet began glitching and kicking her out of apps
+        within months of purchase, and later the camera failed inside apps until a reboot. This is a software-stability
+        complaint that recurs across the M10 3rd-gen reports.
+      advice: ''
+    tr:
+      title: Tab M10 3. nesil aylar içinde bozulmaya başladı ve kullanıcıyı uygulamalardan attı
+      body: M10 3. nesil bir sahibi, tabletin satın almadan sonraki aylar içinde bozulmaya ve onu uygulamalardan
+        atmaya başladığını, daha sonra kameranın yeniden başlatılana kadar uygulamalar içinde arızalandığını
+        bildiriyor. Bu, M10 3. nesil raporlarında tekrarlanan bir yazılım kararlılığı şikayetidir.
+  evidence:
+  - url: https://comfy.ua/planshet-lenovo-tab-m10-3-gen-4-64-wifi-zaae0027ua-storm-grey-ucenka-1-1-otzyvy.html
+    quote: на 8 марта купила себе планшет 2024, летом того же года он начал глючить и выбивать из приложения
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:32:58+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      model: pad-6
+  kind: known_issue
+  domain: performance
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: System performance / RAM management
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Xiaomi Pad 6 lags and freezes when online after about a year of use
+      body: A Yandex Market owner review reports that after a year, the tablet starts to lag and freeze
+        when connected to the internet.
+      advice: Expect possible performance degradation after a year of use, especially when online; this
+        may be mitigated by clearing cache or factory reset.
+    tr:
+      title: Xiaomi Pad 6 yaklaşık bir yıl kullanımdan sonra çevrimiçiyken takılıyor ve donuyor
+      body: Bir Yandex Market sahip incelemesi, bir yıl sonra tabletin internete bağlıyken takılmaya ve
+        donmaya başladığını bildiriyor.
+      advice: Bir yıl kullanımdan sonra olası performans düşüşü bekleyin, özellikle çevrimiçiyken; bu
+        önbelleği temizleyerek veya fabrika ayarlarına sıfırlayarak hafifletilebilir.
+  evidence:
+  - url: https://market.yandex.ru/offers/planshet-xiaomi-pad-6-2023/1879698769/reviews?sku=102137895754&page=3
+    quote: Через год, при подключении к интернету начинает тупить и виснуть.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:31:31+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      model: redmi-pad
+  kind: known_issue
+  domain: performance
+  severity: high
+  consequence: ''
+  detection: ''
+  component: system software (MIUI)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Redmi Pad freezes with 'system not responding' popups for up to 8 minutes
+      body: An owner reports the tablet repeatedly freezes with 'system not responding'/'app not responding'
+        popups, sometimes for up to 8 minutes, and calls it unusable.
+      advice: Expect the 4GB/entry config to stutter and freeze under normal use; budget for a higher-RAM
+        variant or a different tablet if smooth multitasking matters.
+    tr:
+      title: Redmi Pad 'sistem yanıt vermiyor' açılır pencereleriyle 8 dakikaya kadar donuyor
+      body: Bir sahip, tabletin 'sistem yanıt vermiyor'/'uygulama yanıt vermiyor' açılır pencereleriyle
+        tekrar tekrar donduğunu, bazen 8 dakikaya kadar sürdüğünü ve bunu kullanılamaz olarak nitelendirdiğini
+        bildiriyor.
+      advice: 4GB/giriş yapılandırmasının normal kullanımda takılmasını ve donmasını bekleyin; sorunsuz
+        çoklu görev önemliyse daha yüksek RAM'li bir varyant veya farklı bir tablet için bütçe ayırın.
+  evidence:
+  - url: https://dns-shop.kg/ru/product/3dc681463565ed20/1061-planset-xiaomi-redmi-pad-wi-fi-128-gb-seryj/opinions/
+    quote: Висяки постоянные с вывешиванием сообщений типа " система не отвечает", " системная оболочка
+      не отвечает", " приложение не отвечает". Пользоваться невозможно, зависания иногда длятся до 8мин
+      с поочередным появлением вышеописанных сообщений.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:30:04+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: lenovo
+      model: tab-m10
+  kind: known_issue
+  domain: hardware
+  severity: low
+  consequence: ''
+  detection: ''
+  component: display / touchscreen
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Tab M10 1st gen display not responding to touch (iFixit repair thread)
+      body: An iFixit repair thread on the M10 1st gen describes a display that is not responding to touch.
+        The suggested fixes are a forced restart and charging, pointing to a software/battery-related
+        display fault rather than a guaranteed hardware defect. Lower severity because it is a troubleshooting
+        thread, not a confirmed failure rate.
+      advice: ''
+    tr:
+      title: Tab M10 1. nesil ekran dokunmaya yanıt vermiyor (iFixit onarım konusu)
+      body: M10 1. nesil hakkındaki bir iFixit onarım konusu, dokunmaya yanıt vermeyen bir ekranı anlatıyor.
+        Önerilen çözümler zorla yeniden başlatma ve şarj etme olup, garantili bir donanım arızasından
+        ziyade yazılım/pille ilgili bir ekran hatasına işaret ediyor. Önem derecesi daha düşük çünkü bu
+        bir sorun giderme konusu, doğrulanmış bir arıza oranı değil.
+  evidence:
+  - url: https://de.ifixit.com/Antworten/Ansehen/956826/Display+is+not+working+properly
+    quote: Display is not responding to touch and perform automatically
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:32:58+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: apple
+      model: ipad-10th-gen
+  kind: known_issue
+  domain: hardware
+  severity: low
+  consequence: ''
+  detection: ''
+  component: mainboard / processor area
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: iPad 10 heats up in the right corner during app updates
+      body: On the Russian forum 4pda, a user reports the iPad 10 heats up in the right corner (where
+        the processor and board sit) during app updates, and asks about weak battery life.
+      advice: A forum user reports noticeable heating in the right corner of the iPad 10 during app updates,
+        consistent with the processor/board location. This is a minor comfort concern rather than a failure,
+        but combined with battery complaints it may indicate thermal/power behaviour worth watching.
+    tr:
+      title: iPad 10 uygulama güncellemeleri sırasında sağ köşede ısınıyor
+      body: Rus forumu 4pda'da bir kullanıcı, iPad 10'un uygulama güncellemeleri sırasında sağ köşede
+        (işlemci ve kartın bulunduğu yer) ısındığını bildiriyor ve zayıf pil ömrünü soruyor.
+      advice: Bir forum kullanıcısı, iPad 10'un sağ köşesinde uygulama güncellemeleri sırasında işlemci/kart
+        konumuyla tutarlı şekilde belirgin ısınma bildiriyor. Bu bir arıza değil küçük bir konfor endişesi,
+        ancak pil şikayetleriyle birleşince izlenmeye değer termal/güç davranışına işaret edebilir.
+  evidence:
+  - url: https://4pda.to/forum/index.php?showtopic=1056841&st=140
+    quote: У всех планшет греется(правый угол), тупо при обновлении приложений.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:27:03+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: huawei
+      model: matepad-se-11
+  kind: known_issue
+  domain: connectivity
+  severity: high
+  consequence: ''
+  detection: ''
+  component: Bluetooth module
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: MatePad SE 11 Bluetooth completely non-functional (error on connect, pairs with nothing)
+      body: 'A buyer reports the Bluetooth never worked: it throws an error on connect and pairs with
+        no device, leading to a return/refund dispute.'
+      advice: If Bluetooth is essential (keyboard, audio, stylus), test it immediately on delivery; a
+        dead Bluetooth unit may require a return fight.
+    tr:
+      title: MatePad SE 11 Bluetooth tamamen işlevsiz (bağlanırken hata, hiçbir şeyle eşleşmiyor)
+      body: 'Bir alıcı Bluetooth''un hiç çalışmadığını bildiriyor: bağlanırken hata veriyor ve hiçbir
+        cihazla eşleşmiyor, bu da iade/geri ödeme anlaşmazlığına yol açıyor.'
+      advice: Bluetooth esas ise (klavye, ses, kalem), teslimat sırasında hemen test edin; ölü bir Bluetooth
+        birimi iade mücadelesi gerektirebilir.
+  evidence:
+  - url: https://www.technodom.kz/aktobe_kk/p/planshet-huawei-matepad-se-11-inbox-pencil-8gb-128gb-wifi-nebula-gray-agassi6-w19dp-291247/reviews
+    quote: Huawei MatePad SE планшетін сатып алдым. Қолдану барысында Bluetooth мүлдем жұмыс істемеді.
+      Қосылған кезде «сбой» деген қате шығады және ешқандай құрылғыға қосылмайды.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:26:07+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      model: galaxy-tab-a9
+  kind: known_issue
+  domain: performance
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: SoC / software
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Slow performance, lag and poor multitasking on the A range
+      body: Owners describe the A-range as slow and poor at multitasking, with battery draining quickly;
+        Samsung's own reply acknowledges complaints about battery life and performance versus the S range.
+        A Reddit owner thread on the A9 also calls the screen low-resolution and scrolling laggy.
+      advice: For a budget tablet the A9 is slow under multitasking and its battery life is a common complaint;
+        buy it only if light use is acceptable.
+    tr:
+      title: A serisinde yavaş performans, gecikme ve zayıf çoklu görev
+      body: Sahipler A serisini yavaş ve çoklu görevde zayıf olarak tanımlıyor, pil hızla tükeniyor; Samsung'un
+        kendi yanıtı S serisine kıyasla pil ömrü ve performans şikayetlerini kabul ediyor. A9 hakkındaki
+        bir Reddit sahip konusu da ekranı düşük çözünürlüklü ve kaydırmayı gecikmeli olarak nitelendiriyor.
+      advice: Bütçe tableti olarak A9 çoklu görevde yavaş ve pil ömrü yaygın bir şikayet; yalnızca hafif
+        kullanım kabul edilebilirse satın alın.
+  evidence:
+  - url: https://www.samsung.com/co/tablets/galaxy-tab-a/galaxy-tab-a9-wifi-graphite-128gb-sm-x110nzael13/
+    quote: Bad as ever. if you need to purchase a tablet buy the S range. The A range is very slow. the
+      price is affordable but in the end not good to multis task. Battery runs off quicky
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:27:34+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      model: redmi-pad-se
+  kind: known_issue
+  domain: performance
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: SoC / RAM
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Redmi Pad SE lag under load: thermal throttling and low memory cause lag in games and multitasking'
+      body: Xiaomi's own FAQ for the Redmi Pad SE 8.7 acknowledges lag during gaming and multitasking,
+        attributing it to thermal throttling under heavy load and to limited memory (the entry model ships
+        with 4 GB RAM). This is a manufacturer-confirmed performance limitation rather than a defect,
+        and matters most for buyers who expect smooth gaming or heavy multitasking from an entry-tier
+        tablet.
+      advice: Expect lag in resource-intensive games and heavy multitasking on the Redmi Pad SE; close
+        background apps and avoid long gaming sessions if you want smoother performance, and consider
+        the higher-RAM variant if performance matters.
+    tr:
+      title: 'Redmi Pad SE yük altında gecikme: termal kısıtlama ve düşük bellek oyunlarda ve çoklu görevde
+        gecikmeye neden oluyor'
+      body: Xiaomi'nin Redmi Pad SE 8.7 için kendi SSS'si oyun ve çoklu görev sırasında gecikmeyi kabul
+        ediyor, bunu ağır yük altında termal kısıtlamaya ve sınırlı belleğe (giriş modeli 4 GB RAM ile
+        geliyor) bağlıyor. Bu bir arıza değil üretici tarafından doğrulanmış bir performans sınırlaması
+        ve giriş seviyesi bir tabletten akıcı oyun veya ağır çoklu görev bekleyen alıcılar için en çok
+        önem taşıyor.
+      advice: Redmi Pad SE'de kaynak yoğun oyunlarda ve ağır çoklu görevde gecikme bekleyin; daha akıcı
+        performans istiyorsanız arka plan uygulamalarını kapatın ve uzun oyun oturumlarından kaçının,
+        performans önemliyse daha yüksek RAM'li varyantı düşünün.
+  evidence:
+  - url: https://www.mi.com/sg/support/faq/details/KA-484666/
+    quote: Intensive gaming can cause the device to heat up, triggering thermal throttling where the system
+      reduces performance to cool down, resulting in lag
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:32:02+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: lenovo
+      model: tab-m11
+  kind: known_issue
+  domain: connectivity
+  severity: high
+  consequence: ''
+  detection: ''
+  component: Wi-Fi module
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Tablet stops connecting to Wi-Fi after powering off
+      body: Found via 'Lenovo Tab M11 sorun şikayet' (Comfy.ua customer review).
+      advice: An owner reports the tablet stops connecting to Wi-Fi after it powers off; a factory reset
+        fixes it temporarily but the problem recurs, pointing to a Wi-Fi module fault.
+    tr:
+      title: Tablet kapatıldıktan sonra Wi-Fi'ye bağlanmayı bırakıyor
+      body: '''Lenovo Tab M11 sorun şikayet'' (Comfy.ua müşteri yorumu) aracılığıyla bulundu.'
+      advice: Bir sahip, tabletin kapatıldıktan sonra Wi-Fi'ye bağlanmayı bıraktığını bildiriyor; fabrika
+        ayarlarına sıfırlama sorunu geçici olarak düzeltiyor ancak sorun tekrarlıyor, bu da bir Wi-Fi
+        modülü arızasına işaret ediyor.
+  evidence:
+  - url: https://comfy.ua/planshet-lenovo-tab-m11-8-128-wifi-zada0299ua-luna-grey-pen-otzyvy.html
+    quote: Працював добре , але місяць тому виключився і перестав підключатись до вай фаю
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:26:25+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: apple
+      model: ipad-10th-gen
+  kind: known_issue
+  domain: hardware
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: charging port / USB-C connector
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: iPad 10. Nesil charging port contact failure — warranty claim denied
+      body: nesil şikayet sorun şarj'. A Turkish owner reports intermittent charging on an iPad 10 under
+        warranty; Apple's authorized service said the charging port had contact failure due to frame deformation
+        and denied warranty coverage, quoting 15,300 TL for a replacement unit.
+      advice: Intermittent charging on an iPad 10 can be diagnosed by Apple as frame damage causing charging-port
+        contact failure, and warranty coverage may be denied. If you buy one, check the frame/port area
+        early; a charging fault may not be covered if any deformation is found.
+    tr:
+      title: iPad 10. Nesil şarj bağlantı noktası temas arızası — garanti talebi reddedildi
+      body: nesil şikayet sorun şarj'. Bir Türk sahibi, garantili bir iPad 10'da aralıklı şarj sorunu
+        bildiriyor; Apple'ın yetkili servisi, şarj bağlantı noktasının çerçeve deformasyonu nedeniyle
+        temas arızası verdiğini söyleyerek garanti kapsamını reddetti ve değişim ünitesi için 15.300 TL
+        fiyat verdi.
+      advice: Bir iPad 10'da aralıklı şarj, Apple tarafından şarj bağlantı noktası temas arızasına yol
+        açan çerçeve hasarı olarak teşhis edilebilir ve garanti kapsamı reddedilebilir. Bir tane alırsanız,
+        çerçeve/bağlantı noktası bölgesini erken kontrol edin; herhangi bir deformasyon bulunursa şarj
+        arızası kapsam dahilinde olmayabilir.
+  evidence:
+  - url: https://www.sikayetvar.com/apple/apple-garanti-kapsaminda-ipad-degisimi-reddi-ve-yetersiz-servis-incelemesi
+    quote: Kasa hasarından dolayı şarj soketi temassızlık yapmaktadır.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:27:03+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      model: redmi-pad-se
+  kind: known_issue
+  domain: performance
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: SoC / thermal throttling
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Lag during gaming from thermal throttling and low memory
+      body: From Xiaomi's own support FAQ for the Redmi Pad SE 8.7. Xiaomi itself acknowledges the tablet
+        lags in heavy gaming because of thermal throttling and lack of memory. This is a performance-domain
+        limitation a buyer should expect on this entry-tier hardware.
+      advice: If you plan to game or run many apps, expect lag; close background apps and avoid long heavy
+        sessions on this model.
+    tr:
+      title: Isıl kısıtlama ve düşük bellek nedeniyle oyun sırasında takılma
+      body: Xiaomi'nin Redmi Pad SE 8.7 için kendi destek SSS'sinden. Xiaomi'nin kendisi, tabletin ısıl
+        kısıtlama ve bellek eksikliği nedeniyle ağır oyunlarda takıldığını kabul ediyor. Bu, bir alıcının
+        bu giriş seviyesi donanımda beklemesi gereken bir performans alanı sınırlamasıdır.
+      advice: Oyun oynamayı veya çok sayıda uygulama çalıştırmayı planlıyorsanız takılma bekleyin; arka
+        plan uygulamalarını kapatın ve bu modelde uzun ağır oturumlardan kaçının.
+  evidence:
+  - url: https://www.mi.com/sg/support/faq/details/KA-484666/
+    quote: Intensive gaming can cause the device to heat up, triggering thermal throttling where the system
+      reduces performance to cool down, resulting in lag
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:32:02+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: lenovo
+      model: tab-m10
+  kind: known_issue
+  domain: hardware
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: power button
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Tab M10 Military Edition power button stopped responding after 8 months
+      body: An owner of the M10 Military Edition (ZAAH0046UA) reports the power button stopped waking
+        the device after sleep at 8 months, plus random reboots and content stutter. This is a concrete
+        physical-button failure matching the pack's 'faulty physical buttons' concern.
+      advice: ''
+    tr:
+      title: Tab M10 Military Edition güç düğmesi 8 ay sonra yanıt vermeyi durdurdu
+      body: M10 Military Edition (ZAAH0046UA) sahibi, 8. ayda güç düğmesinin uykudan sonra cihazı uyandırmayı
+        durdurduğunu, ayrıca rastgele yeniden başlatmalar ve içerik takılması yaşadığını bildiriyor. Bu,
+        paketin 'hatalı fiziksel düğmeler' endişesiyle örtüşen somut bir fiziksel düğme arızasıdır.
+  evidence:
+  - url: https://comfy.ua/ua/planshet-lenovo-tab-m10-military-edition-no-cameras-4-64-lte-zaah0046ua-storm-grey-otzyvy.html
+    quote: через 8 місяців перестав реагувати на кнопку включення після сну
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:32:58+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: huawei
+      model: matepad-se-11
+  kind: known_issue
+  domain: hardware
+  severity: high
+  consequence: ''
+  detection: ''
+  component: display / charging socket
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: MatePad SE 11 recurring screen fault (lines, then black screen) plus charging-socket failure,
+        twice through service
+      body: A Turkish owner reports the screen developed a line then went black/refused to power on, and
+        the charging socket failed; after two service visits the fault was not permanently fixed.
+      advice: Buyer should verify warranty/service terms before purchase; screen and charging faults are
+        the most serious reported failure and may require repeat service visits.
+    tr:
+      title: MatePad SE 11 tekrarlayan ekran arızası (çizgiler, ardından siyah ekran) ve şarj soketi arızası,
+        servisten iki kez geçti
+      body: Bir Türk sahibi, ekranda bir çizgi oluştuğunu ve ardından karardığını/açılmayı reddettiğini
+        ve şarj soketinin arızalandığını bildiriyor; iki servis ziyaretinden sonra arıza kalıcı olarak
+        giderilmedi.
+      advice: Alıcı, satın almadan önce garanti/servis koşullarını doğrulamalıdır; ekran ve şarj arızaları
+        bildirilen en ciddi arızalardır ve tekrarlanan servis ziyaretleri gerektirebilir.
+  evidence:
+  - url: https://www.sikayetvar.com/huawei/huawei-matepad-se-11-tabletinde-tekrarlayan-ekran-ve-sarj-arizalari-nedeniyle-degisim-talebi
+    quote: Huawei Matepad se 11 tabletimi Media Markt üzerinden satın aldıktan bir süre sonra ekranda
+      önce çizgi oluşmasıyla başlayan bir sorun yaşadım. Ürünü bu nedenle 8. Aydan itibaren servise gönderdim.
+      Cihaz bana tamir edildiği söylenerek geri gönderildi ancak ekran sorunu bu kez kararma, kapanıp
+      açılmama şeklinde devam etti. Ayrıca şarj soketinde de sorun yaşamaya başladım.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:26:07+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      model: galaxy-tab-a9
+  kind: known_issue
+  domain: hardware
+  severity: low
+  consequence: ''
+  detection: ''
+  component: chassis / case
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Chronic case/paint peeling and metal deformation
+      body: An owner reports paint dots peeling, metal deformation at the volume area and flaking at the
+        charging-port rear case despite careful use, calling it a chronic case problem. The authorized
+        service quoted ~5000 TL for a case swap and warned the screen might break.
+      advice: The A9's case finish can peel and deform; cosmetic, but a service may quote a costly case
+        replacement, so get a second opinion.
+    tr:
+      title: Kronik kasa/boya soyulması ve metal deformasyonu
+      body: Bir sahip, dikkatli kullanıma rağmen boya noktalarının soyulduğunu, ses düğmesi bölgesinde
+        metal deformasyonu ve şarj bağlantı noktası arka kasasında pul pul dökülme olduğunu bildirerek
+        bunu kronik bir kasa sorunu olarak nitelendiriyor. Yetkili servis, kasa değişimi için ~5000 TL
+        fiyat verdi ve ekranın kırılabileceği uyarısında bulundu.
+      advice: A9'un kasa kaplaması soyulabilir ve deforme olabilir; kozmetik, ancak bir servis maliyetli
+        bir kasa değişimi fiyatı verebilir, bu yüzden ikinci bir görüş alın.
+  evidence:
+  - url: https://www.sikayetvar.com/samsung-telefon/samsung-galaxy-tab-a9da-kronik-kasa-sorunu-ve-servis-hayal-kirikligi
+    quote: cihazın dış yüzeyinde nokta şeklinde boya atmalar oluştu, ses açma kısmındaki metalde yamulmalar
+      meydana geldi ve şarj girişinin arka kasa kısmında dökülmeler oluştu.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:27:34+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: lenovo
+      model: tab-m10
+  kind: known_issue
+  domain: power
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Tab M10 3rd gen battery drains fast after about one year of use
+      body: An owner of the M10 3rd gen (ZAAE0027UA) lists fast discharge as the main drawback, especially
+        after roughly one year of use. This matches the pack's 'short battery life' concern and tells
+        a buyer the battery degrades noticeably within the first year.
+      advice: ''
+    tr:
+      title: Tab M10 3. nesil pil yaklaşık bir yıllık kullanımdan sonra hızlı tükeniyor
+      body: M10 3. nesil (ZAAE0027UA) sahibi, özellikle yaklaşık bir yıllık kullanımdan sonra hızlı deşarjı
+        ana dezavantaj olarak listeliyor. Bu, paketin 'kısa pil ömrü' endişesiyle örtüşüyor ve alıcıya
+        pilin ilk yıl içinde belirgin şekilde bozulduğunu söylüyor.
+  evidence:
+  - url: https://comfy.ua/planshet-lenovo-tab-m10-3-gen-4-64-wifi-zaae0027ua-storm-grey-ucenka-1-1-otzyvy.html
+    quote: Швидко розряджається,особливо після приблизно 1го року використання
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:32:58+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      model: galaxy-tab-a7-lite
+  kind: known_issue
+  domain: power
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: Battery / charging port
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Galaxy Tab A7 Lite has lousy battery life and a persistent charging-connection warning
+      body: An eBay owner review reports poor battery life and a charging-connection warning that persists
+        across different USB-C cables, making charging slow.
+      advice: Short battery life plus a charging-connection warning suggests a weak battery or port; factor
+        in battery replacement cost on older units.
+    tr:
+      title: Galaxy Tab A7 Lite berbat pil ömrüne ve kalıcı bir şarj bağlantısı uyarısına sahip
+      body: Bir eBay sahibi incelemesi, kötü pil ömrünü ve farklı USB-C kablolarında devam eden, şarjı
+        yavaşlatan bir şarj bağlantısı uyarısını bildiriyor.
+      advice: Kısa pil ömrü artı bir şarj bağlantısı uyarısı, zayıf bir pil veya bağlantı noktasına işaret
+        eder; eski birimlerde pil değiştirme maliyetini hesaba katın.
+  evidence:
+  - url: https://www.ebay.ca/urw/Samsung-Galaxy-Tab-A7-Lite-SM-T227-32-GB-Wi-Fi-4G-8-7-in-Gray/product-reviews/6048642016?_itm=186197881326
+    quote: Great cosmetic condition and works fine, but has a really lousy battery life and I always get
+      a charging connection warning/status no matter which usb c cable I use which makes it really slow
+      to charge.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:28:40+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: lenovo
+      model: tab-m11
+  kind: known_issue
+  domain: hardware
+  severity: high
+  consequence: ''
+  detection: ''
+  component: mainboard
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Mainboard replaced under warranty after heavy freezing
+      body: Found via 'Lenovo Tab M11 problems review' (Comfy.ua customer review).
+      advice: A buyer reports the tablet started freezing heavily a few months after purchase and needed
+        boards replaced under warranty, so a hardware fault is possible within the first year.
+    tr:
+      title: Ağır donmaların ardından ana kart garanti kapsamında değiştirildi
+      body: '''Lenovo Tab M11 problems review'' (Comfy.ua müşteri incelemesi) aracılığıyla bulundu.'
+      advice: Bir alıcı, tabletin satın alımdan birkaç ay sonra ağır şekilde donmaya başladığını ve kartların
+        garanti kapsamında değiştirilmesi gerektiğini bildiriyor, bu nedenle ilk yıl içinde bir donanım
+        arızası mümkündür.
+  evidence:
+  - url: https://comfy.ua/planshet-lenovo-tab-m11-8-128-lte-zadb0317ua-luna-grey-pen-ucenka-1-1-otzyvy.html
+    quote: У січні звернулися в сервісний центр- по гарантії замінили якісь плати
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:26:25+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: huawei
+      model: matepad-se-11
+  kind: known_issue
+  domain: software
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: HarmonyOS / Google services
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: MatePad SE 11 runs HarmonyOS 2.0 (Android 10 base) with no Google services and Bluetooth
+        restrictions
+      body: A buyer reports HarmonyOS 2.0 is an Android 10 base with no Google services, Bluetooth restrictions,
+        and other system limitations.
+      advice: If the buyer relies on Google Play apps, they must sideload APKs or use a GBox workaround;
+        some apps will not work.
+    tr:
+      title: MatePad SE 11, Google hizmetleri ve Bluetooth kısıtlamaları olmadan HarmonyOS 2.0 (Android
+        10 tabanı) çalıştırıyor
+      body: Bir alıcı, HarmonyOS 2.0'ın Google hizmetleri, Bluetooth kısıtlamaları ve diğer sistem sınırlamaları
+        olmayan bir Android 10 tabanı olduğunu bildiriyor.
+      advice: Alıcı Google Play uygulamalarına güveniyorsa, APK'ları yandan yüklemeli veya bir GBox geçici
+        çözümü kullanmalıdır; bazı uygulamalar çalışmayacaktır.
+  evidence:
+  - url: https://dns-shop.ge/ru/product/4088c21a1ee4d0a4/11-planset-huawei-matepad-se-11-wi-fi-128-gb-seryj/opinions/
+    quote: Столкнулся с кучей проблем и ограничений системы. Выяснилось что Harmony IS 2.0 которая здесь
+      стоит это старый андроид 10. Ограничения с работой с блютуз и куча ещё ограничений.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:26:07+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      model: galaxy-tab-a7-lite
+  kind: known_issue
+  domain: connectivity
+  severity: high
+  consequence: ''
+  detection: ''
+  component: Wi-Fi radio / antenna
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Galaxy Tab A7 Lite keeps disconnecting from the internet
+      body: An owner review (originally posted on walmart.com) reports the tablet repeatedly drops its
+        internet connection while other devices on the same network stay connected.
+      advice: If Wi-Fi reliability matters, this is a documented failure mode; the owner could not fix
+        it and the unit was used for streaming/music that kept stopping.
+    tr:
+      title: Galaxy Tab A7 Lite internetten bağlantısını sürekli kesiyor
+      body: Bir sahibi incelemesi (başlangıçta walmart.com'da yayınlanmıştır), aynı ağdaki diğer cihazlar
+        bağlı kalırken tabletin internet bağlantısını tekrar tekrar düşürdüğünü bildiriyor.
+      advice: Wi-Fi güvenilirliği önemliyse, bu belgelenmiş bir arıza modudur; sahibi bunu düzeltememiştir
+        ve birim sürekli duran akış/müzik için kullanılmıştır.
+  evidence:
+  - url: https://buywisely.com.au/au/product/samsung-galaxy-tab-a7-lite-87-2021-wifi-cellular-32gb-4g-lte
+    quote: This unit kept disconnecting from the internet. Why? Eho knows. All my other devices didn't
+      disconnect.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:28:40+00:00'

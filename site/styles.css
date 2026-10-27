@@ -243,6 +243,7 @@ h2 { font-size: clamp(2.5rem, 5.4vw, 4.2rem); max-width: 14em; }
 .problems .alerts li { margin: 0; max-width: none; border-top: 1px solid var(--line); }
 .problems .alerts a { display: flex; align-items: baseline; padding: 9px 0; color: var(--ink); text-decoration: none; font-weight: 600; }
 .problems .alerts a:hover span { text-decoration: underline; }
+.problems .serious .rest summary { padding: 9px 0; border-top: 1px solid var(--line); color: var(--muted); font-weight: 600; cursor: pointer; }
 .problems .alerts small { display: block; margin-top: 2px; color: var(--muted); font-size: .95rem; font-weight: 400; }
 .problems .card .ico.big { display: block; width: 2rem; height: 2rem; margin: 0 0 8px; }
 

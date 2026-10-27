@@ -1,0 +1,1616 @@
+# Claims — what is known to go wrong, each with the page it came from and the quote
+# that was read there. A claim without both is not in this file.
+- subject:
+    kind: product
+    identity:
+      brand: lenovo
+      series: ideapad 5i
+  kind: known_issue
+  domain: hinge_chassis
+  severity: high
+  consequence: ''
+  detection: ''
+  component: hinge screw assembly / display glass
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: IdeaPad 5i 2-in-1 hinge screw backs out, shatters display glass
+      body: Owner reports hinge screw backing out during normal use, causing the display glass to shatter
+        when closing the lid. Owner describes it as 'a widely documented structural issue across this
+        specific model line.' Failure occurred just outside warranty, so the owner had to request a courtesy
+        repair.
+      advice: Check hinge integrity regularly; if a screw feels loose or the lid resistance changes, stop
+        using the lid and have it serviced before the glass breaks. This failure can occur outside warranty,
+        leaving the owner with a full display replacement cost.
+    tr:
+      title: IdeaPad 5i 2'si 1 arada menteşe vidası geri çıkıyor, ekran camını parçalıyor
+      body: Sahibi, normal kullanım sırasında menteşe vidasının geri çıktığını ve kapak kapatılırken ekran
+        camının parçalanmasına neden olduğunu bildiriyor. Sahibi bunu 'bu belirli model serisinde yaygın
+        olarak belgelenmiş bir yapısal sorun' olarak tanımlıyor. Arıza garanti süresinin hemen dışında
+        meydana geldi, bu yüzden sahibi bir jest onarımı talep etmek zorunda kaldı.
+      advice: Menteşe bütünlüğünü düzenli olarak kontrol edin; bir vida gevşek hissedilirse veya kapak
+        direnci değişirse, kapağı kullanmayı bırakın ve cam kırılmadan önce servise verin. Bu arıza garanti
+        süresi dışında meydana gelebilir ve sahibine tam ekran değişim maliyeti bırakabilir.
+  evidence:
+  - url: https://forums.lenovo.com/t5/Lenovo-IdeaPad-1xx-3xx-5xx-7xx-Edge-LaVie-Z-Flex-Laptops/Out-of-Warranty-Courtesy-Repair-Request-IdeaPad-5i-2-in-1-Hinge-Mechanical-Failure-Shattered-Glass/m-p/10050396
+    quote: A few days ago, a structural hinge screw backed out on its own from the bottom right casing
+      during normal, careful handling. The next time I went to gently close the laptop lid, the entire
+      mechanical resistance shifted entirely onto the lower corner of the display panel because the hinge
+      was no longer structurally secured. This sudden leverage caused the lower-right corner of the glass
+      to imm3ediately flex and shatter.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:58:19+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: lenovo
+      series: ideapad 5i
+  kind: known_issue
+  domain: battery
+  severity: high
+  consequence: ''
+  detection: ''
+  component: battery / power system
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: IdeaPad 5i completely dead after being left unplugged overnight
+      body: Owner reports the laptop became completely unresponsive after being left unplugged overnight,
+        5 months after purchase. The machine would not power on, would not recognize the charger, and
+        reset attempts failed.
+      advice: A battery/power failure can occur within the first year. If the laptop dies after being
+        unplugged, try the hard reset and charging steps, but be prepared that the battery or power board
+        may need replacement — ideally under warranty.
+    tr:
+      title: IdeaPad 5i gece boyunca fişten çekili bırakıldıktan sonra tamamen ölü
+      body: Sahibi, satın alımdan 5 ay sonra gece boyunca fişten çekili bırakıldıktan sonra dizüstü bilgisayarın
+        tamamen yanıt vermez hale geldiğini bildiriyor. Makine açılmıyor, şarj cihazını tanımıyor ve sıfırlama
+        denemeleri başarısız oldu.
+      advice: İlk yıl içinde bir pil/güç arızası meydana gelebilir. Dizüstü bilgisayar fişten çekildikten
+        sonra ölürse, sabit sıfırlama ve şarj etme adımlarını deneyin, ancak pilin veya güç kartının değiştirilmesi
+        gerekebileceğine hazırlıklı olun — ideal olarak garanti kapsamında.
+  evidence:
+  - url: https://www.walmart.com/reviews/product/648554999?clickid=Qzwwwv3-axyKW6zQ4xwdhyzQUkC3D0y--1bWXo0&irgwc=1&sourceid=imp_Qzwwwv3-axyKW6zQ4xwdhyzQUkC3D0y--1bWXo0&veh=aff&wmlspartner=imp_10451&affiliates_ad_id=567111&campaign_id=9383&sharedid=&page=341
+    quote: Bought this 5 months ago for my son. It was left unplugged and the next morning we could not
+      get it powered on, it was completely dead. Nothing worked. Didn't know if it was because of the
+      battery, but difficult to know because the computer wouldn't even recognize the power chord. Tried
+      to reset it, hold the power button down for 1 minute, leave it plugged in to see if it would charge
+      after some time. Nothing! completely dead.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:58:19+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: hp
+      series: envy x360
+  kind: known_issue
+  domain: general
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: keyboard
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Envy x360 keyboard stops responding; welded into palmrest makes repair costly
+      body: An iFixit thread documents the built-in keyboard stopping responding after updates, with the
+        fixer noting the keyboard is welded into the palmrest so the whole upper case must be replaced
+        at roughly $100+ in parts. A Czech Alza review in the same run reports the keyboard randomly disconnecting
+        twice, requiring two warranty claims.
+      advice: If keys stop responding, a USB keyboard confirms it is the internal unit; budget for a full
+        upper-case replacement since the keyboard is not separately replaceable on newer models.
+    tr:
+      title: Envy x360 klavyesi yanıt vermeyi durduruyor; avuç içi dayanağına kaynaklanmış olması onarımı
+        maliyetli kılıyor
+      body: Bir iFixit başlığı, güncellemelerden sonra yerleşik klavyenin yanıt vermeyi durdurduğunu belgeliyor
+        ve onarımcı, klavyenin avuç içi dayanağına kaynaklanmış olduğunu, bu nedenle tüm üst kasanın yaklaşık
+        100$+ parça maliyetiyle değiştirilmesi gerektiğini belirtiyor. Aynı dönemde bir Çek Alza incelemesi,
+        klavyenin rastgele iki kez bağlantısının kesildiğini ve iki garanti talebi gerektirdiğini bildiriyor.
+      advice: Tuşlar yanıt vermeyi durdurursa, bir USB klavye bunun dahili birim olduğunu doğrular; klavye
+        yeni modellerde ayrı olarak değiştirilemediği için tam üst kasa değişimi için bütçe ayırın.
+  evidence:
+  - url: https://it.ifixit.com/Risposte/Visualizza/940338/keyboard+still+fails+to+respond
+    quote: The bad news is HP welds it into the palmrest on newer models, so you have to replace the entire
+      upper case and it's not a cheap repair :-(
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:56:35+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: hp
+      series: pavilion 15
+  kind: known_issue
+  domain: software_firmware
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: BIOS firmware / ACPI sleep state
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: HP Pavilion 15-eg1xxx hard-reboots on sleep after Windows 11 26H2, BIOS F.26 incompatible
+      body: A Pavilion 15-eg1xxx owner reports hard-reboots (Kernel-Power 41) on entering Modern Standby
+        after the Windows 11 26H2 update, tied to an incompatible BIOS revision.
+      advice: After a Windows feature update, this series can hard-reboot when going to sleep until HP
+        ships a compatible BIOS; the workaround is forcing S3 sleep via the registry. Keep BIOS and Windows
+        updated, and expect possible sleep-related instability after major updates.
+    tr:
+      title: HP Pavilion 15-eg1xxx, Windows 11 26H2 sonrası uykuda sabit yeniden başlıyor, BIOS F.26 uyumsuz
+      body: Bir Pavilion 15-eg1xxx sahibi, Windows 11 26H2 güncellemesinden sonra Modern Standby'a girerken
+        sabit yeniden başlamalar (Kernel-Power 41) yaşadığını ve bunun uyumsuz bir BIOS revizyonuyla bağlantılı
+        olduğunu bildiriyor.
+      advice: Bir Windows özellik güncellemesinden sonra, HP uyumlu bir BIOS yayınlayana kadar bu seri
+        uykuya geçerken sabit yeniden başlayabilir; geçici çözüm, kayıt defteri aracılığıyla S3 uykusunu
+        zorlamaktır. BIOS ve Windows'u güncel tutun ve büyük güncellemelerden sonra olası uykuyla ilgili
+        kararsızlığa hazırlıklı olun.
+  evidence:
+  - url: https://h30434.www3.hp.com/t5/Notebook-Operating-System-and-Recovery/BIOS-F-26-incompatible-with-Windows-11-26H2-S0ix-Modern/m-p/9726587
+    quote: After upgrading to Windows 11 26H2 on Oct 21, my Pavilion 15-eg1xxx (BIOS F.26) began hard-rebooting
+      (Kernel-Power 41, BugcheckCode 0) whenever the system attempted to enter Modern Standby (S0ix).
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:57:36+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: apple
+      series: macbook air m2
+  kind: known_issue
+  domain: battery
+  severity: high
+  consequence: ''
+  detection: ''
+  component: battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: MacBook Air M2 swollen battery, 170€ charged out of warranty
+      body: By the 3rd year Apple confirmed a swollen battery and charged 170€, claiming out of warranty,
+        while the owner argues the latent defect/safety risk (fire hazard) should be covered by the legal
+        guarantee.
+      advice: A swollen battery on an M2 Air is a safety issue that can surface as a chemical smell early;
+        document any smell within the warranty period, because Apple may otherwise charge ~170€ to replace
+        the battery later.
+    tr:
+      title: MacBook Air M2 şişmiş pil, garanti dışı 170€ ücret alındı
+      body: 3. yılda Apple şişmiş bir pili doğruladı ve garanti dışı olduğunu iddia ederek 170€ ücret
+        aldı, oysa sahibi gizli kusurun/güvenlik riskinin (yangın tehlikesi) yasal garanti kapsamında
+        olması gerektiğini savunuyor.
+      advice: Bir M2 Air'de şişmiş pil, erken dönemde kimyasal koku olarak ortaya çıkabilecek bir güvenlik
+        sorunudur; garanti süresi içinde herhangi bir kokuyu belgeleyin, çünkü aksi takdirde Apple pili
+        daha sonra değiştirmek için ~170€ ücret alabilir.
+  evidence:
+  - url: https://www.deco.proteste.pt/reclamar/todas-as-reclamacoes/garantia-n-C3-A3o-realizada/3c8f28500dff6c577a
+    quote: Agora, no 3º ano, confirmam bateria inchada e cobram 170€, alegando fora de garantia e sem
+      reclamação prévia.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:54:55+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: hp
+      series: envy x360
+  kind: known_issue
+  domain: software_firmware
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: audio drivers
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Envy x360 locks up with a loud buzzing noise during voice chat
+      body: A Best Buy owner describes a lockup with a loud buzzing noise during voice chat, calling it
+        a known issue HP had not fixed. This matches the widely reported 'Envy x360 buzzing' audio problem.
+      advice: If you rely on Zoom/Discord calls, verify the audio driver/firmware is current before buying;
+        a lockup mid-call requiring a full restart is disruptive.
+    tr:
+      title: Envy x360 sesli sohbet sırasında yüksek bir vızıltı sesiyle kilitleniyor
+      body: Bir Best Buy sahibi, sesli sohbet sırasında yüksek bir vızıltı sesiyle kilitlenmeyi tanımlıyor
+        ve bunu HP'nin düzeltmediği bilinen bir sorun olarak adlandırıyor. Bu, yaygın olarak bildirilen
+        'Envy x360 vızıltı' ses sorunuyla örtüşüyor.
+      advice: Zoom/Discord aramalarına güveniyorsanız, satın almadan önce ses sürücüsünün/yazılımının
+        güncel olduğunu doğrulayın; arama ortasında tam yeniden başlatma gerektiren bir kilitlenme rahatsız
+        edicidir.
+  evidence:
+  - url: https://www.bestbuy.com/site/reviews/hp-envy-x360-2-in-1-15-6-touch-screen-laptop-amd-ryzen-5-8gb-memory-256gb-solid-state-drive-sandblasted-anodized-finish-nightfall-black/6339175?page=6&pageSize=20&rating=1&sku=6339175&sort=BEST_REVIEW&variant=A
+    quote: It locks up and freezes during and voice chat. Zoom, discord, steam, it doesn't matter, it
+      will lock up within 30 minutes to an hour of using it for this and a loud buzzing noise will start
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:56:35+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: apple
+      series: macbook air m2
+  kind: known_issue
+  domain: general
+  severity: high
+  consequence: ''
+  detection: ''
+  component: placa base (motherboard), display
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: MacBook Air M2 image and keyboard faults traced to motherboard, replaced twice without resolution
+      body: Apple's authorized service traced it to the motherboard, replaced it, and said a second motherboard
+        would be needed. The owner was still without a working unit as of 27/05/2026.
+      advice: A recurring image/keyboard fault on an M2 Air may be a motherboard problem that survives
+        a screen swap; if you hit repeated repairs under warranty, push for full unit replacement rather
+        than accepting endless part swaps.
+    tr:
+      title: MacBook Air M2 görüntü ve klavye arızalarının kaynağı anakart olarak tespit edildi, iki kez
+        değiştirildi ancak çözüm bulunamadı
+      body: Apple'ın yetkili servisi sorunun kaynağını anakart olarak tespit etti, değiştirdi ve ikinci
+        bir anakartın gerekli olacağını söyledi. Sahibi 27/05/2026 itibarıyla hâlâ çalışan bir cihaza
+        sahip değildi.
+      advice: Bir M2 Air'de tekrarlayan görüntü/klavye arızası, ekran değişiminden sonra da devam eden
+        bir anakart sorunu olabilir; garanti kapsamında tekrarlanan onarımlarla karşılaşırsanız, sonsuz
+        parça değişimlerini kabul etmek yerine tam cihaz değişimi için ısrar edin.
+  evidence:
+  - url: https://www.ocu.org/reclamar/lista-reclamaciones-publicas/reclamaci-C3-B3n-por-falta-de-confo/fb7763ce8c325c3f43
+    quote: se me informó de que el origen del problema era la placa base, por lo que se solicitó una nueva
+      pieza y se procedió a su sustitución. Tras dicha reparación, se me comunicó que el fallo persistía
+      y que sería necesario solicitar una segunda placa base.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:54:55+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: hp
+      series: pavilion 15
+  kind: known_issue
+  domain: display
+  severity: high
+  consequence: ''
+  detection: ''
+  component: display video cable (LVDS/eDP ribbon at hinge)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: HP Pavilion 15-ef2729wm display flicker from video cable impinged at hinge
+      body: An owner of five units of the exact subject model reports four developing the same flicker/distortion,
+        traced to the video cable being pinched where it routes around the hinge; freeing it worked only
+        temporarily.
+      advice: If you buy this model, expect a possible display flicker/line-distortion fault that recurs
+        even after the cable is re-routed; it points to a design weakness at the hinge rather than a one-off
+        unit. Check the screen during the return window.
+    tr:
+      title: HP Pavilion 15-ef2729wm ekran titremesi, menteşede sıkışan video kablosundan kaynaklanıyor
+      body: Tam olarak söz konusu modelden beş adet sahibi olan bir kullanıcı, dördünde aynı titreme/bozulmanın
+        geliştiğini, bunun menteşe çevresinden geçen video kablosunun sıkışmasından kaynaklandığını bildiriyor;
+        kabloyu serbest bırakmak yalnızca geçici olarak işe yaradı.
+      advice: Bu modeli satın alırsanız, kablo yeniden yönlendirildikten sonra bile tekrarlayan olası
+        bir ekran titremesi/çizgi bozulması arızası bekleyin; bu, tek seferlik bir cihaz sorunu yerine
+        menteşedeki bir tasarım zayıflığına işaret eder. İade süresi içinde ekranı kontrol edin.
+  evidence:
+  - url: https://h30434.www3.hp.com/t5/Notebook-Hardware-and-Upgrade-Questions/HP-Laptop-15-ef2729wm-Multiple-Laptops-Same-Problem-Video/td-p/9725852
+    quote: The screen begins to flicker in and out on and off or distorts the desktop with horizontal
+      lines in and out rapidly.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:57:36+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: hp
+      series: envy x360
+  kind: known_issue
+  domain: battery
+  severity: high
+  consequence: ''
+  detection: ''
+  component: battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Envy x360 battery fails within the first year, needing paid replacement
+      body: A Best Buy owner review reports battery failure right out of the box and a paid replacement
+        within the first year, alongside a hinge break. This is an owner-reported reliability claim on
+        a retail review page.
+      advice: Test the battery early in the warranty period; if it randomly shuts off or fails to power
+        on, file a claim before the warranty lapses because out-of-warranty replacement is paid.
+    tr:
+      title: Envy x360 pili ilk yıl içinde arızalanıyor ve ücretli değişim gerekiyor
+      body: Bir Best Buy sahibi incelemesi, kutudan çıkar çıkmaz pil arızası ve ilk yıl içinde ücretli
+        değişim ile birlikte bir menteşe kırılması bildiriyor. Bu, bir perakende inceleme sayfasında sahibi
+        tarafından bildirilen bir güvenilirlik iddiasıdır.
+      advice: Pili garanti süresinin başlarında test edin; rastgele kapanırsa veya açılmazsa, garanti
+        süresi dolmadan talepte bulunun çünkü garanti dışı değişim ücretlidir.
+  evidence:
+  - url: https://www.bestbuy.com/site/reviews/hp-envy-x360-2-in-1-15-6-touch-screen-laptop-amd-ryzen-5-8gb-memory-256gb-solid-state-drive-sandblasted-anodized-finish-nightfall-black/6339175?page=6&pageSize=20&rating=1&sku=6339175&sort=BEST_REVIEW&variant=A
+    quote: Battery issues right out of the box. It would randomly turn off or not turn on. Within the
+      first year I had to pay to get the battery replaced.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:56:35+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: dell
+      series: xps 13
+  kind: known_issue
+  domain: software_firmware
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: BIOS firmware
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: XPS 13 7390 hangs and slow login after BIOS 1.21 update
+      body: On the XPS 13 7390, BIOS update 1.21 caused app-opening hangs and ~2-minute logins; the owner
+        could not roll back the BIOS.
+      advice: Before applying a BIOS update on the 7390, check community reports; a bad BIOS can be hard
+        to roll back and may require reflashing.
+    tr:
+      title: XPS 13 7390, BIOS 1.21 güncellemesinden sonra takılıyor ve oturum açma yavaş
+      body: XPS 13 7390'da BIOS güncellemesi 1.21, uygulama açma takılmalarına ve ~2 dakikalık oturum
+        açmalara neden oldu; sahibi BIOS'u geri alamadı.
+      advice: 7390'da BIOS güncellemesi uygulamadan önce topluluk raporlarını kontrol edin; kötü bir BIOS'un
+        geri alınması zor olabilir ve yeniden yazılması gerekebilir.
+  evidence:
+  - url: https://www.dell.com/community/en/conversations/xps/xps-13-7390-bios-121-issue/6503c88a21bb98620255a96f
+    quote: After installing several drivers and BIOS Update 1.21 the system was would hang up when opening
+      apps and take 2 minutes to log in.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:00:49+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: lenovo
+      series: thinkpad t14
+  kind: known_issue
+  domain: software_firmware
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: BIOS/firmware
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: AMD T14 freezes when idle; blank screen + random restart, fixed by BIOS update
+      body: On the Qubes OS forum, owners of AMD T14/P14s machines report freezes when idle and a blank
+        screen followed by a random restart; one user reports a new BIOS update resolved it, while another
+        says a later firmware update reintroduced the problem.
+      advice: 'AMD T14 owners report idle freezes and blank-screen restarts that are firmware-related:
+        updating the BIOS can fix them, but a later firmware update can bring the problem back. Keep the
+        BIOS current and check the Lenovo community for the latest firmware before assuming hardware failure.'
+    tr:
+      title: AMD T14 boşta donuyor; boş ekran + rastgele yeniden başlatma, BIOS güncellemesiyle düzeltildi
+      body: Qubes OS forumunda, AMD T14/P14s makinelerinin sahipleri boşta donmalar ve boş ekranın ardından
+        rastgele yeniden başlatma bildiriyor; bir kullanıcı yeni bir BIOS güncellemesinin sorunu çözdüğünü
+        bildirirken, bir diğeri daha sonraki bir ürün yazılımı güncellemesinin sorunu yeniden ortaya çıkardığını
+        söylüyor.
+      advice: 'AMD T14 sahipleri, ürün yazılımıyla ilgili boşta donmalar ve boş ekran yeniden başlatmaları
+        bildiriyor: BIOS''u güncellemek bunları düzeltebilir, ancak daha sonraki bir ürün yazılımı güncellemesi
+        sorunu geri getirebilir. BIOS''u güncel tutun ve donanım arızası olduğunu varsaymadan önce en
+        son ürün yazılımı için Lenovo topluluğunu kontrol edin.'
+  evidence:
+  - url: https://forum.qubes-os.org/t/lenovo-thinkpad-t14-with-amd-ryzen-cpu-freezes-when-idle/38887/14
+    quote: I also have the new symptom of the screen going blank then a random restart.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:00:09+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: monster
+      series: abra a7
+  kind: known_issue
+  domain: thermal
+  severity: high
+  consequence: ''
+  detection: ''
+  component: cooling system / power adapter
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Abra A7 v15.3.2 overheating: F10-F11 deck and adapter too hot to touch, ~98°C under load'
+      body: A two-month-old v15.3.2 unit runs at 98°C under gaming load, with the F10-F11 deck and the
+        adapter too hot to touch and the adapter occasionally smelling; the authorized service returned
+        it as 'normal' with no fix.
+      advice: A buyer should expect the A7 to run very hot under load and should verify the unit's thermals
+        and whether the service will actually act before purchase; overheating here was dismissed as normal
+        by the manufacturer's service.
+    tr:
+      title: 'Abra A7 v15.3.2 aşırı ısınma: F10-F11 bölümü ve adaptör dokunulamayacak kadar sıcak, yük
+        altında ~98°C'
+      body: İki aylık bir v15.3.2 cihazı oyun yükü altında 98°C'de çalışıyor; F10-F11 bölümü ve adaptör
+        dokunulamayacak kadar sıcak ve adaptör ara sıra koku yayıyor; yetkili servis cihazı 'normal' olarak
+        geri gönderdi ve hiçbir düzeltme yapmadı.
+      advice: Bir alıcı, A7'nin yük altında çok ısınmasını beklemeli ve satın almadan önce cihazın termal
+        durumunu ve servisin gerçekten harekete geçip geçmeyeceğini doğrulamalıdır; buradaki aşırı ısınma,
+        üreticinin servisi tarafından normal olarak değerlendirildi.
+  evidence:
+  - url: https://www.sikayetvar.com/monster-notebook/monster-abra-a7-asiri-isinma-ve-servis-sorunlariyla-yeni-cihaz-talebi
+    quote: Özellikle F10–F11 tuşları bölgesi ve adaptör kısmı birkaç saniye dokunamayacağım kadar ısınıyor,
+      adaptörden zaman zaman koku geliyor ve cihazın sıcaklığı 98 derecenin altına düşmüyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:59:12+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: dell
+      series: xps 13
+  kind: known_issue
+  domain: service_support
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: support plan
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Dell support refuses help on XPS 13 7390 unless extra support purchased
+      body: Dell told the owner the BSODs were a software issue and would only help if they bought additional
+        support, since software is not covered under the basic warranty.
+      advice: Confirm what the warranty covers for software/firmware faults before relying on Dell support;
+        basic plans may exclude software troubleshooting.
+    tr:
+      title: Dell destek, ek destek satın alınmadıkça XPS 13 7390 için yardımı reddediyor
+      body: Dell, sahibine BSOD'ların bir yazılım sorunu olduğunu ve yazılım temel garanti kapsamında
+        olmadığı için yalnızca ek destek satın almaları durumunda yardımcı olacağını söyledi.
+      advice: Dell desteğine güvenmeden önce garantinin yazılım/donanım yazılımı arızalarını kapsadığını
+        doğrulayın; temel planlar yazılım sorun gidermeyi hariç tutabilir.
+  evidence:
+  - url: https://www.dell.com/community/en/users/647c067db3bb1b09f18ea915
+    quote: I was told by Dell that this is a software issue but that I would only be helped further if
+      I purchase additional support as software is not covered in my plan.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:00:49+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: hp
+      series: pavilion 15
+  kind: known_issue
+  domain: display
+  severity: low
+  consequence: ''
+  detection: ''
+  component: LCD panel / graphics driver
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: HP Pavilion 15 BSOD VIDEO_TDR_FAILURE with bad LCD, graphics driver fault
+      body: A Pavilion 15 (EH3000 variant) owner reports a failing LCD and a VIDEO_TDR_FAILURE blue screen,
+        which the reply attributes to a graphics driver issue.
+      advice: On a different Pavilion 15 variant, a VIDEO_TDR_FAILURE blue screen points to a graphics
+        driver problem rather than hardware; update the AMD/Intel graphics driver first. This is lower-confidence
+        because it is a different model from the subject.
+    tr:
+      title: HP Pavilion 15 BSOD VIDEO_TDR_FAILURE, kötü LCD ve grafik sürücüsü arızasıyla
+      body: Bir Pavilion 15 (EH3000 varyantı) sahibi, arızalı bir LCD ve VIDEO_TDR_FAILURE mavi ekranı
+        bildiriyor; yanıt bunu bir grafik sürücüsü sorununa bağlıyor.
+      advice: Farklı bir Pavilion 15 varyantında, VIDEO_TDR_FAILURE mavi ekranı donanımdan ziyade bir
+        grafik sürücüsü sorununa işaret eder; önce AMD/Intel grafik sürücüsünü güncelleyin. Bu, konuyla
+        ilgili modelden farklı bir model olduğu için daha düşük güvenilirliktedir.
+  evidence:
+  - url: https://learn.microsoft.com/en-us/answers/questions/5783709/hp-pavilion-15-bsod-windows-11-anyone-have-similar
+    quote: has a blue scren of death is VIDEO_TDR_FAILURE
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:57:36+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: asus
+      series: zenbook 13 oled
+  kind: known_issue
+  domain: display
+  severity: low
+  consequence: ''
+  detection: ''
+  component: OLED panel
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: OLED screen flickering at low brightness
+      body: TechSpot's review aggregation lists OLED flickering at low brightness as a reviewer complaint
+        for the UM325S. This is a secondary/aggregated source, lower weight than owner forums, but it
+        corroborates a display-level quirk.
+      advice: If you are sensitive to flicker, keep brightness above the low end or check for driver updates;
+        this is a known OLED characteristic rather than a defect unique to this unit.
+    tr:
+      title: OLED ekran düşük parlaklıkta titriyor
+      body: TechSpot'un inceleme derlemesi, UM325S için düşük parlaklıkta OLED titremesini bir inceleyici
+        şikayeti olarak listeliyor. Bu ikincil/toplanmış bir kaynaktır, sahip forumlarından daha düşük
+        ağırlıktadır, ancak ekran düzeyinde bir tuhaflığı doğrulamaktadır.
+      advice: Titremeye karşı hassassanız, parlaklığı alt sınırın üzerinde tutun veya sürücü güncellemelerini
+        kontrol edin; bu, bu birime özgü bir kusur değil, bilinen bir OLED özelliğidir.
+  evidence:
+  - url: https://www.techspot.com/products/laptops/asus-zenbook-13-oled.233489/
+    quote: Only available with an OLED screen, and beware of flickering at low brightness
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:55:38+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: lenovo
+      series: thinkpad t14
+  kind: known_issue
+  domain: software_firmware
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: AMD platform sleep firmware
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: T14 Gen5 AMD sleep/wake failure persists across generations
+      body: A reviewer of the T14 G5 reports the AMD variants of the T14 line repeatedly fail to wake
+        from sleep, and that Lenovo has not issued a fix for 3+ years.
+      advice: If you are choosing an AMD T14 Gen5, expect a known sleep/wake defect that Lenovo has not
+        fixed across multiple generations; buyers report it is not a unit defect (3 replacements all showed
+        it), so it is a platform-level firmware issue to plan around.
+    tr:
+      title: T14 Gen5 AMD uyku/uyanma arızası nesiller boyunca sürüyor
+      body: Bir T14 G5 inceleyicisi, T14 serisinin AMD varyantlarının uykudan uyanmada tekrar tekrar başarısız
+        olduğunu ve Lenovo'nun 3+ yıldır bir düzeltme yayınlamadığını bildiriyor.
+      advice: Bir AMD T14 Gen5 seçiyorsanız, Lenovo'nun birden fazla nesil boyunca düzeltmediği bilinen
+        bir uyku/uyanma kusuru bekleyin; alıcılar bunun bir birim kusuru olmadığını bildiriyor (3 değişim
+        de bunu gösterdi), bu nedenle hesaba katılması gereken platform düzeyinde bir donanım yazılımı
+        sorunudur.
+  evidence:
+  - url: https://www.google.it/shopping/product/2700343304831433401/reviews?q=t14&hl=zh-CN&prds=eto:9738267627036415507_0,pid:17547819426486032495,rate:1,rnum:10,rsk:PC_13570997248408508042&sa=X&ved=0ahUKEwiM1eS6-52IAxVrxjgGHVScBY4Qn08IKCgE
+    quote: Multiple generations later and it appears that all the AMD variants of these laptops have sleep
+      wake issues.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:00:09+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: monster
+      series: abra a7
+  kind: known_issue
+  domain: software_firmware
+  severity: low
+  consequence: ''
+  detection: ''
+  component: Realtek audio driver / headphone jack
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Abra A7 v14.2 audio cuts out after unplugging headphones; Realtek driver issue, service fixed
+        only by reformat
+      body: A v14.2 owner reports sound stops after plugging/unplugging headphones and the headphone jack
+        disappears from the device list; re-installing drivers did not help, and the service only fixed
+        it by reformatting, which the forum attributes to a chronic software/driver problem.
+      advice: This is a lower-severity, software-side audio issue that recurs and was only resolved by
+        a full reformat. Minor, but worth knowing it is not a hardware failure.
+    tr:
+      title: Abra A7 v14.2 kulaklık çıkarıldıktan sonra ses kesiliyor; Realtek sürücüsü sorunu, servis
+        yalnızca yeniden biçimlendirmeyle düzeltti
+      body: Bir v14.2 sahibi, kulaklık takıp çıkarıldıktan sonra sesin durduğunu ve kulaklık girişinin
+        aygıt listesinden kaybolduğunu bildiriyor; sürücüleri yeniden yüklemek yardımcı olmadı ve servis
+        yalnızca yeniden biçimlendirerek düzeltti; forum bunu kronik bir yazılım/sürücü sorununa bağlıyor.
+      advice: Bu, tekrarlayan ve yalnızca tam yeniden biçimlendirmeyle çözülen, daha düşük önem dereceli,
+        yazılım tarafı bir ses sorunudur. Küçük, ancak bunun bir donanım arızası olmadığını bilmeye değer.
+  evidence:
+  - url: https://www.technopat.net/sosyal/konu/monster-abra-a7-14-2-surekli-ses-gidiyor.3808154/
+    quote: Kulaklık girişinden kulaklığı çıkarıp taktıktan sonra ses gelmemeye başladı.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:59:12+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: asus
+      series: zenbook 13 oled
+  kind: known_issue
+  domain: software_firmware
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: display firmware / brightness driver
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Brightness bug after screen lock — firmware bug suspected on UM325SA
+      body: A German owner of a UM325SA reports that after locking the screen, the display reports maximum
+        brightness but is visibly dimmer; lowering brightness by one step makes it brighter again. A forum
+        respondent calls it a suspected Asus firmware bug.
+      advice: If you see this, try updating firmware/drivers first; if it persists, it is a known firmware-level
+        quirk, not a hardware failure — but verify with Asus support before assuming it will be fixed.
+    tr:
+      title: Ekran kilidinden sonra parlaklık hatası — UM325SA'da donanım yazılımı hatasından şüpheleniliyor
+      body: Bir UM325SA Alman sahibi, ekranı kilitledikten sonra ekranın maksimum parlaklık bildirdiğini
+        ancak görünür şekilde daha loş olduğunu bildiriyor; parlaklığı bir kademe düşürmek onu tekrar
+        daha parlak yapıyor. Bir forum yanıtlayıcısı bunu şüpheli bir Asus donanım yazılımı hatası olarak
+        adlandırıyor.
+      advice: Bunu görürseniz, önce donanım yazılımını/sürücüleri güncellemeyi deneyin; devam ederse,
+        bu bir donanım arızası değil, bilinen bir donanım yazılımı düzeyinde tuhaflıktır — ancak düzeltileceğini
+        varsaymadan önce Asus desteğiyle doğrulayın.
+  evidence:
+  - url: https://www.computerbase.de/forum/threads/weniger-helligkeit-nach-sperren-des-bildschirms.2231794/
+    quote: Ich habe ein Asus ZenBook 13 OLED (UM325SA) mit AMD Ryzen 7 5800U und Windows 10. Nach dem
+      Sperren des Bildschirms und dem Abschalten des Displays wird der Bildschirm nach dem Entsperren
+      als "maximale Helligkeit" angezeigt, ist aber sichtbar dunkler. Wenn ich die Helligkeit um eine
+      Stufe herunterdrehe, wird der Bildschirm sofort heller.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:55:38+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: hp
+      series: pavilion 15
+  kind: known_issue
+  domain: battery
+  severity: high
+  consequence: ''
+  detection: ''
+  component: motherboard / charging circuit
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: HP Pavilion 15 motherboard failure and charging cut-out, 8,100 TL replacement quote (Turkey)
+      body: A Turkish owner reports the Pavilion 15 stopping charging partway through a charge, then HP
+        diagnosing a motherboard fault and quoting ~8,100 TL for replacement after warranty expired.
+      advice: In Turkey, a charging cut-out on this model can be diagnosed as a motherboard fault costing
+        thousands of lira out of warranty. Verify the fault with an independent repairer before paying
+        HP's replacement quote, and keep the device in warranty as long as possible.
+    tr:
+      title: HP Pavilion 15 anakart arızası ve şarj kesintisi, 8.100 TL değişim teklifi (Türkiye)
+      body: Bir Türk sahibi, Pavilion 15'in şarj işleminin ortasında şarj etmeyi durdurduğunu, ardından
+        HP'nin anakart arızası teşhis ettiğini ve garanti süresi dolduktan sonra değişim için yaklaşık
+        8.100 TL teklif verdiğini bildiriyor.
+      advice: Türkiye'de bu modelde şarj kesintisi, garanti dışında binlerce lira tutan bir anakart arızası
+        olarak teşhis edilebilir. HP'nin değişim teklifini ödemeden önce arızayı bağımsız bir tamirciye
+        doğrulatın ve cihazı mümkün olduğunca uzun süre garantide tutun.
+  evidence:
+  - url: https://www.sikayetvar.com/hp/hp-pavilion-15-laptop-ana-kart-arizasi-video
+    quote: Fakat bu hafta HP destek hattını aradığımda ana kart problemi olduğu ve değişim için 8100 küsur
+      fiyat verildi ve garanti süreside dolduğu için ücret bende talep edildi.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:57:36+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: dell
+      series: xps 13
+  kind: known_issue
+  domain: thermal
+  severity: high
+  consequence: ''
+  detection: ''
+  component: cooling fan / thermal system
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: XPS 13 overheats and required fan replacement
+      body: An owner of a high-end XPS 13 (€2,518) reports severe overheating that forced a fan replacement,
+        yet the machine still runs excessively hot afterwards.
+      advice: Check thermals early; if the unit runs hot even after a fan swap, expect recurring overheating
+        and treat it as a persistent design weakness.
+    tr:
+      title: XPS 13 aşırı ısınıyor ve fan değişimi gerekti
+      body: Üst düzey bir XPS 13'ün (€2.518) sahibi, fan değişimine zorlayan ciddi aşırı ısınma bildiriyor,
+        ancak makine sonrasında hâlâ aşırı sıcak çalışıyor.
+      advice: Termal durumu erken kontrol edin; fan değişiminden sonra bile cihaz sıcak çalışıyorsa tekrarlayan
+        aşırı ısınma bekleyin ve bunu kalıcı bir tasarım zayıflığı olarak değerlendirin.
+  evidence:
+  - url: https://www.dell.com/community/es/conversations/xps/decepcion-absoluta-xps-13/698f871c763b490bb7eb01ed?commentId=698fa01b4f4f4e6ff933a1f5
+    quote: problemas graves de sobrecalentamiento que motivaron el cambio del ventilador (a día de hoy,
+      el ordenador sigue calentándose de forma excesiva)
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:00:49+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: monster
+      series: abra a7
+  kind: known_issue
+  domain: general
+  severity: high
+  consequence: ''
+  detection: ''
+  component: southbridge chipset / mainboard
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Abra A7 chronic southbridge/chipset failure and static-electricity no-power-on, mainboard
+        replacement
+      body: An owner reports the machine died without external cause and would not power on, attributing
+        it to a chronic southbridge/chipset fault and static-electricity buildup, and claims the same
+        fault recurs in a large share of units and ends in mainboard replacement, with spare boards nearly
+        unavailable on the market.
+      advice: 'This is the most serious finding: a sudden no-power-on state leading to mainboard replacement,
+        with parts hard to source. A buyer should weigh the availability of warranty/mainboard support
+        and the static-electricity failure mode before buying.'
+    tr:
+      title: Abra A7 kronik güney köprüsü/yonga seti arızası ve statik elektrik nedeniyle açılmama, anakart
+        değişimi
+      body: Bir sahibi, makinenin dış bir neden olmadan öldüğünü ve açılmadığını, bunu kronik bir güney
+        köprüsü/yonga seti arızasına ve statik elektrik birikimine bağladığını ve aynı arızanın büyük
+        bir birim payında tekrarladığını ve anakart değişimiyle sonuçlandığını, yedek kartların piyasada
+        neredeyse bulunamadığını iddia ediyor.
+      advice: 'Bu en ciddi bulgu: anakart değişimine yol açan ani açılmama durumu ve parçaların zor tedarik
+        edilmesi. Bir alıcı, satın almadan önce garanti/anakart desteğinin mevcudiyetini ve statik elektrik
+        arıza modunu tartmalıdır.'
+  evidence:
+  - url: https://www.sikayetvar.com/monster-notebook/monster-notebook-abra-a7-modelinde-kronik-chipset-ve-ana-kart-sorunu
+    quote: Cihazı kullanan 100 kişinin 85'inde aynı hata tekrar etmiş ve chipset arızası vererek ana kart
+      değişimine sebep olmuştur.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:59:12+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: hp
+      series: envy x360
+  kind: known_issue
+  domain: general
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: storage drive (HDD)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Envy x360 storage drive fails within days, with repeated warranty claims
+      body: A verified Czech Alza review reports the HDD failing the second day and being sent for warranty
+        repair, and another verified reviewer reports the HDD failing twice and losing data. This is an
+        EU-market owner report.
+      advice: Back up immediately and confirm the storage warranty; an HDD that fails within days means
+        data loss and a warranty claim right after purchase.
+    tr:
+      title: Envy x360 depolama sürücüsü günler içinde arızalanıyor, tekrarlanan garanti talepleriyle
+      body: Doğrulanmış bir Çek Alza incelemesi, HDD'nin ikinci gün arızalandığını ve garanti onarımına
+        gönderildiğini bildiriyor ve başka bir doğrulanmış inceleyici, HDD'nin iki kez arızalandığını
+        ve veri kaybı yaşandığını bildiriyor. Bu bir AB pazarı sahibi raporudur.
+      advice: Hemen yedekleyin ve depolama garantisini doğrulayın; günler içinde arızalanan bir HDD, satın
+        alımdan hemen sonra veri kaybı ve garanti talebi anlamına gelir.
+  evidence:
+  - url: https://m.alza.cz/recenze/hp-envy-x360-14-fa0900nc-glacier-silver-celokovovy-12383445.htm
+    quote: Hned druhý den odešel HDD, nyní je v reklamaci.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:56:35+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: dell
+      series: xps 13
+  kind: known_issue
+  domain: hinge_chassis
+  severity: high
+  consequence: ''
+  detection: ''
+  component: display panel / chassis
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: XPS 13 9315 screen cracks from camera/screen design stress point
+      body: A long-time customer describes a design flaw where the camera and screen meet, creating a
+        stress concentration that cracks the screen.
+      advice: Handle the lid carefully; a cracked screen from normal use may be denied under warranty,
+        so check coverage before purchase.
+    tr:
+      title: XPS 13 9315 ekranı kamera/ekran tasarım gerilme noktasından çatlıyor
+      body: Uzun süreli bir müşteri, kameranın ve ekranın birleştiği yerde gerilme yığılması oluşturarak
+        ekranı çatlatan bir tasarım kusurunu tanımlıyor.
+      advice: Kapağı dikkatli tutun; normal kullanımdan kaynaklanan çatlamış bir ekran garanti kapsamında
+        reddedilebilir, bu nedenle satın almadan önce kapsamı kontrol edin.
+  evidence:
+  - url: https://www.dell.com/community/en/users/674638e1ca4ae66e382ca09d
+    quote: The XPS 13 has a design flaw where the camera and screen come together. Stress concentration
+      = cracked screen.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:00:49+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: hp
+      series: pavilion 15
+  kind: known_issue
+  domain: hinge_chassis
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: battery, hinge, display cable
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: HP Pavilion 14/15 series battery swelling, hinge cracks, screen flicker and overheating
+      body: A repair-shop aggregate lists the same four recurring Pavilion 14/15 faults — battery swelling,
+        hinge crack, screen flicker, overheating — corroborating the owner reports above.
+      advice: 'This corroborates the owner-level reports: expect battery swelling after a couple of years,
+        hinge cracks, and the screen-flicker/loose-cable fault. These are repairable without a motherboard
+        swap, but budget for them in years 2–3.'
+    tr:
+      title: HP Pavilion 14/15 serisi batarya şişmesi, menteşe çatlakları, ekran titremesi ve aşırı ısınma
+      body: Bir tamir atölyesi derlemesi, aynı dört tekrarlayan Pavilion 14/15 arızasını listeliyor —
+        batarya şişmesi, menteşe çatlağı, ekran titremesi, aşırı ısınma — yukarıdaki sahip raporlarını
+        destekliyor.
+      advice: 'Bu, sahip düzeyindeki raporları destekliyor: birkaç yıl sonra batarya şişmesi, menteşe
+        çatlakları ve ekran titremesi/gevşek kablo arızası bekleyin. Bunlar anakart değişimi olmadan onarılabilir,
+        ancak 2–3. yıllarda bunlar için bütçe ayırın.'
+  evidence:
+  - url: https://www.laptoprepairworld.com/blog/hp-pavilion-common-issues-india/
+    quote: 'The HP Pavilion series has four issues that repeat across India: battery swell, hinge crack,
+      screen flicker, and overheating.'
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:57:36+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: monster
+      series: abra a7
+  kind: known_issue
+  domain: software_firmware
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: control-center software / GPU
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Abra A7 v13.2 control-center software reports wrong, unstable temperatures; GPU shuts down
+        on its own
+      body: An owner of a v13.2 reports the control-panel software shows wrong, unstable temperature readings,
+        BIOS problems, and a GPU that began shutting itself off randomly after a year and a half.
+      advice: The bundled control software is reported unreliable for temperature reporting, and the GPU
+        can shut off on its own. A buyer should not trust the in-software thermals and should verify real
+        temperatures independently.
+    tr:
+      title: Abra A7 v13.2 kontrol merkezi yazılımı yanlış, kararsız sıcaklıklar bildiriyor; GPU kendi
+        kendine kapanıyor
+      body: Bir v13.2 sahibi, kontrol paneli yazılımının yanlış, kararsız sıcaklık okumaları gösterdiğini,
+        BIOS sorunları olduğunu ve bir buçuk yıl sonra GPU'nun rastgele kendi kendine kapanmaya başladığını
+        bildiriyor.
+      advice: Paketle gelen kontrol yazılımının sıcaklık bildirimi için güvenilmez olduğu bildiriliyor
+        ve GPU kendi kendine kapanabiliyor. Bir alıcı yazılım içindeki termal değerlere güvenmemeli ve
+        gerçek sıcaklıkları bağımsız olarak doğrulamalıdır.
+  evidence:
+  - url: https://techolay.net/sosyal/konu/monster-abra-a7-v13-2-ile-yasanan-olumsuz-deneyimler.168543/
+    quote: Kontrol paneli doğru çalışmıyor, sıcaklık derecelerini yanlış ve alakasız bir şekilde, herhangi
+      bir stabilizasyon olmadan gösteriyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:59:12+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: hp
+      series: envy x360
+  kind: known_issue
+  domain: hinge_chassis
+  severity: high
+  consequence: ''
+  detection: ''
+  component: hinge assembly
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Envy x360 hinge assembly separates from chassis, cracking the display
+      body: An owner on HP's own community forum reports the hinge separating under normal use and destroying
+        the display, calling it a documented design flaw. A Best Buy owner review in the same run independently
+        reports the hinge breaking and the screen separating from the lid.
+      advice: Check the hinge area on any used unit and treat a cracked/separating screen as hinge damage,
+        not accidental damage; HP has not recalled it.
+    tr:
+      title: Envy x360 menteşe düzeneği gövdeden ayrılıyor, ekranı çatlatıyor
+      body: HP'nin kendi topluluk forumunda bir sahip, menteşenin normal kullanımda ayrıldığını ve ekranı
+        tahrip ettiğini bildiriyor ve bunu belgelenmiş bir tasarım kusuru olarak nitelendiriyor. Aynı
+        dönemde bir Best Buy sahip incelemesi, menteşenin kırıldığını ve ekranın kapaktan ayrıldığını
+        bağımsız olarak bildiriyor.
+      advice: Kullanılmış herhangi bir ünitede menteşe bölgesini kontrol edin ve çatlamış/ayrılan ekranı
+        kaza hasarı değil menteşe hasarı olarak değerlendirin; HP bunu geri çağırmadı.
+  evidence:
+  - url: https://h30434.www3.hp.com/t5/Notebook-Video-Display-and-Touch/HP-Envy-Touch-Screen-Ruined-from-Manufacturer-Defeect/m-p/9579104/highlight/true
+    quote: The hinge assembly separated from the chassis under normal use, forcibly opening the display
+      and directly causing the touchscreen to crack.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:56:35+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: apple
+      series: macbook air m2
+  kind: known_issue
+  domain: display
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: display (screen)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: MacBook Air M2 screen scratched by debris trapped between keyboard and display
+      body: This matches the known M2 Air keyboard-marks-on-screen issue.
+      advice: On the M2 Air the keyboard can mark or scratch the display when the lid closes over debris;
+        use a screen/keyboard protector and keep the deck clean if you want to avoid permanent screen
+        damage.
+    tr:
+      title: MacBook Air M2 ekranı, klavye ile ekran arasında sıkışan kalıntılarla çizildi
+      body: Bu, bilinen M2 Air klavye izlerinin ekranda bıraktığı sorunla örtüşüyor.
+      advice: M2 Air'de kapak kalıntıların üzerine kapandığında klavye ekranı işaretleyebilir veya çizebilir;
+        kalıcı ekran hasarından kaçınmak istiyorsanız ekran/klavye koruyucu kullanın ve klavye yüzeyini
+        temiz tutun.
+  evidence:
+  - url: https://comfy.ua/noutbuk-apple-macbook-air-13-6-m2-16gb-256gb-mc7u4-space-grey-otzyvy.html
+    quote: найнеприємніше що будь яка піщинка яка потрапить між екраном та клавіатурою врізається в екран,
+      залишаючи кратери які не можна виправити
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:54:55+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: hp
+      series: envy x360
+  kind: known_issue
+  domain: thermal
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: cooling/thermal system
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Envy x360 runs hot to the touch even on light tasks and while charging
+      body: A brand-new 16-ac0000 owner reports the chassis getting hot even with only Chrome running
+        and while charging. A German computerbase.de forum thread in the same run reports constant high
+        fan noise and thermal throttling on the 13" 2018 model, and a Best Buy owner reports overheating
+        followed by a no-power failure.
+      advice: Expect a warm chassis under load and during charging; a cooling pad and balanced power mode
+        help, but severe throttling or no-power after overheating is a repair-worthy fault.
+    tr:
+      title: Envy x360 hafif görevlerde bile ve şarj olurken dokunulacak kadar sıcak çalışıyor
+      body: Yeni bir 16-ac0000 sahibi, yalnızca Chrome açıkken bile ve şarj olurken gövdenin ısındığını
+        bildiriyor. Aynı dönemde bir Alman computerbase.de forum başlığı, 13" 2018 modelinde sürekli yüksek
+        fan gürültüsü ve termal kısıtlama bildiriyor ve bir Best Buy sahibi aşırı ısınmanın ardından güç
+        gelmemesi arızası bildiriyor.
+      advice: Yük altında ve şarj sırasında sıcak bir gövde bekleyin; soğutma pedi ve dengeli güç modu
+        yardımcı olur, ancak aşırı ısınmanın ardından şiddetli kısıtlama veya güç gelmemesi onarım gerektiren
+        bir arızadır.
+  evidence:
+  - url: https://h30434.www3.hp.com/t5/Notebook-Hardware-and-Upgrade-Questions/My-laptop-seems-to-be-overheating/m-p/9503542/highlight/true
+    quote: However it has been getting very hot to the touch, both on the top and the bottom.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:56:35+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: lenovo
+      series: ideapad 5i
+  kind: known_issue
+  domain: hinge_chassis
+  severity: high
+  consequence: ''
+  detection: ''
+  component: hinge and lid mounting bracket
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: IdeaPad 5 15ALC05 defective hinge and broken mounting bracket in lid
+      body: A repairer describes an IdeaPad 5 15ALC05 brought to them with a defective hinge and a broken
+        mounting bracket inside the lid. They note that reading Reddit threads suggests this is a larger
+        weak point ('eine größere Schwachstelle') in these units.
+      advice: The hinge/mounting bracket failure is a known weak point on this model line. Owners should
+        handle the lid gently and watch for unusual resistance or creaking, as the repair requires replacing
+        both the display lid and both hinges.
+    tr:
+      title: IdeaPad 5 15ALC05 kusurlu menteşe ve kapak içinde kırık montaj braketi
+      body: Bir tamirci, kendilerine getirilen bir IdeaPad 5 15ALC05'te kusurlu bir menteşe ve kapak içinde
+        kırık bir montaj braketi olduğunu anlatıyor. Reddit başlıklarını okumanın bunun bu ünitelerde
+        'eine größere Schwachstelle' (daha büyük bir zayıf nokta) olduğunu gösterdiğini belirtiyorlar.
+      advice: Menteşe/montaj braketi arızası bu model serisinde bilinen bir zayıf noktadır. Sahipler kapağı
+        nazikçe kullanmalı ve olağandışı direnç veya gıcırtıya dikkat etmelidir, çünkü onarım hem ekran
+        kapağının hem de her iki menteşenin değiştirilmesini gerektirir.
+  evidence:
+  - url: https://www.computerbase.de/forum/threads/lenovo-ideapad-5-15alc05-laed-startet-nicht.2268496/
+    quote: ich habe im Bekanntenkreis jemanden, der das besagte Ideapad besitzt und wegen eines defekten
+      Schaniers und herausgebrochener im Deckel befindlicher Halterung auf mich zukam.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:58:19+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: apple
+      series: macbook air m2
+  kind: known_issue
+  domain: general
+  severity: high
+  consequence: ''
+  detection: ''
+  component: logicboard (motherboard)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: MacBook Air M2 logic board failure after ~3 years of normal use
+      body: The authorized diagnosis blamed a logic board failure, which the complainant notes is a documented,
+        recurring fault on M2 Macs. The seller/Apple refused free repair under the EU 3-year conformity
+        guarantee.
+      advice: Expect the logic board to be a failure point on M2 Airs in the third year; keep proof of
+        purchase and the EU legal guarantee (DL 84/2021) in hand, because the seller may try to charge
+        for a motherboard replacement out of warranty.
+    tr:
+      title: MacBook Air M2 anakart arızası ~3 yıllık normal kullanımdan sonra
+      body: Yetkili teşhis, şikayetçinin M2 Mac'lerde belgelenmiş, tekrarlayan bir arıza olduğunu belirttiği
+        bir anakart arızasını işaret etti. Satıcı/Apple, AB 3 yıllık uygunluk garantisi kapsamında ücretsiz
+        onarımı reddetti.
+      advice: M2 Air'lerde üçüncü yılda anakartın bir arıza noktası olmasını bekleyin; satıcı garanti
+        dışı bir anakart değişimi için ücret talep etmeye çalışabileceğinden satın alma kanıtını ve AB
+        yasal garantisini (DL 84/2021) elinizde bulundurun.
+  evidence:
+  - url: https://www.deco.proteste.pt/reclamar/todas-as-reclamacoes/recusa-de-repara-C3-A7-C3-A3o-no-3-C2-BA-ano-/370f817628c3ea6a68
+    quote: O O diagnóstico técnico determinou que a avaria se deve a falha da logicboard, componente essencial
+      do sistema. É importante salientar que a falha da logic board em computadores Apple com processadores
+      M2 constitui um problema técnico conhecido e documentado
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:54:55+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: monster
+      series: abra a7
+  kind: known_issue
+  domain: service_support
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: chassis / case (top cover)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Abra A7 v13.2.4 returned from routine service with a crack in the case near the Esc key
+      body: A v13.2.4 (the subject's named variant) was sent for routine service intact and returned the
+        same day with a crack in the case near the Esc key; the owner says the damage was not present
+        before service.
+      advice: This is a second, independent report of a unit coming back from Monster service physically
+        damaged. The specific variant named in this brief (v13.2.4) is the one involved. Photograph the
+        machine before sending it for service.
+    tr:
+      title: Abra A7 v13.2.4 rutin servisten Esc tuşu yakınındaki kasada çatlakla döndü
+      body: Bir v13.2.4 (konunun adlandırdığı varyant) rutin servise sağlam gönderildi ve aynı gün Esc
+        tuşu yakınındaki kasada bir çatlakla geri döndü; sahibi hasarın servisten önce mevcut olmadığını
+        söylüyor.
+      advice: Bu, Monster servisinden fiziksel olarak hasarlı dönen bir birimin ikinci, bağımsız raporudur.
+        Bu özette adlandırılan spesifik varyant (v13.2.4) söz konusu olandır. Makineyi servise göndermeden
+        önce fotoğraflayın.
+  evidence:
+  - url: https://www.sikayetvar.com/monster-notebook/monster-servisine-birakilan-notebookta-catlak-ucretsiz-onarim-ve-kargo-talebi
+    quote: klavyenin sol üst kısmında, esc tuşunun olduğu soğutma bölümünde bir çatlak/kırık olduğunu
+      fark ettim.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:59:12+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: monster
+      series: abra a7
+  kind: known_issue
+  domain: service_support
+  severity: high
+  consequence: ''
+  detection: ''
+  component: chassis clip / thermal paste application
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Abra A7 v13.2 returned from service with broken chassis clip and insufficient thermal paste,
+        then overheated and shut off
+      body: The same v13.2 owner reports the service returned the machine with a broken chassis clip and
+        so little thermal paste that it then overheated and shut itself off — the unit came back worse
+        than it went in.
+      advice: Service visits carry a documented risk of physical damage (broken clip) and poor reassembly
+        (insufficient thermal paste) that worsens overheating. A buyer should photograph the unit before
+        sending it to service and check thermals after return.
+    tr:
+      title: Abra A7 v13.2 servisten kırık kasa klipsi ve yetersiz termal macunla döndü, ardından aşırı
+        ısınıp kapandı
+      body: Aynı v13.2 sahibi, servisin makineyi kırık bir kasa klipsi ve o kadar az termal macunla geri
+        döndürdüğünü bildiriyor ki makine ardından aşırı ısınıp kendi kendine kapandı — birim girdiğinden
+        daha kötü geri geldi.
+      advice: Servis ziyaretleri, aşırı ısınmayı kötüleştiren belgelenmiş fiziksel hasar (kırık klips)
+        ve kötü yeniden montaj (yetersiz termal macun) riski taşır. Bir alıcı, birimi servise göndermeden
+        önce fotoğraflamalı ve dönüşten sonra termalleri kontrol etmelidir.
+  evidence:
+  - url: https://techolay.net/sosyal/konu/monster-abra-a7-v13-2-ile-yasanan-olumsuz-deneyimler.168543/
+    quote: Servisten döndüğünde kasanın klipsinin kırılmış olduğunu gördüm ve bilgisayar aşırı ısınarak
+      kendini kapatmaya başladı ben de bilgisayarı açıp macununa bakmak istedim ve termal macunun çok
+      az sürüldüğünü fark ettim.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:59:12+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: dell
+      series: xps 13
+  kind: known_issue
+  domain: display
+  severity: high
+  consequence: ''
+  detection: ''
+  component: display/eDP cable
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: XPS 13 display fails via eDP cable/hinge fault when lid opened
+      body: An owner's display blanks as the lid is opened past one-third and then fails entirely while
+        an external monitor works; the diagnosis points to a display cable/hinge fault rather than the
+        GPU.
+      advice: If the screen cuts out when the lid is moved, suspect the eDP cable routed through the hinge;
+        repair involves replacing the cable/panel, typically out of warranty.
+    tr:
+      title: XPS 13 ekranı, kapak açıldığında eDP kablosu/menteşe arızası nedeniyle arızalanıyor
+      body: Bir sahibin ekranı, kapak üçte birinden fazla açıldığında kararıyor ve ardından tamamen arızalanıyor;
+        harici monitör çalışıyor; teşhis GPU yerine bir ekran kablosu/menteşe arızasına işaret ediyor.
+      advice: Kapak hareket ettirildiğinde ekran kesiliyorsa, menteşeden geçen eDP kablosundan şüphelenin;
+        onarım kablo/panel değişimini içerir ve genellikle garanti dışıdır.
+  evidence:
+  - url: https://www.dell.com/community/en/conversations/xps/display-failed-on-xps-13/6adb42d15983fcfa4dec4fb2?commentId=6adc9dcfa2c1ed0333591488
+    quote: Your symptom—display failing as the lid is opened past about one-third, then failing completely
+      while an external monitor still works—strongly suggests a display cable/hinge-related fault rather
+      than a failed graphics system.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:00:49+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: lenovo
+      series: thinkpad t14
+  kind: known_issue
+  domain: thermal
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: integrated GPU (AMD Radeon, Ryzen 7 Pro 4750U)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: T14 Gen1 Ryzen freezes with pixel artifacts; suspected iGPU overheating
+      body: An owner reports a T14 Gen1 Ryzen that intermittently freezes and fails to boot after shutdown;
+        a forum expert replies 'würde mal "überhitzung" vermuten so langsam verabschiedet sich das Teil
+        b.z.w. die igpu' and notes repair costs over 200 EUR.
+      advice: On a Gen1 AMD T14, an intermittent freeze with pixel artifacts that worsens when the lid
+        is moved points to the integrated GPU/thermal issue rather than software; it is hard to self-diagnose
+        and costly to repair (over 200 EUR), so check warranty status before paying for a repair.
+    tr:
+      title: T14 Gen1 Ryzen piksel artefaktlarıyla donuyor; iGPU aşırı ısınmasından şüpheleniliyor
+      body: Bir sahip, aralıklı olarak donan ve kapatıldıktan sonra önyüklenemeyen bir T14 Gen1 Ryzen
+        bildiriyor; bir forum uzmanı 'würde mal "überhitzung" vermuten so langsam verabschiedet sich das
+        Teil b.z.w. die igpu' diye yanıtlıyor ve onarım maliyetlerinin 200 EUR'nun üzerinde olduğunu belirtiyor.
+      advice: Bir Gen1 AMD T14'te, kapak hareket ettirildiğinde kötüleşen piksel artefaktlarıyla birlikte
+        aralıklı donma, yazılım yerine entegre GPU/termal soruna işaret eder; kendi kendine teşhis etmesi
+        zor ve onarımı maliyetlidir (200 EUR'nun üzerinde), bu nedenle onarım için ödeme yapmadan önce
+        garanti durumunu kontrol edin.
+  evidence:
+  - url: https://www.hardwareluxx.de/community/threads/laptop-friert-unreproduzierbar-ein.1364544/
+    quote: Der Laptop meiner Freundin macht manchmal echte Probleme. Er funktioniert teilweise tadellos,
+      aber manchmal hat er so seine Probleme wo er einfriert und nach dem abschalten nicht mehr hochfährt
+      bzw. einige cycles braucht, bis er wieder hochgefahren ist.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:00:09+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: lenovo
+      series: ideapad 5i
+  kind: known_issue
+  domain: software_firmware
+  severity: low
+  consequence: ''
+  detection: ''
+  component: display / graphics driver
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: IdeaPad 5i Pro 16 screen freezes during light work
+      body: Owner of a new IdeaPad 5i Pro 16 reports the screen froze during light work; the system remained
+        responsive underneath (mouse moved, keyboard lights responded), and closing/reopening the lid
+        recovered it. This points to a display or graphics driver-level freeze rather than a full system
+        crash.
+      advice: A frozen screen with responsive system underneath is often a driver or display pipeline
+        issue. Try updating graphics drivers and Windows; if it recurs, it may be a hardware display fault
+        worth checking under warranty.
+    tr:
+      title: IdeaPad 5i Pro 16 ekranı hafif iş sırasında donuyor
+      body: Yeni bir IdeaPad 5i Pro 16 sahibi, ekranın hafif iş sırasında donduğunu bildiriyor; sistem
+        altta yanıt vermeye devam etti (fare hareket etti, klavye ışıkları yanıt verdi) ve kapağı kapatıp
+        yeniden açmak onu kurtardı. Bu, tam bir sistem çökmesi yerine bir ekran veya grafik sürücüsü düzeyinde
+        donmaya işaret eder.
+      advice: Altta yanıt veren bir sistemle donmuş ekran genellikle bir sürücü veya ekran hattı sorunudur.
+        Grafik sürücülerini ve Windows'u güncellemeyi deneyin; tekrarlarsa, garanti kapsamında kontrol
+        edilmeye değer bir donanım ekran arızası olabilir.
+  evidence:
+  - url: https://learn.microsoft.com/en-us/answers/questions/4238506/my-new-windows-10-laptop-froze-but-after-closing-t
+    quote: While I was using it for work -nothing really demanding- the screen froze. I could still move
+      my mouse around. Also the lights from the num lock, capslock and fnlock keys were responding.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:58:19+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: asus
+      series: zenbook 13 oled
+  kind: known_issue
+  domain: general
+  severity: high
+  consequence: ''
+  detection: ''
+  component: motherboard
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Motherboard failure — laptop stopped suddenly and will not power on (UM325UA)
+      body: A repair-forum user reports their UM325UA-KG501TS stopped suddenly while in use and will not
+        power on, with no LED when the charger is plugged in. The user suspects a short circuit on the
+        motherboard. This is a single owner report on a repair forum, so it is anecdotal but points to
+        a possible sudden-death failure mode.
+      advice: If the machine dies suddenly with no power LED, this may be a motherboard-level failure
+        requiring board repair or replacement; check warranty coverage before paying for out-of-warranty
+        repair.
+    tr:
+      title: Anakart arızası — dizüstü aniden durdu ve açılmıyor (UM325UA)
+      body: Bir onarım forumu kullanıcısı, UM325UA-KG501TS cihazının kullanım sırasında aniden durduğunu
+        ve açılmadığını, şarj cihazı takıldığında hiçbir LED yanmadığını bildiriyor. Kullanıcı anakartta
+        kısa devre olduğundan şüpheleniyor. Bu, bir onarım forumunda tek bir sahip raporudur, dolayısıyla
+        anekdot niteliğindedir ancak olası bir ani ölüm arıza moduna işaret eder.
+      advice: Makine güç LED'i olmadan aniden ölürse, bu kart onarımı veya değişimi gerektiren anakart
+        düzeyinde bir arıza olabilir; garanti dışı onarım için ödeme yapmadan önce garanti kapsamını kontrol
+        edin.
+  evidence:
+  - url: https://www.diy-laptoprepair.com/forum/fix-Asus-ZenBook-13-UM325UA-KG501TS-repair-guide-schematics.php
+    quote: My computer won't turn on anymore, no led when I plug the charger, it stopped suddenly while
+      I was working on it.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:55:38+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: dell
+      series: xps 13
+  kind: known_issue
+  domain: software_firmware
+  severity: high
+  consequence: ''
+  detection: ''
+  component: system software / motherboard
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: XPS 13 7390 2-in-1 suffers daily blue screens
+      body: An owner of the XPS 13 7390 2-in-1 reports daily blue screens from day one, with Dell diagnostics
+        finding no hardware fault.
+      advice: If you buy a 7390 and see repeated BSODs, push Dell for a resolution early; the owner was
+        told software issues are not covered under basic warranty.
+    tr:
+      title: XPS 13 7390 2-in-1 günlük mavi ekranlarla karşılaşıyor
+      body: Bir XPS 13 7390 2-in-1 sahibi, ilk günden itibaren günlük mavi ekranlar bildiriyor ve Dell
+        tanılama hiçbir donanım arızası bulmuyor.
+      advice: Bir 7390 satın alır ve tekrarlanan BSOD'lar görürseniz, Dell'i erken bir çözüm için zorlayın;
+        sahibine yazılım sorunlarının temel garanti kapsamında olmadığı söylendi.
+  evidence:
+  - url: https://www.dell.com/community/en/users/647c067db3bb1b09f18ea915
+    quote: I purchased my XPS13 7390 2in1 about three months ago, and it never worked properly. I have
+      had countless BSoD on a daily basis.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:00:49+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: dell
+      series: xps 13
+  kind: known_issue
+  domain: thermal
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: cooling fan
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: XPS 13 cooling fan loosens and scrapes against aluminium chassis
+      body: A company running Dell XPS units reports the XPS 13's fan loosens and scrapes against the
+        aluminium housing, a recurring hardware noise/vibration defect.
+      advice: Listen for fan scraping/rattle early; a loose fan rubbing the case can precede fan failure
+        and needs reseating or replacement.
+    tr:
+      title: XPS 13 soğutma fanı gevşiyor ve alüminyum kasaya sürtüyor
+      body: Dell XPS birimleri kullanan bir şirket, XPS 13'ün fanının gevşediğini ve alüminyum muhafazaya
+        sürtündüğünü, bunun tekrarlayan bir donanım gürültüsü/titreşim kusuru olduğunu bildiriyor.
+      advice: Fan sürtünmesi/takırtısı için erken dinleyin; kasaya sürtünen gevşek bir fan, fan arızasından
+        önce gelebilir ve yeniden yerleştirme veya değiştirme gerektirir.
+  evidence:
+  - url: https://www.dell.com/community/de/conversations/laptops/probleme-mit-dell-xps-laptops-und-dockingstations-l%C3%B6sungsm%C3%B6glichkeiten-gesucht/67b5b2b9703eaf4dd422ae82
+    quote: Lockere Lüfter, die am Aluminiumgehäuse schleifen.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:00:49+00:00'

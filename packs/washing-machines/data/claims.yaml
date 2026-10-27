@@ -1,0 +1,913 @@
+# Claims — what is known to go wrong, each with the page it came from and the quote
+# that was read there. A claim without both is not in this file.
+- subject:
+    kind: product
+    identity:
+      brand: arcelik
+      series: 9120dmx
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: körük lastiği (door bellows/gasket)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Door bellows (körük lastiği) tears repeatedly and leaks water; 4,000 TL charged despite warranty
+      body: Owner replaced the door gasket a second time in two years; the torn gasket leaks water while
+        running, and the service charged 4,000 TL even though the unit was under warranty.
+      advice: The door gasket is a recurring, costly wear part on this model. Budget for repeated replacement
+        and expect possible out-of-warranty charges even within the warranty period.
+    tr:
+      title: Kapı körüğü (körük lastiği) tekrar tekrar yırtılıyor ve su sızdırıyor; garantiye rağmen 4.000
+        TL ücret alındı
+      body: Sahibi, kapı contasını iki yıl içinde ikinci kez değiştirdi; yırtılan conta çalışırken su
+        sızdırıyor ve ünite garanti kapsamında olmasına rağmen servis 4.000 TL ücret aldı.
+      advice: Kapı contası bu modelde tekrarlayan, maliyetli bir aşınma parçasıdır. Tekrarlanan değişim
+        için bütçe ayırın ve garanti süresi içinde bile garanti dışı ücretlerle karşılaşabileceğinizi
+        bekleyin.
+  evidence:
+  - url: https://www.sikayetvar.com/arcelik/arcelik-9120-dmx-camasir-makinesinde-tekrarlayan-koruk-lastigi-arizasi-ve-garanti-ucret-iddiasi
+    quote: Arçelik 9120 dmx model çamaşır makinesini yaklaşık 2 yıllık evliyim ve bu süre içinde ikinci
+      kez körük lastiğini değiştirmek zorunda kalıyorum. Şu an körük lastiği tekrar yırtıldığı için makinenin
+      kapağı kapandığında, çalıştığı sırada oradan su akıtıyor ve makineyi düzgün şekilde kullanamıyorum.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:14:08+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: arcelik
+      series: 9120dmx
+  kind: known_issue
+  domain: general
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: kazan içi ve hortum (drum interior and hose)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: New machine shows mold, corrosion and rust inside the drum and hose from the first day
+      body: A brand-new 9120 DMX showed mold, corrosion and rust inside the drum and a moldy hose immediately
+        after installation; the complaint thread was later marked resolved by a unit replacement.
+      advice: Inspect a new unit's drum and hose at delivery, since mold/rust has been reported on a factory-fresh
+        machine. If present, push for replacement early rather than accepting a repair.
+    tr:
+      title: Yeni makine ilk günden tambur ve hortum içinde küf, korozyon ve pas gösteriyor
+      body: Sıfır bir 9120 DMX, kurulumdan hemen sonra tambur içinde küf, korozyon ve pas ile küflü bir
+        hortum gösterdi; şikayet konusu daha sonra ünite değişimi ile çözüldü olarak işaretlendi.
+      advice: Fabrikadan yeni çıkmış bir makinede küf/pas bildirildiği için teslimatta yeni bir ünitenin
+        tamburunu ve hortumunu inceleyin. Varsa, onarımı kabul etmek yerine erken değişim için ısrar edin.
+  evidence:
+  - url: https://www.sikayetvar.com/arcelik/sifir-camasir-makinesinde-kuf-ve-paslanma-sorunu-cozum-bekliyorum
+    quote: Kurulumun hemen ardından ürünün iç kazan kısmında küf, korozyon ve paslanma problemi kazan
+      içerisinde bulunan hortumun küflü olduğunu fark ettim.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:14:08+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: bosch
+      series: wgk252z0tr
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: drum / basket and door gasket
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Machine tears, cuts and punctures laundry from first use (WGK252Z0TR)
+      body: 'Owner complaint on Şikayetvar (query ''Bosch WGK252Z0TR şikayet''): from the very first wash
+        the machine tore, cut and punctured clothes even at 30°C and 400 rpm spin; the owner reports the
+        dealer refused the return request.'
+      advice: If you buy this model, test the first few loads with a cheap or sacrificial load to check
+        for fabric damage; a machine that damages clothes from day one is a strong case for return/replacement.
+    tr:
+      title: Makine ilk kullanımdan itibaren çamaşırları yırtıyor, kesiyor ve deliyor (WGK252Z0TR)
+      body: 'Şikayetvar''da sahip şikayeti (''Bosch WGK252Z0TR şikayet'' sorgusu): makine ilk yıkamadan
+        itibaren 30°C ve 400 rpm sıkma devrinde bile kıyafetleri yırttı, kesti ve deldi; sahibi, satıcının
+        iade talebini reddettiğini bildiriyor.'
+      advice: Bu modeli alırsanız, kumaş hasarını kontrol etmek için ilk birkaç yükü ucuz veya feda edilebilir
+        bir yükle test edin; ilk günden kıyafetlere zarar veren bir makine iade/değişim için güçlü bir
+        gerekçedir.
+  evidence:
+  - url: https://www.sikayetvar.com/bosch/talep/urun?page=25
+    quote: her yıkamada çamaşırlarımı yırtma, kesme ve delme sorunu yaşamaya başladım. 30 derecede yıkayıp
+      400 devirde sıkmama rağmen çamaşırlarım çekti, zarar gördü
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:13:25+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: bosch
+      series: wgk252z0tr
+  kind: known_issue
+  domain: electrical
+  severity: low
+  consequence: ''
+  detection: ''
+  component: Home Connect WiFi module / app
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Home Connect app drops out after every wash (WGK252Z0TR)
+      body: 'Verified-buyer review on Hepsiburada (query ''Bosch WGK252Z0TR common problems''): the Home
+        Connect app disables itself after every wash and must be re-enabled each cycle; the owner notes
+        this is not the case on their Bosch dishwasher.'
+      advice: Treat the app as a minor convenience; if remote control matters to you, verify the app stays
+        connected, otherwise this is a low-cost software annoyance, not a hardware failure.
+    tr:
+      title: Home Connect uygulaması her yıkamadan sonra bağlantıyı kesiyor (WGK252Z0TR)
+      body: 'Hepsiburada''da doğrulanmış alıcı incelemesi (''Bosch WGK252Z0TR common problems'' sorgusu):
+        Home Connect uygulaması her yıkamadan sonra kendini devre dışı bırakıyor ve her döngüde yeniden
+        etkinleştirilmesi gerekiyor; sahibi bunun Bosch bulaşık makinesinde böyle olmadığını belirtiyor.'
+      advice: Uygulamayı küçük bir kolaylık olarak değerlendirin; uzaktan kontrol sizin için önemliyse
+        uygulamanın bağlı kaldığını doğrulayın, aksi halde bu bir donanım arızası değil, düşük maliyetli
+        bir yazılım sıkıntısıdır.
+  evidence:
+  - url: https://www.hepsiburada.com/bosch-wgk252z0tr-10-kg-1200-devir-beyaz-camasir-makinesi-pm-HBC0000908D3Q-yorumlari?magaza=tunahangrup
+    quote: Home connect uygulaması her yıkamadan sonra devre dışı kalıyor. Her yıkamada tekrar tuşa basmak
+      gerekiyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:13:25+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      series: ww11dg5b25aeah
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: drum / spin assembly
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Recurring loud noise — replacement unit develops the same fault
+      body: From a Turkish complaint (sikayetvar) on the exact WW11dg5B25AEAH01 model. The first unit
+        became very loud after ~5 months, was replaced, and the brand-new replacement developed the identical
+        loud-noise fault after ~1.5 months. The factory chose repair over refund.
+      advice: A recurring noise fault across two units points to a design/component weakness rather than
+        a one-off defect; expect possible pushback if you ask for a refund instead of a repair.
+    tr:
+      title: Tekrarlayan yüksek ses — değişim ünitesi aynı arızayı geliştiriyor
+      body: Tam olarak WW11dg5B25AEAH01 modeli üzerine bir Türk şikayetinden (sikayetvar). İlk ünite yaklaşık
+        5 ay sonra çok gürültülü hale geldi, değiştirildi ve yepyeni değişim ünitesi yaklaşık 1,5 ay sonra
+        aynı yüksek ses arızasını geliştirdi. Fabrika para iadesi yerine onarımı seçti.
+      advice: İki ünite arasında tekrarlayan bir ses arızası, tek seferlik bir kusur yerine bir tasarım/bileşen
+        zayıflığına işaret eder; onarım yerine para iadesi isterseniz olası bir dirençle karşılaşmayı
+        bekleyin.
+  evidence:
+  - url: https://www.sikayetvar.com/samsung/samsung-camasir-makinesinde-tekrarlayan-gurultu-sorunu-ve-ucret-iadesi-talebi
+    quote: Ancak ikinci gelen sıfır makine de aynı şekilde, bu kez yaklaşık bir buçuk ay sonra ilk üründekiyle
+      birebir aynı arızayı göstermeye başladı ve yine çok yüksek sesli çalışmaya başladı.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:12:17+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      series: ww11dg5b25aeah
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: detergent drawer seal / door gasket
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Water leaking from detergent drawer and door on a new unit
+      body: From a Turkish complaint on the exact model. A new unit leaked water from the detergent drawer
+        and around the large door, leaving the owner unable to wash for over two weeks, with the seller
+        and service passing responsibility between them.
+      advice: A water leak from the drawer/door on a new machine is a serious functional fault; document
+        it and push for replacement rather than repair.
+    tr:
+      title: Yeni bir ünitede deterjan çekmecesinden ve kapıdan su sızıyor
+      body: Tam model üzerine bir Türk şikayetinden. Yeni bir ünite deterjan çekmecesinden ve büyük kapının
+        çevresinden su sızdırdı, sahibi iki haftadan fazla yıkama yapamadı ve satıcı ile servis sorumluluğu
+        aralarında birbirine attı.
+      advice: Yeni bir makinede çekmeceden/kapıdan su sızması ciddi bir işlevsel arızadır; belgeleyin
+        ve onarım yerine değişim için ısrar edin.
+  evidence:
+  - url: https://www.sikayetvar.com/samsung/yeni-aldigim-samsung-camasir-makinesi-surekli-arizali-degisim-talebim-karsilanmiyor
+    quote: Makinenin deterjan haznesinden ve büyük kapağın etrafından su sızdırması sebebiyle 2 haftayı
+      aşkın süredir çamaşır yıkayamıyoruz.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:12:17+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      series: ww11dg5b25aeah
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: drum bearings (rodamientos)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Bearing failure on WW11DG5B25TE (same series) while in warranty, with parts delays
+      body: From the Samsung Spain product-page review of the WW11DG5B25TE variant of this series. The
+        owner reports the bearings broke while the machine was still in warranty and the official service
+        had it for 10 days waiting for spare parts, with the drum appearing loose and making a horrible
+        noise.
+      advice: If buying, confirm the warranty and parts availability; a bearing failure on a near-new
+        unit left this owner without the machine for over a week and with no parts in stock.
+    tr:
+      title: WW11DG5B25TE (aynı seri) garantisi devam ederken yatak arızası ve parça gecikmeleri
+      body: Bu serinin WW11DG5B25TE varyantı için Samsung İspanya ürün sayfası incelemesinden. Kullanıcı,
+        makine hâlâ garanti kapsamındayken yatakların bozulduğunu ve resmi servisin yedek parça bekleyerek
+        makineyi 10 gün elinde tuttuğunu, tamburun gevşek göründüğünü ve korkunç bir ses çıkardığını bildiriyor.
+      advice: Satın alacaksanız garantiyi ve parça bulunabilirliğini teyit edin; neredeyse yeni bir ünitede
+        yatak arızası bu kullanıcıyı bir haftadan uzun süre makinesiz bıraktı ve stokta parça yoktu.
+  evidence:
+  - url: https://www.samsung.com/es/washers-and-dryers/washing-machines/ww5000d-front-loading-smartthings-ai-energy-mode-a-10-percent-extra-energy-efficiency-ai-ecobubble-11kg-black-ww11dg5b25abec/
+    quote: se le han roto los rodamientos, está en garantía y hace 10 días la tienen el servicio oficial
+      porque no le llegan los repuestos!!!!
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:12:17+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: bosch
+      series: wgk252z0tr
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: door gasket (körük lastiği) and its internal spring
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Door gasket spring detaches and machine leaks water during wash (WGK252Z0TR)
+      body: 'Owner complaint on Şikayetvar (query ''Bosch WGK252Z0TR sorun''): within the first month
+        the spring inside the door gasket came out; after the gasket was replaced the machine began throwing
+        clean (non-detergent) water out during wash on various programs. The owner reports the issue persisted
+        unresolved for 9 months across multiple service visits, with service calling it normal.'
+      advice: Before buying, check the door seal fit and ask whether gasket/spring detachment is a known
+        issue on this model; if it occurs in warranty, push for a documented repair or replacement rather
+        than accepting a 'normal' verdict.
+    tr:
+      title: Kapı contası yayı çıkıyor ve makine yıkama sırasında su sızdırıyor (WGK252Z0TR)
+      body: 'Şikayetvar''da kullanıcı şikayeti (''Bosch WGK252Z0TR sorun'' sorgusu): ilk ay içinde kapı
+        contasının içindeki yay çıktı; conta değiştirildikten sonra makine çeşitli programlarda yıkama
+        sırasında temiz (deterjansız) suyu dışarı atmaya başladı. Kullanıcı, sorunun birden fazla servis
+        ziyaretine rağmen 9 ay boyunca çözülmeden devam ettiğini ve servisin bunu normal olarak nitelendirdiğini
+        bildiriyor.'
+      advice: Satın almadan önce kapı contasının oturuşunu kontrol edin ve bu modelde conta/yay ayrılmasının
+        bilinen bir sorun olup olmadığını sorun; garanti kapsamında ortaya çıkarsa 'normal' değerlendirmesini
+        kabul etmek yerine belgelenmiş bir onarım veya değişim talep edin.
+  evidence:
+  - url: https://www.sikayetvar.com/bosch/bosch-camasir-makinesi-sorunum-9-aydir-cozulemedi-servis-ilgisiz-kaldi
+    quote: Makinenin 1. Ayında lastik içerisindeki yayın çıkması sonucu, kullanıcı hatası denilerek parça
+      değişimi yapıldı ve bu işlem için ücret ödedim. Lastik değişiminden sonra ise makine farklı programlarda
+      ve arada bir, yıkama sırasında dışarıya su atmaya başladı.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:13:25+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      series: ww11dg5b25aeah
+  kind: known_issue
+  domain: general
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: wash performance (drum/agitator)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Machine does not remove stains — poor washing performance
+      body: From a Turkish complaint on the exact model. The machine has not washed properly since installation,
+        failing to remove even a simple chocolate stain, and two service visits did not resolve it (service
+        blamed detergent type/brand).
+      advice: If cleaning performance matters to you, note that multiple owners report stains remaining
+        and service attributing it to user error rather than a fault.
+    tr:
+      title: Makine lekeleri çıkarmıyor — zayıf yıkama performansı
+      body: Tam model hakkında bir Türkçe şikayetten. Makine kurulumdan beri düzgün yıkamıyor, basit bir
+        çikolata lekesini bile çıkaramıyor ve iki servis ziyareti sorunu çözmedi (servis deterjan türünü/markasını
+        suçladı).
+      advice: Temizlik performansı sizin için önemliyse, birden fazla kullanıcının lekelerin kaldığını
+        ve servisin bunu arıza yerine kullanıcı hatasına bağladığını bildirdiğini unutmayın.
+  evidence:
+  - url: https://www.sikayetvar.com/samsung/samsung-camasir-makinesinde-lekeler-cikmiyor-servis-sorunu-cozulmedi
+    quote: Makine kurulduğu günden bu yana çamaşırları gerektiği gibi yıkamıyor, basit bir çikolata lekesini
+      bile çıkarmıyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:12:17+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      series: ww11dg5b25aeah
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: drum / spin assembly
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Abnormally noisy operation from the second day of use
+      body: From a Turkish complaint on the exact model. The machine ran abnormally loudly on every wash
+        from the second day, and the owner was charged 500 TL for a service visit that did not help.
+      advice: Noise from early use is worth getting checked under warranty immediately; a paid service
+        visit may not resolve it.
+    tr:
+      title: Kullanımın ikinci gününden itibaren anormal gürültülü çalışma
+      body: Tam model hakkında bir Türkçe şikayetten. Makine ikinci günden itibaren her yıkamada anormal
+        derecede gürültülü çalıştı ve kullanıcıdan yardımcı olmayan bir servis ziyareti için 500 TL ücret
+        alındı.
+      advice: Erken kullanımdan kaynaklanan gürültüyü derhal garanti kapsamında kontrol ettirmeye değer;
+        ücretli bir servis ziyareti bunu çözmeyebilir.
+  evidence:
+  - url: https://www.sikayetvar.com/samsung/yeni-alinan-camasir-makinesinde-gurultu-ve-olumsuz-servis-deneyimi
+    quote: Makineyi aldıktan sonra ikinci günden itibaren her yıkamada anormal derecede gürültülü çalışmaya
+      başladı
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:12:17+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: arcelik
+      series: 9120dmx
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: motor ve ana kart (motor and main control board)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Recurring motor and main-board failures; 6 service visits in 5 months without a lasting fix
+      body: Owner reports continuous motor and main-board faults from purchase, six service visits over
+        five months, the machine fully dead for a month, and four refused replacement requests.
+      advice: Electrical failures (motor/control board) are reported as persistent and hard to resolve
+        on this model, with the unit left unusable for long stretches. Factor in the risk of a machine
+        that spends months in repair.
+    tr:
+      title: Tekrarlayan motor ve ana kart arızaları; 5 ayda kalıcı çözüm olmadan 6 servis ziyareti
+      body: Kullanıcı, satın alımdan itibaren sürekli motor ve ana kart arızaları, beş ay içinde altı
+        servis ziyareti, makinenin bir ay boyunca tamamen çalışmaz durumda kalması ve dört reddedilen
+        değişim talebi bildiriyor.
+      advice: Elektriksel arızaların (motor/kontrol kartı) bu modelde kalıcı olduğu ve çözülmesinin zor
+        olduğu, ünitenin uzun süreler kullanılamaz kaldığı bildiriliyor. Aylarca tamirde kalan bir makine
+        riskini hesaba katın.
+  evidence:
+  - url: https://www.sikayetvar.com/arcelik/surekli-arizali-camasir-makinesi-icin-urun-degisimi-talebi
+    quote: Arçelik 9120 dmx model çamaşır makinesini aldığımızdan beri sürekli motor ve ana kart arızası
+      yaşıyoruz. Yaklaşık 5 aydır bu sorunlarla uğraşıyorum ve bu süre içinde 6 kez servis geldi ancak
+      sorun bir türlü kalıcı olarak çözülemedi.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:14:08+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: arcelik
+      series: 9120dmx
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: drum/bearings (noise and vibration)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Excessive noise and shaking, machine moves side to side, failing 17 days after purchase
+      body: Owner reports loud noise, severe shaking and the machine moving side to side from day one,
+        failing within 17 days, and requested a refund.
+      advice: Vibration and noise early in life point to a drum/balance fault. Test the unit's spin cycle
+        at delivery; if it shakes or is loud, reject it immediately rather than waiting for a repair cycle.
+    tr:
+      title: Aşırı gürültü ve sarsıntı, makine yan yana hareket ediyor, satın alımdan 17 gün sonra arızalanıyor
+      body: Kullanıcı ilk günden itibaren yüksek gürültü, şiddetli sarsıntı ve makinenin yan yana hareket
+        ettiğini, 17 gün içinde arızalandığını bildiriyor ve para iadesi talep etti.
+      advice: Kullanımın başındaki titreşim ve gürültü tambur/denge arızasına işaret eder. Teslimatta
+        ünitenin sıkma döngüsünü test edin; sarsılıyor veya gürültülüyse bir onarım döngüsünü beklemek
+        yerine derhal reddedin.
+  evidence:
+  - url: https://www.sikayetvar.com/arcelik/ariza/fatura/makine?page=2
+    quote: Makine teslim edildikten yalnızca 17 gün sonra bozuldu; aslında geldiği günden beri yüksek
+      ses, aşırı sarsıntı ve sağa‑sola hareket etme şeklinde arıza belirtileri gösteriyor
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:14:08+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      series: ww11dg5b25aeah
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: control panel / digital display
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Digital display powers itself on and off
+      body: From the same Turkish complaint on the exact model. The digital display turns itself on and
+        off, an electrical fault reported alongside the water leak on a new unit.
+      advice: A self-cycling display suggests a control-board fault; treat it as an electrical defect
+        worth reporting under warranty.
+    tr:
+      title: Dijital ekran kendi kendine açılıp kapanıyor
+      body: Aynı modelle ilgili aynı Türkçe şikayetten. Dijital ekran kendi kendine açılıp kapanıyor;
+        yeni bir ünitede su sızıntısıyla birlikte bildirilen bir elektrik arızası.
+      advice: Kendi kendine döngüye giren bir ekran, kontrol kartı arızasına işaret eder; bunu garanti
+        kapsamında bildirilmeye değer bir elektrik kusuru olarak değerlendirin.
+  evidence:
+  - url: https://www.sikayetvar.com/samsung/yeni-aldigim-samsung-camasir-makinesi-surekli-arizali-degisim-talebim-karsilanmiyor
+    quote: Ayrıca dijital ekran kendiliğinden açılıp kapanıyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:12:17+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: lg
+      series: f4y7er
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: drum / bearing seal
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: F4Y7ERPY leaves oil stains on clothes, runs loud, drum found broken
+      body: Owner of a F4Y7ERPY reports oil stains on laundry and loud running from the first day; service
+        eventually found the drum broken, repaired it, but the faults returned, leading to a consumer-court
+        ruling for a replacement machine that was then delayed.
+      advice: Oil stains on clothes plus loud running point to a drum/bearing seal failure. This is a
+        serious, hard-to-fix defect; if you see oil on laundry, do not accept a temporary repair — pursue
+        a replacement while under warranty.
+    tr:
+      title: F4Y7ERPY çamaşırlarda yağ lekesi bırakıyor, gürültülü çalışıyor, tambur kırık bulundu
+      body: Bir F4Y7ERPY sahibi, ilk günden itibaren çamaşırlarda yağ lekeleri ve gürültülü çalışma bildiriyor;
+        servis sonunda tamburun kırık olduğunu bulup onarmış, ancak arızalar geri dönmüş ve bu da değişim
+        makinesi için tüketici mahkemesi kararına yol açmış, ancak bu karar sonra gecikmiş.
+      advice: Çamaşırlarda yağ lekeleri ve gürültülü çalışma, tambur/rulman keçesi arızasına işaret eder.
+        Bu ciddi ve düzeltilmesi zor bir kusurdur; çamaşırda yağ görürseniz geçici bir onarımı kabul etmeyin
+        — garanti kapsamındayken değişim talep edin.
+  evidence:
+  - url: https://www.sikayetvar.com/lg/mahkeme-karari-sonrasi-yeni-camasir-makinesi-teslimi-gecikiyor
+    quote: Makine ilk günden beri çamaşırlarda yağ lekesi bırakıyor ve aşırı sesli çalışıyordu
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:21:25+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: beko
+      series: cmx10120s
+  kind: known_issue
+  domain: general
+  severity: high
+  consequence: ''
+  detection: ''
+  component: water inlet/hose seal
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Water sprayed out and flooded the home on first use
+      body: An owner reports that on the first run water sprayed out of the machine and flooded the home,
+        swelling the parquet floor.
+      advice: Run the first cycle with someone present and watch for leaks, since one owner reports flooding
+        on first use; a flood can damage flooring and the machine.
+    tr:
+      title: İlk kullanımda su fışkırdı ve evi su bastı
+      body: Bir sahip, ilk çalıştırmada makineden su fışkırdığını ve evi su bastığını, parke zeminin şiştiğini
+        bildiriyor.
+      advice: İlk yıkamayı bir kişi yanınızdayken çalıştırın ve sızıntı olup olmadığını izleyin, çünkü
+        bir sahip ilk kullanımda su baskını bildiriyor; su baskını zemine ve makineye zarar verebilir.
+  evidence:
+  - url: https://www.sikayetvar.com/beko/fark/talep?page=14
+    quote: Eşim makineyi ilk kez çalıştırdığında makineden su fışkırdı ve ev su bastı, parkelerim kabardı.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:21:56+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: beko
+      series: cmx10120s
+  kind: known_issue
+  domain: general
+  severity: low
+  consequence: ''
+  detection: ''
+  component: program/control logic
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Wash program runs far longer than selected time
+      body: An owner reports the Cotton program extends by 1–2 hours beyond the selected time regardless
+        of load, which the owner says also wears clothes.
+      advice: Expect the cotton program to run noticeably longer than the display time; if cycle length
+        matters to you this is a known behaviour on the model.
+    tr:
+      title: Yıkama programı seçilen süreden çok daha uzun sürüyor
+      body: Bir sahip, Pamuklu programının yükten bağımsız olarak seçilen sürenin 1–2 saat üzerine çıktığını
+        ve bunun da sahibine göre çamaşırları yıprattığını bildiriyor.
+      advice: Pamuklu programının ekrandaki süreden belirgin şekilde daha uzun sürmesini bekleyin; döngü
+        süresi sizin için önemliyse bu, modelde bilinen bir davranıştır.
+  evidence:
+  - url: https://www.sikayetvar.com/beko/sessiz-calismasi-beklenen-camasir-makinesi-gurultu-sorunu
+    quote: Pamuklu programını açtığımda 1 saat, 1 buçuk hatta 2 saat bile programı uzatıyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:21:56+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: lg
+      series: f4y7er
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: drum / spin balancing
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: F4Y7ERPYWPLTK severe vibration and noise during spin
+      body: Owner of a F4Y7ERPYWPLTK (11/6 kg) reports violent vibration and noise during every spin;
+        three authorised service visits delivered no fix, and LG Turkey declined a replacement request
+        while the machine was under warranty.
+      advice: 'This is a recurring pattern across F4Y7ER variants: spin-phase vibration that service cannot
+        resolve. If you buy one, test a full spin cycle before accepting delivery, and treat ''service
+        says no fault'' as a red flag rather than reassurance.'
+    tr:
+      title: F4Y7ERPYWPLTK sıkma sırasında şiddetli titreşim ve gürültü
+      body: Bir F4Y7ERPYWPLTK (11/6 kg) sahibi, her sıkmada şiddetli titreşim ve gürültü bildiriyor; üç
+        yetkili servis ziyareti çözüm getirmedi ve LG Turkey, makine garanti kapsamındayken değişim talebini
+        reddetti.
+      advice: 'Bu, F4Y7ER varyantlarında tekrar eden bir örüntüdür: servisin çözemediği sıkma aşaması
+        titreşimi. Bir tane alırsanız, teslim almadan önce tam bir sıkma döngüsünü test edin ve ''servis
+        arıza yok diyor'' ifadesini güvence değil, bir uyarı işareti olarak değerlendirin.'
+  evidence:
+  - url: https://www.sikayetvar.com/lg/lg-kurutmali-camasir-makinesi-sarsinti-ve-gurultu-sorunu-cozulemiyor
+    quote: her yıkamada sıkma esnasında aşırı sarsıntılı ve gürültülü çalışıyor
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:21:25+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: lg
+      series: f4y7er
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: suspension / levelling feet
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: F4Y7ERPYW walks and shakes during spin
+      body: Owner of a F4Y7ERPYW reports the machine walks and shakes starting 15 days after purchase;
+        three service visits did not resolve it, and the service claimed no fault even though the owner
+        had videos of the machine moving while level.
+      advice: A machine that walks on a level floor points to a suspension/balancing fault rather than
+        user error. If you see this, keep video evidence and insist on a written service report, since
+        the seller may otherwise claim no fault exists.
+    tr:
+      title: F4Y7ERPYW sıkma sırasında yürüyor ve sarsılıyor
+      body: Bir F4Y7ERPYW sahibi, makinenin satın alımdan 15 gün sonra yürümeye ve sarsılmaya başladığını
+        bildiriyor; üç servis ziyareti bunu çözmedi ve sahibin makinenin düz zeminde hareket ettiğine
+        dair videoları olmasına rağmen servis arıza olmadığını iddia etti.
+      advice: Düz bir zeminde yürüyen bir makine, kullanıcı hatasından çok süspansiyon/dengeleme arızasına
+        işaret eder. Bunu görürseniz video kanıtı saklayın ve yazılı bir servis raporu talep etmekte ısrar
+        edin, çünkü aksi halde satıcı arıza olmadığını iddia edebilir.
+  evidence:
+  - url: https://www.sikayetvar.com/lg/lg-camasir-makinesi-surekli-sallaniyor-servis-cozum-bulamiyor
+    quote: F4Y7ERPYW model LG çamaşır makinesini aldıktan 15 gün sonra yürüme ve sallanma sorunu yaşadım
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:21:25+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: beko
+      series: cmx10120s
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: door bellows gasket (körük contası)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Door bellows gasket (körük contası) tears, leaking water from the front door
+      body: An owner of a CMX 10120 S reports the front-door bellows gasket tore ~2–3 cm and water began
+        leaking from under the front door within about a year of purchase, with Beko refusing warranty
+        coverage and quoting 3,249 TL to replace the part.
+      advice: Check the door gasket for tears before the warranty lapses; if it tears, water leaks onto
+        the floor and the replacement is an out-of-pocket cost (≈3,249 TL) if Beko refuses warranty cover.
+    tr:
+      title: Kapı körüğü contası (körük contası) yırtılıyor, ön kapıdan su sızıyor
+      body: Bir CMX 10120 S sahibi, satın alımdan yaklaşık bir yıl içinde ön kapı körüğü contasının ~2–3
+        cm yırtıldığını ve ön kapının altından su sızmaya başladığını, Beko'nun garanti kapsamını reddettiğini
+        ve parçayı değiştirmek için 3.249 TL fiyat verdiğini bildiriyor.
+      advice: Garanti süresi dolmadan kapı contasını yırtık açısından kontrol edin; yırtılırsa su yere
+        sızar ve Beko garanti kapsamını reddederse değişim cepten yapılan bir maliyettir (≈3.249 TL).
+  evidence:
+  - url: https://www.sikayetvar.com/beko/beko-garanti-kapsaminda-koruk-contasi-degisimi-reddedildi-musteri-magdur
+    quote: körük contasının yaklaşık 2–3 cm kadar yırtıldığını gördük
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:21:56+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: lg
+      series: f4y7er
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: drum balancing / front panel seal
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: F4Y7ERPYP excessive vibration and water leaking from the front panel
+      body: Owner of a F4Y7ERPYP washer-dryer reports the machine vibrates violently on every run and
+        leaks water from the front panel; LG authorised service visited three times, said a part would
+        be replaced, then said the part was not in stock and offered only a refund.
+      advice: Before buying, check the unit's balance in the showroom, and be aware that vibration-plus-panel-leak
+        complaints on this model have gone unresolved through multiple service visits. If you already
+        own one, document the leak and vibration with video and push for a replacement or refund while
+        the 3-year warranty is active.
+    tr:
+      title: F4Y7ERPYP aşırı titreşim ve ön panelden su sızıntısı
+      body: Bir F4Y7ERPYP çamaşır-kurutma makinesi sahibi, makinenin her çalıştırmada şiddetli titreştiğini
+        ve ön panelden su sızdırdığını bildiriyor; LG yetkili servisi üç kez geldi, bir parçanın değiştirileceğini
+        söyledi, ardından parçanın stokta olmadığını söyleyip yalnızca iade teklif etti.
+      advice: Satın almadan önce ünitenin dengesini mağazada kontrol edin ve bu modelde titreşim artı
+        panel sızıntısı şikayetlerinin birden fazla servis ziyaretine rağmen çözülmediğini bilin. Zaten
+        bir tane sahipseniz, sızıntıyı ve titreşimi videoyla belgeleyin ve 3 yıllık garanti geçerliyken
+        değişim veya iade için ısrar edin.
+  evidence:
+  - url: https://www.sikayetvar.com/lg/lg-kurutmali-camasir-makinesinde-asiri-sarsinti-ve-su-sizintisi
+    quote: cihaz her çalıştırmada aşırı sarsıntılı çalışıyor ve ayrıca panel kısmından su gelmesi sorunu
+      yaşıyorum
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:21:25+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: beko
+      series: cmx10120s
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: drum/tub and bearings
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Excessive noise and vibration during the spin cycle
+      body: Multiple CMX 10120 S owners report loud noise and vibration during spin, one noting the vibration
+        is audible from a neighbour's flat and a friend who works at the Arçelik factory said the drum
+        was at fault.
+      advice: If the machine is noisy or shakes during spin, have the drum/bearings checked early; owners
+        report service visits not resolving it and the noise/vibration being severe enough to disturb
+        neighbours.
+    tr:
+      title: Sıkma devri sırasında aşırı gürültü ve titreşim
+      body: Birden fazla CMX 10120 S sahibi, sıkma sırasında yüksek gürültü ve titreşim bildiriyor; biri
+        titreşimin komşunun dairesinden duyulabildiğini ve Arçelik fabrikasında çalışan bir arkadaşının
+        kazanın sorunlu olduğunu söylediğini belirtiyor.
+      advice: Makine sıkma sırasında gürültülüyse veya sarsılıyorsa, kazanı/rulmanları erken kontrol ettirin;
+        sahipler servis ziyaretlerinin bunu çözmediğini ve gürültü/titreşimin komşuları rahatsız edecek
+        kadar şiddetli olduğunu bildiriyor.
+  evidence:
+  - url: https://www.sikayetvar.com/beko/sessiz-calismasi-beklenen-camasir-makinesi-gurultu-sorunu
+    quote: Çamaşır makinesi sıkma sırasında çok gürültülü ses çıkarıyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:21:56+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: lg
+      series: f4y7er
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: main control board (anakart)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: F4Y7ERPYP runs loud; service found loose mainboard (anakart) and could not fix it
+      body: Owner of a F4Y7ERPYP reports the machine runs loud from installation day; service first levelled
+        the feet, then opened the rear cover, said the mainboard was not secure, and re-secured it — but
+        the noise did not stop, and the seller refused a refund.
+      advice: A loose mainboard causing noise is a build-quality defect that a simple re-securing did
+        not cure. If your unit is loud from day one, do not accept a 'no fault' verdict; ask for the service
+        report and push for replacement while under warranty.
+    tr:
+      title: F4Y7ERPYP yüksek sesle çalışıyor; servis gevşek anakart (anakart) buldu ve düzeltemedi
+      body: Bir F4Y7ERPYP sahibi, makinenin kurulum gününden itibaren yüksek sesle çalıştığını bildiriyor;
+        servis önce ayakları dengeledi, ardından arka kapağı açtı, anakartın sabit olmadığını söyledi
+        ve yeniden sabitledi — ancak gürültü durmadı ve satıcı iadeyi reddetti.
+      advice: Gürültüye neden olan gevşek bir anakart, basit bir yeniden sabitlemenin gidermediği bir
+        üretim kalitesi kusurudur. Üniteniz ilk günden itibaren yüksek sesliyse, 'kusur yok' kararını
+        kabul etmeyin; servis raporunu isteyin ve garanti kapsamındayken değişim için ısrar edin.
+  evidence:
+  - url: https://www.sikayetvar.com/lg/sesli-calisan-lg-camasir-makinesinin-iadesi-icin-talep
+    quote: sabit olmadığını, bu yüzden ses yaptığını söyleyip anakartı sabitleme işlemi yaptı. Tüm bu
+      işlemlere rağmen ses problemi hiç düzelmedi
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:21:25+00:00'

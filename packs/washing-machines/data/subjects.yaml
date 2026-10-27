@@ -1,0 +1,69 @@
+# Subjects — the things this pack knows about.
+#
+# `identity` carries exactly the keys `pack.toml` declares for the
+# kind: that dictionary is hashed to the subject id.
+- kind: product
+  label: Arçelik 9120 DMX
+  identity:
+    brand: arcelik
+    series: 9120dmx
+  attributes:
+    capacity_kg:
+      value: '9'
+      source: https://hayatteknoloji.net/en-iyi-camasir-makinesi-5-tavsiye.html
+    spin_rpm:
+      value: '1200'
+      source: https://hayatteknoloji.net/en-iyi-camasir-makinesi-5-tavsiye.html
+  aliases:
+  - 9120 DMX
+- kind: product
+  label: Beko CMX 10120 S
+  identity:
+    brand: beko
+    series: cmx10120s
+  attributes:
+    capacity_kg:
+      value: '10'
+      source: https://shiftdelete.net/en-iyi-camasir-makinesi
+    spin_rpm:
+      value: '1200'
+      source: https://shiftdelete.net/en-iyi-camasir-makinesi
+  aliases:
+  - CMX 10120 S
+- kind: product
+  label: Bosch WGK252Z0TR
+  identity:
+    brand: bosch
+    series: wgk252z0tr
+  aliases:
+  - WGK252Z0TR
+  - 252Z0TR
+- kind: product
+  label: Siemens WG52A2Z0TR
+  identity:
+    brand: siemens
+    series: wg52a2z0tr
+  aliases:
+  - WG52A2Z0TR
+- kind: product
+  label: Samsung WW11DG5B25AEAH
+  identity:
+    brand: samsung
+    series: ww11dg5b25aeah
+  attributes:
+    capacity_kg:
+      value: '11'
+      source: https://www.sikayetvar.com/samsung/yeni-aldigim-samsung-camasir-makinesi-surekli-arizali-degisim-talebim-karsilanmiyor
+    spin_rpm:
+      value: '1400'
+      source: https://www.sikayetvar.com/samsung/yeni-aldigim-samsung-camasir-makinesi-surekli-arizali-degisim-talebim-karsilanmiyor
+  aliases:
+  - WW11DG5B25AEAH
+  - WW11DG5B25TE
+- kind: product
+  label: LG F4Y7ER
+  identity:
+    brand: lg
+    series: f4y7er
+  aliases:
+  - F4Y7ER pyp

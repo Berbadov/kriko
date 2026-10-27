@@ -274,6 +274,11 @@ FIRE = (
     # The word is in the body only, in passing: a worn part is not a fire hazard.
     + _claim("anvil", "Piston ring wear", "high", "Segman aşınması", "https://forum.invalid/r", body="Oil can reach a fire wall seal.")
     + _claim("anvil", "Screen burn-in", "medium", "Ekran yanması", "https://forum.invalid/b")
+    # A product that is named Fire, and a fault that only sounds like one, are not fires.
+    + _claim("anvil", "Fire HD 10 screen cracks", "high", "Ekran çatlar", "https://forum.invalid/hd")
+    + _claim("anvil", "Hotend thermal runaway error on startup", "high", "Hata", "https://forum.invalid/t")
+    # A fire risk that is not rated high is marked on its card but is not what the hub leads with.
+    + _claim("anvil", "Smells like fire when idle", "medium", "Yangın kokusu", "https://forum.invalid/s")
 )
 
 
@@ -285,12 +290,14 @@ def test_a_claim_about_fire_is_marked_as_a_safety_risk_and_the_hub_leads_with_it
     cards = {title: card for title, card in re.findall(r"<h3>.*?</svg>(.*?)</h3>(.*?)</article>", page, re.S)}
     assert "Safety risk" in cards["Battery can catch fire while charging"]
     # Only the claim whose own title says so is marked: not a passing mention, not display burn-in.
-    assert [t for t, card in cards.items() if "Safety risk" in card] == ["Battery can catch fire while charging"]
-    assert "1 of these reports describe a risk" in page
+    assert sorted(t for t, card in cards.items() if "Safety risk" in card) == [
+        "Battery can catch fire while charging", "Smells like fire when idle"]
+    assert "2 of these reports describe a fire, explosion or shock risk" in page
 
     hub = (site / "problems" / "index.html").read_text(encoding="utf-8")
     featured = hub.split('class="serious"')[1].split("</section>")[0]
-    assert "Battery can catch fire while charging" in featured and "Piston ring wear" not in featured
+    assert "Battery can catch fire while charging" in featured
+    assert "Piston ring wear" not in featured and "Smells like fire" not in featured and "Fire HD" not in featured
     # The strip links to the claim's own card, which exists on the product page.
     anchor = re.search(r'href="/problems/anvil/#(c-[0-9a-f]+)"', featured).group(1)
     assert f'id="{anchor}"' in page
@@ -314,3 +321,48 @@ def test_a_catalog_picks_its_icon_by_name_and_an_unknown_name_is_the_box(tmp_pat
     manifest.write_text(manifest.read_text(encoding="utf-8").replace('icon = "printer"', 'icon = "no-such-drawing"'), encoding="utf-8")
     module.render(packs, site)
     assert module.ICONS["box"] in (site / "problems" / "index.html").read_text(encoding="utf-8")
+
+
+def test_the_product_with_more_fire_reports_leads_the_hubs_safety_strip_and_says_how_many(tmp_path):
+    packs, site = tmp_path / "packs", _site(tmp_path)
+    anvil = (_claim("anvil", "Pack caught fire in a garage", "high", "Garajda yandı", "https://news.invalid/a1")
+             + _claim("anvil", "Second fire after the recall repair", "high", "Onarımdan sonra yangın", "https://news.invalid/a2")
+             + _claim("anvil", "Paint chips", "low", "Boya atar", "https://forum.invalid/p"))
+    widget = (_claim("widget", "Charger can start a fire", "high", "Şarj aleti yangın çıkarır", "https://news.invalid/w1")
+              + _claim("widget", "Cable frays", "low", "Kablo yıpranır", "https://forum.invalid/c")
+              + _claim("widget", "Lid sticks", "low", "Kapak sıkışır", "https://forum.invalid/l"))
+    _write_catalog(packs, "tools", widget + anvil)
+    _load().render(packs, site)
+    featured = (site / "problems" / "index.html").read_text(encoding="utf-8").split('class="serious"')[1].split("</section>")[0]
+    assert featured.index("Anvil") < featured.index("Widget")
+    assert "Anvil · 2 reports" in featured and "Widget</small>" in featured
+
+
+def test_of_two_products_with_as_many_fire_reports_the_one_more_sites_agree_on_comes_first(tmp_path):
+    packs, site = tmp_path / "packs", _site(tmp_path)
+    anvil = (_claim("anvil", "Pack caught fire in a garage", "high", "Garajda yandı", "https://news.invalid/a1")
+             + _claim("anvil", "Cable frays", "low", "Kablo yıpranır", "https://forum.invalid/c")
+             + _claim("anvil", "Lid sticks", "low", "Kapak sıkışır", "https://forum.invalid/l"))
+    widget = (_claim("widget", "Charger can start a fire", "high", "Şarj aleti yangın çıkarır", "https://news.invalid/w1")
+              + _claim("widget", "A second fire was reported", "medium", "İkinci yangın", "https://recalls.invalid/w2")
+              + _claim("widget", "Lid sticks", "low", "Kapak sıkışır", "https://forum.invalid/l"))
+    _write_catalog(packs, "tools", anvil + widget)
+    _load().render(packs, site)
+    featured = (site / "problems" / "index.html").read_text(encoding="utf-8").split('class="serious"')[1].split("</section>")[0]
+    assert featured.index("Widget") < featured.index("Anvil")
+
+
+def test_the_safety_strip_shows_a_few_and_folds_the_rest_so_the_categories_stay_in_view(tmp_path):
+    module = _load()
+    packs, site = tmp_path / "packs", _site(tmp_path)
+    models = [f"m{n}" for n in range(module.SAFETY_SHOWN + 2)]
+    claims = "".join(_claim(m, f"Unit {m} caught fire", "high", "Yandı", f"https://news.invalid/{m}")
+                     + _claim(m, f"Handle {m} cracks", "low", "Sap", f"https://forum.invalid/{m}a")
+                     + _claim(m, f"Lid {m} sticks", "low", "Kapak", f"https://forum.invalid/{m}b") for m in models)
+    extra = "\n" + "\n".join(f"- {{kind: product, label: {m.title()}, identity: {{brand: acme, model: {m}}}}}" for m in models)
+    _write_catalog(packs, "tools", claims, extra_subjects=extra)
+    module.render(packs, site)
+    for path, folded in (("problems", "Show 2 more"), ("tr/problems", "2 tane daha göster")):
+        strip = (site / path / "index.html").read_text(encoding="utf-8").split('class="serious"')[1].split("</section>")[0]
+        shown, rest = strip.split('<details class="rest">')
+        assert shown.count("<li>") == module.SAFETY_SHOWN and rest.count("<li>") == 2 and folded in rest

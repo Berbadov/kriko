@@ -1,0 +1,188 @@
+# Subjects — the things this pack knows about.
+#
+# `identity` carries exactly the keys `pack.toml` declares for the
+# kind: that dictionary is hashed to the subject id.
+- kind: product
+  label: DJI Mini 3 Pro
+  identity:
+    brand: dji
+    series: mini 3 pro
+  attributes:
+    weight_g:
+      value: '249'
+      source: https://www.dji.com/mini-3-pro/specs
+    flight_time_min:
+      value: '34'
+      source: https://www.dji.com/mini-3-pro/specs
+    camera_mp:
+      value: '48'
+      source: https://www.dji.com/mini-3-pro/specs
+    video_resolution:
+      value: 4K/60fps
+      source: https://www.dji.com/mini-3-pro/specs
+    range_km:
+      value: '12'
+      source: https://www.dji.com/mini-3-pro/specs
+  aliases:
+  - Mini 3 Pro
+- kind: product
+  label: DJI Mini 4 Pro
+  identity:
+    brand: dji
+    series: mini 4 pro
+  attributes:
+    weight_g:
+      value: '249'
+      source: https://www.dji.com/mini-4-pro/specs
+    flight_time_min:
+      value: '34'
+      source: https://www.dji.com/mini-4-pro/specs
+    camera_mp:
+      value: '48'
+      source: https://www.dji.com/mini-4-pro/specs
+    video_resolution:
+      value: 4K/60fps
+      source: https://www.dji.com/mini-4-pro/specs
+    range_km:
+      value: '20'
+      source: https://www.dji.com/mini-4-pro/specs
+  aliases:
+  - Mini 4 Pro
+- kind: product
+  label: DJI Air 3
+  identity:
+    brand: dji
+    series: air 3
+  attributes:
+    weight_g:
+      value: '720'
+      source: https://www.dji.com/air-3/specs
+    flight_time_min:
+      value: '46'
+      source: https://www.dji.com/air-3/specs
+    camera_mp:
+      value: '48'
+      source: https://www.dji.com/air-3/specs
+    video_resolution:
+      value: 4K/60fps
+      source: https://www.dji.com/air-3/specs
+    range_km:
+      value: '20'
+      source: https://www.dji.com/air-3/specs
+  aliases:
+  - Air 3
+- kind: product
+  label: DJI Mavic 3
+  identity:
+    brand: dji
+    series: mavic 3
+  attributes:
+    weight_g:
+      value: '895'
+      source: https://www.dji.com/mavic-3/specs
+    flight_time_min:
+      value: '46'
+      source: https://www.dji.com/mavic-3/specs
+    camera_mp:
+      value: '20'
+      source: https://www.dji.com/mavic-3/specs
+    video_resolution:
+      value: 5.1K/50fps
+      source: https://www.dji.com/mavic-3/specs
+    range_km:
+      value: '15'
+      source: https://www.dji.com/mavic-3/specs
+  aliases:
+  - Mavic 3
+- kind: product
+  label: DJI Neo
+  identity:
+    brand: dji
+    series: neo
+  attributes:
+    weight_g:
+      value: '135'
+      source: https://www.dji.com/neo/specs
+    flight_time_min:
+      value: '18'
+      source: https://www.dji.com/neo/specs
+    camera_mp:
+      value: '12'
+      source: https://www.dji.com/neo/specs
+    video_resolution:
+      value: 4K/30fps
+      source: https://www.dji.com/neo/specs
+    range_km:
+      value: '10'
+      source: https://www.dji.com/neo/specs
+  aliases:
+  - Neo
+- kind: product
+  label: DJI Avata 2
+  identity:
+    brand: dji
+    series: avata 2
+  attributes:
+    weight_g:
+      value: '377'
+      source: https://www.dji.com/avata-2/specs
+    flight_time_min:
+      value: '23'
+      source: https://www.dji.com/avata-2/specs
+    camera_mp:
+      value: '48'
+      source: https://www.dji.com/avata-2/specs
+    video_resolution:
+      value: 4K/60fps
+      source: https://www.dji.com/avata-2/specs
+    range_km:
+      value: '13'
+      source: https://www.dji.com/avata-2/specs
+  aliases:
+  - Avata 2
+- kind: product
+  label: Autel EVO Nano
+  identity:
+    brand: autel
+    series: evo nano
+  attributes:
+    weight_g:
+      value: '249'
+      source: https://www.autelrobotics.com/productdetail/12.html
+    flight_time_min:
+      value: '28'
+      source: https://www.autelrobotics.com/productdetail/12.html
+    camera_mp:
+      value: '48'
+      source: https://www.autelrobotics.com/productdetail/12.html
+    video_resolution:
+      value: 4K/30fps
+      source: https://www.autelrobotics.com/productdetail/12.html
+    range_km:
+      value: '10'
+      source: https://www.autelrobotics.com/productdetail/12.html
+  aliases:
+  - EVO Nano
+- kind: product
+  label: Potensic Atom SE
+  identity:
+    brand: potensic
+    series: atom se
+  attributes:
+    weight_g:
+      value: '249'
+      source: https://potensic.com/products/potensic-atom-se
+    flight_time_min:
+      value: '31'
+      source: https://potensic.com/products/potensic-atom-se
+    camera_mp:
+      value: '12'
+      source: https://potensic.com/products/potensic-atom-se
+    video_resolution:
+      value: 4K/30fps
+      source: https://potensic.com/products/potensic-atom-se
+    range_km:
+      value: '4'
+      source: https://potensic.com/products/potensic-atom-se
+  aliases:
+  - Atom SE

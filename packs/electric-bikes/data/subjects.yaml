@@ -1,0 +1,147 @@
+# Subjects — the things this pack knows about.
+#
+# `identity` carries exactly the keys `pack.toml` declares for the
+# kind: that dictionary is hashed to the subject id.
+- kind: product
+  label: Xiaomi Himo Z20
+  identity:
+    brand: xiaomi
+    series: himo-z20
+  attributes:
+    range_km:
+      value: '80'
+      source: https://www.elproducente.com/travel/xiaomi-himo-c20-e-bike-hands-on-review-manual/
+    top_speed_kmh:
+      value: '25'
+      source: https://www.elproducente.com/travel/xiaomi-himo-c20-e-bike-hands-on-review-manual/
+    weight_kg:
+      value: '21.6'
+      source: https://www.elproducente.com/travel/xiaomi-himo-c20-e-bike-hands-on-review-manual/
+  aliases:
+  - Mi Himo Z20
+  - Himo Z20
+- kind: product
+  label: Xiaomi Himo C20
+  identity:
+    brand: xiaomi
+    series: himo-c20
+  attributes:
+    range_km:
+      value: '80'
+      source: https://www.elproducente.com/travel/xiaomi-himo-c20-e-bike-hands-on-review-manual/
+    top_speed_kmh:
+      value: '25'
+      source: https://www.elproducente.com/travel/xiaomi-himo-c20-e-bike-hands-on-review-manual/
+    weight_kg:
+      value: '21.5'
+      source: https://www.elproducente.com/travel/xiaomi-himo-c20-e-bike-hands-on-review-manual/
+  aliases:
+  - Mi Himo C20
+  - Himo C20
+- kind: product
+  label: Xiaomi Qicycle EF1
+  identity:
+    brand: xiaomi
+    series: qicycle-ef1
+  attributes:
+    battery_capacity_wh:
+      value: '208.8'
+      source: https://www.teknolojihbr.com.tr/karsinizda-turkiyede-satilan-tek-xiaomi-elektrikli-bisiklet/
+    motor_power_w:
+      value: '250'
+      source: https://www.teknolojihbr.com.tr/karsinizda-turkiyede-satilan-tek-xiaomi-elektrikli-bisiklet/
+    range_km:
+      value: '45'
+      source: https://www.teknolojihbr.com.tr/karsinizda-turkiyede-satilan-tek-xiaomi-elektrikli-bisiklet/
+    top_speed_kmh:
+      value: '20'
+      source: https://www.teknolojihbr.com.tr/karsinizda-turkiyede-satilan-tek-xiaomi-elektrikli-bisiklet/
+    weight_kg:
+      value: '14.5'
+      source: https://www.teknolojihbr.com.tr/karsinizda-turkiyede-satilan-tek-xiaomi-elektrikli-bisiklet/
+  aliases:
+  - Qicycle Ef1
+  - Mi Qicycle EF1
+- kind: product
+  label: Xiaomi Himo C26
+  identity:
+    brand: Xiaomi
+    series: Himo C26
+  attributes:
+    battery_capacity_wh:
+      value: '480'
+      source: https://ek.ua/HIMO-C26.htm
+    motor_power_w:
+      value: '250'
+      source: https://ek.ua/HIMO-C26.htm
+    voltage_v:
+      value: '48'
+      source: https://ek.ua/HIMO-C26.htm
+    range_km:
+      value: '100'
+      source: https://ek.ua/HIMO-C26.htm
+    top_speed_kmh:
+      value: '25'
+      source: https://ek.ua/HIMO-C26.htm
+    weight_kg:
+      value: '25'
+      source: https://ek.ua/HIMO-C26.htm
+  aliases:
+  - HIMO C26
+  - Himo C26 E-Bike
+- kind: product
+  label: Xiaomi Himo T1
+  identity:
+    brand: Xiaomi
+    series: Himo T1
+  attributes:
+    battery_capacity_wh:
+      value: '672'
+      source: https://futumag24.ru/products/elektroskuter-xiaomi-himo-t1
+    motor_power_w:
+      value: '350'
+      source: https://futumag24.ru/products/elektroskuter-xiaomi-himo-t1
+    voltage_v:
+      value: '48'
+      source: https://futumag24.ru/products/elektroskuter-xiaomi-himo-t1
+    range_km:
+      value: '120'
+      source: https://futumag24.ru/products/elektroskuter-xiaomi-himo-t1
+    top_speed_kmh:
+      value: '25'
+      source: https://futumag24.ru/products/elektroskuter-xiaomi-himo-t1
+    weight_kg:
+      value: '53'
+      source: https://futumag24.ru/products/elektroskuter-xiaomi-himo-t1
+  aliases:
+  - HIMO T1
+  - Xiaomi Himo T1 e-Scooter
+- kind: product
+  label: Xiaomi Mi Electric Bike
+  identity:
+    brand: Xiaomi
+    series: Mi Electric Bike
+  attributes:
+    battery_capacity_wh:
+      value: '208.8'
+      source: https://www.skatehut.co.uk/articles/xiaomi-mi-electric-bike-the-best-new-e-bike-on-the-market
+    voltage_v:
+      value: '36'
+      source: https://www.skatehut.co.uk/articles/xiaomi-mi-electric-bike-the-best-new-e-bike-on-the-market
+    range_km:
+      value: '40'
+      source: https://www.skatehut.co.uk/articles/xiaomi-mi-electric-bike-the-best-new-e-bike-on-the-market
+    top_speed_kmh:
+      value: '25'
+      source: https://www.skatehut.co.uk/articles/xiaomi-mi-electric-bike-the-best-new-e-bike-on-the-market
+  aliases:
+  - Xiaomi Mi Electric Bike
+  - Mi Electric Bike
+- kind: product
+  label: Xiaomi Hifree 5th Wheel
+  identity:
+    brand: Xiaomi
+    series: Hifree 5th Wheel
+  aliases:
+  - Hifree 5th Wheel Electric Bicycle
+  - HiFree 5th Wheel
