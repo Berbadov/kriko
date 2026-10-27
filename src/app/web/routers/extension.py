@@ -381,7 +381,7 @@ def start_research_plane(
         if not installed_ids and not picked_api:
             raise HTTPException(503, (
                 "Product drafts need an agent. Install a coding-agent CLI, pick "
-                "the Mistral API agent in Settings → Agents (it needs a Mistral "
+                "the Mistral API agent in More → Agents (it needs a Mistral "
                 "key), or run a local model server with a model downloaded. "
                 + local["reason"] + " No API research was started."
             )) from exc

@@ -23,7 +23,7 @@ const PAGES = [
   { source: 'guide/index.html', output: 'tr/guide/index.html', canonical: 'https://kriko.cc/tr/guide/', meta: '@meta:guide' },
 ];
 // Pages with no Turkish version still carry the hashes.
-const STAMPED = [...PAGES.map((page) => page.source), 'privacy/index.html'];
+const STAMPED = [...PAGES.map((page) => page.source), 'privacy/index.html', '404.html'];
 // A link to one of these goes to the Turkish version of it; /privacy/ is English only.
 const LOCALISED = /^\/(?:guide\/)?(?:#.*)?$/;
 
@@ -36,7 +36,8 @@ function stamp(file) {
   let html = fs.readFileSync(target, 'utf8');
   const depth = file.split('/').length - 1;
   for (const asset of ASSETS) {
-    const prefix = '../'.repeat(depth);
+    // The 404 page answers at any address, so it names its files from the root.
+    const prefix = file === '404.html' ? '/' : '../'.repeat(depth);
     const pattern = new RegExp(`((?:href|src)=")${prefix}${asset.replace('.', '\\.')}(?:\\?v=[0-9a-f]+)?(")`, 'g');
     html = html.replace(pattern, `$1${prefix}${asset}?v=${hash(asset)}$2`);
   }
@@ -88,6 +89,8 @@ function render({ source, output, canonical, meta: metaKey }) {
   document.querySelector('meta[name="description"]').content = meta.description;
   document.querySelector('meta[property="og:title"]').content = meta['og:title'];
   document.querySelector('meta[property="og:description"]').content = meta['og:description'];
+  document.querySelector('meta[property="og:url"]').content = canonical;
+  document.querySelector('meta[property="og:image:alt"]').content = meta['og:image:alt'];
   document.querySelector('link[rel="canonical"]').href = canonical;
   for (const a of document.querySelectorAll('.language-switch a')) {
     if (a.lang === 'tr') a.setAttribute('aria-current', 'page');
@@ -102,8 +105,8 @@ function render({ source, output, canonical, meta: metaKey }) {
   }
 
   // The Turkish page is one folder deeper than its source, so its relative paths go up one more.
-  for (const el of document.querySelectorAll('[src], [href], [srcset]')) {
-    for (const attribute of ['src', 'href', 'srcset']) {
+  for (const el of document.querySelectorAll('[src], [href], [srcset], [poster]')) {
+    for (const attribute of ['src', 'href', 'srcset', 'poster']) {
       const value = el.getAttribute(attribute);
       if (value && /^(\.\.\/|assets\/|styles\.css|script\.js)/.test(value)) el.setAttribute(attribute, `../${value}`);
     }

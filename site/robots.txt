@@ -1,0 +1,5 @@
+User-agent: *
+Disallow: /tools/
+Allow: /
+
+Sitemap: https://kriko.cc/sitemap.xml

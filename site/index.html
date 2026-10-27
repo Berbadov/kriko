@@ -4,14 +4,20 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
-  <title>Kriko</title>
+  <title>Kriko: what is known to go wrong with this product</title>
   <meta name="description" content="Kriko shows what is known to go wrong with the exact product you are looking at, with the source beside every finding. It runs on your computer and works on any listing site.">
   <meta property="og:title" content="Kriko: the listing tells half the story">
   <meta property="og:description" content="What is known to go wrong with this exact product, with sources you can check, beside the listing.">
   <meta property="og:type" content="website">
-  <meta property="og:image" content="https://kriko.cc/assets/icon-128.png">
+  <meta property="og:site_name" content="Kriko">
+  <meta property="og:url" content="https://kriko.cc/">
+  <meta property="og:image" content="https://kriko.cc/assets/share-card.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="The Kriko panel open beside an invented e-bike listing, with the headline: The listing tells half the story.">
+  <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" href="assets/icon-32.png">
-  <link rel="stylesheet" href="styles.css?v=21e6481025a5">
+  <link rel="stylesheet" href="styles.css?v=6eed87146023">
   <script src="script.js?v=8b8abf59128c" defer></script>
   <link rel="canonical" href="https://kriko.cc/">
   <link rel="alternate" href="https://kriko.cc/" hreflang="en">
@@ -48,13 +54,16 @@
         <div class="hero-copy">
           <p class="label">Before you buy</p>
           <h1>The listing tells <span>half the story.</span></h1>
-          <p class="lead">Kriko shows what is known to go wrong with the exact product you are looking at. Every finding keeps its source.</p>
+          <p class="lead">Buying a used car, phone or appliance? Kriko shows known problems with the exact model, beside the listing, with sources you can open and questions to ask the seller.</p>
           <div class="actions">
             <a class="button" href="https://github.com/Berbadov/kriko/releases/latest/download/kriko-0.3.7-x86_64-setup.exe"><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg><span>Download Kriko for Windows</span></a>
             <a class="button ghost" href="https://chromewebstore.google.com/detail/kriko/bdifnaggafjokndlpjgmlfappcoehdjb">Get the browser extension</a>
             <a class="button ghost" href="https://github.com/Berbadov/kriko"><svg class="icon" aria-hidden="true"><use href="#i-external"/></svg><span>GitHub</span></a>
           </div>
-          <p class="fine">Free · Open source · No account</p>
+          <p class="fine">Windows app · Free · Open source · No account</p>
+          <p class="fine">The extension needs the Windows app running. Installed catalogs work offline without an AI key; online research needs a connected agent and may have provider costs.</p>
+          <p class="fine"><a href="#film">Watch the 28-second demo</a> or <a href="#get">follow the setup steps</a>.</p>
+          <p class="fine">The installer is not signed yet, so Windows may stop the first run with <strong>Windows protected your PC</strong>. Choose <strong>More info</strong>, then <strong>Run anyway</strong>.</p>
         </div>
         <figure class="stage">
           <div class="stage-sky">
@@ -74,6 +83,20 @@
         <li>Your research stays on your computer</li>
         <li>Free and open source</li>
       </ul>
+    </section>
+
+    <section class="section film" id="film">
+      <div class="wrap">
+        <p class="label">The film</p>
+        <h2>Twenty-eight seconds, with sound.</h2>
+        <figure class="window">
+          <video controls preload="none" playsinline width="1280" height="720" poster="assets/film/kriko-ad-poster.webp" aria-label="A 28-second film of Kriko checking an invented e-bike listing: what is known to go wrong with it, with the source beside every finding.">
+            <source src="assets/film/kriko-ad.mp4" type="video/mp4">
+            <p>Your browser cannot play this film. <a href="assets/film/kriko-ad.mp4">Download it</a> instead.</p>
+          </video>
+          <figcaption>The e-bike and every finding in it are invented. The film plays only when you press play.</figcaption>
+        </figure>
+      </div>
     </section>
 
     <section class="section" id="how">
@@ -231,9 +254,9 @@
         <div class="get-grid">
           <ol class="setup">
             <li><span class="step-number">01</span><div><h3>Install the app.</h3><p>Download the Windows installer and open Kriko. It needs no administrator rights. The first-start setup walks you through the rest.</p></div></li>
-            <li><span class="step-number">02</span><div><h3>Add knowledge.</h3><p>Open <strong>Catalogs</strong>, choose <strong>Find release catalogs</strong> and install one. You can also research without one.</p></div></li>
+            <li><span class="step-number">02</span><div><h3>Choose how to check.</h3><p>For offline lookups, open <strong>More → Catalogs → Find release catalogs</strong> and install a catalog. For online research, open <strong>More → Agents</strong>, choose an agent and press <strong>Check connection</strong>. Paid providers bill your own account; research works without a catalog.</p></div></li>
             <li><span class="step-number">03</span><div><h3>Add Kriko to your browser.</h3><p>Install <a href="https://chromewebstore.google.com/detail/kriko/bdifnaggafjokndlpjgmlfappcoehdjb">Kriko from the Chrome Web Store</a> in Chrome, Edge or Brave. The store handles updates. Keep the desktop app running; the extension needs it to work.</p></div></li>
-            <li><span class="step-number">04</span><div><h3>Open a listing.</h3><p>Keep Kriko running, open a product page and press <span class="keys"><kbd>Alt</kbd> + <kbd>K</kbd></span> or the toolbar button. Read the findings and follow the sources.</p></div></li>
+            <li><span class="step-number">04</span><div><h3>Open a listing.</h3><p>Keep Kriko running, open a product page and press <span class="keys"><kbd>Alt</kbd> + <kbd>K</kbd></span> or the toolbar button. Confirm the model and variant, then open a finding and follow its source. No findings means a gap in coverage, not proof the product is trouble-free.</p></div></li>
           </ol>
           <div class="download-card">
             <h3>Kriko for Windows</h3>

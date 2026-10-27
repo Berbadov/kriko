@@ -455,7 +455,7 @@ def _api_hint(api: bool, app_state_path=None,
              if api else [])
     if ready:
         return (f"; {ready[0].label} has a key but bills per token, so it runs "
-                "only when picked — choose it under Settings → Agents")
+                "only when picked — choose it under More → Agents")
     return ", and no API-provider key for the API agent" if api else ""
 
 

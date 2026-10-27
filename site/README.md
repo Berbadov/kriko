@@ -35,6 +35,10 @@ from another site.
 - `guide/index.html`: how to use Kriko, one short film per step. Also a source of
   a Turkish page; see below.
 - `privacy/index.html`: the privacy policy. English only.
+- `404.html`: what an unknown address answers (Cloudflare Pages serves it with a 404
+  status). It names its files from the root, because it answers at any depth.
+- `robots.txt` and `sitemap.xml`: add a new page to the sitemap, with its Turkish
+  twin as an alternate; a test fails when the sitemap and the pages disagree.
 - `styles.css`, `script.js`: shared by every page. `script.js` runs the menu on a
   narrow screen and puts a pause button on each film in the guide.
 
@@ -132,6 +136,57 @@ Commit the pictures in `assets/desktop/`. The comparison is drawn wide, for a
 desktop screen, and narrow, for a phone. The checked product and the start
 screen are only shown narrow, so they are drawn only at that size. `ONLY=compare`
 draws one picture.
+
+## The share card
+
+A link to kriko.cc pasted into X, Bluesky, Slack or a chat unfurls into
+`assets/share-card.jpg` (1200x630). `tools/share-card.html` lays it out from the site's
+own fonts and the hero picture, and `tools/share-card.mjs` photographs it:
+
+```sh
+PLAYWRIGHT_MODULE=/path/to/playwright/index.mjs node site/tools/share-card.mjs
+```
+
+The home page and the guide name it in `og:image` with its size and a description,
+and a test reads the JPEG's own size against those tags. The Turkish pages get their
+own address and description from `tr.json` (`og:image:alt`).
+
+## The advertisement
+
+`tools/ad/` draws a 28.5-second advertisement, 1920x1080 at 30 fps, with a
+soundtrack, from the same invented e-bike and the pictures above. It is loud on
+purpose: thick outlines, a dithered field that moves, a camera that punches on the
+beat, 120 BPM. Nothing in it is a recording: `tools/ad/index.html` is one stage,
+`tools/ad/scenes.js` sets every element as a function of time (`render(t)`), and
+`tools/ad/render.mjs` photographs each frame in a browser and pipes the frames to
+ffmpeg. The same time always gives the same frame, so a change is checked by
+drawing a few stills before the render.
+
+```sh
+PLAYWRIGHT_MODULE=/path/to/playwright/index.mjs node site/tools/ad/render.mjs stills 2.6,13,24.8
+python3 site/tools/ad/sheet.py site/tools/ad/out/sheet.png 2.6 13 24.8   # from site/tools/ad
+PLAYWRIGHT_MODULE=/path/to/playwright/index.mjs FFMPEG=/path/to/ffmpeg node site/tools/ad/render.mjs video out/kriko-ad-silent.mp4
+python3 -I site/tools/ad/score.py                                         # out/kriko-ad.wav
+ffmpeg -i out/kriko-ad.wav -af "loudnorm=I=-14:TP=-2:LRA=7,aresample=48000" out/kriko-ad-norm.wav
+ffmpeg -i out/kriko-ad-silent.mp4 -i out/kriko-ad-norm.wav -c:v copy -c:a aac -b:a 192k -shortest out/kriko-ad.mp4
+ffmpeg -i out/kriko-ad-silent.mp4 -i out/kriko-ad-norm.wav -vf scale=1280:720:flags=lanczos -c:v libx264 -crf 28 -preset slow -pix_fmt yuv420p -c:a aac -b:a 192k -shortest -movflags +faststart ../../assets/film/kriko-ad.mp4
+```
+
+`score.py` makes the sound from sine, saw and noise (numpy and scipy), so there is
+nothing to license, and it lands its hits on the same times `scenes.js` lands the
+pictures. Change one file and change the other. The sound goes through `loudnorm` because
+the raw mix peaks above full scale, and a mux limiter alone left a true peak of
++0.8 dBTP after AAC, which clips on some players; this lands at about -14 LUFS with a
+true peak near -1.7 dBTP. Keep `-b:a 192k`: at 128k the same mix came out at -0.4 dBTP.
+The first mux is the full-size file for a social post (about 54 MB); the last is the
+film on the home page, 720p and about 9.5 MB, which has to stay well under the 25 MiB
+a Cloudflare Pages file may be (a test keeps it under 12 MB). Cut its still with
+`ffmpeg -ss 1.2 -i assets/film/kriko-ad.mp4 -frames:v 1 poster.png` and save it as
+`assets/film/kriko-ad-poster.webp`.
+
+The text on screen is the sound-off script, and the three promises are the page's
+own lines word for word. `out/` (stills and the videos) is not committed. The ad
+says in its corner that the products and findings are invented.
 
 ## Readability
 

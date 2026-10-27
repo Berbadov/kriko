@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Kriko ad</title>
+<style>
+@font-face { font-family: "Barlow Condensed"; font-weight: 700; src: url("/site/assets/fonts/barlow-condensed-latin-700-normal.woff2") format("woff2"); }
+@font-face { font-family: "Barlow Condensed"; font-weight: 600; src: url("/site/assets/fonts/barlow-condensed-latin-600-normal.woff2") format("woff2"); }
+@font-face { font-family: "Atkinson Hyperlegible Next"; font-weight: 200 800; src: url("/site/assets/fonts/atkinson-hyperlegible-next-latin-wght-normal.woff2") format("woff2"); }
+:root { --ink:#0b1020; --paper:#fcfbf8; --blue:#2447e6; --pink:#ff2e93; --yellow:#ffe14a; --mint:#5be3a0; --red:#ff5a4f; --amber:#ffc233;
+  --display:"Barlow Condensed","Arial Narrow",sans-serif; --sans:"Atkinson Hyperlegible Next","Segoe UI",sans-serif; }
+html, body { margin:0; background:#000; }
+#stage { position:relative; width:1920px; height:1080px; overflow:hidden; background:#0b1020; color:var(--ink); font-family:var(--sans); -webkit-font-smoothing:antialiased; }
+#bg { position:absolute; left:-30px; top:-30px; width:1980px; height:1140px; image-rendering:pixelated; }
+#cam { position:absolute; left:0; top:0; width:1920px; height:1080px; transform-origin:50% 50%; }
+#fx { position:absolute; left:0; top:0; width:1920px; height:1080px; pointer-events:none; }
+#flash { position:absolute; left:0; top:0; width:1920px; height:1080px; background:#fff; opacity:0; pointer-events:none; }
+.scene { position:absolute; left:0; top:0; width:1920px; height:1080px; display:none; }
+.n { position:absolute; left:0; top:0; transform-origin:50% 50%; will-change:transform; }
+img { display:block; }
+
+/* the loud look: thick ink outlines and hard offset shadows */
+.stk { background:#fff; border:7px solid var(--ink); border-radius:22px; box-shadow:12px 12px 0 var(--ink); padding:14px 28px 10px; font:700 58px/.98 var(--display); text-transform:uppercase; letter-spacing:.005em; white-space:nowrap; text-align:center; }
+.stk small { display:block; font:700 30px/1 var(--display); letter-spacing:.08em; margin-bottom:6px; opacity:.85; }
+.row { display:flex; gap:22px; align-items:center; justify-content:center; white-space:nowrap; }
+.wb { display:inline-block; font:700 200px/.9 var(--display); text-transform:uppercase; padding:10px 28px 0; border:9px solid var(--ink); border-radius:26px; box-shadow:14px 14px 0 var(--ink); letter-spacing:-.005em; }
+.cap { font:700 190px/.9 var(--display); text-transform:uppercase; white-space:nowrap; letter-spacing:-.005em; }
+.cap i { display:inline-block; font-style:normal; }
+
+/* the listing card */
+.card { position:absolute; left:0; top:0; width:900px; height:640px; background:#fff; border:9px solid var(--ink); border-radius:40px; box-sizing:border-box; box-shadow:18px 18px 0 var(--ink); color:var(--ink); }
+.card svg { position:absolute; left:160px; top:34px; width:560px; height:300px; overflow:visible; }
+.card .t { position:absolute; left:50px; top:366px; font:700 70px/1 var(--display); text-transform:uppercase; }
+.card .s { position:absolute; left:50px; top:452px; font:600 34px/1 var(--sans); opacity:.75; }
+.card .p { position:absolute; right:50px; top:358px; font:700 86px/1 var(--display); color:var(--blue); }
+.card .chips { position:absolute; left:50px; top:528px; display:flex; gap:14px; }
+.card .chip { font:700 26px/1 var(--display); text-transform:uppercase; letter-spacing:.04em; padding:10px 20px 6px; border:4px solid currentColor; border-radius:999px; }
+.card.x { background:#070b1e; color:#7dffb2; border-color:#7dffb2; box-shadow:0 0 0 0 transparent, 0 0 60px rgba(125,255,178,.55) inset; }
+.card.x .p { color:#ff5ca8; }
+.card.x svg { filter:drop-shadow(0 0 10px #7dffb2); }
+.scan { position:absolute; top:-50px; width:14px; height:740px; background:#ff2e93; box-shadow:0 0 40px 14px rgba(255,46,147,.8), 0 0 120px 40px rgba(255,46,147,.45); border-radius:7px; }
+
+.star { width:300px; height:300px; background:var(--yellow); clip-path:polygon(50% 0,61% 20%,82% 9%,79% 33%,100% 38%,83% 54%,97% 74%,73% 74%,69% 98%,50% 82%,31% 98%,27% 74%,3% 74%,17% 54%,0 38%,21% 33%,18% 9%,39% 20%); display:grid; place-items:center; text-align:center; font:700 64px/.9 var(--display); text-transform:uppercase; color:var(--ink); }
+
+/* pictures of the real apps */
+.shot { border:8px solid var(--ink); border-radius:34px; box-shadow:16px 16px 0 var(--ink); overflow:hidden; background:#fff; }
+.shot img { position:absolute; left:0; top:0; }
+.ring { position:absolute; border:7px solid var(--pink); border-radius:18px; box-shadow:0 0 0 6px rgba(255,46,147,.28), 0 0 40px rgba(255,46,147,.7); opacity:0; }
+
+/* grades */
+.band { position:absolute; left:0; width:1920px; height:380px; overflow:hidden; }
+.band .w { position:absolute; left:110px; top:30px; font:700 290px/1 var(--display); text-transform:uppercase; letter-spacing:-.01em; }
+.band .why { position:absolute; right:110px; top:282px; font:700 50px/1 var(--display); text-transform:uppercase; text-align:right; }
+.bars { position:absolute; right:130px; top:36px; display:flex; align-items:flex-end; gap:20px; height:210px; }
+.bars i { display:block; width:56px; border-radius:10px; background:rgba(11,16,32,.2); border:6px solid var(--ink); box-sizing:border-box; }
+
+/* promises */
+.pb { display:flex; align-items:center; gap:36px; background:#fff; border:9px solid var(--ink); border-radius:34px; box-shadow:16px 16px 0 var(--ink); padding:20px 50px 12px 30px; font:700 96px/1 var(--display); text-transform:uppercase; white-space:nowrap; }
+.pb .tick { width:86px; height:86px; border-radius:50%; background:var(--blue); border:7px solid var(--ink); display:grid; place-items:center; flex:none; }
+.pb .tick svg { width:58px; height:58px; }
+.mq { position:absolute; left:-900px; width:4200px; white-space:nowrap; font:700 230px/1 var(--display); text-transform:uppercase; color:transparent; -webkit-text-stroke:5px rgba(255,255,255,.34); }
+
+/* end */
+.btn { font:700 54px/1 var(--display); text-transform:uppercase; letter-spacing:.03em; padding:30px 56px 22px; border-radius:20px; border:8px solid var(--ink); box-shadow:12px 12px 0 var(--ink); }
+.fine { position:absolute; left:26px; bottom:22px; font:600 24px/1 var(--display); letter-spacing:.1em; text-transform:uppercase; background:var(--ink); color:#fff; padding:10px 18px 7px; border-radius:999px; opacity:0; }
+#cursor { position:absolute; left:0; top:0; width:70px; height:70px; opacity:0; filter:drop-shadow(5px 6px 0 rgba(11,16,32,.9)); }
+.click { position:absolute; width:90px; height:90px; border:8px solid var(--yellow); border-radius:50%; opacity:0; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="bg" width="198" height="114"></canvas>
+  <div id="cam"></div>
+  <canvas id="fx" width="1920" height="1080"></canvas>
+  <div id="flash"></div>
+</div>
+<script src="/scenes.js"></script>
+</body>
+</html>
