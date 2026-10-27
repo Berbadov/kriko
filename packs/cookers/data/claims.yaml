@@ -1,0 +1,1883 @@
+# Claims — what is known to go wrong, each with the page it came from and the quote
+# that was read there. A claim without both is not in this file.
+- subject:
+    kind: product
+    identity:
+      brand: beko
+      series: built-in oven
+  kind: known_issue
+  domain: glass
+  severity: high
+  consequence: ''
+  detection: ''
+  component: middle door glass
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Beko built-in oven middle door glass shattered after normal use at 200°C
+      body: Owner reports the middle door glass of a Beko built-in oven shattered about 5 minutes after
+        normal use at 200°C (well below the oven's 250°C maximum), scattering glass on the floor. The
+        service technician attributed it to user error and charged for the glass. This indicates the failure
+        occurs within normal operating parameters and owners bear the cost.
+      advice: Treat Beko built-in oven door glass as a documented failure point even under normal use;
+        if it shatters, expect the service to blame user error and charge for replacement.
+    tr:
+      title: Beko ankastre fırının orta kapı camı 200°C'de normal kullanımdan sonra paramparça oldu
+      body: Sahibi, bir Beko ankastre fırının orta kapı camının 200°C'de (fırının 250°C maksimumunun oldukça
+        altında) normal kullanımdan yaklaşık 5 dakika sonra paramparça olduğunu ve camın yere saçıldığını
+        bildiriyor. Servis teknisyeni bunu kullanıcı hatasına bağladı ve cam için ücret aldı. Bu, arızanın
+        normal çalışma parametreleri içinde meydana geldiğini ve maliyeti sahiplerin üstlendiğini gösteriyor.
+      advice: Beko ankastre fırın kapı camını normal kullanımda bile belgelenmiş bir arıza noktası olarak
+        değerlendirin; paramparça olursa, servisin kullanıcı hatasını suçlamasını ve değişim için ücret
+        almasını bekleyin.
+  evidence:
+  - url: https://www.sikayetvar.com/beko/beko-ankastre-firin-cami-patladi-ve-servis-ucret-talep-ediyor
+    quote: Beko marka ankastre fırının orta camı patladı. 200 derecede yemek pişirdim ve fırını kapatıp
+      kapağını açıp içeriye geçtim 5 dakika gibi bür zaman sonra patlama sesleri geldi
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:08:31+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: vestel
+      series: built-in oven
+  kind: known_issue
+  domain: general
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: kontrol kartı / donanım (Err7 hata kodu)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Vestel ankastre fırın kapandıktan sonra kendi kendine çalışıp Err7 hata kodu verdi
+      body: Bu bulgu 'Vestel ankastre fırın yangın riski' aramasından gelen benzer şikayetler listesinden
+        geldi. Kullanıcı, fırının kapatıldıktan sonra iki kez kendi kendine çalıştığını ve Err7 donanımsal
+        hata kodu verdiğini; servisin bunu güvenlik riski olarak tanımlayıp fırının fişinin çekili tutulmasını
+        önerdiğini anlatıyor. Kendi kendine çalışma, gözetimsiz bırakılan bir fırın için yangın riski
+        oluşturabilir.
+      advice: Vestel ankastre fırın kapatıldıktan sonra kendi kendine çalışıyorsa, bu donanımsal bir arıza
+        belirtisidir ve gözetimsiz bırakılan cihaz için risk oluşturur. Alıcı, bu tür kendi kendine çalışma
+        davranışı bildirilen modellerde cihazı kullanmadığında fişten çekmeyi göz önünde bulundurmalı.
+    tr:
+      title: Vestel ankastre fırın kapandıktan sonra kendi kendine çalışıp Err7 hata kodu verdi
+      body: Bu bulgu 'Vestel ankastre fırın yangın riski' aramasından gelen benzer şikayetler listesinden
+        geldi. Kullanıcı, fırının kapatıldıktan sonra iki kez kendi kendine çalıştığını ve Err7 donanımsal
+        hata kodu verdiğini; servisin bunu güvenlik riski olarak tanımlayıp fırının fişinin çekili tutulmasını
+        önerdiğini anlatıyor. Kendi kendine çalışma, gözetimsiz bırakılan bir fırın için yangın riski
+        oluşturabilir.
+      advice: Vestel ankastre fırın kapatıldıktan sonra kendi kendine çalışıyorsa, bu donanımsal bir arıza
+        belirtisidir ve gözetimsiz bırakılan cihaz için risk oluşturur. Alıcı, bu tür kendi kendine çalışma
+        davranışı bildirilen modellerde cihazı kullanmadığında fişten çekmeyi göz önünde bulundurmalı.
+  evidence:
+  - url: https://www.sikayetvar.com/vestel/vestel-ankastre-firinda-err7-hatasi-guvenlik-riski-ve-cozum-talebi
+    quote: kullanım sonrası fırını kapattıktan bir süre sonra cihaz iki kez kendi kendine çalıştı ve ekranda
+      err7 hata kodu verdi
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:10:47+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      series: nv75n5671rs
+  kind: known_issue
+  domain: glass
+  severity: high
+  consequence: ''
+  detection: ''
+  component: Exterior lower door glass panel
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Samsung NV75N5671RS Dual Cook exterior lower glass spontaneously exploded
+      body: Owner on Darty SAV forum reports the lower exterior glass of the Samsung Dual Cook oven exploded
+        spontaneously. A second respondent in the same thread reports the oven self-starting repeatedly
+        and paying €281 per repair. The glass shattering is a documented failure mode for this exact model
+        (NV75N5671RS).
+      advice: If you own this oven, inspect the exterior glass for stress cracks. If it shatters, contact
+        Samsung support and the retailer. Do not use the oven if the glass is compromised. Replacement
+        glass is a significant cost.
+    tr:
+      title: Samsung NV75N5671RS Dual Cook dış alt camı kendiliğinden patladı
+      body: Darty SAV forumundaki sahibi, Samsung Dual Cook fırınının alt dış camının kendiliğinden patladığını
+        bildiriyor. Aynı başlıktaki ikinci bir yanıtlayan, fırının tekrar tekrar kendi kendine çalıştığını
+        ve onarım başına €281 ödediğini bildiriyor. Camın paramparça olması, bu tam model (NV75N5671RS)
+        için belgelenmiş bir arıza modudur.
+      advice: Bu fırına sahipseniz, dış camı gerilim çatlakları açısından inceleyin. Paramparça olursa,
+        Samsung desteği ve satıcıyla iletişime geçin. Cam hasarlıysa fırını kullanmayın. Yedek cam önemli
+        bir maliyettir.
+  evidence:
+  - url: https://sav.darty.com/forum/SAMSUNG/NV75N5671RS-DUAL-COOK-FLEX-/EXPLOSION-DE-LA-VITRE-EXTERIEURE-BASSE-DE-MON-FOUR-SAMSUNG-DUAL-COOK/5512970/556801
+    quote: La vitre basse extérieure de mon four Samsung dual cook vient d'exploser.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:12:24+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: beko
+      series: hiyg64225sbop
+  kind: known_issue
+  domain: general
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: large dual-ring burner thermocouple (termocoppia)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Owner report: Beko HIYG 64225 SBO large burner thermocouple exposed, early oxidation'
+      body: An Italian consumer complaint on Altroconsumo's claims board about a Beko gas hob named as
+        'HIYG 64225 SBO' (the near-identical SBO variant of the SBOP subject). After normal domestic use,
+        the large dual-ring burner is described as designed with a downward structure leaving the thermocouple
+        exposed and unprotected, so cooking/cleaning liquids flow inward, the thermocouple stays exposed
+        to moisture, and early oxidation is already present; the owner also reports the liquids can reach
+        the oven below with a potential electrical-safety concern. The authorized technician reportedly
+        said the repair would be uneconomical and the defect would recur. This is a single owner's report,
+        not a service record or recall.
+      advice: This is one owner's account of a design defect on the closely related SBO variant, not an
+        official notice. A buyer should weigh it as anecdotal; the documented, official risk for this
+        family remains the gas-leak fire recall described above.
+    tr:
+      title: 'Sahip raporu: Beko HIYG 64225 SBO büyük brülör termokuplu açıkta, erken oksidasyon'
+      body: Altroconsumo'nun talep panosunda 'HIYG 64225 SBO' olarak adlandırılan bir Beko gaz ocağı hakkında
+        İtalyan tüketici şikayeti (SBOP konusunun neredeyse aynısı olan SBO varyantı). Normal ev kullanımından
+        sonra, büyük çift halkalı brülörün, termokuplu açıkta ve korumasız bırakan aşağı yönlü bir yapıyla
+        tasarlandığı, böylece pişirme/temizlik sıvılarının içe doğru aktığı, termokuplun neme maruz kaldığı
+        ve erken oksidasyonun zaten mevcut olduğu anlatılıyor; sahibi ayrıca sıvıların aşağıdaki fırına
+        ulaşabileceğini ve potansiyel bir elektrik güvenliği endişesi olduğunu bildiriyor. Yetkili teknisyenin,
+        onarımın ekonomik olmayacağını ve arızanın tekrarlayacağını söylediği bildiriliyor. Bu, tek bir
+        sahibin raporudur, servis kaydı veya geri çağırma değildir.
+      advice: Bu, yakından ilişkili SBO varyantındaki bir tasarım kusuruna dair tek bir sahibin anlatımıdır,
+        resmi bir bildirim değildir. Alıcı bunu anekdot olarak değerlendirmelidir; bu aile için belgelenmiş,
+        resmi risk yukarıda açıklanan gaz kaçağı yangın geri çağırması olmaya devam etmektedir.
+  evidence:
+  - url: https://www.altroconsumo.it/reclamare/bacheca-dei-reclami/segnalazione-per-difetto-di-co/c273995a2958fa14d9
+    quote: Il fuoco grande è progettato con struttura in discesa, con termocoppia esposta e priva di protezione.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:07:49+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: vestel
+      series: built-in oven
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: fırın alt kapağı içindeki yanmaz elyaf / metal plaka (alt bölüm)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Vestel fırın alt kısmından yoğun duman çıkarak yangın riski oluşturdu
+      body: Bu bulgu 'Vestel ankastre fırın yangın riski' aramasından geldi. Kullanıcı, pişirmeden saatler
+        sonra fırının alt kısmından yoğun duman çıktığını, aileyi tahliye ettiğini ve alt kapağı açınca
+        içindeki yanmaz elyafın bir kısmının yandığını, onu koruyan metal plakanın boşta durduğunu gördüğünü
+        anlatıyor. Bu, fırının alt bölümünde yangın riski oluşturan bir malzeme/montaj hatası kaydıdır.
+      advice: Vestel fırın sahipleri, pişirme sonrası fırın kapalıyken bile alt kısımdan yanık kokusu
+        veya duman gelmesi durumunda cihazı kullanmayı bırakıp fişini çekmeli; bu belirti alt bölümde
+        yanma/erime riskine işaret ediyor. Alıcı için bu, yangın riski taşıyan bir model hakkında karar
+        verirken dikkate alınacak ciddi bir kayıttır.
+    tr:
+      title: Vestel fırın alt kısmından yoğun duman çıkarak yangın riski oluşturdu
+      body: Bu bulgu 'Vestel ankastre fırın yangın riski' aramasından geldi. Kullanıcı, pişirmeden saatler
+        sonra fırının alt kısmından yoğun duman çıktığını, aileyi tahliye ettiğini ve alt kapağı açınca
+        içindeki yanmaz elyafın bir kısmının yandığını, onu koruyan metal plakanın boşta durduğunu gördüğünü
+        anlatıyor. Bu, fırının alt bölümünde yangın riski oluşturan bir malzeme/montaj hatası kaydıdır.
+      advice: Vestel fırın sahipleri, pişirme sonrası fırın kapalıyken bile alt kısımdan yanık kokusu
+        veya duman gelmesi durumunda cihazı kullanmayı bırakıp fişini çekmeli; bu belirti alt bölümde
+        yanma/erime riskine işaret ediyor. Alıcı için bu, yangın riski taşıyan bir model hakkında karar
+        verirken dikkate alınacak ciddi bir kayıttır.
+  evidence:
+  - url: https://www.sikayetvar.com/vestel/vestel-firin-yangin-riski-ve-garanti-ihmaline-acil-degisim-talebi
+    quote: Mutfağa gittiğimde fırının alt kısmından yoğun şekilde duman çıktığını gördüm
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:10:47+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: arcelik
+      series: ov 643 t
+  kind: known_issue
+  domain: glass
+  severity: high
+  consequence: ''
+  detection: ''
+  component: vitroseramik cam yüzey
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Arçelik OV 643 T cam ocağı camı iki kez kendiliğinden patladı
+      body: 'Owner report (Şikayetvar, 27 Sept 2025) naming the OV 643t model: the ceramic glass top shattered
+        spontaneously, was replaced for a fee even while under warranty, then shattered again while cooking.'
+      advice: The glass top on this model has shattered more than once on the same unit, in one case while
+        cooking, so a buyer should treat a cracked/shattered top as a recurring risk rather than a one-off
+        and should not assume warranty coverage — the owner was charged despite the warranty.
+    tr:
+      title: Arçelik OV 643 T cam ocağı camı iki kez kendiliğinden patladı
+      body: 'Sahip raporu (Şikayetvar, 27 Eylül 2025) OV 643t modelini adlandırıyor: seramik cam üst kısım
+        kendiliğinden paramparça oldu, garanti kapsamındayken bile ücret karşılığında değiştirildi, ardından
+        pişirme sırasında tekrar paramparça oldu.'
+      advice: Bu modeldeki cam üst kısım aynı ünitede birden fazla kez paramparça olmuştur, bir durumda
+        pişirme sırasında, bu nedenle alıcı çatlamış/paramparça olmuş üst kısmı tek seferlik bir olay
+        değil, tekrarlayan bir risk olarak değerlendirmeli ve garanti kapsamını varsaymamalıdır — sahibinden
+        garantiye rağmen ücret alınmıştır.
+  evidence:
+  - url: https://www.sikayetvar.com/arcelik/arcelik-cam-ocak-tekrar-patladi-guvenlik-riski-devam-ediyor
+    quote: Arçelik markasına ait ov 643t model cam ocak kullanıyoruz. Daha önce camı kendiliğinden patlamış,
+      garanti kapsamında olmasına rağmen ücret karşılığında değiştirilmişti. Ancak aynı sorun tekrar yaşandı
+      ve ocak camı yemek yaparken yeniden patladı.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:06:26+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      series: slide-in electric range
+  kind: known_issue
+  domain: glass
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: oven door glass
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Samsung oven-door glass shattering incidents reported to CPSC (Consumer Reports investigation)
+      body: Consumer Reports identified 10 Samsung-specific complaints among ~400 CPSC glass-shattering
+        reports.
+      advice: Samsung oven-door glass has shattered without warning in some units, sometimes days after
+        the appliance was turned off. If you own a Samsung range, be aware of this failure mode; Samsung
+        has stated it will repair oven door glass free of charge regardless of warranty status. This is
+        a US-focused finding; no equivalent EU/TR documentation was found in this run.
+    tr:
+      title: Samsung fırın kapağı camının kırılması olayları CPSC'ye bildirildi (Consumer Reports soruşturması)
+      body: Consumer Reports, yaklaşık 400 CPSC cam kırılması raporu arasında Samsung'a özgü 10 şikayet
+        tespit etti.
+      advice: Samsung fırın kapağı camı bazı ünitelerde uyarı olmadan kırıldı, bazen cihaz kapatıldıktan
+        günler sonra. Bir Samsung ocak sahibiyseniz bu arıza modunun farkında olun; Samsung, garanti durumundan
+        bağımsız olarak fırın kapağı camını ücretsiz onaracağını belirtti. Bu, ABD odaklı bir bulgudur;
+        bu çalışmada eşdeğer bir AB/TR belgesi bulunamadı.
+  evidence:
+  - url: https://espanol.consumerreports.org/product-safety/shattered-glass-in-range-oven-doors-a8345900362/
+    quote: Other complaints referenced GE (63 incidents), Whirlpool (35), LG (15), and Samsung (10).
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:12:57+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: arcelik
+      series: built-in cooker set
+  kind: known_issue
+  domain: glass
+  severity: high
+  consequence: ''
+  detection: ''
+  component: oven door glass (fırın camı)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Arçelik ankastre set oven door glass shattered, cuts on hands, life-threatening
+      body: 'Owner report listed under similar complaints on the same Şikayetvar page: a newly bought
+        Arçelik ankastre set''s oven door glass shattered within a week of first use, causing cuts, and
+        service called it user error.'
+      advice: The oven door glass can shatter early in the product's life; a buyer should not assume warranty
+        coverage, as service attributed it to user error.
+    tr:
+      title: Arçelik ankastre set fırın kapağı camı kırıldı, ellerde kesikler, hayati tehlike
+      body: 'Aynı Şikayetvar sayfasındaki benzer şikayetler altında listelenen sahip raporu: yeni alınan
+        bir Arçelik ankastre setin fırın kapağı camı ilk kullanımdan bir hafta içinde kırıldı, kesiklere
+        neden oldu ve servis bunu kullanıcı hatası olarak nitelendirdi.'
+      advice: Fırın kapağı camı ürünün ömrünün erken döneminde kırılabilir; servis bunu kullanıcı hatasına
+        bağladığı için bir alıcı garanti kapsamını varsaymamalıdır.
+  evidence:
+  - url: https://www.sikayetvar.com/arcelik/ankastre-ocak-cami-patladi-servis-ve-guvenlik-sorunu-yasadik
+    quote: Arçelik'ten yeni aldığım ankastre setin fırının camı patladı, çok büyük bir hayati tehlike
+      yaşadık ve elimizde kesikler oluştu.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:06:41+00:00'
+- subject:
+    kind: platform
+    identity:
+      brand: bosch
+      family: glass ceramic hob 60cm 2006
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: glass ceramic hob (two induction plates)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Bosch/Siemens/Neff/Constructa glass ceramic hob with two induction plates recalled for fire
+        risk (RAPEX)
+      body: 'Official notice from the Cyprus Department of Electromechanical Services (Ministry of Communications)
+        listing the RAPEX entry for the Bosch/Siemens/Neff/Constructa/Balay/Lynx glass ceramic hob with
+        two induction plates, origin Germany and Spain from September 2006, reason: fire.'
+      advice: This is the primary regulator source for the recall. It confirms the product identity (glass
+        ceramic hob with two induction plates, four target brands, 2006 origin) and the fire risk. It
+        is the strongest anchor for the claim.
+    tr:
+      title: Bosch/Siemens/Neff/Constructa iki indüksiyon plakalı cam seramik ocak yangın riski nedeniyle
+        geri çağrıldı (RAPEX)
+      body: 'Kıbrıs Elektromekanik Hizmetler Dairesi''nden (İletişim Bakanlığı) resmi bildirim; Bosch/Siemens/Neff/Constructa/Balay/Lynx
+        iki indüksiyon plakalı cam seramik ocağın RAPEX kaydını listeliyor, menşei Almanya ve İspanya,
+        Eylül 2006''dan itibaren, sebep: yangın.'
+      advice: Bu, geri çağırma için birincil düzenleyici kaynaktır. Ürün kimliğini (iki indüksiyon plakalı
+        cam seramik ocak, dört hedef marka, 2006 menşei) ve yangın riskini doğrular. İddia için en güçlü
+        dayanaktır.
+  evidence:
+  - url: https://www.mcw.gov.cy/mcw/ems/ems.nsf/All/DE343C27136E6BCBC2257EA0003DB270/$file/RAPEX%20-%20WEEK%2017%20-%202007.pdf
+    quote: 'Λόγοι επικινδυνότητας: Πρόκληση φωτιάς'
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:09:30+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: arcelik
+      series: built-in cooker set
+  kind: known_issue
+  domain: glass
+  severity: high
+  consequence: ''
+  detection: ''
+  component: hob glass (ocak camı)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Arçelik ankastre set hob glass shattered while cooking, glass hit family members
+      body: 'Owner report from the Turkish complaint site Şikayetvar (ID 33181461): the Arçelik ankastre
+        set hob glass shattered spontaneously while two burners were lit, and glass fragments sprayed
+        onto the family. Service blamed user error and quoted 650 TL for inspection. This came from the
+        Turkish seed query ''Arcelik ankastre set cam patlaması şikayet''.'
+      advice: A buyer should know the glass hob can shatter during normal cooking with people nearby,
+        and that Arçelik service tends to classify it as user error rather than covering it under warranty.
+    tr:
+      title: Arçelik ankastre set ocak camı pişirme sırasında kırıldı, cam aile üyelerine çarptı
+      body: 'Türk şikayet sitesi Şikayetvar''dan sahip raporu (ID 33181461): Arçelik ankastre set ocak
+        camı iki ocak gözü yanarken kendiliğinden kırıldı ve cam parçaları ailenin üzerine sıçradı. Servis
+        kullanıcı hatası olarak nitelendirdi ve inceleme için 650 TL fiyat verdi. Bu, ''Arcelik ankastre
+        set cam patlaması şikayet'' Türkçe başlangıç sorgusundan geldi.'
+      advice: Bir alıcı, cam ocağın insanlar yakınındayken normal pişirme sırasında kırılabileceğini ve
+        Arçelik servisinin bunu garanti kapsamında karşılamak yerine kullanıcı hatası olarak sınıflandırma
+        eğiliminde olduğunu bilmelidir.
+  evidence:
+  - url: https://www.sikayetvar.com/arcelik/ankastre-ocak-cami-patladi-servis-ve-guvenlik-sorunu-yasadik
+    quote: 2 sene önce Arçelik'ten almış olduğum ankastre setin ocak camı, beklenmedik bir anda iki göz
+      açıkken (birinde çay, birinde yumurta tavası vardı) yüksek sesle patlayarak paramparça oldu.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:06:41+00:00'
+- subject:
+    kind: platform
+    identity:
+      brand: bosch
+      family: glass ceramic hob 60cm 2006
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: electronic component (rear electric cooking zone switching)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Bosch/Siemens/Neff/Constructa 60 cm glass ceramic hob: rear electric zones can self-ignite
+        and set objects alight'
+      body: Spanish consumer-protection notice (regmurcia) reproducing the RAPEX alert for the same 60
+        cm glass ceramic hobs made in Germany from 1 January 2006 (and Spain from September 2006 under
+        Balay/Lince).
+      advice: Independent corroboration of the same recall in a second language. It adds the identification
+        detail (affected units carry a manufacturing number starting with E) and confirms the manufacturer
+        committed to repairing the product. Use this to check a specific unit before purchase.
+    tr:
+      title: 'Bosch/Siemens/Neff/Constructa 60 cm cam seramik ocak: arka elektrikli bölgeler kendiliğinden
+        tutuşabilir ve nesneleri ateşe verebilir'
+      body: İspanyol tüketici koruma bildirimi (regmurcia), 1 Ocak 2006'dan itibaren Almanya'da (ve Eylül
+        2006'dan itibaren Balay/Lince adı altında İspanya'da) üretilen aynı 60 cm cam seramik ocaklar
+        için RAPEX uyarısını yeniden yayımlıyor.
+      advice: Aynı geri çağırmanın ikinci bir dilde bağımsız teyidi. Kimlik tespit ayrıntısını ekler (etkilenen
+        üniteler E ile başlayan bir üretim numarası taşır) ve üreticinin ürünü onarma taahhüdünü doğrular.
+        Satın almadan önce belirli bir üniteyi kontrol etmek için bunu kullanın.
+  evidence:
+  - url: https://www.regmurcia.com/servlet/s.Sl?sit=a,0,c,374,m,1107&r=ReP-18097-DETALLE_REPORTAJES
+    quote: Un componente electrónico de la placa podría fallar, por lo que las zonas eléctricas para cocinar
+      en la parte posterior podrían encenderse por sí mismas. Si hubiese objetos sobre la placa, podrían
+      arder o causar fuego sin el conocimiento del usuario.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:09:30+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      series: slide-in electric range
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: front-mounted range knobs
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Samsung slide-in electric range front-mounted knob fire hazard recall (CPSC 24-335)
+      body: Official CPSC recall notice, recall number 24-335, dated August 8, 2024. Affected models include
+        NE58K9430SS/AA, NE58R9431SS/AA, NE58F9500SS/AA, NE63T8711SS/AA and others listed on the page.
+        Sold May 2013 through August 2024 for $1,250-$3,050. Manufactured in Thailand. Remedy is free
+        knob locks or covers.
+      advice: If you own a Samsung slide-in electric range with front-mounted knobs, check the model number
+        (inside upper left of oven door or in the storage bin) against the recalled list. If affected,
+        request the free knob lock/covers kit from Samsung immediately, keep children and pets away from
+        the knobs, check knobs are off before leaving home or going to bed, and never leave objects on
+        the range top. Note this recall is US/Canada-specific; no equivalent EU/RAPEX recall was found
+        in this run.
+    tr:
+      title: Samsung ankastre elektrikli ocak ön tarafa monte düğme yangın tehlikesi geri çağırması (CPSC
+        24-335)
+      body: Resmi CPSC geri çağırma bildirimi, geri çağırma numarası 24-335, tarih 8 Ağustos 2024. Etkilenen
+        modeller arasında NE58K9430SS/AA, NE58R9431SS/AA, NE58F9500SS/AA, NE63T8711SS/AA ve sayfada listelenen
+        diğerleri bulunur. Mayıs 2013 ile Ağustos 2024 arasında 1.250-3.050 $ fiyatla satıldı. Tayland'da
+        üretildi. Çözüm ücretsiz düğme kilitleri veya kapaklarıdır.
+      advice: Ön tarafa monte düğmeleri olan bir Samsung ankastre elektrikli ocağınız varsa, model numarasını
+        (fırın kapağının iç üst solunda veya saklama bölmesinde) geri çağrılan listeyle karşılaştırın.
+        Etkilenmişse derhal Samsung'dan ücretsiz düğme kilidi/kapak setini talep edin, çocukları ve evcil
+        hayvanları düğmelerden uzak tutun, evden ayrılmadan veya yatmadan önce düğmelerin kapalı olduğunu
+        kontrol edin ve ocak üstünde asla nesne bırakmayın. Bu geri çağırmanın ABD/Kanada'ya özgü olduğunu
+        unutmayın; bu çalışmada eşdeğer bir AB/RAPEX geri çağırması bulunamadı.
+  evidence:
+  - url: https://www.cpsc.gov/Recalls/2024/Samsung-Recalls-Slide-In-Electric-Ranges-Due-to-Fire-Hazard?language=en
+    quote: Front-mounted knobs on the ranges can be activated by accidental contact by humans or pets,
+      posing a fire hazard.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:10:19+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: altus
+      series: cooker
+  kind: known_issue
+  domain: glass
+  severity: high
+  consequence: ''
+  detection: ''
+  component: oven inner door glass (iç cam)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Altus ALA 137 oven inner door glass shattered spontaneously while cold and closed
+      body: Owner report from query 'Altus fırın cam patlaması şikayet'. The inner door glass of an Altus
+        ALA 137 oven shattered into pieces while the oven was completely off, cold and closed, with no
+        impact, drop or force applied; the glass was original from the factory and about 6 years old.
+      advice: The inner door glass can shatter spontaneously without any impact, even when the oven is
+        cold and off. If you own an Altus oven, treat the door glass as a shatter risk; the owner reports
+        the manufacturer refused a free replacement once the warranty had lapsed, so finding out can mean
+        paying for a new glass panel out of pocket.
+    tr:
+      title: Altus ALA 137 fırının iç kapı camı soğuk ve kapalıyken kendiliğinden paramparça oldu
+      body: '''Altus fırın cam patlaması şikayet'' sorgusundan sahibinin bildirimi. Altus ALA 137 fırının
+        iç kapı camı, fırın tamamen kapalı, soğuk ve kapalıyken, hiçbir darbe, düşme veya kuvvet uygulanmadan
+        paramparça oldu; cam fabrikadan orijinaldi ve yaklaşık 6 yıllıktı.'
+      advice: İç kapı camı, fırın soğuk ve kapalıyken bile hiçbir darbe olmadan kendiliğinden paramparça
+        olabilir. Bir Altus fırınınız varsa, kapı camını bir kırılma riski olarak değerlendirin; sahibi,
+        garanti süresi dolduktan sonra üreticinin ücretsiz değişimi reddettiğini bildiriyor, bu nedenle
+        bunu öğrenmek cebinizden yeni bir cam panel için ödeme yapmak anlamına gelebilir.
+  evidence:
+  - url: https://www.sikayetvar.com/altus/altus-ala-137-firin-ic-cami-patladi-guvenlik-riski-olustu
+    quote: Altus ala 137 fırınımın iç camı dün, fırın tamamen kapalı ve soğuk durumdayken aniden patlayarak
+      tuz buz oldu.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:05:50+00:00'
+- subject:
+    kind: platform
+    identity:
+      brand: bosch
+      family: glass ceramic hob 60cm 2006
+  kind: known_issue
+  domain: glass
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: glass ceramic top
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Bosch glass cooktop shattered spontaneously during normal cooking
+      body: Owner report (ComplaintsBoard) of a Bosch glass cooktop shattering spontaneously during normal
+        cooking; Bosch Türkiye classified it as user-related (invisible micro-crack) and offered only
+        a discounted paid glass replacement.
+      advice: This documents a recurring reported failure mode for Bosch glass hobs (spontaneous shattering
+        with flying glass), but the report does not identify the model, so it is not confirmed for the
+        specific 2006 60 cm unit. Treat it as evidence of a general pattern rather than a finding specific
+        to this model.
+    tr:
+      title: Bosch cam ocak normal pişirme sırasında kendiliğinden paramparça oldu
+      body: Bir Bosch cam ocağın normal pişirme sırasında kendiliğinden paramparça olduğuna dair sahibinin
+        bildirimi (ComplaintsBoard); Bosch Türkiye bunu kullanıcı kaynaklı (görünmez mikro çatlak) olarak
+        sınıflandırdı ve yalnızca indirimli ücretli cam değişimi teklif etti.
+      advice: Bu, Bosch cam ocaklar için bildirilen tekrarlayan bir arıza modunu (camların uçarak kendiliğinden
+        paramparça olması) belgeliyor, ancak bildirim modeli tanımlamıyor, bu nedenle 2006 tarihli 60
+        cm'lik belirli ünite için doğrulanmış değil. Bunu bu modele özgü bir bulgu değil, genel bir örüntünün
+        kanıtı olarak değerlendirin.
+  evidence:
+  - url: https://www.complaintsboard.com/bosch-washer-bosch-glass-cooktop-shattered-my-biggest-concern-is-the-safety-explanation-c2016412
+    quote: While cooking under normal household conditions, the glass surface suddenly shattered. Fortunately,
+      no one was injured, but the incident could easily have caused serious injuries due to flying glass
+      fragments.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:09:30+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: beko
+      series: bsuf 5000 meb
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: rear of oven / rear heating element (smoke source)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Heavy smoke from the rear of the oven during cooking; owner demanded refund on safety grounds
+      body: An owner on Şikayetvar (complaint 'Mini Fırında Aşırı Duman Ve Güvenlik Riski, İade Ve Ücret
+        Geri Ödemesi Talebi', 28 March) reports thick smoke pouring from the rear of the oven during cooking,
+        filling the kitchen, and asked for a refund citing both safety and health concerns.
+      advice: A reported heavy-smoke event during normal cooking is a fire and inhalation hazard. If you
+        own or buy this oven, run the first use in a ventilated space and watch the rear of the unit;
+        if dense smoke appears, stop use and pursue a refund or exchange rather than accepting a repair.
+    tr:
+      title: Pişirme sırasında fırının arkasından yoğun duman; sahibi güvenlik gerekçesiyle iade talep
+        etti
+      body: Şikayetvar'da bir sahip ('Mini Fırında Aşırı Duman Ve Güvenlik Riski, İade Ve Ücret Geri Ödemesi
+        Talebi', 28 Mart) pişirme sırasında fırının arkasından mutfağı dolduran yoğun duman çıktığını
+        bildiriyor ve hem güvenlik hem de sağlık endişelerini gerekçe göstererek iade talep etti.
+      advice: Normal pişirme sırasında bildirilen yoğun duman olayı bir yangın ve soluma tehlikesidir.
+        Bu fırına sahipseniz veya satın alıyorsanız, ilk kullanımı havalandırılan bir alanda yapın ve
+        ünitenin arkasını izleyin; yoğun duman görülürse kullanımı durdurun ve onarımı kabul etmek yerine
+        iade veya değişim talep edin.
+  evidence:
+  - url: https://www.sikayetvar.com/beko/bsuf-5000-meb/musteri
+    quote: pişirme esnasında fırının arka kısmından çok ciddi şekilde duman çıkmaya başladı ve mutfak
+      tamamen duman altında kaldı.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:11:13+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: vestel
+      series: built-in oven
+  kind: known_issue
+  domain: fire
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: üst rezistans ve iç kablolar / ana kart
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Vestel ankastre fırında üst rezistans ve kablolar yanarak yangın riski oluşturdu
+      body: Bu bulgu 'Vestel ankastre fırın yangın riski' aramasından geldi. Kullanıcı, fırının 'pat'
+        diye ses çıkarıp yanık kokusu yaydığını, üst rezistansın çalışmaz hale geldiğini ve söküp incelediğinde
+        kabloların yandığını ve ana karta zarar verdiğini gördüğünü anlatıyor. Bu, fırının elektrik tesisatında
+        yanma/arıza kaydıdır.
+      advice: Vestel ankastre fırında üst rezistans bölgesinden yanık kokusu veya 'pat' sesi gelmesi,
+        iç kabloların yandığına işaret edebilir ve yangın riski taşır. Bu belirtide cihaz derhal kapatılıp
+        fişi çekilmeli; alıcı için bu, fırının elektrik güvenliği konusunda dikkate alınacak bir kayıttır.
+    tr:
+      title: Vestel ankastre fırında üst rezistans ve kablolar yanarak yangın riski oluşturdu
+      body: Bu bulgu 'Vestel ankastre fırın yangın riski' aramasından geldi. Kullanıcı, fırının 'pat'
+        diye ses çıkarıp yanık kokusu yaydığını, üst rezistansın çalışmaz hale geldiğini ve söküp incelediğinde
+        kabloların yandığını ve ana karta zarar verdiğini gördüğünü anlatıyor. Bu, fırının elektrik tesisatında
+        yanma/arıza kaydıdır.
+      advice: Vestel ankastre fırında üst rezistans bölgesinden yanık kokusu veya 'pat' sesi gelmesi,
+        iç kabloların yandığına işaret edebilir ve yangın riski taşır. Bu belirtide cihaz derhal kapatılıp
+        fişi çekilmeli; alıcı için bu, fırının elektrik güvenliği konusunda dikkate alınacak bir kayıttır.
+  evidence:
+  - url: https://www.sikayetvar.com/vestel/ankastre-firin/ariza
+    quote: Evde yangın riski oluşturduğu için ürünü söküp incelediğimde, kabloların yandığını ve ana karta
+      zarar verdiğini gördüm
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:10:47+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      series: slide-in electric range
+  kind: known_issue
+  domain: glass
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: oven door glass
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Consumer Reports calls for CPSC investigation into range oven glass doors including Samsung
+      body: Independent corroboration of the glass-shattering finding from Consumer Reports' advocacy
+        arm, naming Samsung among the brands in the federal database.
+      advice: Corroborates the glass-shattering risk for Samsung ranges. The CPSC has been asked to investigate;
+        no recall has been issued for this issue as of the source date. Owners should be alert to spontaneous
+        oven-door glass breakage.
+    tr:
+      title: Consumer Reports, Samsung dahil ocak fırın cam kapıları için CPSC soruşturması çağrısında
+        bulundu
+      body: Consumer Reports'un savunuculuk biriminden cam kırılması bulgusunun bağımsız doğrulaması;
+        federal veri tabanındaki markalar arasında Samsung'u da adlandırıyor.
+      advice: Samsung ocaklar için cam kırılması riskini doğruluyor. CPSC'den soruşturma talep edildi;
+        kaynak tarihi itibarıyla bu konuda herhangi bir geri çağırma yayınlanmadı. Sahipler fırın kapısı
+        camının kendiliğinden kırılmasına karşı dikkatli olmalıdır.
+  evidence:
+  - url: https://advocacy.consumerreports.org/press_release/consumer-reports-calls-for-investigation-into-the-safety-of-range-oven-glass-doors/
+    quote: Consumer Reports (CR) has identified nearly 400 glass-shattering incident reports involving
+      electric and gas ranges made by Frigidaire, GE, Whirlpool, LG, and Samsung in a federal database,
+      and is calling for an investigation by the Consumer Product Safety Commission (CPSC) into potential
+      safety defects.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:12:57+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: arcelik
+      series: built-in cooker set
+  kind: known_issue
+  domain: glass
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: built-in stove glass
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Arçelik built-in stove glass shattered again after warranty replacement; service charged
+        for 'accessory'
+      body: 'English-language owner report on Şikayetvar: the built-in stove glass shattered again after
+        a warranty replacement, with no impact, and Arçelik then charged ₺4,000 for glass plus ₺5,000
+        for the process, calling the glass an ''accessory''.'
+      advice: A buyer should know the glass can shatter repeatedly and that Arçelik may refuse warranty
+        coverage and charge thousands of lira to replace it.
+    tr:
+      title: Arçelik ankastre ocak camı garanti değişiminden sonra tekrar paramparça oldu; servis 'aksesuar'
+        için ücret aldı
+      body: 'Şikayetvar''da İngilizce sahip bildirimi: ankastre ocak camı, hiçbir darbe olmadan garanti
+        değişiminden sonra tekrar paramparça oldu ve Arçelik ardından cam için ₺4.000 artı işlem için
+        ₺5.000 ücret aldı, camı ''aksesuar'' olarak adlandırdı.'
+      advice: Bir alıcı, camın tekrar tekrar paramparça olabileceğini ve Arçelik'in garanti kapsamını
+        reddedip değiştirmek için binlerce lira ücret alabileceğini bilmelidir.
+  evidence:
+  - url: https://www.sikayetvar.com/en/arcelik-us/arcelik-refused-warranty-replacement-for-my-shattered-built-in-stove-glass
+    quote: My three-year-old Arçelik built-in stove glass shattered again shortly after a warranty replacement.
+      There was no impact—several areas have cracked, not just one, as shown in photos.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:06:41+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      series: nv75n5671rs
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: Control board / electronics
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Samsung NV75N5671RS Dual Cook oven self-starts and heats unattended — fire risk
+      body: Multiple owners on the official Samsung Community forum (EU) report the NV75N5671RS turning
+        itself on and heating at any time of day or night without user action. One owner reports paying
+        over €600 for repairs after 2 years of use. Another states the oven 'endangers our homes and our
+        lives'. The thread has 84 replies, indicating a widespread issue.
+      advice: This is a serious fire risk. If your oven self-starts, unplug it or cut power at the circuit
+        breaker immediately. Do not leave it plugged in unattended. Samsung's after-sales service may
+        charge for the repair even though the fault is a known safety issue.
+    tr:
+      title: Samsung NV75N5671RS Dual Cook fırın kendi kendine çalışıyor ve gözetimsiz ısınıyor — yangın
+        riski
+      body: Resmi Samsung Community forumunda (AB) birden fazla sahip, NV75N5671RS'in günün veya gecenin
+        herhangi bir saatinde kullanıcı müdahalesi olmadan kendi kendine açıldığını ve ısındığını bildiriyor.
+        Bir sahip, 2 yıllık kullanımdan sonra onarımlar için 600 €'dan fazla ödediğini bildiriyor. Bir
+        diğeri, fırının 'evlerimizi ve hayatlarımızı tehlikeye attığını' belirtiyor. Konu başlığında 84
+        yanıt var, bu da yaygın bir soruna işaret ediyor.
+      advice: Bu ciddi bir yangın riskidir. Fırınınız kendi kendine çalışırsa, fişini hemen çekin veya
+        devre kesiciden gücü kesin. Fişi takılı ve gözetimsiz bırakmayın. Samsung'un satış sonrası servisi,
+        arıza bilinen bir güvenlik sorunu olsa bile onarım için ücret talep edebilir.
+  evidence:
+  - url: https://eu.community.samsung.com/t5/maison-electrom%C3%A9nager/four-s-allume-tout-seul/m-p/5856730
+    quote: le four s'allume et chauffe tout seul a n'importe quel moment du jour ou de la nuit !
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:12:24+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: altus
+      series: cooker
+  kind: known_issue
+  domain: glass
+  severity: high
+  consequence: ''
+  detection: ''
+  component: oven inner door glass (iç cam)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Altus 322 i built-in oven inner glass shattered while oven was running
+      body: Owner reports from query 'Altus fırın cam patlaması şikayet', from the Altus fırın camı complaint
+        category page listing 11 complaints. A 322 i model built-in oven's inner glass shattered while
+        the oven was running, ruining the meal; another owner's oven glass shattered with food inside
+        and the authorized service quoted 1300 TL to replace it.
+      advice: Inner door glass shattering is reported across multiple Altus oven models, both while running
+        and with food inside. Even under warranty the owner reports difficulty getting a free fix, and
+        out of warranty the service quoted about 1300 TL for the glass. Expect a costly replacement if
+        the glass goes.
+    tr:
+      title: Altus 322 i ankastre fırının iç camı fırın çalışırken paramparça oldu
+      body: Sahip bildirimi 'Altus fırın cam patlaması şikayet' sorgusundan, 11 şikayet listeleyen Altus
+        fırın camı şikayet kategorisi sayfasından. 322 i model ankastre fırının iç camı fırın çalışırken
+        paramparça oldu ve yemeği mahvetti; başka bir sahibin fırın camı içinde yemek varken paramparça
+        oldu ve yetkili servis değişim için 1300 TL fiyat verdi.
+      advice: İç kapı camının paramparça olması, hem çalışırken hem de içinde yemek varken birden fazla
+        Altus fırın modelinde bildiriliyor. Sahip, garanti kapsamında bile ücretsiz onarım almakta zorluk
+        yaşadığını bildiriyor ve garanti dışında servis cam için yaklaşık 1300 TL fiyat verdi. Cam kırılırsa
+        maliyetli bir değişim bekleyin.
+  evidence:
+  - url: https://www.sikayetvar.com/altus/firin-cami
+    quote: Altus marka 322 i model ankastre fırınımın iç camı, 10 veya 17 Ocak 2026 tarihinde fırın çalışır
+      durumdayken bir anda pa...tladı
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:05:50+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      series: nv75n5671rs
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: Control board / electronics
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Samsung NV75N5671RS Dual Cook self-starts and heats to 170°C just 3 months after warranty
+        expiry
+      body: Certified owner on Darty SAV forum reports the NV75N5671RS turning itself on and heating to
+        170°C, just 3 months after warranty expiry. The owner notes many similar cases on Samsung's own
+        website. This is a third independent report of the self-starting fault on this exact model.
+      advice: The self-starting fault appears to occur around or just after warranty expiry, meaning owners
+        bear the full repair cost. If your oven self-starts, unplug it immediately. Document the behaviour
+        with video evidence before contacting Samsung.
+    tr:
+      title: Samsung NV75N5671RS Dual Cook garanti bitiminden sadece 3 ay sonra kendi kendine çalışıyor
+        ve 170°C'ye ısınıyor
+      body: Darty SAV forumunda sertifikalı sahip, NV75N5671RS'in garanti bitiminden sadece 3 ay sonra
+        kendi kendine açıldığını ve 170°C'ye ısındığını bildiriyor. Sahip, Samsung'un kendi web sitesinde
+        birçok benzer vaka olduğunu belirtiyor. Bu, bu tam modeldeki kendi kendine çalışma arızasının
+        üçüncü bağımsız bildirimidir.
+      advice: Kendi kendine çalışma arızası garanti bitimi civarında veya hemen sonrasında ortaya çıkıyor
+        gibi görünüyor, yani sahipler onarım maliyetinin tamamını üstleniyor. Fırınınız kendi kendine
+        çalışırsa, fişini hemen çekin. Samsung ile iletişime geçmeden önce davranışı video kanıtıyla belgeleyin.
+  evidence:
+  - url: https://sav.darty.com/forum/SAMSUNG/NV75N5671RS-DUAL-COOK-FLEX/FOUR-QUI-S-ALLUME-ET-CHAUFFE/4915016/556801
+    quote: Notre four s'allume tout seul et se met à chauffer à 170 degrés.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:12:24+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: arcelik
+      series: ov 643 t
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: elektronik kontrol kartı (kart arızası)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Arçelik OV 643 T gözü kendiliğinden yanıyor, yangın tehdidi
+      body: 'Owner report (Şikayetvar, 23 Feb) naming the OV 643t: one zone ignites by itself while another
+        is on, for about two years, and the owner calls it a fire risk in a multi-storey building; the
+        service attributed it to a card fault and quoted a service fee.'
+      advice: Uncontrolled self-ignition of a zone is a fire hazard, and the owner reports the service
+        blamed a control-board fault and charged a fee after warranty; a buyer should treat any spontaneous
+        ignition as urgent and expect the fix to be the control board.
+    tr:
+      title: Arçelik OV 643 T gözü kendiliğinden yanıyor, yangın tehdidi
+      body: 'Sahip bildirimi (Şikayetvar, 23 Şubat) OV 643t''yi adlandırıyor: bir göz, diğeri açıkken
+        kendi kendine ateşleniyor, yaklaşık iki yıldır ve sahip bunu çok katlı bir binada yangın riski
+        olarak nitelendiriyor; servis bunu kart arızasına bağladı ve bir servis ücreti fiyat verdi.'
+      advice: Bir gözün kontrolsüz kendi kendine ateşlenmesi yangın tehlikesidir ve sahip, servisin bir
+        kontrol kartı arızasını suçladığını ve garanti sonrası ücret aldığını bildiriyor; bir alıcı herhangi
+        bir kendiliğinden ateşlenmeyi acil olarak değerlendirmeli ve düzeltmenin kontrol kartı olmasını
+        beklemelidir.
+  evidence:
+  - url: https://www.sikayetvar.com/arcelik/arcelik-ocaginin-kontrolsuz-yanmasi-yangin-tehdidi-olusturuyor
+    quote: Arçelik ov 643t model ocağı yaklaşık 3 yıldır kullanıyorum. Güvendiğim bir markanın ocağında
+      ciddi bir güvenlik sorunu yaşıyorum. Ocağın bir gözü yanarken, diğer göz kendiliğinden yanmaya başlıyor
+      ve bu durum yaklaşık 2 yıldır devam ediyor. Çok katlı bir binada oturduğumuz için olası bir yangın
+      riskinden dolayı gerçekten tedirgin oluyoruz.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:06:26+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: arcelik
+      series: built-in cooker set
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: shut-off gas valve in cookers
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Arcelik 2024 recall of 3,566 cookers for gas-leak risk in shut-off valves
+      body: Arcelik Global's own 2024 Integrated Report confirms an official recall of 3,566 cooker units
+        for gas-leak risk from a surface defect in shut-off valves. This is the manufacturer's primary
+        documentation, from the seed query 'Arcelik ankastre set recall RAPEX'.
+      advice: A buyer should know Arcelik issued a 2024 recall for cookers over a gas-leak risk in shut-off
+        valves, so checking whether a specific unit is affected matters for safety.
+    tr:
+      title: Arcelik 2024'te kapatma valflerindeki gaz kaçağı riski nedeniyle 3.566 fırının geri çağrılması
+      body: Arcelik Global'in kendi 2024 Entegre Raporu, kapatma valflerindeki yüzey kusurundan kaynaklanan
+        gaz kaçağı riski nedeniyle 3.566 fırın ünitesinin resmi geri çağrılmasını doğruluyor. Bu, 'Arcelik
+        ankastre set recall RAPEX' tohum sorgusundan üreticinin birincil belgeleridir.
+      advice: Bir alıcı, Arcelik'in kapatma valflerindeki gaz kaçağı riski nedeniyle fırınlar için 2024'te
+        geri çağırma yayınladığını bilmelidir, bu nedenle belirli bir ünitenin etkilenip etkilenmediğini
+        kontrol etmek güvenlik açısından önemlidir.
+  evidence:
+  - url: https://www.arcelikglobal.com/media/5kijpw34/2024-integrated-report.pdf
+    quote: One recall was issued in 2024. The hazard was the risk of a gas leak caused by a surface defect
+      in the shut off valves used in cookers. The problem was resolved with a series of improvements in
+      the production process and an improved control system. A total of 3,566 units were recollected in
+      this recall.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:06:41+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      series: nv75n5671rs
+  kind: known_issue
+  domain: glass
+  severity: high
+  consequence: ''
+  detection: ''
+  component: Exterior door glass panel
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Samsung NV75N5671RS Dual Cook exterior glass shattered spontaneously after 3 years (no impact)
+      body: Verified owner review on Samsung's official French product page for the NV75N5671RS. The reviewer
+        (Portuguese) reports the exterior glass shattered spontaneously after ~3 years of normal use,
+        with no impact, no prior crack, and no damage. The reviewer concludes it was poor manufacturing
+        and notes it happened right after warranty expired. This is an independent confirmation of the
+        glass shattering failure documented on the Darty forum.
+      advice: This is a second independent confirmation of spontaneous exterior glass shattering on this
+        exact model. The failure occurred after warranty expiry (~3 years), meaning the owner bears the
+        full replacement cost. Consider whether this risk is acceptable.
+    tr:
+      title: Samsung NV75N5671RS Dual Cook dış camı 3 yıl sonra kendiliğinden paramparça oldu (darbe yok)
+      body: Samsung'un NV75N5671RS için resmi Fransız ürün sayfasında doğrulanmış sahip incelemesi. İnceleyen
+        (Portekizli), dış camın ~3 yıllık normal kullanımdan sonra kendiliğinden paramparça olduğunu,
+        darbe, önceden çatlak ve hasar olmadığını bildiriyor. İnceleyen bunun kötü üretim olduğu sonucuna
+        varıyor ve tam garanti bittikten sonra meydana geldiğini belirtiyor. Bu, Darty forumunda belgelenen
+        camın paramparça olması arızasının bağımsız bir doğrulamasıdır.
+      advice: Bu, bu tam modelde kendiliğinden dış camın paramparça olmasının ikinci bağımsız doğrulamasıdır.
+        Arıza garanti bitiminden sonra (~3 yıl) meydana geldi, yani sahip değişim maliyetinin tamamını
+        üstleniyor. Bu riskin kabul edilebilir olup olmadığını düşünün.
+  evidence:
+  - url: https://www.samsung.com/fr/cooking-appliances/ovens/electric-oven-nv75n5671rs-ef/
+    quote: O meu forno foi comprado à cerca de 3 anos e funcionava até relativamente bem. Recentemente,
+      logo após uma utilização, o vidro exterior partiu expontâneamente, o que eu nunca pensei ser possível!!
+      Ficou todo desfeito, e foi um enorme susto! Não houve nehum impacto ou dano sobre o vidro, não tinha
+      nehuma fissura, nada que levasse a este desfecho.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:12:24+00:00'
+- subject:
+    kind: platform
+    identity:
+      brand: bosch
+      family: glass ceramic hob 60cm 2006
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: electronic control component (rear cooking zone switching)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Bosch/Siemens/Neff/Constructa 60 cm glass ceramic hob: electronic component failure can
+        switch the rear cooking zones on by themselves (fire risk)'
+      body: Austrian consumer-protection notice (konsument.at) describing the official recall of 60 cm
+        glass ceramic hobs under Bosch, Siemens, Neff and Constructa, bought from January 2006, with two
+        induction and two electric zones.
+      advice: This is exactly the subject product (60 cm, 2006, four brands). Before buying or using a
+        2006 60 cm Bosch/Siemens/Neff/Constructa glass ceramic hob, check whether it is part of the recall;
+        the manufacturer committed to repairing it. Do not leave objects on the hob unattended and switch
+        off the circuit when not in use until it is checked.
+    tr:
+      title: 'Bosch/Siemens/Neff/Constructa 60 cm cam seramik ocak: elektronik bileşen arızası arka pişirme
+        bölgelerini kendi kendine açabilir (yangın riski)'
+      body: Avusturya tüketici koruma bildirimi (konsument.at), Ocak 2006'dan itibaren satın alınan, iki
+        indüksiyon ve iki elektrikli bölgesi olan Bosch, Siemens, Neff ve Constructa markaları altındaki
+        60 cm cam seramik ocakların resmi geri çağrılmasını açıklıyor.
+      advice: Bu tam olarak söz konusu üründür (60 cm, 2006, dört marka). 2006 model 60 cm Bosch/Siemens/Neff/Constructa
+        cam seramik ocak satın almadan veya kullanmadan önce geri çağırma kapsamında olup olmadığını kontrol
+        edin; üretici onarım taahhüdünde bulundu. Ocağın üzerinde eşyaları gözetimsiz bırakmayın ve kontrol
+        edilene kadar kullanılmadığında devreyi kapatın.
+  evidence:
+  - url: https://konsument.at:443/heim-garten/glaskeramik-kochfelder-bosch-siemens-neff-constructa
+    quote: Bei Glaskeramik-Kochfeldern der Marken Bosch, Siemens, Neff und Constructa kann ein elektronisches
+      Bauteil ausfallen. Dadurch können sich die beiden hinteren Kochzonen in ausgeschaltetem Zustand
+      von selbst einschalten.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:09:30+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: beko
+      series: bsuf 5000 meb
+  kind: known_issue
+  domain: general
+  severity: low
+  consequence: ''
+  detection: ''
+  component: interior enamel coating (lower interior)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Interior enamel coating flaking/bubbling after about four months of use
+      body: An owner (complaint 'Garanti Kapsamındaki Beko Fırın Emaye Çatlaması İçin Ücretsiz Onarım
+        İsteği', 25 March) reports the interior enamel flaking/bubbling in the lower part of the oven
+        after about four months, while still under warranty.
+      advice: This is a quality/reliability defect rather than a safety hazard, but it means the interior
+        finish can degrade within months. If you buy this oven, inspect the interior enamel early and
+        file any flaking claim while the warranty is still active, since the owner's report shows it appears
+        within the first year.
+    tr:
+      title: Yaklaşık dört aylık kullanımdan sonra iç emaye kaplama dökülüyor/kabarcık yapıyor
+      body: Bir sahibi ('Garanti Kapsamındaki Beko Fırın Emaye Çatlaması İçin Ücretsiz Onarım İsteği',
+        25 Mart) yaklaşık dört ay sonra, hâlâ garanti kapsamındayken fırının alt kısmındaki iç emayenin
+        döküldüğünü/kabarcık yaptığını bildiriyor.
+      advice: Bu bir güvenlik tehlikesinden ziyade kalite/güvenilirlik kusurudur, ancak iç kaplamanın
+        aylar içinde bozulabileceği anlamına gelir. Bu fırını satın alırsanız iç emayeyi erken kontrol
+        edin ve sahibinin bildirimi ilk yıl içinde ortaya çıktığını gösterdiğinden, garanti hâlâ geçerliyken
+        herhangi bir dökülme talebini dosyalayın.
+  evidence:
+  - url: https://www.sikayetvar.com/beko/bsuf-5000-meb/5000-meb-firin
+    quote: fırının içinde, alt kısımda emaye boyasında atmalar oluştu
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:11:13+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: arcelik
+      series: built-in cooker set
+  kind: known_issue
+  domain: glass
+  severity: high
+  consequence: ''
+  detection: ''
+  component: OCD T 651 ES glass hob
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Arçelik OCD T 651 ES glass hob shattered during cooking while under warranty
+      body: Owner report naming a specific model, the Arçelik OCD T 651 ES built-in glass hob, which shattered
+        completely during cooking while still under warranty until 2032. The same model appears in multiple
+        complaints on the site.
+      advice: A buyer of the OCD T 651 ES model should know the glass surface has shattered during normal
+        cooking even under warranty, so this specific model carries a documented glass risk.
+    tr:
+      title: Arçelik OCD T 651 ES cam ocak garanti kapsamındayken pişirme sırasında paramparça oldu
+      body: 'Belirli bir modeli adlandıran sahip bildirimi: Arçelik OCD T 651 ES ankastre cam ocak, 2032''ye
+        kadar hâlâ garanti kapsamındayken pişirme sırasında tamamen paramparça oldu. Aynı model sitedeki
+        birden fazla şikâyette görünüyor.'
+      advice: OCD T 651 ES modelinin bir alıcısı, cam yüzeyin garanti kapsamındayken bile normal pişirme
+        sırasında paramparça olduğunu bilmelidir; bu nedenle bu belirli model belgelenmiş bir cam riski
+        taşımaktadır.
+  evidence:
+  - url: https://www.sikayetvar.com/en/members/semiha-16352050
+    quote: On September 15, 2025, while cooking on my Arçelik OCD T 651 ES built-in glass stove, I suddenly
+      heard a noise, and the ...pot jumped into the air. I saw that the glass surface of the stove had
+      completely shattered.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:06:41+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: beko
+      series: hiyg64225sbop
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: gas nozzle (plynový hrot) to gas rail (plynová lišta) seal
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'RAPEX recall SR/00792/25: Beko HIYG64225SBOP gas-hob gas-leak fire risk'
+      body: Safety Gate/RAPEX notification 9/2025 (SR/00792/25), reported by Poland, published 28.02.2025.
+        The notified defect is insufficient sealing between the gas nozzles and the gas rail, which can
+        leak gas and cause fire and burns. It covers models HIYG64225SBOP and HIYG64225SXOP (barcodes
+        8770263200 / 8770273200) made in Turkey between 01.08.2024 and 31.10.2024, and the product is
+        found non-compliant with the EU Gas Appliances Regulation (GAR). The measure is withdrawal from
+        end users, effective 10/02/2025.
+      advice: 'If you own this hob, check the production date. Units made 01.08.2024–31.10.2024 are covered
+        by the recall: stop using them and contact Beko''s Polish distributor (recall page beko.com/pl-pl/Pomoc-techniczna/informacja-plyty-gazowe-2025)
+        for return/replacement. Units outside that date range are not named in the notice.'
+    tr:
+      title: 'RAPEX geri çağırma SR/00792/25: Beko HIYG64225SBOP gazlı ocak gaz kaçağı yangın riski'
+      body: Polonya tarafından bildirilen, 28.02.2025'te yayımlanan Güvenlik Kapısı/RAPEX bildirimi 9/2025
+        (SR/00792/25). Bildirilen kusur, gaz memeleri ile gaz rayı arasındaki yetersiz sızdırmazlıktır;
+        bu, gaz kaçağına ve yangın ile yanıklara neden olabilir. 01.08.2024 ile 31.10.2024 arasında Türkiye'de
+        üretilen HIYG64225SBOP ve HIYG64225SXOP modellerini (barkodlar 8770263200 / 8770273200) kapsar
+        ve ürünün AB Gaz Yakıtları Yönetmeliği (GAR) ile uyumsuz olduğu tespit edilmiştir. Tedbir, 10/02/2025
+        tarihinden itibaren geçerli olmak üzere son kullanıcılardan geri toplamadır.
+      advice: 'Bu ocağa sahipseniz üretim tarihini kontrol edin. 01.08.2024–31.10.2024 arasında üretilen
+        birimler geri çağırma kapsamındadır: kullanmayı bırakın ve iade/değişim için Beko''nun Polonya
+        distribütörüyle (geri çağırma sayfası beko.com/pl-pl/Pomoc-techniczna/informacja-plyty-gazowe-2025)
+        iletişime geçin. Bu tarih aralığı dışındaki birimler bildirimde adlandırılmamıştır.'
+  evidence:
+  - url: https://www.dtest.sk/nebezpecny-vyrobek/plynova-varna-deska-beko/38698?danger=9&datefrom=03%2f2010&order-by=4&order-dir=1
+    quote: Nedostatečné utěsnění mezi plynovými hroty a plynovou lištou plynové varné desky může vést
+      k úniku plynu, který může způsobit požár a popáleniny.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:07:49+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: beko
+      series: built-in oven
+  kind: known_issue
+  domain: general
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: oven (unspecified)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Beko ovens were notified through EU RAPEX system (notification 0354/09)
+      body: A UK parliamentary written answer confirms Beko ovens were the subject of a RAPEX notification
+        (0354/09), but the record does not state the nature of the fault, the models affected, or whether
+        built-in ovens were included. This is a weak but real recall signal.
+      advice: A formal EU rapid-alert notification exists for Beko ovens, but without fault details or
+        model scope it cannot be acted on directly; treat it as a reason to check Beko's recall pages
+        for your specific model.
+    tr:
+      title: Beko fırınları AB RAPEX sistemi aracılığıyla bildirildi (bildirim 0354/09)
+      body: Bir Birleşik Krallık parlamento yazılı cevabı, Beko fırınlarının bir RAPEX bildirimine (0354/09)
+        konu olduğunu doğruluyor, ancak kayıt arızanın niteliğini, etkilenen modelleri veya ankastre fırınların
+        dahil edilip edilmediğini belirtmiyor. Bu zayıf ama gerçek bir geri çağırma sinyalidir.
+      advice: Beko fırınları için resmi bir AB hızlı uyarı bildirimi mevcut, ancak arıza ayrıntıları veya
+        model kapsamı olmadan doğrudan harekete geçilemez; bunu, belirli modeliniz için Beko'nun geri
+        çağırma sayfalarını kontrol etmeniz için bir neden olarak değerlendirin.
+  evidence:
+  - url: https://www.theyworkforyou.com/wrans/?id=2013-03-06a.146043.h
+    quote: The Department for Business, Innovation and Skills informed the EU rapid alert system of the
+      potential faults in ovens manufactured by Beko plc and its group of companies through the RAPEX
+      system (notification number 0354/09)
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:08:31+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      series: slide-in electric range
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: front-mounted control knobs
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Samsung slide-in electric ranges recalled for fire hazard from front-mounted knobs
+      body: Official CPSC recall notice of Aug 8, 2024 for Samsung Electric Slide-In Ranges with front-mounted
+        knobs. The knobs can be activated by accidental contact by humans or pets, posing a fire hazard.
+        Recalled model numbers include NE58K9430SS/AA, NE58F9500SS/AA, NE58K9850WS/AA, NE63T8111SS/AA,
+        NE63T8711SS/AA, NE63T8751SS/AA and others. Remedy is free knob locks or covers.
+      advice: Check the model number (inside upper left corner of oven door or inside the bottom storage
+        bin) against the recalled list. If affected, request the free knob lock/cover kit from Samsung
+        and keep children, pets, and objects off the cooktop when not in use.
+    tr:
+      title: Samsung ankastre elektrikli ocaklar, ön tarafa monte edilmiş düğmelerden kaynaklanan yangın
+        tehlikesi nedeniyle geri çağrıldı
+      body: Ön tarafa monte edilmiş düğmelere sahip Samsung Elektrikli Ankastre Ocaklar için 8 Ağustos
+        2024 tarihli resmi CPSC geri çağırma bildirimi. Düğmeler, insanlar veya evcil hayvanlar tarafından
+        kazara temasla etkinleştirilebilir ve yangın tehlikesi oluşturur. Geri çağrılan model numaraları
+        arasında NE58K9430SS/AA, NE58F9500SS/AA, NE58K9850WS/AA, NE63T8111SS/AA, NE63T8711SS/AA, NE63T8751SS/AA
+        ve diğerleri bulunur. Çözüm, ücretsiz düğme kilitleri veya kapaklarıdır.
+      advice: Model numarasını (fırın kapağının iç üst sol köşesinde veya alt saklama bölmesinin içinde)
+        geri çağrılan listeyle karşılaştırın. Etkilenmişse Samsung'dan ücretsiz düğme kilidi/kapak setini
+        talep edin ve kullanılmadığında çocukları, evcil hayvanları ve eşyaları ocak üzerinden uzak tutun.
+  evidence:
+  - url: https://www.cpsc.gov/Recalls/2024/Samsung-Recalls-Slide-In-Electric-Ranges-Due-to-Fire-Hazard?language=en
+    quote: Samsung has received over 300 reports of unintentional activation of the front-mounted knobs
+      by humans or pets since 2013. These ranges have been involved in approximately 250 fires. At least
+      18 fires caused extensive property damage. Approximately 40 injuries have been reported, eight of
+      which required medical attention, and there have been reports of seven fires involving pet deaths.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:10:19+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      series: slide-in electric range
+  kind: known_issue
+  domain: fire
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: surface element wire connector
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Samsung electric range wire connector overheating recall (2022, ~95,000 units)
+      body: 'Reports a 2022 recall of approximately 95,000 Samsung electric ranges due to a wire connector
+        at the surface element terminal developing a high-resistance connection causing localized overheating.
+        Caveat: this is a repair-industry blog aggregating recall records, not a primary source; I could
+        not verify against the CPSC or Samsung primary source before budget ran out.'
+      advice: If you own a Samsung electric range from around 2022, check whether your model is covered
+        by this wire-connector recall. Treat this as a lead to verify with Samsung or CPSC directly, as
+        the source is secondary.
+    tr:
+      title: Samsung elektrikli ocak kablo konektörü aşırı ısınma geri çağırması (2022, ~95.000 adet)
+      body: 'Yaklaşık 95.000 Samsung elektrikli ocağın, yüzey elemanı terminalindeki bir kablo konektörünün
+        yüksek dirençli bir bağlantı geliştirerek yerel aşırı ısınmaya neden olması nedeniyle 2022''de
+        geri çağrıldığını bildiriyor. Uyarı: bu, geri çağırma kayıtlarını derleyen bir tamir sektörü blogudur,
+        birincil kaynak değildir; bütçe tükenmeden önce CPSC veya Samsung birincil kaynağına karşı doğrulayamadım.'
+      advice: 2022 civarından bir Samsung elektrikli ocağınız varsa, modelinizin bu kablo konektörü geri
+        çağırması kapsamında olup olmadığını kontrol edin. Kaynak ikincil olduğundan bunu doğrudan Samsung
+        veya CPSC ile doğrulanacak bir ipucu olarak değerlendirin.
+  evidence:
+  - url: https://easybear-appliancerepair.com/blog/samsung-appliance-recalls-complete-list
+    quote: The wire connector at the surface element terminal can develop a high-resistance connection,
+      causing localized overhe...
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:12:57+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: beko
+      series: built-in oven
+  kind: known_issue
+  domain: glass
+  severity: high
+  consequence: ''
+  detection: ''
+  component: oven door glass
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Beko BFC 431 B built-in oven door glass shattered spontaneously while cold and off
+      body: Owner reports the door glass of a nearly-new Beko BFC 431 B built-in oven shattered spontaneously
+        while the oven was cold, closed and unused, when touched with water. Beko's service quoted 1,650
+        TL for the replacement and declined to cover it. This is a spontaneous, unpredictable failure
+        with injury risk and out-of-pocket cost.
+      advice: If you own or are considering a Beko built-in oven, be aware of documented spontaneous door-glass
+        shattering reports; check whether your unit is within warranty and push for coverage, as Beko
+        service has reportedly charged owners for replacement glass even on near-new units.
+    tr:
+      title: Beko BFC 431 B ankastre fırın kapı camı soğukken ve kapalıyken kendiliğinden patladı
+      body: Sahibi, neredeyse yeni olan Beko BFC 431 B ankastre fırının kapı camının, fırın soğuk, kapalı
+        ve kullanılmıyorken suyla temas ettiğinde kendiliğinden patladığını bildiriyor. Beko servisi değişim
+        için 1.650 TL fiyat verdi ve karşılamayı reddetti. Bu, yaralanma riski ve cepten çıkacak maliyet
+        taşıyan kendiliğinden, öngörülemeyen bir arızadır.
+      advice: Bir Beko ankastre fırınınız varsa veya almayı düşünüyorsanız, belgelenmiş kendiliğinden
+        kapı camı patlaması bildirimlerinin farkında olun; ünitenizin garanti kapsamında olup olmadığını
+        kontrol edin ve kapsam için ısrar edin, çünkü Beko servisinin neredeyse yeni ünitelerde bile sahiplerden
+        değişim camı için ücret aldığı bildiriliyor.
+  evidence:
+  - url: https://www.sikayetvar.com/beko/beko-ankastre-firin-cami-patladi-ucretsiz-degisim-talebi
+    quote: hiçbir darbe almadan cam su değdiği anda aniden patladı
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:08:31+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: bosch
+      series: pue611bb5e
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: induction hob cooking zones / power electronics
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Bosch PUE611BB5E induction hob power imbalance burns pan bases — fire risk
+      body: 'An owner complaint on Şikayetvar names this exact model (PUE611BB5E Serie 4) and reports
+        that after about a month of problems the hob developed marked power imbalance between zones: three
+        separate pans'' bottoms burned and one pan''s base separated completely, and while cooking the
+        rear-zone kettle suddenly boiled over. This is a documented fire-adjacent incident specific to
+        this product, not a general brand complaint. It came from the Turkish seed query ''Bosch PUE611BB5E
+        yangın riski''.'
+      advice: If you own or are buying this hob, watch for uneven heating and overheating of cookware;
+        if pans burn or boil unexpectedly, stop using the affected zone and contact Bosch service. The
+        owner's report suggests the power-distribution behaviour is the thing to verify before relying
+        on the hob.
+    tr:
+      title: Bosch PUE611BB5E indüksiyon ocak güç dengesizliği tava tabanlarını yakıyor — yangın riski
+      body: 'Şikayetvar''da bir sahip şikayeti bu tam modeli (PUE611BB5E Serie 4) adlandırıyor ve yaklaşık
+        bir aylık sorunlardan sonra ocağın bölgeler arasında belirgin güç dengesizliği geliştirdiğini
+        bildiriyor: üç ayrı tavanın tabanı yandı ve bir tavanın tabanı tamamen ayrıldı, ayrıca pişirme
+        sırasında arka bölgedeki su ısıtıcısı aniden taştı. Bu, genel bir marka şikayeti değil, bu ürüne
+        özgü belgelenmiş yangına yakın bir olaydır. Türkçe ''Bosch PUE611BB5E yangın riski'' tohum sorgusundan
+        geldi.'
+      advice: Bu ocağınız varsa veya alıyorsanız, eşit olmayan ısınma ve pişirme kaplarının aşırı ısınmasına
+        dikkat edin; tavalarda yanma veya beklenmedik taşma olursa etkilenen bölgeyi kullanmayı bırakın
+        ve Bosch servisine başvurun. Sahibin bildirimi, ocağa güvenmeden önce doğrulanması gereken şeyin
+        güç dağıtım davranışı olduğunu gösteriyor.
+  evidence:
+  - url: https://www.sikayetvar.com/bosch/ocak/serie-4
+    quote: Mayıs ayında satın aldığımız Bosch PUE611BB5E Serie 4 indüksiyon ocakta son 1 aydır ciddi ve
+      güvenlik açısından endişe verici sorunlar yaşıyoruz. Ocak gözlerinde belirgin güç dengesizliği oluştu;
+      üç ayrı tavamın altı yandı, birinin tabanı tamamen ayrıldı. Yemek yaparken arka gözdeki çaydanlık
+      aniden
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:09:10+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: arcelik
+      series: ov 643 t
+  kind: known_issue
+  domain: glass
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: sağ üst göz camı
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Arçelik OV 643 T sağ üst gözü üç kez patladı
+      body: 'Owner report (Şikayetvar, 9 July) naming the OV 643 t: the same right-upper zone exploded
+        three times, with the service charging 2,945 TL and later 5,580 TL for glass replacement and calling
+        it user error.'
+      advice: The same zone has shattered three times on one unit with no impact, and the owner was charged
+        for each replacement; this points to a recurring glass failure on the same zone rather than a
+        one-off accident.
+    tr:
+      title: Arçelik OV 643 T sağ üst gözü üç kez patladı
+      body: 'Sahip bildirimi (Şikayetvar, 9 Temmuz) OV 643 t modelini adlandırıyor: aynı sağ üst bölge
+        üç kez patladı, servis cam değişimi için 2.945 TL ve ardından 5.580 TL ücret aldı ve bunu kullanıcı
+        hatası olarak nitelendirdi.'
+      advice: Bir ünitede aynı bölge darbe olmadan üç kez patladı ve sahipten her değişim için ücret alındı;
+        bu, tek seferlik bir kaza yerine aynı bölgede tekrarlayan bir cam arızasına işaret ediyor.
+  evidence:
+  - url: https://www.sikayetvar.com/arcelik/arcelik-ankastre-ocakta-patlamalar-ve-ucretsiz-degisim-talebi
+    quote: Bu ocağın sağ üst gözünü hiç kullanmamamıza, ocağın üzerinde herhangi bir darbe, çarpma, kırılma
+      izi olmamasına rağmen aynı gözün üç kez patlamasını kullanıcı hatası olarak kabul etmiyorum.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:06:26+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: vestel
+      series: built-in oven
+  kind: known_issue
+  domain: glass
+  severity: high
+  consequence: ''
+  detection: ''
+  component: fırın kapı camı (oven door glass)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Vestel ankastre fırın kapı camı düşük sıcaklıkta kendiliğinden patlıyor
+      body: Bu bulgu 'Vestel ankastre fırın cam patlaması şikayet' aramasından geldi. Kullanıcı, fırın
+        yalnızca 150°C'de, günün ilk kullanımında çalışırken camın kendiliğinden patladığını ve mutfağın
+        cam parçalarıyla dolduğunu anlatıyor; garanti bittiği için servisin ücretli değişim (yaklaşık
+        800 TL) istediğini belirtiyor. Aynı şikayet platformunda birden çok benzer Vestel fırın camı patlaması
+        kaydı var (iç cam, dış cam, lamba camı).
+      advice: Vestel ankastre fırın almayı düşünen biri, kapı camının düşük sıcaklıkta bile kendiliğinden
+        patladığına dair tekrarlayan kullanıcı kayıtlarını bilmeli; garanti bittikten sonra cam değişimi
+        ücretli (yüzlerce TL) olabiliyor. Cam patlaması yaralanma riski taşıdığından, alıcı garanti kapsamını
+        ve cam değişim politikasını satın almadan önce netleştirmeli.
+    tr:
+      title: Vestel ankastre fırın kapı camı düşük sıcaklıkta kendiliğinden patlıyor
+      body: Bu bulgu 'Vestel ankastre fırın cam patlaması şikayet' aramasından geldi. Kullanıcı, fırın
+        yalnızca 150°C'de, günün ilk kullanımında çalışırken camın kendiliğinden patladığını ve mutfağın
+        cam parçalarıyla dolduğunu anlatıyor; garanti bittiği için servisin ücretli değişim (yaklaşık
+        800 TL) istediğini belirtiyor. Aynı şikayet platformunda birden çok benzer Vestel fırın camı patlaması
+        kaydı var (iç cam, dış cam, lamba camı).
+      advice: Vestel ankastre fırın almayı düşünen biri, kapı camının düşük sıcaklıkta bile kendiliğinden
+        patladığına dair tekrarlayan kullanıcı kayıtlarını bilmeli; garanti bittikten sonra cam değişimi
+        ücretli (yüzlerce TL) olabiliyor. Cam patlaması yaralanma riski taşıdığından, alıcı garanti kapsamını
+        ve cam değişim politikasını satın almadan önce netleştirmeli.
+  evidence:
+  - url: https://www.sikayetvar.com/vestel/vestel-ankastre-firinin-cam-patlamasi-ve-ucretsiz-degisim-talebi
+    quote: fırın yalnızca 150 derecede çalışırken aniden bomba gibi patladı ve mutfak tamamen cam parçalarıyla
+      doldu
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:10:47+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: bosch
+      series: pue611bb5e
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: anakart (motherboard) / power distribution
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Bosch PUE611BB5E induction hob power imbalance burns pans, launches kettle, and is called
+        a fire risk by service
+      body: 'Owner report on the PUE611BB5E (found via the ''yangın riski'' and ''cam patlaması'' seed
+        searches): after about a month of use the hob showed marked power imbalance across zones, three
+        pans'' bottoms burned, one pan base separated, and a kettle on the rear zone suddenly launched
+        off, burning the owner''s hand and face. The first authorized service said the hob had been wired
+        incorrectly, the motherboard may be damaged, and continued use carried a fire risk; a second service
+        disputed this. The owner stopped using the hob and left the home for three days.'
+      advice: 'If you own or are buying this model, treat reports of uneven zone power as a safety matter,
+        not a nuisance: stop using the hob and have an authorized service inspect the wiring and motherboard
+        before cooking again. The conflicting service statements mean you should get the diagnosis in
+        writing. This is an owner report, not an official recall.'
+    tr:
+      title: Bosch PUE611BB5E indüksiyon ocak güç dengesizliği tavalaları yakıyor, su ısıtıcısını fırlatıyor
+        ve servis tarafından yangın riski olarak nitelendiriliyor
+      body: 'PUE611BB5E hakkında sahip bildirimi (''yangın riski'' ve ''cam patlaması'' tohum aramalarıyla
+        bulundu): yaklaşık bir aylık kullanımdan sonra ocak bölgeler arasında belirgin güç dengesizliği
+        gösterdi, üç tavanın tabanı yandı, bir tava tabanı ayrıldı ve arka bölgedeki bir su ısıtıcısı
+        aniden fırlayarak sahibin elini ve yüzünü yaktı. İlk yetkili servis ocağın yanlış kablolandığını,
+        anakartın hasar görmüş olabileceğini ve kullanıma devam etmenin yangın riski taşıdığını söyledi;
+        ikinci bir servis bunu tartıştı. Sahip ocağı kullanmayı bıraktı ve üç gün evden ayrıldı.'
+      advice: 'Bu modeliniz varsa veya alıyorsanız, bölgeler arası eşit olmayan güç bildirimlerini bir
+        rahatsızlık değil güvenlik meselesi olarak değerlendirin: ocağı kullanmayı bırakın ve tekrar pişirme
+        yapmadan önce yetkili bir servise kablolamayı ve anakartı inceletin. Çelişkili servis açıklamaları,
+        teşhisi yazılı olarak almanız gerektiği anlamına geliyor. Bu bir sahip bildirimidir, resmi bir
+        geri çağırma değildir.'
+  evidence:
+  - url: https://www.sikayetvar.com/bosch/bosch-induksiyon-ocak-guc-dengesizligi-ve-yangin-riski-nedeniyle-acil-degisim-talebi
+    quote: Ocak gözlerinde belirgin güç dengesizliği oluştu; üç ayrı tavamın altı yandı, birinin tabanı
+      tamamen ayrıldı. Yemek yaparken arka gözdeki çaydanlık aniden havaya fırladı ve elimiz ile yüzümüz
+      yandı.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:11:48+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: beko
+      series: bsuf 5000 meb
+  kind: known_issue
+  domain: glass
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: front door glass (double-glazed door)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Oven-door glass cracked while cooking; service charged for the part
+      body: An owner on Şikayetvar (complaint 'Mini Fırın Camı Çatladı, Servis Ücreti İsteniyor, Çözüm
+        Yok', 12 July 2025) reports the oven-door glass cracked while cooking, and that Beko's service
+        asked to be paid for the service and part before even visiting.
+      advice: If you buy this oven, check the door glass early and document any crack immediately; the
+        owner's report indicates Beko treated the cracked glass as a chargeable repair rather than a warranty
+        failure, so a glass failure could cost you the door assembly out of pocket.
+    tr:
+      title: Pişirme sırasında fırın kapağı camı çatladı; parça için servis ücreti alındı
+      body: Şikayetvar'da bir sahip ('Mini Fırın Camı Çatladı, Servis Ücreti İsteniyor, Çözüm Yok', 12
+        Temmuz 2025) pişirme sırasında fırın kapağı camının çatladığını ve Beko servisinin daha ziyaret
+        etmeden servis ve parça için ödeme talep ettiğini bildiriyor.
+      advice: Bu fırını satın alırsanız, kapak camını erkenden kontrol edin ve herhangi bir çatlağı hemen
+        belgeleyin; sahibin raporu, Beko'nun çatlamış camı garanti arızası yerine ücretli onarım olarak
+        değerlendirdiğini gösteriyor, bu nedenle bir cam arızası size kapak düzeneğini cebinizden ödetebilir.
+  evidence:
+  - url: https://www.sikayetvar.com/beko/bsuf-5000-meb/musteri
+    quote: Aldığımız mini fırın ile yemek pişirirken camı çatladı.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:11:13+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: beko
+      series: hiyg64225sbop
+  kind: known_issue
+  domain: fire
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: gaz uçları (bekleri) ile gaz rayı arasındaki sızdırmazlık (gas burner-to-rail seal)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Beko Türkiye duyurusu: HIYG64225SBOP gaz kaçağı yangın riski geri çağırma'
+      body: 'Turkish-language report of the same recall (SR/00792/25, 25 Şubat 2025): insufficient sealing
+        between the gas burners and the gas rail can cause gas leaks and potentially fire and burn incidents.
+        It names HIYG64225SBOP (barcode 8770263200) and HIYG64225SXOP (8770273200) produced in Turkey
+        01.08.2024–31.10.2024. The article notes the recall currently covers only the Poland market and
+        that Beko Türkiye has made no official statement about the same models sold in Turkey.'
+      advice: For a unit bought in Turkey, the recall is not yet officially confirmed there; the article
+        advises Turkish owners to monitor Beko Türkiye's official channels. For an EU/Poland unit, follow
+        the recall process above.
+    tr:
+      title: 'Beko Türkiye duyurusu: HIYG64225SBOP gaz kaçağı yangın riski geri çağırma'
+      body: 'Aynı geri çağırmanın Türkçe raporu (SR/00792/25, 25 Şubat 2025): gaz brülörleri ile gaz rayı
+        arasındaki yetersiz sızdırmazlık gaz kaçaklarına ve potansiyel olarak yangın ve yanma olaylarına
+        neden olabilir. Türkiye''de 01.08.2024–31.10.2024 tarihleri arasında üretilen HIYG64225SBOP (barkod
+        8770263200) ve HIYG64225SXOP (8770273200) modellerini adlandırıyor. Makale, geri çağırmanın şu
+        anda yalnızca Polonya pazarını kapsadığını ve Beko Türkiye''nin Türkiye''de satılan aynı modeller
+        hakkında resmi bir açıklama yapmadığını belirtiyor.'
+      advice: Türkiye'de satın alınan bir ünite için geri çağırma orada henüz resmi olarak doğrulanmadı;
+        makale Türk sahiplerine Beko Türkiye'nin resmi kanallarını izlemelerini tavsiye ediyor. AB/Polonya
+        ünitesi için yukarıdaki geri çağırma sürecini izleyin.
+  evidence:
+  - url: https://saglik.org.tr/yazilar/beko-gazli-ocaklarda-yangin-riski-uyarisi-yapildi
+    quote: Bu durum, gaz kaçağına ve potansiyel olarak yangın ve yanık olaylarına yol açabiliyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:07:49+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: arcelik
+      series: built-in cooker set
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: hob (ocak) gas/electrical ignition
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Arçelik ankastre hob self-ignited with no use, fire risk in kitchen
+      body: 'Owner report: the Arçelik ankastre hob began burning on its own with no use; the owner noticed
+        flames only when the fuses tripped, and an expert confirmed the fault originated in the hob. Four
+        months later no remedy was offered and the hob remained damaged.'
+      advice: A buyer should know a hob can self-ignite and start a kitchen fire even when not in use,
+        and that Arçelik service may not resolve it promptly.
+    tr:
+      title: Arçelik ankastre hob kullanılmadan kendi kendine tutuştu, mutfakta yangın riski
+      body: 'Sahip raporu: Arçelik ankastre hob kullanılmadan kendi kendine yanmaya başladı; sahip alevleri
+        yalnızca sigortalar attığında fark etti ve bir uzman arızanın hobdan kaynaklandığını doğruladı.
+        Dört ay sonra hiçbir çözüm sunulmadı ve hob hasarlı kaldı.'
+      advice: Bir alıcı, kullanımda olmasa bile bir hobun kendi kendine tutuşabileceğini ve mutfak yangını
+        başlatabileceğini ve Arçelik servisinin bunu derhal çözemeyebileceğini bilmelidir.
+  evidence:
+  - url: https://www.sikayetvar.com/basak-ticaret-silivri/basak-ticaret-silivri-kendiliginden-yanan-ocak-ve-4-aydir-cozumsuz-kalan-guvenlik-sorunu
+    quote: ankastre ocağım hiçbir kullanım yokken kendiliğinden yanmaya başladı. Sigortalarımız attığında
+      ocağın alev aldığını anlık olarak fark edebildik.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:06:41+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: altus
+      series: cooker
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: oven (fırın) electrical connection
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Altus ALA 189 oven caught fire after service reversed the electrical connection
+      body: Owner report from query 'Altus fırın yangını servis ihmali şikayet'. After an Altus ALA 189
+        hob/oven set was serviced and the hob replaced, a reversed electrical connection caused the oven
+        to suddenly catch fire on 16 June; the house reached burning point, the owner's mother was hospitalized
+        for smoke inhalation, and firefighters intervened.
+      advice: The documented Altus oven fire followed a service visit in which the electrical connection
+        was reversed, not a spontaneous product fault. If you have an Altus oven serviced, verify the
+        connection is correct before use; a mis-wired oven can ignite and escalate to a house fire quickly.
+    tr:
+      title: Altus ALA 189 fırın, servis elektrik bağlantısını ters çevirdikten sonra alev aldı
+      body: '''Altus fırın yangını servis ihmali şikayet'' sorgusundan sahip raporu. Bir Altus ALA 189
+        hob/fırın seti servis edilip hob değiştirildikten sonra, ters çevrilmiş bir elektrik bağlantısı
+        16 Haziran''da fırının aniden alev almasına neden oldu; ev yanma noktasına geldi, sahibin annesi
+        duman soluması nedeniyle hastaneye kaldırıldı ve itfaiye müdahale etti.'
+      advice: Belgelenen Altus fırın yangını, kendiliğinden bir ürün arızası değil, elektrik bağlantısının
+        ters çevrildiği bir servis ziyaretini takip etti. Altus fırınınız servis edilirse, kullanmadan
+        önce bağlantının doğru olduğunu doğrulayın; yanlış kablolanmış bir fırın hızla tutuşabilir ve
+        ev yangınına dönüşebilir.
+  evidence:
+  - url: https://www.sikayetvar.com/altus/altusta-firin-yangini-ve-servis-ihmali-aile-hayati-tehlikede
+    quote: Ancak bu değişim sırasında elektriğin ters bağlanması sonucu 16 Haziran günü fırın aniden yanarak
+      hem evi hem de ailemi hayati tehlike içine soktu.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:05:50+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: bosch
+      series: pue611bb5e
+  kind: known_issue
+  domain: general
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: anakart (motherboard)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Bosch PUE611BB5 induction hob third zone cycles on/off; service diagnoses motherboard (anakart)
+        fault
+      body: 'Owner report on the close model PUE611BB5 (listed on the PUE611BB5E complaint page, found
+        via the ''glass door shattered forum'' and ''cam patlaması'' searches): opening the third zone
+        produces a repeated on/off ''tık tık'' cycling sound, with heating cutting out and restarting
+        in sync. The authorized service diagnosed a faulty motherboard (anakart) and set about sourcing
+        a replacement.'
+      advice: Expect that a motherboard fault on this series may present as a single zone cycling on/off
+        rather than a total failure. Have the service confirm the part and warranty coverage before paying;
+        the owner here was told the motherboard was faulty and needed replacing.
+    tr:
+      title: Bosch PUE611BB5 indüksiyon hob üçüncü bölge açılıp kapanıyor; servis anakart arızası teşhisi
+        koyuyor
+      body: 'Yakın model PUE611BB5 hakkında sahip raporu (PUE611BB5E şikayet sayfasında listelenmiş, ''glass
+        door shattered forum'' ve ''cam patlaması'' aramalarıyla bulundu): üçüncü bölgeyi açmak, ısıtmanın
+        kesilip senkronize şekilde yeniden başlamasıyla tekrarlanan açık/kapalı ''tık tık'' döngü sesi
+        üretiyor. Yetkili servis arızalı bir anakart teşhisi koydu ve yedek parça tedarik etmeye başladı.'
+      advice: Bu seride bir anakart arızasının toplam arıza yerine tek bir bölgenin açılıp kapanması şeklinde
+        ortaya çıkabileceğini bekleyin. Ödeme yapmadan önce servisin parçayı ve garanti kapsamını doğrulamasını
+        sağlayın; buradaki sahibe anakartın arızalı olduğu ve değiştirilmesi gerektiği söylendi.
+  evidence:
+  - url: https://www.sikayetvar.com/bosch/pue611bb5e
+    quote: gelen yetkili servis anakartın arızalı olduğunu söyledi
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:11:48+00:00'

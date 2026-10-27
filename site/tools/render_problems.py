@@ -36,6 +36,7 @@ import sqlite3
 import sys
 import tempfile
 import tomllib
+import zlib
 from pathlib import Path
 
 import yaml
@@ -740,8 +741,12 @@ def render(packs_dir: Path, site_dir: Path) -> list[str]:
                 if not have:
                     continue
                 slug = base = slugify(subject["label"])
+                # A name already taken gets a number drawn from the product itself, never from how many
+                # pages came first: a page that has been indexed must not move because a catalog was added.
+                number = 100 + zlib.crc32(f"{catalog_slug}/{subject['label']}/{subject['kind']}".encode()) % 900
                 while slug in slugs:
-                    slug = f"{base}-{len(slugs)}"
+                    slug = f"{base}-{number}"
+                    number += 1
                 slugs.add(slug)
                 entry = {"slug": slug, "label": subject["label"], "products": sorted(set(subject["products"])),
                          "catalog": catalog["name"], "catalog_slug": catalog_slug, "names": catalog["names"],

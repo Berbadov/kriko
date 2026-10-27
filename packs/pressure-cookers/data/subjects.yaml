@@ -1,0 +1,173 @@
+# Subjects — the things this pack knows about.
+#
+# `identity` carries exactly the keys `pack.toml` declares for the
+# kind: that dictionary is hashed to the subject id.
+- kind: product
+  label: Instant Pot Smart-60
+  identity:
+    brand: instant pot
+    series: smart-60
+  attributes:
+    capacity_l:
+      value: '5.7'
+      source: https://www.schmidtandclark.com/instant-pot-smart-60-recall-lawsuit
+    power_w:
+      value: '1000'
+      source: https://www.schmidtandclark.com/instant-pot-smart-60-recall-lawsuit
+  aliases:
+  - Smart 60
+  - Smart-60
+- kind: product
+  label: Instant Pot Smart
+  identity:
+    brand: instant pot
+    series: smart
+  aliases:
+  - Smart
+- kind: product
+  label: Instant Pot Gem 65
+  identity:
+    brand: instant pot
+    series: gem 65
+  attributes:
+    capacity_l:
+      value: '6.5'
+      source: https://www.cpsc.gov/Recall-Products/Electric-Kettles-or-Hot-Pots
+    functions:
+      value: '8'
+      source: https://www.cpsc.gov/Recall-Products/Electric-Kettles-or-Hot-Pots
+  aliases:
+  - Gem 65 8-in-1
+- kind: product
+  label: Instant Pot Duo
+  identity:
+    brand: instant pot
+    series: duo
+  attributes:
+    capacity_l:
+      value: '5.7'
+      source: https://www.amazon.com.tr/Instant-Stainless-Steel-Litre-1000/dp/B00OP26T4K
+    power_w:
+      value: '1000'
+      source: https://www.amazon.com.tr/Instant-Stainless-Steel-Litre-1000/dp/B00OP26T4K
+    functions:
+      value: '7'
+      source: https://www.amazon.com.tr/Instant-Stainless-Steel-Litre-1000/dp/B00OP26T4K
+  aliases:
+  - Duo 7-in-1
+  - IP-DUO60
+- kind: product
+  label: Instant Pot Plus Wi-Fi
+  identity:
+    brand: Instant Pot
+    series: Plus Wi-Fi
+  attributes:
+    capacity_l:
+      value: '5.7'
+      source: https://www.cdn.amazon.it/-/en/Instant-Pot-Plus-Multicooker-Stainless/dp/B0DMWK3RDV
+    power_w:
+      value: '1000'
+      source: https://www.cdn.amazon.it/-/en/Instant-Pot-Plus-Multicooker-Stainless/dp/B0DMWK3RDV
+    functions:
+      value: '9'
+      source: https://www.cdn.amazon.it/-/en/Instant-Pot-Plus-Multicooker-Stainless/dp/B0DMWK3RDV
+  aliases:
+  - Instant Pot Plus WiFi
+  - RPPC61-BK
+- kind: product
+  label: Instant Pot Pro Crisp
+  identity:
+    brand: Instant Pot
+    series: Pro Crisp
+  attributes:
+    capacity_l:
+      value: '7.6'
+      source: https://www.amazon.de/Instant-Pot-Crisp-1-Elektro-Multikocher-Sous-Vide-Maschine/dp/B08XC72JT5/
+    power_w:
+      value: '1500'
+      source: https://www.amazon.de/Instant-Pot-Crisp-1-Elektro-Multikocher-Sous-Vide-Maschine/dp/B08XC72JT5/
+    functions:
+      value: '11'
+      source: https://www.amazon.de/Instant-Pot-Crisp-1-Elektro-Multikocher-Sous-Vide-Maschine/dp/B08XC72JT5/
+  aliases:
+  - Pro Crisp 11-in-1
+- kind: product
+  label: Instant Pot Duo Nova
+  identity:
+    brand: Instant Pot
+    series: Duo Nova
+  attributes:
+    capacity_l:
+      value: '5.7'
+      source: https://www.doordash.com/products/instant-pot-6-qt-multiuse-pressure-cooker/urpc_e5708229-d497-4f35-80fb-baa4d5c577ca
+    power_w:
+      value: '1000'
+      source: https://www.doordash.com/products/instant-pot-6-qt-multiuse-pressure-cooker/urpc_e5708229-d497-4f35-80fb-baa4d5c577ca
+    functions:
+      value: '7'
+      source: https://www.doordash.com/products/instant-pot-6-qt-multiuse-pressure-cooker/urpc_e5708229-d497-4f35-80fb-baa4d5c577ca
+  aliases:
+  - Duo Nova 60
+  - Duo Nova 80
+- kind: product
+  label: Instant Pot Duo Plus
+  identity:
+    brand: Instant Pot
+    series: Duo Plus
+  attributes:
+    capacity_l:
+      value: '5.7'
+      source: https://www.instantpotmy.com/products/duo-plus-9-in-1-multi-functional-smart-cooker
+    power_w:
+      value: '1000'
+      source: https://luxembourg.desertcart.com/products/41100974-instant-pot-duo-plus-6-qt-9-in-1-electric?source=search
+    functions:
+      value: '9'
+      source: https://www.instantpotmy.com/products/duo-plus-9-in-1-multi-functional-smart-cooker
+  aliases:
+  - Duo Plus 9-in-1
+- kind: product
+  label: Instant Pot Ultra
+  identity:
+    brand: Instant Pot
+    series: Ultra
+  attributes:
+    capacity_l:
+      value: '5.7'
+      source: https://www.qvc.com/.product.K48237.html
+    power_w:
+      value: '1000'
+      source: https://www.qvc.com/.product.K48237.html
+    functions:
+      value: '10'
+      source: https://www.qvc.com/.product.K48237.html
+  aliases:
+  - Ultra 10-in-1
+- kind: product
+  label: Instant Pot Lux
+  identity:
+    brand: Instant Pot
+    series: Lux
+  attributes:
+    capacity_l:
+      value: '6'
+      source: https://www.amazon.sg/gp/product/B0073GIN08
+    power_w:
+      value: '1000'
+      source: https://www.amazon.sg/gp/product/B0073GIN08
+    functions:
+      value: '6'
+      source: https://www.amazon.sg/gp/product/B0073GIN08
+  aliases:
+  - Lux 6-in-1
+  - LUX60
+- kind: product
+  label: Instant Pot Nova Plus
+  identity:
+    brand: Instant Pot
+    series: Nova Plus
+- kind: product
+  label: Instant Pot Viva
+  identity:
+    brand: Instant Pot
+    series: Viva
