@@ -1,0 +1,54 @@
+# Vocabulary — every kind, key, domain and attribute this pack uses.
+#
+# Written from the pack an agent proposed. Declared before use: the
+# builder refuses a row naming a term that is not here, which is also
+# why a domain used by a claim and never declared is added above.
+- term_id: product
+  role: subject_kind
+  label:
+    en: product
+- term_id: brand
+  role: attribute
+  datatype: text
+  label:
+    en: brand
+- term_id: model
+  role: attribute
+  datatype: text
+  label:
+    en: model
+- term_id: chipset
+  role: attribute
+  datatype: text
+  label:
+    en: Chipset
+- term_id: battery_mah
+  role: attribute
+  datatype: number
+  label:
+    en: Battery capacity (mAh)
+- term_id: display_inches
+  role: attribute
+  datatype: number
+  label:
+    en: Display size (inches)
+- term_id: battery
+  role: domain
+  label:
+    en: Battery and power
+- term_id: display
+  role: domain
+  label:
+    en: Display and screen
+- term_id: hardware
+  role: domain
+  label:
+    en: Hardware and components
+- term_id: software
+  role: domain
+  label:
+    en: Software and updates
+- term_id: general
+  role: domain
+  label:
+    en: General

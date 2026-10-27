@@ -1,0 +1,145 @@
+# Subjects — the things this pack knows about.
+#
+# `identity` carries exactly the keys `pack.toml` declares for the
+# kind: that dictionary is hashed to the subject id.
+- kind: product
+  label: Apple AirPods Pro 3
+  identity:
+    brand: apple
+    series: airpods pro 3
+  aliases:
+  - AirPods Pro (3rd generation)
+  - APP3
+- kind: product
+  label: Apple AirPods Pro 2
+  identity:
+    brand: Apple
+    series: AirPods Pro
+  aliases:
+  - AirPods Pro (2nd generation)
+- kind: product
+  label: Samsung Galaxy Buds3 Pro
+  identity:
+    brand: Samsung
+    series: Galaxy Buds
+  aliases:
+  - Buds3 Pro
+- kind: product
+  label: Samsung Galaxy Buds3
+  identity:
+    brand: Samsung
+    series: Galaxy Buds
+  attributes:
+    battery_life_h:
+      value: less than 2 hours with ANC
+      source: https://www.samsung.com/ae_ar/audio-sound/galaxy-buds/galaxy-buds3-silver-sm-r530nzaamea/
+  aliases:
+  - Buds3
+- kind: product
+  label: Samsung Galaxy Buds2 Pro
+  identity:
+    brand: Samsung
+    series: Galaxy Buds
+  aliases:
+  - Buds2 Pro
+- kind: product
+  label: Sony WF-1000XM5
+  identity:
+    brand: Sony
+    series: WF-1000X
+  aliases:
+  - XM5
+- kind: product
+  label: Sony WF-1000XM4
+  identity:
+    brand: Sony
+    series: WF-1000X
+  aliases:
+  - XM4
+- kind: product
+  label: Jabra Elite 10 Gen 2
+  identity:
+    brand: Jabra
+    series: Elite 10 Gen 2
+  attributes:
+    battery_life_h:
+      value: 6 hours with ANC on; 8 hours with ANC off; 27 hours with case (ANC on);
+        36 hours with case (ANC off)
+      source: https://tech.yahoo.com/audio/articles/jabra-elite-10-flagship-noise-065652162.html
+    active_noise_cancellation:
+      value: Yes (Advanced ANC)
+      source: https://www.jabra.com/_/media/Jabra_VXi_Product-Documentation/Jabra-Elite-10-Gen2/Technical-specifications/RevA/PL-Jabra-Elite-10-G2-Tech-Specs-A4-WEB-240524.pdf
+  aliases:
+  - Elite 10 Gen 2
+  - Jabra Elite 10 Gen2
+- kind: product
+  label: Jabra Elite 8 Active Gen 2
+  identity:
+    brand: Jabra
+    series: Elite 8 Active Gen 2
+  attributes:
+    battery_life_h:
+      value: 8 hours with ANC on; 14 hours with ANC off; 32 hours with case (ANC on);
+        56 hours with case (ANC off)
+      source: https://www.jabra.com/en-gb/test/geoffrey/jeea/buy
+    active_noise_cancellation:
+      value: Yes (Adaptive Hybrid ANC)
+      source: https://www.jabra.com/en-gb/test/geoffrey/jeea/buy
+  aliases:
+  - Elite 8 Active Gen 2
+- kind: product
+  label: Jabra Elite 10
+  identity:
+    brand: Jabra
+    series: Elite 10
+  attributes:
+    battery_life_h:
+      value: 6 hours with ANC on; 27 hours with case
+      source: https://www.google.com.tw/shopping/product/5869529027394242196
+    active_noise_cancellation:
+      value: Yes (ANC)
+      source: https://www.google.com.tw/shopping/product/5869529027394242196
+  aliases:
+  - Elite 10
+- kind: product
+  label: Jabra Elite 8 Active
+  identity:
+    brand: Jabra
+    series: Elite 8 Active
+  attributes:
+    battery_life_h:
+      value: 8 hours (ANC)
+      source: https://www.galaxus.ch/en/productrating/enttaeuschend--8631144
+    active_noise_cancellation:
+      value: Yes (ANC)
+      source: https://www.galaxus.ch/en/productrating/enttaeuschend--8631144
+  aliases:
+  - Elite 8 Active
+- kind: product
+  label: Bose QuietComfort Ultra Earbuds
+  identity:
+    brand: Bose
+    series: QuietComfort Ultra Earbuds
+  attributes:
+    battery_life_h:
+      value: 6 hours (ANC)
+      source: https://www.galaxus.de/en/productrating/machen-viele-probleme-aber-sound-und-noisecancling-sehr-gut-10984111
+    active_noise_cancellation:
+      value: 'Yes'
+      source: https://www.galaxus.de/en/productrating/machen-viele-probleme-aber-sound-und-noisecancling-sehr-gut-10984111
+  aliases:
+  - QC Ultra Earbuds
+- kind: product
+  label: Bose QuietComfort Earbuds (2024)
+  identity:
+    brand: Bose
+    series: QuietComfort Earbuds (2024)
+  attributes:
+    battery_life_h:
+      value: Up to 8.5 hours playtime
+      source: https://www.cdn.amazon.it/-/en/dp/B0FC6KNK6X
+    active_noise_cancellation:
+      value: 'Yes'
+      source: https://www.soundguys.com/bose-quietcomfort-earbuds-2024-review-124327/
+  aliases:
+  - Bose QC Earbuds 2024

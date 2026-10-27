@@ -1,0 +1,1295 @@
+# Claims — what is known to go wrong, each with the page it came from and the quote
+# that was read there. A claim without both is not in this file.
+- subject:
+    kind: product
+    identity:
+      brand: audi
+      series: e-tron
+  kind: known_issue
+  domain: battery
+  severity: high
+  consequence: ''
+  detection: ''
+  component: high-voltage battery module (self-discharge defect)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Audi e-tron battery self-discharge can cause thermal overload and fire — official NHTSA recall
+        document
+      body: Primary official NHTSA recall circular (Safety Recall Code 93V2) describing the defect mechanism.
+      advice: 'This is the manufacturer''s own description of the defect: self-discharge in certain HV
+        battery modules can lead to thermal overload and fire. The remedy is a software update plus module
+        replacement where needed, and until then Audi limits charge to 80%. Buyers should verify the recall
+        was performed on any used e-tron.'
+    tr:
+      title: Audi e-tron akü kendiliğinden deşarjı termal aşırı yüklenmeye ve yangına neden olabilir —
+        resmi NHTSA geri çağırma belgesi
+      body: Kusur mekanizmasını açıklayan birincil resmi NHTSA geri çağırma genelgesi (Güvenlik Geri Çağırma
+        Kodu 93V2).
+      advice: 'Bu, üreticinin kusurun kendi açıklamasıdır: belirli HV akü modüllerinde kendiliğinden deşarj,
+        termal aşırı yüklenmeye ve yangına yol açabilir. Çözüm, bir yazılım güncellemesi ve gerektiğinde
+        modül değişimidir ve o zamana kadar Audi şarjı %80 ile sınırlar. Alıcılar, kullanılmış herhangi
+        bir e-tron''da geri çağırmanın yapıldığını doğrulamalıdır.'
+  evidence:
+  - url: https://static.nhtsa.gov/odi/rcl/2023/RCRIT-23V867-2933.pdf
+    quote: A potentially critical self- discharge condition exists in certain high- voltage battery modules
+      that, in some instances, may lead to thermal overload, possibly resulting in smoke or a fire.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:57:18+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: mercedes-benz
+      series: eqb
+  kind: known_issue
+  domain: battery
+  severity: high
+  consequence: ''
+  detection: ''
+  component: 70.5 kWh high-voltage battery (Farasis)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'EQB 250+ 70.5 kWh Farasis battery: internal short-circuit fire risk, replacement delayed
+        to 2028'
+      body: The EQB 250+ with the 70.5 kWh Farasis battery (2021-2024) carries an internal short-circuit
+        fire risk. The recall covers more than 51,000 vehicles worldwide (~4,700 in Germany), and battery
+        replacement may be delayed until March 2028 due to limited parts availability.
+      advice: Owners of the EQB 250+ face a long wait for the replacement battery. Until then they must
+        keep charge at or below 80% and avoid parking in garages or underground car parks.
+    tr:
+      title: 'EQB 250+ 70,5 kWh Farasis akü: dahili kısa devre yangın riski, değişim 2028''e ertelendi'
+      body: 70,5 kWh Farasis akülü EQB 250+ (2021-2024) dahili kısa devre yangın riski taşır. Geri çağırma
+        dünya çapında 51.000'den fazla aracı kapsıyor (Almanya'da ~4.700) ve sınırlı parça bulunabilirliği
+        nedeniyle akü değişimi Mart 2028'e kadar ertelenebilir.
+      advice: EQB 250+ sahipleri, değişim aküsü için uzun bir bekleyişle karşı karşıyadır. O zamana kadar
+        şarjı %80 veya altında tutmalı ve garajlarda veya yer altı otoparklarında park etmekten kaçınmalıdırlar.
+  evidence:
+  - url: https://mbpassion.de/2026/10/mercedes-eqa-und-eqb-batterietausch-zieht-sich-bis-2028/
+    quote: Betroffen sind EQA 250+ und EQB 250+ mit 70,5 kWh Akku der Baujahre 2021 bis 2024. Bei den
+      verbauten Hochvoltbatterien vom Hersteller Farasis besteht das Risiko eines internen Kurzschlusses,
+      der im schlimmsten Fall einen Brand auslösen kann.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:55:32+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: renault
+      series: zoe
+  kind: known_issue
+  domain: battery
+  severity: high
+  consequence: ''
+  detection: ''
+  component: BT4 XLR (Extra Long Range) battery module, AR1 * 1020
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Renault Zoe BT4 XLR battery module internal short-circuit fire recall (2022, code 0DKQ) —
+        production Jan–Feb 2021
+      body: Official EU Safety Gate recall (A12/00258/22) notified by France for the Zoe with the BT4
+        XLR long-range battery module (AR1*1020) built at Flins 3 Jan–22 Feb 2021. The battery can fail
+        during charging or driving, causing an internal short circuit and increased fire risk. The recall
+        extended across multiple EU/EEA countries.
+      advice: This affects the long-range BT4 XLR battery variant built in early 2021. A buyer of a used
+        2021 Zoe should confirm recall 0DKQ has been performed; if not, the battery should be checked
+        by a Renault dealer.
+    tr:
+      title: Renault Zoe BT4 XLR akü modülü dahili kısa devre yangın geri çağırması (2022, kod 0DKQ) —
+        üretim Ocak–Şubat 2021
+      body: Fransa tarafından Flins'te 3 Ocak–22 Şubat 2021'de üretilen BT4 XLR uzun menzilli akü modüllü
+        (AR1*1020) Zoe için bildirilen resmi AB Safety Gate geri çağırması (A12/00258/22). Akü, şarj sırasında
+        veya sürüş sırasında arızalanarak dahili kısa devreye ve artan yangın riskine neden olabilir.
+        Geri çağırma birden fazla AB/AEA ülkesine yayıldı.
+      advice: Bu, 2021'in başlarında üretilen uzun menzilli BT4 XLR akü varyantını etkiler. Kullanılmış
+        bir 2021 Zoe alıcısı, 0DKQ geri çağırmasının yapıldığını doğrulamalıdır; yapılmadıysa akü bir
+        Renault bayisi tarafından kontrol edilmelidir.
+  evidence:
+  - url: https://ec.europa.eu/safety-gate-alerts/api/download/notification/detail/pdf/10005369/en
+    quote: The battery may stop working properly during the charging cycle or rolling vehicle, causing
+      an internal short circuit. This will lead to increased risk of fire.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:55:49+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: kia
+      series: ev6
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: Integrated Charging Control Unit (ICCU) and ICCU fuse
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Kia EV6 ICCU safety recall (SC327/24V867) — loss of drive power
+      body: Official NHTSA recall Q&A for Kia recall SC327 (NHTSA 24V867).
+      advice: A documented recall affecting roughly 62,872 EV6s (2022-2023 and certain 2024 MY) where
+        a damaged ICCU can drain the 12V battery and lead to complete loss of drive power. Remedy is ICCU/fuse
+        replacement plus software update. A buyer should confirm the recall was performed on any candidate
+        EV6.
+    tr:
+      title: Kia EV6 ICCU güvenlik geri çağırması (SC327/24V867) — tahrik gücü kaybı
+      body: Kia geri çağırması SC327 (NHTSA 24V867) için resmi NHTSA geri çağırma Soru-Cevap belgesi.
+      advice: Yaklaşık 62.872 EV6'yı (2022-2023 ve belirli 2024 MY) etkileyen belgelenmiş bir geri çağırma;
+        burada hasarlı bir ICCU, 12V aküyü tüketebilir ve tahrik gücünün tamamen kaybına yol açabilir.
+        Çözüm, ICCU/sigorta değişimi ve yazılım güncellemesidir. Bir alıcı, aday herhangi bir EV6'da geri
+        çağırmanın yapıldığını doğrulamalıdır.
+  evidence:
+  - url: https://static.nhtsa.gov/odi/rcl/2024/RCMN-24V867-7941.pdf
+    quote: The Integrated Charging Control Unit (ICCU) may become damaged over time from transient high
+      voltage and thermal cycling. A damaged ICCU may not be able to charge the 12-volt battery which
+      can discharge gradually while driving with progressive reductions of motive power.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:56:58+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: audi
+      series: e-tron
+  kind: known_issue
+  domain: battery
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: high-voltage battery module, LG Energy Solution E61V cells
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Audi e-tron 2019-2022 global service campaign uses LG Energy Solution E61V battery cells
+      body: Identifies the specific battery cells (LG Energy Solution E61V) fitted to 2019-2022 e-trons
+        and the global service campaign limiting charge to 80%.
+      advice: 'Names the concrete part: LG Energy Solution E61V cells in the high-voltage battery. This
+        anchors the risk to a specific component, so a buyer can check which battery generation a given
+        e-tron carries and whether it is in the campaign.'
+    tr:
+      title: Audi e-tron 2019-2022 küresel servis kampanyası LG Energy Solution E61V akü hücrelerini kullanıyor
+      body: 2019-2022 e-tron'lara takılan belirli akü hücrelerini (LG Energy Solution E61V) ve şarjı %80
+        ile sınırlayan küresel servis kampanyasını tanımlar.
+      advice: 'Somut parçayı adlandırır: yüksek voltajlı aküdeki LG Energy Solution E61V hücreleri. Bu,
+        riski belirli bir bileşene bağlar, böylece bir alıcı belirli bir e-tron''un hangi akü neslini
+        taşıdığını ve kampanyada olup olmadığını kontrol edebilir.'
+  evidence:
+  - url: https://motoryzacja.interia.pl/auta-elektryczne/news-kupili-elektryka-i-nie-moga-go-ladowac-do-100-proc-istnieje,nId,20947661
+    quote: Na początku 2024 roku niemiecki producent ogłosił globalną akcję serwisową, obejmującą samochody
+      Audi e-tron wyprodukowane w latach 2019-2022, wówczas wyposażano je w akumulatory LG Energy Solution
+      E61V.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:57:18+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: ford
+      series: mustang-mach-e
+  kind: known_issue
+  domain: battery
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: High-voltage battery relays (reläer)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: European recall of ~42,000 Mach-Es for high-voltage battery relay overheating (~3,200 in
+        Sweden)
+      body: Swedish automotive press (Vi Bilägare, June 21 2022) reports the US recall of ~50,000 Mach-Es
+        for overheating high-voltage battery relays extends to ~42,000 vehicles in Europe, ~3,200 in Sweden,
+        fixed by an over-the-air update; Ford stated no reported injuries or crashes linked to the fault.
+      advice: Confirms the contactor/relay overheating recall applies to the European market, not just
+        the US; EU owners should ensure the OTA update is installed.
+    tr:
+      title: Yüksek voltajlı akü rölesinin aşırı ısınması nedeniyle ~42.000 Mach-E için Avrupa geri çağırması
+        (İsveç'te ~3.200)
+      body: İsveç otomotiv basını (Vi Bilägare, 21 Haziran 2022), aşırı ısınan yüksek voltajlı akü röleleri
+        nedeniyle ~50.000 Mach-E için ABD geri çağırmasının Avrupa'da ~42.000 araca, İsveç'te ~3.200 araca
+        yayıldığını ve havadan güncelleme ile giderildiğini bildiriyor; Ford, kusurla bağlantılı bildirilmiş
+        yaralanma veya kaza olmadığını belirtti.
+      advice: Kontaktör/röle aşırı ısınma geri çağırmasının yalnızca ABD'de değil Avrupa pazarında da
+        geçerli olduğunu doğrular; AB sahipleri OTA güncellemesinin yüklendiğinden emin olmalıdır.
+  evidence:
+  - url: https://www.vibilagare.se/nyheter/batteriproblem-aven-i-svenska-mustang-mach-e
+    quote: Nu kommer information om att ytterligare 42 000 bilar berörs i Europa, varav ungefär 3 200
+      av dessa finns i Sverige.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:55:03+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: audi
+      series: e-tron
+  kind: known_issue
+  domain: battery
+  severity: high
+  consequence: ''
+  detection: ''
+  component: high-voltage battery pack (LG cells), self-discharge/thermal overload
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Audi e-tron battery fire recall covers 43,000 cars in Europe — German KBA
+      body: Confirms the same e-tron battery recall extends to Europe via the German KBA, covering 43,000
+        vehicles, with LG battery packs.
+      advice: This establishes the EU scope of the recall (relevant to the pack's EU market). A European
+        e-tron owner/buyer should confirm the KBA recall was applied to the specific VIN, since the affected
+        battery can self-discharge and thermally overload into a fire.
+    tr:
+      title: Audi e-tron batarya yangını geri çağırması Avrupa'da 43.000 aracı kapsıyor — Alman KBA
+      body: Aynı e-tron batarya geri çağırmasının Alman KBA aracılığıyla Avrupa'ya uzandığını, LG batarya
+        paketleriyle 43.000 aracı kapsadığını doğruluyor.
+      advice: Bu, geri çağırmanın AB kapsamını ortaya koyuyor (paketin AB pazarıyla ilgili). Avrupalı
+        bir e-tron sahibi/alıcısı, etkilenen batarya kendiliğinden deşarj olup termal aşırı yüklenmeyle
+        yangına dönüşebileceğinden, KBA geri çağırmasının belirli VIN'e uygulandığını doğrulamalıdır.
+  evidence:
+  - url: https://www.boosted.dk/audi-har-ingen-loesning-paa-brandfarlige-elbiler/
+    quote: Ifølge tilbagekaldelsesdokumenter fra det tyske svar på Færdselsstyrelsen (KBA) er 43.000 biler
+      i Europa en del af tilbagekaldelsen.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:57:18+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: tesla
+      series: model-y
+  kind: known_issue
+  domain: general
+  severity: high
+  consequence: ''
+  detection: ''
+  component: door latch / manual emergency release
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Fatal 2024 Anseong Model Y fire: witnesses could not open the doors'
+      body: In a fatal October 2024 Model Y fire in Anseong, witnesses could not open the doors; Tesla's
+        manual says the front release is a lever and the rear release is a cable under the door-pocket
+        mat, and that not all Model Ys have the rear manual release.
+      advice: 'This is the concrete failure behind the recall: the electronic door release can be unusable
+        after a crash, and the manual backup is hard to find, especially for rear passengers; an owner
+        should locate and practice both releases on their own car.'
+    tr:
+      title: 'Ölümcül 2024 Anseong Model Y yangını: tanıklar kapıları açamadı'
+      body: Ekim 2024'te Anseong'da meydana gelen ölümcül Model Y yangınında tanıklar kapıları açamadı;
+        Tesla'nın kılavuzu ön serbest bırakmanın bir kol, arka serbest bırakmanın kapı cebi paspasının
+        altındaki bir kablo olduğunu ve tüm Model Y'lerde arka manuel serbest bırakmanın bulunmadığını
+        belirtiyor.
+      advice: 'Bu, geri çağırmanın arkasındaki somut arızadır: elektronik kapı serbest bırakma bir kaza
+        sonrasında kullanılamaz hale gelebilir ve manuel yedek özellikle arka yolcular için bulunması
+        zordur; bir sahip kendi aracında her iki serbest bırakmayı da bulup pratik yapmalıdır.'
+  evidence:
+  - url: https://www.motormag.co.kr/news/articleView.html?idxno=22283
+    quote: 2024년 10월, 경기 안성에서 불이 난 테슬라 모델 Y의 문을 목격자가 열려고 했다. 문은 열리지 않았다.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:56:08+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: ford
+      series: mustang-mach-e
+  kind: known_issue
+  domain: battery
+  severity: high
+  consequence: ''
+  detection: ''
+  component: Battery Energy Control Module (BECM) software
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Battery Energy Control Module (BECM) software recall 26V582: high-voltage battery fire risk
+        after repeated DC fast charging'
+      body: NHTSA campaign 26V582000, Ford recall 26S68, reported Sept 9 2026, 86 vehicles, 2023-2025
+        Mach-E that received a replacement BECM during a prior repair. The software can misread state
+        of charge and raise the risk of a high-voltage battery fire after repeated DC fast charging.
+      advice: If you own a 2023-2025 Mach-E that had a BECM replaced, check your VIN against NHTSA campaign
+        26V582000 and get the free software update when available; the fire risk is tied to repeated DC
+        fast charging.
+    tr:
+      title: 'Batarya Enerji Kontrol Modülü (BECM) yazılım geri çağırması 26V582: tekrarlanan DC hızlı
+        şarj sonrası yüksek voltajlı batarya yangın riski'
+      body: NHTSA kampanyası 26V582000, Ford geri çağırması 26S68, 9 Eylül 2026'da bildirildi, 86 araç,
+        önceki bir onarım sırasında değiştirilmiş BECM alan 2023-2025 Mach-E. Yazılım şarj durumunu yanlış
+        okuyabilir ve tekrarlanan DC hızlı şarj sonrası yüksek voltajlı batarya yangını riskini artırabilir.
+      advice: BECM'i değiştirilmiş 2023-2025 bir Mach-E sahibiyseniz, VIN'inizi NHTSA kampanyası 26V582000'e
+        göre kontrol edin ve mevcut olduğunda ücretsiz yazılım güncellemesini alın; yangın riski tekrarlanan
+        DC hızlı şarjla bağlantılıdır.
+  evidence:
+  - url: https://americaslemonlawyer.com/recalls/ford-26v582000-mustang-mach-e-software/
+    quote: The battery energy control module software may cause an incorrect state of charge to display
+      in the vehicle, or lead to an increased risk of a high voltage battery fire after repeated DC Fast
+      Charging cycles.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:55:03+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: mercedes-benz
+      series: eqb
+  kind: known_issue
+  domain: battery
+  severity: high
+  consequence: ''
+  detection: ''
+  component: high-voltage battery (Farasis cells)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Third fire-related recall 26V073 replaces software fix; EQB 250+ affected
+      body: Mercedes issued a third fire-related recall (26V073) for 11,895 EQBs from 2022-2024 model
+        years after a software update failed to stop fires. The affected variants include the 2023-2024
+        EQB 250+.
+      advice: The software fix did not resolve the risk; Mercedes now plans full battery replacement.
+        Check your VIN against recall 26V073 and do not rely on a prior software update as a final remedy.
+    tr:
+      title: Üçüncü yangınla ilgili geri çağırma 26V073 yazılım düzeltmesinin yerini alıyor; EQB 250+
+        etkilendi
+      body: Mercedes, bir yazılım güncellemesi yangınları durduramadıktan sonra 2022-2024 model yıllarından
+        11.895 EQB için üçüncü yangınla ilgili geri çağırmayı (26V073) yayınladı. Etkilenen varyantlar
+        arasında 2023-2024 EQB 250+ yer alıyor.
+      advice: Yazılım düzeltmesi riski gidermedi; Mercedes artık tam batarya değişimini planlıyor. VIN'inizi
+        26V073 geri çağırmasına göre kontrol edin ve önceki bir yazılım güncellemesine nihai çözüm olarak
+        güvenmeyin.
+  evidence:
+  - url: https://www.carscoops.com/2026/02/mercedes-issues-third-recall-for-eqb-fires/
+    quote: The latest campaign is known as 26V073 and it replaces two recalls from last year that involved
+      7,531 vehicles.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:55:32+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: tesla
+      series: model-y
+  kind: known_issue
+  domain: battery
+  severity: high
+  consequence: ''
+  detection: ''
+  component: high-voltage battery pack
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Turkey: Model Y crashed into a truck and caught fire, firefighters took ~3 hours to extinguish'
+      body: 'A documented Model Y battery fire in Turkey (Aydın/Efeler) after a collision with a truck:
+        the lithium pack entered thermal runaway, required about three hours of cooling to extinguish,
+        and carried a re-ignition risk.'
+      advice: This is a crash-induced battery fire, not a spontaneous one; the practical cost for an owner
+        is that a Model Y fire is very hard to put out (tens of thousands of gallons of water) and can
+        reignite, so parking/charging near structures carries risk.
+    tr:
+      title: 'Türkiye: Model Y bir kamyona çarptı ve alev aldı, itfaiyecilerin söndürmesi ~3 saat sürdü'
+      body: 'Türkiye''de (Aydın/Efeler) bir kamyonla çarpışma sonrası belgelenmiş bir Model Y batarya
+        yangını: lityum paket termal kaçışa girdi, söndürmek için yaklaşık üç saat soğutma gerekti ve
+        yeniden tutuşma riski taşıyordu.'
+      advice: Bu, kendiliğinden değil çarpışma kaynaklı bir batarya yangınıdır; bir sahip için pratik
+        maliyet, bir Model Y yangınının söndürülmesinin çok zor olması (on binlerce galon su) ve yeniden
+        tutuşabilmesidir, bu nedenle yapıların yakınında park etme/şarj etme risk taşır.
+  evidence:
+  - url: https://www.d1ev.com/news/qiye/314739
+    quote: 在土耳其艾登省埃费勒（Efeler）区穆拉大道的路口，发生一起特斯拉Model Y与重型卡车相撞起火事故。
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:56:08+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: tesla
+      series: model-y
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: 12V auxiliary battery / external door handle
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: NHTSA investigating 2021 Model Y external door-opening failure tied to 12V battery voltage
+        drop
+      body: 'NHTSA is investigating 2021 Model Y external door-opening failure: 16 complaints of the exterior
+        handle not working due to low 12V battery voltage, some cases requiring breaking a window to enter.'
+      advice: This is an open investigation, not a final defect finding; an owner should keep the 12V
+        battery healthy because a weak low-voltage battery can leave the exterior door handle inoperative.
+    tr:
+      title: NHTSA, 12V batarya voltaj düşüşüyle bağlantılı 2021 Model Y dış kapı açma arızasını inceliyor
+      body: 'NHTSA, 2021 Model Y dış kapı açma arızasını inceliyor: düşük 12V batarya voltajı nedeniyle
+        dış kapı kolunun çalışmadığına dair 16 şikayet, bazı vakalarda girmek için cam kırmak gerekmiş.'
+      advice: Bu, nihai bir kusur tespiti değil açık bir incelemedir; bir sahip 12V bataryayı sağlıklı
+        tutmalıdır çünkü zayıf bir düşük voltajlı batarya dış kapı kolunu çalışamaz halde bırakabilir.
+  evidence:
+  - url: https://www.motormag.co.kr/news/articleView.html?idxno=22283
+    quote: 미국 도로교통안전국(NHTSA)도 2021년형 모델 Y의 외부 도어 개방 불능 의혹을 조사 대상으로 삼았다. 2025년 10월 27일 테슬라에 보낸 공식 자료 요구서에는
+      12V 배터리 전압 저하로 외부 손잡이가 작동하지 않았다는 신고 16건이 기재됐다.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:56:08+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: kia
+      series: ev6
+  kind: known_issue
+  domain: battery
+  severity: high
+  consequence: ''
+  detection: ''
+  component: High-Voltage Battery System assembly (SK On lithium-ion cells)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Kia EV6 high-voltage battery fire recall (SK On misaligned electrode) — NHTSA SC375/26V431
+      body: Official NHTSA dealer recall notice for Kia recall SC375 (NHTSA 26V431).
+      advice: A battery fire-risk recall affecting 2022-2024 EV6 built Dec 2021-Sep 2023. Until repaired,
+        Kia instructs owners to charge to max 80% and park outdoors away from structures. Remedy is full
+        high-voltage battery pack replacement. A buyer should verify a candidate EV6's VIN against this
+        recall before purchase.
+    tr:
+      title: Kia EV6 yüksek voltajlı batarya yangın geri çağırması (SK On hatalı hizalanmış elektrot)
+        — NHTSA SC375/26V431
+      body: Kia geri çağırması SC375 (NHTSA 26V431) için resmi NHTSA bayi geri çağırma bildirimi.
+      advice: Aralık 2021-Eylül 2023 arasında üretilen 2022-2024 EV6'yı etkileyen batarya yangın riski
+        geri çağırması. Onarılana kadar Kia, sahiplerine en fazla %80'e kadar şarj etmelerini ve yapılardan
+        uzakta açık havada park etmelerini talimat veriyor. Çözüm, tam yüksek voltajlı batarya paketi
+        değişimidir. Bir alıcı, satın almadan önce aday bir EV6'nın VIN'ini bu geri çağırmaya karşı doğrulamalıdır.
+  evidence:
+  - url: https://static.nhtsa.gov/odi/rcl/2026/RCMN-26V431-3646.pdf
+    quote: Due to a quality deviation by the supplier, certain battery cells within the High-Voltage Battery
+      System assembly, manufactured in limited production periods, may have been produced with a misaligned
+      electrode. A misaligned electrode may, over time, result in an internal short circuit in certain
+      situations, thereby increasing the risk of fire.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:56:58+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: hyundai
+      series: kona-electric
+  kind: known_issue
+  domain: battery
+  severity: high
+  consequence: ''
+  detection: ''
+  component: LG Energy Solution battery pack / BMS software
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Turkish market: LG battery fire recall on 2018–2020 Kona Electric must be verified before
+        purchase'
+      body: Turkish market source confirms the LG battery fire recall applies to 2018–2020 production
+        and that the remedy was a BMS update followed by free full battery-pack replacement (2021) after
+        fires persisted. It explicitly tells buyers to check via VIN and to avoid any Kona Electric without
+        documented recall work.
+      advice: For a Turkish-market Kona Electric, confirm the LG battery recall was completed (pack replacement
+        or BMS update) using the VIN at a Hyundai dealer before buying. The source rates an un-remedied
+        2018–2020 example as an unconditional avoid.
+    tr:
+      title: 'Türkiye pazarı: 2018–2020 Kona Electric''te LG batarya yangın geri çağırması satın almadan
+        önce doğrulanmalı'
+      body: Türkiye pazarı kaynağı, LG batarya yangın geri çağırmasının 2018–2020 üretimi için geçerli
+        olduğunu ve çözümün bir BMS güncellemesi ve ardından yangınlar devam ettikten sonra (2021'de)
+        ücretsiz tam batarya paketi değişimi olduğunu doğruluyor. Alıcılara açıkça VIN aracılığıyla kontrol
+        etmelerini ve belgelenmiş geri çağırma işlemi olmayan hiçbir Kona Electric'ten kaçınmalarını söylüyor.
+      advice: Türkiye pazarındaki bir Kona Electric için, satın almadan önce bir Hyundai bayisinde VIN
+        kullanarak LG batarya geri çağırmasının tamamlandığını (paket değişimi veya BMS güncellemesi)
+        doğrulayın. Kaynak, giderilmemiş 2018–2020 örneğini koşulsuz kaçınılması gereken olarak değerlendiriyor.
+  evidence:
+  - url: https://degerbil.net/arac/hyundai-kona-electric/
+    quote: LG'nin Nanjing fabrikasında üretilen hücrelerde katlanmış anot tırnağı nedeniyle iç kısa devre
+      ve yangın vakaları yaşandı; Hyundai önce BMS yazılımını güncelledi, güncelleme sonrası da yangın
+      çıkınca 2021'de tüm batarya paketlerini ücretsiz değiştirdi.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:55:18+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: chevrolet
+      series: bolt-ev
+  kind: known_issue
+  domain: general
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: Pyrotechnic seat belt tensioner (insulation felt)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: KBA warns of post-crash fire risk from pyrotechnic seat belt tensioner on Bolt/Ampera-e (EU)
+      body: The German regulator (KBA) warns of an elevated post-crash fire risk from a misaligned pyrotechnic
+        seat belt tensioner; the same platform issue affects the Chevrolet Bolt (the Ampera-e is its European
+        twin).
+      advice: For EU-market buyers, this confirms the pretensioner fire risk is recognized by the German
+        regulator, not just NHTSA. Have the tensioner checked and the insulation shield fitted under the
+        recall.
+    tr:
+      title: KBA, Bolt/Ampera-e'de (AB) piroteknik emniyet kemeri gergisinden kaynaklanan çarpışma sonrası
+        yangın riski konusunda uyarıyor
+      body: Alman düzenleyici (KBA), hatalı hizalanmış bir piroteknik emniyet kemeri gergisinden kaynaklanan
+        yüksek çarpışma sonrası yangın riski konusunda uyarıyor; aynı platform sorunu Chevrolet Bolt'u
+        etkiliyor (Ampera-e onun Avrupalı ikizidir).
+      advice: AB pazarındaki alıcılar için bu, gergi yangın riskinin yalnızca NHTSA tarafından değil,
+        Alman düzenleyici tarafından da tanındığını doğruluyor. Gergiyi kontrol ettirin ve geri çağırma
+        kapsamında yalıtım kalkanını taktırın.
+  evidence:
+  - url: https://www.fahrzeug-karosserie.de/brandschutz-und-falsche-fahrzeugnummern-a-10d15bdd19dded57cb77a1c8b0dd0de0/
+    quote: Es besteht somit ein erhöhtes Brandrisiko nach einem Unfall
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:57:52+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: hyundai
+      series: kona-electric
+  kind: known_issue
+  domain: battery
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: LG Energy Solution battery cells / battery modules
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Kona Electric battery recall confirmed in Turkish market — LG Energy Solution cell defect,
+        thermal runaway/fire risk
+      body: A Turkish-market source (OtoRaporu) documents the EV battery recall for the Kona in Turkey,
+        advising buyers to check whether the recall was performed.
+      advice: For a Kona Electric bought or sold in Turkey, confirm the battery recall/campaign was completed
+        before purchase; the source explicitly advises checking this.
+    tr:
+      title: Kona Electric batarya geri çağırması Türkiye pazarında doğrulandı — LG Energy Solution hücre
+        kusuru, termal kaçak/yangın riski
+      body: Türkiye pazarı kaynağı (OtoRaporu), Türkiye'deki Kona için EV batarya geri çağırmasını belgeliyor
+        ve alıcılara geri çağırmanın yapılıp yapılmadığını kontrol etmelerini tavsiye ediyor.
+      advice: Türkiye'de satın alınan veya satılan bir Kona Electric için, satın almadan önce batarya
+        geri çağırmasının/kampanyasının tamamlandığını doğrulayın; kaynak bunu kontrol etmeyi açıkça tavsiye
+        ediyor.
+  evidence:
+  - url: https://www.otoraporu.net/arac/hyundai-kona-1-0-tgdi
+    quote: Hyundai/Kia'nın LG Energy Solution üretimi bazı batarya hücrelerinde üretim hatası tespit edildi
+      — nadir durumlarda termal kaçış (thermal runaway) ve yangın riski. Hyundai tüm etkilenen araçları
+      geri çağırarak batarya modüllerini değiştirdi.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:57:36+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: kia
+      series: ev6
+  kind: known_issue
+  domain: battery
+  severity: high
+  consequence: ''
+  detection: ''
+  component: High-voltage battery cells (supplier production defect)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Kia EV6 high-voltage battery service campaign in EU/Poland (code 261334) — fire risk from
+        misaligned electrode
+      body: Polish automotive trade outlet reporting Kia's EU service campaign for EV6/EV9 high-voltage
+        batteries.
+      advice: 'Confirms the battery fire-risk issue reached the EU market: a Polish service campaign (code
+        261334) covers EV6 (CV) and EV9 (MV) built 2021-2024. An EU buyer should check whether a specific
+        EV6 is included via Kia''s campaign lookup, since not every unit in that window is affected.'
+    tr:
+      title: AB/Polonya'da Kia EV6 yüksek voltajlı batarya servis kampanyası (kod 261334) — hatalı hizalanmış
+        elektrottan yangın riski
+      body: Polonyalı otomotiv ticaret yayını, Kia'nın EV6/EV9 yüksek voltajlı bataryaları için AB servis
+        kampanyasını bildiriyor.
+      advice: 'Batarya yangın riski sorununun AB pazarına ulaştığını doğruluyor: bir Polonya servis kampanyası
+        (kod 261334), 2021-2024 arasında üretilen EV6 (CV) ve EV9''u (MV) kapsıyor. Bir AB alıcısı, o
+        dönemdeki her birim etkilenmediğinden, belirli bir EV6''nın Kia''nın kampanya sorgulaması aracılığıyla
+        dahil olup olmadığını kontrol etmelidir.'
+  evidence:
+  - url: https://motofocus.pl/marki-samochodow/kia/143797/kia-wzywa-elektryki-do-serwisow-ostrzega-przed-ryzykiem-pozaru
+    quote: W polskim wykazie kampanię serwisową oznaczono kodem 261334. Akcja dotyczy modeli Kia EV6 (CV)
+      oraz EV9 (MV) wyporukowanych w latach 2021–2024.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:56:58+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: chevrolet
+      series: bolt-ev
+  kind: known_issue
+  domain: battery
+  severity: high
+  consequence: ''
+  detection: ''
+  component: LG Chem battery cells (torn anode tab / folded separator)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: LG Chem cell manufacturing defects (torn anode tab + folded separator) cause thermal runaway
+      body: 'Explains the root cause of the fire risk: two simultaneous manufacturing defects in the same
+        cell, which can ignite even when parked and unplugged.'
+      advice: The defect is in the cell itself, so no driving habit fully removes the risk; the only definitive
+        fix is battery module replacement. Owners of 2017-2021 units should treat the charge limit and
+        park-outside guidance as mandatory until replacement.
+    tr:
+      title: LG Chem hücre üretim kusurları (yırtık anot tırnağı + katlanmış ayırıcı) termal kaçağa neden
+        oluyor
+      body: 'Yangın riskinin kök nedenini açıklıyor: aynı hücrede iki eşzamanlı üretim kusuru, park halinde
+        ve fişten çekilmişken bile tutuşabilir.'
+      advice: Kusur hücrenin kendisindedir, bu nedenle hiçbir sürüş alışkanlığı riski tamamen ortadan
+        kaldırmaz; tek kesin çözüm batarya modülü değişimidir. 2017-2021 birimlerinin sahipleri, değişime
+        kadar şarj limiti ve dışarıda park etme yönergesini zorunlu olarak uygulamalıdır.
+  evidence:
+  - url: https://www.margarianlaw.com/chevrolet/bolt-ev-gen1/
+    quote: two rare defects — a torn anode tab and a folded separator — could appear simultaneously in
+      the same battery cell.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:57:52+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: renault
+      series: zoe
+  kind: known_issue
+  domain: battery
+  severity: high
+  consequence: ''
+  detection: ''
+  component: high voltage battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Renault Zoe high-voltage battery short-circuit fire recall (2024, code 0EBN) — production
+        Sep 2023
+      body: This is an official EU Safety Gate recall (A12/00815/24) notified by France, covering Zoe
+        built at the Flins factory 1–28 September 2023. A manufacturing defect can cause a short circuit
+        inside the high-voltage battery, raising fire risk. Cross-confirmed by French press (auto-infos.fr,
+        La Voix du Nord) reporting the same March 2024 campaign.
+      advice: If you own or are buying a Zoe built September 2023, check the VIN against recall code 0EBN
+        and have the dealer inspect/replace the battery. A buyer should verify the car is not under this
+        open recall before purchase.
+    tr:
+      title: Renault Zoe yüksek voltajlı akü kısa devre yangın geri çağırması (2024, kod 0EBN) — üretim
+        Eylül 2023
+      body: Bu, Fransa tarafından bildirilen resmi bir AB Safety Gate geri çağırmasıdır (A12/00815/24)
+        ve Flins fabrikasında 1–28 Eylül 2023 tarihleri arasında üretilen Zoe'leri kapsar. Bir üretim
+        hatası, yüksek voltajlı akü içinde kısa devreye neden olarak yangın riskini artırabilir. Aynı
+        Mart 2024 kampanyasını bildiren Fransız basını (auto-infos.fr, La Voix du Nord) tarafından çapraz
+        olarak doğrulanmıştır.
+      advice: Eylül 2023 üretimi bir Zoe'ye sahipseniz veya satın alıyorsanız, VIN'i geri çağırma kodu
+        0EBN ile karşılaştırın ve bayiden aküyü incelemesini/değiştirmesini isteyin. Bir alıcı, satın
+        almadan önce aracın bu açık geri çağırma kapsamında olmadığını doğrulamalıdır.
+  evidence:
+  - url: https://ec.europa.eu/safety-gate-alerts/api/download/notification/detail/pdf/10012405/en
+    quote: Due to a manufacturing issue, a short circuit may occur within the high voltage battery. This
+      will increase the risk of fire.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:55:49+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: kia
+      series: ev6
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: Integrated Charging Control Unit (ICCU)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Class-action lawsuit alleges Kia EV6 ICCU recall did not fix the defect
+      body: CarScoops reporting on a class-action lawsuit over repeat ICCU failures.
+      advice: Owners allege the ICCU recall remedy did not stop failures — replacement ICCUs may fail
+        again, causing 12V battery drain, limp mode, and total power loss. This is litigation, not an
+        official finding, but it signals the ICCU problem may persist after the recall fix.
+    tr:
+      title: Toplu dava, Kia EV6 ICCU geri çağırmasının kusuru gidermediğini iddia ediyor
+      body: CarScoops, tekrarlanan ICCU arızalarına ilişkin bir toplu davayı bildiriyor.
+      advice: Sahipler, ICCU geri çağırma çözümünün arızaları durdurmadığını iddia ediyor — değiştirilen
+        ICCU'lar tekrar arızalanabilir, 12V akü boşalmasına, limp moda ve tam güç kaybına neden olabilir.
+        Bu bir dava sürecidir, resmi bir tespit değildir, ancak ICCU sorununun geri çağırma düzeltmesinden
+        sonra da devam edebileceğine işaret eder.
+  evidence:
+  - url: https://www.carscoops.com/2026/04/hyundai-kia-genesis-iccu-lawsuit/
+    quote: Hyundai and Kia have issued recalls to fix ICCU-related issues but now a class action lawsuit
+      claims that the fix is just using more bad parts.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:56:58+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: chevrolet
+      series: bolt-ev
+  kind: known_issue
+  domain: battery
+  severity: high
+  consequence: ''
+  detection: ''
+  component: High-voltage lithium-ion battery modules (LG Chem)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: High-voltage battery fire risk when charged to full — GM safety recall N212343880
+      body: This is GM's own dealer FAQ for the official NHTSA recall N212343880, covering all 2017-2019
+        Bolt EVs.
+      advice: Until the battery modules are replaced, keep the charge limited to 90% (Hilltop Reserve/Target
+        Charge Level), avoid depleting below ~70 miles of range, park outside after charging, and do not
+        charge indoors overnight. The remedy is free module replacement.
+    tr:
+      title: Tam şarj edildiğinde yüksek voltajlı akü yangın riski — GM güvenlik geri çağırması N212343880
+      body: Bu, GM'nin tüm 2017-2019 Bolt EV'leri kapsayan resmi NHTSA geri çağırması N212343880 için
+        kendi bayi SSS belgesidir.
+      advice: Akü modülleri değiştirilene kadar şarjı %90 ile sınırlı tutun (Hilltop Reserve/Target Charge
+        Level), menzili yaklaşık 70 milin altına düşürmekten kaçının, şarjdan sonra dışarıda park edin
+        ve gece boyunca kapalı alanda şarj etmeyin. Çözüm ücretsiz modül değişimidir.
+  evidence:
+  - url: https://static.nhtsa.gov/odi/rcl/2021/RMISC-21V560-8422.pdf
+    quote: The high voltage batteries in these vehicles may pose a risk of fire when charged to full,
+      or very close to full, capacity.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:57:52+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: chevrolet
+      series: bolt-ev
+  kind: known_issue
+  domain: software
+  severity: high
+  consequence: ''
+  detection: ''
+  component: Advanced diagnostic software (ADS)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Advanced diagnostic software installation failure re-opens battery fire risk — recalls 24V812
+        and 24V481
+      body: NHTSA recall 24V812 (Oct 2024) and 24V481 (June 2024) show the software fix itself failed
+        on some vehicles, keeping the fire risk alive even after the earlier 21V650 recall.
+      advice: Even after the original battery recall, confirm the advanced diagnostic software was correctly
+        installed; if the charge cap or warning is not active, the battery fire risk remains. Keep charge
+        at 90% and park outside until the software is reinstalled.
+    tr:
+      title: Gelişmiş teşhis yazılımı kurulum hatası akü yangın riskini yeniden açıyor — geri çağırmalar
+        24V812 ve 24V481
+      body: NHTSA geri çağırmaları 24V812 (Ekim 2024) ve 24V481 (Haziran 2024), yazılım düzeltmesinin
+        bazı araçlarda başarısız olduğunu ve daha önceki 21V650 geri çağırmasından sonra bile yangın riskinin
+        sürdüğünü gösteriyor.
+      advice: Orijinal akü geri çağırmasından sonra bile, gelişmiş teşhis yazılımının doğru şekilde kurulduğunu
+        doğrulayın; şarj sınırı veya uyarı etkin değilse, akü yangın riski devam eder. Yazılım yeniden
+        kurulana kadar şarjı %90'da tutun ve dışarıda park edin.
+  evidence:
+  - url: https://mobile.www.cars.com/research/chevrolet-bolt_ev-2021/recalls/
+    quote: The installation of advanced diagnostic software may have failed. As such, the high voltage
+      battery could catch fire when charged to full or nearly full capacity.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:57:52+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: tesla
+      series: model-y
+  kind: known_issue
+  domain: general
+  severity: high
+  consequence: ''
+  detection: ''
+  component: electronic door handles / emergency manual door release
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: China SAMR recall of 2.98M Teslas including Model Y over emergency door-release handles
+      body: The Chinese regulator (SAMR) recalled 2.98M Teslas, including China-built Model Y, because
+        the emergency manual door release is hard to find and operate, which can trap occupants in a crash
+        or fire.
+      advice: A Model Y owner in TR/EU should know the manual release locations (front lever, rear cable
+        under the door-pocket mat on 2020-2024 cars) and confirm their specific car has the rear release
+        fitted, since the recall fix is a label plus an OTA window-lowering update.
+    tr:
+      title: Çin SAMR, acil kapı açma kolları nedeniyle Model Y dahil 2,98 milyon Tesla'yı geri çağırdı
+      body: Çin düzenleyicisi (SAMR), acil durum manuel kapı açma kolunun bulunması ve kullanılması zor
+        olduğu ve bu nedenle bir çarpışma veya yangında yolcuları mahsur bırakabileceği için Çin'de üretilen
+        Model Y dahil 2,98 milyon Tesla'yı geri çağırdı.
+      advice: TR/AB'deki bir Model Y sahibi, manuel açma konumlarını (ön kol, 2020-2024 araçlarda kapı
+        cebi paspasının altındaki arka kablo) bilmeli ve geri çağırma düzeltmesi bir etiket artı OTA ile
+        cam indirme güncellemesi olduğundan, kendi aracında arka açmanın takılı olduğunu doğrulamalıdır.
+  evidence:
+  - url: https://www.thepeterboroughexaminer.com/business/a-tesla-fire-in-toronto-turned-fatal-when-doors-wouldnt-open-now-the-company-is-recalling-3-million-evs-in-china-over-the-handles/article_09f96a60-48db-5d94-9416-ce4dae94379f.html
+    quote: The recall affects 2.98 million Teslas in China, including Model 3, Model Y, Model X and Model
+      S.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:56:08+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: chevrolet
+      series: bolt-ev
+  kind: known_issue
+  domain: general
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: Front seat belt pretensioners (exhaust / carpet insulation)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Seat belt pretensioner exhaust can ignite carpet after a crash — recall 23V845
+      body: 'A separate, non-battery fire recall: after a crash, the pretensioner''s hot exhaust can ignite
+        carpet fibers near the B-pillar.'
+      advice: This is a crash-triggered fire risk, not a battery issue. Have the dealer inspect both front
+        pretensioners and install the metal-foil shield so a collision does not lead to a cabin fire.
+    tr:
+      title: Emniyet kemeri gergisi egzozu bir çarpışmadan sonra halıyı tutuşturabilir — geri çağırma
+        23V845
+      body: 'Ayrı, aküyle ilgili olmayan bir yangın geri çağırması: bir çarpışmadan sonra, gerginin sıcak
+        egzozu B-direği yakınındaki halı liflerini tutuşturabilir.'
+      advice: Bu, çarpışmayla tetiklenen bir yangın riskidir, akü sorunu değildir. Bayiden her iki ön
+        gergiyi incelemesini ve bir çarpışmanın kabin yangınına yol açmaması için metal folyo siperliğini
+        takmasını isteyin.
+  evidence:
+  - url: https://mobile.www.cars.com/research/chevrolet-bolt_ev-2021/recalls/
+    quote: After a crash with seat belt pretensioner deployment, the pretensioner exhaust may ignite carpet
+      fibers near the B-pillar, causing a fire.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:57:52+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: audi
+      series: e-tron
+  kind: known_issue
+  domain: battery
+  severity: high
+  consequence: ''
+  detection: ''
+  component: high-voltage battery module (traction battery thermal management software)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Audi e-tron high-voltage battery modules may overheat — NHTSA recall 23V867000 (campaigns
+        93U9/93V2)
+      body: Official NHTSA recall record for the original e-tron Quattro (2019-2022) and Sportback Quattro
+        (2020-2022).
+      advice: If you own or are buying a 2019-2022 e-tron Quattro/Sportback, check the VIN against recall
+        23V867000 (Audi 93U9/93V2). Until the software remedy is installed, Audi tells owners to cap charging
+        at 80%. A battery module that overheats is a fire risk, so this is a high-severity, must-check
+        item.
+    tr:
+      title: Audi e-tron yüksek voltajlı batarya modülleri aşırı ısınabilir — NHTSA geri çağırma 23V867000
+        (kampanyalar 93U9/93V2)
+      body: Orijinal e-tron Quattro (2019-2022) ve Sportback Quattro (2020-2022) için resmi NHTSA geri
+        çağırma kaydı.
+      advice: 2019-2022 e-tron Quattro/Sportback sahibiyseniz veya satın alıyorsanız, VIN'i geri çağırma
+        23V867000 (Audi 93U9/93V2) ile karşılaştırın. Yazılım çözümü yüklenene kadar Audi, sahiplerine
+        şarjı %80 ile sınırlamalarını söylüyor. Aşırı ısınan bir batarya modülü yangın riskidir, bu nedenle
+        bu yüksek önem dereceli, mutlaka kontrol edilmesi gereken bir maddedir.
+  evidence:
+  - url: https://auto-recalls.justia.com/audi/e-tron/2019/23v867000/
+    quote: A high-voltage battery that overheats increases the risk of a fire.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:57:18+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: hyundai
+      series: kona-electric
+  kind: known_issue
+  domain: battery
+  severity: high
+  consequence: ''
+  detection: ''
+  component: 64 kWh battery pack (short-circuit possibility) / BMS software
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: European recall of first-gen Kona Electric — 64 kWh battery pack short-circuit possibility,
+        BMS software update
+      body: A Korean industry source (M2Daily) reports the European recall of ~200,000 units including
+        the first-gen Kona Electric, tying the issue to the 64 kWh battery pack short-circuit possibility
+        and a BMS software update.
+      advice: Confirms the EU-wide scope of the recall affecting the 64 kWh battery pack variant of the
+        first-gen Kona Electric; the fix is a BMS software update with earlier anomaly detection.
+    tr:
+      title: Birinci nesil Kona Electric'in Avrupa geri çağırması — 64 kWh batarya paketinde kısa devre
+        olasılığı, BMS yazılım güncellemesi
+      body: Bir Koreli sektör kaynağı (M2Daily), birinci nesil Kona Electric dahil yaklaşık 200.000 adedin
+        Avrupa geri çağırmasını bildiriyor ve sorunu 64 kWh batarya paketinde kısa devre olasılığı ve
+        bir BMS yazılım güncellemesiyle ilişkilendiriyor.
+      advice: Birinci nesil Kona Electric'in 64 kWh batarya paketi varyantını etkileyen geri çağırmanın
+        AB çapındaki kapsamını doğrular; çözüm, daha erken anormallik tespiti içeren bir BMS yazılım güncellemesidir.
+  evidence:
+  - url: https://www.autodaily.co.kr/news/articleView.html?idxno=543109
+    quote: 문제는 64kWh 배터리 팩에서 발생할 수 있는 단락 가능성과 관련된 것이다.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:57:36+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: mercedes-benz
+      series: eqb
+  kind: known_issue
+  domain: battery
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: high-voltage battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Court ruling: charging/parking restrictions alone make EQA/EQB unusable; fire risk unresolved'
+      body: Mercedes identified battery-related fire risk in about 51,729 EQA/EQB models built between
+        February 2021 and July 2024 (4,677 in Germany). A Stuttgart court ruled the charging and parking
+        restrictions alone made the car unusable, awarding rescission of the sale contract.
+      advice: The fire risk is unresolved and the interim restrictions (park outside, charge max 80%)
+        are significant. A court has allowed a buyer to return the car; this is a case-specific ruling,
+        not an automatic right for all owners.
+    tr:
+      title: 'Mahkeme kararı: yalnızca şarj/park kısıtlamaları EQA/EQB''yi kullanılamaz hale getiriyor;
+        yangın riski çözülmedi'
+      body: Mercedes, Şubat 2021 ile Temmuz 2024 arasında üretilen yaklaşık 51.729 EQA/EQB modelinde bataryayla
+        ilgili yangın riski tespit etti (Almanya'da 4.677). Bir Stuttgart mahkemesi, yalnızca şarj ve
+        park kısıtlamalarının aracı kullanılamaz hale getirdiğine hükmederek satış sözleşmesinin feshine
+        karar verdi.
+      advice: Yangın riski çözülmedi ve geçici kısıtlamalar (dışarıda park etme, en fazla %80 şarj) önemlidir.
+        Bir mahkeme, bir alıcının aracı iade etmesine izin verdi; bu duruma özgü bir karardır, tüm sahipler
+        için otomatik bir hak değildir.
+  evidence:
+  - url: https://www.hurriyet.com.tr/avrupa/mercedes-elektrikli-aracta-yangin-krizi-43287558
+    quote: Mercedes-Benz, Şubat 2021 ile Temmuz 2024 arasında üretilen yaklaşık 51 bin 729 EQA ve EQB
+      modelinde batarya kaynaklı yangın riski tespit etti.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:55:32+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: renault
+      series: zoe
+  kind: known_issue
+  domain: battery
+  severity: high
+  consequence: ''
+  detection: ''
+  component: battery (manufacturing defect)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Renault Zoe battery manufacturing-defect short-circuit fire recall (2019, code 0DAS) — production
+        Sep–Dec 2019
+      body: French government recall notice (rappel.conso.gouv.fr) for Zoe built 23 Sep–18 Dec 2019 under
+        Renault recall code 0DAS. A battery manufacturing defect can cause a short circuit, overheating,
+        and damage to electrical systems, increasing fire risk.
+      advice: Affects 2019-production Zoe (type AG). A used-2019 Zoe buyer should verify recall 0DAS was
+        completed; otherwise the battery should be inspected by a dealer.
+    tr:
+      title: Renault Zoe batarya üretim hatası kısa devre yangın geri çağırması (2019, kod 0DAS) — üretim
+        Eylül–Aralık 2019
+      body: 23 Eylül–18 Aralık 2019 arasında üretilen Zoe için Fransız hükümeti geri çağırma bildirimi
+        (rappel.conso.gouv.fr), Renault geri çağırma kodu 0DAS. Bir batarya üretim hatası kısa devreye,
+        aşırı ısınmaya ve elektrik sistemlerinde hasara yol açarak yangın riskini artırabilir.
+      advice: 2019 üretimi Zoe'yi (tip AG) etkiler. 2019 model ikinci el bir Zoe alıcısı, geri çağırma
+        0DAS'ın tamamlandığını doğrulamalıdır; aksi takdirde batarya bir bayii tarafından incelenmelidir.
+  evidence:
+  - url: https://rappel.conso.gouv.fr:443/affichettePDF/47060/Rapex
+    quote: Un défaut de production de la batterie peut entraîner un court-circuit. Cela peut causer une
+      surchauffe et des dommages aux systèmes électriques, ce qui augmente le risque d'incendie.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:55:49+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: ford
+      series: mustang-mach-e
+  kind: known_issue
+  domain: battery
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: High-voltage battery main contactors / Powertrain Control Module (PCM)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: High-voltage battery main contactors may overheat (UK/EU recall, 6,535 vehicles)
+      body: 'UK DVSA recall record for the 2021 Mach-E: the high-voltage battery main contactors may overheat,
+        fixed by a free PCM software update, affecting 6,535 vehicles in the UK.'
+      advice: A UK/EU 2021 Mach-E owner should confirm this recall is applied (PCM update); overheating
+        contactors can cause loss of drive power.
+    tr:
+      title: Yüksek voltajlı batarya ana kontaktörleri aşırı ısınabilir (Birleşik Krallık/AB geri çağırması,
+        6.535 araç)
+      body: '2021 Mach-E için Birleşik Krallık DVSA geri çağırma kaydı: yüksek voltajlı batarya ana kontaktörleri
+        aşırı ısınabilir, ücretsiz bir PCM yazılım güncellemesiyle giderilir, Birleşik Krallık''ta 6.535
+        aracı etkiler.'
+      advice: Birleşik Krallık/AB 2021 Mach-E sahibi bu geri çağırmanın uygulandığını (PCM güncellemesi)
+        doğrulamalıdır; aşırı ısınan kontaktörler tahrik gücü kaybına neden olabilir.
+  evidence:
+  - url: https://www.check-vehicle-recalls.service.gov.uk/recall-type/vehicle/make/FORD/model/MUSTANG%20MACH-E/year/2021/recalls
+    quote: It is possible that the high voltage battery main contactors may overheat
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:55:03+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: mercedes-benz
+      series: eqb
+  kind: known_issue
+  domain: battery
+  severity: high
+  consequence: ''
+  detection: ''
+  component: high-voltage battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'KBA official recall 16136R: 50,000 EQA/EQB get new high-voltage batteries'
+      body: Germany's KBA published official recall 16136R covering roughly 50,000 EQA/EQB vehicles worldwide,
+        including several thousand built in Germany between February 2022 and July 2024, with full high-voltage
+        battery replacement.
+      advice: For EU-market EQB owners, this is the official German recall number to reference. The remedy
+        is a free full battery replacement; until then charging power and usable capacity are limited.
+    tr:
+      title: 'KBA resmi geri çağırma 16136R: 50.000 EQA/EQB yeni yüksek voltajlı batarya alıyor'
+      body: Almanya'nın KBA'sı, dünya çapında yaklaşık 50.000 EQA/EQB aracını kapsayan resmi geri çağırma
+        16136R'yi yayımladı; bunlar arasında Şubat 2022 ile Temmuz 2024 arasında Almanya'da üretilen birkaç
+        bin araç da var ve tam yüksek voltajlı batarya değişimi yapılacak.
+      advice: AB pazarındaki EQB sahipleri için bu, başvurulacak resmi Alman geri çağırma numarasıdır.
+        Çözüm ücretsiz tam batarya değişimidir; o zamana kadar şarj gücü ve kullanılabilir kapasite sınırlıdır.
+  evidence:
+  - url: https://www.firmenauto.de/fahrzeuge/pkw/brnadrisiko-mercedes-eqa-eqb-rueckruf-50000-fahrzeuge-erhalten-neue-hochvoltbatterie/
+    quote: Das Kraftfahrt-Bundesamt hat bereits einen entsprechenden offiziellen Rückruf mit der Nummer
+      16136R veröffentlicht.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:55:32+00:00'

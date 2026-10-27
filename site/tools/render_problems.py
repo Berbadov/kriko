@@ -65,9 +65,9 @@ UI = {
         "products": "{n} products",
         "safety": "Safety risk",
         "serious_h": "Safety first",
-        "serious_lead": "Reports of fire, smoke, recalls and injury, each linked to the page it came from.",
+        "serious_lead": "Reports of a product catching fire, exploding or shocking its owner, each linked to the page it came from.",
         "serious_in": "Safety first in {name}",
-        "safety_note": "{n} of these reports describe a risk to people or property.",
+        "safety_note": "{n} of these reports describe a fire, explosion or shock risk.",
         "title": "{label}: known problems",
         "lead": "{n} sourced reports, with what to check before you buy. Each one links to the page it was reported on.",
         "desc": "{n} sourced problems reported for {label}, with what to check before you buy. {top}",
@@ -91,6 +91,7 @@ UI = {
         "hub_desc": "Sourced known problems for specific products and parts, with what to check before you buy.",
         "hub_other": "Other",
         "reports": "{n} reports",
+        "show_more": "Show {n} more",
         "footer_home": "kriko.cc",
         "footer_help": "Help and feedback",
         "privacy": "Privacy",
@@ -111,9 +112,9 @@ UI = {
         "products": "{n} ürün",
         "safety": "Güvenlik riski",
         "serious_h": "Önce güvenlik",
-        "serious_lead": "Yangın, duman, geri çağırma ve yaralanma raporları; her biri geldiği sayfaya bağlantı verir.",
+        "serious_lead": "Bir ürünün yangın çıkardığı, patladığı ya da sahibini çarptığı raporlar; her biri geldiği sayfaya bağlantı verir.",
         "serious_in": "{name} için önce güvenlik",
-        "safety_note": "Bu raporlardan {n} tanesi insanlar ya da mallar için bir risk bildiriyor.",
+        "safety_note": "Bu raporlardan {n} tanesi yangın, patlama ya da elektrik çarpması riski bildiriyor.",
         "title": "{label}: bilinen sorunlar",
         "lead": "{n} kaynaklı rapor ve satın almadan önce neye bakmanız gerektiği. Her biri, bildirildiği sayfaya bağlantı verir.",
         "desc": "{label} için bildirilen {n} kaynaklı sorun ve satın almadan önce neye bakılacağı. {top}",
@@ -137,6 +138,7 @@ UI = {
         "hub_desc": "Belirli ürün ve parçalar için kaynaklı bilinen sorunlar ve satın almadan önce neye bakılacağı.",
         "hub_other": "Diğer",
         "reports": "{n} rapor",
+        "show_more": "{n} tane daha göster",
         "footer_home": "kriko.cc",
         "footer_help": "Yardım ve geri bildirim",
         "privacy": "Gizlilik",
@@ -187,14 +189,15 @@ ICONS = {
     "info": '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>',
 }
 SEVERITY_ICON = {"high": "alert", "medium": "wrench", "low": "info"}
-# What makes a claim a safety risk, whatever the product: harm to a person or a home. Matched
+# What makes a claim a safety risk, whatever the product: it can start a fire, explode or shock a
+# person. Not a fault that merely annoys, nor one that is only dangerous in a long chain. Matched
 # on the claim's English title alone, so it is flagged the same way in every language it is shown
 # in, and a body that mentions a fire in passing does not make a piston ring a hazard.
 HAZARD = re.compile(
-    r"\b(?:fires?|flames?|catch(?:es|ing)? fire|burst into flames|burn(?:s|ed|ing)?(?!-in)|explo(?:de|des|ded|ding|sion|sions)"
-    r"|smok(?:e|ing)|recalls?|recalled|thermal runaway|short[- ]circuit\w*|electrocut\w*|electric shock"
-    r"|swollen|swelling|brake failure|airbags?|injur\w*|choking|strangulation|carbon monoxide)\b", re.I)
-SAFETY_FIRST = 6  # claims featured on the hub, and 3 on a catalog's page
+    r"\b(?:fires?(?! (?:hd|tv|stick|max|kids|tablet|os|\d))|flames?|burst into flames|explo(?:de|des|ded|ding|sion|sions)"
+    r"|electrocut\w*|electric shock)\b", re.I)
+SAFETY_FIRST = 12  # claims featured on the hub, and 3 on a catalog's page
+SAFETY_SHOWN = 5  # of them, how many are in view before "show more"
 
 
 def icon(name: str, cls: str = "ico") -> str:
@@ -452,24 +455,33 @@ def _subject_page(catalog: dict, entry: dict, subject: dict, lang: str, claims: 
 
 
 def _safety_first(lang: str, entries: list[dict], heading: str, limit: int) -> str:
-    """The worst safety reports of `entries`, one for each product, each linked to its own card."""
+    """The worst safety reports of `entries`, one for each product, each linked to its own card.
+
+    A product with more reports of the kind leads, then the one more sites agree on; the one shown for it is the best backed.
+    """
     ui = UI[lang]
     found = []
     for entry in entries:
-        picked = [c for c in entry["claims"].get(lang, []) if is_hazard(c)]
-        if picked:
-            best = min(picked, key=lambda c: (SEVERITY_ORDER.index(c["severity"]) if c["severity"] in SEVERITY_ORDER else 9,
-                                              -len(c["sources"]), c["id"]))
-            found.append((SEVERITY_ORDER.index(best["severity"]) if best["severity"] in SEVERITY_ORDER else 9,
-                          -len(best["sources"]), entry["label"], entry, best))
+        risky = [c for c in entry["claims"].get(lang, []) if is_hazard(c)]
+        high = [c for c in risky if c["severity"] == "high"]
+        if high:
+            best = min(high, key=lambda c: (-len(c["sources"]), c["id"]))
+            # More serious reports lead, then more distinct sites behind them, so a fire several pages agree on
+            # outranks one a single page reports.
+            sites = len({domain or url for c in risky for url, domain in c["sources"]})
+            found.append((-len(high), -sites, entry["label"], entry, best, len(risky)))
     if not found:
         return ""
-    rows = "".join(
-        f'<li><a href="{ui["prefix"]}/problems/{entry["slug"]}/#c-{_e(claim["id"][:8])}">{icon("flame")}'
-        f'<span>{_e(claim["text"][lang]["title"])}<small>{_e(entry["label"])}</small></span></a></li>'
-        for *_, entry, claim in sorted(found, key=lambda f: f[:3])[:limit])
+    rows = []
+    for *_, entry, claim, count in sorted(found, key=lambda f: f[:3])[:limit]:
+        more = f' · {_e(ui["reports"].format(n=count))}' if count > 1 else ""
+        rows.append(f'<li><a href="{ui["prefix"]}/problems/{entry["slug"]}/#c-{_e(claim["id"][:8])}">{icon("flame")}'
+                    f'<span>{_e(claim["text"][lang]["title"])}<small>{_e(entry["label"])}{more}</small></span></a></li>')
+    # The first few stay in view, so the categories below are not pushed off the screen; the rest open on request.
+    rest = (f'<details class="rest"><summary>{_e(ui["show_more"].format(n=len(rows) - SAFETY_SHOWN))}</summary>'
+            f'<ul class="alerts">{"".join(rows[SAFETY_SHOWN:])}</ul></details>') if len(rows) > SAFETY_SHOWN else ""
     return (f'      <section class="serious"><h2>{icon("flame")}{_e(heading)}</h2>\n'
-            f'      <p>{_e(ui["serious_lead"])}</p>\n      <ul class="alerts">{rows}</ul></section>\n')
+            f'      <p>{_e(ui["serious_lead"])}</p>\n      <ul class="alerts">{"".join(rows[:SAFETY_SHOWN])}</ul>{rest}</section>\n')
 
 
 def _category_page(lang: str, items: list[dict], css: str, have: set[str]) -> str:

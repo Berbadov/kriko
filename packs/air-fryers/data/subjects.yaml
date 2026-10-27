@@ -1,0 +1,148 @@
+# Subjects — the things this pack knows about.
+#
+# `identity` carries exactly the keys `pack.toml` declares for the
+# kind: that dictionary is hashed to the subject id.
+- kind: product
+  label: Philips Airfryer 3000 Series L (HD9243/90)
+  identity:
+    brand: philips
+    series: hd9243/90
+  attributes:
+    capacity_l:
+      value: '4.1'
+      source: https://p-yo-www-amazon-com-tr-kalias.amazon.com.tr/gp/bestsellers/kitchen/26951559031/ref=zg_bs_pg_1_kitchen?ie=UTF8&pg=1
+  aliases:
+  - HD9243/90
+- kind: product
+  label: Philips Airfryer Double Basket (NA352/00)
+  identity:
+    brand: philips
+    series: na352/00
+  attributes:
+    capacity_l:
+      value: '6'
+      source: https://sav.darty.com/forum/PHILIPS/NA352-00-AIRFRYER-A-DOUBLE-PANIER/BIP-ET-JE-FONCTIONNE-PAS/5307584/607352
+  aliases:
+  - NA352/00
+- kind: product
+  label: Philips Airfryer Essential XL Connected (HD9280/70)
+  identity:
+    brand: philips
+    series: hd9280/70
+  attributes:
+    capacity_l:
+      value: '6.2'
+      source: https://sav.darty.com/forum/PHILIPS/AIRFRYER-ESSENTIAL-XL-CONNECTE-HD9280-70/MODE-DE-CUISSON-/5325006/595101
+  aliases:
+  - HD9280/70
+- kind: product
+  label: Xiaomi Smart Air Fryer Pro
+  identity:
+    brand: xiaomi
+    series: smart air fryer pro
+- kind: product
+  label: Xiaomi Smart Double Stack Air Fryer 12L
+  identity:
+    brand: xiaomi
+    series: smart double stack air fryer 12l
+  attributes:
+    capacity_l:
+      value: '12'
+      source: https://www.mi.com/global/support/faq/details/KA-621627/
+- kind: product
+  label: Xiaomi Smart Air Fryer 6.5L
+  identity:
+    brand: xiaomi
+    series: smart air fryer 6.5l
+- kind: product
+  label: Ninja 6-in-1 2-Basket Air Fryer (R-AD300CO)
+  identity:
+    brand: ninja
+    series: r-ad300co
+  aliases:
+  - R-AD300CO
+- kind: product
+  label: Ninja Double Stack XL (SL400ME)
+  identity:
+    brand: ninja
+    series: sl400me
+  aliases:
+  - SL400ME
+- kind: product
+  label: Ninja Flip Toaster Oven Air Fryer
+  identity:
+    brand: ninja
+    series: flip toaster oven air fryer
+- kind: product
+  label: Cosori Dual Basket (CAF-R901-AEU)
+  identity:
+    brand: cosori
+    series: caf-r901-aeu
+  attributes:
+    capacity_l:
+      value: '8.5'
+      source: https://cosori.site/it/wp-content/uploads/sites/5/2024/02/Dual-Basket-Manual.pdf
+  aliases:
+  - CAF-R901-AEU
+- kind: product
+  label: Tefal Easy Fry Compact (EY145810)
+  identity:
+    brand: tefal
+    series: ey145810
+  attributes:
+    capacity_l:
+      value: '3'
+      source: https://dns-shop.kg/ru/product/71fa46bcb072485c/aerogril-tefal-easy-fry-compact-ey145810-cernyj/opinions/
+    power_w:
+      value: '1300'
+      source: https://dns-shop.kg/ru/product/71fa46bcb072485c/aerogril-tefal-easy-fry-compact-ey145810-cernyj/opinions/
+  aliases:
+  - EY145810
+- kind: product
+  label: Tefal Easy Fry Steam & Grill (FW2018)
+  identity:
+    brand: tefal
+    series: fw2018
+  aliases:
+  - FW2018
+- kind: product
+  label: Tefal Dual Easy Fry XXL (EY942B)
+  identity:
+    brand: tefal
+    series: ey942b
+  aliases:
+  - EY942B
+- kind: product
+  label: Arzum Airtasty XL (AR2074-G)
+  identity:
+    brand: arzum
+    series: ar2074-g
+  aliases:
+  - AR2074-G
+  - AR2074-B
+- kind: product
+  label: Arzum Airtasty Smart 7.5L (AR2076-S)
+  identity:
+    brand: arzum
+    series: ar2076-s
+  attributes:
+    capacity_l:
+      value: '7.5'
+      source: https://www.sikayetvar.com/arzum/arzum-airfryer-kek-pisirme-sorunu-ve-degisim-talebi
+  aliases:
+  - AR2076-S
+- kind: product
+  label: Arzum Airtasty X Large
+  identity:
+    brand: arzum
+    series: airtasty x large
+- kind: product
+  label: Fakir Chefry Mono
+  identity:
+    brand: fakir
+    series: chefry mono
+- kind: product
+  label: Fakir Airfry
+  identity:
+    brand: fakir
+    series: airfry

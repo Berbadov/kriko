@@ -1,0 +1,92 @@
+lineup:
+- MacBook Air M1
+- MacBook Air M2
+- MacBook Air M3
+- MacBook Pro 14 M1
+- MacBook Pro 14 M2
+- MacBook Pro 14 M3
+- MacBook Pro 16 M1
+- MacBook Pro 16 M2
+- MacBook Pro 16 M3
+- ThinkPad T14
+- ThinkPad T16
+- ThinkPad X1 Carbon
+- ThinkPad E14
+- IdeaPad Slim 3
+- IdeaPad 5
+- IdeaPad Gaming 3
+- Zenbook 14 OLED
+- Zenbook 13 OLED
+- Zenbook 16
+- ROG Strix G16
+- ROG Zephyrus G14
+- ROG TUF Gaming F15
+- HP Pavilion 15
+- HP Envy x360
+- HP Spectre x360
+- HP Victus 15
+- Dell XPS 13
+- Dell XPS 14
+- Dell XPS 15
+- Monster Abra A5
+- Monster Abra A7
+- Monster Tulpar T7
+- Monster Semruk
+- Casper Nirvana C550
+- Casper Excalibur G770
+- Casper VIA
+covered:
+- casper nirvana c550
+- hp envy x360
+- hp pavilion 15
+- ideapad 5i
+- macbook air m2
+- monster abra a7
+- product brand apple series macbook air m2
+- product brand asus series zenbook 13 oled
+- product brand casper series nirvana c550
+- product brand dell series xps 13
+- product brand hp series envy x360
+- product brand hp series pavilion 15
+- product brand lenovo series ideapad 5i
+- product brand lenovo series thinkpad t14
+- product brand monster series abra a7
+- thinkpad t14
+- xps 13
+- zenbook 13 oled
+uncovered:
+- MacBook Air M1
+- MacBook Air M3
+- MacBook Pro 14 M1
+- MacBook Pro 14 M2
+- MacBook Pro 14 M3
+- MacBook Pro 16 M1
+- MacBook Pro 16 M2
+- MacBook Pro 16 M3
+- ThinkPad T16
+- ThinkPad X1 Carbon
+- ThinkPad E14
+- IdeaPad Slim 3
+- IdeaPad Gaming 3
+- Zenbook 14 OLED
+- Zenbook 16
+- ROG Strix G16
+- ROG Zephyrus G14
+- ROG TUF Gaming F15
+- HP Spectre x360
+- HP Victus 15
+- Dell XPS 14
+- Dell XPS 15
+- Monster Abra A5
+- Monster Tulpar T7
+- Monster Semruk
+- Casper Excalibur G770
+- Casper VIA
+note: Evidence was found for nine subjects; the remaining models in the lineup are
+  named but lack sourced claims in this run.
+out_of_scope:
+- laptop bags
+- external monitors
+- docking stations
+- mouse devices
+quarantined: []

@@ -1,0 +1,1455 @@
+# Claims — what is known to go wrong, each with the page it came from and the quote
+# that was read there. A claim without both is not in this file.
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      series: qicycle-ef1
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: battery (36V, 5.8Ah, 208.8Wh, 42V max)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: EF1 replacement battery is scarce on the market and expensive
+      body: A Spanish battery-repair seller states the EF1 battery is scarce on the market and a reasonably
+        priced spare is hard to find, so they offer cell-level replacement instead.
+      advice: Budget for the possibility that a replacement battery is hard to source and costly; check
+        availability in your market before relying on this bike long-term.
+    tr:
+      title: EF1 yedek bataryası piyasada kıt ve pahalı
+      body: İspanyol bir batarya tamir satıcısı, EF1 bataryasının piyasada kıt olduğunu ve makul fiyatlı
+        bir yedeğin bulunmasının zor olduğunu belirtiyor, bu yüzden hücre düzeyinde değişim sunuyorlar.
+      advice: Yedek bataryanın tedarikinin zor ve maliyetli olma ihtimaline bütçe ayırın; bu bisiklete
+        uzun vadeli güvenmeden önce pazarınızdaki bulunabilirliği kontrol edin.
+  evidence:
+  - url: https://www.repararbaterias.es/producto/bateria-xiaomi-qicycle/
+    quote: Sin embargo, debido a su escasez en el mercado, encontrar un repuesto a un precio razonable
+      puede ser difícil.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:57:17+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      series: himo-c20
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: battery (12S4P 21700 pack)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Himo C20 battery cells report unbalanced, dropping capacity after charge
+      body: An owner reports voltage sag from 40V to 35V under load; the reply diagnoses unbalanced cells
+        that withhold full capacity.
+      advice: If a C20 battery reads well below ~40V right after a full charge, the pack is likely unbalanced
+        and will not deliver rated range; expect reduced capacity and possible early replacement.
+    tr:
+      title: Himo C20 batarya hücreleri dengesiz rapor ediliyor, şarjdan sonra kapasite düşüyor
+      body: Bir sahip yük altında voltajın 40V'tan 35V'a düştüğünü bildiriyor; yanıt, tam kapasiteyi tutmayan
+        dengesiz hücreler teşhisi koyuyor.
+      advice: Bir C20 bataryası tam şarjdan hemen sonra ~40V'un çok altında okunuyorsa, paket büyük olasılıkla
+        dengesizdir ve nominal menzili sağlamayacaktır; azalmış kapasite ve olası erken değişim bekleyin.
+  evidence:
+  - url: https://electrotransport.ru/index.php?PHPSESSID=qgcvae3n1lo443kt2rrmmoh6sf&topic=67739.0
+    quote: То, что она у вас после заряда всего 40В - это означает, что ячейки разбалансированы. Это плохо
+      и батка не выдаёт вам полную ёмкость.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:56:43+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Xiaomi
+      series: Hifree 5th Wheel
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: front wheel / fork quick-release retention
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Hifree E-Cycle front wheel came out of the fork during use
+      body: A Hifree E-Cycle (a sibling model in the same Xiaomi Hifree line) lost its front wheel from
+        the fork during use about a week after purchase, which the owner describes as a serious safety
+        risk. Note this is the E-Cycle model, not the 5th Wheel, so it is adjacent rather than identical.
+      advice: If you buy any Hifree folding bike, check the front-wheel retention before every ride; a
+        wheel detaching at speed is a serious hazard. This specific report is on the E-Cycle model.
+    tr:
+      title: Hifree E-Cycle ön tekeri kullanım sırasında çataldan çıktı
+      body: Aynı Xiaomi Hifree serisindeki kardeş bir model olan bir Hifree E-Cycle, satın alımdan yaklaşık
+        bir hafta sonra kullanım sırasında ön tekerini çataldan kaybetti; sahip bunu ciddi bir güvenlik
+        riski olarak tanımlıyor. Bunun 5th Wheel değil E-Cycle modeli olduğunu unutmayın, yani birebir
+        aynı değil benzerdir.
+      advice: Herhangi bir Hifree katlanır bisiklet alırsanız, her sürüşten önce ön tekerlek tutuculuğunu
+        kontrol edin; hızda ayrılan bir tekerlek ciddi bir tehlikedir. Bu özel rapor E-Cycle modeliyle
+        ilgilidir.
+  evidence:
+  - url: https://www.sikayetvar.com/mieko/hifree
+    quote: Xiaomi markalı Hifree E-Cycle elektrikli bisikleti satın aldıktan yaklaşık 1 hafta sonra, kullanım
+      esnasında ön tekeri y...erinden çıktı.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:59:04+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      series: qicycle-ef1
+  kind: known_issue
+  domain: commercial
+  severity: low
+  consequence: ''
+  detection: ''
+  component: battery (36V 5800mAh, EU version)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: EU-version replacement battery exists (36V 5800mAh) but requires checking charging port type
+      body: A UK seller offers a 'genuine' EU-version replacement battery (36V 5800mAh) for the EF1, but
+        instructs buyers to verify their charging port type before ordering — indicating there are variants.
+      advice: If replacing the battery, confirm your charging port/connector type matches the replacement;
+        not all EF1 batteries are interchangeable.
+    tr:
+      title: AB versiyonu yedek batarya mevcut (36V 5800mAh) ancak şarj portu tipinin kontrol edilmesini
+        gerektiriyor
+      body: Bir Birleşik Krallık satıcısı EF1 için 'orijinal' AB versiyonu yedek batarya (36V 5800mAh)
+        sunuyor, ancak alıcılara sipariş vermeden önce şarj portu tiplerini doğrulamalarını söylüyor —
+        bu da varyantlar olduğunu gösteriyor.
+      advice: Bataryayı değiştirirken, şarj portu/bağlantı tipinizin yedekle eşleştiğini doğrulayın; tüm
+        EF1 bataryaları birbiriyle değiştirilebilir değildir.
+  evidence:
+  - url: https://besbike.co.uk/product/genuine-xiaomi-qicycle-ef1-electric-folding-bike-battery-eu/
+    quote: Electric bike battery pack with 36V voltage and 5800mAh capacity for Xiaomi Qicycle EF1 model
+      electric bicycles
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:59:41+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Xiaomi
+      series: Himo C26
+  kind: known_issue
+  domain: electrical
+  severity: low
+  consequence: ''
+  detection: ''
+  component: battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Himo C26 uses a 48V TFL48V10AH battery with only a 1-year warranty
+      body: Identifies the battery as a 48V Zheijang Tianhong lithium unit, model TFL48V10AH, 480 Wh,
+        and notes the battery carries only a 1-year warranty while the bike has 2 years.
+      advice: The battery (the most expensive and safety-critical part) is warranted for only one year;
+        budget for a possible out-of-warranty battery replacement and confirm a genuine replacement is
+        obtainable in TR/EU.
+    tr:
+      title: Himo C26 yalnızca 1 yıl garantili 48V TFL48V10AH batarya kullanıyor
+      body: Bataryayı 48V Zheijang Tianhong lityum ünite, model TFL48V10AH, 480 Wh olarak tanımlıyor ve
+        bataryanın yalnızca 1 yıl garantisi olduğunu, bisikletin ise 2 yıl garantisi olduğunu belirtiyor.
+      advice: Batarya (en pahalı ve güvenlik açısından kritik parça) yalnızca bir yıl garantilidir; olası
+        garanti dışı batarya değişimi için bütçe ayırın ve TR/AB'de orijinal bir yedeğin temin edilebildiğini
+        doğrulayın.
+  evidence:
+  - url: https://moottori.fi/uutinen/sahkopyoran-koeajo-himo-c26-himottavan-edullinen-sahkopyora/
+    quote: Zheijang Tianhong Litium Battery – TFL48V10AH, 480 Wh.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:57:39+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Xiaomi
+      series: Mi Electric Bike
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: Battery (batarya) on Xiaomi Mi Himo Z20
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Turkish owner reports: Xiaomi Mi Himo Z20 battery fails to charge and self-discharges'
+      body: A Turkish owner on Şikayetvar reports the Xiaomi Mi Himo Z20 battery stopped charging suddenly.
+        The warranty service said there was nothing wrong, but testing with another charger on the same
+        bike model showed the bike had a contact issue. Another complaint on the same platform says the
+        battery drains itself even when the bike is off and unused.
+      advice: If you own a Himo Z20, test with a known-good charger and check the charging contact/connector
+        before assuming the battery itself is dead. Turkish warranty service may not acknowledge the issue,
+        so document everything.
+    tr:
+      title: 'Türk sahibi bildiriyor: Xiaomi Mi Himo Z20 bataryası şarj olmuyor ve kendiliğinden deşarj
+        oluyor'
+      body: Şikayetvar'da bir Türk sahibi, Xiaomi Mi Himo Z20 bataryasının aniden şarj olmayı bıraktığını
+        bildiriyor. Garanti servisi sorun olmadığını söyledi, ancak aynı bisiklet modelinde başka bir
+        şarj cihazıyla test edildiğinde bisikletin bir temas sorunu olduğu görüldü. Aynı platformdaki
+        başka bir şikayet, bisiklet kapalı ve kullanılmıyorken bile bataryanın kendiliğinden boşaldığını
+        söylüyor.
+      advice: Bir Himo Z20'niz varsa, bataryanın kendisinin ölü olduğunu varsaymadan önce bilinen iyi
+        bir şarj cihazıyla test edin ve şarj temasını/bağlantısını kontrol edin. Türk garanti servisi
+        sorunu kabul etmeyebilir, bu yüzden her şeyi belgeleyin.
+  evidence:
+  - url: https://www.sikayetvar.com/xiaomi/elektrikli-bisiklet/sarj-olmuyor
+    quote: Media Markt'tan Xiaomi Mi himo z20 bisiklet aldım. Bir anda bisikletin bataryası şarj olmamaya
+      başladı. Garantiye gönder...dik bir şeyi yok dediler. Media Markt'ta denedik olmadı. Sorun şarjda
+      sanmıştım ama bisiklette bir temassızlık var ve şarjla aynı model bisiklette denedik şarj oldu.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T12:00:02+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Xiaomi
+      series: Mi Electric Bike
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: battery charger (model SLS-4202, 36V/42V)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'EU Safety Gate recall SR/02322/26: Xiaomi e-bike battery charger (SLS-4202) carries electric-shock
+        risk'
+      body: 'Official EU Safety Gate alert SR/02322/26, notified by Denmark, published 21 Aug 2026, product
+        of China. The charger marketed for Xiaomi e-scooter/e-bike fails Low Voltage Directive creepage-distance
+        requirements, so a user could touch live parts and get an electric shock. Caveat: this is a third-party
+        ''Power Charger'' (SLS-4202) sold for Xiaomi e-bikes, not confirmed as the OEM Mi Electric Bike
+        charger, so a buyer should match the exact model/barcode before assuming their unit is affected.'
+      advice: If you own a 36V/42V charger labelled SLS-4202 sold for a Xiaomi e-bike, stop using it and
+        check the EU Safety Gate record; the risk is electric shock from inadequate internal insulation.
+    tr:
+      title: 'AB Safety Gate geri çağırma SR/02322/26: Xiaomi e-bike batarya şarj cihazı (SLS-4202) elektrik
+        çarpması riski taşıyor'
+      body: 'Danimarka tarafından bildirilen, 21 Ağu 2026 tarihinde yayımlanan resmi AB Safety Gate uyarısı
+        SR/02322/26, ürün menşei Çin. Xiaomi e-scooter/e-bike için pazarlanan şarj cihazı, Alçak Gerilim
+        Direktifi kaçak akım mesafesi gerekliliklerini karşılamıyor, bu nedenle bir kullanıcı canlı parçalara
+        dokunabilir ve elektrik çarpmasına maruz kalabilir. Uyarı: bu, Xiaomi e-bike''lar için satılan
+        üçüncü taraf bir ''Power Charger'' (SLS-4202) olup, OEM Mi Electric Bike şarj cihazı olduğu doğrulanmamıştır,
+        bu nedenle bir alıcı, kendi ünitesinin etkilendiğini varsaymadan önce tam model/barkodu eşleştirmelidir.'
+      advice: Xiaomi e-bike için satılan SLS-4202 etiketli 36V/42V şarj cihazına sahipseniz, kullanmayı
+        bırakın ve AB Safety Gate kaydını kontrol edin; risk, yetersiz iç yalıtımdan kaynaklanan elektrik
+        çarpmasıdır.
+  evidence:
+  - url: https://recalleurope.com/alert/power-charger-sr-02322-26/
+    quote: Battery charger for Xiaomi Electric Scooter E-Bike. Lithium battery with adapter kit, 36V 42V.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:58:20+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      series: himo-z20
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: motor controller / wire harness
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Himo Z20 motor-controller wiring failure causes E10 communication error
+      body: Owner thread from seed 'Xiaomi Himo Z20 Bafang motor controller error'.
+      advice: An owner who replaced the motor on a Himo Z20 found the original wiring harness and controller
+        produced an E10 communication error, forcing a near-total parts replacement. Controller/harness
+        faults on this model can cascade into expensive full-system swaps.
+    tr:
+      title: Himo Z20 motor denetleyici kablolama arızası E10 iletişim hatasına neden oluyor
+      body: '''Xiaomi Himo Z20 Bafang motor controller error'' tohumundan sahip başlığı.'
+      advice: Himo Z20'de motoru değiştiren bir sahip, orijinal kablo demetinin ve denetleyicinin E10
+        iletişim hatası ürettiğini, bunun da neredeyse tamamen parça değişimini zorunlu kıldığını buldu.
+        Bu modelde denetleyici/kablo demeti arızaları, pahalı tam sistem değişimlerine dönüşebilir.
+  evidence:
+  - url: https://ebikesforum.com/threads/bafang-lights-with-ebikeling-controller.4580/
+    quote: I will just end up with another E10 communication error when trying to hook it up.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:55:56+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      series: qicycle-ef1
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: battery (36V 5.8Ah, repairable to 7Ah)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Spanish market has a repair service specifically for dead or non-charging EF1/EF2 batteries
+      body: A Spanish repair listing (Wallapop) offers battery pack replacement for EF1/EF2, explicitly
+        targeting 'dead batteries or without charge' — evidence that battery failure is common enough
+        to sustain a repair market.
+      advice: Battery failure is a known, widespread issue; repair services exist in some markets (Spain)
+        but are not official Xiaomi channels. Verify the repairer's credentials before paying.
+    tr:
+      title: İspanya pazarında özellikle ölü veya şarj olmayan EF1/EF2 bataryaları için bir onarım hizmeti
+        var
+      body: Bir İspanyol onarım ilanı (Wallapop), EF1/EF2 için batarya paketi değişimi sunuyor ve açıkça
+        'ölü bataryalar veya şarjsız' olanları hedefliyor — batarya arızasının bir onarım pazarını ayakta
+        tutacak kadar yaygın olduğunun kanıtı.
+      advice: Batarya arızası bilinen, yaygın bir sorundur; onarım hizmetleri bazı pazarlarda (İspanya)
+        mevcuttur ancak resmi Xiaomi kanalları değildir. Ödeme yapmadan önce onarımcının kimlik bilgilerini
+        doğrulayın.
+  evidence:
+  - url: https://www.wallapop.com/item/bateria-xiaomi-qicycle-ef1-ef2-reparacion-1289310849
+    quote: Restauro tu batería cambiando el pack completo por celdas nuevas de primeras marcas (Samsung,
+      LG...), dejándola 100% funcional y con más capacidad 7Ah 20A
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:59:41+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Xiaomi
+      series: Hifree 5th Wheel
+  kind: known_issue
+  domain: electrical
+  severity: low
+  consequence: ''
+  detection: ''
+  component: 48V 10.4Ah removable lithium-ion battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Hifree 5th Wheel uses a removable 48V 10.4Ah lithium-ion battery
+      body: The Turkish distributor Mieko's own product page identifies the battery as a removable 48V
+        10.4Ah lithium-ion pack (product code EB006). This anchors the battery component for the 5th Wheel
+        line.
+      advice: This is the concrete battery spec to check against any recall or replacement claim; the
+        owner complaint above shows service struggled to supply a matching pack.
+    tr:
+      title: Hifree 5th Wheel çıkarılabilir 48V 10.4Ah lityum-iyon batarya kullanıyor
+      body: Türk distribütör Mieko'nun kendi ürün sayfası, bataryayı çıkarılabilir 48V 10.4Ah lityum-iyon
+        paket (ürün kodu EB006) olarak tanımlıyor. Bu, 5th Wheel serisi için batarya bileşenini sabitliyor.
+      advice: Herhangi bir geri çağırma veya değişim iddiasına karşı kontrol edilecek somut batarya spesifikasyonu
+        budur; yukarıdaki sahip şikayeti, servisin eşleşen bir paket tedarik etmekte zorlandığını gösteriyor.
+  evidence:
+  - url: https://mieko.com.tr/hifree-5th-whell-elektrikli-bisiklet-power-trail
+    quote: 'Batarya
+
+
+      48V 10.4Ah lityum iyon batarya,
+
+      çıkarılabilir ve taşınabilir.'
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:56:13+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      series: qicycle-ef1
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: battery (36V 5.8Ah lithium-ion, removable, in frame)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: EF1 battery stops charging and no replacement battery or repair is available
+      body: An owner reports the EF1's battery stopped charging and that no repair shop or replacement
+        battery can be found, making the bike effectively disposable since it is too heavy to ride unassisted.
+      advice: Before buying, confirm a replacement battery or repair path exists in your market; if the
+        battery dies, the bike may be unusable.
+    tr:
+      title: EF1 bataryası şarj olmayı durduruyor ve yedek batarya veya onarım mevcut değil
+      body: Bir sahip, EF1'in bataryasının şarj olmayı durdurduğunu ve hiçbir onarım atölyesi veya yedek
+        batarya bulunamadığını bildiriyor, bu da bisikleti fiilen kullanılamaz hale getiriyor çünkü desteksiz
+        sürmek için çok ağır.
+      advice: Satın almadan önce, pazarınızda bir yedek batarya veya onarım yolu olduğunu doğrulayın;
+        batarya ölürse bisiklet kullanılamaz hale gelebilir.
+  evidence:
+  - url: https://www.reclameaqui.com.br/keplar-network/bicicleta-assistencia_smQIHY20Yf43O4RP/
+    quote: A bateria da mesma apresentou problemas, não carregando mais. Está sendo completamente impossível
+      achar qualquer estabelecimento que faça reparo ou venda uma bateria nova para a bicicleta, tornando
+      o produto descartável
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:57:17+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Xiaomi
+      series: Hifree 5th Wheel
+  kind: known_issue
+  domain: electrical
+  severity: low
+  consequence: ''
+  detection: ''
+  component: battery (48V 10.4Ah lithium-ion)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: HiFree 5TH Whell Power Trail carries a 48V 10.4Ah removable lithium-ion battery
+      body: 'From the manufacturer/distributor Mieko''s own product page. This anchors the concrete battery
+        part for the 5TH Whell Power Trail: a 48V 10.4Ah removable lithium-ion battery, 4-5 hour charge
+        time.'
+      advice: This identifies the specific battery spec a buyer should check when buying a replacement
+        or verifying a charger; the 48V rating matters because the EU charger recall below does not apply
+        to it.
+    tr:
+      title: HiFree 5TH Whell Power Trail 48V 10.4Ah çıkarılabilir lityum-iyon batarya taşıyor
+      body: 'Üretici/distribütör Mieko''nun kendi ürün sayfasından. Bu, 5TH Whell Power Trail için somut
+        batarya parçasını sabitliyor: 48V 10.4Ah çıkarılabilir lityum-iyon batarya, 4-5 saat şarj süresi.'
+      advice: Bu, bir alıcının yedek satın alırken veya bir şarj cihazını doğrularken kontrol etmesi gereken
+        belirli batarya spesifikasyonunu tanımlar; 48V değeri önemlidir çünkü aşağıdaki AB şarj cihazı
+        geri çağırması bunun için geçerli değildir.
+  evidence:
+  - url: https://mieko.com.tr/hifree-5th-whell-elektrikli-bisiklet-power-trail
+    quote: 'Batarya
+
+
+      48V 10.4Ah lityum iyon batarya,
+
+      çıkarılabilir ve taşınabilir.'
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:56:13+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Xiaomi
+      series: Himo C26
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: display/controller
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Himo C26 display error and freeze after about 2 months
+      body: The owner says the bike was fine until after 2 months it stopped working, gave an error and
+        the display froze; it broke after 2 months of non-intensive use. Corroborates the electrical/controller
+        failure theme.
+      advice: Treat the display/controller as a known early-failure point; check whether the seller or
+        importer provides a repair path in TR/EU before purchase.
+    tr:
+      title: Himo C26 ekran hatası ve yaklaşık 2 ay sonra donma
+      body: Sahibi, bisikletin 2 ay sonra çalışmayı durdurana kadar sorunsuz olduğunu, bir hata verdiğini
+        ve ekranın donduğunu söylüyor; yoğun olmayan 2 aylık kullanımdan sonra bozuldu. Elektrik/kontrolcü
+        arızası temasını destekliyor.
+      advice: Ekranı/kontrolcüyü bilinen bir erken arıza noktası olarak değerlendirin; satın almadan önce
+        satıcının veya ithalatçının TR/AB'de bir onarım yolu sunup sunmadığını kontrol edin.
+  evidence:
+  - url: https://hotline.ua/ua/sport-elektrovelosipedy/xiaomi-himo-c26-white/?tab=reviews
+    quote: Сам велосипед нормальный, был, пока через 2 месяца не перестал работать, выдал ошибку и завис
+      дисплей.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:57:39+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      series: qicycle-ef1
+  kind: known_issue
+  domain: commercial
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: battery (36V 5.8Ah)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Battery replacement scarcity acknowledged by Spanish repair shop; €250 and out of stock
+      body: A Spanish battery repair shop lists the EF1 battery at €250, currently out of stock, and explicitly
+        notes market scarcity makes finding a reasonably priced replacement difficult.
+      advice: Replacement batteries are scarce and expensive (€250+); factor this into the total cost
+        of ownership. Verify availability before purchase.
+    tr:
+      title: İspanyol tamir atölyesi tarafından pil değişimi kıtlığı kabul edildi; €250 ve stokta yok
+      body: Bir İspanyol pil tamir atölyesi EF1 pilini €250 olarak listeliyor, şu anda stokta yok ve piyasa
+        kıtlığının makul fiyatlı bir yedek bulmayı zorlaştırdığını açıkça belirtiyor.
+      advice: Yedek piller kıt ve pahalı (€250+); bunu toplam sahip olma maliyetine dahil edin. Satın
+        almadan önce stok durumunu doğrulayın.
+  evidence:
+  - url: https://www.repararbaterias.es/producto/bateria-xiaomi-qicycle/
+    quote: Sin embargo, debido a su escasez en el mercado, encontrar un repuesto a un precio razonable
+      puede ser difícil
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:57:17+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Xiaomi
+      series: Himo T1
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: instrument panel (仪表) / undervoltage protection circuit
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Himo T1 early-batch instrument panel undervoltage threshold causes sudden power cutout while
+        riding
+      body: A Chinese owner (smzdm) reports that early production batches of the T1 had the undervoltage
+        protection threshold set too high in the instrument panel firmware, so when the throttle is twisted
+        the battery's instantaneous voltage dips and the controller cuts all power mid-ride. The manufacturer's
+        fix was a replacement instrument panel with a lower threshold. This is a motor-controller/battery-management
+        defect that causes sudden loss of propulsion while riding, which is dangerous in traffic.
+      advice: If buying a used T1, ask whether the instrument panel was replaced under this issue; if
+        riding one, expect sudden power cutouts when battery is not full. Budget for a replacement instrument
+        panel if not already fitted.
+    tr:
+      title: Himo T1 erken parti gösterge paneli düşük voltaj eşiği sürüş sırasında ani güç kesintisine
+        neden oluyor
+      body: Bir Çinli sahip (smzdm), T1'in erken üretim partilerinde gösterge paneli yazılımında düşük
+        voltaj koruma eşiğinin çok yüksek ayarlandığını, bu nedenle gaz verildiğinde pilin anlık voltajının
+        düştüğünü ve kontrolcünün sürüş ortasında tüm gücü kestiğini bildiriyor. Üreticinin düzeltmesi,
+        daha düşük eşikli bir gösterge paneli değişimiydi. Bu, sürüş sırasında ani itiş kaybına neden
+        olan ve trafikte tehlikeli olan bir motor-kontrolcü/pil yönetimi kusurudur.
+      advice: İkinci el bir T1 alıyorsanız, gösterge panelinin bu sorun kapsamında değiştirilip değiştirilmediğini
+        sorun; böyle bir bisiklet kullanıyorsanız, pil dolu değilken ani güç kesintileri bekleyin. Henüz
+        takılmadıysa yedek gösterge paneli için bütçe ayırın.
+  evidence:
+  - url: https://post.smzdm.com/p/a4wkr958/pic_2/
+    quote: 原因在于早先一些批次的T1的仪表设置的欠压保护限值比较高，当扭动电门时电池瞬时电压不足，触发欠压保护自动断电了。
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:58:20+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      series: qicycle-ef1
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: battery / electrical system
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: EF1 loses power within 2 weeks; battery reseating and cable checks do not help
+      body: 'Korean owner review (Aug 2022): power failure within 2 weeks of purchase; battery was fully
+        charged, reseated, cables visually inspected — none helped. Service center experience was poor.'
+      advice: Early electrical failure is documented; if the bike loses power, basic troubleshooting (battery
+        reseat, cable check) may not resolve it, and service support is inconsistent across regions.
+    tr:
+      title: EF1 2 hafta içinde güç kaybediyor; pili yeniden yerleştirme ve kablo kontrolleri yardımcı
+        olmuyor
+      body: 'Koreli sahip incelemesi (Ağustos 2022): satın almadan sonraki 2 hafta içinde güç arızası;
+        pil tamamen şarj edildi, yeniden yerleştirildi, kablolar gözle kontrol edildi — hiçbiri yardımcı
+        olmadı. Servis merkezi deneyimi kötüydü.'
+      advice: Erken elektrik arızası belgelenmiştir; bisiklet güç kaybederse, temel sorun giderme (pili
+        yeniden yerleştirme, kablo kontrolü) bunu çözmeyebilir ve servis desteği bölgeler arasında tutarsızdır.
+  evidence:
+  - url: https://prod.danawa.com/info/?pcode=16462034&keyword=%EC%83%A4%EC%98%A4%EB%AF%B8%EC%9E%90%EC%A0%84%EA%B1%B0&cate=13238802&bookmark=cm_opinion&companyReviewYN=Y
+    quote: 구입한지 2주만에 전원이 안들어 온다.1. 배터리 확인 충전 만땅이다2. 배터리를 다시껐다 끼운다3. 케이블이 이상없나 육안검사를 한다.다 도움이 안된다
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:59:41+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Xiaomi
+      series: Himo T1
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: Li-ion battery pack (48V, 14Ah/28Ah)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Himo T1 battery capacity far below claimed range and degrades sharply in cold weather
+      body: An owner measured 42km per battery in August versus the claimed 60km, and under 20km at -5°C.
+        The battery degrades faster than expected and range collapses in winter. For a buyer this means
+        the advertised range is not achievable in practice, especially in cold climates like Turkey's
+        winters.
+      advice: Expect roughly 70% of claimed range in warm weather and under half in winter. If range matters,
+        consider the 28Ah variant or a different model.
+    tr:
+      title: Himo T1 pil kapasitesi iddia edilen menzilin çok altında ve soğuk havada hızla düşüyor
+      body: Bir sahip Ağustos'ta pil başına 42 km ölçtü, iddia edilen 60 km'ye karşı ve -5°C'de 20 km'nin
+        altında. Pil beklenenden daha hızlı düşüyor ve menzil kışın çöküyor. Bir alıcı için bu, reklamı
+        yapılan menzilin pratikte, özellikle Türkiye'nin kışları gibi soğuk iklimlerde ulaşılabilir olmadığı
+        anlamına gelir.
+      advice: Sıcak havada iddia edilen menzilin yaklaşık %70'ini ve kışın yarısından azını bekleyin.
+        Menzil önemliyse, 28Ah varyantını veya farklı bir modeli düşünün.
+  evidence:
+  - url: https://post.smzdm.com/p/a4wkr958/pic_2/
+    quote: 电池：在8月份有意做了骑行测试，每块电池只能骑行42KM，超出时速度变10KM以下并越来越慢；12月北京温度-5度，电池只能骑行20KM不到，衰减超出想象；
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:58:20+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      series: qicycle-ef1
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: battery (36V 5.8Ah lithium-ion)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: EF1 battery confirmed dead after new charger fails to fix charging issue
+      body: 'Vietnamese owner thread: battery intermittently failed to charge (red light blinking), then
+        stopped charging entirely; buying a new charger did not help, confirming the battery itself is
+        the failed part.'
+      advice: If the EF1 battery stops charging, a new charger will not fix it — the battery pack itself
+        is failing. Budget for a full battery replacement, which is scarce and expensive (€250+ where
+        available).
+    tr:
+      title: Yeni şarj cihazı şarj sorununu çözemedikten sonra EF1 pilinin öldüğü doğrulandı
+      body: 'Vietnamlı sahip başlığı: pil aralıklı olarak şarj olmuyordu (kırmızı ışık yanıp sönüyordu),
+        sonra tamamen şarj olmayı durdurdu; yeni bir şarj cihazı satın almak yardımcı olmadı ve pilin
+        kendisinin arızalı parça olduğu doğrulandı.'
+      advice: EF1 pili şarj olmayı durdurursa, yeni bir şarj cihazı bunu düzeltmez — pil paketinin kendisi
+        arızalanıyor. Kıt ve pahalı olan (mevcut olduğunda €250+) tam bir pil değişimi için bütçe ayırın.
+  evidence:
+  - url: https://tinhte.vn/thread/pin-sac-xiaomi-qicycle-ef1.3114032/
+    quote: mình đã mua sạc mới và thử nhưng vẫn không được --> lỗi pin rồi
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:59:41+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      series: himo-c20
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: battery and charger
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Himo C20 battery stops charging at 31.1V after long storage, shows E002
+      body: A 2020 C20 stored 3-4 years will not charge past 31.1V; the display then shows error E002.
+      advice: A C20 battery left unused for years may fail to charge properly and trigger error E002;
+        the pack and charger should be checked before relying on the bike.
+    tr:
+      title: Himo C20 bataryası uzun süreli depolamadan sonra 31.1V'da şarj olmayı durduruyor, E002 gösteriyor
+      body: 3-4 yıl depolanan bir 2020 C20, 31.1V'un üzerine şarj olmuyor; ekran ardından E002 hatasını
+        gösteriyor.
+      advice: Yıllarca kullanılmadan bırakılan bir C20 bataryası düzgün şarj olmayabilir ve E002 hatasını
+        tetikleyebilir; bisiklete güvenmeden önce paket ve şarj cihazı kontrol edilmelidir.
+  evidence:
+  - url: https://otvet.mail.ru/question/268116358?reply
+    quote: напряжение на выходе достигает 31,1 В, но дальше зарядка не идёт;
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:59:23+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Xiaomi
+      series: Himo T1
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: battery level gauge / power delivery system
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Himo T1 battery gauge is inaccurate and causes repeated mid-ride power loss
+      body: 'The owner describes the battery gauge as severely inaccurate: the last bar frequently triggers
+        power cutout, the bike loses propulsion while riding, and only brief re-engagement of the throttle
+        restores a few meters of movement. This is a recurring pattern tied to the undervoltage protection
+        issue and makes the bike unreliable and potentially dangerous in traffic.'
+      advice: Treat the battery gauge as unreliable; do not ride near what the gauge shows as empty. This
+        is a known systemic issue, not a one-off defect.
+    tr:
+      title: Himo T1 batarya göstergesi yanlış ve sürüş ortasında tekrarlanan güç kaybına neden oluyor
+      body: 'Sahibi, batarya göstergesini ciddi şekilde yanlış olarak tanımlıyor: son çubuk sıklıkla güç
+        kesintisini tetikliyor, bisiklet sürüş sırasında itiş gücünü kaybediyor ve yalnızca gazın kısa
+        süreli yeniden devreye alınması birkaç metre hareketi geri getiriyor. Bu, düşük voltaj koruması
+        sorununa bağlı tekrarlayan bir örüntüdür ve bisikleti güvenilmez ve trafikte potansiyel olarak
+        tehlikeli hale getirir.'
+      advice: Batarya göstergesini güvenilmez olarak değerlendirin; gösterge boş gösterdiğine yakın sürüş
+        yapmayın. Bu, tek seferlik bir kusur değil, bilinen sistemik bir sorundur.
+  evidence:
+  - url: https://post.smzdm.com/p/a4wkr958/pic_2/
+    quote: 严重虚表电量，最后一格动不动就断电，你知道吗，是断电，骑着骑着没动力了，然后你再扭几下才走几米，然后又没动力了。
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:58:20+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Xiaomi
+      series: Himo T1
+  kind: known_issue
+  domain: general
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: after-sales service / warranty support
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Himo T1 owners report no functional after-sales support from HIMO/Xiaomi
+      body: A Zhihu user reports a new unit that would not power on, no after-sales support, and being
+        told to troubleshoot with electrical tools themselves. Another user reports being denied returns
+        and told to self-inspect. This pattern suggests that if something goes wrong, the buyer may be
+        left without recourse.
+      advice: Before buying, verify whether the seller in your market (TR/EU) provides actual warranty
+        service. The manufacturer's own support appears unreliable based on owner reports.
+    tr:
+      title: Himo T1 sahipleri HIMO/Xiaomi'den işlevsel satış sonrası destek olmadığını bildiriyor
+      body: Bir Zhihu kullanıcısı, açılmayan yeni bir ünite, satış sonrası destek olmadığını ve elektrikli
+        aletlerle kendilerinin sorun gidermesi söylendiğini bildiriyor. Başka bir kullanıcı, iadelerin
+        reddedildiğini ve kendi kendine inceleme yapması söylendiğini bildiriyor. Bu örüntü, bir sorun
+        çıkarsa alıcının başvuru yolu olmadan bırakılabileceğini gösteriyor.
+      advice: Satın almadan önce, pazarınızdaki satıcının (TR/EU) gerçek garanti hizmeti sağlayıp sağlamadığını
+        doğrulayın. Üreticinin kendi desteği, sahip bildirimlerine göre güvenilmez görünüyor.
+  evidence:
+  - url: https://www.zhihu.com/question/321367362
+    quote: 垃圾中的垃圾，全新的东西就是坏的，电源无论如何也打不开，售后服务等于没有，客服只会让我用电工专业设备去自行排除故障，提交售后申请退货还显示订单不存在，也不让评论该产品，生平最糟心的购物体验，劝各位远离【喜摩】这个垃圾野鸡品牌。
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:58:20+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Xiaomi
+      series: Hifree 5th Wheel
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: battery charger (36V/42V)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'EU Safety Gate recall SR/02322/26: Xiaomi e-bike battery charger electric-shock risk (36V/42V)'
+      body: 'An EU Safety Gate alert (SR/02322/26, notified by Denmark, product from China) recalls a
+        power charger for Xiaomi e-scooter/e-bike batteries over inadequate creepage distances causing
+        electric-shock risk. Caveat: the recalled charger is rated 36V/42V, while the Hifree 5th Wheel
+        battery is 48V, so this specific alert likely does not cover the 5th Wheel charger — I could not
+        confirm a 5th Wheel-specific charger recall before the budget ran out.'
+      advice: There is an active EU recall on a Xiaomi e-bike charger for shock risk, but at 36V/42V it
+        does not match the 48V Hifree 5th Wheel. I could not confirm a charger recall specific to this
+        bike.
+    tr:
+      title: 'EU Safety Gate geri çağırma SR/02322/26: Xiaomi e-bisiklet batarya şarj cihazı elektrik
+        çarpması riski (36V/42V)'
+      body: 'Bir EU Safety Gate uyarısı (SR/02322/26, Danimarka tarafından bildirildi, ürün Çin''den)
+        yetersiz kaçak akım mesafeleri nedeniyle elektrik çarpması riski taşıyan Xiaomi e-scooter/e-bisiklet
+        bataryaları için bir güç şarj cihazını geri çağırıyor. Uyarı: geri çağrılan şarj cihazı 36V/42V
+        olarak derecelendirilmişken Hifree 5th Wheel bataryası 48V''dir, dolayısıyla bu spesifik uyarı
+        muhtemelen 5th Wheel şarj cihazını kapsamıyor — bütçe tükenmeden önce 5th Wheel''e özgü bir şarj
+        cihazı geri çağırmasını doğrulayamadım.'
+      advice: Xiaomi e-bisiklet şarj cihazı için çarpma riski nedeniyle aktif bir AB geri çağırması var,
+        ancak 36V/42V olarak 48V Hifree 5th Wheel ile eşleşmiyor. Bu bisiklete özgü bir şarj cihazı geri
+        çağırmasını doğrulayamadım.
+  evidence:
+  - url: https://recalleurope.com/es/alert/power-charger-sr-02322-26/
+    quote: Cargador de batería para Xiaomi Electric Scooter E-Bike. Batería de litio con kit adaptador,
+      36V 42V.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:56:13+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      series: himo-c20
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: battery lock
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Himo C20 battery lock disintegrates within three weeks of use
+      body: A buyer review reports the battery lock falls apart in the third week of use.
+      advice: The battery lock is a common early-failure point; if it fails the battery is not held securely
+        and may need a frame strap or replacement lock.
+    tr:
+      title: Himo C20 batarya kilidi kullanımdan sonraki üç hafta içinde dağılıyor
+      body: Bir alıcı incelemesi, batarya kilidinin kullanımın üçüncü haftasında parçalandığını bildiriyor.
+      advice: Batarya kilidi yaygın bir erken arıza noktasıdır; arızalanırsa batarya güvenli şekilde tutulmaz
+        ve bir kadro kayışı veya yedek kilit gerekebilir.
+  evidence:
+  - url: https://reviews.yandex.ru/product/xiaomi-himo-c20--619076861
+    quote: Отвратительные качество. Замок аккумулятора - разваливается на третью неделю эксплуатации (по
+      асфальту).
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:59:23+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Xiaomi
+      series: Himo T1
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: frame fasteners, chain, kickstand, pedal crank
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Himo T1 frame and chain rust severely within months of purchase
+      body: An owner reports widespread rust on screws and components, a fully rusted chain affecting
+        the rear wheel bearing, a bent pedal crank, and a broken kickstand within about a year. This indicates
+        poor corrosion protection and material quality, which shortens the bike's usable life and adds
+        replacement costs.
+      advice: Expect rust-related maintenance within the first year, especially in humid or wet climates.
+        Budget for chain replacement and rust treatment.
+    tr:
+      title: Himo T1 kadrosu ve zinciri satın almadan sonraki aylar içinde ciddi şekilde paslanıyor
+      body: Bir sahip, vidalarda ve bileşenlerde yaygın pas, arka tekerlek yatağını etkileyen tamamen
+        paslanmış bir zincir, bükülmüş bir pedal kolu ve yaklaşık bir yıl içinde kırılmış bir ayaklık
+        bildiriyor. Bu, zayıf korozyon koruması ve malzeme kalitesine işaret eder; bu da bisikletin kullanılabilir
+        ömrünü kısaltır ve değiştirme maliyetleri ekler.
+      advice: Özellikle nemli veya ıslak iklimlerde, ilk yıl içinde pasla ilgili bakım bekleyin. Zincir
+        değişimi ve pas işlemi için bütçe ayırın.
+  evidence:
+  - url: https://post.smzdm.com/p/a4wkr958/pic_2/
+    quote: 2021年4月，发现车上有很多螺丝和部件用的材料不怎么防锈，已经有很多地方发现了严重生锈，特别是链条，整条黄色的，都影响到后轮丝滑的轴承了，我很早就拆了。
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:58:20+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Xiaomi
+      series: Himo C26
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: motor controller
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Himo C26 torque/motor controller breaks down, per owner and seller
+      body: An owner reports the torque controller breaking down and the seller confirming it is typical
+        of Himo bikes with plenty of reports. This is the strongest motor-controller failure claim found.
+      advice: Before buying, confirm the controller is covered by a warranty longer than the common failure
+        window (reported around 6 months) and that a replacement controller is actually available in your
+        market.
+    tr:
+      title: Himo C26 tork/motor denetleyicisi bozuluyor, sahibi ve satıcıya göre
+      body: Bir sahip, tork denetleyicisinin bozulduğunu ve satıcının bunun Himo bisikletlerinde tipik
+        olduğunu, birçok rapor bulunduğunu doğruladığını bildiriyor. Bu, bulunan en güçlü motor denetleyicisi
+        arızası iddiasıdır.
+      advice: Satın almadan önce, denetleyicinin yaygın arıza penceresinden (yaklaşık 6 ay olarak bildirilmiştir)
+        daha uzun bir garanti kapsamında olduğunu ve pazarınızda gerçekten yedek bir denetleyicinin bulunabildiğini
+        doğrulayın.
+  evidence:
+  - url: https://arcus-www.amazon.ae/product-reviews/B08LNCK27G/ref=acr_dp_hist_4?ie=UTF8&filterByStar=four_star&reviewerType=all_reviews
+    quote: it is typical at Himo bikes, the torque controller breaks down, there are plenty of reports
+      present.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:57:39+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      series: himo-c20
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: battery lock / mounting tab
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Himo C20 battery lock tab breaks, battery can pop out over curbs
+      body: A review site warns the battery lock tab breaks and the battery can eject when riding over
+        curbs.
+      advice: The removable battery's locking tab is fragile; if it breaks the battery can detach mid-ride.
+        Owners patch it by strapping the battery to the frame.
+    tr:
+      title: Himo C20 batarya kilit tırnağı kırılıyor, batarya kaldırımların üzerinden geçerken dışarı
+        fırlayabiliyor
+      body: Bir inceleme sitesi, batarya kilit tırnağının kırıldığı ve kaldırımların üzerinden sürerken
+        bataryanın dışarı fırlayabileceği konusunda uyarıyor.
+      advice: Çıkarılabilir bataryanın kilit tırnağı kırılgandır; kırılırsa batarya sürüş sırasında ayrılabilir.
+        Sahipler bunu bataryayı çerçeveye bağlayarak geçici olarak düzeltiyor.
+  evidence:
+  - url: https://electropowerbikes.com/xiaomi-himo-c20/?share=jetpack-whatsapp
+    quote: Если прыгать с бордюров рано или поздно отломится язычок крепления у замка батареи и она начнет
+      при прыжках с бордюров выскакивать.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:56:43+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Xiaomi
+      series: Himo T1
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: battery charger (model SLS-4202, 36V/42V)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'EU Safety Gate recall SR/02322/26: Xiaomi e-bike charger electric shock risk'
+      body: 'This is an official EU Safety Gate recall for a Xiaomi e-bike/scooter battery charger with
+        an electric shock hazard. Caveat: the recalled charger is 36V/42V, while the Himo T1 uses a 48V
+        battery, so this specific recall may not cover the T1''s charger. However, it shows a pattern
+        of Xiaomi e-bike charger safety issues in the EU market.'
+      advice: Check the voltage and model number of your T1 charger against this recall. If you have a
+        36V/42V Xiaomi e-bike charger, stop using it immediately. For the T1's 48V charger, verify it
+        is not affected by any similar notice.
+    tr:
+      title: 'AB Safety Gate geri çağırma SR/02322/26: Xiaomi e-bisiklet şarj cihazı elektrik çarpması
+        riski'
+      body: 'Bu, elektrik çarpması tehlikesi olan bir Xiaomi e-bisiklet/scooter batarya şarj cihazı için
+        resmi bir AB Safety Gate geri çağırmasıdır. Uyarı: geri çağrılan şarj cihazı 36V/42V iken Himo
+        T1 48V batarya kullanır, bu nedenle bu özel geri çağırma T1''in şarj cihazını kapsamayabilir.
+        Ancak bu, AB pazarında Xiaomi e-bisiklet şarj cihazı güvenlik sorunlarının bir örüntüsünü gösterir.'
+      advice: T1 şarj cihazınızın voltajını ve model numarasını bu geri çağırmayla karşılaştırın. 36V/42V
+        bir Xiaomi e-bisiklet şarj cihazınız varsa kullanmayı hemen bırakın. T1'in 48V şarj cihazı için
+        benzer bir bildirimden etkilenmediğini doğrulayın.
+  evidence:
+  - url: https://recalleurope.com/alert/power-charger-sr-02322-26/
+    quote: The creepage distances between the primary and secondary circuits are inadequate. The user
+      could therefore touch accessible live parts and receive an electric shock.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:58:20+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Xiaomi
+      series: Mi Electric Bike
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: Battery charger (Power Charger, model SLS-4202)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'EU Safety Gate recall SR/02322/26: Xiaomi E-Bike charger (SLS-4202) electric shock risk'
+      body: 'The EU Safety Gate alert SR/02322/26 (notifying country: Denmark) recalls a charger sold
+        for Xiaomi Electric Scooter E-Bike. The risk is electric shock from inadequate creepage distances
+        between primary and secondary circuits. The charger is 36V/42V lithium with adapter kit. This
+        is a serious electrical safety issue for anyone using this charger.'
+      advice: If you own a Xiaomi E-Bike charger with model SLS-4202, stop using it immediately and contact
+        the retailer/importer for a replacement. The product was removed from online marketplace listings
+        as of 25/06/2026.
+    tr:
+      title: 'AB Safety Gate geri çağırma SR/02322/26: Xiaomi E-Bike şarj cihazı (SLS-4202) elektrik çarpması
+        riski'
+      body: 'AB Safety Gate uyarısı SR/02322/26 (bildirimde bulunan ülke: Danimarka), Xiaomi Electric
+        Scooter E-Bike için satılan bir şarj cihazını geri çağırıyor. Risk, birincil ve ikincil devreler
+        arasındaki yetersiz kaçak akım mesafelerinden kaynaklanan elektrik çarpmasıdır. Şarj cihazı adaptör
+        kitli 36V/42V lityumdur. Bu, bu şarj cihazını kullanan herkes için ciddi bir elektriksel güvenlik
+        sorunudur.'
+      advice: SLS-4202 modelinde bir Xiaomi E-Bike şarj cihazınız varsa kullanmayı hemen bırakın ve değişim
+        için perakendeciyi/ithalatçıyı arayın. Ürün 25/06/2026 itibarıyla çevrimiçi pazar yeri listelerinden
+        kaldırılmıştır.
+  evidence:
+  - url: https://recalleurope.com/alert/power-charger-sr-02322-26/
+    quote: The creepage distances between the primary and secondary circuits are inadequate. The user
+      could therefore touch accessible live parts and receive an electric shock. The product does not
+      comply with the requirements of the Low Voltage Directive.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:58:20+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      series: qicycle-ef1
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: battery (36V 5.8Ah lithium-ion)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Qicycle EF1 battery fails to charge; no replacement available, making the bike disposable
+      body: Owner complaint (Nov 2024, Brazil) reporting the battery stopped charging entirely and no
+        repair or replacement channel exists, making the bike unusable without electric assist.
+      advice: Before buying, verify a replacement battery is actually obtainable in your market; the EF1
+        is heavy (14.5kg) and impractical to pedal without assist. The battery is the single point of
+        failure with no official parts channel in several markets.
+    tr:
+      title: Qicycle EF1 batarya şarj olmuyor; yedek bulunamıyor, bu da bisikleti kullanılamaz hale getiriyor
+      body: 'Sahip şikayeti (Kasım 2024, Brezilya): batarya tamamen şarj olmayı bıraktı ve hiçbir onarım
+        veya değişim kanalı yok, bu da bisikleti elektrik desteği olmadan kullanılamaz hale getiriyor.'
+      advice: Satın almadan önce, pazarınızda yedek bir bataryanın gerçekten temin edilebildiğini doğrulayın;
+        EF1 ağırdır (14,5kg) ve destek olmadan pedal çevirmek pratik değildir. Batarya, birçok pazarda
+        resmi parça kanalı olmayan tek arıza noktasıdır.
+  evidence:
+  - url: https://www.reclameaqui.com.br/keplar-network/bicicleta-assistencia_smQIHY20Yf43O4RP/
+    quote: A bateria da mesma apresentou problemas, não carregando mais. Está sendo completamente impossível
+      achar qualquer estabelecimento que faça reparo ou venda uma bateria nova para a bicicleta, tornando
+      o produto descartável
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:57:17+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Xiaomi
+      series: Himo T1
+  kind: known_issue
+  domain: mechanical
+  severity: low
+  consequence: ''
+  detection: ''
+  component: pedal crank / bottom bracket assembly
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Himo T1 assembly defect: pedal crank misaligned, steering lock key stuck'
+      body: A formal complaint on Sina's Black Cat platform describes a factory assembly defect (misaligned
+        bottom bracket) causing the pedal crank to catch on the shell, plus a steering lock where the
+        key cannot be removed. The seller blamed shipping and offered no repair. This indicates quality-control
+        gaps at the factory.
+      advice: Inspect the bike thoroughly on delivery, especially pedal crank alignment and steering lock
+        function. Document defects immediately for warranty claims.
+    tr:
+      title: 'Himo T1 montaj hatası: pedal kolu yanlış hizalanmış, direksiyon kilidi anahtarı sıkışmış'
+      body: Sina'nın Black Cat platformundaki resmi bir şikayet, pedal kolunun gövdeye takılmasına neden
+        olan bir fabrika montaj hatasını (yanlış hizalanmış orta göbek) ve anahtarın çıkarılamadığı bir
+        direksiyon kilidini tanımlıyor. Satıcı nakliyeyi suçladı ve onarım teklif etmedi. Bu, fabrikadaki
+        kalite kontrol boşluklarını gösterir.
+      advice: Bisikleti teslimatta iyice inceleyin, özellikle pedal kolu hizalamasını ve direksiyon kilidi
+        işlevini. Garanti talepleri için kusurları hemen belgeleyin.
+  evidence:
+  - url: https://tousu.sina.com.cn/complaint/view/17350185291/
+    quote: 首先发现的是白色电动车的右侧脚踏曲柄卡在车壳上，车子倒推时会卡住。
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:58:20+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Xiaomi
+      series: Himo C26
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Himo C26 battery indicator wrong because factory BO voltage set to 36V instead of 48V
+      body: Two identical new bikes showed a full battery on the panel when the battery was low; the fix
+        was correcting the factory-set battery voltage parameter from 36V to 48V. Points to a factory
+        configuration defect affecting the battery charge readout.
+      advice: If the panel shows a permanently full battery, check the controller's battery-voltage (BO)
+        setting is 48V, not 36V; a wrong setting hides a genuinely low battery, which can lead to deep
+        discharge.
+    tr:
+      title: Himo C26 pil göstergesi yanlış çünkü fabrika BO voltajı 48V yerine 36V olarak ayarlanmış
+      body: İki adet aynı yeni bisiklet, pil düşükken panelde tam dolu pil gösterdi; düzeltme, fabrikada
+        ayarlanmış pil voltajı parametresinin 36V'den 48V'ye düzeltilmesiydi. Pil şarj göstergesini etkileyen
+        bir fabrika yapılandırma kusuruna işaret ediyor.
+      advice: Panel kalıcı olarak tam dolu pil gösteriyorsa, denetleyicinin pil voltajı (BO) ayarının
+        36V değil 48V olduğunu kontrol edin; yanlış bir ayar gerçekten düşük bir pili gizler ve bu da
+        derin deşarja yol açabilir.
+  evidence:
+  - url: https://xiaomi.eu/community/threads/himo-c26-battery-indicator-on-panel-not-correct.63656/
+    quote: The battery voltage (BO) must be set to 48V for the HIMO C26. It was wrong 36V.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:57:39+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Xiaomi
+      series: Mi Electric Bike
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: Bafang motor controller (models KT24WSH-BF08, KT36WSH-BFZ13504)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Bafang motor controller recall (CPSC 2018): water ingress caused unintended acceleration'
+      body: The US CPSC recalled Bafang motor controllers (models KT24WSH-BF08 and KT36WSH-BFZ13504) in
+        August 2018 after 6 reports of unintended acceleration causing riders to lose control. Water ingress
+        into the controller caused the acceleration. This is a Bafang component recall, not specifically
+        a Xiaomi bike recall, but it is relevant because Bafang motors are used in many e-bikes including
+        some Xiaomi models.
+      advice: If your e-bike uses a Bafang motor controller, check the model number against this recall.
+        Keep the controller dry and inspect for water damage. Unintended acceleration is a serious safety
+        hazard.
+    tr:
+      title: 'Bafang motor denetleyicisi geri çağırma (CPSC 2018): su girişi istenmeyen hızlanmaya neden
+        oldu'
+      body: ABD CPSC, Ağustos 2018'de Bafang motor denetleyicilerini (modeller KT24WSH-BF08 ve KT36WSH-BFZ13504)
+        geri çağırdı; bunun nedeni, sürücülerin kontrolünü kaybetmesine neden olan istenmeyen hızlanmaya
+        ilişkin 6 bildirimdi. Denetleyiciye su girişi hızlanmaya neden oldu. Bu, özellikle bir Xiaomi
+        bisiklet geri çağırması değil, bir Bafang bileşen geri çağırmasıdır, ancak Bafang motorları bazı
+        Xiaomi modelleri de dahil olmak üzere birçok e-bisiklette kullanıldığı için ilgilidir.
+      advice: E-bisikletiniz bir Bafang motor denetleyicisi kullanıyorsa, model numarasını bu geri çağırmayla
+        karşılaştırın. Denetleyiciyi kuru tutun ve su hasarı olup olmadığını kontrol edin. İstenmeyen
+        hızlanma ciddi bir güvenlik tehlikesidir.
+  evidence:
+  - url: http://swj.ningbo.gov.cn/art/2018/8/7/art_1229031552_47421183.html
+    quote: 水进入该产品可能电机控制器加速，有造成骑手碰撞和受伤的危险。
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T12:00:02+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Xiaomi
+      series: Mi Electric Bike
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: hub motor / motor wiring and battery contacts
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Mi Smart Electric Folding Bike owners report motor-assist failure and battery-contact play
+      body: 'On the Darty SAV community forum, a certified owner of the Mi Smart Electric Folding Bike
+        (the subject model, Samsung 36V/5800mAh battery) reports two units: one turns on with the assist
+        logo but delivers no motor power, the other cuts assist when crossing a curb; a reply points to
+        excessive play in the battery contacts. This is an owner-reported electrical failure of the exact
+        subject product, though it is a single thread and not a confirmed defect rate.'
+      advice: Before assuming a dead battery on this bike, check the battery contact fit and the motor
+        cable connection — owners report intermittent assist loss tied to contacts/wiring rather than
+        the cells themselves.
+    tr:
+      title: Mi Smart Electric Folding Bike sahipleri motor desteği arızası ve pil temas boşluğu bildiriyor
+      body: 'Darty SAV topluluk forumunda, Mi Smart Electric Folding Bike''ın (konu model, Samsung 36V/5800mAh
+        pil) sertifikalı bir sahibi iki adet bildiriyor: biri destek logosuyla açılıyor ancak motor gücü
+        vermiyor, diğeri kaldırıma çıkarken desteği kesiyor; bir yanıt pil temas noktalarındaki aşırı
+        boşluğa işaret ediyor. Bu, tam olarak konu ürünün sahibi tarafından bildirilen bir elektriksel
+        arızasıdır, ancak tek bir başlıktır ve doğrulanmış bir kusur oranı değildir.'
+      advice: Bu bisiklette ölü pil olduğunu varsaymadan önce, pil temas oturuşunu ve motor kablosu bağlantısını
+        kontrol edin — sahipler, aralıklı destek kaybının hücrelerin kendisinden ziyade temaslara/kablolara
+        bağlı olduğunu bildiriyor.
+  evidence:
+  - url: https://sav.darty.com/forum/XIAOMI/MI-SMART-ELECTRIC-FOLDING-BIKE-PLIABLE/AIDEZ-MOI-SVPPP/5223323/583592
+    quote: Le premier s allume normalement avec le logo de l assistance mais rien au nivrau moteur je
+      ne s1is vr1iment pas d ou cela peut provenir....
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:58:46+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Xiaomi
+      series: Hifree 5th Wheel
+  kind: known_issue
+  domain: electrical
+  severity: low
+  consequence: ''
+  detection: ''
+  component: charger (36V/42V scooter charger)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: EU Safety Gate recall SR/02322/26 covers a 36V/42V Xiaomi scooter charger, not the 5th Wheel's
+        48V battery
+      body: From the EU Safety Gate recall SR/02322/26 (notified by Denmark, 21 Aug 2026) via recalleurope.
+        This charger recall is for a Xiaomi Electric Scooter E-Bike charger at 36V/42V — it does NOT match
+        the 5th Wheel's 48V battery, so it is not a recall for this product.
+      advice: A buyer should not assume this EU recall applies to the 5th Wheel; the recalled charger
+        is a 36V/42V scooter charger, while the 5th Wheel uses a 48V battery. No matching recall for the
+        5th Wheel's own charger was found.
+    tr:
+      title: AB Güvenlik Kapısı geri çağırma SR/02322/26, 5th Wheel'in 48V pilini değil, bir 36V/42V Xiaomi
+        scooter şarj cihazını kapsıyor
+      body: recalleurope aracılığıyla AB Güvenlik Kapısı geri çağırma SR/02322/26'dan (Danimarka tarafından
+        bildirildi, 21 Ağu 2026). Bu şarj cihazı geri çağırması, 36V/42V'de bir Xiaomi Electric Scooter
+        E-Bike şarj cihazı içindir — 5th Wheel'in 48V piliyle eşleşmez, dolayısıyla bu ürün için bir geri
+        çağırma değildir.
+      advice: Bir alıcı bu AB geri çağırmasının 5th Wheel için geçerli olduğunu varsaymamalıdır; geri
+        çağrılan şarj cihazı bir 36V/42V scooter şarj cihazıdır, oysa 5th Wheel 48V pil kullanır. 5th
+        Wheel'in kendi şarj cihazı için eşleşen bir geri çağırma bulunamadı.
+  evidence:
+  - url: https://recalleurope.com/es/alert/power-charger-sr-02322-26/
+    quote: Cargador de batería para Xiaomi Electric Scooter E-Bike. Batería de litio con kit adaptador,
+      36V 42V.
+    locator: ''
+    stance: disputes
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:56:13+00:00'
