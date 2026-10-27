@@ -280,7 +280,8 @@ class ResearchTask:
         """
         rule = ("two or three plain sentences somebody about to spend money "
                 "can act on — what goes wrong, when, and what it costs them "
-                "to find out.")
+                "to find out. Say what the source reports about this product, "
+                "never how you came to it: no searches, queries or seeds.")
         if self.min_rationale_chars:
             rule += (f" This pack refuses anything under "
                      f"{self.min_rationale_chars} characters.")
