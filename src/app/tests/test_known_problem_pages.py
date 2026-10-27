@@ -94,7 +94,7 @@ def test_a_subject_with_enough_claims_gets_a_page_in_each_language_and_a_hub(tmp
     english = (site / "problems" / "anvil" / "index.html").read_text(encoding="utf-8")
     turkish = (site / "tr" / "problems" / "anvil" / "index.html").read_text(encoding="utf-8")
     assert "<title>Anvil: known problems | Kriko</title>" in english
-    assert "<title>Anvil: bilinen sorunlar | Kriko</title>" in turkish
+    assert "<title>Anvil sorunları ve bilinen arızalar | Kriko</title>" in turkish
     assert 'hreflang="tr" href="https://kriko.cc/tr/problems/anvil/"' in english
     assert 'hreflang="en" href="https://kriko.cc/problems/anvil/"' in turkish
     assert "Kafa gevşer" in turkish and "Head loosens" not in turkish
