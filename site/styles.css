@@ -131,7 +131,8 @@ h2 { font-size: clamp(2.5rem, 5.4vw, 4.2rem); max-width: 14em; }
 /* Examples */
 /* The desktop app, drawn as a window: the whole picture, a hairline and a shadow. */
 .window { margin: clamp(32px, 5vw, 52px) 0 0; }
-.window img { display: block; width: 100%; height: auto; border-radius: 12px; border: 1px solid var(--line); box-shadow: 0 24px 60px -26px rgba(11, 16, 32, .4), 0 2px 8px rgba(11, 16, 32, .08); }
+.window img, .window video { display: block; width: 100%; height: auto; border-radius: 12px; border: 1px solid var(--line); box-shadow: 0 24px 60px -26px rgba(11, 16, 32, .4), 0 2px 8px rgba(11, 16, 32, .08); }
+.window video { aspect-ratio: 16 / 9; background: #090c17; }
 .window figcaption { margin-top: 14px; max-width: 46em; font-size: 1rem; line-height: 1.6; color: var(--muted); }
 .window-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(20px, 3vw, 36px); }
 .window-pair .window { margin-top: clamp(24px, 4vw, 40px); }
