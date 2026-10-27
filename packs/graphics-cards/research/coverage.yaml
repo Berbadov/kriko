@@ -1,0 +1,79 @@
+lineup:
+- GeForce RTX 3060
+- GeForce RTX 3060 Ti
+- GeForce RTX 3070
+- GeForce RTX 3080
+- GeForce RTX 3090
+- GeForce RTX 4060
+- GeForce RTX 4070
+- GeForce RTX 4080
+- GeForce RTX 4090
+- GeForce RTX 5060
+- GeForce RTX 5070
+- GeForce RTX 5070 Ti
+- GeForce RTX 5080
+- GeForce RTX 5090
+- Radeon RX 6600
+- Radeon RX 6700 XT
+- Radeon RX 6800 XT
+- Radeon RX 6900 XT
+- Radeon RX 7600
+- Radeon RX 7700 XT
+- Radeon RX 7800 XT
+- Radeon RX 7900 XT
+- Radeon RX 7900 XTX
+- Radeon RX 9060 XT
+- Radeon RX 9070 XT
+- Radeon RX 9080
+- Radeon RX 9090
+- Intel Arc A750
+- Intel Arc A770
+- Intel Arc B570
+- Intel Arc B580
+covered:
+- geforce rtx 3060
+- geforce rtx 3060 ti
+- geforce rtx 3070
+- geforce rtx 3080
+- geforce rtx 3090
+- geforce rtx 4060
+- geforce rtx 4090
+- geforce rtx 5070 ti
+- geforce rtx 5080
+- geforce rtx 5090
+- intel arc b580
+- radeon rx 7900 xt
+- radeon rx 7900 xtx
+uncovered:
+- GeForce RTX 4070
+- GeForce RTX 4080
+- GeForce RTX 5060
+- GeForce RTX 5070
+- Radeon RX 6600
+- Radeon RX 6700 XT
+- Radeon RX 6800 XT
+- Radeon RX 6900 XT
+- Radeon RX 7600
+- Radeon RX 7700 XT
+- Radeon RX 7800 XT
+- Radeon RX 9060 XT
+- Radeon RX 9070 XT
+- Radeon RX 9080
+- Radeon RX 9090
+- Intel Arc A750
+- Intel Arc A770
+- Intel Arc B570
+note: Covered the six requested NVIDIA cards. Tool budget was exhausted after 12 searches;
+  no pages could be fetched (fetch attempts returned 'Tool budget exhausted'). All
+  quotes come from inline search-result page text. Specs (VRAM, TDP, memory type)
+  are included only where a source page explicitly stated them; missing specs for
+  RTX 3060 Ti, RTX 3070, and RTX 4060 TDP are honest gaps. The RTX 4060 has only one
+  claim (PCIe x8 interface) since no failure-mode evidence was found within the budget;
+  the overclockers.ru performance discussion was excluded because this pack does not
+  cover performance benchmarks.
+out_of_scope:
+- 12VHPWR adapter accessories
+- AIB partner cards (MSI, ASUS, Gigabyte, Gainward, Sapphire variants) — instances
+  of the same model, not separate products
+- Power supply units (e.g. MSI PSUs with 12V-2x6 connectors)
+quarantined: []

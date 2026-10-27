@@ -1,0 +1,1614 @@
+# Claims — what is known to go wrong, each with the page it came from and the quote
+# that was read there. A claim without both is not in this file.
+- subject:
+    kind: product
+    identity:
+      brand: microsoft
+      series: xbox series x
+  kind: known_issue
+  domain: software
+  severity: high
+  consequence: ''
+  detection: ''
+  component: system OS / firmware (10.0.26100.2911)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Series X system software slows to a crawl and games fail to load until a factory reset
+      body: A July 2024 EU-market Series X owner reports the console suddenly slowing down, games stuttering
+        and failing to load with error codes 0x87e5002b / 0x87e50033, delayed inputs and 5-6 minute save
+        loads; only a full factory reset restores it, and the problem recurred ~5 weeks later. The owner
+        notes the same issue is widely reported on Microsoft's forum and Reddit with no identified cause
+        or permanent fix.
+      advice: Expect a recurring software-level slowdown that a hard reset does not fix; only a factory
+        reset restores the console, and it can return weeks later. This is a firmware/OS issue, not a
+        hardware fault, so a warranty return may not resolve it.
+    tr:
+      title: Series X sistem yazılımı ağırlaşıyor ve fabrika sıfırlaması yapılana kadar oyunlar yüklenmiyor
+      body: Temmuz 2024'te AB pazarındaki bir Series X sahibi, konsolun aniden yavaşladığını, oyunların
+        takıldığını ve 0x87e5002b / 0x87e50033 hata kodlarıyla yüklenemediğini, girişlerin geciktiğini
+        ve kayıtların 5-6 dakika yüklendiğini bildiriyor; yalnızca tam bir fabrika sıfırlaması düzeltiyor
+        ve sorun yaklaşık 5 hafta sonra tekrar ortaya çıktı. Sahip, aynı sorunun Microsoft'un forumunda
+        ve Reddit'te yaygın olarak bildirildiğini, tanımlanmış bir neden veya kalıcı bir çözüm olmadığını
+        belirtiyor.
+      advice: Sabit sıfırlamanın düzeltmediği, tekrarlayan yazılım düzeyinde bir yavaşlama bekleyin; konsolu
+        yalnızca fabrika sıfırlaması düzeltiyor ve sorun haftalar sonra geri dönebiliyor. Bu bir donanım
+        arızası değil, ürün yazılımı/işletim sistemi sorunudur, bu nedenle garanti iadesi bunu çözmeyebilir.
+  evidence:
+  - url: https://www.computerbase.de/forum/threads/x-box-series-x-extrem-langsam-spiele-laden-nicht-oder-stuerzen-ab.2224780/
+    quote: Spiele laden nicht mehr und brechen mit den diversesten Fehlercodes ab (z.B. 0x87e5002b, 0x87e50033).
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:58:44+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: sony
+      series: playstation 5
+  kind: known_issue
+  domain: software
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: system software / game data (error CE-108255-1)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: CE-108255-1 crash error on PS5 Slim Disc Edition when joining online matches
+      body: A PS5 Slim Disc Edition owner reports crashes with error CE-108255-1 specifically when entering
+        online matches; a separate French forum thread calls CE-108255-1 a recurring Sony error code on
+        PS5, usually resolved by clearing cache or reinstalling the game.
+      advice: CE-108255-1 is a known PS5 crash error code. It is often a software/data issue (clear cache,
+        rebuild database, reinstall the game) rather than hardware, but if it persists across games a
+        repairer may suspect the internal SSD. Try the software fixes before paying for hardware diagnosis.
+    tr:
+      title: PS5 Slim Disc Edition'da çevrimiçi maçlara katılırken CE-108255-1 çökme hatası
+      body: Bir PS5 Slim Disc Edition sahibi, özellikle çevrimiçi maçlara girerken CE-108255-1 hatasıyla
+        çökmeler bildiriyor; ayrı bir Fransız forum başlığı CE-108255-1'i PS5'te tekrarlayan bir Sony
+        hata kodu olarak nitelendiriyor ve genellikle önbelleği temizleyerek veya oyunu yeniden yükleyerek
+        çözüldüğünü belirtiyor.
+      advice: CE-108255-1 bilinen bir PS5 çökme hata kodudur. Genellikle donanım değil yazılım/veri sorunudur
+        (önbelleği temizleyin, veritabanını yeniden oluşturun, oyunu yeniden yükleyin), ancak oyunlar
+        arasında devam ederse bir tamirci dahili SSD'den şüphelenebilir. Donanım teşhisi için ödeme yapmadan
+        önce yazılım düzeltmelerini deneyin.
+  evidence:
+  - url: https://fr.ifixit.com/R%C3%A9ponses/Afficher/964193/PS5+Slim+CE-108255-1+crash+when+joining+online+matches
+    quote: I have a PS5 Slim Disc Edition (~1.5 years old). It works fine in menus and lobbies, but crashes
+      with error CE-108255-1 specifically when transitioning from a lobby (like Fortnite) into an online
+      match.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:00:10+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Microsoft
+      series: Xbox Series
+  kind: known_issue
+  domain: general
+  severity: high
+  consequence: ''
+  detection: ''
+  component: internal SSD
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Xbox Series S internal SSD failure leaves console stuck at dashboard and E109 error after
+        cloning
+      body: A repair thread describes a Series S that boots games to a blackscreen and returns to the
+        dashboard; the suspected cause is a failing SSD, and a self-repair clone produced an E109 error
+        because the drive key did not transfer.
+      advice: A failing internal SSD makes the console drop back to the dashboard when launching games;
+        DIY cloning is risky (E109 error from the missing key), so this is an expensive repair that most
+        buyers will not attempt.
+    tr:
+      title: Xbox Series S dahili SSD arızası, klonlamadan sonra konsolu panoda takılı ve E109 hatasıyla
+        bırakıyor
+      body: Bir onarım başlığı, oyunları siyah ekrana açıp panoya dönen bir Series S'i anlatıyor; şüphelenilen
+        neden arızalı bir SSD ve kendi kendine onarım klonlaması, sürücü anahtarı aktarılmadığı için E109
+        hatası üretti.
+      advice: Arızalı bir dahili SSD, oyunları başlatırken konsolun panoya geri düşmesine neden olur;
+        kendin yap klonlama risklidir (eksik anahtardan kaynaklanan E109 hatası), bu nedenle bu, çoğu
+        alıcının denemeyeceği pahalı bir onarımdır.
+  evidence:
+  - url: https://zh.ifixit.com/Answers/View/941739/When+booting+up+a+game+the+xbox+goes+back+to+the+dashboard
+    quote: Cloned the drive and copied to a new SSD, I am now getting E109 error
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:57:58+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: microsoft
+      series: xbox series x
+  kind: known_issue
+  domain: general
+  severity: low
+  consequence: ''
+  detection: ''
+  component: power delivery / inductor (coil whine)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Series X emits coil whine in standby while downloading
+      body: A new Series X All Digital owner reports a high-frequency, annoying coil-whine noise in standby
+        mode while a game downloads, stopping when the download finishes. The owner sent the console for
+        repair and the report stated it was 'repaired' and tested, but nothing was actually fixed.
+      advice: Coil whine during standby downloads is audible across the room and a warranty repair may
+        not fix it (this owner's unit came back unchanged). It is cosmetic/noise rather than a functional
+        failure, but it is persistent.
+    tr:
+      title: Series X bekleme modunda indirme yaparken bobin uğultusu çıkarıyor
+      body: Yeni bir Series X All Digital sahibi, bekleme modunda bir oyun indirilirken yüksek frekanslı,
+        rahatsız edici bir bobin uğultusu sesi bildiriyor ve indirme bitince ses kesiliyor. Sahip konsolu
+        onarıma göndermiş ve raporda 'onarıldığı' ve test edildiği belirtilmiş, ancak aslında hiçbir şey
+        düzeltilmemiş.
+      advice: Bekleme modundaki indirmeler sırasında bobin uğultusu odanın karşısından duyulur ve garanti
+        onarımı bunu düzeltmeyebilir (bu sahibin cihazı değişmeden geri geldi). İşlevsel bir arıza değil
+        kozmetik/gürültü sorunudur, ancak kalıcıdır.
+  evidence:
+  - url: https://www.computerbase.de/forum/threads/xbox-series-x-mit-spulenfiepen-im-standbymodus.2228355/
+    quote: Meine neue Xbox Series X erzeugt im Standbymodus, wenn ein Spiel heruntergeladen wird, ein
+      hochfrequentes, sehr nerviges Geräusch.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:58:44+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Microsoft
+      series: Xbox Series
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: left analog stick (joystick)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Xbox Series S left analog stick drift reported by owners
+      body: An owner reports severe left-stick drift on a Series S controller that cleaning with alcohol
+        did not fix.
+      advice: Stick drift is a common owner-reported fault on the Series S controller; the poster's cleaning
+        attempt failed, so a buyer should budget for a replacement controller (roughly €50-60) rather
+        than expect a cheap fix.
+    tr:
+      title: Xbox Series S sol analog çubuğunda sahipler tarafından bildirilen kayma
+      body: Bir sahip, alkolle temizliğin düzeltmediği ciddi sol çubuk kayması bildiriyor.
+      advice: Çubuk kayması, Series S denetleyicisinde sahipler tarafından yaygın olarak bildirilen bir
+        arızadır; gönderi sahibinin temizleme girişimi başarısız oldu, bu nedenle bir alıcı ucuz bir çözüm
+        beklemek yerine yedek bir denetleyici için (yaklaşık €50-60) bütçe ayırmalıdır.
+  evidence:
+  - url: https://www.elotrolado.net/hilo_es-habitual-que-fallen-los-mandos-de-xbox-series-drift_2508669_s50
+    quote: 'Series S: drift en el stick izquierdo brutal, intente abrirlo y limpiarlo con alcohol, pero
+      nada...'
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:57:58+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Nintendo
+      series: Nintendo Switch
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: control sticks (joysticks)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Nintendo offers free drift repair in EEA, UK and Switzerland
+      body: Nintendo's official Swedish support page confirms that repair of the stick responsiveness
+        syndrome (drift) is free in the EEA, UK and Switzerland, regardless of cause.
+      advice: For an EU buyer, drift is a covered, free repair through Nintendo, so the cost of finding
+        out is low even though the fault is common. This is the strongest, most actionable source for
+        the EU market.
+    tr:
+      title: Nintendo, AEA, Birleşik Krallık ve İsviçre'de ücretsiz kayma onarımı sunuyor
+      body: Nintendo'nun resmi İsveç destek sayfası, çubuk tepkisellik sendromunun (kayma) onarımının
+        AEA, Birleşik Krallık ve İsviçre'de nedeni ne olursa olsun ücretsiz olduğunu doğruluyor.
+      advice: Bir AB alıcısı için kayma, Nintendo aracılığıyla kapsanan ve ücretsiz bir onarımdır, bu
+        nedenle arıza yaygın olsa da öğrenmenin maliyeti düşüktür. Bu, AB pazarı için en güçlü ve en uygulanabilir
+        kaynaktır.
+  evidence:
+  - url: https://www.nintendo.se/support/faq/joy-con-control-sticks-svarar-inte-eller-svarar-felaktigt-responssyndrom-eller-sa-kallad-drifting
+    quote: Tills vidare kommer Nintendo inte att debitera dig i Europeiska ekonomiska samarbetsområdet
+      (EES), Storbritannien och Schweiz för reparation av responsivitetssyndromet, oavsett om detta orsakas
+      av en defekt eller slitage.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:59:29+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: valve
+      series: steam deck oled
+  kind: known_issue
+  domain: power
+  severity: high
+  consequence: ''
+  detection: ''
+  component: battery (50Whr pack)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Steam Deck OLED rapid battery drain and battery-health error in sleep
+      body: German owner forum thread describing an OLED that suddenly drains very fast in sleep with
+        a game in the background and then reports a low battery-health state (46%) with an orange error
+        in desktop mode, while the owner's LCD model holds charge normally. A power/battery reporting
+        fault on the OLED.
+      advice: Some OLED units drain rapidly in sleep and show a spurious low battery-health error; the
+        owner initiated an RMA, so verify battery behavior before accepting a unit.
+    tr:
+      title: Steam Deck OLED'de hızlı pil tükenmesi ve uyku modunda pil sağlığı hatası
+      body: Bir Alman sahibinin forum başlığında, arka planda bir oyun açıkken uyku modunda aniden çok
+        hızlı tükenen ve ardından masaüstü modunda turuncu bir hatayla düşük pil sağlığı durumu (%46)
+        bildiren bir OLED anlatılıyor; sahibinin LCD modeli ise şarjını normal tutuyor. OLED'de bir güç/pil
+        raporlama arızası.
+      advice: Bazı OLED birimleri uyku modunda hızla tükeniyor ve yanıltıcı bir düşük pil sağlığı hatası
+        gösteriyor; sahibi bir RMA başlattı, bu yüzden bir birimi kabul etmeden önce pil davranışını doğrulayın.
+  evidence:
+  - url: https://www.computerbase.de/forum/threads/steam-deck-oled-entlaedt-sich-manchmal-vollstaendig-und-es-wird-ein-akku-error-angezegt.2258371/
+    quote: mein Steam Deck Oled entlädt sich seit 2 Wochen plötzlich sehr zügig, was vorher nicht so war.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:57:24+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Nintendo
+      series: Nintendo Switch
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: right thumbstick / joystick
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Switch Lite right thumbstick drifts and keeps drifting after replacement
+      body: An owner reports the right thumbstick drifted upward and that three replacement sticks all
+        drifted the same way, pointing to the ZIF connector/motherboard rather than the stick itself.
+      advice: Stick drift is the most commonly reported Switch Lite hardware fault. Because the sticks
+        are built into the console (not detachable like Joy-Cons), a drift means a full console repair
+        or a motherboard-level fix, not a cheap controller swap.
+    tr:
+      title: Switch Lite sağ analog çubuğu kayıyor ve değişimden sonra da kaymaya devam ediyor
+      body: Bir sahip, sağ analog çubuğun yukarı doğru kaydığını ve üç yedek çubuğun da aynı yönde kaydığını
+        bildiriyor; bu, çubuğun kendisinden ziyade ZIF konektörü/ana karta işaret ediyor.
+      advice: Çubuk kayması, en sık bildirilen Switch Lite donanım arızasıdır. Çubuklar konsola gömülü
+        olduğundan (Joy-Con'lar gibi çıkarılabilir değil), kayma ucuz bir denetleyici değişimi değil,
+        tam konsol onarımı veya ana kart düzeyinde bir düzeltme anlamına gelir.
+  evidence:
+  - url: https://fr.ifixit.com/R%C3%A9ponses/Afficher/886452/Right+thumbstick+still+drifting+after+replacement.
+    quote: So I replaced the right thumbstick due to extreme upward drift. The new one keeps having the
+      same issue. I've tried 3 different sticks and they have the same issue.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:59:29+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Valve
+      series: Steam Deck
+  kind: known_issue
+  domain: thermal
+  severity: high
+  consequence: ''
+  detection: ''
+  component: BIOS / APU power-thermal management
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Steam Deck LCD random shutdowns and high GPU temps after BIOS update
+      body: An owner reports the LCD model became unstable after a BIOS update, with random shutdowns,
+        NVMe-style boot errors, and high GPU temperatures.
+      advice: If you buy an LCD Deck, be aware a BIOS update can trigger random shutdowns and thermal
+        spikes; owners report rolling back the BIOS as the fix. Verify the unit's BIOS/SteamOS version
+        before purchase.
+    tr:
+      title: Steam Deck LCD'de BIOS güncellemesinden sonra rastgele kapanmalar ve yüksek GPU sıcaklıkları
+      body: Bir sahip, LCD modelin bir BIOS güncellemesinden sonra kararsız hale geldiğini, rastgele kapanmalar,
+        NVMe tarzı önyükleme hataları ve yüksek GPU sıcaklıkları yaşandığını bildiriyor.
+      advice: Bir LCD Deck alırsanız, bir BIOS güncellemesinin rastgele kapanmaları ve termal sıçramaları
+        tetikleyebileceğini bilin; sahipler çözüm olarak BIOS'u geri almayı bildiriyor. Satın almadan
+        önce birimin BIOS/SteamOS sürümünü doğrulayın.
+  evidence:
+  - url: https://github.com/ValveSoftware/SteamOS/issues/2029
+    quote: This strongly suggests an underlying issue with CPU/GPU power or thermal management in the
+      current BIOS for the Steam Deck LCD.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:56:59+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: nintendo
+      series: switch oled
+  kind: known_issue
+  domain: software
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: system software / SD card
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Switch OLED boot error 2002-4373 with black screen
+      body: A Nintendo Life forum owner reports a month-old Switch OLED showing error 2002-4373 on a black
+        screen after sleep; a power-cycle fixed it, and forum speculation points to the SD card or corrupt
+        system files.
+      advice: Error 2002-4373 is a system-level error that usually clears on reboot, but if it recurs
+        it is worth testing with the SD card removed before assuming hardware failure.
+    tr:
+      title: Switch OLED'de siyah ekranla önyükleme hatası 2002-4373
+      body: Bir Nintendo Life forum sahibi, bir aylık Switch OLED'in uyku modundan sonra siyah ekranda
+        2002-4373 hatası gösterdiğini bildiriyor; bir güç döngüsü sorunu çözdü ve forum tahminleri SD
+        karta veya bozuk sistem dosyalarına işaret ediyor.
+      advice: Hata 2002-4373, genellikle yeniden başlatmada geçen sistem düzeyinde bir hatadır, ancak
+        tekrarlarsa donanım arızası varsaymadan önce SD kart çıkarılmış halde test etmeye değer.
+  evidence:
+  - url: https://www.nintendolife.com/forums/nintendo-switch/error_code_2002-4373_and_black_screen
+    quote: the Switch screen was ON with just white letters saying there was an error and code 2002-4373
+      at the top.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:55:43+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: valve
+      series: steam deck oled
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: right thumbstick (joystick)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Steam Deck OLED right thumbstick drift and deadzone fix
+      body: Owner forum thread where users report right thumbstick drift on the OLED, with fixes ranging
+        from recalibration and deadzone adjustment to RMA or swapping in Hall-effect sticks. Drift is
+        a real, owner-reported fault on this model.
+      advice: If the right stick drifts, first recalibrate and raise the deadzone; if it persists, the
+        OLED uses a distinct joystick part and replacement or RMA is the path.
+    tr:
+      title: Steam Deck OLED sağ analog çubuğu kayması ve ölü bölge düzeltmesi
+      body: Kullanıcıların OLED'de sağ analog çubuğu kayması bildirdiği sahip forum başlığı; düzeltmeler
+        yeniden kalibrasyondan ve ölü bölge ayarından RMA'ya veya Hall-effect çubuklarla değiştirmeye
+        kadar uzanıyor. Kayma, bu modelde gerçek, sahipler tarafından bildirilen bir arızadır.
+      advice: Sağ çubuk kayarsa, önce yeniden kalibre edin ve ölü bölgeyi artırın; devam ederse, OLED
+        farklı bir joystick parçası kullanır ve değişim veya RMA izlenecek yoldur.
+  evidence:
+  - url: https://steamcommunity.com/app/1675200/discussions/1/597394233225206375/?l=danish
+    quote: Recalibrate your thumbsticks. Right thumbstick is probably drifting.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:57:24+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: sony
+      series: playstation 5
+  kind: known_issue
+  domain: power
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: motherboard/PSU (Sonics bus error B0088108)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: PS5 Slim shuts down under load in native PS5 games (Sonics bus error)
+      body: A repair-forum case documents a PS5 Slim (EDM-052 board) that crashes and fully shuts down
+        under load in native PS5 games, with Syscon logs showing a Sonics bus error (B0088108) and SSD
+        controller watchdog timeout.
+      advice: A PS5 that powers off only under heavy game load (not in menus) points to a hardware/power
+        fault rather than software; the Syscon error log is what a repairer reads to diagnose it. This
+        is a single-unit repair case, not evidence of a widespread defect.
+    tr:
+      title: PS5 Slim yerel PS5 oyunlarında yük altında kapanıyor (Sonics veri yolu hatası)
+      body: Bir onarım forumu vakası, yerel PS5 oyunlarında yük altında çöken ve tamamen kapanan bir PS5
+        Slim'i (EDM-052 kartı) belgeliyor; Syscon günlükleri bir Sonics veri yolu hatası (B0088108) ve
+        SSD denetleyicisi watchdog zaman aşımı gösteriyor.
+      advice: Yalnızca ağır oyun yükü altında (menülerde değil) kapanan bir PS5, yazılımdan ziyade bir
+        donanım/güç arızasına işaret eder; bir onarımcının bunu teşhis etmek için okuduğu şey Syscon hata
+        günlüğüdür. Bu, yaygın bir kusurun kanıtı değil, tek bir birimin onarım vakasıdır.
+  evidence:
+  - url: https://fr.ifixit.com/R%C3%A9ponses/Afficher/974322/PS5+Slim+(EDM-052)+shuts+down+in+PS5+games+(under+load)+-+Syscon+logs
+    quote: In native PS5 games, it shuts down anywhere between 5 to 20 minutes, sometimes even faster
+      depending on the load.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:00:10+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: nintendo
+      series: switch oled
+  kind: known_issue
+  domain: display
+  severity: low
+  consequence: ''
+  detection: ''
+  component: OLED panel / horizontal sync calibration
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Switch OLED screen edge pixel projection / miscalibration
+      body: An iFixit answer thread documents a Switch OLED whose left-edge pixels are mirrored/projected
+        onto the right edge in gray tones, attributed to a factory horizontal-sync miscalibration that
+        is unfixable but cosmetic.
+      advice: This is a cosmetic panel quirk visible mainly in gray scenes; it is not a functional failure,
+        but if it bothers you it should be raised at purchase time since it is not repairable.
+    tr:
+      title: Switch OLED ekran kenarı piksel projeksiyonu / yanlış kalibrasyon
+      body: Bir iFixit yanıt dizisi, sol kenar pikselleri sağ kenara gri tonlarda yansıtılan/projekte
+        edilen bir Switch OLED'i belgeliyor; bunun düzeltilemez ama kozmetik bir fabrika yatay senkronizasyon
+        yanlış kalibrasyonundan kaynaklandığı belirtiliyor.
+      advice: Bu, esas olarak gri sahnelerde görülen kozmetik bir panel tuhaflığıdır; işlevsel bir arıza
+        değildir, ancak sizi rahatsız ediyorsa onarılamaz olduğu için satın alma sırasında dile getirilmelidir.
+  evidence:
+  - url: https://zh.ifixit.com/Answers/View/877011/Strange+OLED+issue+where+pixels+on+the+left+edge+%22project%22+to+the+righ
+    quote: There's this strange thing with my Switch OLED screen where pixels on the very right side of
+      the screen seem to "project" or "mimick" the pixels on the very left side.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:55:43+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: asus
+      series: rog ally z1 extreme
+  kind: known_issue
+  domain: display
+  severity: low
+  consequence: ''
+  detection: ''
+  component: built-in screen / VRR
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Built-in screen flickers when VRR is enabled
+      body: Bazzite issue tracker report that the ROG Ally's built-in screen flickers heavily in-game
+        when VRR is enabled, and stops when VRR is turned off.
+      advice: If you see screen flicker on the Z1 Extreme, try disabling VRR first; the flicker is tied
+        to the VRR toggle rather than a dead panel.
+    tr:
+      title: VRR etkinleştirildiğinde yerleşik ekran titriyor
+      body: Bazzite sorun izleyicisi, ROG Ally'nin yerleşik ekranının VRR etkinleştirildiğinde oyun içinde
+        yoğun şekilde titrediğini ve VRR kapatıldığında durduğunu bildiriyor.
+      advice: Z1 Extreme'de ekran titremesi görürseniz önce VRR'yi devre dışı bırakmayı deneyin; titreme
+        ölü bir panelden ziyade VRR anahtarına bağlıdır.
+  evidence:
+  - url: https://github.com/ublue-os/bazzite/issues/1889
+    quote: when the VRR toggle is on, in game the builtin screen flickers a lot. When I turn off VRR the
+      problem went away.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:01:19+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Valve
+      series: Steam Deck
+  kind: known_issue
+  domain: power
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: battery (original spare parts)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Valve phasing out original spare parts and batteries for the Steam Deck LCD
+      body: Reports that Valve is phasing out original LCD spare parts via iFixit, with batteries out
+        of stock and low likelihood of restock; OLED parts remain available.
+      advice: 'For an EU buyer, the LCD model''s repairability is shrinking: original batteries are being
+        discontinued, so a worn battery may not be replaceable with an official part. Factor this into
+        the purchase decision.'
+    tr:
+      title: Valve, Steam Deck LCD için orijinal yedek parçaları ve pilleri aşamalı olarak kaldırıyor
+      body: Valve'ın iFixit aracılığıyla orijinal LCD yedek parçalarını aşamalı olarak kaldırdığı, pillerin
+        stokta olmadığı ve yeniden stoklanma olasılığının düşük olduğu; OLED parçalarının ise mevcut kaldığı
+        bildiriliyor.
+      advice: 'Bir AB alıcısı için LCD modelinin onarılabilirliği azalıyor: orijinal pillerin üretimi
+        durduruluyor, bu nedenle yıpranmış bir pil resmi bir parçayla değiştirilemeyebilir. Bunu satın
+        alma kararınıza dahil edin.'
+  evidence:
+  - url: https://en.gamegpu.com/news/zhelezo/valve-tajno-svorachivaet-programmu-podderzhki-i-remonta-originalnoj-versii-steam-deck-lcd
+    quote: Valve has begun phasing out original spare parts for the Steam Deck LCD handheld gaming console
+      through its official repair partner, iFixit.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:56:59+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: asus
+      series: rog ally z1 extreme
+  kind: known_issue
+  domain: thermal
+  severity: high
+  consequence: ''
+  detection: ''
+  component: microSD card reader
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: ROG Ally microSD card reader malfunctions under thermal stress (ASUS-confirmed)
+      body: ASUS itself confirmed the reader can malfunction under thermal stress, with some users' cards
+        permanently damaged.
+      advice: Treat the microSD slot as unreliable for long sessions; prefer the internal SSD or a larger
+        2230 SSD for storage. If a card stops being read, test it in another device before assuming the
+        card is dead.
+    tr:
+      title: ROG Ally microSD kart okuyucusu termal stres altında arızalanıyor (ASUS tarafından doğrulandı)
+      body: ASUS'un kendisi, okuyucunun termal stres altında arızalanabileceğini ve bazı kullanıcıların
+        kartlarının kalıcı olarak hasar gördüğünü doğruladı.
+      advice: microSD yuvasını uzun oturumlar için güvenilmez olarak değerlendirin; depolama için dahili
+        SSD'yi veya daha büyük bir 2230 SSD'yi tercih edin. Bir kart okunmamaya başlarsa, kartın öldüğünü
+        varsaymadan önce başka bir cihazda test edin.
+  evidence:
+  - url: https://tech.yahoo.com/general/articles/asus-admits-rog-allys-microsd-113900326.html
+    quote: After confirmation from internal testing, under certain thermal stress conditions the SD card
+      reader may malfunction,
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:00:32+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: nintendo
+      series: switch oled
+  kind: known_issue
+  domain: display
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: OLED screen adhesive/bezel
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Switch OLED screen edge raised from bezel (adhesive)
+      body: A Nintendo Life forum owner reports a brand-new white Switch OLED whose screen edge is slightly
+        raised from the bezel and lifts again after being pressed down, a known adhesive issue on the
+        original Switch.
+      advice: Check the screen edges on a new unit at purchase; a raised edge is a cosmetic/adhesive defect
+        that may not be covered as a failure but is worth flagging for exchange while under warranty.
+    tr:
+      title: Switch OLED ekran kenarı çerçeveden yükselmiş (yapıştırıcı)
+      body: Bir Nintendo Life forum sahibi, ekran kenarı çerçeveden hafifçe yükselen ve bastırıldıktan
+        sonra tekrar kalkan yepyeni bir beyaz Switch OLED bildiriyor; bu, orijinal Switch'te bilinen bir
+        yapıştırıcı sorunudur.
+      advice: Satın alırken yeni bir ünitede ekran kenarlarını kontrol edin; yükselmiş bir kenar, arıza
+        olarak kapsanmayabilecek ancak garanti kapsamındayken değişim için işaretlenmeye değer kozmetik/yapıştırıcı
+        bir kusurdur.
+  evidence:
+  - url: https://www.nintendolife.com/super-smash-bros/forums/help/brand_new_switch_oleds_screen_is_slightly_raised_on_the_right_side
+    quote: I bought a brand new white Switch OLED yesterday and just noticed now that the right side of
+      the screen is very slightly raised from the bezel instead of being completely flush like the left
+      side.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:55:43+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: microsoft
+      series: xbox series x
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: controller thumbstick (analog joystick)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: First-party controller thumbsticks drift within months of use
+      body: In a French owner forum thread, a user describes the 'disastrous reliability' of Xbox controllers
+        with stick drift appearing within a few months, alongside controller disconnects and the console
+        failing to power on. This is an owner-reported failure of the bundled controller rather than the
+        console body.
+      advice: The bundled controller's thumbsticks are the weak point, drifting within months. Plan for
+        a replacement controller or a Hall-effect third-party unit; the console itself is not the failing
+        part.
+    tr:
+      title: Birinci taraf kol çubukları birkaç ay içinde kayıyor
+      body: Bir Fransız sahip forumu dizisinde bir kullanıcı, Xbox kollarının 'felaket güvenilirliğini'
+        tarif ediyor; çubuk kayması birkaç ay içinde ortaya çıkıyor, bunun yanı sıra kol bağlantı kesilmeleri
+        ve konsolun açılmaması da görülüyor. Bu, konsol gövdesinden ziyade paketle gelen kolun sahip tarafından
+        bildirilen bir arızasıdır.
+      advice: Paketle gelen kolun çubukları zayıf noktadır ve aylar içinde kayar. Yedek bir kol veya Hall-effect
+        üçüncü taraf bir ünite planlayın; arızalanan parça konsolun kendisi değildir.
+  evidence:
+  - url: https://m.jeuxvideo.com/forums/42-3017784-76639333-1-0-1-0-trop-de-bug-de-console.htm
+    quote: Et la fiabilité désastreuse des manettes avec des drifts qui surviennent en quelques mois ?
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:58:44+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: asus
+      series: rog ally z1 extreme
+  kind: known_issue
+  domain: power
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: APU TDP power management
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: ROG Ally APU hard-locks at minimum TDP on wake from sleep (SteamOS 3.8)
+      body: On the SteamOS/Linux build, waking from sleep can lock the APU at ~4-7W, causing severe stutter
+        until restart or AC re-plug.
+      advice: This is specific to the SteamOS (Linux) configuration, not stock Windows. If running SteamOS
+        on the Ally, a wake-from-sleep power hang is a known regression; a restart or AC re-plug recovers
+        it.
+    tr:
+      title: ROG Ally APU, uykudan uyanmada minimum TDP'de sabitleniyor (SteamOS 3.8)
+      body: SteamOS/Linux yapısında, uykudan uyanma APU'yu ~4-7W'de kilitleyebilir ve yeniden başlatma
+        veya AC'nin yeniden takılmasına kadar ciddi takılmalara neden olabilir.
+      advice: Bu, SteamOS (Linux) yapılandırmasına özgüdür, stok Windows'a değil. Ally'de SteamOS çalıştırıyorsanız,
+        uykudan uyanma güç askıda kalması bilinen bir gerilemedir; yeniden başlatma veya AC'nin yeniden
+        takılması bunu düzeltir.
+  evidence:
+  - url: https://github.com/ValveSoftware/SteamOS/issues/2790
+    quote: Upon waking the device from sleep, the APU gets hard-locked at the lowest possible TDP/power
+      limit (~4-7W).
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:00:32+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: valve
+      series: steam deck oled
+  kind: known_issue
+  domain: network
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: Wi-Fi module (SteamOS network stack)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Steam Deck OLED intermittent Wi-Fi disconnection regression
+      body: A news report on Valve's SteamOS 3.7.10 beta fix for a Wi-Fi regression specific to the OLED
+        model, which had caused intermittent disconnects during multiplayer and downloads. Fixed by software
+        update, so the cost to a buyer is a buggy network experience until patched.
+      advice: Wi-Fi dropping on the OLED was a known regression addressed by the SteamOS 3.7.10 update;
+        keep the device updated before assuming a hardware fault.
+    tr:
+      title: Steam Deck OLED aralıklı Wi-Fi bağlantı kesilmesi gerilemesi
+      body: Valve'ın OLED modeline özgü bir Wi-Fi gerilemesi için SteamOS 3.7.10 beta düzeltmesine ilişkin
+        bir haber raporu; bu gerileme çok oyunculu oyunlar ve indirmeler sırasında aralıklı bağlantı kesilmelerine
+        neden olmuştu. Yazılım güncellemesiyle düzeltildi, bu nedenle bir alıcı için maliyet, yama uygulanana
+        kadar hatalı bir ağ deneyimidir.
+      advice: OLED'de Wi-Fi kopması, SteamOS 3.7.10 güncellemesiyle ele alınan bilinen bir gerilemeydi;
+        bir donanım arızası olduğunu varsaymadan önce cihazı güncel tutun.
+  evidence:
+  - url: https://gamerant.com/steam-deck-update-new-wifi-bug-fix-steamos-patch-notes/
+    quote: Chief among them was an intermittent Wi-Fi disconnection problem that disrupted multiplayer
+      sessions and downloads for many players.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:57:24+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: asus
+      series: rog ally z1 extreme
+  kind: known_issue
+  domain: thermal
+  severity: high
+  consequence: ''
+  detection: ''
+  component: microSD card reader
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: microSD card reader malfunctions under thermal stress (official ASUS confirmation)
+      body: News report quoting an ASUS representative confirming the integrated microSD reader can fail
+        under heat; ASUS shipped a fan-speed update to mitigate, but damaged readers need board-level
+        repair.
+      advice: Do not rely on the microSD slot for primary storage on the Z1 Extreme; heat from the exhaust-adjacent
+        reader can kill cards. Keep long sessions off the SD card or accept the risk.
+    tr:
+      title: microSD kart okuyucu termal stres altında arızalanıyor (resmi ASUS onayı)
+      body: Bir ASUS temsilcisinin, entegre microSD okuyucunun ısı altında arızalanabileceğini doğruladığını
+        aktaran haber raporu; ASUS bunu hafifletmek için bir fan hızı güncellemesi yayınladı, ancak hasarlı
+        okuyucular kart seviyesinde onarım gerektirir.
+      advice: Z1 Extreme'de birincil depolama için microSD yuvasına güvenmeyin; egzoza bitişik okuyucudan
+        gelen ısı kartları öldürebilir. Uzun oturumları SD karttan uzak tutun veya riski kabul edin.
+  evidence:
+  - url: https://www.extremetech.com/gaming/asus-confirms-rog-ally-might-roast-your-sd-cards-alive
+    quote: After confirmation from internal testing, under certain thermal stress conditions, the SD card
+      reader may malfunction,
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:01:19+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: sony
+      series: playstation 5
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: DualSense analog stick potentiometers
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: DualSense stick drift is common and recurs on replacement controllers
+      body: French owner forum thread where users report PS5 stick drift; the quoted user says the only
+        real fix is replacing the stock sticks with magnetic ones (soldering or ~30-50€ shop repair) and
+        warns a new 75€ controller will drift again within a year.
+      advice: Stick drift is the most commonly reported PS5 controller fault. It affects the DualSense
+        regardless of console model, so budget for it; a replacement controller may develop the same fault,
+        and a magnetic-stick swap is the longer-lasting fix.
+    tr:
+      title: DualSense çubuk kayması yaygındır ve yedek kumandalarda tekrarlar
+      body: Kullanıcıların PS5 çubuk kayması bildirdiği Fransız sahip forumu konusu; alıntılanan kullanıcı,
+        tek gerçek çözümün stok çubukları manyetik olanlarla değiştirmek olduğunu (lehimleme veya ~30-50€
+        dükkan onarımı) söylüyor ve yeni bir 75€ kumandanın bir yıl içinde tekrar kayacağı konusunda uyarıyor.
+      advice: Çubuk kayması, en sık bildirilen PS5 kumanda arızasıdır. Konsol modelinden bağımsız olarak
+        DualSense'i etkiler, bu nedenle bunun için bütçe ayırın; yedek bir kumanda aynı arızayı geliştirebilir
+        ve manyetik çubuk değişimi daha uzun ömürlü çözümdür.
+  evidence:
+  - url: https://m.jeuxvideo.com/forums/42-3022514-76828053-1-0-1-0-stick-drift.htm
+    quote: Oui j'en ai déjà eu le seul moyen de virer ça c'est de changer les joystick de base par des
+      joystick magnétique ça coute 10 balles sur Amazon mais faut savoir souder ou l'envoyer en réparation
+      dans une boutique de réparation ça coute entre 30 et 50€ sinon racheter une manette a 75 balles
+      ce que je déconseille au bout de 1 ans tu auras la même merde sur la nouvelle
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:00:10+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Microsoft
+      series: Xbox Series
+  kind: known_issue
+  domain: power
+  severity: high
+  consequence: ''
+  detection: ''
+  component: AC power cord (model 1948-000001)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Microsoft global replacement program for Xbox Series X/S AC power cords (model 1948-000001)
+        due to overheating
+      body: Reports a voluntary global replacement program for Series X/S AC power cords (model 1948-000001)
+        that can overheat at the C13 connector, with surface temperatures exceeding safety thresholds.
+      advice: 'This is the most consequential finding: affected power cords can overheat or melt at the
+        plug, and owners in the EU market should check their cord''s model number (1948-000001) and use
+        Microsoft''s replacement program rather than keep using the cord.'
+    tr:
+      title: Microsoft'un Xbox Series X/S AC güç kabloları (model 1948-000001) için aşırı ısınma nedeniyle
+        küresel değişim programı
+      body: C13 konektöründe aşırı ısınabilen ve yüzey sıcaklıkları güvenlik eşiklerini aşan Series X/S
+        AC güç kabloları (model 1948-000001) için gönüllü bir küresel değişim programı bildiriyor.
+      advice: 'Bu en önemli bulgudur: etkilenen güç kabloları fişte aşırı ısınabilir veya eriyebilir ve
+        AB pazarındaki sahipler kablonun model numarasını (1948-000001) kontrol etmeli ve kabloyu kullanmaya
+        devam etmek yerine Microsoft''un değişim programını kullanmalıdır.'
+  evidence:
+  - url: https://thegadgetdigest.com/home-theater/microsoft-to-replace-xbox-power-cords
+    quote: Affected cords bear the model number 1948-000001 and were shipped with consoles in North America,
+      Europe, Australia, and select Asian markets.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:57:58+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: asus
+      series: rog ally z1 extreme
+  kind: known_issue
+  domain: power
+  severity: high
+  consequence: ''
+  detection: ''
+  component: APU power management (TDP)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: APU power limit hard-locks to ~4-7W on wake from sleep (SteamOS 3.8)
+      body: Owner report on the Valve SteamOS tracker for the RC71L Z1 Extreme (BIOS 342) that after sleep/wake
+        the APU is stuck at the lowest TDP, making the device effectively unusable until reboot.
+      advice: If you run SteamOS/Bazzite on the Z1 Extreme, wake-from-sleep can leave the APU locked at
+        ~4-7W; a reboot is the workaround. Check for a fixed SteamOS build before buying for this use.
+    tr:
+      title: APU güç limiti uykudan uyanmada ~4-7W'de sabitleniyor (SteamOS 3.8)
+      body: RC71L Z1 Extreme (BIOS 342) için Valve SteamOS izleyicisinde bir sahip raporu; uyku/uyanmadan
+        sonra APU'nun en düşük TDP'de takılı kaldığını ve cihazın yeniden başlatılana kadar fiilen kullanılamaz
+        hale geldiğini belirtiyor.
+      advice: Z1 Extreme'de SteamOS/Bazzite çalıştırıyorsanız, uykudan uyanma APU'yu ~4-7W'de kilitli
+        bırakabilir; yeniden başlatma geçici çözümdür. Bu kullanım için satın almadan önce düzeltilmiş
+        bir SteamOS yapısı olup olmadığını kontrol edin.
+  evidence:
+  - url: https://github.com/ValveSoftware/SteamOS/issues/2790
+    quote: Upon waking the device from sleep, the APU gets hard-locked at the lowest possible TDP/power
+      limit (~4-7W).
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:00:32+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Nintendo
+      series: Nintendo Switch
+  kind: known_issue
+  domain: power
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: battery / charging circuit
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Switch Lite battery fully drained, console won't charge or boot
+      body: An owner reports a Switch Lite with a fully drained battery that will not charge or boot,
+        and forum replies note a fully depleted battery may need 24-48 hours on a charger before it boots.
+      advice: If a Lite is left to fully drain, it may appear dead and refuse to charge or boot for a
+        day or two. This is often recoverable rather than a hardware failure, but it can look like a bricked
+        console.
+    tr:
+      title: Switch Lite pili tamamen bitti, konsol şarj olmuyor veya açılmıyor
+      body: Bir sahip, pili tamamen biten ve şarj olmayan veya açılmayan bir Switch Lite bildiriyor; forum
+        yanıtları, tamamen tükenmiş bir pilin açılmadan önce şarj cihazında 24-48 saat kalması gerekebileceğini
+        belirtiyor.
+      advice: Bir Lite tamamen bitmeye bırakılırsa, ölü görünebilir ve bir veya iki gün boyunca şarj olmayı
+        veya açılmayı reddedebilir. Bu genellikle donanım arızasından ziyade kurtarılabilir bir durumdur,
+        ancak tuğlalanmış bir konsol gibi görünebilir.
+  evidence:
+  - url: https://www.nintendolife.com/forums/nintendo-switch/nintendo_switch_and_nintendo_switch_lite_having_same_problem
+    quote: The battery is 100% drained, but nothing will charge, and like I said I cant boot it into maintenance
+      mode.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:59:29+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: valve
+      series: steam deck oled
+  kind: known_issue
+  domain: software
+  severity: high
+  consequence: ''
+  detection: ''
+  component: audio DSP (snd_sof_amd_vangogh / ACP SOF driver)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Steam Deck OLED audio DSP topology load failure (kernel bug)
+      body: A Linux kernel patch description documenting that a driver change broke audio on the Steam
+        Deck OLED, producing IPC timeouts and DSP topology load failures. This is a software-level audio
+        failure specific to the OLED's AMD ACP audio hardware, later fixed by a kernel patch.
+      advice: Audio failure on the OLED can stem from a kernel/driver regression rather than hardware;
+        a system update or kernel fix resolves it.
+    tr:
+      title: Steam Deck OLED ses DSP topolojisi yükleme hatası (çekirdek hatası)
+      body: Bir Linux çekirdek yaması açıklaması, bir sürücü değişikliğinin Steam Deck OLED'de sesi bozduğunu,
+        IPC zaman aşımları ve DSP topolojisi yükleme hataları ürettiğini belgeliyor. Bu, OLED'in AMD ACP
+        ses donanımına özgü yazılım düzeyinde bir ses arızasıdır ve daha sonra bir çekirdek yamasıyla
+        düzeltilmiştir.
+      advice: OLED'de ses arızası donanımdan ziyade bir çekirdek/sürücü gerilemesinden kaynaklanabilir;
+        bir sistem güncellemesi veya çekirdek düzeltmesi bunu çözer.
+  evidence:
+  - url: http://git.armlinux.org.uk/cgit/linux.git/log/sound/soc/sof/amd/acp.h?showmsg=1
+    quote: The recent introduction of the ACP/PSP communication for IRAM/DRAM fence register modification
+      breaks the audio support on Valve's Steam Deck OLED device.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:57:24+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: microsoft
+      series: xbox series x
+  kind: known_issue
+  domain: thermal
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: cooling system / ventilation vents
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Series X shuts down immediately when internal temperature exceeds what the cooling system
+        can handle
+      body: A tech outlet covering the Series X reports that unexpected shutdowns are one of the most
+        common problems, and that poor ventilation or blocked vents cause overheating, after which the
+        console shuts down immediately to protect itself.
+      advice: Keep 4-6 inches of clearance around the console and clean the vents; a blocked or poorly
+        ventilated unit will shut down mid-game. This is preventable with placement, not a defect requiring
+        repair.
+    tr:
+      title: Series X, iç sıcaklık soğutma sisteminin kaldırabileceğini aştığında hemen kapanıyor
+      body: Series X'i ele alan bir teknoloji yayını, beklenmeyen kapanmaların en yaygın sorunlardan biri
+        olduğunu ve kötü havalandırma veya tıkalı havalandırma deliklerinin aşırı ısınmaya neden olduğunu,
+        ardından konsolun kendini korumak için hemen kapandığını bildiriyor.
+      advice: Konsolun çevresinde 4-6 inç boşluk bırakın ve havalandırma deliklerini temizleyin; tıkalı
+        veya kötü havalandırılan bir ünite oyun ortasında kapanacaktır. Bu, onarım gerektiren bir kusur
+        değil, yerleşimle önlenebilir bir durumdur.
+  evidence:
+  - url: https://www.slashgear.com/1163045/if-your-xbox-series-x-keeps-crashing-heres-how-to-fix-it/
+    quote: Once the temperature goes beyond what the console can handle, it shuts down immediately.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:58:44+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: asus
+      series: rog ally z1 extreme
+  kind: known_issue
+  domain: software
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: AMD graphics driver / DXGI
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Fatal D3D device-hung crash (DXGI_ERROR_DEVICE_HUNG) during games
+      body: Microsoft Q&A thread on a ROG Ally RC71L with the Ryzen Z1 Extreme hitting a fatal D3D device-hung
+        error (0x887a0006) during games under Windows 11.
+      advice: Expect occasional graphics-driver crashes on the Z1 Extreme under Windows; the DXGI_ERROR_DEVICE_HUNG
+        error is a known pattern that driver/BIOS updates may or may not fix. Keep GPU drivers current.
+    tr:
+      title: Oyunlar sırasında ölümcül D3D cihaz takılması çökmesi (DXGI_ERROR_DEVICE_HUNG)
+      body: Windows 11 altında oyunlar sırasında ölümcül D3D cihaz takılması hatası (0x887a0006) alan
+        Ryzen Z1 Extreme'li bir ROG Ally RC71L hakkında Microsoft Q&A konusu.
+      advice: Windows altında Z1 Extreme'de ara sıra grafik sürücüsü çökmeleri bekleyin; DXGI_ERROR_DEVICE_HUNG
+        hatası, sürücü/BIOS güncellemelerinin düzeltip düzeltmeyebileceği bilinen bir kalıptır. GPU sürücülerini
+        güncel tutun.
+  evidence:
+  - url: https://learn.microsoft.com/en-us/answers/questions/3890471/fatal-d3d-error-(25-dxgi-error-device-hung-0x887a0
+    quote: Fatal D3D error (25, DXGI_ERROR_DEVICE_HUNG, 0x887a0006)
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:01:19+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: asus
+      series: rog ally z1 extreme
+  kind: known_issue
+  domain: network
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: MediaTek MT7922 WiFi card
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: MediaTek MT7922 WiFi disconnects and networks disappear until reboot
+      body: Owner report on the Bazzite forum that the MT7922 WiFi card drops all networks minutes after
+        boot and requires a reboot; the card is partially functional (Bluetooth still works).
+      advice: WiFi dropouts on the Z1 Extreme are reported with the MediaTek MT7922 card, often under
+        Linux; a reboot is the usual workaround. Treat this as a driver/firmware issue rather than a dead
+        card.
+    tr:
+      title: MediaTek MT7922 WiFi bağlantısı kesiliyor ve yeniden başlatılana kadar ağlar kayboluyor
+      body: Bazzite forumunda bir sahip, MT7922 WiFi kartının açılıştan dakikalar sonra tüm ağları düşürdüğünü
+        ve yeniden başlatma gerektirdiğini bildiriyor; kart kısmen işlevsel (Bluetooth hâlâ çalışıyor).
+      advice: Z1 Extreme'de WiFi kopmaları, genellikle Linux altında MediaTek MT7922 kartıyla bildirilir;
+        yeniden başlatma olağan geçici çözümdür. Bunu ölü bir kart yerine sürücü/yazılım sorunu olarak
+        değerlendirin.
+  evidence:
+  - url: https://universal-blue.discourse.group/t/rog-ally-wifi-problem-on-bazzite/8620/2
+    quote: The WiFi card is a MediaTek MT7922.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:01:19+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Valve
+      series: Steam Deck
+  kind: known_issue
+  domain: general
+  severity: high
+  consequence: ''
+  detection: ''
+  component: internal controller / board-level power rail
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Steam Deck LCD board-level fault: black display, dead controls, fan at 0 RPM, CPU stuck
+        at 400 MHz'
+      body: An owner describes a sudden hardware failure (out of sleep) where the internal display goes
+        black, controls die, the fan reports fault, and the CPU is stuck at 400 MHz; a fresh SteamOS reimage
+        does not fix it, pointing to a board-level fault rather than software.
+      advice: This is a sudden, non-user-caused hardware failure that survives a full OS reimage. If buying
+        second-hand, ask whether the unit has ever shown this symptom; it is not fixable by software and
+        may require board repair.
+    tr:
+      title: 'Steam Deck LCD kart düzeyinde arıza: siyah ekran, ölü kontroller, 0 RPM''de fan, 400 MHz''de
+        takılı CPU'
+      body: 'Bir sahip, ani bir donanım arızası (uykudan çıkışta) tanımlıyor: dahili ekran siyaha dönüyor,
+        kontroller ölüyor, fan arıza bildiriyor ve CPU 400 MHz''de takılı kalıyor; yeni bir SteamOS yeniden
+        kurulumu bunu düzeltmiyor, bu da yazılımdan ziyade kart düzeyinde bir arızaya işaret ediyor.'
+      advice: Bu, tam bir işletim sistemi yeniden kurulumundan sonra da devam eden, kullanıcı kaynaklı
+        olmayan ani bir donanım arızasıdır. İkinci el alıyorsanız, ünitenin bu belirtiyi hiç gösterip
+        göstermediğini sorun; yazılımla düzeltilemez ve kart onarımı gerektirebilir.
+  evidence:
+  - url: https://steamcommunity.com/discussions/forum/11/567045558745874380/?l=italian
+    quote: The internal controller (Valve 28de:1205) does not appear anywhere in the kernel log. No enumeration,
+      nor bind error, which I understand indicates the controller's bus/hardware is not being detected
+      at the kernel level, not a driver or software issue.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:56:59+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: sony
+      series: playstation 5
+  kind: known_issue
+  domain: thermal
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: liquid metal thermal interface (APU/heatsink)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Liquid metal thermal interface degrades with age, causing overheating and shutdowns on older
+        disc-model PS5s
+      body: A repair technician documented a CFI-1116 (a disc-model revision) with severe overheating
+        from degraded liquid metal; the article also cites Reddit owners of launch-day PS5s shutting down
+        after 20-30 minutes, fixed by replacing liquid metal and thermal pads.
+      advice: On an ageing PS5 Disc, overheating/auto-shutdown after years of use may be the liquid metal
+        interface degrading rather than dust. This is a repair-shop job (liquid metal replacement), not
+        a DIY fix, and the article notes it does not affect every unit.
+    tr:
+      title: Sıvı metal termal arayüz yaşlandıkça bozuluyor, eski disk modelli PS5'lerde aşırı ısınmaya
+        ve kapanmalara neden oluyor
+      body: Bir tamir teknisyeni, bozulmuş sıvı metalden kaynaklanan ciddi aşırı ısınma yaşayan bir CFI-1116'yı
+        (disk modelli bir revizyon) belgeledi; makale ayrıca çıkış günü PS5'lerine sahip Reddit kullanıcılarının
+        20-30 dakika sonra kapandığını ve sıvı metal ile termal pedlerin değiştirilmesiyle düzeltildiğini
+        aktarıyor.
+      advice: Yaşlanan bir PS5 Disc'te, yıllarca kullanımdan sonra aşırı ısınma/otomatik kapanma tozdan
+        ziyade sıvı metal arayüzünün bozulması olabilir. Bu bir tamirci işidir (sıvı metal değişimi),
+        kendin yap çözümü değildir ve makale bunun her cihazı etkilemediğini belirtiyor.
+  evidence:
+  - url: https://www.notebookcheck.net/Older-PS5-develops-severe-overheating-as-liquid-metal-leaves-permanent-scars-on-heatsink.1366421.0.html
+    quote: An older PlayStation 5 has developed a severe overheating problem that appears to be linked
+      to degradation around its liquid metal thermal interface. The affected console is a CFI-1116 model,
+      although other PS5 owners have reported similar symptoms after several years of use.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:00:10+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: nintendo
+      series: switch oled
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: Joy-Con analog stick
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Joy-Con stick drift reported on Switch OLED units
+      body: A Feddit thread on OLED drift reports the OLED's Joy-Con use the same sticks as all Switch
+        1 controllers and are prone to drift as a manufacturing issue, and links an owner report of drift
+        on an OLED after one year.
+      advice: Stick drift is the most widely documented Switch failure and the OLED is not exempt. Budget
+        for a Joy-Con repair or replacement sticks; Nintendo's repair program and aftermarket parts are
+        the common routes.
+    tr:
+      title: Switch OLED cihazlarında Joy-Con çubuk kayması bildirildi
+      body: OLED kayması hakkında bir Feddit başlığı, OLED'in Joy-Con'larının tüm Switch 1 kumandalarıyla
+        aynı çubukları kullandığını ve bir üretim sorunu olarak kaymaya yatkın olduğunu bildiriyor ve
+        bir yıl sonra bir OLED'de kayma yaşandığına dair bir sahip raporuna bağlantı veriyor.
+      advice: Çubuk kayması en yaygın belgelenmiş Switch arızasıdır ve OLED bunun istisnası değildir.
+        Bir Joy-Con tamiri veya yedek çubuklar için bütçe ayırın; Nintendo'nun tamir programı ve satış
+        sonrası parçalar yaygın yollardır.
+  evidence:
+  - url: https://feddit.fr/post/62618?sort=new
+    quote: And yes, they are prone to drift. It's a manufacturing issue.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:55:43+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Nintendo
+      series: Nintendo Switch
+  kind: known_issue
+  domain: power
+  severity: high
+  consequence: ''
+  detection: ''
+  component: MAX77620H power management IC / motherboard caps
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Switch Lite fails to boot with 2168-0002 error, shorted caps near MAX77620H
+      body: A repairer reports an unmodified Switch Lite that fails to boot with a 2168-0002 error right
+        after the Nintendo logo, with shorted capacitors near the MAX77620H power management IC.
+      advice: A 2168-0002 boot failure on an unmodified Lite is a board-level power fault (shorted caps
+        near the MAX77620H PMIC), not a software fix. It means a repair or replacement, not a reset.
+    tr:
+      title: Switch Lite 2168-0002 hatasıyla açılmıyor, MAX77620H yakınındaki kondansatörler kısa devre
+      body: Bir tamirci, Nintendo logosundan hemen sonra 2168-0002 hatasıyla açılmayan, MAX77620H güç
+        yönetimi IC'sinin yakınındaki kondansatörleri kısa devre olan modifiye edilmemiş bir Switch Lite
+        bildiriyor.
+      advice: Modifiye edilmemiş bir Lite'ta 2168-0002 açılış arızası, yazılım düzeltmesi değil kart seviyesinde
+        bir güç arızasıdır (MAX77620H PMIC yakınındaki kısa devre kondansatörler). Bu, sıfırlama değil
+        tamir veya değişim anlamına gelir.
+  evidence:
+  - url: https://gbatemp.net/threads/2168-0002-on-unmodified-switch-lite.679455/
+    quote: fails to boot with a 2168-0002 error showing up right after the initial Nintendo Switch logo.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:59:29+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: ASUS
+      series: ROG Ally
+  kind: known_issue
+  domain: general
+  severity: high
+  consequence: ''
+  detection: ''
+  component: motherboard / USB port / buttons
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: ASUS UK reports 'high repair volume' on ROG Xbox Ally X; USB/button/motherboard complaints
+      body: This is about the newer ROG Xbox Ally X variant, not the 2024 ROG Ally X. ASUS UK told a Windows
+        Central writer its repair centers were overloaded and diverted repairs overseas; anecdotal Reddit
+        reports point to USB-port, sticky-button and motherboard issues.
+      advice: For the Xbox-branded Ally X, expect slow warranty turnaround (repairs sent overseas) and
+        a higher chance of board-level faults. Buy with a retailer that handles warranty locally, and
+        log any fault early.
+    tr:
+      title: ASUS UK, ROG Xbox Ally X'te 'yüksek tamir hacmi' bildiriyor; USB/düğme/anakart şikayetleri
+      body: Bu, 2024 ROG Ally X değil, daha yeni ROG Xbox Ally X varyantıyla ilgilidir. ASUS UK, bir Windows
+        Central yazarına tamir merkezlerinin aşırı yüklendiğini ve tamirleri denizaşırıya yönlendirdiğini
+        söyledi; Reddit'teki anekdot niteliğindeki raporlar USB portu, yapışkan düğme ve anakart sorunlarına
+        işaret ediyor.
+      advice: Xbox markalı Ally X için yavaş garanti süreci (tamirlerin denizaşırıya gönderilmesi) ve
+        daha yüksek kart seviyesinde arıza olasılığı bekleyin. Garantiyi yerel olarak yürüten bir satıcıdan
+        satın alın ve herhangi bir arızayı erken kaydedin.
+  evidence:
+  - url: https://www.techpowerup.com/346306/asus-uk-reports-high-repair-volume-diverts-repairs-to-overseas-facilities
+    quote: ASUS is "experiencing high repair volumes" not too long after shipments started for the ASUS
+      ROG Xbox Ally.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:56:19+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Nintendo
+      series: Nintendo Switch
+  kind: known_issue
+  domain: display
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: LCD panel / display ribbon cable / GPU
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Switch Lite screen shows colour bleed and scrambled picture (GPU or ribbon/LCD fault)
+      body: A report aggregating r/NintendoSwitchHelp describes a Switch Lite showing colour bleed and
+        scrambled picture, attributed to either GPU core damage or a loose/aged display ribbon cable and
+        LCD panel.
+      advice: A scrambled or colour-bleeding screen points to either the GPU or the display ribbon/LCD.
+        GPU faults need a board-level repair; ribbon/LCD faults are cheaper to fix. This is a secondary
+        aggregation, so treat it as a weaker source than an owner's own thread.
+    tr:
+      title: Switch Lite ekranı renk taşması ve bozuk görüntü gösteriyor (GPU veya şerit/LCD arızası)
+      body: r/NintendoSwitchHelp'i derleyen bir rapor, renk taşması ve bozuk görüntü gösteren bir Switch
+        Lite'ı tanımlıyor; bunun ya GPU çekirdek hasarına ya da gevşek/yaşlanmış ekran şerit kablosu ve
+        LCD paneline bağlandığını belirtiyor.
+      advice: Bozuk veya renk taşan bir ekran ya GPU'ya ya da ekran şeridi/LCD'ye işaret eder. GPU arızaları
+        kart seviyesinde tamir gerektirir; şerit/LCD arızalarını düzeltmek daha ucuzdur. Bu ikincil bir
+        derlemedir, bu yüzden bir sahibin kendi başlığından daha zayıf bir kaynak olarak değerlendirin.
+  evidence:
+  - url: http://360game.360.cn/article/content?id=69f93837e78ed7d66fb725be
+    quote: 这类画面异常基本分为两种故障源头，分别是机身GPU核心损坏，还有屏幕排线松动、排线老化以及液晶面板本身失效。
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:59:29+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: ASUS
+      series: ROG Ally
+  kind: known_issue
+  domain: software
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: AMD graphics driver / BIOS / Windows sleep resume
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: ROG Ally X crashes/freezes/BSODs traced to drivers, heat, sleep resume and storage
+      body: 'An owner-facing troubleshooting guide lists the recurring crash causes for the ROG Ally X:
+        Windows updates swapping in a generic AMD driver, BIOS issues, unstable sleep resume, heat, and
+        storage corruption.'
+      advice: If the unit crashes or fails to wake, the first suspects are a Windows-update driver swap
+        and sleep-resume bugs, not hardware. Roll back/reinstall the AMD driver and update BIOS before
+        assuming a faulty unit.
+    tr:
+      title: ROG Ally X çökmeleri/donmaları/BSOD'ları sürücülere, ısıya, uyku devamına ve depolamaya bağlandı
+      body: 'Sahiplere yönelik bir sorun giderme kılavuzu, ROG Ally X için tekrarlayan çökme nedenlerini
+        listeliyor: Windows güncellemelerinin genel bir AMD sürücüsünü devreye sokması, BIOS sorunları,
+        kararsız uyku devamı, ısı ve depolama bozulması.'
+      advice: Cihaz çökerse veya uyanmazsa, ilk şüpheliler donanım değil, bir Windows güncellemesi sürücü
+        değişimi ve uyku devamı hatalarıdır. Arızalı bir cihaz varsaymadan önce AMD sürücüsünü geri alın/yeniden
+        yükleyin ve BIOS'u güncelleyin.
+  evidence:
+  - url: https://evezone.evetech.co.za/build-lab/why-does-my-rog-ally-x-crashing
+    quote: ROG Ally X crashes, freezes, blue screens, reboots, or shutdowns usually comes from a Windows
+      update, AMD graphics driver mismatch, BIOS issue, unstable sleep resume, heat, or storage corruption.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:56:19+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: ASUS
+      series: ROG Ally
+  kind: known_issue
+  domain: power
+  severity: high
+  consequence: ''
+  detection: ''
+  component: battery / power delivery / charging circuit
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: ROG Xbox Ally X unit died in sleep, refused to charge (no LED) after ~5 months
+      body: A Windows Central journalist's £800 ROG Xbox Ally X (again the Xbox variant) failed to wake
+        from sleep and then refused to charge, with no charging LED, after about five months of light
+        use. The charger was verified working on another device.
+      advice: For the Xbox-branded Ally X, a sleep-to-dead power failure is documented, and recovery (power-button
+        holds) failed in this case. Keep the unit charged and be ready to use warranty if it won't wake
+        or charge.
+    tr:
+      title: ROG Xbox Ally X cihazı uykuda öldü, yaklaşık 5 ay sonra şarj olmayı reddetti (LED yok)
+      body: Bir Windows Central gazetecisinin £800 ROG Xbox Ally X'i (yine Xbox varyantı) uykudan uyanamadı
+        ve ardından yaklaşık beş aylık hafif kullanımdan sonra şarj LED'i olmadan şarj olmayı reddetti.
+        Şarj cihazının başka bir cihazda çalıştığı doğrulandı.
+      advice: Xbox markalı Ally X için uykudan ölü güç arızası belgelenmiştir ve bu durumda kurtarma (güç
+        düğmesini basılı tutma) başarısız oldu. Cihazı şarjlı tutun ve uyanmaz veya şarj olmazsa garantiyi
+        kullanmaya hazır olun.
+  evidence:
+  - url: https://tech.yahoo.com/gaming/articles/dead-xbox-rog-ally-x-190118045.html
+    quote: After a recent session, I turned off the console and put it away, only to return a day later
+      and find it wouldn't wake up.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T10:56:19+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: sony
+      series: playstation 5
+  kind: known_issue
+  domain: mechanical
+  severity: low
+  consequence: ''
+  detection: ''
+  component: disc drive (BD/DVD reader and eject mechanism)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Disc drive can fail to read discs or trap a disc; Sony ships a manual eject procedure
+      body: Sony's official support documentation for the disc model covers disc-reading problems and
+        a manual procedure to remove a disc stuck in the drive (using a screw on the drive), confirming
+        the disc drive is a serviceable part with recognized failure modes.
+      advice: For the Disc edition specifically, the optical drive is the part unique to this model. Sony's
+        own guide documents reading faults and stuck discs and provides a manual eject screw, so a stuck
+        disc is recoverable without sending the console away, but drive faults are a repair-shop item.
+    tr:
+      title: Disk sürücüsü diskleri okumayı başaramayabilir veya bir diski sıkıştırabilir; Sony manuel
+        çıkarma prosedürü gönderiyor
+      body: Sony'nin disk modeli için resmi destek belgeleri, disk okuma sorunlarını ve sürücüde sıkışan
+        bir diski çıkarmak için manuel bir prosedürü (sürücüdeki bir vida kullanılarak) kapsar; bu da
+        disk sürücüsünün tanınmış arıza modlarına sahip, bakımı yapılabilir bir parça olduğunu doğrular.
+      advice: Özellikle Disc sürümü için optik sürücü, bu modele özgü parçadır. Sony'nin kendi kılavuzu
+        okuma arızalarını ve sıkışan diskleri belgeler ve manuel bir çıkarma vidası sağlar, bu nedenle
+        sıkışan bir disk konsolu göndermeden kurtarılabilir, ancak sürücü arızaları bir tamirci kalemidir.
+  evidence:
+  - url: https://www.playstation.com/zh-hans-cn/support/hardware/ps5-problem-reading-disc/?$100px--t$
+    quote: '如何从PS5主机中取出卡住的光碟
+
+
+      注意：以下方式仅适用于型号为CFI-1000/CFI-1100/CFI-1200系列的PS5主机。'
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:00:10+00:00'

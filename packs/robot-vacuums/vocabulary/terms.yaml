@@ -1,0 +1,59 @@
+# Vocabulary — every kind, key, domain and attribute this pack uses.
+#
+# Written from the pack an agent proposed. Declared before use: the
+# builder refuses a row naming a term that is not here, which is also
+# why a domain used by a claim and never declared is added above.
+- term_id: product
+  role: subject_kind
+  label:
+    en: product
+- term_id: brand
+  role: attribute
+  datatype: text
+  label:
+    en: brand
+- term_id: model
+  role: attribute
+  datatype: text
+  label:
+    en: model
+- term_id: suction_pa
+  role: attribute
+  datatype: number
+  label:
+    en: Max suction (Pa)
+- term_id: battery_min
+  role: attribute
+  datatype: number
+  label:
+    en: Battery runtime (min)
+- term_id: dustbin_l
+  role: attribute
+  datatype: number
+  label:
+    en: Dustbin capacity (L)
+- term_id: water_tank_l
+  role: attribute
+  datatype: number
+  label:
+    en: Clean-water tank (L)
+- term_id: mechanical
+  role: domain
+  label:
+    en: Mechanical
+- term_id: software
+  role: domain
+  label:
+    en: Software and app
+- term_id: electrical
+  role: domain
+  label:
+    en: Electrical and charging
+- term_id: service
+  role: domain
+  label:
+    en: Warranty and service
+- term_id: general
+  role: domain
+  label:
+    en: General

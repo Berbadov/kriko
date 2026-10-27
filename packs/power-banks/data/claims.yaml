@@ -1,0 +1,1612 @@
+# Claims — what is known to go wrong, each with the page it came from and the quote
+# that was read there. A claim without both is not in this file.
+- subject:
+    kind: product
+    identity:
+      brand: Anker
+      model: PowerCore 10000 PD+ (A1236)
+  kind: known_issue
+  domain: battery
+  severity: low
+  consequence: ''
+  detection: ''
+  component: lithium-ion battery (model A1236)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: News report lists PowerCore 10000 A1236 among recalled Anker models, conflicting with CPSC
+      body: This secondary Spanish news article (aggregating Daily Mail) lists the A1236 among recalled
+        Anker models. It conflicts with the primary CPSC notice, which states the recall covers model
+        A1263 only, and the article's model list contains errors (e.g., A1642, not a recalled MagGo model).
+        I could not open the page to verify it (fetch hit the tool budget), so this is reported as an
+        unverified, conflicting claim.
+      advice: Treat this as an unreliable secondary source. The authoritative CPSC notice does not include
+        the A1236; verify any recall status against CPSC or Anker's official recall page before acting.
+    tr:
+      title: Haber raporu, PowerCore 10000 A1236'yı geri çağrılan Anker modelleri arasında listeliyor
+        ve CPSC ile çelişiyor
+      body: Bu ikincil İspanyolca haber makalesi (Daily Mail'i derleyen) A1236'yı geri çağrılan Anker
+        modelleri arasında listeliyor. Geri çağırmanın yalnızca A1263 modelini kapsadığını belirten birincil
+        CPSC bildirimiyle çelişiyor ve makalenin model listesi hatalar içeriyor (örneğin, geri çağrılan
+        bir MagGo modeli olmayan A1642). Sayfayı doğrulamak için açamadım (getirme işlemi araç bütçesine
+        takıldı), bu nedenle bu, doğrulanmamış ve çelişkili bir iddia olarak raporlanıyor.
+      advice: Bunu güvenilmez bir ikincil kaynak olarak değerlendirin. Yetkili CPSC bildirimi A1236'yı
+        içermiyor; harekete geçmeden önce herhangi bir geri çağırma durumunu CPSC veya Anker'in resmi
+        geri çağırma sayfasından doğrulayın.
+  evidence:
+  - url: https://rpp.pe/capital/trending/cargadores-anker-retirados-del-mercado-por-reportes-de-quemaduras-y-explosiones-estados-unidos-bscapital-noticias-1640816
+    quote: incluyen los productos PowerCore 10000 (modelo A1236), 334 MagGO 10K (modelos A1642, A1647
+      y A1652), 321 Power Bank (5k) (modelo A1112) y 535 Power Bank (20K) (modelo 1366).
+    locator: ''
+    stance: disputes
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:44:05+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Anker
+      model: 523 Power Bank (PowerCore 10000) (A1245)
+  kind: known_issue
+  domain: battery
+  severity: high
+  consequence: ''
+  detection: ''
+  component: battery cell (model identification)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Anker June 2025 recall covers PowerCore 10000 model A1263 and other models, not the A1245
+        523 Power Bank
+      body: This finding came from the query 'Anker A1245 523 Power Bank recall'. Anker's own IPO prospectus
+        lists the recalled models; A1245 is not among them.
+      advice: If you own the A1245 523 Power Bank, do not assume the June 2025 Anker recall covers it.
+        The recalled PowerCore 10000 is model A1263 (plus A1257, A1680, A1681, A1689, A1642, A1647, A1652).
+        Check your unit's model number before acting on recall news.
+    tr:
+      title: Anker Haziran 2025 geri çağırması PowerCore 10000 model A1263'ü ve diğer modelleri kapsıyor,
+        A1245 523 Power Bank'ı değil
+      body: Bu bulgu 'Anker A1245 523 Power Bank recall' sorgusundan geldi. Anker'in kendi IPO izahnamesi
+        geri çağrılan modelleri listeliyor; A1245 bunlar arasında değil.
+      advice: A1245 523 Power Bank'a sahipseniz, Haziran 2025 Anker geri çağırmasının bunu kapsadığını
+        varsaymayın. Geri çağrılan PowerCore 10000, model A1263'tür (ayrıca A1257, A1680, A1681, A1689,
+        A1642, A1647, A1652). Geri çağırma haberlerine göre harekete geçmeden önce cihazınızın model numarasını
+        kontrol edin.
+  evidence:
+  - url: https://s4.biz.itc.cn/hk/2026/0702/12224764-0.PDF
+    quote: We initiated the voluntary recall in June 2025, affecting less than 2.9 million units and models
+      including power banks A1257, A1680, A1681, A1689, A1642, A1647, A1652 and A1263, and in response
+      removed all affected products from our official sales platforms
+    locator: ''
+    stance: disputes
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:45:35+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: anker
+      model: a1263
+  kind: known_issue
+  domain: battery
+  severity: high
+  consequence: ''
+  detection: ''
+  component: lithium-ion battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Anker recalls PowerCore 10000 A1263: lithium-ion battery can overheat, melting plastic and
+        causing smoke/fire'
+      body: This is the manufacturer's own recall page (primary source).
+      advice: If you own an A1263, check the serial number on Anker's recall page (anker.com/a1263-recall).
+        If affected, stop using it immediately and register for a free replacement; dispose of the recalled
+        lithium battery at a hazardous-waste center, not in trash/recycling. A receipt is helpful but
+        not required.
+    tr:
+      title: 'Anker, PowerCore 10000 A1263''ü geri çağırıyor: lityum iyon pil aşırı ısınarak plastiği
+        eritebilir ve duman/yangına neden olabilir'
+      body: Bu, üreticinin kendi geri çağırma sayfasıdır (birincil kaynak).
+      advice: Bir A1263'e sahipseniz, Anker'in geri çağırma sayfasındaki (anker.com/a1263-recall) seri
+        numarasını kontrol edin. Etkilenmişse, kullanmayı hemen durdurun ve ücretsiz değişim için kaydolun;
+        geri çağrılan lityum pili çöp/geri dönüşüme değil, bir tehlikeli atık merkezine bertaraf edin.
+        Fiş yardımcı olur ancak gerekli değildir.
+  evidence:
+  - url: https://www.anker.com/a1263-recall
+    quote: This issue can cause the battery to overheat, leading to melting of plastic components, smoke,
+      and fire hazards.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:43:10+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: anker
+      model: a1685
+  kind: known_issue
+  domain: battery
+  severity: high
+  consequence: ''
+  detection: ''
+  component: lithium-ion battery cell
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Anker Zolo Magnetic Power Bank A1685 sparked and burned while unused
+      body: An owner reported her Anker Zolo Magnetic Power Bank A1685 10k sparked and burned at ~1 a.m.
+        while unplugged and unused, about a year after purchase. She explicitly stated her model (A1685)
+        was not part of Anker's global recall. Anker's local distributor reached out to coordinate an
+        investigation. This is a documented fire incident tied directly to the A1685 model number.
+      advice: The A1685 is not covered by Anker's recall, so a buyer cannot rely on a recall remedy for
+        this model. If you own or buy this unit, treat it as unrecalled, monitor it for heat/swelling,
+        and do not leave it charging unattended or near flammables overnight. The incident occurred while
+        the unit was idle, so even 'unused' units have been reported to ignite.
+    tr:
+      title: Anker Zolo Magnetic Power Bank A1685 kullanılmadığı sırada kıvılcım çıkardı ve yandı
+      body: Bir sahibi, Anker Zolo Magnetic Power Bank A1685 10k'nın satın alımdan yaklaşık bir yıl sonra,
+        saat ~01.00'de fişe takılı değilken ve kullanılmadığı sırada kıvılcım çıkarıp yandığını bildirdi.
+        Modelinin (A1685) Anker'in küresel geri çağırmasının bir parçası olmadığını açıkça belirtti. Anker'in
+        yerel distribütörü bir soruşturmayı koordine etmek için iletişime geçti. Bu, doğrudan A1685 model
+        numarasına bağlı belgelenmiş bir yangın olayıdır.
+      advice: A1685, Anker'in geri çağırması kapsamında değildir, bu nedenle bir alıcı bu model için geri
+        çağırma çözümüne güvenemez. Bu cihaza sahipseniz veya satın alırsanız, geri çağrılmamış olarak
+        değerlendirin, ısınma/şişme açısından izleyin ve gece boyunca gözetimsiz veya yanıcı maddelerin
+        yakınında şarjda bırakmayın. Olay cihaz boştayken meydana geldi, bu nedenle 'kullanılmayan' cihazların
+        bile tutuştuğu bildirilmiştir.
+  evidence:
+  - url: https://interaksyon.philstar.com/trends-spotlights/2026/10/26/321002/pinay-raises-power-bank-safety-awareness-device-catches-fire-unused/
+    quote: Facebook user Mai Madelle Elcullada shared on Thursday, October 23, that her Anker Zolo Magnetic
+      Power Bank “sparked and burned” at around 1 a.m. on October 22.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:44:55+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Anker
+      model: PowerCore Solar 10000 (A1640)
+  kind: known_issue
+  domain: battery
+  severity: low
+  consequence: ''
+  detection: ''
+  component: lithium-ion battery / power bank
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Anker CPSC recall does not include the PowerCore Solar 10000 (A1640)
+      body: The primary CPSC notice (Sept 18, 2025) names only A1647, A1652, A1257, A1681 and A1689. The
+        A1640 (PowerCore Solar 10000) is not among them, and the earlier June 2025 recall was for the
+        PowerCore 10000 A1263, a different product.
+      advice: Do not assume the A1640 is recalled. Secondary articles describe the second recall as covering
+        a model range (A1257-A1647) that could be read to include A1640, but the authoritative CPSC notice
+        lists specific models and A1640 is not one of them.
+    tr:
+      title: Anker CPSC geri çağırması PowerCore Solar 10000'i (A1640) içermiyor
+      body: Birincil CPSC bildirimi (18 Eylül 2025) yalnızca A1647, A1652, A1257, A1681 ve A1689'u adlandırıyor.
+        A1640 (PowerCore Solar 10000) bunlar arasında değil ve daha önceki Haziran 2025 geri çağırması
+        farklı bir ürün olan PowerCore 10000 A1263 içindi.
+      advice: A1640'ın geri çağrıldığını varsaymayın. İkincil makaleler ikinci geri çağırmayı, A1640'ı
+        içerecek şekilde okunabilecek bir model aralığını (A1257-A1647) kapsıyor şeklinde tanımlıyor,
+        ancak yetkili CPSC bildirimi belirli modelleri listeliyor ve A1640 bunlardan biri değil.
+  evidence:
+  - url: https://www.cpsc.gov/Recalls/2025/Anker-Power-Banks-Recalled-Due-to-Fire-and-Burn-Hazards-Manufactured-by-Anker-Innovations-1
+    quote: This recall involves Anker Power Banks with model numbers A1647, A1652, A1257, A1681 and A1689.
+    locator: ''
+    stance: disputes
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:42:38+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: anker
+      model: a1652
+  kind: known_issue
+  domain: battery
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: lithium-ion battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Anker MEA regional recall page confirms A1652 recall with specific model identification details
+      body: Anker's Middle East/Africa regional recall page specifically for the A1652 model. Provides
+        detailed instructions on how to identify the affected product by model number and serial number.
+      advice: This page provides the specific identification details for the A1652 — check the bottom
+        of the device for 'Anker MagGo Power Bank (10,000mAh, 7.5W)' with model number A1652. The serial
+        number does not contain the letters 'O' or 'I'.
+    tr:
+      title: Anker MEA bölgesel geri çağırma sayfası, belirli model tanımlama ayrıntılarıyla A1652 geri
+        çağırmasını doğruluyor
+      body: Anker'in özellikle A1652 modeli için Orta Doğu/Afrika bölgesel geri çağırma sayfası. Etkilenen
+        ürünün model numarası ve seri numarasıyla nasıl tanımlanacağına dair ayrıntılı talimatlar sağlar.
+      advice: Bu sayfa A1652 için belirli tanımlama ayrıntılarını sağlar — cihazın alt kısmında 'Anker
+        MagGo Power Bank (10,000mAh, 7.5W)' ve model numarası A1652 olup olmadığını kontrol edin. Seri
+        numarası 'O' veya 'I' harflerini içermez.
+  evidence:
+  - url: https://www.anker-mea.com/public/product-recall/a1652-recall
+    quote: 'We urge all customers with an Anker MagGo Power Bank (10,000mAh, 7.5W) (Model: A1652) to check
+      if their unit is included in this recall by following the steps below.'
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:48:28+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: anker
+      model: a1685
+  kind: known_issue
+  domain: battery
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: lithium-ion battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: CPSC Anker power bank recall excludes A1685
+      body: 'The official CPSC recall (Sept 18, 2025, recall #25-466, ~481,000 units) covers models A1647,
+        A1652, A1257, A1681 and A1689. The A1685 subject model is NOT among the recalled models, so it
+        is not covered by the recall remedy (full cash refund or gift card).'
+      advice: Because the A1685 is not in the CPSC recall, a buyer of this specific model has no recall-based
+        remedy and should not assume the unit is protected. The recall itself documents 33 fire/explosion
+        reports across the recalled Anker models, showing the broader risk family, but it does not extend
+        to the A1685.
+    tr:
+      title: CPSC Anker power bank geri çağırması A1685'i kapsamıyor
+      body: 'Resmi CPSC geri çağırması (18 Eylül 2025, geri çağırma #25-466, ~481.000 adet) A1647, A1652,
+        A1257, A1681 ve A1689 modellerini kapsıyor. Söz konusu A1685 modeli geri çağrılan modeller arasında
+        DEĞİLDİR, bu nedenle geri çağırma telafisi (tam nakit iade veya hediye kartı) kapsamında değildir.'
+      advice: A1685 CPSC geri çağırmasında yer almadığı için, bu belirli modeli satın alan birinin geri
+        çağırmaya dayalı bir telafisi yoktur ve ünitenin korunduğunu varsaymamalıdır. Geri çağırmanın
+        kendisi, geri çağrılan Anker modelleri genelinde 33 yangın/patlama raporunu belgeleyerek daha
+        geniş risk ailesini göstermektedir, ancak bu A1685'i kapsamamaktadır.
+  evidence:
+  - url: https://www.cpsc.gov/Recalls/2025/Anker-Power-Banks-Recalled-Due-to-Fire-and-Burn-Hazards-Manufactured-by-Anker-Innovations-1
+    quote: This recall involves Anker Power Banks with model numbers A1647, A1652, A1257, A1681 and A1689.
+    locator: ''
+    stance: disputes
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:42:38+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Anker
+      model: PowerCore Solar 10000 (A1640)
+  kind: known_issue
+  domain: battery
+  severity: low
+  consequence: ''
+  detection: ''
+  component: solar panel / battery cells
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Owner reports solar panel surface temperature exceeding 60°C during solar charging, risking
+        battery cell damage
+      body: A Japanese Amazon reviewer of the Anker PowerCore Solar 10000 (A1640) reports that solar charging
+        causes the unit to overheat to the point of potential battery cell damage, noting the solar panel
+        surface temperature exceeds 60°C in summer. This is an owner observation, not a documented safety
+        event like a fire or recall. This finding came from the search 'Anker PowerCore Solar 10000 A1640
+        overheating'.
+      advice: The A1640 has a high-temperature indicator (per its manual) that warns when the unit exceeds
+        its operating temperature limit. Owners should avoid leaving the unit in direct sunlight for extended
+        solar charging, especially in summer, as the heat may degrade the battery cells.
+    tr:
+      title: Sahip, güneş enerjisiyle şarj sırasında güneş paneli yüzey sıcaklığının 60°C'yi aştığını
+        ve pil hücresi hasarı riski oluşturduğunu bildiriyor
+      body: Anker PowerCore Solar 10000 (A1640) ürününün bir Japon Amazon yorumcusu, güneş enerjisiyle
+        şarjın ünitenin potansiyel pil hücresi hasarına yol açacak kadar aşırı ısınmasına neden olduğunu
+        ve yaz aylarında güneş paneli yüzey sıcaklığının 60°C'yi aştığını belirtiyor. Bu bir sahip gözlemidir,
+        yangın veya geri çağırma gibi belgelenmiş bir güvenlik olayı değildir. Bu bulgu 'Anker PowerCore
+        Solar 10000 A1640 overheating' aramasından elde edilmiştir.
+      advice: A1640'ın (kılavuzuna göre) ünitenin çalışma sıcaklığı sınırını aştığında uyaran bir yüksek
+        sıcaklık göstergesi vardır. Sahipler, ısının pil hücrelerini bozabileceğinden, özellikle yaz aylarında
+        üniteyi uzun süreli güneş enerjisiyle şarj için doğrudan güneş ışığında bırakmaktan kaçınmalıdır.
+  evidence:
+  - url: https://www.amazon.co.jp/exec/obidos/ASIN/B089PTX3LR/funglr03-22/
+    quote: ソーラー充電は極端に時間がかかる上、太陽光による熱でバッテリセルにダメージ入りそうなくらい過熱する。
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:48:03+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: anker
+      model: a1652
+  kind: known_issue
+  domain: battery
+  severity: high
+  consequence: ''
+  detection: ''
+  component: lithium-ion battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Documented fire incident: A1652 caught fire while charging in Japan on April 10, 2026'
+      body: This is a Japanese news report from Weekly ASCII (May 29, 2026) documenting that Japan's Consumer
+        Affairs Agency reported a fire incident on April 10, 2026 involving the A1652 model. The product
+        caught fire while charging, burning the product and surrounding area. The cause is under investigation.
+      advice: This is a documented actual fire incident involving the A1652 model, not just a theoretical
+        risk. The unit was being charged when it caught fire. This underscores the real-world fire risk
+        of this product.
+    tr:
+      title: 'Belgelenmiş yangın olayı: A1652, 10 Nisan 2026''da Japonya''da şarj olurken alev aldı'
+      body: Bu, Weekly ASCII'den (29 Mayıs 2026) bir Japon haber raporudur ve Japonya Tüketici İşleri
+        Ajansı'nın 10 Nisan 2026'da A1652 modelini içeren bir yangın olayını bildirdiğini belgelemektedir.
+        Ürün şarj olurken alev almış, ürünü ve çevresini yakmıştır. Nedeni araştırılmaktadır.
+      advice: Bu, A1652 modelini içeren belgelenmiş gerçek bir yangın olayıdır, yalnızca teorik bir risk
+        değildir. Ünite alev aldığında şarj ediliyordu. Bu, bu ürünün gerçek dünyadaki yangın riskinin
+        altını çizmektedir.
+  evidence:
+  - url: https://weekly.ascii.jp/elem/000/004/406/4406393/
+    quote: 事故内容：当該製品を充電中、当該製品及び周辺を焼損する火災が発生した
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:48:28+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Anker
+      model: PowerCore 10000 PD Redux (A1246)
+  kind: known_issue
+  domain: battery
+  severity: low
+  consequence: ''
+  detection: ''
+  component: battery cell
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: User reports PowerCore 10000 PD Redux 25W ran 6 hours without significant heat
+      body: An Amazon Japan customer review reports using the PowerCore 10000 PD Redux 25W (the A1246
+        family) continuously for 6 hours while powering a 12V fan, observing almost no heat from the cable,
+        with the power bank itself being the warmer component.
+      advice: Single-user anecdote, not a systematic test. It suggests normal thermal behavior for this
+        model under continuous moderate load, but does not rule out long-term degradation or manufacturing
+        defects.
+    tr:
+      title: Kullanıcı, PowerCore 10000 PD Redux 25W'nin önemli bir ısı olmadan 6 saat çalıştığını bildiriyor
+      body: Bir Amazon Japan müşteri yorumu, PowerCore 10000 PD Redux 25W'nin (A1246 ailesi) 12V bir fanı
+        çalıştırırken 6 saat boyunca sürekli kullanıldığını, kablodan neredeyse hiç ısı gözlemlenmediğini
+        ve power bank'ın kendisinin daha sıcak bileşen olduğunu bildirmektedir.
+      advice: Tek kullanıcı anekdotu, sistematik bir test değildir. Bu model için sürekli orta yük altında
+        normal termal davranışa işaret etmektedir, ancak uzun vadeli bozulmayı veya üretim hatalarını
+        dışlamamaktadır.
+  evidence:
+  - url: https://www.amazon.co.jp/-/en/gp/customer-reviews/R1Y73IG2HHOFVC/ref=cm_cr_srp_d_rvw_ttl?ie=UTF8&ASIN=B0CG9WDB8P
+    quote: ですがしっかりと使えたのと線の発熱など心配しましたが連続６時間使いましたが発熱はほとんどありませんでした。
+    locator: ''
+    stance: disputes
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:46:41+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: anker
+      model: a1263
+  kind: known_issue
+  domain: battery
+  severity: high
+  consequence: ''
+  detection: ''
+  component: lithium-ion battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'CPSC recall 25-338: Anker PowerCore 10000 (A1263) lithium-ion battery can overheat, fire/burn
+        hazard'
+      body: This is the official CPSC recall notice (Recall No. 25-338, June 12, 2025) covering about
+        1,158,000 US-sold A1263 units.
+      advice: 'Stop using an A1263 unit immediately and check its serial number at anker.com/product-recalls;
+        qualifying units get a free replacement. The hazard is real and documented: 19 fire/explosion
+        reports, 2 minor burns, and over $60,700 in property damage. Dispose of the recalled battery at
+        a hazardous-waste center, not in trash or recycling.'
+    tr:
+      title: 'CPSC geri çağırması 25-338: Anker PowerCore 10000 (A1263) lityum iyon pili aşırı ısınabilir,
+        yangın/yanma tehlikesi'
+      body: Bu, ABD'de satılan yaklaşık 1.158.000 adet A1263 ünitesini kapsayan resmi CPSC geri çağırma
+        bildirimidir (Geri Çağırma No. 25-338, 12 Haziran 2025).
+      advice: 'Bir A1263 ünitesini derhal kullanmayı bırakın ve seri numarasını anker.com/product-recalls
+        adresinde kontrol edin; uygun üniteler ücretsiz değişim alır. Tehlike gerçek ve belgelenmiştir:
+        19 yangın/patlama raporu, 2 hafif yanık ve 60.700 $''ın üzerinde maddi hasar. Geri çağrılan pili
+        çöp veya geri dönüşüme değil, tehlikeli atık merkezine bertaraf edin.'
+  evidence:
+  - url: https://www.cpsc.gov/Recalls/2025/More-than-One-Million-Anker-Power-Banks-Recalled-Due-to-Fire-and-Burn-Hazards-Manufactured-by-Anker-Innovations
+    quote: The lithium-ion battery in the power bank can overheat, posing fire and burn hazards to consumers.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:44:05+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Anker
+      model: PowerCore Slim 10000 (A1229)
+  kind: known_issue
+  domain: battery
+  severity: low
+  consequence: ''
+  detection: ''
+  component: lithium-ion battery cell
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: No documented safety event found tied specifically to the A1229
+      body: This finding came from the query 'CPSC Anker PowerCore 10000 A1229 recall'. The recall is
+        for the PowerCore 10000 (A1263); my searches for A1229-specific fire, overheating, or swollen-battery
+        events returned no documented incident tied to that model.
+      advice: No recall or reported fire/overheating incident was found for the A1229 specifically. The
+        documented 2025 recall applies to the A1263, a different model. If you are deciding whether to
+        buy the A1229, the known safety event in this category is the A1263 recall, not this unit.
+    tr:
+      title: A1229'a özel olarak bağlı belgelenmiş bir güvenlik olayı bulunamadı
+      body: Bu bulgu 'CPSC Anker PowerCore 10000 A1229 recall' sorgusundan elde edilmiştir. Geri çağırma
+        PowerCore 10000 (A1263) içindir; A1229'a özel yangın, aşırı ısınma veya şişmiş pil olaylarına
+        yönelik aramalarım o modelle bağlantılı belgelenmiş bir olay döndürmedi.
+      advice: A1229 için özel olarak hiçbir geri çağırma veya bildirilmiş yangın/aşırı ısınma olayı bulunamadı.
+        Belgelenmiş 2025 geri çağırması, farklı bir model olan A1263 için geçerlidir. A1229'u satın alıp
+        almayacağınıza karar veriyorsanız, bu kategorideki bilinen güvenlik olayı bu ünite değil, A1263
+        geri çağırmasıdır.
+  evidence:
+  - url: https://www.howtogeek.com/over-a-million-anker-battery-packs-are-getting-recalled/
+    quote: Anker is recalling 1,158,000 PowerCore 10000 battery packs due to fire hazards and explosions.
+    locator: ''
+    stance: disputes
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:47:40+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Anker
+      model: PowerCore Slim 10000 (A1229)
+  kind: known_issue
+  domain: battery
+  severity: low
+  consequence: ''
+  detection: ''
+  component: lithium polymer cell (model A1229)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: No direct recall or serious accident report confirmed for the A1229
+      body: This Japanese-language analysis of the A1229 states that, as of the analysis period, no direct
+        recall instruction or serious accident report has been confirmed for the A1229 (and A1244). It
+        notes the sibling A1263 recall of 2025 affected brand trust but not this model itself.
+      advice: No documented recall or serious accident report is tied to the A1229. The 2025 CPSC recall
+        applies to the A1263, a different model, so it should not be treated as covering the A1229.
+    tr:
+      title: A1229 için doğrudan geri çağırma veya ciddi kaza raporu teyit edilmedi
+      body: A1229'un bu Japonca analizi, analiz dönemi itibarıyla A1229 (ve A1244) için doğrudan bir geri
+        çağırma talimatı veya ciddi kaza raporunun teyit edilmediğini belirtir. 2025'teki kardeş model
+        A1263 geri çağırmasının marka güvenini etkilediğini ancak bu modelin kendisini etkilemediğini
+        not eder.
+      advice: A1229 ile bağlantılı belgelenmiş bir geri çağırma veya ciddi kaza raporu yoktur. 2025 CPSC
+        geri çağırması farklı bir model olan A1263 için geçerlidir, bu nedenle A1229'u kapsadığı şeklinde
+        değerlendirilmemelidir.
+  evidence:
+  - url: https://note.com/over4_reac4/n/n6751117817e8
+    quote: 本製品（Model A1229/A1244）において、現時点で直接的なリコール指示や重大な事故報告は確認されていません。
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:50:41+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: anker
+      model: a1257
+  kind: known_issue
+  domain: battery
+  severity: high
+  consequence: ''
+  detection: ''
+  component: lithium-ion battery cell
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Anker official global voluntary recall lists A1257 (10K, 22.5W)
+      body: This is the manufacturer's own global voluntary recall notice, which names A1257 among the
+        affected models and attributes the issue to lithium-ion battery cells from a single vendor.
+      advice: This is the manufacturer's official recall page. It confirms the A1257 is affected and directs
+        owners to verify serial number and submit a recall claim for a replacement or gift card. Affected
+        serial numbers do not contain the letters 'O' or 'I'.
+    tr:
+      title: Anker resmi küresel gönüllü geri çağırması A1257'yi (10K, 22.5W) listeliyor
+      body: Bu, üreticinin kendi küresel gönüllü geri çağırma bildirimidir; etkilenen modeller arasında
+        A1257'yi adlandırır ve sorunu tek bir tedarikçiden gelen lityum iyon pil hücrelerine bağlar.
+      advice: Bu, üreticinin resmi geri çağırma sayfasıdır. A1257'nin etkilendiğini teyit eder ve sahiplerini
+        seri numarasını doğrulamaya ve değişim veya hediye kartı için geri çağırma talebi göndermeye yönlendirir.
+        Etkilenen seri numaralarında 'O' veya 'I' harfleri bulunmaz.
+  evidence:
+  - url: https://www.anker.com/my/rc2506
+    quote: While the likelihood of malfunction is considered minimal, out of an abundance of caution,
+      we have decided to initiate a voluntary global recall of several Anker power bank models.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:42:38+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Anker
+      model: PowerCore 10000 PD+ (A1236)
+  kind: known_issue
+  domain: battery
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: lithium-ion battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Secondary news aggregator lists A1236 among recalled PowerCore 10000 models, contradicting
+        CPSC
+      body: This Spanish aggregator (citing Daily Mail) is the only source naming A1236 in a recall list,
+        but it conflicts with the official CPSC and Anker notices which specify A1263 only.
+      advice: Treat this as a likely model-number error in a secondary aggregator. Do not use it to conclude
+        the A1236 is recalled; the official primary sources say A1263 only.
+    tr:
+      title: İkincil haber toplayıcısı, CPSC ile çelişerek A1236'yı geri çağrılan PowerCore 10000 modelleri
+        arasında listeliyor
+      body: Bu İspanyolca toplayıcı (Daily Mail'e atıfta bulunarak) bir geri çağırma listesinde A1236'yı
+        adlandıran tek kaynaktır, ancak yalnızca A1263'ü belirten resmi CPSC ve Anker bildirimleriyle
+        çelişmektedir.
+      advice: Bunu ikincil bir toplayıcıdaki muhtemel bir model numarası hatası olarak değerlendirin.
+        A1236'nın geri çağrıldığı sonucuna varmak için kullanmayın; resmi birincil kaynaklar yalnızca
+        A1263 diyor.
+  evidence:
+  - url: https://rpp.pe/capital/trending/cargadores-anker-retirados-del-mercado-por-reportes-de-quemaduras-y-explosiones-estados-unidos-bscapital-noticias-1640816
+    quote: incluyen los productos PowerCore 10000 (modelo A1236), 334 MagGO 10K (modelos A1642, A1647
+      y A1652), 321 Power Bank (5k) (modelo A1112) y 535 Power Bank (20K) (modelo 1366).
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:44:05+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Anker
+      model: PowerCore Solar 10000 (A1640)
+  kind: known_issue
+  domain: battery
+  severity: low
+  consequence: ''
+  detection: ''
+  component: solar panel / battery cell
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Owner reports PowerCore Solar 10000 (A1640) overheats during solar charging
+      body: An owner review of the A1640 reports that in summer the solar panel surface temperature exceeds
+        60 degrees Celsius and that the reviewer worried the heat would damage the battery cells, advising
+        not to use it in that state.
+      advice: If you plan to solar-charge this unit, be aware it can get very hot in direct summer sun
+        (surface above 60C per one owner), which the reviewer worried degrades the cells. This is a Japanese-market
+        owner report, not a US documented incident, and no fire incident tied to the A1640 was found.
+    tr:
+      title: Sahip, PowerCore Solar 10000'in (A1640) güneşle şarj sırasında aşırı ısındığını bildiriyor
+      body: A1640 hakkında bir sahip incelemesi, yazın güneş paneli yüzey sıcaklığının 60 santigrat dereceyi
+        aştığını ve inceleyicinin ısının pil hücrelerine zarar vereceğinden endişelendiğini, bu durumda
+        kullanılmamasını tavsiye ettiğini bildiriyor.
+      advice: Bu üniteyi güneşle şarj etmeyi planlıyorsanız, doğrudan yaz güneşinde çok ısınabileceğini
+        (bir sahibe göre yüzey 60C'nin üzerinde) bilin; inceleyici bunun hücreleri bozacağından endişelenmiştir.
+        Bu, ABD'de belgelenmiş bir olay değil, Japon pazarına ait bir sahip raporudur ve A1640 ile bağlantılı
+        herhangi bir yangın olayı bulunamamıştır.
+  evidence:
+  - url: https://www.amazon.co.jp/exec/obidos/ASIN/B089PTX3LR/funglr03-22/
+    quote: 実際夏場のソーラパネルの表面温度は60度を超える。
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:48:03+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: anker
+      model: a1263
+  kind: known_issue
+  domain: battery
+  severity: high
+  consequence: ''
+  detection: ''
+  component: lithium-ion battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Anker manufacturer recall: A1263 battery overheating causes plastic melting, smoke, fire'
+      body: This is Anker's own recall page, confirming the manufacturer recall and the affected production/sale
+        date ranges.
+      advice: Confirms the manufacturer's own recall program. Consumers should verify model A1263 and
+        serial number; the recall covers US-sold units manufactured 2016-2019 and sold through 2022. Anker
+        offers a free replacement after photo verification and proper disposal.
+    tr:
+      title: 'Anker üretici geri çağırması: A1263 pil aşırı ısınması plastik erimesine, dumana, yangına
+        neden oluyor'
+      body: Bu, Anker'in kendi geri çağırma sayfasıdır; üretici geri çağırmasını ve etkilenen üretim/satış
+        tarih aralıklarını teyit eder.
+      advice: Üreticinin kendi geri çağırma programını teyit eder. Tüketiciler A1263 modelini ve seri
+        numarasını doğrulamalıdır; geri çağırma 2016-2019 arasında üretilen ve 2022'ye kadar satılan ABD'de
+        satılmış üniteleri kapsar. Anker, fotoğrafla doğrulama ve uygun bertarafın ardından ücretsiz değişim
+        sunar.
+  evidence:
+  - url: https://www.anker.com/a1263-recall
+    quote: This issue can cause the battery to overheat, leading to melting of plastic components, smoke,
+      and fire hazards.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:43:10+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Anker
+      model: PowerCore III 10000 (A1247)
+  kind: known_issue
+  domain: battery
+  severity: high
+  consequence: ''
+  detection: ''
+  component: A1263
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: CPSC recall of Anker PowerCore 10000 covers model A1263 only, not the A1247 subject
+      body: The official CPSC notice states the recall covers only model A1263 (PowerCore 10000), not
+        the A1247 (PowerCore III 10000) subject.
+      advice: If you own an A1247, this recall does not apply to it. The recall is only for model A1263
+        units sold in the U.S. with qualifying serial numbers; check your serial number at anker.com/product-recalls
+        if you have an A1263.
+    tr:
+      title: Anker PowerCore 10000'in CPSC geri çağırması yalnızca A1263 modelini kapsar, A1247 konusunu
+        değil
+      body: Resmi CPSC bildirimi, geri çağırmanın yalnızca A1263 (PowerCore 10000) modelini kapsadığını,
+        A1247 (PowerCore III 10000) konusunu kapsamadığını belirtir.
+      advice: Bir A1247'niz varsa, bu geri çağırma onun için geçerli değildir. Geri çağırma yalnızca ABD'de
+        satılan ve uygun seri numaralarına sahip A1263 modeli üniteler içindir; bir A1263'ünüz varsa seri
+        numaranızı anker.com/product-recalls adresinde kontrol edin.
+  evidence:
+  - url: https://www.cpsc.gov/Recalls/2025/More-than-One-Million-Anker-Power-Banks-Recalled-Due-to-Fire-and-Burn-Hazards-Manufactured-by-Anker-Innovations
+    quote: This recall involves Anker PowerCore 10000 power banks with model number A1263.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:44:05+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Anker
+      model: PowerCore Solar 10000 (A1640)
+  kind: known_issue
+  domain: battery
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: lithium-ion battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: A1640 not included in June 2025 CPSC recall of Anker PowerCore 10000 (model A1263 only)
+      body: The June 12, 2025 CPSC recall (about 1,158,000 units) covers only model A1263 of the Anker
+        PowerCore 10000. The A1640 PowerCore Solar 10000 is a different model and is not included. This
+        finding came from the search 'cpsc.gov Anker recall power bank model numbers'.
+      advice: The A1640 is not part of this recall. The recalled A1263 is a different PowerCore 10000
+        variant with a different model number.
+    tr:
+      title: A1640, Haziran 2025 CPSC'nin Anker PowerCore 10000 geri çağırmasına (yalnızca model A1263)
+        dahil değil
+      body: 12 Haziran 2025 CPSC geri çağırması (yaklaşık 1.158.000 adet) yalnızca Anker PowerCore 10000'in
+        A1263 modelini kapsıyor. A1640 PowerCore Solar 10000 farklı bir modeldir ve dahil değildir. Bu
+        bulgu 'cpsc.gov Anker recall power bank model numbers' aramasından elde edildi.
+      advice: A1640 bu geri çağırmanın parçası değildir. Geri çağrılan A1263, farklı bir model numarasına
+        sahip farklı bir PowerCore 10000 varyantıdır.
+  evidence:
+  - url: https://www.cpsc.gov/Recalls/2025/More-than-One-Million-Anker-Power-Banks-Recalled-Due-to-Fire-and-Burn-Hazards-Manufactured-by-Anker-Innovations
+    quote: This recall involves Anker PowerCore 10000 power banks with model number A1263.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:44:05+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Anker
+      model: PowerCore Solar 10000 (A1640)
+  kind: known_issue
+  domain: general
+  severity: low
+  consequence: ''
+  detection: ''
+  component: high-temperature indicator
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: A1640 manual documents high-temperature indicator to prevent overheating
+      body: 'The official Anker A1640 user manual describes a high-temperature indicator feature designed
+        to prevent overheating. The Turkish manual translation further states: ''Yüksek sıcaklık göstergesi
+        kırmızıya döndüğünde bu, PowerCore Solar''ın sıcaklık sınırını aştığı anlamına gelir. Tekrar kullanmadan
+        önce soğumasını bekleyin.'' (When the high-temperature indicator turns red, it means the PowerCore
+        Solar has exceeded its temperature limit. Wait for it to cool down before using again.) This finding
+        came from the search ''Anker PowerCore Solar 10000 A1640 fire''.'
+      advice: The A1640 includes a built-in safety feature that alerts the user when the unit exceeds
+        its operating temperature. This is a design feature, not a documented failure.
+    tr:
+      title: A1640 kılavuzu, aşırı ısınmayı önlemek için yüksek sıcaklık göstergesini belgeliyor
+      body: 'Resmi Anker A1640 kullanım kılavuzu, aşırı ısınmayı önlemek için tasarlanmış bir yüksek sıcaklık
+        göstergesi özelliğini açıklıyor. Türkçe kılavuz çevirisi ayrıca şunu belirtiyor: ''Yüksek sıcaklık
+        göstergesi kırmızıya döndüğünde bu, PowerCore Solar''ın sıcaklık sınırını aştığı anlamına gelir.
+        Tekrar kullanmadan önce soğumasını bekleyin.'' (When the high-temperature indicator turns red,
+        it means the PowerCore Solar has exceeded its temperature limit. Wait for it to cool down before
+        using again.) Bu bulgu ''Anker PowerCore Solar 10000 A1640 fire'' aramasından elde edildi.'
+      advice: A1640, ünite çalışma sıcaklığını aştığında kullanıcıyı uyaran yerleşik bir güvenlik özelliği
+        içerir. Bu bir tasarım özelliğidir, belgelenmiş bir arıza değildir.
+  evidence:
+  - url: https://manualzz.com/doc/65651239/anker-a1640-powercore-solar-10000-user-manual
+    quote: The device also features a high-temperature indicator to prevent overheating.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:51:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Anker
+      model: PowerCore 10000 PD Redux (A1246)
+  kind: known_issue
+  domain: battery
+  severity: low
+  consequence: ''
+  detection: ''
+  component: lithium-ion battery (model A1263)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Anker PowerCore 10000 PD Redux A1246 is not part of the June 2025 CPSC recall (A1263 only)
+      body: The June 12, 2025 recall covers about 1,158,000 units of the plain PowerCore 10000, model
+        A1263 only.
+      advice: A buyer or owner of the A1246 PD Redux should not assume it is covered by this recall; the
+        recall is limited to model A1263.
+    tr:
+      title: Anker PowerCore 10000 PD Redux A1246, Haziran 2025 CPSC geri çağırmasının parçası değil (yalnızca
+        A1263)
+      body: 12 Haziran 2025 geri çağırması, düz PowerCore 10000'in yalnızca A1263 modelinin yaklaşık 1.158.000
+        adedini kapsıyor.
+      advice: A1246 PD Redux'un bir alıcısı veya sahibi, bu geri çağırma kapsamında olduğunu varsaymamalıdır;
+        geri çağırma model A1263 ile sınırlıdır.
+  evidence:
+  - url: https://www.cpsc.gov/Recalls/2025/More-than-One-Million-Anker-Power-Banks-Recalled-Due-to-Fire-and-Burn-Hazards-Manufactured-by-Anker-Innovations
+    quote: Only model number A1263 power banks sold in the U.S. with qualifying serial numbers are included
+      in the recall.
+    locator: ''
+    stance: disputes
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:44:05+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: anker
+      model: a1685
+  kind: known_issue
+  domain: battery
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: lithium-ion battery cell
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Anker/CPSC recall covers A1647, A1652, A1257, A1681, A1689 — not A1685
+      body: The official CPSC recall (Sept 18, 2025, recall 25-466) covers five models, none of which
+        is A1685, so the Zolo Magnetic Power Bank 10K is outside the recall.
+      advice: The A1685 is not part of the CPSC/Anker recall, so there is no official remedy or replacement
+        path for this model. This matters because the recall exists precisely because of overheating/fire
+        risk in the same product family, and the A1685 has its own reported fire incident. A buyer should
+        not mistake the recall for covering this model.
+    tr:
+      title: Anker/CPSC geri çağırması A1647, A1652, A1257, A1681, A1689'u kapsıyor — A1685'i değil
+      body: Resmi CPSC geri çağırması (18 Eylül 2025, geri çağırma 25-466) hiçbiri A1685 olmayan beş modeli
+        kapsıyor, dolayısıyla Zolo Magnetic Power Bank 10K geri çağırmanın dışında.
+      advice: A1685, CPSC/Anker geri çağırmasının parçası değildir, bu nedenle bu model için resmi bir
+        çözüm veya değişim yolu yoktur. Bu önemlidir çünkü geri çağırma tam olarak aynı ürün ailesindeki
+        aşırı ısınma/yangın riski nedeniyle mevcuttur ve A1685'in kendine ait bildirilmiş bir yangın olayı
+        vardır. Bir alıcı, geri çağırmanın bu modeli kapsadığını sanmamalıdır.
+  evidence:
+  - url: https://www.cpsc.gov/Recalls/2025/Anker-Power-Banks-Recalled-Due-to-Fire-and-Burn-Hazards-Manufactured-by-Anker-Innovations-1
+    quote: This recall involves Anker Power Banks with model numbers A1647, A1652, A1257, A1681 and A1689.
+    locator: ''
+    stance: disputes
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:42:38+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: anker
+      model: a1652
+  kind: known_issue
+  domain: battery
+  severity: high
+  consequence: ''
+  detection: ''
+  component: lithium-ion battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: CPSC recalls ~481,000 Anker power banks including A1652 after 33 fire/explosion reports
+      body: This is the CPSC's official recall notice (Spanish version) dated September 18, 2025, covering
+        approximately 481,000 units across five models including the A1652. The company received 33 reports
+        of fire and explosion incidents, 4 minor burn injuries, and 1 report of significant property damage.
+      advice: This is a formal US government recall. If you own an A1652, stop using it immediately, verify
+        the serial number on Anker's recall page, and contact Anker for a full refund or gift card. Do
+        not dispose of it in regular trash or recycling.
+    tr:
+      title: CPSC, 33 yangın/patlama raporunun ardından A1652 dahil yaklaşık 481.000 Anker power bank'i
+        geri çağırıyor
+      body: Bu, CPSC'nin 18 Eylül 2025 tarihli resmi geri çağırma bildirimidir (İspanyolca versiyonu)
+        ve A1652 dahil beş modelde yaklaşık 481.000 adedi kapsıyor. Şirket 33 yangın ve patlama olayı
+        raporu, 4 küçük yanık yaralanması ve 1 önemli maddi hasar raporu aldı.
+      advice: Bu resmi bir ABD hükümeti geri çağırmasıdır. Bir A1652'niz varsa, kullanmayı hemen durdurun,
+        seri numarasını Anker'in geri çağırma sayfasında doğrulayın ve tam para iadesi veya hediye kartı
+        için Anker ile iletişime geçin. Normal çöpe veya geri dönüşüme atmayın.
+  evidence:
+  - url: https://www.cpsc.gov/es/Noticias/2025/Anker-Power-Banks-Recalled-Due-to-Fire-and-Burn-Hazards-Manufactured-by-Anker-Innovations-1
+    quote: La empresa ha recibido 33 reportes de incendio y explosiones. Se han reportado cuatro lesiones
+      por quemaduras leves y un reporte de daños considerables a la propiedad.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:48:28+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Anker
+      model: PowerCore Slim 10000 (A1229)
+  kind: known_issue
+  domain: battery
+  severity: low
+  consequence: ''
+  detection: ''
+  component: lithium-ion battery (model A1263)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: CPSC recall covers PowerCore 10000 model A1263 only, not the A1229 Slim
+      body: The CPSC recall of about 1,158,000 units is limited to model A1263 (PowerCore 10000), which
+        is a different model from the subject A1229 (PowerCore Slim 10000). A buyer should not assume
+        their A1229 is covered by this recall.
+      advice: Check the model number printed on the bottom of the unit. Only A1263 units with qualifying
+        serial numbers are recalled; the A1229 is outside this recall's scope.
+    tr:
+      title: CPSC geri çağırması yalnızca PowerCore 10000 model A1263'ü kapsıyor, A1229 Slim'i değil
+      body: Yaklaşık 1.158.000 adetlik CPSC geri çağırması, konu A1229'dan (PowerCore Slim 10000) farklı
+        bir model olan model A1263 (PowerCore 10000) ile sınırlıdır. Bir alıcı, A1229'unun bu geri çağırma
+        kapsamında olduğunu varsaymamalıdır.
+      advice: Ünitenin altında yazılı model numarasını kontrol edin. Yalnızca uygun seri numaralarına
+        sahip A1263 üniteleri geri çağrılmıştır; A1229 bu geri çağırmanın kapsamı dışındadır.
+  evidence:
+  - url: https://www.cpsc.gov/Recalls/2025/More-than-One-Million-Anker-Power-Banks-Recalled-Due-to-Fire-and-Burn-Hazards-Manufactured-by-Anker-Innovations
+    quote: This recall involves Anker PowerCore 10000 power banks with model number A1263. The brand name
+      “Anker” is engraved on the front of the product.
+    locator: ''
+    stance: disputes
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:44:05+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Anker
+      model: PowerCore III 10000 (A1247)
+  kind: known_issue
+  domain: battery
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: lithium-ion battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: September 2025 global recall models exclude the A1247
+      body: The second, worldwide Anker recall (September 2025) covers models A1257, A1647, A1652, A1681,
+        A1689. The A1247 is not on this list either.
+      advice: The A1247 appears in neither the June 2025 A1263 recall nor the September 2025 global recall.
+        No recall or documented fire/overheating event found in this run is tied specifically to the A1247
+        model.
+    tr:
+      title: Eylül 2025 küresel geri çağırma modelleri A1247'yi kapsamıyor
+      body: İkinci, dünya çapındaki Anker geri çağırması (Eylül 2025) A1257, A1647, A1652, A1681, A1689
+        modellerini kapsıyor. A1247 bu listede de yok.
+      advice: A1247 ne Haziran 2025 A1263 geri çağırmasında ne de Eylül 2025 küresel geri çağırmasında
+        yer alıyor. Bu çalışmada bulunan hiçbir geri çağırma veya belgelenmiş yangın/aşırı ısınma olayı
+        özellikle A1247 modeline bağlı değil.
+  evidence:
+  - url: https://schmidtandclark.com/anker-power-bank-recall-lawsuit
+    quote: September 18, 2025 – Anker has recalled about 481,000 power banks (models A1647, A1652, A1257,
+      A1681, A1689) after lithium-ion battery defects caused overheating, fire, and burn hazards
+    locator: ''
+    stance: disputes
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:46:56+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: anker
+      model: a1257
+  kind: known_issue
+  domain: battery
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: battery negative tab weld / internal short
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Taiwan BSMI notice: A1257 defect is a negative-tab welding fault that starts an internal
+        short'
+      body: 'This is the Taiwan regulator (BSMI) recall notice for the A1257, which details the root cause:
+        a negative-tab welding fault from a winding machine power fluctuation that creates the starting
+        point of an internal short, leading to local overheating and, in severe cases, thermal runaway.
+        Note this notice is for the Taiwan market, not the US.'
+      advice: 'This explains the mechanism behind the A1257 recall: a manufacturing defect in the battery''s
+        negative tab weld can initiate an internal short and overheating after long-term use. It is a
+        Taiwan-market notice, so it does not by itself establish a US event, but it corroborates the same
+        model''s defect documented by the US CPSC and Anker.'
+    tr:
+      title: 'Tayvan BSMI bildirimi: A1257 kusuru, dahili kısa devre başlatan bir negatif sekme kaynak
+        hatasıdır'
+      body: 'Bu, A1257 için Tayvan düzenleyicisinin (BSMI) geri çağırma bildirimidir ve kök nedeni ayrıntılı
+        olarak açıklar: bir sarma makinesindeki güç dalgalanmasından kaynaklanan negatif sekme kaynak
+        hatası, dahili kısa devrenin başlangıç noktasını oluşturur ve yerel aşırı ısınmaya ve ciddi durumlarda
+        termal kaçışa yol açar. Bu bildirimin Tayvan pazarı için olduğunu, ABD için olmadığını unutmayın.'
+      advice: 'Bu, A1257 geri çağırmasının arkasındaki mekanizmayı açıklar: pilin negatif sekme kaynağındaki
+        bir üretim kusuru, uzun süreli kullanımdan sonra dahili kısa devre ve aşırı ısınmayı başlatabilir.
+        Bu bir Tayvan pazarı bildirimidir, dolayısıyla tek başına bir ABD olayı tesis etmez, ancak aynı
+        modelin ABD CPSC ve Anker tarafından belgelenen kusurunu destekler.'
+  evidence:
+  - url: https://www.bsmi.gov.tw/wSite/fp?xItem=121779&ctNode=8250&mp=65
+    quote: 發現繞線芯內環的負極處存在缺陷，該處為內部短路的起始點
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:42:38+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Anker
+      model: PowerCore 10000 PD+ (A1236)
+  kind: known_issue
+  domain: battery
+  severity: high
+  consequence: ''
+  detection: ''
+  component: lithium-ion battery (model A1263)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: CPSC recall covers Anker PowerCore 10000 model A1263 only, not the A1236
+      body: The primary CPSC notice (Recall No. 25-338, June 12 2025) limits the recall to model A1263
+        only. The subject A1236 (PowerCore 10000 PD+) is a different model and is not covered by this
+        recall.
+      advice: Do not assume an A1236 unit is recalled because of the A1263 recall. Check the model number
+        printed on the bottom of the unit; only A1263 units with qualifying serial numbers are affected.
+    tr:
+      title: CPSC geri çağırması yalnızca Anker PowerCore 10000 model A1263'ü kapsıyor, A1236'yı değil
+      body: Birincil CPSC bildirimi (Geri Çağırma No. 25-338, 12 Haziran 2025) geri çağırmayı yalnızca
+        model A1263 ile sınırlıyor. Söz konusu A1236 (PowerCore 10000 PD+) farklı bir modeldir ve bu geri
+        çağırma kapsamında değildir.
+      advice: A1263 geri çağırması nedeniyle bir A1236 biriminin geri çağrıldığını varsaymayın. Birimin
+        alt kısmında yazılı model numarasını kontrol edin; yalnızca uygun seri numaralarına sahip A1263
+        birimleri etkilenir.
+  evidence:
+  - url: https://www.cpsc.gov/Recalls/2025/More-than-One-Million-Anker-Power-Banks-Recalled-Due-to-Fire-and-Burn-Hazards-Manufactured-by-Anker-Innovations
+    quote: This recall involves Anker PowerCore 10000 power banks with model number A1263.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:44:05+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Anker
+      model: 523 Power Bank (PowerCore 10000) (A1245)
+  kind: known_issue
+  domain: battery
+  severity: high
+  consequence: ''
+  detection: ''
+  component: lithium-ion battery cell
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: CPSC recall covers Anker PowerCore 10000 model A1263 only, not the A1245
+      body: The June 12, 2025 recall (about 1,158,000 units) is explicitly limited to model A1263. The
+        subject of this run, the Anker 523 Power Bank / PowerCore Slim 10K PD, is model A1245, which is
+        a different model and is NOT included in this recall.
+      advice: A buyer checking this power bank should not assume the A1263 recall applies to the A1245.
+        The A1245 is not the recalled model.
+    tr:
+      title: CPSC geri çağırması yalnızca Anker PowerCore 10000 model A1263'ü kapsıyor, A1245'i değil
+      body: 12 Haziran 2025 tarihli geri çağırma (yaklaşık 1.158.000 adet) açıkça model A1263 ile sınırlıdır.
+        Bu çalışmanın konusu olan Anker 523 Power Bank / PowerCore Slim 10K PD, model A1245'tir ve bu
+        farklı bir modeldir ve bu geri çağırmaya DAHİL DEĞİLDİR.
+      advice: Bu power bank'i kontrol eden bir alıcı, A1263 geri çağırmasının A1245 için geçerli olduğunu
+        varsaymamalıdır. A1245 geri çağrılan model değildir.
+  evidence:
+  - url: https://www.cpsc.gov/Recalls/2025/More-than-One-Million-Anker-Power-Banks-Recalled-Due-to-Fire-and-Burn-Hazards-Manufactured-by-Anker-Innovations
+    quote: Only model number A1263 power banks sold in the U.S. with qualifying serial numbers are included
+      in the recall.
+    locator: ''
+    stance: disputes
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:44:05+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Anker
+      model: PowerCore III 10000 (A1247)
+  kind: known_issue
+  domain: battery
+  severity: high
+  consequence: ''
+  detection: ''
+  component: model A1263 lithium-ion battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: CPSC June 2025 recall covers model A1263 only, not the A1247
+      body: The official CPSC notice names model A1263 as the only recalled PowerCore 10000. The subject
+        of this research, the PowerCore III 10000 A1247, is a different model and is NOT part of this
+        recall.
+      advice: If you own an A1247, this recall does not apply to it. Do not assume the headline 'Anker
+        PowerCore 10000 recall' covers your unit — check the model number printed on the bottom; only
+        A1263 units with qualifying serial numbers are affected.
+    tr:
+      title: CPSC Haziran 2025 geri çağırması yalnızca model A1263'ü kapsıyor, A1247'yi değil
+      body: Resmi CPSC bildirimi, geri çağrılan tek PowerCore 10000 olarak model A1263'ü adlandırıyor.
+        Bu araştırmanın konusu olan PowerCore III 10000 A1247 farklı bir modeldir ve bu geri çağırmanın
+        parçası DEĞİLDİR.
+      advice: Bir A1247'niz varsa, bu geri çağırma onun için geçerli değildir. 'Anker PowerCore 10000
+        geri çağırması' başlığının biriminizi kapsadığını varsaymayın — alt kısmında yazılı model numarasını
+        kontrol edin; yalnızca uygun seri numaralarına sahip A1263 birimleri etkilenir.
+  evidence:
+  - url: https://www.cpsc.gov/Recalls/2025/More-than-One-Million-Anker-Power-Banks-Recalled-Due-to-Fire-and-Burn-Hazards-Manufactured-by-Anker-Innovations
+    quote: This recall involves Anker PowerCore 10000 power banks with model number A1263.
+    locator: ''
+    stance: disputes
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:44:05+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: anker
+      model: a1257
+  kind: known_issue
+  domain: battery
+  severity: high
+  consequence: ''
+  detection: ''
+  component: lithium-ion battery cell
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'US CPSC recall 25-466: A1257 lithium-ion battery can overheat, fire/burn hazard'
+      body: This is the US Consumer Product Safety Commission recall notice (recall 25-466, Sept 18 2025)
+        covering model A1257 among five Anker power bank models. It is the primary US regulator source
+        for this subject.
+      advice: If you own an A1257, check the serial number against Anker's recall page (anker.com/rc2506).
+        Affected units qualify for a full cash refund or Anker gift card. Stop using the unit immediately
+        and do not throw it in the trash or general recycling — recalled lithium-ion batteries must go
+        to a certified/HHW disposal site. The recall covers units sold Aug 2023–June 2025 for $30–$50.
+    tr:
+      title: 'ABD CPSC geri çağırması 25-466: A1257 lityum iyon pil aşırı ısınabilir, yangın/yanık tehlikesi'
+      body: Bu, beş Anker power bank modeli arasında model A1257'yi kapsayan ABD Tüketici Ürün Güvenliği
+        Komisyonu geri çağırma bildirimidir (geri çağırma 25-466, 18 Eylül 2025). Bu konu için birincil
+        ABD düzenleyici kaynağıdır.
+      advice: Bir A1257'niz varsa, seri numarasını Anker'in geri çağırma sayfasıyla (anker.com/rc2506)
+        karşılaştırın. Etkilenen birimler tam nakit iade veya Anker hediye kartı almaya hak kazanır. Birimi
+        derhal kullanmayı bırakın ve çöpe veya genel geri dönüşüme atmayın — geri çağrılan lityum iyon
+        piller sertifikalı/evsel tehlikeli atık (HHW) bertaraf tesisine götürülmelidir. Geri çağırma,
+        Ağustos 2023–Haziran 2025 arasında 30–50 $ karşılığında satılan birimleri kapsar.
+  evidence:
+  - url: https://www.cpsc.gov/Recalls/2025/Anker-Power-Banks-Recalled-Due-to-Fire-and-Burn-Hazards-Manufactured-by-Anker-Innovations-1
+    quote: The lithium-ion battery in the power bank can overheat, posing fire and burn hazards to consumers.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:42:38+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Anker
+      model: PowerCore Solar 10000 (A1640)
+  kind: known_issue
+  domain: battery
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: lithium-ion battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: A1640 PowerCore Solar 10000 not included in September 2025 CPSC recall of Anker power banks
+      body: The September 18, 2025 CPSC recall of Anker power banks (about 481,000 units) covers models
+        A1647, A1652, A1257, A1681, and A1689. The A1640 PowerCore Solar 10000 is not among the recalled
+        models. This finding came from the CPSC recall notice (Spanish version) returned by the search
+        'CPSC Anker power bank recall 2025 A1642 A1647 A1652 fire burn hazards'.
+      advice: If you own an A1640, it is not part of this recall. However, check your serial number on
+        Anker's recall page if you have any Anker power bank, as recalls are serial-number-specific.
+    tr:
+      title: A1640 PowerCore Solar 10000, Eylül 2025 CPSC'nin Anker power bank geri çağırmasına dahil
+        değil
+      body: 18 Eylül 2025 tarihli CPSC'nin Anker power bank geri çağırması (yaklaşık 481.000 adet) A1647,
+        A1652, A1257, A1681 ve A1689 modellerini kapsıyor. A1640 PowerCore Solar 10000 geri çağrılan modeller
+        arasında değil. Bu bulgu, 'CPSC Anker power bank recall 2025 A1642 A1647 A1652 fire burn hazards'
+        aramasıyla dönen CPSC geri çağırma bildiriminden (İspanyolca sürüm) geldi.
+      advice: Bir A1640'a sahipseniz, bu geri çağırmanın parçası değildir. Ancak herhangi bir Anker power
+        bank'iniz varsa, seri numaranızı Anker'in geri çağırma sayfasında kontrol edin, çünkü geri çağırmalar
+        seri numarasına özgüdür.
+  evidence:
+  - url: https://www.cpsc.gov/es/Noticias/2025/Anker-Power-Banks-Recalled-Due-to-Fire-and-Burn-Hazards-Manufactured-by-Anker-Innovations-1
+    quote: Este retiro del mercado abarca las baterías externas de Anker que tienen los números de modelo
+      A1647, A1652, A1257, A1681 y A1689.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:48:28+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: anker
+      model: a1685
+  kind: known_issue
+  domain: battery
+  severity: high
+  consequence: ''
+  detection: ''
+  component: lithium-ion battery cell
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Anker Zolo Magnetic Power Bank 10K (A1685) caught fire while unused; owner notes model not
+        recalled
+      body: An owner reports her A1685 Zolo Magnetic Power Bank sparked and burned at ~1 a.m. while unplugged
+        and unused, about a year after purchase, and states the model was not part of Anker's recall.
+      advice: The A1685 is not covered by Anker's official recall, so a buyer cannot rely on a recall
+        remedy for this model. The reported fire occurred while the unit was idle and unplugged, so it
+        is not explained by charging misuse. Anyone owning or buying this model should treat it as a fire
+        risk and keep it away from sleeping areas and flammables, and should not assume a recall covers
+        it.
+    tr:
+      title: Anker Zolo Magnetic Power Bank 10K (A1685) kullanılmadığı sırada alev aldı; sahibi modelin
+        geri çağrılmadığını belirtiyor
+      body: Bir sahip, A1685 Zolo Magnetic Power Bank'inin satın alımdan yaklaşık bir yıl sonra, saat
+        ~01.00'de fişe takılı değilken ve kullanılmadığı sırada kıvılcım çıkarıp yandığını bildiriyor
+        ve modelin Anker'in geri çağırmasının parçası olmadığını belirtiyor.
+      advice: A1685, Anker'in resmi geri çağırması kapsamında değildir, bu nedenle bir alıcı bu model
+        için geri çağırma çözümüne güvenemez. Bildirilen yangın, cihaz boştayken ve fişe takılı değilken
+        meydana geldi, bu nedenle şarj hatasıyla açıklanamaz. Bu modele sahip olan veya satın alan herkes
+        onu yangın riski olarak değerlendirmeli, uyku alanlarından ve yanıcı maddelerden uzak tutmalı
+        ve bir geri çağırmanın bunu kapsadığını varsaymamalıdır.
+  evidence:
+  - url: https://interaksyon.philstar.com/trends-spotlights/2026/10/26/321002/pinay-raises-power-bank-safety-awareness-device-catches-fire-unused/
+    quote: 'PS: not recalled pala ang model ko A1685 10k'
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:44:55+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: anker
+      model: a1652
+  kind: known_issue
+  domain: battery
+  severity: high
+  consequence: ''
+  detection: ''
+  component: lithium-ion battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Anker officially recalls A1652 MagGo Power Bank due to fire risk from lithium-ion battery
+        defect
+      body: This is Anker's official recall page confirming the A1652 is affected by a manufacturing defect
+        in lithium-ion batteries that can cause overheating, melting of plastic components, smoke, and
+        fire. The recall covers units from January 3, 2024 to September 17, 2024, with an expanded recall
+        launched in June 2025.
+      advice: If you own an A1652, immediately stop using it, check the serial number on Anker's recall
+        page, and dispose of it at a facility that accepts lithium-ion batteries. Do not throw it in the
+        trash or recycling bins.
+    tr:
+      title: Anker, lityum iyon batarya kusurundan kaynaklanan yangın riski nedeniyle A1652 MagGo Power
+        Bank'i resmen geri çağırıyor
+      body: Bu, A1652'nin aşırı ısınmaya, plastik bileşenlerin erimesine, dumana ve yangına neden olabilecek
+        lityum iyon bataryalardaki üretim kusurundan etkilendiğini doğrulayan Anker'in resmi geri çağırma
+        sayfasıdır. Geri çağırma, 3 Ocak 2024 ile 17 Eylül 2024 arasındaki birimleri kapsıyor ve Haziran
+        2025'te genişletilmiş bir geri çağırma başlatıldı.
+      advice: Bir A1652'ye sahipseniz, derhal kullanmayı bırakın, seri numarasını Anker'in geri çağırma
+        sayfasında kontrol edin ve lityum iyon bataryaları kabul eden bir tesiste bertaraf edin. Çöpe
+        veya geri dönüşüm kutularına atmayın.
+  evidence:
+  - url: https://www.anker.com/a1642-a1647-a1652-recall
+    quote: We have discovered that some of the lithium-ion batteries used in our Anker 334 MagGo Battery
+      (PowerCore 10K), Anker Power Bank and Anker MagGo Power Bank may pose a fire risk due to a manufacturing
+      defect. The lithium-ion battery in the affected powerbanks can overheat, potentially causing melting
+      of plastic components, smoke and fire hazards.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:48:28+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Anker
+      model: PowerCore 10000 PD+ (A1236)
+  kind: known_issue
+  domain: battery
+  severity: high
+  consequence: ''
+  detection: ''
+  component: lithium-ion battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: CPSC June 2025 recall covers PowerCore 10000 model A1263 only, not A1236
+      body: The official CPSC notice (Recall 25-338, June 12 2025, ~1,158,000 units) names the recalled
+        model as A1263 only.
+      advice: The A1236 (PowerCore 10000 PD+) is a different model and is not covered by this recall.
+        A buyer checking whether their A1236 is affected can confirm the official recall is limited to
+        A1263.
+    tr:
+      title: CPSC Haziran 2025 geri çağırması yalnızca PowerCore 10000 model A1263'ü kapsıyor, A1236'yı
+        değil
+      body: Resmi CPSC bildirimi (Geri Çağırma 25-338, 12 Haziran 2025, ~1.158.000 adet) geri çağrılan
+        modeli yalnızca A1263 olarak adlandırıyor.
+      advice: A1236 (PowerCore 10000 PD+) farklı bir modeldir ve bu geri çağırma kapsamında değildir.
+        A1236'sının etkilenip etkilenmediğini kontrol eden bir alıcı, resmi geri çağırmanın A1263 ile
+        sınırlı olduğunu doğrulayabilir.
+  evidence:
+  - url: https://www.cpsc.gov/Recalls/2025/More-than-One-Million-Anker-Power-Banks-Recalled-Due-to-Fire-and-Burn-Hazards-Manufactured-by-Anker-Innovations
+    quote: This recall involves Anker PowerCore 10000 power banks with model number A1263.
+    locator: ''
+    stance: disputes
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:44:05+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Anker
+      model: PowerCore 10000 PD Redux (A1246)
+  kind: known_issue
+  domain: battery
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: lithium-ion battery cell
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Japan recall of PowerCore 10000 also covers only A1263 variants, not A1246
+      body: The Japanese Consumer Affairs Agency recall of PowerCore 10000 (410,000+ units) lists only
+        A1263 variants (A1263N12, A1263016, A1263N22, A1263026, A1263036, A1263096). The A1246 is not
+        among the recalled models.
+      advice: Confirms across both US and Japan markets that the PowerCore 10000 recall targets A1263
+        models only. The A1246 PD Redux is not recalled in either market.
+    tr:
+      title: Japonya'daki PowerCore 10000 geri çağırması da yalnızca A1263 varyantlarını kapsıyor, A1246'yı
+        değil
+      body: Japon Tüketici İşleri Ajansı'nın PowerCore 10000 geri çağırması (410.000+ adet) yalnızca A1263
+        varyantlarını (A1263N12, A1263016, A1263N22, A1263026, A1263036, A1263096) listeliyor. A1246 geri
+        çağrılan modeller arasında değil.
+      advice: Hem ABD hem de Japonya pazarlarında PowerCore 10000 geri çağırmasının yalnızca A1263 modellerini
+        hedef aldığını doğrular. A1246 PD Redux her iki pazarda da geri çağrılmamıştır.
+  evidence:
+  - url: https://www.smartwatchlife.jp/79661/
+    quote: "対象は次のとおりです。\n\n色 | JAN（EAN）コード | 型番 \n---|---|---\nブラック | 4571411204692 | A1263N12 \nブラック\
+      \ | 4571411205163 | A1263016 \nホワイト | 4571411204708 | A1263N22 \nホワイト | 4571411205170 | A1263026\
+      \ \nブルー | 4571411205187 | A1263036 \nレッド | 4571411205194 | A1263096"
+    locator: ''
+    stance: disputes
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:46:41+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Anker
+      model: PowerCore III 10000 (A1247)
+  kind: known_issue
+  domain: battery
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: A1257/A1647/A1652/A1681/A1689
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Global Anker recall (Sept 2025) covers A1257/A1647/A1652/A1681/A1689, none of which is the
+        A1247 subject
+      body: A second, global recall covers five other Anker models; none is the A1247 subject.
+      advice: This global recall likewise does not apply to the A1247. The A1247 subject appears in no
+        recall notice found in this run.
+    tr:
+      title: Küresel Anker geri çağırması (Eylül 2025) A1257/A1647/A1652/A1681/A1689'u kapsıyor, bunların
+        hiçbiri A1247 konusu değil
+      body: İkinci, küresel bir geri çağırma diğer beş Anker modelini kapsıyor; hiçbiri A1247 konusu değil.
+      advice: Bu küresel geri çağırma da A1247 için geçerli değildir. A1247 konusu bu çalışmada bulunan
+        hiçbir geri çağırma bildiriminde yer almıyor.
+  evidence:
+  - url: https://schmidtandclark.com/anker-power-bank-recall-lawsuit
+    quote: Anker has recalled about 481,000 power banks (models A1647, A1652, A1257, A1681, A1689) after
+      lithium-ion battery defects caused overheating, fire, and burn hazards
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:46:56+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Anker
+      model: 523 Power Bank (PowerCore 10000) (A1245)
+  kind: known_issue
+  domain: battery
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: lithium-ion battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Anker PowerCore 10000 recall covers model A1263 only, not the 523/A1245
+      body: The June 12, 2025 CPSC recall (No. 25-338) of ~1.158M Anker PowerCore 10000 units applies
+        to model A1263 only, not to the subject A1245 (523 Power Bank / PowerCore Slim 10K PD). Anker's
+        own recall page confirms the same model A1263. The A1245 is a different model and is not named
+        in this recall or in Anker's September 18, 2025 recall (models A1647, A1652, A1257, A1681, A1689).
+      advice: A buyer of the Anker 523 Power Bank (A1245) should not assume it is part of the widely-reported
+        June 2025 PowerCore 10000 recall — that recall is model A1263 only. Verify the model number printed
+        on the bottom of the unit (A1245 vs A1263) before acting on recall notices. No A1245-specific
+        recall, fire, overheating, or swelling event was found in this run.
+    tr:
+      title: Anker PowerCore 10000 geri çağırması yalnızca A1263 modelini kapsıyor, 523/A1245 modelini
+        değil
+      body: 12 Haziran 2025 tarihli CPSC geri çağırması (No. 25-338), yaklaşık 1,158 milyon adet Anker
+        PowerCore 10000 ünitesini kapsıyor ve yalnızca A1263 modeli için geçerlidir; konu olan A1245 (523
+        Power Bank / PowerCore Slim 10K PD) için geçerli değildir. Anker'in kendi geri çağırma sayfası
+        da aynı A1263 modelini doğrulamaktadır. A1245 farklı bir modeldir ve ne bu geri çağırmada ne de
+        Anker'in 18 Eylül 2025 tarihli geri çağırmasında (A1647, A1652, A1257, A1681, A1689 modelleri)
+        adı geçmektedir.
+      advice: Bir Anker 523 Power Bank (A1245) alıcısı, yaygın olarak bildirilen Haziran 2025 PowerCore
+        10000 geri çağırmasının bir parçası olduğunu varsaymamalıdır — o geri çağırma yalnızca A1263 modelidir.
+        Geri çağırma bildirimlerine göre hareket etmeden önce ünitenin altında yazılı model numarasını
+        (A1245 ile A1263) doğrulayın. Bu çalışmada A1245'e özgü bir geri çağırma, yangın, aşırı ısınma
+        veya şişme olayı bulunamadı.
+  evidence:
+  - url: https://www.cpsc.gov/Recalls/2025/More-than-One-Million-Anker-Power-Banks-Recalled-Due-to-Fire-and-Burn-Hazards-Manufactured-by-Anker-Innovations
+    quote: This recall involves Anker PowerCore 10000 power banks with model number A1263.
+    locator: ''
+    stance: disputes
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:44:05+00:00'

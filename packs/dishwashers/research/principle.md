@@ -1,0 +1,3 @@
+# What this pack surfaces
+
+This pack surfaces what owners, repair forums, service bulletins and official support pages report going wrong with the best-selling dishwasher models of Arçelik, Beko, Bosch, Siemens, Samsung and Miele in Turkey and Europe. It does not claim every model of these brands is affected; each claim names the model or variant it was reported on, and a claim that genuinely applies to a different variant says so inside the claim rather than widening the pack. Routine, user-fixable issues (clogged filters, kinked hoses, loading mistakes) are included only where a brand's own support page or a repair record treats them as the recurring failure.
