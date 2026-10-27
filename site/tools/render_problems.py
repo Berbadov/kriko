@@ -29,6 +29,7 @@ this script and rewritten whole.
 import argparse
 import hashlib
 import html
+import json
 import re
 import shutil
 import sqlite3
@@ -51,6 +52,7 @@ OPEN_UP_TO = 12  # a group of more products than this starts folded
 UI = {
     "en": {
         "html_lang": "en",
+        "locale": "en_US",
         "prefix": "",
         "home": "/",
         "get": "/#get",
@@ -69,6 +71,13 @@ UI = {
         "serious_in": "Safety first in {name}",
         "safety_note": "{n} of these reports describe a fire, explosion or shock risk.",
         "title": "{label}: known problems",
+        "title_risk": "{label}: known problems and safety risks",
+        "safety_title": "Product fires, explosions and shocks: reports by product",
+        "safety_desc": "Sourced reports of products catching fire, exploding or shocking their owners, with the page each one came from.",
+        "safety_lead": "Every product in the catalogs with a serious report of it catching fire, exploding or shocking its owner. Each links to the report on the product's page, and from there to the page it came from.",
+        "safety_all": "All {n} products with safety reports",
+        "sponsored": "Sponsored",
+        "sponsored_note": "A paid placement. It is not a finding, and it changes nothing reported on this page.",
         "lead": "{n} sourced reports, with what to check before you buy. Each one links to the page it was reported on.",
         "desc": "{n} sourced problems reported for {label}, with what to check before you buy. {top}",
         "check": "What to check",
@@ -98,6 +107,7 @@ UI = {
     },
     "tr": {
         "html_lang": "tr",
+        "locale": "tr_TR",
         "prefix": "/tr",
         "home": "/tr/",
         "get": "/tr/#get",
@@ -116,6 +126,13 @@ UI = {
         "serious_in": "{name} için önce güvenlik",
         "safety_note": "Bu raporlardan {n} tanesi yangın, patlama ya da elektrik çarpması riski bildiriyor.",
         "title": "{label}: bilinen sorunlar",
+        "title_risk": "{label}: bilinen sorunlar ve güvenlik riskleri",
+        "safety_title": "Yangın, patlama ve elektrik çarpması: ürün bazında raporlar",
+        "safety_desc": "Ürünlerin yangın çıkardığı, patladığı ya da sahibini çarptığı kaynaklı raporlar; her biri geldiği sayfaya bağlantı verir.",
+        "safety_lead": "Yangın çıkardığı, patladığı ya da sahibini çarptığı ciddi biçimde bildirilen her ürün. Her biri, ürünün sayfasındaki rapora, oradan da geldiği sayfaya bağlantı verir.",
+        "safety_all": "Güvenlik raporu olan {n} ürünün tümü",
+        "sponsored": "Sponsorlu",
+        "sponsored_note": "Ücretli bir yerleşimdir. Bir bulgu değildir ve bu sayfada bildirilen hiçbir şeyi değiştirmez.",
         "lead": "{n} kaynaklı rapor ve satın almadan önce neye bakmanız gerektiği. Her biri, bildirildiği sayfaya bağlantı verir.",
         "desc": "{label} için bildirilen {n} kaynaklı sorun ve satın almadan önce neye bakılacağı. {top}",
         "check": "Neye bakmalı",
@@ -253,15 +270,19 @@ def read_catalog(path: Path) -> dict:
         subjects = {sid: {"label": label, "kind": kind, "claims": [], "products": [], "group": ""}
                     for sid, label, kind in conn.execute("SELECT subject_id, label, kind FROM subjects")}
         sources: dict[str, list[tuple[str, str]]] = {}
-        for claim_id, url, domain in conn.execute(
-            "SELECT e.claim_id, s.url, s.domain FROM evidence e JOIN sources s USING (source_id) ORDER BY s.url"
+        seen: dict[str, str] = {}  # the day a claim's newest source was read, which is when the claim was last checked
+        for claim_id, url, domain, when in conn.execute(
+            "SELECT e.claim_id, s.url, s.domain, s.retrieved_at FROM evidence e JOIN sources s USING (source_id) ORDER BY s.url"
         ):
             sources.setdefault(claim_id, []).append((url, domain))
+            day = str(when or "")[:10]
+            if re.fullmatch(r"\d{4}-\d{2}-\d{2}", day) and day > seen.get(claim_id, ""):
+                seen[claim_id] = day
         claims = {}
         for claim_id, subject_id, severity, detection in conn.execute(
             "SELECT claim_id, subject_id, severity, detection FROM claims"
         ):
-            claims[claim_id] = {"id": claim_id, "severity": severity, "detection": detection,
+            claims[claim_id] = {"id": claim_id, "severity": severity, "detection": detection, "seen": seen.get(claim_id, ""),
                                 "sources": list(dict.fromkeys(sources.get(claim_id, []))), "text": {}}
             subjects[subject_id]["claims"].append(claims[claim_id])
         for claim_id, lang, title, body, advice in conn.execute(
@@ -297,10 +318,82 @@ def _e(text) -> str:
     return html.escape(str(text), quote=True)
 
 
+ORGANISATION = {"@type": "Organization", "name": "Kriko", "url": f"{ORIGIN}/"}
+
+
+def _breadcrumbs(trail: list[tuple[str, str]]) -> dict:
+    """schema.org breadcrumbs, so a result can show the path to the page instead of a bare address."""
+    return {"@context": "https://schema.org", "@type": "BreadcrumbList",
+            "itemListElement": [{"@type": "ListItem", "position": n, "name": name, "item": f"{ORIGIN}{path}"}
+                                for n, (name, path) in enumerate(trail, 1)]}
+
+
+def _article(lang: str, *, headline: str, description: str, path: str, modified: str) -> dict:
+    page = {"@context": "https://schema.org", "@type": "Article", "headline": headline, "description": description,
+            "inLanguage": UI[lang]["html_lang"], "mainEntityOfPage": f"{ORIGIN}{path}",
+            "image": f"{ORIGIN}/assets/share-card.jpg", "author": ORGANISATION, "publisher": ORGANISATION}
+    if modified:
+        page["dateModified"] = modified
+    return page
+
+
+def _collection(lang: str, *, name: str, description: str, path: str, items: list[tuple[str, str]]) -> dict:
+    """schema.org for a page that is a list of other pages: what the list holds, and where each one is."""
+    return {"@context": "https://schema.org", "@type": "CollectionPage", "name": name, "description": description,
+            "inLanguage": UI[lang]["html_lang"], "url": f"{ORIGIN}{path}", "isPartOf": {"@type": "WebSite", "name": "Kriko", "url": f"{ORIGIN}/"},
+            "mainEntity": {"@type": "ItemList", "numberOfItems": len(items),
+                           "itemListElement": [{"@type": "ListItem", "position": n, "name": label, "url": f"{ORIGIN}{url}"}
+                                               for n, (label, url) in enumerate(items, 1)]}}
+
+
+def _structured(data: dict) -> str:
+    """One block of structured data. It is data, not code: nothing in it can close the tag it sits in."""
+    text = json.dumps(data, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
+    return f'  <script type="application/ld+json">{text}</script>\n'
+
+
+def _updated(claims: list[dict]) -> str:
+    """The day the newest source behind any of `claims` was read; empty when none says."""
+    return max((c["seen"] for c in claims), default="")
+
+
+def load_sponsors(site_dir: Path) -> list[dict]:
+    """The paid placements `site/sponsors.json` lists that can be shown, by id.
+
+    A placement is a link to an https address, with a name and a sentence in each language it
+    is shown in. One that is not is left out and named on stderr: no advertisement is better
+    than one that cannot be told from a finding, or that links somewhere a visitor cannot trust.
+    """
+    path = site_dir / "sponsors.json"
+    if not path.is_file():
+        return []
+    kept: dict[str, dict] = {}
+    for row in json.loads(path.read_text(encoding="utf-8")):
+        ident = str(row.get("id", ""))
+        if ident and ident not in kept and str(row.get("url", "")).startswith("https://") \
+                and isinstance(row.get("name"), dict) and isinstance(row.get("text"), dict):
+            kept[ident] = row
+        else:
+            print(f"sponsors.json: {ident or row} is not a placement that can be shown", file=sys.stderr)
+    return [kept[ident] for ident in sorted(kept)]
+
+
+def _sponsored(lang: str, sponsors: list[dict], catalog_slug: str) -> str:
+    """The one paid placement for a page of this catalog, boxed apart from the findings and labelled as paid."""
+    ui = UI[lang]
+    for row in sponsors:
+        if lang in row["name"] and lang in row["text"] and (not row.get("catalogs") or catalog_slug in row["catalogs"]):
+            return (f'      <aside class="sponsored" aria-label="{_e(ui["sponsored"])}"><p class="tag">{_e(ui["sponsored"])}</p>'
+                    f'<p><a href="{_e(row["url"])}" rel="sponsored nofollow noopener">{_e(row["name"][lang])}</a>: '
+                    f'{_e(row["text"][lang])}</p><p class="fine">{_e(ui["sponsored_note"])}</p></aside>\n')
+    return ""
+
+
 def _chrome(lang: str, *, title: str, description: str, path: str, alternates: dict[str, str], depth: int,
-            css: str, body: str) -> str:
+            css: str, body: str, schema: tuple = ()) -> str:
     ui = UI[lang]
     up = "../" * depth
+    data = "".join(_structured(one) for one in schema)
     links = "".join(f'  <link rel="alternate" hreflang="{code}" href="{ORIGIN}{url}">\n' for code, url in alternates.items())
     if alternates:
         links += f'  <link rel="alternate" hreflang="x-default" href="{ORIGIN}{alternates.get("en") or next(iter(alternates.values()))}">\n'
@@ -314,17 +407,21 @@ def _chrome(lang: str, *, title: str, description: str, path: str, alternates: d
   <meta name="color-scheme" content="light dark">
   <title>{_e(title)} | Kriko</title>
   <meta name="description" content="{_e(description)}">
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
   <link rel="icon" href="{up}assets/icon-32.png">
   <link rel="stylesheet" href="{up}styles.css?v={css}">
   <link rel="canonical" href="{ORIGIN}{path}">
 {links}  <meta property="og:type" content="article">
   <meta property="og:site_name" content="Kriko">
+  <meta property="og:locale" content="{ui["locale"]}">
   <meta property="og:title" content="{_e(title)}">
   <meta property="og:description" content="{_e(description)}">
   <meta property="og:url" content="{ORIGIN}{path}">
   <meta property="og:image" content="{ORIGIN}/assets/share-card.jpg">
   <meta name="twitter:card" content="summary_large_image">
-</head>
+  <meta name="twitter:title" content="{_e(title)}">
+  <meta name="twitter:description" content="{_e(description)}">
+{data}</head>
 <body>
   <header class="topbar">
     <div class="wrap bar">
@@ -407,7 +504,7 @@ def _neighbours(entry: dict, entries: list[dict], lang: str) -> list[dict]:
 
 
 def _subject_page(catalog: dict, entry: dict, subject: dict, lang: str, claims: list[dict], css: str,
-                  entries: list[dict]) -> str:
+                  entries: list[dict], sponsors: list[dict]) -> str:
     ui = UI[lang]
     label = subject["label"]
     path = f'{ui["prefix"]}/problems/{entry["slug"]}/'
@@ -443,48 +540,93 @@ def _subject_page(catalog: dict, entry: dict, subject: dict, lang: str, claims: 
             f'<a href="{ui["prefix"]}/problems/{entry["catalog_slug"]}/">{_e(category)}</a></p>\n'
             f'      <h1>{icon(entry["icon"], "ico big")}{_e(ui["title"].format(label=label))}</h1>\n'
             f'      <p class="lead">{_e(ui["lead"].format(n=len(claims)))}</p>\n'
-            + risk + glance + "\n".join(sections) + "\n" + fits + more +
+            + risk + glance + "\n".join(sections) + "\n" + fits + _sponsored(lang, sponsors, entry["catalog_slug"]) + more +
             f'      <div class="short"><h2>{_e(ui["cta_h"])}</h2><p>{_e(ui["cta_p"])}</p>'
             f'<p><a class="button" href="{ui["get"]}">{_e(ui["cta_b"])}</a></p></div>\n'
             f'      <p class="fine">{_e(ui["note"])}</p>\n'
             f'      <p class="fine">{_e(ui["licence"].format(name=catalog["name"], version=catalog["version"], license=catalog["license"]))}</p>')
     description = ui["desc"].format(label=label, n=len(claims), top=top)
     description = description if len(description) <= 158 else description[:155].rsplit(" ", 1)[0] + "…"
-    return _chrome(lang, title=ui["title"].format(label=label), description=description, path=path,
-                   alternates=alternates, depth=3 if lang == "tr" else 2, css=css, body=body)
+    # A page that reports a fire says so in its title: that is the word a reader searches for.
+    title = ui["title_risk" if risky else "title"].format(label=label)
+    schema = (_breadcrumbs([(ui["crumb"], f'{ui["prefix"]}/problems/'),
+                            (category, f'{ui["prefix"]}/problems/{entry["catalog_slug"]}/'), (label, path)]),
+              _article(lang, headline=title, description=description, path=path, modified=_updated(claims)))
+    return _chrome(lang, title=title, description=description, path=path,
+                   alternates=alternates, depth=3 if lang == "tr" else 2, css=css, body=body, schema=schema)
 
 
-def _safety_first(lang: str, entries: list[dict], heading: str, limit: int) -> str:
-    """The worst safety reports of `entries`, one for each product, each linked to its own card.
+def _safety_rows(lang: str, entries: list[dict]) -> list[tuple[dict, dict, int]]:
+    """The worst safety report of each product of `entries` that has one, as (product, report, how many), worst first.
 
-    A product with more reports of the kind leads, then the one more sites agree on; the one shown for it is the best backed.
+    A product with more serious reports of the kind leads, then the one more sites agree on, so a fire
+    several pages agree on outranks one a single page reports; the report shown is the best backed.
     """
-    ui = UI[lang]
     found = []
     for entry in entries:
         risky = [c for c in entry["claims"].get(lang, []) if is_hazard(c)]
         high = [c for c in risky if c["severity"] == "high"]
         if high:
             best = min(high, key=lambda c: (-len(c["sources"]), c["id"]))
-            # More serious reports lead, then more distinct sites behind them, so a fire several pages agree on
-            # outranks one a single page reports.
             sites = len({domain or url for c in risky for url, domain in c["sources"]})
             found.append((-len(high), -sites, entry["label"], entry, best, len(risky)))
+    return [(entry, claim, count) for *_, entry, claim, count in sorted(found, key=lambda f: f[:3])]
+
+
+def _alert_row(lang: str, entry: dict, claim: dict, count: int) -> str:
+    ui = UI[lang]
+    more = f' · {_e(ui["reports"].format(n=count))}' if count > 1 else ""
+    return (f'<li><a href="{ui["prefix"]}/problems/{entry["slug"]}/#c-{_e(claim["id"][:8])}">{icon("flame")}'
+            f'<span>{_e(claim["text"][lang]["title"])}<small>{_e(entry["label"])}{more}</small></span></a></li>')
+
+
+def _safety_first(lang: str, entries: list[dict], heading: str, limit: int, everything: bool = False) -> str:
+    """The worst safety reports of `entries`, one for each product, each linked to its own card.
+
+    `everything` ends the strip with a link to the page that lists every one of them.
+    """
+    ui = UI[lang]
+    found = _safety_rows(lang, entries)
     if not found:
         return ""
-    rows = []
-    for *_, entry, claim, count in sorted(found, key=lambda f: f[:3])[:limit]:
-        more = f' · {_e(ui["reports"].format(n=count))}' if count > 1 else ""
-        rows.append(f'<li><a href="{ui["prefix"]}/problems/{entry["slug"]}/#c-{_e(claim["id"][:8])}">{icon("flame")}'
-                    f'<span>{_e(claim["text"][lang]["title"])}<small>{_e(entry["label"])}{more}</small></span></a></li>')
+    rows = [_alert_row(lang, *row) for row in found[:limit]]
     # The first few stay in view, so the categories below are not pushed off the screen; the rest open on request.
     rest = (f'<details class="rest"><summary>{_e(ui["show_more"].format(n=len(rows) - SAFETY_SHOWN))}</summary>'
             f'<ul class="alerts">{"".join(rows[SAFETY_SHOWN:])}</ul></details>') if len(rows) > SAFETY_SHOWN else ""
+    every = (f'<p class="all"><a href="{ui["prefix"]}/problems/safety/">{_e(ui["safety_all"].format(n=len(found)))}</a></p>'
+             if everything else "")
     return (f'      <section class="serious"><h2>{icon("flame")}{_e(heading)}</h2>\n'
-            f'      <p>{_e(ui["serious_lead"])}</p>\n      <ul class="alerts">{"".join(rows[:SAFETY_SHOWN])}</ul>{rest}</section>\n')
+            f'      <p>{_e(ui["serious_lead"])}</p>\n      <ul class="alerts">{"".join(rows[:SAFETY_SHOWN])}</ul>{rest}{every}</section>\n')
 
 
-def _category_page(lang: str, items: list[dict], css: str, have: set[str]) -> str:
+def _safety_page(lang: str, entries: list[dict], css: str, have: set[str]) -> str:
+    """Every product with a serious fire, explosion or shock report, under its catalog: the page a search for one lands on."""
+    ui = UI[lang]
+    path = f'{ui["prefix"]}/problems/safety/'
+    alternates = {code: f'{UI[code]["prefix"]}/problems/safety/' for code in LANGS if code in have}
+    found = _safety_rows(lang, entries)
+    by_catalog: dict[str, list[tuple[dict, dict, int]]] = {}
+    for row in found:
+        by_catalog.setdefault(row[0]["catalog_slug"], []).append(row)
+    sections = ""
+    for slug, rows in sorted(by_catalog.items(), key=lambda kv: (-len(kv[1]), kv[0])):
+        first = rows[0][0]
+        sections += (f'      <h2>{icon(first["icon"])}<a href="{ui["prefix"]}/problems/{slug}/">{_e(_category_name(first, lang))}</a></h2>\n'
+                     f'      <ul class="alerts">{"".join(_alert_row(lang, *row) for row in rows)}</ul>\n')
+    body = (f'      <p class="crumb"><a href="{ui["prefix"]}/problems/">{_e(ui["crumb"])}</a></p>\n'
+            f'      <h1>{icon("flame", "ico big hazard")}{_e(ui["safety_title"])}</h1>\n      <p class="lead">{_e(ui["safety_lead"])}</p>\n'
+            f'      <section class="serious">\n{sections}      </section>\n'
+            f'      <div class="short"><h2>{_e(ui["cta_h"])}</h2><p>{_e(ui["cta_p"])}</p>'
+            f'<p><a class="button" href="{ui["get"]}">{_e(ui["cta_b"])}</a></p></div>\n'
+            f'      <p class="fine">{_e(ui["note"])}</p>')
+    schema = (_breadcrumbs([(ui["crumb"], f'{ui["prefix"]}/problems/'), (ui["safety_title"], path)]),
+              _collection(lang, name=ui["safety_title"], description=ui["safety_desc"], path=path,
+                          items=[(e["label"], f'{ui["prefix"]}/problems/{e["slug"]}/') for e, _, _ in found]))
+    return _chrome(lang, title=ui["safety_title"], description=ui["safety_desc"], path=path, alternates=alternates,
+                   depth=3 if lang == "tr" else 2, css=css, body=body, schema=schema)
+
+
+def _category_page(lang: str, items: list[dict], css: str, have: set[str], sponsors: list[dict]) -> str:
     """One catalog's page: its products under their make or brand, a part under each product it fits."""
     ui = UI[lang]
     first = items[0]
@@ -521,12 +663,16 @@ def _category_page(lang: str, items: list[dict], css: str, have: set[str]) -> st
             f'      <h1>{icon(first["icon"], "ico big")}{_e(ui["cat_title"].format(name=name))}</h1>\n'
             f'      <p class="lead">{_e(ui["cat_lead"].format(n=len(items)))}</p>\n'
             + _safety_first(lang, items, ui["serious_in"].format(name=name), 3)
-            + "\n".join(sections) + "\n"
+            + "\n".join(sections) + "\n" + _sponsored(lang, sponsors, first["catalog_slug"]) +
             f'      <div class="short"><h2>{_e(ui["cta_h"])}</h2><p>{_e(ui["cta_p"])}</p>'
             f'<p><a class="button" href="{ui["get"]}">{_e(ui["cta_b"])}</a></p></div>\n'
             f'      <p class="fine">{_e(ui["note"])}</p>')
-    return _chrome(lang, title=ui["cat_title"].format(name=name), description=ui["cat_desc"].format(n=len(items), name=name),
-                   path=path, alternates=alternates, depth=3 if lang == "tr" else 2, css=css, body=body)
+    title, description = ui["cat_title"].format(name=name), ui["cat_desc"].format(n=len(items), name=name)
+    schema = (_breadcrumbs([(ui["crumb"], f'{ui["prefix"]}/problems/'), (name, path)]),
+              _collection(lang, name=title, description=description, path=path,
+                          items=[(e["label"], f'{ui["prefix"]}/problems/{e["slug"]}/') for e in sorted(items, key=lambda e: e["label"])]))
+    return _chrome(lang, title=title, description=description, path=path, alternates=alternates,
+                   depth=3 if lang == "tr" else 2, css=css, body=body, schema=schema)
 
 
 def _hub_page(lang: str, entries: list[dict], css: str) -> str:
@@ -546,21 +692,26 @@ def _hub_page(lang: str, entries: list[dict], css: str) -> str:
             f'<span>{_e(ui["products"].format(n=len(items)))} · {_e(ui["reports"].format(n=reports))}</span>'
             f'<small>{_e(", ".join(e["label"] for e in best))}…</small></a></li>')
     body = (f'      <h1>{_e(ui["hub_title"])}</h1>\n      <p class="lead">{_e(ui["hub_lead"])}</p>\n'
-            + _safety_first(lang, entries, ui["serious_h"], SAFETY_FIRST) +
+            + _safety_first(lang, entries, ui["serious_h"], SAFETY_FIRST, everything=True) +
             f'      <ul class="cards">{"".join(cards)}</ul>\n'
             f'      <div class="short"><h2>{_e(ui["cta_h"])}</h2><p>{_e(ui["cta_p"])}</p>'
             f'<p><a class="button" href="{ui["get"]}">{_e(ui["cta_b"])}</a></p></div>\n'
             f'      <p class="fine">{_e(ui["note"])}</p>')
+    schema = (_collection(lang, name=ui["hub_title"], description=ui["hub_desc"], path=path,
+                          items=[(_category_name(items[0], lang), f'{ui["prefix"]}/problems/{slug}/')
+                                 for slug, items in sorted(by_catalog.items())]),)
     return _chrome(lang, title=ui["hub_title"], description=ui["hub_desc"], path=path, alternates=alternates,
-                   depth=2 if lang == "tr" else 1, css=css, body=body)
+                   depth=2 if lang == "tr" else 1, css=css, body=body, schema=schema)
 
 
-def _sitemap(pages: list[tuple[str, dict[str, str]]]) -> str:
+def _sitemap(pages: list[tuple[str, dict[str, str], str]]) -> str:
     out = ['<?xml version="1.0" encoding="UTF-8"?>',
            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">']
-    for path, alternates in pages:
+    for path, alternates, modified in pages:
         out.append("  <url>")
         out.append(f"    <loc>{ORIGIN}{path}</loc>")
+        if modified:
+            out.append(f"    <lastmod>{modified}</lastmod>")
         for code, url in alternates.items():
             out.append(f'    <xhtml:link rel="alternate" hreflang="{code}" href="{ORIGIN}{url}"/>')
         if alternates:
@@ -574,8 +725,9 @@ def _sitemap(pages: list[tuple[str, dict[str, str]]]) -> str:
 def render(packs_dir: Path, site_dir: Path) -> list[str]:
     """Rewrite the generated pages under `site_dir`; returns every address written."""
     css = stylesheet_hash(site_dir)
+    sponsors = load_sponsors(site_dir)
     records: list[tuple[dict, dict, dict, dict]] = []  # (catalog, entry, subject, claims by language)
-    slugs: set[str] = set()
+    slugs: set[str] = {"safety"}  # the page of every safety report keeps its address; a product never takes it
     with tempfile.TemporaryDirectory() as scratch:
         for root, manifest in real_catalogs(packs_dir):
             catalog = read_catalog(build_catalog(root, Path(scratch) / f"{root.name}.kpack"))
@@ -595,26 +747,36 @@ def render(packs_dir: Path, site_dir: Path) -> list[str]:
                          "catalog": catalog["name"], "catalog_slug": catalog_slug, "names": catalog["names"],
                          "group": subject["group"], "groups": catalog["groups"], "icon": catalog["icon"],
                          "claims": per_lang,
-                         "counts": {code: len(per_lang[code]) for code in languages}, "have": have}
+                         "counts": {code: len(per_lang[code]) for code in languages}, "have": have,
+                         "updated": {code: _updated(per_lang[code]) for code in languages}}
                 records.append((catalog, entry, subject, per_lang))
     entries = [entry for _, entry, _, _ in records]
     written: dict[str, str] = {}
+    modified: dict[str, str] = {}  # the day each page was last checked, for the sitemap
     for catalog, entry, subject, per_lang in records:
         for code in entry["have"]:
-            written[f'{UI[code]["prefix"]}/problems/{entry["slug"]}/'] = _subject_page(
-                catalog, entry, subject, code, per_lang[code], css, entries)
+            path = f'{UI[code]["prefix"]}/problems/{entry["slug"]}/'
+            written[path] = _subject_page(catalog, entry, subject, code, per_lang[code], css, entries, sponsors)
+            modified[path] = entry["updated"][code]
     by_catalog: dict[str, list[dict]] = {}
     for entry in entries:
         by_catalog.setdefault(entry["catalog_slug"], []).append(entry)
     for slug, items in by_catalog.items():
         have = {code for entry in items for code in entry["have"]}
         for code in have:
-            written[f'{UI[code]["prefix"]}/problems/{slug}/'] = _category_page(
-                code, [e for e in items if code in e["have"]], css, have)
+            shown = [e for e in items if code in e["have"]]
+            path = f'{UI[code]["prefix"]}/problems/{slug}/'
+            written[path] = _category_page(code, shown, css, have, sponsors)
+            modified[path] = max(e["updated"][code] for e in shown)
+    safety = {code for code in LANGS if _safety_rows(code, [e for e in entries if code in e["have"]])}
     for code in LANGS:
         shown = [e for e in entries if code in e["have"]]
         if shown:
             written[f'{UI[code]["prefix"]}/problems/'] = _hub_page(code, shown, css)
+            modified[f'{UI[code]["prefix"]}/problems/'] = max(e["updated"][code] for e in shown)
+        if code in safety:
+            written[f'{UI[code]["prefix"]}/problems/safety/'] = _safety_page(code, shown, css, safety)
+            modified[f'{UI[code]["prefix"]}/problems/safety/'] = max(e["updated"][code] for e in shown)
 
     for tree in (site_dir / "problems", site_dir / "tr" / "problems"):
         if tree.exists():
@@ -632,7 +794,7 @@ def render(packs_dir: Path, site_dir: Path) -> list[str]:
     for path in sorted(written):
         tail = path.removeprefix("/tr") if path.startswith("/tr/") else path
         alternates = {code: f'{UI[code]["prefix"]}{tail}' for code in LANGS if f'{UI[code]["prefix"]}{tail}' in written}
-        pages.append((path, alternates))
+        pages.append((path, alternates, modified.get(path, "")))
     with open(sitemap_file, "w", encoding="utf-8", newline="\n") as handle:
         handle.write(_sitemap(pages))
     return sorted(written)

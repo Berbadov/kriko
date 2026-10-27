@@ -7,6 +7,7 @@ that the committed pages are what the catalogs say today.
 """
 
 import importlib.util
+import json
 import re
 import textwrap
 from pathlib import Path
@@ -30,7 +31,8 @@ TERMS = """
 """
 
 
-def _claim(model, title, severity, tr_title, url, body="b", advice="a"):
+def _claim(model, title, severity, tr_title, url, body="b", advice="a", seen=""):
+    retrieved = f", retrieved_at: '{seen}'" if seen else ""
     return f"""
     - subject: {{kind: product, identity: {{brand: acme, model: {model}}}}}
       kind: known_issue
@@ -41,7 +43,7 @@ def _claim(model, title, severity, tr_title, url, body="b", advice="a"):
         en: {{title: "{title}", body: {body}, advice: {advice}}}
         tr: {{title: "{tr_title}", body: gövde, advice: öneri}}
       evidence:
-        - {{url: "{url}", quote: Words that belong to the forum author.}}
+        - {{url: "{url}", quote: Words that belong to the forum author.{retrieved}}}
 """
 
 
@@ -366,3 +368,99 @@ def test_the_safety_strip_shows_a_few_and_folds_the_rest_so_the_categories_stay_
         strip = (site / path / "index.html").read_text(encoding="utf-8").split('class="serious"')[1].split("</section>")[0]
         shown, rest = strip.split('<details class="rest">')
         assert shown.count("<li>") == module.SAFETY_SHOWN and rest.count("<li>") == 2 and folded in rest
+
+
+def _sponsor(**changes):
+    row = {"id": "acme-tools", "url": "https://acme.invalid/tools?ref=kriko",
+           "name": {"en": "Acme Tools", "tr": "Acme Aletleri"}, "text": {"en": "Anvils that last.", "tr": "Uzun ömürlü örsler."}}
+    return {**row, **changes}
+
+
+def _with_sponsors(tmp_path, rows, claims=ANVIL):
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    packs, site = tmp_path / "packs", _site(tmp_path)
+    _write_catalog(packs, "tools", claims)
+    if rows is not None:
+        (site / "sponsors.json").write_text(json.dumps(rows), encoding="utf-8")
+    _load().render(packs, site)
+    return site
+
+
+def test_a_paid_placement_is_boxed_apart_labelled_and_only_on_the_information_pages(tmp_path):
+    site = _with_sponsors(tmp_path, [_sponsor()])
+    product = (site / "problems" / "anvil" / "index.html").read_text(encoding="utf-8")
+    box = re.search(r'<aside class="sponsored".*?</aside>', product, re.S).group(0)
+    assert 'rel="sponsored nofollow noopener"' in box and "Sponsored" in box and "https://acme.invalid/tools?ref=kriko" in box
+    assert "changes nothing reported on this page" in box
+    # It is never inside a finding, so a reader cannot take it for one.
+    assert not any(box in article for article in re.findall(r"<article.*?</article>", product, re.S))
+    assert 'class="sponsored"' in (site / "problems" / "tools" / "index.html").read_text(encoding="utf-8")
+    # Not on the hub, which is the front door, and in Turkish it is in Turkish.
+    assert 'class="sponsored"' not in (site / "problems" / "index.html").read_text(encoding="utf-8")
+    turkish = (site / "tr" / "problems" / "anvil" / "index.html").read_text(encoding="utf-8")
+    assert "Sponsorlu" in turkish and "Acme Aletleri" in turkish
+
+
+def test_a_catalog_with_no_placement_shows_none_and_one_aimed_elsewhere_is_not_shown_here(tmp_path):
+    for n, rows in enumerate((None, [], [_sponsor(catalogs=["washers"])])):
+        site = _with_sponsors(tmp_path / f"case{n}", rows)
+        assert 'class="sponsored"' not in (site / "problems" / "anvil" / "index.html").read_text(encoding="utf-8")
+    site = _with_sponsors(tmp_path / "aimed", [_sponsor(catalogs=["tools"])])
+    assert 'class="sponsored"' in (site / "problems" / "anvil" / "index.html").read_text(encoding="utf-8")
+
+
+def test_a_placement_that_is_not_https_or_is_not_in_the_pages_language_is_not_shown(tmp_path, capsys):
+    rows = [_sponsor(id="a", url="http://acme.invalid/"), _sponsor(id="b", url="javascript:alert(1)"),
+            _sponsor(id="c", name={"en": "English only"}, text={"en": "Only in English."})]
+    site = _with_sponsors(tmp_path, rows)
+    english = (site / "problems" / "anvil" / "index.html").read_text(encoding="utf-8")
+    assert "English only" in english and "javascript" not in english and "http://acme" not in english
+    assert 'class="sponsored"' not in (site / "tr" / "problems" / "anvil" / "index.html").read_text(encoding="utf-8")
+    assert "a is not a placement" in capsys.readouterr().err
+
+
+def test_the_page_of_every_safety_report_lists_each_product_and_the_hub_links_to_it(tmp_path):
+    site = _with_sponsors(tmp_path, None, claims=FIRE)
+    page = (site / "problems" / "safety" / "index.html").read_text(encoding="utf-8")
+    assert "Battery can catch fire while charging" in page and 'href="/problems/anvil/#c-' in page
+    assert "Piston ring wear" not in page and "Smells like fire" not in page
+    hub = (site / "problems" / "index.html").read_text(encoding="utf-8")
+    assert 'href="/problems/safety/">All 1 products with safety reports' in hub
+    assert "Yangın, patlama" in (site / "tr" / "problems" / "safety" / "index.html").read_text(encoding="utf-8")
+    sitemap = (site / "sitemap-problems.xml").read_text(encoding="utf-8")
+    assert "<loc>https://kriko.cc/problems/safety/</loc>" in sitemap
+
+
+def test_a_catalog_with_no_safety_report_has_no_safety_page_and_a_product_cannot_take_its_address(tmp_path):
+    site = _with_sponsors(tmp_path, None, claims=ANVIL.replace("Widget", "x") + _claim("widget", "Pack caught fire", "low", "Yandı", "https://n.invalid/1"))
+    assert not (site / "problems" / "safety").exists()
+    assert "safety reports" not in (site / "problems" / "index.html").read_text(encoding="utf-8")
+    (tmp_path / "again").mkdir()
+    packs = tmp_path / "again" / "packs"
+    _write_catalog(packs, "tools", ANVIL, extra_subjects="\n- {kind: product, label: Safety, identity: {brand: acme, model: safety}}")
+    extra = "".join(_claim("safety", f"Fault {n}", "high", f"Arıza {n}", f"https://forum.invalid/s{n}") for n in range(3))
+    (packs / "tools" / "data" / "claims.yaml").write_text(textwrap.dedent(ANVIL + extra), encoding="utf-8")
+    out = _site(tmp_path / "again")
+    _load().render(packs, out)
+    assert not (out / "problems" / "safety").exists() and (out / "problems" / "safety-3" / "index.html").is_file()
+
+
+def test_a_page_says_when_it_was_last_checked_and_where_it_sits_to_a_search_engine(tmp_path):
+    claims = (_claim("anvil", "Pack caught fire in a garage", "high", "Garajda yandı", "https://news.invalid/a", seen="2026-10-02T09:00:00+00:00")
+              + _claim("anvil", "Handle cracks", "medium", "Sap çatlar", "https://forum.invalid/h", seen="2026-09-20T09:00:00+00:00")
+              + _claim("anvil", "Paint chips", "low", "Boya atar", "https://forum.invalid/p"))
+    site = _with_sponsors(tmp_path, None, claims=claims)
+    page = (site / "problems" / "anvil" / "index.html").read_text(encoding="utf-8")
+    blocks = [json.loads(b) for b in re.findall(r'<script type="application/ld\+json">(.*?)</script>', page, re.S)]
+    kinds = {b["@type"]: b for b in blocks}
+    assert kinds["Article"]["dateModified"] == "2026-10-02"
+    assert [i["name"] for i in kinds["BreadcrumbList"]["itemListElement"]] == ["Known problems", "Tools", "Anvil"]
+    assert "<title>Anvil: known problems and safety risks | Kriko</title>" in page
+    sitemap = (site / "sitemap-problems.xml").read_text(encoding="utf-8")
+    assert re.search(r"<loc>https://kriko.cc/problems/anvil/</loc>\s*<lastmod>2026-10-02</lastmod>", sitemap)
+    # A page with no source date says nothing rather than a guess.
+    assert not re.search(r"<loc>https://kriko.cc/problems/safety/</loc>\s*<lastmod>", sitemap) or "2026-10-02" in sitemap
+
+
+def test_structured_data_cannot_close_the_script_tag_it_sits_in():
+    assert "</script>" not in _load()._structured({"name": "x</script><script>alert(1)</script>"}).replace("</script>\n", "", 1)
