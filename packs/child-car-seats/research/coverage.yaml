@@ -1,0 +1,90 @@
+lineup:
+- Cybex Aton G
+- Cybex Cloud Z2
+- Cybex Sirona S
+- Cybex Solution Z i-Fix
+- Cybex Balios S
+- Cybex Priam
+- Maxi-Cosi Pebble Pro
+- Maxi-Cosi Titan Pro
+- Maxi-Cosi RodiFix
+- Maxi-Cosi Jay Plus
+- Maxi-Cosi FamilyFix Slide Pro
+- Maxi-Cosi Leona
+- Maxi-Cosi Lila
+- Chicco NextFit Zip
+- Chicco MyFit Zip Air
+- Chicco KeyFit 35
+- Chicco Bravo
+- Chicco Viaro
+- Britax Römer BABY-SAFE PRO
+- Britax Römer Dualfix
+- Britax Römer Kidfix
+- Britax Römer B-Agile
+- Joie i-Snug
+- Joie i-Level
+- Joie Every Stage
+- Joie Litetrax
+- Joie Serina Swivel
+- Graco SnugRide Turn & Slide
+- Graco Extend2Fit
+- Graco TriRide
+- Graco Modes Nest
+- Graco FastAction
+- Inglesina Quid
+- Inglesina Trilogy
+- Inglesina Aptica
+covered:
+- britax r mer baby safe pro
+- chicco myfit zip air
+- cybex aton g
+- graco snugride turn slide
+- inglesina quid
+- joie serina swivel
+- maxi cosi familyfix slide pro
+- maxi cosi jay plus
+- product brand britax romer series baby safe pro
+- product brand chicco series myfit zip air
+- product brand cybex series aton g
+- product brand graco series snugride turn slide
+- product brand inglesina series quid
+- product brand joie series serina swivel
+- product brand maxi cosi series familyfix slide pro
+- product brand maxi cosi series jay plus
+uncovered:
+- Cybex Cloud Z2
+- Cybex Sirona S
+- Cybex Solution Z i-Fix
+- Cybex Balios S
+- Cybex Priam
+- Maxi-Cosi Pebble Pro
+- Maxi-Cosi Titan Pro
+- Maxi-Cosi RodiFix
+- Maxi-Cosi Leona
+- Maxi-Cosi Lila
+- Chicco NextFit Zip
+- Chicco KeyFit 35
+- Chicco Bravo
+- Chicco Viaro
+- Britax Römer Dualfix
+- Britax Römer Kidfix
+- Britax Römer B-Agile
+- Joie i-Snug
+- Joie i-Level
+- Joie Every Stage
+- Joie Litetrax
+- Graco Extend2Fit
+- Graco TriRide
+- Graco Modes Nest
+- Graco FastAction
+- Inglesina Trilogy
+- Inglesina Aptica
+note: Only models with documented recalls or safety notices have subjects; the remaining
+  lineup entries are named but were not researched in this run due to tool budget
+  limits.
+out_of_scope:
+- Baby carriers and slings
+- High chairs
+- Baby monitors
+- Changing tables
+quarantined: []

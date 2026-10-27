@@ -1,0 +1,1790 @@
+# Claims — what is known to go wrong, each with the page it came from and the quote
+# that was read there. A claim without both is not in this file.
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      series: redmi buds 6
+  kind: known_issue
+  domain: battery
+  severity: low
+  consequence: ''
+  detection: ''
+  component: firmware / battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Xiaomi acknowledges battery-level difference between left and right buds (firmware quirk)
+      body: Xiaomi confirms the app can show a large battery difference between the left and right buds
+        and that a firmware fix was planned for November 2024.
+      advice: A mismatched left/right battery reading is a known, acknowledged quirk rather than a defect;
+        a firmware update may resolve it, but verify your unit has the latest firmware.
+    tr:
+      title: Xiaomi, sol ve sağ kulaklıklar arasındaki pil seviyesi farkını kabul ediyor (donanım yazılımı
+        tuhaflığı)
+      body: Xiaomi, uygulamanın sol ve sağ kulaklıklar arasında büyük bir pil farkı gösterebileceğini
+        ve Kasım 2024 için bir donanım yazılımı düzeltmesinin planlandığını doğruluyor.
+      advice: Eşleşmeyen sol/sağ pil okuması bir kusur değil, bilinen ve kabul edilmiş bir tuhaflıktır;
+        bir donanım yazılımı güncellemesi bunu çözebilir, ancak cihazınızın en son donanım yazılımına
+        sahip olduğunu doğrulayın.
+  evidence:
+  - url: https://www.mi.com/global/support/faq/details/KA-509528/
+    quote: This issue occurs after using one earbud for an extended period. When there is a battery difference
+      of more than 10% between the two earbuds, and both are then worn, the earbud with more battery remains
+      the main earbud and does not update the battery status to the APP.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T07:41:55+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      series: redmi buds 6
+  kind: known_issue
+  domain: audio
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: firmware
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Xiaomi acknowledges audio cut-off at start of playback (firmware quirk)
+      body: Xiaomi confirms the first word of playback can be cut off in non-noise-canceling mode and
+        that a firmware fix was planned for November 2024.
+      advice: If you hear the start of words/audio clipped, switching to ANC or transparency mode is the
+        documented workaround; a firmware update was promised to fix it.
+    tr:
+      title: Xiaomi, oynatma başlangıcında ses kesilmesini kabul ediyor (donanım yazılımı tuhaflığı)
+      body: Xiaomi, gürültü engelleme olmayan modda oynatmanın ilk kelimesinin kesilebileceğini ve Kasım
+        2024 için bir donanım yazılımı düzeltmesinin planlandığını doğruluyor.
+      advice: Kelimelerin/sesin başlangıcının kesildiğini duyarsanız, ANC veya şeffaflık moduna geçmek
+        belgelenmiş geçici çözümdür; bunu düzeltmek için bir donanım yazılımı güncellemesi vaat edildi.
+  evidence:
+  - url: https://www.mi.com/global/support/faq/details/KA-509528/
+    quote: This audio cut-off occurs in non-noise-canceling mode. Switching to noise-canceling or transparency
+      mode is recommended to resolve it. This issue is currently being fixed by the development team,
+      and a new firmware version will be released to you in November 2024.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T07:41:55+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      series: redmi buds 6
+  kind: known_issue
+  domain: battery
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Battery holds ~2.5 hours instead of claimed 10 hours (Redmi Buds 6)
+      body: Owner review on the same Ukrainian retailer page. The buyer reports the earbuds hold only
+        about 2.5 hours of charge versus the advertised 10 hours without the case.
+      advice: Expect real-world battery life to be well under the advertised figure; if long single-session
+        battery life matters, this is a shortfall to weigh.
+    tr:
+      title: Pil, iddia edilen 10 saat yerine ~2,5 saat dayanıyor (Redmi Buds 6)
+      body: Aynı Ukraynalı perakendeci sayfasındaki sahip incelemesi. Alıcı, kulaklıkların kasasız reklamı
+        yapılan 10 saat yerine yalnızca yaklaşık 2,5 saat şarj dayandığını bildiriyor.
+      advice: Gerçek dünya pil ömrünün reklamı yapılan rakamın oldukça altında olmasını bekleyin; uzun
+        tek oturumluk pil ömrü önemliyse, bu hesaba katılması gereken bir eksikliktir.
+  evidence:
+  - url: https://comfy.ua/naushniki-vkladyshi-besprovodnye-tws-xiaomi-redmi-buds-6-night-black-bhr9251gl-ucenka-1-1-otzyvy.html
+    quote: Заявлено 10 Годин без кейсу на одному заряді,купував собі і дочці тримають заряд 2,5 години
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T07:41:55+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      series: redmi buds 6
+  kind: known_issue
+  domain: hardware
+  severity: high
+  consequence: ''
+  detection: ''
+  component: left earbud
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Left earbud goes silent after ~3 months of use (Redmi Buds 6)
+      body: Owner review on a Ukrainian retailer page. Two separate buyers report the left earbud losing
+        sound after about 3 months of normal use, one noting it is a repeat occurrence with this brand.
+      advice: If you buy these, treat one-side sound loss after a few months as a realistic failure mode;
+        check warranty/return terms before purchase since this appears after the typical return window.
+    tr:
+      title: Sol kulaklık ~3 aylık kullanımdan sonra sessizleşiyor (Redmi Buds 6)
+      body: Bir Ukraynalı perakendeci sayfasındaki sahip incelemesi. İki ayrı alıcı, sol kulaklığın yaklaşık
+        3 aylık normal kullanımdan sonra sesini kaybettiğini bildiriyor; biri bunun bu markayla tekrarlanan
+        bir durum olduğunu belirtiyor.
+      advice: Bunları satın alırsanız, birkaç ay sonra tek taraflı ses kaybını gerçekçi bir arıza modu
+        olarak değerlendirin; bu, tipik iade süresinden sonra ortaya çıktığı için satın almadan önce garanti/iade
+        koşullarını kontrol edin.
+  evidence:
+  - url: https://comfy.ua/naushniki-vkladyshi-besprovodnye-tws-xiaomi-redmi-buds-6-night-black-bhr9251gl-ucenka-1-1-otzyvy.html
+    quote: через три місяці зник звук у лівому навушнику,це не в перший раз у навушниках цього бренду.
+      Дуже не раджу.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T07:41:55+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      series: redmi buds 5
+  kind: known_issue
+  domain: connectivity
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: Bluetooth connection
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Repeated connect/disconnect loop on Pixel 7 after Android 15 (EU/ES)
+      body: From a Google Pixel support thread (Spanish, model M2316E1). After updating to Android 15,
+        the buds connect then disconnect in a loop on the user's Pixel 7, while working fine on other
+        phones.
+      advice: Compatibility with some Android phones is inconsistent; if you hit a connect/disconnect
+        loop, try another device before assuming the buds are faulty.
+    tr:
+      title: Android 15 sonrası Pixel 7'de tekrarlanan bağlan/bağlantı kes döngüsü (AB/ES)
+      body: Bir Google Pixel destek konusundan (İspanyolca, model M2316E1). Android 15'e güncelledikten
+        sonra kulaklıklar kullanıcının Pixel 7'sinde bağlanıp ardından döngü içinde bağlantı kesiyor,
+        diğer telefonlarda ise sorunsuz çalışıyor.
+      advice: Bazı Android telefonlarla uyumluluk tutarsızdır; bir bağlan/bağlantı kes döngüsüyle karşılaşırsanız,
+        kulaklıkların arızalı olduğunu varsaymadan önce başka bir cihaz deneyin.
+  evidence:
+  - url: https://support.google.com/pixelphone/thread/325534770/problema-bluetooth-de-mi-pixel-7-con-unos-xiaomi-redmi-buds-5?hl=es
+    quote: El problema es cuando los saco de la cajita se conectan al teléfono pero a los segundos se
+      desconectan y a los segundos se vuelven a conectar y otra vez a desconectar
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:07:42+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      series: redmi buds 5
+  kind: known_issue
+  domain: general
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Official Xiaomi FAQ acknowledges left/right power imbalance and non-replaceable battery (EU/NL)
+      body: From Xiaomi's official Dutch FAQ for REDMI Buds 5. Xiaomi states that when one side is not
+        worn properly in noise-cancelling mode, a large difference in power level between left and right
+        earbuds will occur; it also states the battery cannot be replaced.
+      advice: The L/R power gap is partly acknowledged by the maker and the battery is not user-replaceable,
+        so battery degradation means a new unit rather than a repair.
+    tr:
+      title: Resmi Xiaomi SSS, sol/sağ güç dengesizliğini ve değiştirilemez pili kabul ediyor (AB/NL)
+      body: Xiaomi'nin REDMI Buds 5 için resmi Hollandaca SSS'sinden. Xiaomi, gürültü engelleme modunda
+        bir taraf düzgün takılmadığında sol ve sağ kulaklıklar arasında büyük bir güç seviyesi farkı oluşacağını
+        belirtiyor; ayrıca pilin değiştirilemeyeceğini de belirtiyor.
+      advice: Sol/sağ güç farkı kısmen üretici tarafından kabul ediliyor ve pil kullanıcı tarafından değiştirilemiyor,
+        bu nedenle pil bozulması onarım yerine yeni bir cihaz anlamına geliyor.
+  evidence:
+  - url: https://www.mi.com/nl/support/faq/details/KA-69429/
+    quote: Wanneer één kant niet goed wordt gedragen wanneer de headset wordt gedragen en gedurende een
+      bepaalde tijd in de ruisonderdrukkingsmodus wordt gebruikt, zal er een groot verschil zijn tussen
+      het vermogensniveau van de linker- en rechteroortelefoon
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:07:42+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Xiaomi
+      series: Redmi Buds 6 Lite
+  kind: known_issue
+  domain: hardware
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: earbud (single side)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Xiaomi official FAQ acknowledges one earbud silent or cannot connect on Redmi Buds 6 Lite
+      body: Xiaomi's own support FAQ addresses a single silent/unconnectable earbud, and if reset fails
+        directs the user to after-sales inspection and repair.
+      advice: The manufacturer itself publishes a troubleshooting path for a silent one-side earbud, confirming
+        it is a recognized issue; reset first, then use the warranty if it persists.
+    tr:
+      title: Xiaomi resmi SSS, Redmi Buds 6 Lite'ta tek kulaklığın sessiz olduğunu veya bağlanamadığını
+        kabul ediyor
+      body: Xiaomi'nin kendi destek SSS'si tek bir sessiz/bağlanamayan kulaklığı ele alıyor ve sıfırlama
+        başarısız olursa kullanıcıyı satış sonrası inceleme ve onarıma yönlendiriyor.
+      advice: Üreticinin kendisi sessiz tek taraflı kulaklık için bir sorun giderme yolu yayımlıyor ve
+        bunun tanınan bir sorun olduğunu doğruluyor; önce sıfırlayın, devam ederse garantiyi kullanın.
+  evidence:
+  - url: https://www.mi.com/global/support/faq/details/KA-243093/
+    quote: What to do if one earbud of the REDMI Buds 6 Lite is silent or cannot be connected?
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:11:35+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Xiaomi
+      series: Redmi Buds 6 Pro
+  kind: known_issue
+  domain: battery
+  severity: low
+  consequence: ''
+  detection: ''
+  component: Battery / playback runtime
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Xiaomi official FAQ: Redmi Buds 6 Pro battery life drops below 4 hours when high-power features
+        are on'
+      body: Xiaomi's official UK FAQ states that listening time under 4 hours occurs when ANC, adaptive
+        listening, dimensional audio and LDAC are all active simultaneously, and recommends disabling
+        unused features to extend battery life.
+      advice: 'Short battery life is feature-driven rather than a defect: running ANC plus LDAC together
+        can cut playback below 4 hours. A buyer who wants long runtime should disable high-power features
+        in the Xiaomi Earbuds app.'
+    tr:
+      title: 'Xiaomi resmi SSS: Yüksek güçlü özellikler açıkken Redmi Buds 6 Pro pil ömrü 4 saatin altına
+        düşüyor'
+      body: Xiaomi'nin resmi UK SSS'si, ANC, uyarlanabilir dinleme, boyutsal ses ve LDAC aynı anda etkinken
+        dinleme süresinin 4 saatin altında gerçekleştiğini belirtiyor ve pil ömrünü uzatmak için kullanılmayan
+        özelliklerin devre dışı bırakılmasını öneriyor.
+      advice: 'Kısa pil ömrü bir kusur değil özellik kaynaklıdır: ANC ile LDAC''in birlikte çalışması
+        oynatmayı 4 saatin altına düşürebilir. Uzun çalışma süresi isteyen bir alıcı Xiaomi Earbuds uygulamasında
+        yüksek güçlü özellikleri devre dışı bırakmalıdır.'
+  evidence:
+  - url: https://www.mi.com/uk/support/faq/details/KA-517340/
+    quote: If the music listening time is less than 4 hours with the Redmi Buds 6 Pro, it is because several
+      high-power consumption features are activated simultaneously.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:12:07+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Xiaomi
+      series: Redmi Buds 6 Lite
+  kind: known_issue
+  domain: connectivity
+  severity: low
+  consequence: ''
+  detection: ''
+  component: audio signal / Bluetooth link
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Xiaomi official FAQ acknowledges intermittent sound or noise on Redmi Buds 6 Lite
+      body: Xiaomi's official FAQ addresses intermittent sound/noise, attributing it to battery, distance,
+        obstacles, or interference, and ends with after-sales inspection if unresolved.
+      advice: Intermittent audio is acknowledged by Xiaomi; try full charge, closer proximity, and a reset
+        before concluding it is a defect.
+    tr:
+      title: Xiaomi resmi SSS, Redmi Buds 6 Lite'ta aralıklı ses veya gürültüyü kabul ediyor
+      body: Xiaomi'nin resmi SSS'si aralıklı ses/gürültüyü ele alıyor, bunu pile, mesafeye, engellere
+        veya parazite bağlıyor ve çözülmezse satış sonrası inceleme ile bitiyor.
+      advice: Aralıklı ses Xiaomi tarafından kabul ediliyor; bunun bir kusur olduğu sonucuna varmadan
+        önce tam şarj, daha yakın mesafe ve sıfırlama deneyin.
+  evidence:
+  - url: https://www.mi.com/global/support/faq/details/KA-243085/
+    quote: What to do if the sound is intermittent or there is noise when using the REDMI Buds 6 Lite?
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:11:35+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      series: redmi buds 5 pro
+  kind: known_issue
+  domain: hardware
+  severity: high
+  consequence: ''
+  detection: ''
+  component: left earbud
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Left earbud loses sound within months of purchase (Turkish owner)
+      body: A Turkish owner reports the left earbud going silent then quieter than the right within 3
+        months of light use.
+      advice: In the TR market, one-side sound loss is a recurring complaint within the first months;
+        keep the receipt and use the warranty early, because the fault recurs.
+    tr:
+      title: Sol kulaklık satın alımdan aylar sonra ses kaybediyor (Türk sahibi)
+      body: Bir Türk sahibi, hafif kullanımla 3 ay içinde sol kulaklığın sessizleştiğini ve ardından sağdan
+        daha kısık olduğunu bildiriyor.
+      advice: TR pazarında tek taraflı ses kaybı ilk aylarda tekrarlayan bir şikayettir; fişi saklayın
+        ve arıza tekrarladığı için garantiyi erken kullanın.
+  evidence:
+  - url: https://www.sikayetvar.com/xiaomi/xiaomi-redmi-buds-5-pro-sol-kulaklikta-ses-sorunu-kisa-surede-tekrarlandi
+    quote: Redmi Buds 5 Pro kulaklığını 3 ay önce aldım ve 3 aydır kullanıyorum. Kullandıktan sonra sol
+      kulaklıktan ilk başta hiç ses gelmemeye başladı. O sorunu çözdüm, ancak şimdi de yine sol kulaklıktan
+      sağ kulaklığa göre daha az ses geliyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:09:37+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Xiaomi
+      series: Redmi Buds 6 Lite
+  kind: known_issue
+  domain: battery
+  severity: high
+  consequence: ''
+  detection: ''
+  component: earbud charging contacts / battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Redmi Buds 6 Lite one earbud stopped charging after a month (owner, Slovak retailer review)
+      body: A buyer reports one earbud stopped charging after a month on a replacement unit, and the first
+        unit lasted about a year.
+      advice: A single earbud refusing to charge is a known failure mode; clean the charging contacts
+        and try the reset, but budget for a replacement or warranty claim if it persists.
+    tr:
+      title: Redmi Buds 6 Lite bir kulaklık bir ay sonra şarj olmayı bıraktı (sahip, Slovak perakendeci
+        incelemesi)
+      body: Bir alıcı, değişim ünitesinde bir kulaklığın bir ay sonra şarj olmayı bıraktığını ve ilk ünitenin
+        yaklaşık bir yıl dayandığını bildiriyor.
+      advice: Tek bir kulaklığın şarj olmayı reddetmesi bilinen bir arıza modudur; şarj kontaklarını temizleyin
+        ve sıfırlamayı deneyin, ancak devam ederse değişim veya garanti talebi için bütçe ayırın.
+  evidence:
+  - url: https://m.alza.sk/EN/reviews/xiaomi-redmi-buds-6-lite-white-12473641.htm
+    quote: the first one lasted about a year, after replacing it with a new one, one of the headphones
+      stopped charging after a month
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:11:35+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Xiaomi
+      series: Redmi Buds 6 Lite
+  kind: known_issue
+  domain: hardware
+  severity: high
+  consequence: ''
+  detection: ''
+  component: earbud Bluetooth module
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Redmi Buds 6 Lite stopped connecting to any phone after 4 months (owner, Ukrainian retailer
+        review)
+      body: A buyer reports that after 4 months the earbuds stopped connecting to the phone and no device
+        sees them; the listed drawback is 'Швидко зламались' (quickly broke).
+      advice: A total loss of pairing/visibility is a hardware failure, not a settings issue; expect to
+        use the warranty/after-sales repair path rather than a fix at home.
+    tr:
+      title: Redmi Buds 6 Lite 4 ay sonra hiçbir telefona bağlanmayı bıraktı (sahip, Ukraynalı perakendeci
+        incelemesi)
+      body: Bir alıcı, 4 ay sonra kulaklıkların telefona bağlanmayı bıraktığını ve hiçbir cihazın onları
+        görmediğini bildiriyor; listelenen dezavantaj 'Швидко зламались' (hızlıca bozuldu).
+      advice: Eşleştirme/görünürlüğün tamamen kaybı bir donanım arızasıdır, ayar sorunu değildir; evde
+        bir düzeltme yerine garanti/satış sonrası onarım yolunu kullanmayı bekleyin.
+  evidence:
+  - url: https://comfy.ua/ua/naushniki-vkladyshi-besprovodnye-tws-xiaomi-redmi-buds-6-lite-blue-bhr8660gl-otzyvy.html
+    quote: На 4 місяць перестали підключатись до телефону. Жоден давайся їх не бачить. Не працють
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:11:35+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Xiaomi
+      series: Redmi Buds 6 Lite
+  kind: known_issue
+  domain: audio
+  severity: low
+  consequence: ''
+  detection: ''
+  component: ANC / firmware
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Redmi Buds 6 Lite bass drops out when ANC is on at higher volume (owner, Slovak retailer
+        review)
+      body: Owners report the bass drops out when ANC is enabled at higher volume; the workaround is turning
+        ANC off, and one owner expects a firmware fix.
+      advice: This is a firmware/ANC quirk, not a hardware defect; if you listen loud with ANC on, expect
+        bass dropouts until a firmware update lands.
+    tr:
+      title: Redmi Buds 6 Lite'ta ANC açıkken yüksek seste bas kayboluyor (sahip, Slovak perakendeci incelemesi)
+      body: Sahipler, ANC etkinleştirildiğinde yüksek seste basın kaybolduğunu bildiriyor; geçici çözüm
+        ANC'yi kapatmak ve bir sahip bir yazılım düzeltmesi bekliyor.
+      advice: Bu bir donanım kusuru değil, yazılım/ANC tuhaflığıdır; ANC açıkken yüksek sesle dinlerseniz,
+        bir yazılım güncellemesi gelene kadar bas kayıplarını bekleyin.
+  evidence:
+  - url: https://m.alza.sk/EN/reviews/xiaomi-redmi-buds-6-lite-white-12473641.htm
+    quote: when you turn on ANC and listen to music at a higher volume in the songs, the bass drops out
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:11:35+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      series: redmi buds 5 pro
+  kind: known_issue
+  domain: connectivity
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: left earbud
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Left earphone starts disconnecting randomly after two years (EU owner)
+      body: From an Alza (EU) verified-owner review of the Midnight Black variant. After about two years
+        the left earbud began dropping the connection at random.
+      advice: EU owners report the left earbud disconnecting after long-term use; this is a late-life
+        failure, so it matters less for a new purchase than the early one-side faults.
+    tr:
+      title: Sol kulaklık iki yıl sonra rastgele bağlantı kesmeye başlıyor (AB sahibi)
+      body: Midnight Black varyantının Alza (AB) doğrulanmış sahip incelemesinden. Yaklaşık iki yıl sonra
+        sol kulaklık rastgele bağlantıyı kesmeye başladı.
+      advice: AB sahipleri uzun süreli kullanımdan sonra sol kulaklığın bağlantı kestiğini bildiriyor;
+        bu geç yaşam arızasıdır, bu nedenle yeni bir alım için erken tek taraf arızalarından daha az önemlidir.
+  evidence:
+  - url: https://m.alza.sk/EN/reviews/xiaomi-redmi-buds-5-pro-midnight-black-8632640.htm
+    quote: Two years after purchase, the left earphone started disconnecting randomly.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:09:37+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      series: redmi buds 5 pro
+  kind: known_issue
+  domain: battery
+  severity: low
+  consequence: ''
+  detection: ''
+  component: battery / ANC power draw
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Xiaomi official FAQ acknowledges fast battery drain
+      body: From Xiaomi's own global support FAQ on fast battery drain. Xiaomi attributes it to firmware,
+        volume, and features like active noise cancellation, and notes a normal left/right power difference
+        of 5%.
+      advice: Battery drain is mostly driven by ANC and volume; the maker treats it as normal behaviour
+        rather than a defect, so it is a low-severity concern.
+    tr:
+      title: Xiaomi resmi SSS hızlı pil tükenmesini kabul ediyor
+      body: Xiaomi'nin hızlı pil tükenmesi hakkındaki kendi küresel destek SSS'sinden. Xiaomi bunu yazılıma,
+        sese ve aktif gürültü engelleme gibi özelliklere bağlıyor ve normal sol/sağ güç farkının %5 olduğunu
+        belirtiyor.
+      advice: Pil tükenmesi çoğunlukla ANC ve sesten kaynaklanır; üretici bunu bir kusur değil normal
+        davranış olarak değerlendiriyor, bu nedenle düşük önem dereceli bir endişedir.
+  evidence:
+  - url: https://www.mi.com/global/support/faq/details/KA-113928/
+    quote: The REDMI Buds 5 Pro battery drain fast.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:09:37+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Xiaomi
+      series: Redmi Buds 6 Pro
+  kind: known_issue
+  domain: hardware
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: Single earbud sound output (left/right)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Xiaomi official FAQ acknowledges Redmi Buds 6 Pro sound in only one earbud after Bluetooth
+        pairing
+      body: Xiaomi's own Turkish FAQ confirms that sound in only one earbud after Bluetooth pairing is
+        a known condition, listing weak contact, low battery, blocked speaker, water/sweat short-circuit,
+        and left-right Bluetooth disconnection as causes.
+      advice: One-side sound loss is a recognized issue acknowledged by Xiaomi itself. The official remedies
+        (re-seat in case, clean contacts, re-pair) can help, but if the single-side audio persists the
+        FAQ directs the user to an after-sales service center for inspection.
+    tr:
+      title: Xiaomi resmi SSS, Redmi Buds 6 Pro'da Bluetooth eşleştirmesinden sonra yalnızca bir kulaklıkta
+        ses olmasını kabul ediyor
+      body: Xiaomi'nin kendi Türkçe SSS'si, Bluetooth eşleştirmesinden sonra yalnızca bir kulaklıkta ses
+        olmasının bilinen bir durum olduğunu doğruluyor ve zayıf temas, düşük pil, tıkalı hoparlör, su/ter
+        kısa devresi ve sol-sağ Bluetooth bağlantı kesilmesini nedenler olarak sıralıyor.
+      advice: Tek taraf ses kaybı Xiaomi'nin kendisi tarafından kabul edilen bir sorundur. Resmi çözümler
+        (kutuya yeniden yerleştirme, temas noktalarını temizleme, yeniden eşleştirme) yardımcı olabilir,
+        ancak tek taraf ses devam ederse SSS kullanıcıyı inceleme için satış sonrası servis merkezine
+        yönlendirir.
+  evidence:
+  - url: https://www.mi.com/tr/support/faq/details/KA-740881/
+    quote: Bluetooth eşleştirmesinden sonra Redmi Buds 6 Pro 'nun neden yalnızca bir kulaklığında ses
+      var?
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:12:07+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      series: redmi buds 6 active
+  kind: known_issue
+  domain: audio
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: left/right earbud driver
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Redmi Buds 6 Active one-side earbud drops to very low volume after months of use
+      body: A Turkish owner reports one earbud dropping to very low volume ~4 months in, then the other
+        side doing the same; forum replies call it a common fault of these budget buds and advise sending
+        to service.
+      advice: If one side goes quiet after a few months, try a reset and cleaning first, but treat persistent
+        one-side low volume as a defect and use the warranty service rather than living with it.
+    tr:
+      title: Redmi Buds 6 Active tek taraf kulaklık aylarca kullanımdan sonra çok düşük sese düşüyor
+      body: Bir Türk sahip, yaklaşık 4 ay içinde bir kulaklığın çok düşük sese düştüğünü, ardından diğer
+        tarafın da aynısını yaptığını bildiriyor; forum yanıtları bunu bu bütçe kulaklıkların yaygın bir
+        arızası olarak nitelendiriyor ve servise gönderilmesini öneriyor.
+      advice: Bir taraf birkaç ay sonra sessizleşirse, önce sıfırlama ve temizlemeyi deneyin, ancak kalıcı
+        tek taraf düşük sesi bir kusur olarak değerlendirin ve bununla yaşamak yerine garanti hizmetini
+        kullanın.
+  evidence:
+  - url: https://forum.donanimarsivi.com/konu/redmi-buds-6-active-kulakligim-arizali-mi.1169348/
+    quote: Yaklaşık 4 ay önce falan kulaklığın sol teki çok az ses vermeye başladı. Arızalandığını düşünüp
+      servise yollayacaktım ama tam o zamanlar düzeldi, kulaklığın iki tekide aynı ses seviyesini veriyordu.
+      1 ay sonra ise bu sefer sağ tek için aynı şey oldu. Şuandada sağ tek çok az ses vermekte.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:10:28+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      series: redmi buds 6 play
+  kind: known_issue
+  domain: audio
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: single earbud (speaker/contact/battery)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: One earbud has no sound when paired — acknowledged by Xiaomi
+      body: Xiaomi's own FAQ confirms one-side sound loss as a recognized issue, listing poor contact,
+        low battery, dirt, moisture short-circuit and Bluetooth disconnection as causes.
+      advice: One-side sound loss is acknowledged by the maker; the listed fixes are cleaning, re-pairing
+        and a 10-second factory reset, otherwise service center.
+    tr:
+      title: Eşleştirildiğinde bir kulaklıkta ses yok — Xiaomi tarafından kabul edildi
+      body: Xiaomi'nin kendi SSS'si tek taraf ses kaybını kabul edilen bir sorun olarak doğruluyor ve
+        zayıf temas, düşük pil, kir, nem kısa devresi ve Bluetooth bağlantı kesilmesini nedenler olarak
+        sıralıyor.
+      advice: Tek taraf ses kaybı üretici tarafından kabul ediliyor; listelenen düzeltmeler temizleme,
+        yeniden eşleştirme ve 10 saniyelik fabrika sıfırlamasıdır, aksi halde servis merkezi.
+  evidence:
+  - url: https://www.mi.com/uk/support/faq/details/KA-310880/
+    quote: Poor contact with single-sided earbud results in only pairing with single-sided earbud;
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:08:33+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      series: redmi buds 6 play
+  kind: known_issue
+  domain: connectivity
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: Bluetooth pairing / earbud firmware
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Earbuds stopped connecting after a month of inactivity
+      body: An owner reports the earbuds stopped connecting to the phone after a month of inactivity,
+        and that restarting or reinstalling the app did not help.
+      advice: Buds left idle can fail to re-pair; if this happens, the official fix is the 10-second factory
+        reset before considering service.
+    tr:
+      title: Kulaklıklar bir aylık hareketsizlikten sonra bağlanmayı bıraktı
+      body: Bir sahip, kulaklıkların bir aylık hareketsizlikten sonra telefona bağlanmayı bıraktığını
+        ve uygulamayı yeniden başlatmanın veya yeniden yüklemenin yardımcı olmadığını bildiriyor.
+      advice: Boşta bırakılan kulaklıklar yeniden eşleşemeyebilir; bu olursa, resmi çözüm servisi düşünmeden
+        önce 10 saniyelik fabrika sıfırlamasıdır.
+  evidence:
+  - url: https://comfy.ua/naushniki-vkladyshi-besprovodnye-tws-xiaomi-redmi-buds-6-play-black-bhr8776gl-ucenka-1-1-otzyvy.html
+    quote: Через місяць неактивного користування перестали з'єднуватись з телефоном.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:08:33+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      series: redmi buds 6 active
+  kind: known_issue
+  domain: battery
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: battery (case standby drain)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Redmi Buds 6 Active battery drains fast and dies in the case despite high charge
+      body: An owner review reports the buds and case drain to dead after 3 days of minimal use despite
+        showing 92% the morning before, i.e. high standby drain in the case.
+      advice: If you store the buds in the case for days between uses, expect them to be drained; charge
+        before each use. This undercuts the advertised 30-hour total figure for intermittent users.
+    tr:
+      title: Redmi Buds 6 Active pili hızla tükeniyor ve yüksek şarja rağmen kutuda ölüyor
+      body: Bir sahip incelemesi, kulaklıkların ve kutunun bir önceki sabah %92 göstermesine rağmen minimal
+        kullanımla 3 gün sonra tamamen tükendiğini, yani kutuda yüksek bekleme tüketimi olduğunu bildiriyor.
+      advice: Kulaklıkları kullanımlar arasında günlerce kutuda saklarsanız, tükenmelerini bekleyin; her
+        kullanımdan önce şarj edin. Bu, aralıklı kullanıcılar için reklamı yapılan 30 saatlik toplam süreyi
+        baltalıyor.
+  evidence:
+  - url: https://www.pbtech.com/pacific/product/HSTMIX83950/Xiaomi-Redmi-Buds-6-Active-True-Wireless-Earbuds
+    quote: Battery life is terrible compared to my JBL. I keep these in my gym bag and after 3 days of
+      minimal use they are dead even though it had 92% the morning before when i checked.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:10:28+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      series: redmi buds 6 active
+  kind: known_issue
+  domain: hardware
+  severity: high
+  consequence: ''
+  detection: ''
+  component: left earbud (charging contact / driver)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Redmi Buds 6 Active left earbud goes silent and never charges (TR market owner report)
+      body: A Turkish buyer reports the left earbud produced sound for only ~1.5-2 minutes then went permanently
+        silent, and the Xiaomi app showed the left bud never charged. The seller refunded after the complaint.
+      advice: Test both earbuds and the case charging contacts immediately on purchase; a left bud that
+        never charges is a hardware defect, not a setting. Return within the seller's window rather than
+        troubleshooting.
+    tr:
+      title: Redmi Buds 6 Active sol kulaklık sessizleşiyor ve asla şarj olmuyor (TR pazarı sahip raporu)
+      body: Bir Türk alıcı, sol kulaklığın yalnızca ~1,5-2 dakika ses verdiğini ve ardından kalıcı olarak
+        sessizleştiğini, Xiaomi uygulamasının sol kulaklığın asla şarj olmadığını gösterdiğini bildiriyor.
+        Satıcı şikayetten sonra ücreti iade etti.
+      advice: Satın alırken her iki kulaklığı ve kutu şarj temas noktalarını hemen test edin; asla şarj
+        olmayan bir sol kulaklık donanım arızasıdır, ayar değildir. Sorun gidermek yerine satıcının süresi
+        içinde iade edin.
+  evidence:
+  - url: https://www.sikayetvar.com/xiaomi/redmi-buds-6-active-sol-kulaklik-sorunu-ve-magaza-ilgisizligi
+    quote: O sırada ses geldi çünkü sadece 1.5 - 2 dakika ses geliyor soldan. Sonra asla sol taraftan
+      ses çıkmıyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:10:28+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      series: redmi buds 6 active
+  kind: known_issue
+  domain: connectivity
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: Bluetooth connection / firmware
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Redmi Buds 6 Active fail to reconnect over Bluetooth after switching devices, needing a reset
+        each time
+      body: A user reports the buds will not reconnect after being used with another device; they must
+        be deleted from Bluetooth settings and reset via the case button each time. Note this evidence
+        is Windows-PC pairing specific.
+      advice: If you switch the buds between phone and PC often, expect re-pairing friction. This is reported
+        mainly on Windows; phone-side behavior was not established in this run.
+    tr:
+      title: Redmi Buds 6 Active cihaz değiştirdikten sonra Bluetooth üzerinden yeniden bağlanamıyor,
+        her seferinde sıfırlama gerekiyor
+      body: Bir kullanıcı, kulaklıkların başka bir cihazla kullanıldıktan sonra yeniden bağlanmadığını;
+        her seferinde Bluetooth ayarlarından silinmeleri ve kutu düğmesiyle sıfırlanmaları gerektiğini
+        bildiriyor. Bu kanıtın Windows-PC eşleştirmesine özgü olduğunu unutmayın.
+      advice: Kulaklıkları sık sık telefon ve PC arasında değiştirirseniz, yeniden eşleştirme sürtünmesi
+        bekleyin. Bu esas olarak Windows'ta bildirilmiştir; telefon tarafındaki davranış bu çalışmada
+        tespit edilmemiştir.
+  evidence:
+  - url: https://learn.microsoft.com/en-ca/answers/questions/5962550/driver-and-connectivity-issue-with-redmi-buds-6-ac
+    quote: Device are not not reconnect after i use it with other device and always need to delete it
+      from BT settings and need to put its in case and hold button in case 5 sec and add it again that
+      is ** to do that each time.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:10:28+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Xiaomi
+      series: Redmi Buds 6 Pro
+  kind: known_issue
+  domain: hardware
+  severity: high
+  consequence: ''
+  detection: ''
+  component: Earbud pairing / Bluetooth link between the two buds
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Redmi Buds 6 Pro pair only one-sided (left or right), never both together (owner, German
+        forum)
+      body: An owner on a German tech forum reports the buds pair only one-sided (sometimes left, sometimes
+        right) even on brand-new units, and the same happens on two other phones; another user notes it
+        can occur with new goods.
+      advice: This is a hardware-level pairing defect where only one earbud connects, and it is not fixed
+        by re-pairing or trying other phones. A buyer should test both buds immediately on arrival and
+        exchange the unit if one side will not pair.
+    tr:
+      title: Redmi Buds 6 Pro yalnızca tek taraflı eşleşiyor (sol veya sağ), asla ikisi birlikte değil
+        (sahip, Alman forumu)
+      body: Bir Alman teknoloji forumundaki sahip, kulaklıkların yepyeni birimlerde bile yalnızca tek
+        taraflı (bazen sol, bazen sağ) eşleştiğini ve aynı şeyin diğer iki telefonda da olduğunu bildiriyor;
+        başka bir kullanıcı bunun yeni ürünlerde de olabileceğini belirtiyor.
+      advice: Bu, yalnızca bir kulaklığın bağlandığı donanım düzeyinde bir eşleştirme kusurudur ve yeniden
+        eşleştirme veya başka telefonları denemeyle düzeltilmez. Bir alıcı, geldiğinde her iki kulaklığı
+        hemen test etmeli ve bir taraf eşleşmezse birimi değiştirmelidir.
+  evidence:
+  - url: https://www.computerbase.de/forum/threads/redmi-buds-6-pro-einseitiges-koppeln.2271116/
+    quote: ich hoffe ihr könnt mir Helfen und zwar habe ich das Problem das sich meine Buds 6 pro nur
+      Einseitig Koppeln lassen
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:12:07+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Xiaomi
+      series: Redmi Buds 6 Lite
+  kind: known_issue
+  domain: connectivity
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: Bluetooth link
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Redmi Buds 6 Lite randomly disconnects (owner, Slovak retailer review)
+      body: A verified buyer reports random disconnections, matching the German forum report of mid-session
+        unpairing.
+      advice: Random disconnects appear across multiple owner reports; try the reset procedure and keep
+        the phone close, but treat it as a recurring behavior rather than a one-off.
+    tr:
+      title: Redmi Buds 6 Lite rastgele bağlantı kesiyor (sahip, Slovak perakendeci incelemesi)
+      body: Doğrulanmış bir alıcı, Alman forum raporundaki oturum ortasında eşleşmenin kalkmasıyla örtüşen
+        rastgele bağlantı kesilmeleri bildiriyor.
+      advice: Rastgele bağlantı kesilmeleri birden fazla sahip raporunda görülüyor; sıfırlama prosedürünü
+        deneyin ve telefonu yakın tutun, ancak bunu tek seferlik değil tekrarlayan bir davranış olarak
+        değerlendirin.
+  evidence:
+  - url: https://m.alza.sk/EN/reviews/xiaomi-redmi-buds-6-lite-white-12473641.htm
+    quote: Sometimes dissconected randomly
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:11:35+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      series: redmi buds 5 pro
+  kind: known_issue
+  domain: hardware
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: single earbud / charging-case contacts
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Xiaomi official FAQ acknowledges single-eardud no-sound fault
+      body: From Xiaomi's own global support FAQ. Xiaomi publishes a troubleshooting page specifically
+        for one earbud failing to connect or producing no sound, confirming the failure is recognised
+        by the maker.
+      advice: If one earbud goes silent, first check the case contact pins and try the 30-second case
+        reset before assuming a hardware fault.
+    tr:
+      title: Xiaomi resmi SSS, tek kulaklıkta ses yok hatasını kabul ediyor
+      body: Xiaomi'nin kendi global destek SSS'sinden. Xiaomi, özellikle bir kulaklığın bağlanamaması
+        veya ses üretmemesi için bir sorun giderme sayfası yayınlıyor ve bu da arızanın üretici tarafından
+        tanındığını doğruluyor.
+      advice: Bir kulaklık sessiz kalırsa, önce kutu temas pimlerini kontrol edin ve donanım arızası olduğunu
+        varsaymadan önce 30 saniyelik kutu sıfırlamasını deneyin.
+  evidence:
+  - url: https://www.mi.com/global/support/faq/details/KA-171473/
+    quote: The single ear of REDMI Buds 5 Pro is unable to connect or has no sound
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:09:37+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Xiaomi
+      series: Redmi Buds 6 Pro
+  kind: known_issue
+  domain: connectivity
+  severity: high
+  consequence: ''
+  detection: ''
+  component: Bluetooth radio / earbud connection
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Redmi Buds 6 Pro disconnect spontaneously from the phone after under two months (owner, EU
+        retail)
+      body: An owner review on the Alza (EU) retail site reports the earbuds begin disconnecting from
+        the phone on their own within two months, and notes a second reviewer reported the same.
+      advice: A buyer should expect spontaneous Bluetooth disconnections to appear within the first couple
+        of months; this is a recurring owner-reported failure, not a one-off. Verify the retailer's return/warranty
+        window before buying.
+    tr:
+      title: Redmi Buds 6 Pro, iki aydan kısa süre sonra telefondan kendiliğinden bağlantısı kesiliyor
+        (sahip, AB perakende)
+      body: Alza (AB) perakende sitesindeki bir sahip incelemesi, kulaklıkların iki ay içinde kendiliğinden
+        telefondan bağlantısının kesilmeye başladığını bildiriyor ve ikinci bir incelemecinin de aynı
+        şeyi bildirdiğini belirtiyor.
+      advice: Bir alıcı, ilk birkaç ay içinde kendiliğinden Bluetooth bağlantı kesilmelerinin ortaya çıkmasını
+        beklemelidir; bu, tek seferlik değil, sahipler tarafından tekrar tekrar bildirilen bir arızadır.
+        Satın almadan önce perakendecinin iade/garanti süresini doğrulayın.
+  evidence:
+  - url: https://m.alza.sk/EN/reviews/xiaomi-redmi-buds-6-pro-lavender-purple-12764028.htm
+    quote: I have had these headphones for less than two months and they have started to disconnect from
+      my phone on their own.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:12:07+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      series: redmi buds 5
+  kind: known_issue
+  domain: battery
+  severity: high
+  consequence: ''
+  detection: ''
+  component: left earbud battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Left earbud battery dies in ~5 minutes after ~8 months of use (TR)
+      body: An owner reports the left earbud's charge now lasts only about 5 minutes after roughly 8 months
+        of normal use.
+      advice: Expect the left earbud battery to degrade sharply within the first year; if it dies in minutes,
+        the unit is effectively unusable and needs replacement rather than a fix.
+    tr:
+      title: Sol kulaklık pili ~8 aylık kullanımdan sonra ~5 dakikada bitiyor (TR)
+      body: Bir sahip, sol kulaklığın şarjının yaklaşık 8 aylık normal kullanımdan sonra artık yalnızca
+        yaklaşık 5 dakika dayandığını bildiriyor.
+      advice: Sol kulaklık pilinin ilk yıl içinde keskin şekilde bozulmasını bekleyin; dakikalar içinde
+        bitiyorsa cihaz fiilen kullanılamaz durumdadır ve düzeltme yerine değişim gerektirir.
+  evidence:
+  - url: https://www.sikayetvar.com/xiaomi/redmi-buds-5
+    quote: son bir aydır sol kulaklığın şarjı 5 dakika bile dayanmadan bitiyor ve kulaklığı sağlıklı şekilde
+      kullanamıyorum
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:07:42+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      series: redmi buds 5
+  kind: known_issue
+  domain: connectivity
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: Bluetooth connection
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Disconnects and goes silent when taken out of the case (Windows)
+      body: From a Microsoft Q&A thread (Windows 11 laptop). The buds pair and appear connected, but produce
+        no sound and drop the link shortly after being removed from the case; the poster says all suggested
+        steps failed.
+      advice: If you use these with a Windows PC, expect possible silent/disconnect behavior on removal
+        from the case; it may not be fixable by the user.
+    tr:
+      title: Kutudan çıkarıldığında bağlantı kesiliyor ve sessizleşiyor (Windows)
+      body: Bir Microsoft Q&A başlığından (Windows 11 dizüstü bilgisayar). Kulaklıklar eşleşiyor ve bağlı
+        görünüyor, ancak ses üretmiyor ve kutudan çıkarıldıktan kısa süre sonra bağlantı düşüyor; gönderiyi
+        yazan kişi önerilen tüm adımların başarısız olduğunu söylüyor.
+      advice: Bunları bir Windows PC ile kullanırsanız, kutudan çıkarıldığında olası sessiz/bağlantı kesilmesi
+        davranışını bekleyin; kullanıcı tarafından düzeltilemeyebilir.
+  evidence:
+  - url: https://learn.microsoft.com/en-ie/answers/questions/4048724/redmi-buds-5-gets-disconnected-when-i-take-them-ou
+    quote: yet when I remove them from the case and put them in my ears they make no sound and shortly
+      after will disconnect themselves while remaining paired
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:07:42+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Xiaomi
+      series: Redmi Buds 6 Lite
+  kind: known_issue
+  domain: connectivity
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: Bluetooth link / pairing
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Redmi Buds 6 Lite unpair mid-use while watching YouTube or listening to music (owner, German
+        forum)
+      body: A German owner reports the earbuds unpair mid-use (YouTube, music) and audio falls back to
+        the phone speaker, happening twice within 5 minutes.
+      advice: Expect occasional mid-session disconnects; a factory reset (10s button hold in case) is
+        the manufacturer's suggested fix, but if it recurs the unit may need after-sales service.
+    tr:
+      title: Redmi Buds 6 Lite, YouTube izlerken veya müzik dinlerken kullanım sırasında eşleşmeyi bırakıyor
+        (sahip, Alman forumu)
+      body: Bir Alman sahip, kulaklıkların kullanım sırasında (YouTube, müzik) eşleşmeyi bıraktığını ve
+        sesin telefon hoparlörüne düştüğünü, bunun 5 dakika içinde iki kez gerçekleştiğini bildiriyor.
+      advice: Ara sıra oturum ortasında bağlantı kesilmelerini bekleyin; fabrika sıfırlaması (kutuda 10
+        sn düğme basılı tutma) üreticinin önerdiği düzeltmedir, ancak tekrarlarsa cihaz satış sonrası
+        servise ihtiyaç duyabilir.
+  evidence:
+  - url: https://www.computerbase.de/forum/threads/redmi-buds-6-lite-verlieren-nach-einer-weile-die-verbindung-zum-handy.2223905/
+    quote: Ich habe seit neuestem die Redmi Buds 6 Lite, aber irgendwie entkoppeln die sich mittendrin
+      beim YouTube gucken, Musik hören etc. und dann geht der Ton auch einfach weiter, aber dann halt
+      über die Lautsprecher vom Telefon.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:11:35+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      series: redmi buds 5
+  kind: known_issue
+  domain: battery
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: earbud battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Runtime far below advertised: ~2h50m vs claimed 6.5h (TR)'
+      body: From the same Şikayetvar page (TR market). A buyer reports the earbuds run out after about
+        2 hours 50 minutes, versus the 6.5 hours stated on the site.
+      advice: Do not rely on the advertised playtime; a new unit may deliver roughly half the claimed
+        runtime, so budget for frequent case recharges.
+    tr:
+      title: 'Çalışma süresi reklamı yapılanın çok altında: ~2sa50dk, iddia edilen 6.5sa (TR)'
+      body: Aynı Şikayetvar sayfasından (TR pazarı). Bir alıcı, kulaklıkların sitede belirtilen 6.5 saat
+        yerine yaklaşık 2 saat 50 dakika sonra bittiğini bildiriyor.
+      advice: Reklamı yapılan oynatma süresine güvenmeyin; yeni bir cihaz iddia edilen çalışma süresinin
+        yaklaşık yarısını sunabilir, bu nedenle sık kutu şarjları için pay ayırın.
+  evidence:
+  - url: https://www.sikayetvar.com/xiaomi/redmi-buds-5
+    quote: Ses konusunda hakkını vermek lazım, lakin şarjı 2 saat 50 dakikada bitiyor
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:07:42+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      series: redmi buds 5 pro
+  kind: known_issue
+  domain: connectivity
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: Bluetooth radio / LDAC codec
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Bad connection on global version with LDAC codec; poor multipoint
+      body: From an Alza (EU) verified-owner review. The owner returned the buds because of a weak connection,
+        citing a forum-reported common problem on the global version with the LDAC codec, and found multipoint
+        connection even worse.
+      advice: EU buyers report unstable Bluetooth, worse in multipoint mode; if you rely on multipoint
+        or LDAC, expect dropouts and test before committing.
+    tr:
+      title: LDAC codec'li global sürümde kötü bağlantı; zayıf multipoint
+      body: Bir Alza (AB) doğrulanmış sahip incelemesinden. Sahip, zayıf bağlantı nedeniyle kulaklıkları
+        iade etmiş; forumda bildirilen, LDAC codec'li global sürümdeki yaygın bir soruna atıfta bulunmuş
+        ve multipoint bağlantıyı daha da kötü bulmuş.
+      advice: AB'li alıcılar kararsız Bluetooth bildiriyor, multipoint modunda daha kötü; multipoint veya
+        LDAC'e güveniyorsanız kopmalar bekleyin ve satın almadan önce test edin.
+  evidence:
+  - url: https://m.alza.cz/EN/reviews/xiaomi-redmi-buds-5-pro-moonlight-white-8632642.htm
+    quote: The headphones are good, but I'm returning them due to a bad connection (I read on the forum
+      that this is a common problem on the global version of the headphones with the LDAC codec)
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:09:37+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      series: redmi buds 5 pro
+  kind: known_issue
+  domain: hardware
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: right earbud
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Right earbud low volume; service replaced unit with a new one
+      body: From the same Şikayetvar thread. Another Turkish owner reports the right earbud dropping to
+        very low volume after a couple of months; the service center replaced the unit with a new one.
+      advice: One-side low volume is a known failure mode; the official service path (replacement) exists
+        but the symptom recurs, so expect possible repeat visits.
+    tr:
+      title: Sağ kulaklıkta düşük ses; servis üniteyi yenisiyle değiştirdi
+      body: Aynı Şikayetvar başlığından. Bir başka Türk sahip, sağ kulaklığın birkaç ay sonra çok düşük
+        sese düştüğünü bildiriyor; servis merkezi üniteyi yenisiyle değiştirmiş.
+      advice: Tek taraflı düşük ses bilinen bir arıza modudur; resmi servis yolu (değişim) mevcut ancak
+        belirti tekrarlıyor, bu yüzden olası tekrar ziyaretleri bekleyin.
+  evidence:
+  - url: https://www.sikayetvar.com/xiaomi/redmi-buds-5-pro/ses-gelmiyor
+    quote: Redmi Buds 5 Pro aldım bayağı önce. Ondan sonra bir iki ay kullandım. Daha sonra bir daha taktığımda
+      kulaklığın sağ tara...fından çok az ses gelmeye başladığını fark ettim. Servise verdik. Servis bize
+      sıfır ürün gönderdi.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:09:37+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      series: redmi buds 6 play
+  kind: known_issue
+  domain: battery
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: right earbud battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Right earbud began draining faster than the left after 8 months
+      body: An owner reports the right earbud started draining faster after 8 months; the retailer replaced
+        the unit under warranty within 2 days.
+      advice: Battery imbalance is a known failure mode; keep proof of purchase since a warranty replacement
+        is the realistic fix.
+    tr:
+      title: Sağ kulaklık 8 ay sonra sol kulaklıktan daha hızlı tükenmeye başladı
+      body: Bir sahip, sağ kulaklığın 8 ay sonra daha hızlı tükenmeye başladığını bildiriyor; satıcı üniteyi
+        garanti kapsamında 2 gün içinde değiştirmiş.
+      advice: Pil dengesizliği bilinen bir arıza modudur; garanti değişimi gerçekçi çözüm olduğundan satın
+        alma belgesini saklayın.
+  evidence:
+  - url: https://comfy.ua/naushniki-vkladyshi-besprovodnye-tws-xiaomi-redmi-buds-6-play-black-bhr8776gl-ucenka-1-1-otzyvy.html
+    quote: Но, через 8 месяцев правый наушник начал быстрее разряжаться
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:08:33+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      series: redmi buds 6 active
+  kind: known_issue
+  domain: battery
+  severity: low
+  consequence: ''
+  detection: ''
+  component: battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Xiaomi FAQ acknowledges real-world battery life of Redmi Buds 6 Active runs shorter than
+        advertised
+      body: Xiaomi's own global FAQ confirms the advertised battery life comes from lab conditions and
+        that real-world use (volume, temperature, interference, aging) will run shorter.
+      advice: Treat the advertised playtime as a best case; expect less at high volume or in warm/cold
+        conditions. This is manufacturer-acknowledged, not a defect claim.
+    tr:
+      title: Xiaomi SSS, Redmi Buds 6 Active'in gerçek dünyadaki pil ömrünün reklamı yapılandan daha kısa
+        olduğunu kabul ediyor
+      body: Xiaomi'nin kendi global SSS'si, reklamı yapılan pil ömrünün laboratuvar koşullarından geldiğini
+        ve gerçek dünyadaki kullanımın (ses düzeyi, sıcaklık, girişim, yaşlanma) daha kısa süreceğini
+        doğruluyor.
+      advice: Reklamı yapılan oynatma süresini en iyi durum olarak kabul edin; yüksek seste veya sıcak/soğuk
+        koşullarda daha az bekleyin. Bu, üretici tarafından kabul edilmiştir, bir kusur iddiası değildir.
+  evidence:
+  - url: https://www.mi.com/global/support/faq/details/KA-485018/
+    quote: The advertised battery life is obtained from Xiaomi laboratories. It is normal that there will
+      be certain differences due to signal interference and electromagnetic interference in actual environments.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:10:28+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      series: redmi buds 5
+  kind: known_issue
+  domain: audio
+  severity: high
+  consequence: ''
+  detection: ''
+  component: left earbud driver
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Left earbud produces no sound despite holding charge (EU/Greece)
+      body: From the Skroutz.eu product discussion (EU market). An owner reports the left earbud made
+        no sound even though it had charge and the app recognized it as the left side, after resetting
+        via Bluetooth and the app.
+      advice: One-side no-sound is a recurring failure mode; if resetting does not restore it, the earbud
+        is defective and should be returned or warrantied rather than accepted.
+    tr:
+      title: Sol kulaklık şarjı olmasına rağmen ses vermiyor (AB/Yunanistan)
+      body: Skroutz.eu ürün tartışmasından (AB pazarı). Bir sahip, Bluetooth ve uygulama üzerinden sıfırladıktan
+        sonra sol kulaklığın şarjı olmasına ve uygulamanın onu sol taraf olarak tanımasına rağmen ses
+        vermediğini bildiriyor.
+      advice: Tek taraflı ses yokluğu tekrarlayan bir arıza modudur; sıfırlama geri getirmezse kulaklık
+        kusurludur ve kabul etmek yerine iade edilmeli veya garantiye verilmelidir.
+  evidence:
+  - url: https://www.skroutz.eu/s/49249636/Xiaomi-Redmi-Buds-5-Bluetooth-Handsfree-Earphones-with-Sweat-Resistance-and-Charging-Case-White/discussion
+    quote: το ένα δεν μου δούλευε το ακουστικό ( το αριστερό ) ενώ είχε μπαταρία καθώς το είχα φορτίσει
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:07:42+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Xiaomi
+      series: Redmi Buds 5 Lite
+  kind: known_issue
+  domain: connectivity
+  severity: low
+  consequence: ''
+  detection: ''
+  component: A2DP Bluetooth connection / earbud audio channel
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Redmi Buds 5/6 Lite audio instability with one earbud losing sound (Linux BlueZ regression)
+      body: 'An owner reports the Redmi Buds 5 and 6 Lite (the 5-series/6-series family this pack covers)
+        dropping one earbud''s sound and failing to auto-connect. Caveat: this is a Linux BlueZ 5.83+
+        software regression, not a defect of the earbuds themselves, and it names the Buds 5 and 6 Lite,
+        not the exact 5 Lite. For a phone buyer in TR/EU this is low relevance; it matters mainly to Linux
+        desktop users.'
+      advice: If you pair these earbuds with a Linux PC on BlueZ 5.83+, expect possible one-earbud sound
+        loss and manual reconnection; downgrading to BlueZ 5.80 resolved it. On phones this finding does
+        not apply.
+    tr:
+      title: Redmi Buds 5/6 Lite'ta bir kulaklığın sesini kaybetmesiyle ses kararsızlığı (Linux BlueZ
+        regresyonu)
+      body: 'Bir sahip, Redmi Buds 5 ve 6 Lite''ın (bu paketin kapsadığı 5-serisi/6-serisi ailesi) bir
+        kulaklığın sesini düşürdüğünü ve otomatik bağlanamadığını bildiriyor. Uyarı: bu, kulaklıkların
+        kendisinde bir kusur değil, bir Linux BlueZ 5.83+ yazılım regresyonudur ve Buds 5 ile 6 Lite''ı
+        adlandırır, tam olarak 5 Lite''ı değil. TR/AB''de bir telefon alıcısı için bu düşük önemdedir;
+        esas olarak Linux masaüstü kullanıcıları için önemlidir.'
+      advice: Bu kulaklıkları BlueZ 5.83+ üzerinde bir Linux PC ile eşleştirirseniz olası tek kulaklık
+        ses kaybı ve manuel yeniden bağlanma bekleyin; BlueZ 5.80'e düşürmek sorunu çözmüştür. Telefonlarda
+        bu bulgu geçerli değildir.
+  evidence:
+  - url: https://github.com/bluez/bluez/issues/1570
+    quote: Even after manual connection, the audio is unstable, with one earbud occasionally losing sound
+      before stabilizing.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:11:11+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Xiaomi
+      series: Redmi Buds 6S
+  kind: known_issue
+  domain: connectivity
+  severity: high
+  consequence: ''
+  detection: ''
+  component: Bluetooth link / earbud pair
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Redmi Buds 6S repeated disconnection (断联) — 4 service visits, same fault, owner calls it
+        a design defect
+      body: A consumer complaint on the Chinese 黑猫投诉 (Heimao) platform, filed against Xiaomi for the REDMI
+        Buds 6S, reports repeated disconnection (断联), four service visits including repair and replacement,
+        with the same fault recurring — the complainant says other buyers report the same problem and
+        calls it a factory design defect.
+      advice: This is the strongest signal of a recurring Bluetooth disconnection fault on the 6S. If
+        you buy, test connection stability over days and keep proof of purchase; the complainant found
+        Xiaomi service would not explain the fault and only offered paid replacement.
+    tr:
+      title: Redmi Buds 6S tekrarlanan bağlantı kopması (断联) — 4 servis ziyareti, aynı arıza, sahibi bunu
+        tasarım hatası olarak nitelendiriyor
+      body: Çin'in 黑猫投诉 (Heimao) platformunda Xiaomi'ye karşı REDMI Buds 6S için açılan bir tüketici şikayeti,
+        tekrarlanan bağlantı kopması (断联), onarım ve değişim dahil dört servis ziyareti ve aynı arızanın
+        tekrarlamasını bildiriyor — şikayetçi diğer alıcıların da aynı sorunu bildirdiğini söylüyor ve
+        bunu fabrika tasarım hatası olarak nitelendiriyor.
+      advice: Bu, 6S'te tekrarlayan bir Bluetooth bağlantı kopması arızasının en güçlü işaretidir. Satın
+        alırsanız, bağlantı kararlılığını günler boyunca test edin ve satın alma kanıtını saklayın; şikayetçi
+        Xiaomi servisinin arızayı açıklamadığını ve yalnızca ücretli değişim sunduğunu tespit etti.
+  evidence:
+  - url: https://tousu.sina.cn/complaint/view/17397794578?sld=2807dcf698049bbebed2bc8e01236426&vt=4
+    quote: 我在小米商城购买的REDMI Buds 6S耳机，在使用期间，出现了无数次耳机断联问题，也经历了3次售后，包括维修，换新，目前又出现了这个情况，这也是第4次售后，还是同样的问题
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:23:23+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Xiaomi
+      series: Redmi Buds 6S
+  kind: known_issue
+  domain: battery
+  severity: high
+  consequence: ''
+  detection: ''
+  component: battery cell M1040S3 (3.85V)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Redmi Buds 6S right earbud battery cell dead (1.89Ω internal resistance) — needs teardown
+        to replace
+      body: A repair teardown on a Chinese repair forum shows the 6S battery cell is welded under the
+        flex cable inside the stem, so replacing it requires opening the earbud stem and desoldering the
+        nickel tabs; the owner measured the right earbud cell at 1.89Ω internal resistance (dead) and
+        left at 900mΩ.
+      advice: Battery life can collapse on one earbud and the cell is not user-replaceable — it is welded
+        under the flex cable, so a dead cell means either a careful teardown/solder job or a warranty/service
+        claim. Check battery health early, before the 1-year-ish warranty window closes.
+    tr:
+      title: Redmi Buds 6S sağ kulaklık pil hücresi ölü (1.89Ω iç direnç) — değiştirmek için söküm gerekiyor
+      body: Çinli bir onarım forumundaki onarım sökümü, 6S pil hücresinin gövde içindeki esnek kablonun
+        altına kaynaklandığını, bu nedenle değiştirmek için kulaklık gövdesinin açılması ve nikel sekmelerin
+        lehiminin sökülmesi gerektiğini gösteriyor; sahibi sağ kulaklık hücresini 1.89Ω iç dirençte (ölü)
+        ve solu 900mΩ olarak ölçmüş.
+      advice: Pil ömrü bir kulaklıkta çökebilir ve hücre kullanıcı tarafından değiştirilemez — esnek kablonun
+        altına kaynaklanmıştır, bu nedenle ölü bir hücre ya dikkatli bir söküm/lehim işi ya da garanti/servis
+        talebi anlamına gelir. Pil sağlığını erken kontrol edin, yaklaşık 1 yıllık garanti süresi kapanmadan
+        önce.
+  evidence:
+  - url: https://www.mydigit.cn/forum.php?mod=viewthread&tid=547903
+    quote: 测一下电池内阻，右耳：1.89Ω，已经废了
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:23:23+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Xiaomi
+      series: Redmi Buds 5 Lite
+  kind: known_issue
+  domain: hardware
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: earbud driver / internal wiring
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Redmi earbud one side silent may be a hardware fault (driver or internal wiring)
+      body: 'Owner-forum guidance for the Redmi TWS family: if one earbud stays silent even after re-pairing
+        on another device, the likely cause is hardware (damaged driver or internal wiring) rather than
+        a software/connection issue, and the fix is a warranty repair. It is a general Redmi-family troubleshooting
+        thread, not a 5 Lite-specific defect report.'
+      advice: If one earbud goes permanently silent and survives a reset and re-pairing on a different
+        phone, treat it as a hardware fault and use the warranty rather than buying a replacement part.
+        This is the family-wide failure mode, not proof the 5 Lite specifically suffers it.
+    tr:
+      title: Redmi kulaklıkta bir taraf sessizse donanım arızası olabilir (sürücü veya iç kablolama)
+      body: 'Redmi TWS ailesi için sahip forumu rehberi: bir kulaklık başka bir cihazda yeniden eşleştirmeden
+        sonra bile sessiz kalıyorsa, olası neden yazılım/bağlantı sorunu yerine donanımdır (hasarlı sürücü
+        veya iç kablolama) ve çözüm garanti onarımıdır. Bu, 5 Lite''a özgü bir arıza raporu değil, Redmi
+        ailesi genelinde bir sorun giderme başlığıdır.'
+      advice: Bir kulaklık kalıcı olarak sessizleşir ve sıfırlama ile farklı bir telefonda yeniden eşleştirmeye
+        rağmen devam ederse, bunu donanım arızası olarak değerlendirin ve yedek parça satın almak yerine
+        garantiyi kullanın. Bu, aile genelindeki arıza modudur, 5 Lite'ın özellikle bundan muzdarip olduğunun
+        kanıtı değildir.
+  evidence:
+  - url: https://erji.znds.com/thread-727-1-1.html
+    quote: 如果更换其他设备连接后仍出现单耳不响的情况，大概率是耳机硬件出现故障，比如振膜损坏、内部线路断裂等
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:22:52+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Xiaomi
+      series: Redmi Buds 6S
+  kind: known_issue
+  domain: audio
+  severity: low
+  consequence: ''
+  detection: ''
+  component: companion app / firmware
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Redmi Buds 6S not selectable in Xiaomi app; uneven volume between earbuds
+      body: A Russian owner review of the Redmi Buds 6S (M2403E1) reports the model cannot be selected
+        in the companion app (so it cannot be configured) and that volume differs between the two earbuds.
+      advice: 'A firmware/app quirk: the 6S may not appear in the Xiaomi companion app, so EQ/controls
+        may be unavailable and one earbud can be louder than the other. Low severity — it does not stop
+        the buds working, but it limits configuration.'
+    tr:
+      title: Redmi Buds 6S Xiaomi uygulamasında seçilemiyor; kulaklıklar arasında dengesiz ses seviyesi
+      body: Redmi Buds 6S (M2403E1) hakkında bir Rus sahip incelemesi, modelin yardımcı uygulamada seçilemediğini
+        (bu nedenle yapılandırılamadığını) ve ses seviyesinin iki kulaklık arasında farklı olduğunu bildiriyor.
+      advice: 'Bir yazılım/uygulama tuhaflığı: 6S, Xiaomi yardımcı uygulamasında görünmeyebilir, bu nedenle
+        EQ/kontroller kullanılamayabilir ve bir kulaklık diğerinden daha yüksek ses verebilir. Düşük önem
+        derecesi — kulaklıkların çalışmasını engellemez, ancak yapılandırmayı sınırlar.'
+  evidence:
+  - url: https://catalog.onliner.by/headphones/xiaomi/redmibuds6scnw/reviews
+    quote: В разных наушниках - разная громкость, в приложении вообще невозможно выбрать именно эту модель
+      наушников, потому что их там нет и настроить их нет возможности.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:23:23+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Xiaomi
+      series: Redmi Buds 6S
+  kind: known_issue
+  domain: battery
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: left earbud battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Redmi Buds 6S left earbud battery life collapses from ~7h to ~45min after 8 months
+      body: A Vietnamese owner thread titled 'Redmi Buds 6s sụt pin tai trái từ 7h xuống 45'' (left earbud
+        battery drops from 7h to 45') reports the left earbud's battery life collapsed after about 8 months
+        of light use, and the poster warns that TWS battery life figures are not to be trusted.
+      advice: Expect asymmetric battery ageing — one earbud can lose most of its runtime within months
+        while the other still holds charge. If you buy, verify battery health early and prefer a unit
+        with a service/warranty path, since the cell is not user-replaceable.
+    tr:
+      title: Redmi Buds 6S sol kulaklık pil ömrü 8 ay sonra ~7 saatten ~45 dakikaya çöküyor
+      body: '''Redmi Buds 6s sụt pin tai trái từ 7h xuống 45'''' (sol kulaklık pili 7 saatten 45 dakikaya
+        düşüyor) başlıklı bir Vietnamlı sahip başlığı, sol kulaklığın pil ömrünün yaklaşık 8 aylık hafif
+        kullanımdan sonra çöktüğünü bildiriyor ve gönderi sahibi TWS pil ömrü rakamlarına güvenilmemesi
+        konusunda uyarıyor.'
+      advice: Asimetrik pil yaşlanması bekleyin — bir kulaklık diğeri hâlâ şarj tutarken aylar içinde
+        çalışma süresinin çoğunu kaybedebilir. Satın alırsanız, pil sağlığını erken doğrulayın ve hücre
+        kullanıcı tarafından değiştirilemediği için servis/garanti yolu olan bir birimi tercih edin.
+  evidence:
+  - url: https://voz.vn/t/redmi-buds-6s-sut-pin-tai-trai-tu-7h-xuong-45-xach-tay-noi-dia.1167261/
+    quote: Nhưng có vẻ sau 8 tháng đã hỏng
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:23:23+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Xiaomi
+      series: Redmi Buds 5 Lite
+  kind: known_issue
+  domain: battery
+  severity: low
+  consequence: ''
+  detection: ''
+  component: earbud battery / master-slave power draw
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Right earbud of budget Redmi TWS drains faster than left (master-slave power draw)
+      body: Explains that in budget Redmi TWS models the right earbud acts as the Bluetooth master and
+        therefore drains faster than the left; a charge difference of 15-20% after a full case charge
+        can indicate battery degradation rather than normal architecture. This is a general Redmi-family
+        explanation, not a 5 Lite-specific owner report.
+      advice: Expect the right earbud to run down a bit faster than the left; that is normal TWS master-slave
+        behavior. If the gap exceeds roughly 15-20% after a full case charge, treat it as a possible battery
+        fault worth a warranty check.
+    tr:
+      title: Bütçe Redmi TWS'nin sağ kulaklığı soldan daha hızlı tükeniyor (ana-köle güç çekişi)
+      body: Bütçe Redmi TWS modellerinde sağ kulaklığın Bluetooth ana cihazı olarak işlev gördüğünü ve
+        bu nedenle soldan daha hızlı tükendiğini açıklar; tam kutu şarjından sonra %15-20'lik bir şarj
+        farkı normal mimari yerine pil bozulmasına işaret edebilir. Bu, 5 Lite'a özgü bir sahip raporu
+        değil, Redmi ailesi genelinde bir açıklamadır.
+      advice: Sağ kulaklığın soldan biraz daha hızlı tükenmesini bekleyin; bu normal TWS ana-köle davranışıdır.
+        Tam kutu şarjından sonra fark yaklaşık %15-20'yi aşarsa, bunu garanti kontrolüne değer olası bir
+        pil arızası olarak değerlendirin.
+  evidence:
+  - url: https://syaomaster.vercel.app/batareya-i-zaryadka/p/po/pochemu-pravyj-naushnik-razryazhaetsya-bystree-levogo-xiaomi.html
+    quote: Если в вашей модели нет технологии одновременной передачи сигнала на оба канала, то правый
+      модуль будет нагреваться сильнее и терять заряд активнее.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:22:52+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Xiaomi
+      series: Redmi Buds 5 Lite
+  kind: known_issue
+  domain: connectivity
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: Bluetooth A2DP profile / earbud audio channel
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Redmi Buds 5 / 6 Lite lose A2DP connection and one earbud drops sound on Linux BlueZ 5.83+
+      body: 'Primary source: a real owner''s GitHub issue report on the Redmi Buds 5 / 6 Lite family.
+        It documents a concrete Bluetooth failure mode: the earbuds fail to auto-connect to the A2DP profile
+        and one earbud intermittently loses sound until reconnected. Caveat: this is specific to Linux/BlueZ
+        5.83+ on a PC, not a phone, so it is a connectivity quirk rather than a universal defect, and
+        it names the 5 and 6 Lite siblings, not the exact 5 Lite.'
+      advice: If you pair these earbuds with a Linux PC, expect the A2DP auto-connect to fail and one
+        earbud to drop audio until you manually reconnect or downgrade BlueZ. On a phone this specific
+        regression does not apply, so weigh it accordingly.
+    tr:
+      title: Redmi Buds 5 / 6 Lite, Linux BlueZ 5.83+ üzerinde A2DP bağlantısını kaybediyor ve bir kulaklık
+        sesi kesiyor
+      body: 'Birincil kaynak: Redmi Buds 5 / 6 Lite ailesi hakkında gerçek bir sahibin GitHub sorun bildirimi.
+        Somut bir Bluetooth arıza modunu belgeliyor: kulaklıklar A2DP profiline otomatik bağlanamıyor
+        ve bir kulaklık yeniden bağlanana kadar aralıklı olarak ses kaybediyor. Uyarı: bu, bir telefonda
+        değil, bir PC''de Linux/BlueZ 5.83+ sürümüne özgüdür, dolayısıyla evrensel bir kusur değil, bir
+        bağlantı tuhaflığıdır ve tam 5 Lite''ı değil, 5 ve 6 Lite kardeşlerini adlandırır.'
+      advice: Bu kulaklıkları bir Linux PC ile eşleştirirseniz, A2DP otomatik bağlantısının başarısız
+        olmasını ve manuel olarak yeniden bağlanana veya BlueZ'yi düşürünceye kadar bir kulaklığın sesi
+        kesmesini bekleyin. Bir telefonda bu özel gerileme geçerli değildir, bu yüzden buna göre değerlendirin.
+  evidence:
+  - url: https://github.com/bluez/bluez/issues/1570
+    quote: 'Audio Instability: Even after manual connection, the audio is unstable, with one earbud occasionally
+      losing sound before stabilizing.'
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:11:11+00:00'

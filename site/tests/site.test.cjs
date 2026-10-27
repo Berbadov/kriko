@@ -345,3 +345,105 @@ test('the Turkish guide has its buttons in Turkish', () => {
   assert.equal(button.textContent, 'Duraklat');
   assert.match(button.getAttribute('aria-label'), /^Animasyonu duraklat: /);
 });
+
+// The pages under problems/ are written by tools/render_problems.py from the catalogs.
+const generated = () => ['problems', 'tr/problems'].flatMap(function walk(dir) {
+  return fs.readdirSync(path.join(root, dir), { withFileTypes: true }).flatMap((entry) => {
+    const next = `${dir}/${entry.name}`;
+    return entry.isDirectory() ? walk(next) : [next];
+  });
+}).filter((file) => file.endsWith('index.html'));
+
+test('every generated problem page is complete, points at its twin, runs no script and names a source for each claim', () => {
+  const files = generated();
+  assert.ok(files.length >= 4, 'there are no generated problem pages');
+  const stylesheet = crypto.createHash('sha256').update(fs.readFileSync(path.join(root, 'styles.css'))).digest('hex').slice(0, 12);
+  for (const file of files) {
+    const url = `https://kriko.cc/${file.replace(/index\.html$/, '')}`;
+    const d = new JSDOM(read(file), { url }).window.document;
+    assert.equal(d.documentElement.lang, file.startsWith('tr/') ? 'tr' : 'en', file);
+    assert.equal(d.querySelectorAll('h1').length, 1, `${file} needs exactly one h1`);
+    assert.ok(d.querySelector('meta[name="description"]').content.length > 40, file);
+    assert.equal(d.querySelector('link[rel="canonical"]').href, url);
+    // The only script is structured data for a search engine: JSON that parses, never code.
+    for (const script of d.querySelectorAll('script')) {
+      assert.equal(script.type, 'application/ld+json', `${file} runs a script`);
+      assert.ok(JSON.parse(script.textContent)['@context'], `${file}: its structured data names no context`);
+    }
+    assert.ok(d.querySelector('script[type="application/ld+json"]'), `${file} has no structured data`);
+    assert.ok(d.querySelector('meta[name="twitter:title"]') && d.querySelector('meta[property="og:locale"]'), `${file} is missing its social tags`);
+    assert.ok(d.querySelector('link[rel="stylesheet"]').href.endsWith(`/styles.css?v=${stylesheet}`), `${file}: the stylesheet hash is stale`);
+    for (const alternate of d.querySelectorAll('link[rel="alternate"][hreflang]')) {
+      const twin = new URL(alternate.href).pathname.replace(/^\//, '');
+      if (alternate.hreflang !== 'x-default') assert.ok(fs.existsSync(path.join(root, twin, 'index.html')), `${file} points at ${twin}, which does not exist`);
+    }
+    for (const claim of d.querySelectorAll('.claim')) {
+      assert.ok(claim.querySelector('.src a[href^="http"]'), `${file}: a claim names no source`);
+    }
+  }
+});
+
+test('every problem page is reached from the hub in the same language, and no link inside them is dead', () => {
+  for (const [prefix, hub] of [['', 'problems/index.html'], ['tr/', 'tr/problems/index.html']]) {
+    const seen = new Set([hub]);
+    const queue = [hub];
+    while (queue.length) {
+      const file = queue.shift();
+      const d = new JSDOM(read(file), { url: `https://kriko.cc/${file.replace(/index\.html$/, '')}` }).window.document;
+      for (const a of d.querySelectorAll('main a[href^="/"]')) {
+        const target = a.getAttribute('href').split('#')[0];
+        if (!target.startsWith(`/${prefix}problems/`)) continue;
+        const next = `${target.replace(/^\//, '')}index.html`;
+        assert.ok(fs.existsSync(path.join(root, next)), `${file} links to ${target}, which does not exist`);
+        if (!seen.has(next)) { seen.add(next); queue.push(next); }
+      }
+    }
+    const own = generated().filter((file) => file.startsWith(`${prefix}problems/`));
+    assert.deepEqual([...seen].sort(), own.sort(), `${prefix || 'en'}: a problem page is not reachable from the hub, or the hub points off the set`);
+  }
+});
+
+test('the problem sitemap lists exactly the generated pages, and robots.txt names it', () => {
+  assert.match(read('robots.txt'), /^Sitemap: https:\/\/kriko\.cc\/sitemap-problems\.xml$/m);
+  const listed = [...read('sitemap-problems.xml').matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[1]).sort();
+  assert.deepEqual(listed, generated().map((file) => `https://kriko.cc/${file.replace(/index\.html$/, '')}`).sort());
+});
+
+test('a product page says where it sits, with breadcrumbs that match what a reader sees', () => {
+  const product = new JSDOM(read('problems/mercedes-eqb/index.html')).window.document;
+  const blocks = [...product.querySelectorAll('script')].map((s) => JSON.parse(s.textContent));
+  const crumbs = blocks.find((block) => block['@type'] === 'BreadcrumbList');
+  assert.deepEqual(crumbs.itemListElement.map((item) => item.name), [...product.querySelectorAll('.crumb a')].map((a) => a.textContent).concat(['Mercedes EQB']));
+  assert.match(blocks.find((block) => block['@type'] === 'Article').dateModified, /^\d{4}-\d{2}-\d{2}$/);
+  assert.match(product.title, /safety risks/, 'a page that reports a fire names the risk in its title');
+});
+
+test('the sitemap says when each page was last checked, and the page of every safety report is listed', () => {
+  const sitemap = read('sitemap-problems.xml');
+  const days = [...sitemap.matchAll(/<lastmod>([^<]+)<\/lastmod>/g)].map((match) => match[1]);
+  assert.ok(days.length > 100, 'the problem pages carry no lastmod');
+  assert.ok(days.every((day) => /^\d{4}-\d{2}-\d{2}$/.test(day)), 'a lastmod is not a date');
+  for (const url of ['https://kriko.cc/problems/safety/', 'https://kriko.cc/tr/problems/safety/']) assert.ok(sitemap.includes(`<loc>${url}</loc>`), url);
+});
+
+test('no sponsored box is on a home page, the guide or the privacy policy', () => {
+  for (const file of ['index.html', 'tr/index.html', 'guide/index.html', 'tr/guide/index.html', 'privacy/index.html']) {
+    assert.ok(!read(file).includes('class="sponsored"'), `${file} carries a sponsored box`);
+  }
+});
+
+test('the privacy policy describes the sponsored boxes whenever any is listed, and says they load nothing', () => {
+  const listed = JSON.parse(read('sponsors.json'));
+  assert.ok(Array.isArray(listed));
+  const policy = load(PAGES[2]);
+  const section = policy.querySelector('#sponsored');
+  if (listed.length) assert.ok(section, 'a sponsor is listed but the privacy policy does not name sponsored boxes');
+  if (section) assert.match(section.nextElementSibling.textContent, /runs no script and sets no cookie/);
+  assert.ok(!/no advertising\./.test(policy.querySelector('.short').textContent) || !listed.length, 'the policy still promises no advertising');
+});
+
+test('both home pages link to the problem pages in their own language', () => {
+  for (const [page, href] of [[PAGES[0], '/problems/'], [PAGES[1], '/tr/problems/']]) {
+    assert.ok(load(page).querySelector(`footer a[href="${href}"]`), `${page.file} has no footer link to ${href}`);
+  }
+});

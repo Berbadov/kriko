@@ -1,0 +1,957 @@
+# Claims — what is known to go wrong, each with the page it came from and the quote
+# that was read there. A claim without both is not in this file.
+- subject:
+    kind: product
+    identity:
+      brand: dji
+      series: neo
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: gimbal rubber bumpers
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Gimbal rubber bumpers break after a crash
+      body: On the iFixit teardown page an owner reports the gimbal's rubber bumpers break in a crash;
+        another owner notes the frame, connectors, motors and gyroscope are glued in place, making DIY
+        repair extremely difficult.
+      advice: 'The Neo is not user-serviceable: internal parts are glued, so a crash that breaks the gimbal
+        bumpers or frame effectively means replacement or a service-center repair, which can cost close
+        to a new unit.'
+    tr:
+      title: Bir çarpışmadan sonra gimbal kauçuk tamponlar kırılıyor
+      body: iFixit söküm sayfasında bir sahip, gimbalin kauçuk tamponlarının bir çarpışmada kırıldığını
+        bildiriyor; başka bir sahip ise çerçevenin, konektörlerin, motorların ve jiroskopun yerlerine
+        yapıştırıldığını, bunun da kendin yap onarımını son derece zorlaştırdığını belirtiyor.
+      advice: 'Neo kullanıcı tarafından bakımı yapılabilir değildir: iç parçalar yapıştırılmıştır, bu
+        nedenle gimbal tamponlarını veya çerçeveyi kıran bir çarpışma fiilen değişim veya servis merkezi
+        onarımı anlamına gelir; bu da neredeyse yeni bir cihaz kadar pahalıya mal olabilir.'
+  evidence:
+  - url: https://zh.ifixit.com/News/106792/dji-neo-teardown
+    quote: what seems to be the biggest problem is that the gimbal 4 rubber (?) bumpers are broken
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:13:09+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: dji
+      series: air 3
+  kind: known_issue
+  domain: electronic
+  severity: high
+  consequence: ''
+  detection: ''
+  component: ESC / motor
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: DJI Air 3 ESC error 16080021 led to permanent loss of the drone
+      body: An owner on the PhantomHelp forum reports abnormal behavior on the first flight with an ESC
+        error (code 16080021); DJI support told them to update firmware and calibrate, the problem recurred,
+        and the drone was permanently lost. A moderator notes the ESC error 'could suggest there was a
+        hardware-related issue with one of the ESCs or motors.'
+      advice: An ESC error code (16080021, or 30085/30210 per repair guides) points to a hardware fault
+        in the electronic speed controller or motor, and a firmware/calibration fix rarely resolves it.
+        Because this can cause a total loss of the aircraft, treat a recurring ESC error as serious and
+        push DJI for a hardware inspection under warranty rather than accepting a software-only fix.
+    tr:
+      title: DJI Air 3 ESC hatası 16080021 dronun kalıcı olarak kaybedilmesine yol açtı
+      body: PhantomHelp forumunda bir sahip, ilk uçuşta ESC hatasıyla (kod 16080021) anormal davranış
+        bildiriyor; DJI desteği onlara ürün yazılımını güncellemelerini ve kalibrasyon yapmalarını söylemiş,
+        sorun tekrarlamış ve drone kalıcı olarak kaybedilmiş. Bir moderatör, ESC hatasının 'ESC'lerden
+        veya motorlardan birinde donanımla ilgili bir sorun olduğunu düşündürebileceğini' belirtiyor.
+      advice: Bir ESC hata kodu (16080021 veya onarım kılavuzlarına göre 30085/30210), elektronik hız
+        denetleyicisinde veya motorda bir donanım arızasına işaret eder ve ürün yazılımı/kalibrasyon düzeltmesi
+        bunu nadiren çözer. Bu, hava aracının tamamen kaybedilmesine neden olabileceğinden, tekrarlayan
+        bir ESC hatasını ciddiye alın ve yalnızca yazılım düzeltmesini kabul etmek yerine DJI'yi garanti
+        kapsamında donanım incelemesi yapmaya zorlayın.
+  evidence:
+  - url: https://forum.phantomhelp.com/t/crash-air3-support-dji-esc-error-code-16080021/11313/3
+    quote: I did a partial log analysis and found the ‘EC’ error. Is this common with the DJI Air 3?
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:14:57+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: dji
+      series: mavic 3
+  kind: known_issue
+  domain: electronic
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: ESC (electronic speed controller)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Mavic 3 power system ESC error requires a serialized ESC replacement
+      body: After a hard landing/crash on a Mavic 3, the owner got Power System hardware error 16100069
+        and ESC error 1608002F; forum replies say a persistent error means a bad ESC, and a replacement
+        ESC must be serialized to the main board with special software that is expensive.
+      advice: 'ESC failure leaves the drone un-flyable, and a replacement is not plug-and-play: it must
+        be serialized to the main board, which costs extra and needs specialist software. Factor this
+        in for a used unit that has had any hard landing.'
+    tr:
+      title: Mavic 3 güç sistemi ESC hatası seri numarası atanmış ESC değişimi gerektiriyor
+      body: Bir Mavic 3'te sert iniş/çarpışmadan sonra sahip, Güç Sistemi donanım hatası 16100069 ve ESC
+        hatası 1608002F aldı; forum yanıtları, kalıcı bir hatanın bozuk ESC anlamına geldiğini ve yedek
+        ESC'nin pahalı olan özel yazılımla ana karta seri numarası atanması gerektiğini söylüyor.
+      advice: 'ESC arızası dronu uçamaz hale getirir ve değişim tak-çalıştır değildir: ana karta seri
+        numarası atanmalıdır; bu ek maliyet getirir ve uzman yazılımı gerektirir. Herhangi bir sert iniş
+        yaşamış ikinci el bir cihaz için bunu hesaba katın.'
+  evidence:
+  - url: https://mavicpilots.com/threads/power-system-hardware-error-code-16100069.154302/
+    quote: If the error is persistent it means you have a bad ESC.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:10:28+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: dji
+      series: mini 4 pro
+  kind: known_issue
+  domain: battery
+  severity: high
+  consequence: ''
+  detection: ''
+  component: Intelligent Flight Battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Mini 4 Pro reports battery communication error on all three batteries after full charge
+      body: A Turkish complaint-site report (non-US source) describes a Mini 4 Pro that, a few months
+        after purchase, began showing a battery communication error and 'battery too low, auto landing'
+        on all three batteries minutes after a full charge, persisting after service replaced only one
+        battery.
+      advice: Some owners report a battery communication error across all batteries shortly after a full
+        charge, forcing an auto-land warning. Note this is a non-US complaint-site report; if you see
+        repeated battery errors, treat the batteries as suspect and push for a full set replacement.
+    tr:
+      title: Mini 4 Pro, tam şarjdan sonra üç pilin tümünde pil iletişim hatası bildiriyor
+      body: Bir Türk şikayet sitesi raporu (ABD dışı kaynak), satın alımdan birkaç ay sonra üç pilin tümünde
+        tam şarjdan dakikalar sonra pil iletişim hatası ve 'pil çok düşük, otomatik iniş' göstermeye başlayan
+        ve servisin yalnızca bir pili değiştirmesinden sonra da devam eden bir Mini 4 Pro'yu anlatıyor.
+      advice: Bazı sahipler, tam şarjdan kısa süre sonra tüm pillerde pil iletişim hatası bildiriyor ve
+        bu da otomatik iniş uyarısını zorunlu kılıyor. Bunun ABD dışı bir şikayet sitesi raporu olduğunu
+        unutmayın; tekrarlanan pil hataları görürseniz pilleri şüpheli kabul edin ve tam set değişimi
+        için ısrar edin.
+  evidence:
+  - url: https://www.sikayetvar.com/karfo-karacasulu/dji-mini-4-pro-batarya-sorunu-ve-teknik-servis-magduriyeti
+    quote: ürünü aldıktan birkaç ay sonra mevcut 3 bataryasında da full şarj ettikten 5 dakika sonra "Pil
+      İletişim Hatası" "Çok Düşük Pil. Araç Otomatik İniyor" şeklinde uyarı vermeye başladı
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:12:29+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: dji
+      series: mini 3 pro
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: gimbal / propellers
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Gimbal high-frequency vibration/shaking in footage, DJI suggests calibration and prop inspection
+      body: On the official DJI forum, a support reply attributes heatwave-like video distortion to high-frequency
+        gimbal vibration, listing bent/damaged props, debris, and gimbal motor issues as causes, and recommends
+        calibration and prop replacement.
+      advice: If footage shows heatwave-like distortion, check props for damage and calibrate the gimbal
+        before assuming a camera fault; the fix may be as cheap as new props.
+    tr:
+      title: Görüntüde gimbal yüksek frekanslı titreşim/sarsıntı, DJI kalibrasyon ve pervane incelemesi
+        öneriyor
+      body: Resmi DJI forumunda bir destek yanıtı, sıcak hava dalgası benzeri video bozulmasını yüksek
+        frekanslı gimbal titreşimine bağlıyor; bükülmüş/hasarlı pervaneler, kalıntılar ve gimbal motoru
+        sorunlarını nedenler olarak sıralıyor ve kalibrasyon ile pervane değişimini öneriyor.
+      advice: Görüntüde sıcak hava dalgası benzeri bozulma görürseniz, kamera arızası varsaymadan önce
+        pervanelerde hasar olup olmadığını kontrol edin ve gimbalı kalibre edin; çözüm yeni pervaneler
+        kadar ucuz olabilir.
+  evidence:
+  - url: https://forum.dji.com/forum.php?mod=viewthread&tid=344340
+    quote: the footage shows a form of high-frequency vibration or shaking during flight, which can resemble
+      heatwaves in the video.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:14:25+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: potensic
+      series: atom se
+  kind: known_issue
+  domain: camera
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: camera / electronic image stabilization
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Atom SE video is choppy except in straight flight; unusable in turns
+      body: Verified-purchase review on Alza.cz (Aug 2025) reporting video is choppy except in straight
+        flight or climb and unusable in turns. This aligns with the Digital Camera World review noting
+        the camera uses EIS rather than a 3-axis gimbal.
+      advice: Buyers who need smooth cinematic video should be aware the Atom SE relies on electronic
+        stabilization, not a 3-axis gimbal, so footage in turns and wind can be choppy. Photos in good
+        light are fine.
+    tr:
+      title: Atom SE videosu düz uçuş dışında takılıyor; dönüşlerde kullanılamaz
+      body: Alza.cz'de doğrulanmış satın alma incelemesi (Ağu 2025), videonun düz uçuş veya tırmanış dışında
+        takıldığını ve dönüşlerde kullanılamaz olduğunu bildiriyor. Bu, kameranın 3 eksenli gimbal yerine
+        EIS kullandığını belirten Digital Camera World incelemesiyle uyumlu.
+      advice: Akıcı sinematik video isteyen alıcılar, Atom SE'nin 3 eksenli gimbal yerine elektronik sabitlemeye
+        dayandığını bilmelidir; bu nedenle dönüşlerde ve rüzgarda görüntü takılabilir. İyi ışıkta fotoğraflar
+        sorunsuzdur.
+  evidence:
+  - url: https://m.alza.cz/EN/reviews/potensic-atom-se-full-combo-three-batteries-carrying-case-and-60w-charging-hub-7809406.htm
+    quote: Video almost unusable, very choppy except in straight flight or climb. Cannot fly into turns
+      or "sideways". I have a drone and photos, but the video is a tragedy
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:10:45+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: dji
+      series: mavic 3
+  kind: known_issue
+  domain: battery
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: Intelligent Flight Battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Mavic 3 Intelligent Flight Battery fails to charge with the original charger
+      body: 'Owner Q&A on the Mavic 3 Intelligent Flight Battery: the battery would not charge via the
+        Mavic 3 Classic with the original charger even overnight, no LEDs lit, and the drone would not
+        power on; replies point to bad contact on the pins, defective electronics, or a defective cell.'
+      advice: A battery that will not charge or wake is a common failure. Check battery health and contact
+        pins before buying, and know that a replacement Intelligent Flight Battery is a significant extra
+        cost.
+    tr:
+      title: Mavic 3 Intelligent Flight Battery, orijinal şarj cihazıyla şarj olmuyor
+      body: 'Mavic 3 Intelligent Flight Battery hakkında sahip soru-cevabı: pil, Mavic 3 Classic üzerinden
+        orijinal şarj cihazıyla bir gecede bile şarj olmadı, hiçbir LED yanmadı ve drone açılmadı; yanıtlar
+        pinlerdeki kötü temasa, arızalı elektroniğe veya arızalı bir hücreye işaret ediyor.'
+      advice: Şarj olmayan veya uyanmayan bir pil yaygın bir arızadır. Satın almadan önce pil sağlığını
+        ve temas pinlerini kontrol edin ve yedek bir Intelligent Flight Battery'nin önemli bir ek maliyet
+        olduğunu bilin.
+  evidence:
+  - url: https://www.galaxus.it/en/s1/questionandanswer/the-battery-does-not-charge-via-the-mavic-3-classic-with-the-original-charger-even-after-a-whole-nig-822427
+    quote: The battery does not charge via the Mavic 3 Classic with the original charger. Even after a
+      whole night, none of the LEDs come on.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:10:28+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: dji
+      series: mavic 3
+  kind: known_issue
+  domain: mechanical
+  severity: low
+  consequence: ''
+  detection: ''
+  component: gimbal
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Mavic 3 gimbal moves irregularly and triggers an app warning
+      body: DJI's own troubleshooting doc (German) lists the Mavic 3 among models where the gimbal can
+        move irregularly with an app warning; one listed cause is gimbal hardware failure, and DJI directs
+        the product back for inspection if calibration does not fix it.
+      advice: Gimbal irregular movement is a recognized symptom on the Mavic 3; if calibration does not
+        clear it, DJI treats it as hardware failure needing return. Lower severity because it is manufacturer
+        troubleshooting rather than a widespread owner-reported failure.
+    tr:
+      title: Mavic 3 gimbal düzensiz hareket ediyor ve uygulama uyarısını tetikliyor
+      body: DJI'nin kendi sorun giderme belgesi (Almanca), gimbalin uygulama uyarısıyla düzensiz hareket
+        edebildiği modeller arasında Mavic 3'ü listeliyor; listelenen nedenlerden biri gimbal donanım
+        arızası ve kalibrasyon sorunu çözmezse DJI ürünün incelenmek üzere geri gönderilmesini söylüyor.
+      advice: Gimbalin düzensiz hareketi Mavic 3'te tanınan bir belirtidir; kalibrasyon bunu gidermezse
+        DJI bunu geri gönderim gerektiren donanım arızası olarak değerlendirir. Önem derecesi daha düşük
+        çünkü bu, yaygın sahip bildirimli bir arıza değil, üretici sorun gidermesidir.
+  evidence:
+  - url: https://support.dji.com/help/content?customId=01700006794&lang=de&paperDocType=ARTICLE&re=CH&spaceId=17
+    quote: Bei normalem Gebrauch des Fluggeräts bewegt sich der Gimbal unregelmäßig und in der App wird
+      eine Warnmeldung angezeigt.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:10:28+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: dji
+      series: air 3
+  kind: known_issue
+  domain: software
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: firmware
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: DJI Air 3 firmware before 01.00.1600 vulnerable to FTP storage exhaustion (CVE-2026-78251)
+      body: 'A documented CVE (CVE-2026-78251) affects the Air 3 on firmware versions before 01.00.1600:
+        a hardcoded-credential FTP service lets an attacker fill onboard storage, blocking flight-log
+        writes and subsequent firmware updates.'
+      advice: This is a security/software issue rather than an owner-reported flight failure, and it requires
+        physical or network access to the drone, so it is lower practical risk for a typical pilot. Still,
+        keeping the Air 3 on firmware 01.00.1600 or newer closes the vulnerability and avoids the 'firmware
+        update fails' symptom the flaw can cause.
+    tr:
+      title: 01.00.1600 öncesi DJI Air 3 ürün yazılımı FTP depolama tükenmesine karşı savunmasız (CVE-2026-78251)
+      body: 'Belgelenmiş bir CVE (CVE-2026-78251), 01.00.1600 öncesi ürün yazılımı sürümlerindeki Air
+        3''ü etkiliyor: sabit kodlanmış kimlik bilgilerine sahip bir FTP hizmeti, saldırganın yerleşik
+        depolamayı doldurmasına, uçuş günlüğü yazımlarını ve sonraki ürün yazılımı güncellemelerini engellemesine
+        olanak tanıyor.'
+      advice: Bu, sahip bildirimli bir uçuş arızasından ziyade bir güvenlik/yazılım sorunudur ve drone'a
+        fiziksel veya ağ erişimi gerektirir, bu nedenle tipik bir pilot için pratik riski daha düşüktür.
+        Yine de Air 3'ü 01.00.1600 veya daha yeni ürün yazılımında tutmak güvenlik açığını kapatır ve
+        kusurun yol açabileceği 'ürün yazılımı güncellemesi başarısız' belirtisini önler.
+  evidence:
+  - url: https://vuldb.com/cve/CVE-2026-78251
+    quote: DJI Air 3 until 01.00.1600
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:14:57+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: dji
+      series: air 3
+  kind: known_issue
+  domain: connection
+  severity: high
+  consequence: ''
+  detection: ''
+  component: transmission / RC link
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: DJI Air 3 flyaway at altitude confirmed as manufacturing defect by DJI
+      body: On the Litchi forum, an owner reports a flyaway of a 3-year-old Air 3 during a waypoint mission;
+        the flight log cut off at 1032m altitude and 3852m distance due to the aircraft disconnecting
+        from the RC, and DJI confirmed it as a manufacturing defect and replaced the unit free even without
+        warranty.
+      advice: This incident involved flying far beyond reliable transmission range, so some of it is pilot
+        risk, but DJI itself classified the failure as a manufacturing defect and replaced the aircraft.
+        The practical lesson is that a lost RC link at distance can end in a total flyaway, so keep within
+        line-of-sight/transmission range and do not rely on automatic RTH to save an out-of-range aircraft.
+    tr:
+      title: Yükseklikte DJI Air 3 flyaway, DJI tarafından üretim hatası olarak doğrulandı
+      body: Litchi forumunda bir sahip, 3 yıllık bir Air 3'ün waypoint görevi sırasında flyaway yaptığını
+        bildiriyor; uçuş günlüğü, hava aracının RC'den bağlantısının kesilmesi nedeniyle 1032m yükseklik
+        ve 3852m mesafede kesildi ve DJI bunu üretim hatası olarak doğrulayıp garanti olmasa bile birimi
+        ücretsiz değiştirdi.
+      advice: Bu olay, güvenilir iletim menzilinin çok ötesinde uçmayı içeriyordu, dolayısıyla bunun bir
+        kısmı pilot riskidir, ancak DJI'nin kendisi arızayı üretim hatası olarak sınıflandırdı ve hava
+        aracını değiştirdi. Pratik ders, mesafede kaybedilen bir RC bağlantısının tam bir flyaway ile
+        sonuçlanabileceğidir; bu nedenle görüş hattı/iletim menzili içinde kalın ve menzil dışındaki bir
+        hava aracını kurtarmak için otomatik RTH'ye güvenmeyin.
+  evidence:
+  - url: https://forum.flylitchi.com/t/dji-flyaway-support-for-air-3/28308/4
+    quote: flight log cut off, due to aircraft disconnecting from RC.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:14:57+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: dji
+      series: mini 4 pro
+  kind: known_issue
+  domain: software
+  severity: low
+  consequence: ''
+  detection: ''
+  component: firmware / RC 2
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Mini 4 Pro firmware update over RC 2 fails mid-way at 58% when batteries deplete
+      body: On PhantomHelp, an owner reports the over-the-air firmware update via the RC 2 controller
+        failed at 58% because the batteries depleted during the update; it succeeded only when done over
+        USB with DJI Assistant on a computer.
+      advice: OTA firmware updates through the RC 2 can stall and fail if the batteries run low mid-update.
+        Use a fully charged setup or update via DJI Assistant on a computer to avoid a failed update.
+    tr:
+      title: RC 2 üzerinden Mini 4 Pro ürün yazılımı güncellemesi, piller tükendiğinde %58'de yarıda başarısız
+        oluyor
+      body: PhantomHelp'te bir sahip, RC 2 kumanda üzerinden kablosuz ürün yazılımı güncellemesinin, güncelleme
+        sırasında piller tükendiği için %58'de başarısız olduğunu bildiriyor; yalnızca bir bilgisayarda
+        DJI Assistant ile USB üzerinden yapıldığında başarılı oldu.
+      advice: RC 2 üzerinden OTA ürün yazılımı güncellemeleri, piller güncelleme ortasında azalırsa durabilir
+        ve başarısız olabilir. Başarısız bir güncellemeden kaçınmak için tam şarjlı bir kurulum kullanın
+        veya bir bilgisayarda DJI Assistant ile güncelleyin.
+  evidence:
+  - url: https://forum.phantomhelp.com/t/mini-4-pro-wont-update-firmware/11409/3
+    quote: Today I attempted to update the firmware of the drone via the RC 2 controller and failed. Both
+      drone and controller batteries were fully charged at the beginning, but the process went only to
+      58%, I think, before the batteries were depleted and I got the message that firmware update failed.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:12:29+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: potensic
+      series: atom se
+  kind: known_issue
+  domain: connection
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: remote controller / radio link
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Atom SE controller disconnects at short range and real range is ~2.5km, not 4km
+      body: Verified-purchase review on Alza.cz (Dec 2025) reporting intermittent disconnection from the
+        controller even at short distance, control delay at distance, and actual range around 2.5km rather
+        than the advertised 4km.
+      advice: Buyer should not rely on the 4km advertised range; expect usable control closer to 2.5km
+        and occasional dropouts. The manufacturer manual itself warns the signal weakens when the drone
+        is directly overhead.
+    tr:
+      title: Atom SE kumanda kısa menzilde bağlantıyı kesiyor ve gerçek menzil 4km değil ~2,5km
+      body: Alza.cz'de doğrulanmış satın alma incelemesi (Aralık 2025), kısa mesafede bile kumandadan
+        aralıklı bağlantı kesilmesi, mesafede kontrol gecikmesi ve gerçek menzilin reklamı yapılan 4km
+        yerine yaklaşık 2,5km olduğunu bildiriyor.
+      advice: Alıcı, reklamı yapılan 4km menzile güvenmemelidir; kullanılabilir kontrolün 2,5km'ye daha
+        yakın olmasını ve ara sıra kopmaları beklemelidir. Üretici kılavuzunun kendisi, drone doğrudan
+        tepedeyken sinyalin zayıfladığı konusunda uyarır.
+  evidence:
+  - url: https://m.alza.cz/EN/reviews/potensic-atom-se-full-combo-three-batteries-carrying-case-and-60w-charging-hub-7809406.htm
+    quote: 'I really didn''t get anywhere near the 4km range. more like 2.5km
+
+
+      at a greater distance there is a large image and control delay
+
+
+      intermittent disconnection of the drone from the controller even at a short distance'
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:10:45+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: dji
+      series: mini 4 pro
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: gimbal motor / gimbal signal cable
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Mini 4 Pro gimbal calibration stalls at 40% and gimbal quivers wildly
+      body: An owner on MavicPilots reports the gimbal calibration stalls at 40% and the gimbal then quivers
+        wildly even on a drone that was never crashed. Forum replies attribute it to a bad gimbal motor
+        or a failed signal cable, both of which need a repair shop.
+      advice: A gimbal that will not calibrate and shakes violently makes the drone unusable for footage
+        and requires a paid repair (signal cable or gimbal motor). Budget for service rather than assuming
+        a reset will fix it.
+    tr:
+      title: Mini 4 Pro gimbal kalibrasyonu %40'ta takılıyor ve gimbal çılgınca titriyor
+      body: MavicPilots'ta bir sahip, gimbal kalibrasyonunun %40'ta takıldığını ve gimbalin daha sonra,
+        hiç kaza yapmamış bir dron üzerinde bile çılgınca titrediğini bildiriyor. Forum yanıtları bunu
+        arızalı bir gimbal motoruna veya arızalı bir sinyal kablosuna bağlıyor; her ikisi de bir onarım
+        atölyesi gerektiriyor.
+      advice: Kalibre olmayan ve şiddetli sarsılan bir gimbal, dronu görüntü çekimi için kullanılamaz
+        hale getirir ve ücretli bir onarım gerektirir (sinyal kablosu veya gimbal motoru). Bir sıfırlamanın
+        bunu düzelteceğini varsaymak yerine servis için bütçe ayırın.
+  evidence:
+  - url: https://mavicpilots.com/threads/dji-mini-4-pro-repair.156848/
+    quote: the gimble calibration gets to 40% and stalls there. When I manually calibrated it the drone
+      seemed fine for a bit, then the gimbal went nuts quivering widly until I shut the unit off.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:12:29+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: dji
+      series: mini 3 pro
+  kind: known_issue
+  domain: software
+  severity: low
+  consequence: ''
+  detection: ''
+  component: firmware
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Firmware vulnerability lets an attacker exhaust storage and block firmware updates (CVE-2026-78251)
+      body: An official INCIBE-CERT early-warning notice lists the Mini 3 Pro (firmware up to 01.00.0900)
+        among affected models for a hardcoded-credential FTP flaw that can exhaust storage and block firmware
+        updates.
+      advice: This requires an attacker with network/USB access, so practical impact for a typical owner
+        is low, but keep firmware updated to the patched version.
+    tr:
+      title: Ürün yazılımı güvenlik açığı, bir saldırganın depolamayı tüketmesine ve ürün yazılımı güncellemelerini
+        engellemesine olanak tanıyor (CVE-2026-78251)
+      body: Resmi bir INCIBE-CERT erken uyarı bildirimi, depolamayı tüketebilen ve ürün yazılımı güncellemelerini
+        engelleyebilen sabit kodlanmış kimlik bilgileri içeren FTP kusuru için etkilenen modeller arasında
+        Mini 3 Pro'yu (01.00.0900'e kadar ürün yazılımı) listeliyor.
+      advice: Bu, ağ/USB erişimi olan bir saldırgan gerektirir, dolayısıyla tipik bir sahip için pratik
+        etki düşüktür, ancak ürün yazılımını yamalı sürümde güncel tutun.
+  evidence:
+  - url: https://www.incibe.es/index.php/en/incibe-cert/early-warning/vulnerabilities/cve-2026-78251
+    quote: An attacker with access to the drone's internal network or USB RNDIS interface can exhaust
+      the available storage, preventing the aircraft from writing flight records, logs, and telemetry
+      and potentially preventing subsequent firmware updates.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:14:25+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: dji
+      series: mini 3 pro
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: gimbal
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Mini 3 Pro gimbal produces shuddering/stuttering video, fixed by DJI warranty swap
+      body: An owner on the DPReview forum reports the gimbal producing shuddering video on playback about
+        half the time; cleaning the gimbal only partly helped, and DJI replaced the whole drone under
+        warranty.
+      advice: If video playback shudders, try cleaning and calibrating the gimbal first, but be prepared
+        that this can require a warranty repair or replacement unit.
+    tr:
+      title: Mini 3 Pro gimbal, titrek/kesik kesik video üretiyor, DJI garanti değişimiyle düzeltildi
+      body: DPReview forumunda bir sahip, gimbalin oynatma sırasında yaklaşık yarı yarıya titrek video
+        ürettiğini bildiriyor; gimbalin temizlenmesi yalnızca kısmen yardımcı oldu ve DJI tüm dronu garanti
+        kapsamında değiştirdi.
+      advice: Video oynatma titrekse, önce gimbalı temizlemeyi ve kalibre etmeyi deneyin, ancak bunun
+        bir garanti onarımı veya değişim ünitesi gerektirebileceğine hazırlıklı olun.
+  evidence:
+  - url: https://www.dpreview.com/forums/threads/dji-customer-service.4782662/
+    quote: my Mini 3 Pro videos were shuddering on playback about half the time. I cleaned the gimbal
+      and there was some improvement but it wasn't cured.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:14:25+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: dji
+      series: neo
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: gimbal
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'DJI bulletin: gimbal moves erratically (Neo series)'
+      body: DJI's official support bulletin lists the Neo series as an applicable product for erratic
+        gimbal movement and gimbal hardware errors, with gimbal calibration in DJI Fly as the first fix.
+      advice: If the gimbal moves erratically or the app warns, try gimbal auto-calibration in DJI Fly
+        first; if it persists the bulletin points to a gimbal hardware error needing service.
+    tr:
+      title: 'DJI bülteni: gimbal düzensiz hareket ediyor (Neo serisi)'
+      body: DJI'nin resmi destek bülteni, düzensiz gimbal hareketi ve gimbal donanım hataları için geçerli
+        ürün olarak Neo serisini listeliyor ve ilk çözüm olarak DJI Fly'da gimbal kalibrasyonunu gösteriyor.
+      advice: Gimbal düzensiz hareket ederse veya uygulama uyarı verirse, önce DJI Fly'da gimbal otomatik
+        kalibrasyonunu deneyin; sorun devam ederse bülten, servis gerektiren bir gimbal donanım hatasına
+        işaret ediyor.
+  evidence:
+  - url: https://support.dji.com/help/content?customId=en-us03400006794&spaceId=34&re=US&lang=en&documentType=artical&paperDocType=paper&encryptId=KWAkczCmKer1WbRLLbSLkw%3D%3D
+    quote: The gimbal moves erratically and the app prompts a warning during normal use of your aircraft.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:13:09+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: dji
+      series: air 3
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: gimbal module
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: DJI Air 3 gimbal overload error with shaking during video and stiff gimbal
+      body: An owner on the DJI official forum reports a persistent 'Gimbal Overload' error, heavy shaking
+        during video, a gimbal that fails its power-on self-test and feels stiff/blocked at one point,
+        plus a strange sound when reaching the zero point. DJI support recommended calibration, which
+        did not resolve it; the unit is out of warranty.
+      advice: A gimbal that fails self-test and feels mechanically stiff is usually a hardware fault (damaged
+        gimbal motor or ribbon cable), not a calibration issue. Expect a full gimbal module replacement
+        cost; the Reboot Hub repair guide lists a full gimbal module at $200-280 and identifies the gimbal-to-mainboard
+        ribbon cable (DJI part BC.MA.SS000413.01) as a known failure point in minor collisions.
+    tr:
+      title: DJI Air 3 gimbal aşırı yük hatası, video sırasında sarsıntı ve sert gimbal
+      body: DJI resmi forumunda bir sahip, kalıcı bir 'Gimbal Overload' hatası, video sırasında yoğun
+        sarsıntı, açılışta kendi kendini test edemeyen ve bir noktada sert/tıkanmış hissedilen bir gimbal
+        ile sıfır noktasına ulaşırken garip bir ses bildiriyor. DJI destek kalibrasyon önerdi, ancak bu
+        sorunu çözmedi; ünite garanti kapsamı dışında.
+      advice: Kendi kendini test edemeyen ve mekanik olarak sert hissedilen bir gimbal genellikle bir
+        donanım arızasıdır (hasarlı gimbal motoru veya şerit kablo), kalibrasyon sorunu değildir. Tam
+        bir gimbal modülü değişim maliyeti bekleyin; Reboot Hub onarım kılavuzu tam bir gimbal modülünü
+        $200-280 olarak listeliyor ve küçük çarpışmalarda bilinen bir arıza noktası olarak gimbal-ana
+        kart şerit kablosunu (DJI parça BC.MA.SS000413.01) tanımlıyor.
+  evidence:
+  - url: https://forum.dji.com/forum.php?mod=viewthread&tid=348855
+    quote: Out of nowhere, the drone started to shake a lot during video, and I’m getting a “Gimbal Overload”
+      error.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:14:57+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: potensic
+      series: atom se
+  kind: known_issue
+  domain: software
+  severity: low
+  consequence: ''
+  detection: ''
+  component: Potensic Pro app
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Atom SE requires internet/app registration to take off
+      body: Verified-purchase review on Alza.cz (Feb 2025) reporting the drone will not take off without
+        an internet connection. The Digital Camera World review also notes the app forces email registration.
+      advice: Buyers flying in areas without mobile data should be aware the app may require a connection/registration
+        before flight; plan accordingly.
+    tr:
+      title: Atom SE, kalkış için internet/uygulama kaydı gerektiriyor
+      body: Alza.cz'de doğrulanmış satın alma incelemesi (Şubat 2025), dronun internet bağlantısı olmadan
+        kalkış yapmayacağını bildiriyor. Digital Camera World incelemesi de uygulamanın e-posta kaydını
+        zorunlu kıldığını belirtiyor.
+      advice: Mobil veri olmayan bölgelerde uçan alıcılar, uygulamanın uçuştan önce bir bağlantı/kayıt
+        gerektirebileceğini bilmelidir; buna göre plan yapın.
+  evidence:
+  - url: https://m.alza.cz/EN/reviews/potensic-atom-se-full-combo-three-batteries-carrying-case-and-60w-charging-hub-7809406.htm
+    quote: It won't take off without the internet
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:10:45+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: dji
+      series: mavic 3
+  kind: known_issue
+  domain: camera
+  severity: high
+  consequence: ''
+  detection: ''
+  component: 7x telephoto camera / lens
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Mavic 3 7X telephoto camera loses focus and needed lens replacement
+      body: Owner of a Mavic 3 with DJI RC Pro reports the 7X telephoto loses focus and will not zoom
+        or autofocus at 7X and above; it persisted across both controllers and firmware, and DJI replaced
+        the 7X lens at the depot at a cost over $617.
+      advice: The 7X telephoto is a known failure point on the Mavic 3. A camera/lens repair ran over
+        $617, so check the telephoto focus before buying and consider whether the extra zoom lens is worth
+        that replacement risk.
+    tr:
+      title: Mavic 3 7X telephoto kamera odağı kaybediyor ve lens değişimi gerekti
+      body: DJI RC Pro'lu bir Mavic 3 sahibi, 7X telephoto'nun odağı kaybettiğini ve 7X ve üzerinde zoom
+        yapmadığını veya otomatik odaklanmadığını bildiriyor; sorun her iki kumandada ve yazılımda da
+        devam etti ve DJI, depoda 7X lensi 617 $'ın üzerinde bir maliyetle değiştirdi.
+      advice: 7X telephoto, Mavic 3'te bilinen bir arıza noktasıdır. Bir kamera/lens onarımı 617 $'ı aştı,
+        bu yüzden satın almadan önce telephoto odağını kontrol edin ve ekstra zoom lensin bu değişim riskine
+        değip değmeyeceğini düşünün.
+  evidence:
+  - url: https://mavicpilots.com/threads/mavic-3-7x-zoom-no-focus-or-zoom.149583/
+    quote: Well, >$617USD, camera failure 7X lens being replaced at DJI depot.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:10:28+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: dji
+      series: mavic 3
+  kind: known_issue
+  domain: connection
+  severity: high
+  consequence: ''
+  detection: ''
+  component: remote controller / transmission link
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Mavic 3 controller loses connection mid-air at about 15 meters
+      body: Owner-reported on a Mavic 3 (dual-camera, non-Cine) that the controller drops the link about
+        15 m up, in multiple locations, on latest firmware and after re-pairing; the thread ends with
+        the owner considering a repair shop.
+      advice: A mid-flight link drop at low altitude is a safety-critical symptom. Before buying, verify
+        the RC/aircraft link in the exact unit, and confirm whether the loss is the RC, the antenna, or
+        the aircraft's transmission module.
+    tr:
+      title: Mavic 3 kumandası havada yaklaşık 15 metrede bağlantıyı kaybediyor
+      body: Bir Mavic 3 (çift kameralı, Cine olmayan) sahibi tarafından bildirildiğine göre kumanda, yaklaşık
+        15 m yükseklikte, birden fazla konumda, en son yazılımda ve yeniden eşleştirmeden sonra bağlantıyı
+        düşürüyor; konu, sahibinin bir onarım atölyesi düşünmesiyle sona eriyor.
+      advice: Düşük irtifada uçuş ortasında bağlantı düşmesi güvenlik açısından kritik bir belirtidir.
+        Satın almadan önce tam olarak o birimde RC/hava aracı bağlantısını doğrulayın ve kaybın RC, anten
+        veya hava aracının iletim modülü olup olmadığını teyit edin.
+  evidence:
+  - url: https://dronewhispers.com/t/mavic-3-keeps-losing-connection-mid-air-what-s-going-on/4137/1
+    quote: As soon as it gets about 15 meters in the air, the controller loses connection.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:10:28+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: dji
+      series: neo
+  kind: known_issue
+  domain: software
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: HTTP media server
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'CVE-2026-78321: HTTP media server DoS blocks QuickTransfer (Neo)'
+      body: INCIBE's advisory CVE-2026-78321 documents a denial-of-service vulnerability in the Neo's
+        HTTP media server (firmware up to 01.00.0400) that blocks QuickTransfer photo/video retrieval,
+        fixed only by a firmware update.
+      advice: Keep the Neo's firmware current; the documented fix for this vulnerability is a vendor firmware
+        update, and an unpatched unit can have its media transfer disrupted.
+    tr:
+      title: 'CVE-2026-78321: HTTP medya sunucusu DoS, QuickTransfer''i engelliyor (Neo)'
+      body: INCIBE'nin CVE-2026-78321 danışma belgesi, Neo'nun HTTP medya sunucusunda (01.00.0400'e kadar
+        yazılım) QuickTransfer fotoğraf/video alımını engelleyen bir hizmet engelleme güvenlik açığını
+        belgeliyor ve yalnızca bir yazılım güncellemesiyle düzeltiliyor.
+      advice: Neo'nun yazılımını güncel tutun; bu güvenlik açığı için belgelenen düzeltme bir üretici
+        yazılım güncellemesidir ve yamasız bir birimin medya aktarımı kesintiye uğrayabilir.
+  evidence:
+  - url: https://www.incibe.es/index.php/en/incibe-cert/early-warning/vulnerabilities/cve-2026-78321
+    quote: An attacker with access to the drone's internal network can exhaust the server's connection
+      pool by repeatedly requesting a stored media file, preventing the server from handling legitimate
+      requests and causing a denial of service that prevents the DJI Fly application from retrieving photos
+      and videos from the aircraft in QuickTransfer mode.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:13:09+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: dji
+      series: mini 4 pro
+  kind: known_issue
+  domain: battery
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: Intelligent Flight Battery release tabs
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Mini 4 Pro Intelligent Flight Battery release tabs break after a few flights
+      body: On Grey Arrows Drone Club, an owner reports the battery release tabs snapped after two flights;
+        DJI replaced the battery under warranty. Other members describe the tabs as a design weakness
+        with brittle plastic.
+      advice: The battery's release tabs are fragile and can snap during normal removal. DJI replaced
+        them under warranty in this case, but a broken tab can make a battery unusable, so handle removal
+        gently.
+    tr:
+      title: Mini 4 Pro Intelligent Flight Battery serbest bırakma tırnakları birkaç uçuştan sonra kırılıyor
+      body: Grey Arrows Drone Club'da bir sahip, pil serbest bırakma tırnaklarının iki uçuştan sonra kırıldığını
+        bildiriyor; DJI pili garanti kapsamında değiştirdi. Diğer üyeler tırnakları kırılgan plastikten
+        yapılmış bir tasarım zayıflığı olarak tanımlıyor.
+      advice: Pilin serbest bırakma tırnakları kırılgandır ve normal çıkarma sırasında kırılabilir. DJI
+        bu durumda bunları garanti kapsamında değiştirdi, ancak kırık bir tırnak pili kullanılamaz hale
+        getirebilir, bu yüzden çıkarırken dikkatli olun.
+  evidence:
+  - url: https://greyarro.ws/t/broken-tabs-on-dji-mini-4-pro-batteries-replaced-under-warranty/103887/4
+    quote: Bought new DJI mini 4 pro intelligent battery after two flights tags broke
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:12:29+00:00'

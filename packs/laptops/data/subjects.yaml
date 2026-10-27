@@ -1,0 +1,66 @@
+# Subjects — the things this pack knows about.
+#
+# `identity` carries exactly the keys `pack.toml` declares for the
+# kind: that dictionary is hashed to the subject id.
+- kind: product
+  label: MacBook Air M2
+  identity:
+    brand: apple
+    series: macbook air m2
+  aliases:
+  - MacBook Air 13 M2
+  - A2681
+- kind: product
+  label: IdeaPad 5i
+  identity:
+    brand: lenovo
+    series: ideapad 5i
+  aliases:
+  - IdeaPad 5i 2-in-1
+- kind: product
+  label: ZenBook 13 OLED
+  identity:
+    brand: asus
+    series: zenbook 13 oled
+  aliases:
+  - UM325
+- kind: product
+  label: XPS 13
+  identity:
+    brand: dell
+    series: xps 13
+  aliases:
+  - XPS 13 9350
+  - XPS 13 7390
+- kind: product
+  label: HP Pavilion 15
+  identity:
+    brand: hp
+    series: pavilion 15
+  aliases:
+  - 15-ef2729wm
+- kind: product
+  label: HP Envy x360
+  identity:
+    brand: hp
+    series: envy x360
+- kind: product
+  label: ThinkPad T14
+  identity:
+    brand: lenovo
+    series: thinkpad t14
+  aliases:
+  - T14 Gen1
+  - T14 Gen5
+- kind: product
+  label: Monster Abra A7
+  identity:
+    brand: monster
+    series: abra a7
+  aliases:
+  - Abra A7 v13.2.4
+- kind: product
+  label: Casper Nirvana C550
+  identity:
+    brand: casper
+    series: nirvana c550

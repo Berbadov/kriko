@@ -1,0 +1,82 @@
+lineup:
+- Arçelik A 710 B Prestige
+- Arçelik A 710 I Prestige
+- Arçelik A 600 B Star
+- Arçelik 6667 WF I
+- Arçelik 62113 I WF
+- Arçelik 6551 HI
+- Beko B 600 Classic
+- Beko B 710 Elite
+- Beko DIS15022
+- Bosch SMS26DW00T
+- Bosch SBV6ZCX16E
+- Bosch S297TCX00E
+- Bosch SHE68T56UC
+- Bosch SHP65T56UC
+- Siemens SN65ZX07CE
+- Siemens SN55ZS07CE
+- Siemens SN23HW60CE
+- Samsung DW60DG540FWQ
+- Samsung DW8-R5061US/AA
+- Samsung DW90F89T0UMTAA
+- Miele G7xxx
+covered:
+- ar elik 62113 i wf
+- ar elik 6551 hi
+- ar elik 6667 wf i
+- ar elik a 600 b star
+- ar elik a 710 b prestige
+- beko b 600 classic
+- beko b 710 elite
+- beko dis15022
+- bosch she68t56uc
+- bosch shp65t56uc
+- bosch sms26dw00t
+- miele g7xxx
+- product brand arcelik series 62113iwf
+- product brand arcelik series 6551hi
+- product brand arcelik series 6667wfi
+- product brand arcelik series a600bstar
+- product brand arcelik series a710bprestige
+- product brand beko series b600classic
+- product brand beko series b710elite
+- product brand beko series dis15022
+- product brand bosch series she68t56uc
+- product brand bosch series shp65t56uc
+- product brand bosch series sms26dw00t
+- product brand miele series g7xxx
+- product brand samsung series dw60dg540fwq
+- product brand samsung series dw8r5061usaa
+- product brand samsung series dw90f89t0umtaa
+- product brand siemens series sn23hw60ce
+- product brand siemens series sn55zs07ce
+- product brand siemens series sn65zx07ce
+- samsung dw60dg540fwq
+- samsung dw8 r5061us aa
+- samsung dw90f89t0umtaa
+- siemens sn23hw60ce
+- siemens sn55zs07ce
+- siemens sn65zx07ce
+uncovered:
+- Arçelik A 710 I Prestige
+- Bosch SBV6ZCX16E
+- Bosch S297TCX00E
+note: Lineup names the best-selling freestanding/solo dishwashers named in Turkish
+  retail listings (Hepsiburada), Euromonitor Turkey, and European market/test reports
+  (BSH/Stiftung Warentest, Tudatos Vásárlók). Subjects cover the models for which
+  owner, service or official evidence was found; several lineup models (e.g. Bosch
+  SBV6ZCX16E, S297TCX00E, Siemens SN55ZS07CE, Samsung DW90F89T0UMTAA) currently carry
+  no claims and are an open gap.
+out_of_scope:
+- Altus
+- Hoover
+- Whirlpool
+- Electrolux
+- Neff
+- Gaggenau
+- Constructa
+- Haier
+- LG
+- KitchenAid
+- Profilo
+quarantined: []

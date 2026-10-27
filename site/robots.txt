@@ -3,3 +3,4 @@ Disallow: /tools/
 Allow: /
 
 Sitemap: https://kriko.cc/sitemap.xml
+Sitemap: https://kriko.cc/sitemap-problems.xml
