@@ -13,6 +13,15 @@ choose, and a paid provider bills your own account.
 [Browser extension](https://chromewebstore.google.com/detail/kriko/bdifnaggafjokndlpjgmlfappcoehdjb) ·
 [Website](https://kriko.cc)
 
+<p align="center">
+  <a href="https://kriko.cc/guide/"><picture>
+    <source media="(prefers-color-scheme: dark)" srcset="site/assets/examples/hero-dark.webp">
+    <img src="site/assets/examples/hero-light.webp" width="640" alt="The Kriko panel open beside an invented e-bike listing. It lists four things to check, each with its source.">
+  </picture></a>
+  <br>
+  <sub>An invented e-bike in the real panel. <a href="https://kriko.cc/#film">Watch the 28-second film</a> · <a href="https://kriko.cc/guide/">How to use it, step by step</a></sub>
+</p>
+
 0.3.7 makes the Kriko Agent size its search to the product before it goes out,
 so a car with faults in six systems is no longer reported from one. The
 companion extension is 0.5.0, a quieter panel with Compare inside it, and mobile
