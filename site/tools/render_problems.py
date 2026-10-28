@@ -38,6 +38,7 @@ import tempfile
 import tomllib
 import zlib
 from pathlib import Path
+from urllib.parse import quote
 
 import yaml
 
@@ -94,6 +95,9 @@ UI = {
         "cta_h": "Check the one you are about to buy",
         "cta_p": "Kriko reads a listing and tells you which of these apply to that exact product. It runs on your computer, needs no account and is free.",
         "cta_b": "Get Kriko",
+        "phone_p": "Reading this on a phone? Kriko runs on a Windows computer.",
+        "phone_a": "Email yourself the link",
+        "phone_subject": "Kriko for my computer",
         "note": "These reports come from the pages linked under each item: owner forums, repair guides and workshops. They are not a diagnosis of any one unit, and a careful check of the one you are buying still applies.",
         "licence": "Text from the Kriko {name} catalog, version {version}, under the {license} license.",
         "hub_title": "Known problems, by product and part",
@@ -149,6 +153,9 @@ UI = {
         "cta_h": "Satın alacağınız ürünü bu listeyle karşılaştırın",
         "cta_p": "Kriko bir ilanı okur ve bu sorunlardan hangilerinin o ürüne uyduğunu söyler. Bilgisayarınızda çalışır, hesap gerektirmez ve ücretsizdir.",
         "cta_b": "Kriko'yu indir",
+        "phone_p": "Bunu telefondan mı okuyorsunuz? Kriko bir Windows bilgisayarda çalışır.",
+        "phone_a": "Bağlantıyı kendinize e-postalayın",
+        "phone_subject": "Kriko'yu bilgisayarıma kuracağım",
         "note": "Bu maddeler, her birinin altında bağlantısı verilen sayfalardan derlenmiştir: kullanıcı forumları, onarım rehberleri ve servisler. Belirli bir ürünün teşhisi değildir; satın alacağınız ürünü dikkatle kontrol etmeniz yine de gerekir.",
         "licence": "Metin, Kriko {name} kataloğundan (sürüm {version}) alınmıştır, {license} lisansıyla.",
         "hub_title": "Bilinen sorunlar: ürün ve parça bazında",
@@ -317,6 +324,20 @@ def read_catalog(path: Path) -> dict:
 
 def _e(text) -> str:
     return html.escape(str(text), quote=True)
+
+
+def _handoff(ui: dict) -> str:
+    """A mailto: link that sends the reader the install page, for a phone that cannot run Kriko.
+
+    Plain HTML on purpose: these pages run no script, and the site sends nothing anywhere."""
+    return _e(f'mailto:?subject={quote(ui["phone_subject"])}&body={quote(ORIGIN + ui["get"], safe="")}')
+
+
+def _cta(ui: dict) -> str:
+    """The closing call to action of every page. `.handoff` shows on touch screens only (styles.css)."""
+    return (f'<div class="short"><h2>{_e(ui["cta_h"])}</h2><p>{_e(ui["cta_p"])}</p>'
+            f'<p><a class="button" href="{ui["get"]}">{_e(ui["cta_b"])}</a></p>'
+            f'<p class="handoff">{_e(ui["phone_p"])} <a href="{_handoff(ui)}">{_e(ui["phone_a"])}</a></p></div>')
 
 
 ORGANISATION = {"@type": "Organization", "name": "Kriko", "url": f"{ORIGIN}/"}
@@ -542,8 +563,7 @@ def _subject_page(catalog: dict, entry: dict, subject: dict, lang: str, claims: 
             f'      <h1>{icon(entry["icon"], "ico big")}{_e(ui["title"].format(label=label))}</h1>\n'
             f'      <p class="lead">{_e(ui["lead"].format(n=len(claims)))}</p>\n'
             + risk + glance + "\n".join(sections) + "\n" + fits + _sponsored(lang, sponsors, entry["catalog_slug"]) + more +
-            f'      <div class="short"><h2>{_e(ui["cta_h"])}</h2><p>{_e(ui["cta_p"])}</p>'
-            f'<p><a class="button" href="{ui["get"]}">{_e(ui["cta_b"])}</a></p></div>\n'
+            f'      {_cta(ui)}\n'
             f'      <p class="fine">{_e(ui["note"])}</p>\n'
             f'      <p class="fine">{_e(ui["licence"].format(name=catalog["name"], version=catalog["version"], license=catalog["license"]))}</p>')
     description = ui["desc"].format(label=label, n=len(claims), top=top)
@@ -617,8 +637,7 @@ def _safety_page(lang: str, entries: list[dict], css: str, have: set[str]) -> st
     body = (f'      <p class="crumb"><a href="{ui["prefix"]}/problems/">{_e(ui["crumb"])}</a></p>\n'
             f'      <h1>{icon("flame", "ico big hazard")}{_e(ui["safety_title"])}</h1>\n      <p class="lead">{_e(ui["safety_lead"])}</p>\n'
             f'      <section class="serious">\n{sections}      </section>\n'
-            f'      <div class="short"><h2>{_e(ui["cta_h"])}</h2><p>{_e(ui["cta_p"])}</p>'
-            f'<p><a class="button" href="{ui["get"]}">{_e(ui["cta_b"])}</a></p></div>\n'
+            f'      {_cta(ui)}\n'
             f'      <p class="fine">{_e(ui["note"])}</p>')
     schema = (_breadcrumbs([(ui["crumb"], f'{ui["prefix"]}/problems/'), (ui["safety_title"], path)]),
               _collection(lang, name=ui["safety_title"], description=ui["safety_desc"], path=path,
@@ -665,8 +684,7 @@ def _category_page(lang: str, items: list[dict], css: str, have: set[str], spons
             f'      <p class="lead">{_e(ui["cat_lead"].format(n=len(items)))}</p>\n'
             + _safety_first(lang, items, ui["serious_in"].format(name=name), 3)
             + "\n".join(sections) + "\n" + _sponsored(lang, sponsors, first["catalog_slug"]) +
-            f'      <div class="short"><h2>{_e(ui["cta_h"])}</h2><p>{_e(ui["cta_p"])}</p>'
-            f'<p><a class="button" href="{ui["get"]}">{_e(ui["cta_b"])}</a></p></div>\n'
+            f'      {_cta(ui)}\n'
             f'      <p class="fine">{_e(ui["note"])}</p>')
     title, description = ui["cat_title"].format(name=name), ui["cat_desc"].format(n=len(items), name=name)
     schema = (_breadcrumbs([(ui["crumb"], f'{ui["prefix"]}/problems/'), (name, path)]),
@@ -695,8 +713,7 @@ def _hub_page(lang: str, entries: list[dict], css: str) -> str:
     body = (f'      <h1>{_e(ui["hub_title"])}</h1>\n      <p class="lead">{_e(ui["hub_lead"])}</p>\n'
             + _safety_first(lang, entries, ui["serious_h"], SAFETY_FIRST, everything=True) +
             f'      <ul class="cards">{"".join(cards)}</ul>\n'
-            f'      <div class="short"><h2>{_e(ui["cta_h"])}</h2><p>{_e(ui["cta_p"])}</p>'
-            f'<p><a class="button" href="{ui["get"]}">{_e(ui["cta_b"])}</a></p></div>\n'
+            f'      {_cta(ui)}\n'
             f'      <p class="fine">{_e(ui["note"])}</p>')
     schema = (_collection(lang, name=ui["hub_title"], description=ui["hub_desc"], path=path,
                           items=[(_category_name(items[0], lang), f'{ui["prefix"]}/problems/{slug}/')
