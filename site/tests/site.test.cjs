@@ -253,11 +253,16 @@ test('the menu opens and closes on a narrow screen, and the pages work without i
   const { document } = dom.window;
   const toggle = document.querySelector('.menu-toggle');
   const nav = document.getElementById('main-nav');
+  assert.ok(document.documentElement.classList.contains('menu-ready'));
   assert.equal(toggle.getAttribute('aria-expanded'), 'false');
   toggle.click();
   assert.equal(toggle.getAttribute('aria-expanded'), 'true');
   assert.ok(nav.classList.contains('is-open'));
   document.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Escape' }));
+  assert.equal(toggle.getAttribute('aria-expanded'), 'false');
+  assert.equal(document.activeElement, toggle);
+  toggle.click();
+  document.querySelector('main').dispatchEvent(new dom.window.Event('pointerdown', { bubbles: true }));
   assert.equal(toggle.getAttribute('aria-expanded'), 'false');
   assert.ok(!/<script(?![^>]*\bsrc=)/.test(read(page.file)), 'the page carries no inline script');
   assert.ok(document.querySelector('.faq details'), 'the questions are details elements, so they work without script');

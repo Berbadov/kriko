@@ -13,7 +13,17 @@
   };
   toggle.addEventListener('click', () => set(!nav.classList.contains('is-open')));
   nav.addEventListener('click', (event) => { if (event.target.closest('a')) set(false); });
-  document.addEventListener('keydown', (event) => { if (event.key === 'Escape') set(false); });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && nav.classList.contains('is-open')) {
+      set(false);
+      toggle.focus();
+    }
+  });
+  document.addEventListener('pointerdown', (event) => {
+    if (!nav.contains(event.target) && !toggle.contains(event.target)) set(false);
+  });
+  // Collapse only once the controls work. Without script the links stay visible.
+  document.documentElement.classList.add('menu-ready');
 })();
 
 // A film is a GIF, and a GIF cannot be paused, so pausing swaps in its still. The markup already
