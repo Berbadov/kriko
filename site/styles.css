@@ -209,6 +209,9 @@ h2 { font-size: clamp(2.5rem, 5.4vw, 4.2rem); max-width: 14em; }
 .problems .check { color: var(--ink); }
 .problems .src { font-size: .95rem; overflow-wrap: anywhere; }
 .problems .short .button { margin-top: 4px; }
+/* A phone cannot run Kriko, so only a touch screen is offered a way to carry the link to a computer. */
+.handoff { display: none; }
+@media (pointer: coarse) { .handoff { display: block; margin-top: 16px; } }
 .problems .cards { list-style: none; padding: 0; margin: 24px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }
 .problems .cards li { margin: 0; max-width: none; }
 .problems .card { display: block; height: 100%; padding: 16px 18px; border: 1px solid var(--line); border-radius: 4px; background: var(--soft); color: var(--ink); text-decoration: none; }
