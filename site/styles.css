@@ -294,9 +294,13 @@ h2 { font-size: clamp(2.5rem, 5.4vw, 4.2rem); max-width: 14em; }
 
 @media (max-width: 760px) {
   body { font-size: 1.125rem; }
-  .menu-toggle { display: inline-block; }
-  .main-nav { display: none; position: absolute; left: 0; right: 0; top: 100%; flex-direction: column; align-items: stretch; gap: 0; margin: 0; padding: 8px var(--gutter) 20px; background: var(--bg); border-bottom: 1px solid var(--line); }
-  .main-nav.is-open { display: flex; }
+  .topbar { position: static; }
+  html.menu-ready .topbar { position: sticky; }
+  .bar { flex-wrap: wrap; }
+  .main-nav { display: flex; flex-basis: 100%; flex-direction: column; align-items: stretch; gap: 0; margin: 0; padding: 8px 0 20px; background: var(--bg); border-bottom: 1px solid var(--line); }
+  html.menu-ready .menu-toggle { display: inline-block; }
+  html.menu-ready .main-nav { display: none; position: absolute; left: 0; right: 0; top: 100%; padding-inline: var(--gutter); max-height: calc(100dvh - 68px); overflow-y: auto; }
+  html.menu-ready .main-nav.is-open { display: flex; }
   .main-nav a:not(.button) { padding: 14px 0; border-bottom: 1px solid var(--line); }
   .language-switch { align-self: flex-start; margin: 14px 0; }
   .main-nav .button { justify-content: center; margin-top: 8px; }
