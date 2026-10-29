@@ -92,6 +92,12 @@ Measured spend includes conversation work where usage is reported; unpriced call
 remain explicitly incomplete. Provider bills can include work the app could not
 measure, particularly an interrupted request.
 
+On the **Usage** page, **Count me as using Kriko** is an optional, off-by-default
+anonymous daily ping (`app/presence.py`): once a day it sends a random install id
+and the app version, and nothing else — no question, no product, no page, no key.
+With no endpoint configured, nothing is ever sent. See the
+[privacy policy](https://kriko.cc/privacy/).
+
 **More → Logs** shows every job's steps in order with their timing: the words
 searched, each page and whether it was read, every agent call (prompt and reply
 size, tokens, cost, which agent and model), each retry and why, each verdict and

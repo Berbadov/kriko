@@ -40,6 +40,9 @@ CLASSIFICATION_PROVIDER = "classification_provider"
 #: off unless "1", and the pool as addresses without credentials, one per line.
 PROXY_ENABLED = "proxy_enabled"
 PROXY_POOL = "proxy_pool"
+#: The reader's opt-in to the anonymous daily ping (`app/presence.py`): "1" is
+#: on, unset or empty is off, which is how every installation starts.
+PRESENCE_ENABLED = "presence_enabled"
 #: How an agent is run: `auto` (a resident worker where the agent has a
 #: persistent protocol, else a process), `persistent` (require it) or `exec`.
 #: It applies to every agent. `codex_transport` is the name it had while only
@@ -326,7 +329,8 @@ KEYS = (HARNESS, MODEL, SEARCH, SEARCH_FALLBACK, AGENT_ORDER, *ROLE_KEYS,
         LLM_BASE_URL, *RESEARCH_KEYS,
         RUN_CONCURRENCY, CHAT_PRODUCT_ONLY, *KRIKO_AGENT_TUNING_KEYS,
         INFO_SENSITIVITY, AGENT_TRANSPORT, CODEX_TRANSPORT,
-        CLASSIFICATION_PROVIDER, PROXY_ENABLED, PROXY_POOL)
+        CLASSIFICATION_PROVIDER, PROXY_ENABLED, PROXY_POOL,
+        PRESENCE_ENABLED)
 
 
 def chat_product_only(conn) -> bool:
