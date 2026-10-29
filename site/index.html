@@ -17,8 +17,8 @@
   <meta property="og:image:alt" content="The Kriko panel open beside an invented e-bike listing, with the headline: The listing tells half the story.">
   <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" href="assets/icon-32.png">
-  <link rel="stylesheet" href="styles.css?v=e2fab4efd728">
-  <script src="script.js?v=b29e79b52961" defer></script>
+  <link rel="stylesheet" href="styles.css?v=a7f7eaeacad5">
+  <script src="script.js?v=4d9ce6d3e172" defer></script>
   <link rel="canonical" href="https://kriko.cc/">
   <link rel="alternate" href="https://kriko.cc/" hreflang="en">
   <link rel="alternate" href="https://kriko.cc/tr/" hreflang="tr">
@@ -30,6 +30,20 @@
     <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12m-5-5 5 5 5-5M5 17v4h14v-4"/></symbol>
     <symbol id="i-external" viewBox="0 0 24 24"><path d="M14 4h6v6m0-6L10 14M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></symbol>
     <symbol id="i-check" viewBox="0 0 24 24"><path d="M4 12.5 9.5 18 20 6.5"/></symbol>
+    <symbol id="i-source" viewBox="0 0 24 24"><path d="M10.5 13.5a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1.7 1.7"/><path d="M13.5 10.5a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1.7-1.7"/></symbol>
+    <symbol id="i-local" viewBox="0 0 24 24"><path d="M3.5 5h17a.5.5 0 0 1 .5.5v10a.5.5 0 0 1-.5.5h-17a.5.5 0 0 1-.5-.5v-10A.5.5 0 0 1 3.5 5Z"/><path d="m9 10.5 2 2 4-4"/><path d="M9 20h6M12 16v4"/></symbol>
+    <symbol id="i-open" viewBox="0 0 24 24"><path d="M8 11V7.5a4 4 0 0 1 7.7-1.5"/><path d="M5.5 11h13v9h-13z"/></symbol>
+    <symbol id="i-page" viewBox="0 0 24 24"><path d="M6 3.5h7.5L18 8v12.5H6Z"/><path d="M13.5 3.5V8H18"/><path d="M9.5 12.5h5M9.5 16h5"/></symbol>
+    <symbol id="i-read" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 4.5 4.5"/><path d="M8 10.5h5M10.5 8v5"/></symbol>
+    <symbol id="i-compare" viewBox="0 0 24 24"><path d="m8 7-4 5 4 5M16 7l4 5-4 5M4 12h16"/></symbol>
+    <symbol id="i-catalog" viewBox="0 0 24 24"><path d="m12 3.5 8.5 4.5L12 12.5 3.5 8Z"/><path d="m3.5 13 8.5 4.5 8.5-4.5"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2Z"/></symbol>
+    <symbol id="i-add" viewBox="0 0 24 24"><path d="M4.5 4.5h15v15h-15z"/><path d="M12 9.5v5M9.5 12h5"/></symbol>
+    <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.5"/><path d="M12 3v3.5M12 17.5V21M3 12h3.5M17.5 12H21"/></symbol>
+    <symbol id="i-desktop" viewBox="0 0 24 24"><path d="M3.5 5h17a.5.5 0 0 1 .5.5v11a.5.5 0 0 1-.5.5h-17a.5.5 0 0 1-.5-.5v-11A.5.5 0 0 1 3.5 5Z"/><path d="M9 21h6M12 17v4"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24"><path d="M8 3.5h8A1.5 1.5 0 0 1 17.5 5v14a1.5 1.5 0 0 1-1.5 1.5H8A1.5 1.5 0 0 1 6.5 19V5A1.5 1.5 0 0 1 8 3.5Z"/><path d="M11 17.5h2"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h16m-6-6 6 6-6 6"/></symbol>
   </svg>
 
   <header class="topbar">
@@ -79,11 +93,18 @@
     </section>
 
     <section class="promises" aria-label="What Kriko promises">
-      <ul class="wrap promise-list">
-        <li>A source beside every finding</li>
-        <li>Your research stays on your computer</li>
-        <li>Free and open source</li>
-      </ul>
+      <div class="wrap">
+        <ul class="promise-list">
+          <li><svg class="icon" aria-hidden="true"><use href="#i-source"/></svg><span>A source beside every finding</span></li>
+          <li><svg class="icon" aria-hidden="true"><use href="#i-local"/></svg><span>Your research stays on your computer</span></li>
+          <li><svg class="icon" aria-hidden="true"><use href="#i-open"/></svg><span>Free and open source</span></li>
+        </ul>
+        <ul class="stats">
+          <li><span class="stat">0</span><span>accounts to create</span></li>
+          <li><span class="stat">100%</span><span>of your research on your machine</span></li>
+          <li><span class="stat">MIT</span><span>license for the whole engine</span></li>
+        </ul>
+      </div>
     </section>
 
     <section class="section film" id="film">
@@ -109,7 +130,7 @@
         <ol class="steps">
           <li class="step">
             <div class="step-copy">
-              <span class="step-number">01</span>
+              <div class="step-head"><span class="step-number">01</span><span class="glyph" aria-hidden="true"><svg class="icon"><use href="#i-page"/></svg></span></div>
               <h3>Open a product page.</h3>
               <p>Kriko reads the page on your computer and looks that exact product up in your catalogs. Nothing leaves your computer.</p>
             </div>
@@ -120,7 +141,7 @@
           </li>
           <li class="step">
             <div class="step-copy">
-              <span class="step-number">02</span>
+              <div class="step-head"><span class="step-number">02</span><span class="glyph" aria-hidden="true"><svg class="icon"><use href="#i-read"/></svg></span></div>
               <h3>Read what to check.</h3>
               <p>Each finding says how serious it is, how well it is supported and what to ask. Open one to see its source.</p>
             </div>
@@ -131,7 +152,7 @@
           </li>
           <li class="step">
             <div class="step-copy">
-              <span class="step-number">03</span>
+              <div class="step-head"><span class="step-number">03</span><span class="glyph" aria-hidden="true"><svg class="icon"><use href="#i-compare"/></svg></span></div>
               <h3>Compare, then decide.</h3>
               <p>Add the products you are torn between. The panel counts what is known to go wrong with each, and the app lines them up side by side.</p>
             </div>
@@ -226,17 +247,26 @@
       </div>
     </section>
 
+    <section class="statement">
+      <div class="wrap">
+        <p class="statement-line">A listing is written to sell.</p>
+        <p class="statement-line accent">Kriko is built to check.</p>
+      </div>
+    </section>
+
     <section class="section" id="catalogs">
       <div class="wrap two split">
         <div class="split-copy">
           <div>
             <p class="label"><span class="index">04</span>Catalogs</p>
+            <span class="glyph" aria-hidden="true"><svg class="icon"><use href="#i-catalog"/></svg></span>
             <h2>Know the model before you buy.</h2>
             <p>A catalog is one product category, written down with its sources. There are catalogs for cars, phones, laptops, TVs, game consoles, kitchen and laundry appliances and more, in English and Turkish. Install one from <strong>Catalogs</strong> in the app and lookups work offline.</p>
             <p class="fine">You do not need the app to read them: <a href="/problems/">browse the known problems by product and part</a>.</p>
           </div>
           <div>
             <p class="label"><span class="index">06</span>Quick look</p>
+            <span class="glyph" aria-hidden="true"><svg class="icon"><use href="#i-spark"/></svg></span>
             <h2>No catalog? Ask your agent.</h2>
             <p><strong>Quick look</strong> sends the agent you chose to research a product no catalog covers, and keeps the sources. It needs an internet connection. If it finds nothing, Kriko says so. It never says a product is fine.</p>
           </div>
@@ -300,14 +330,14 @@
         <p class="section-lead">New to Kriko? <a href="/guide/">The guide</a> shows each step as a short film.</p>
         <div class="get-grid">
           <ol class="setup">
-            <li><span class="step-number">01</span><div><h3>Install the app.</h3><p>Download the Windows installer and open Kriko. It needs no administrator rights. The first-start setup walks you through the rest.</p></div></li>
-            <li><span class="step-number">02</span><div><h3>Choose how to check.</h3><p>For offline lookups, open <strong>More → Catalogs → Find release catalogs</strong> and install a catalog. For online research, open <strong>More → Agents</strong>, choose an agent and press <strong>Check connection</strong>. Paid providers bill your own account; research works without a catalog.</p></div></li>
-            <li><span class="step-number">03</span><div><h3>Add Kriko to your browser.</h3><p>Install <a href="https://chromewebstore.google.com/detail/kriko/bdifnaggafjokndlpjgmlfappcoehdjb">Kriko from the Chrome Web Store</a> in Chrome, Edge or Brave. The store handles updates. Keep the desktop app running; the extension needs it to work.</p></div></li>
-            <li><span class="step-number">04</span><div><h3>Open a listing.</h3><p>Keep Kriko running, open a product page and press <span class="keys"><kbd>Alt</kbd> + <kbd>K</kbd></span> or the toolbar button. Confirm the model and variant, then open a finding and follow its source. No findings means a gap in coverage, not proof the product is trouble-free.</p></div></li>
+            <li><span class="step-number">01</span><div><span class="glyph" aria-hidden="true"><svg class="icon"><use href="#i-download"/></svg></span><h3>Install the app.</h3><p>Download the Windows installer and open Kriko. It needs no administrator rights. The first-start setup walks you through the rest.</p></div></li>
+            <li><span class="step-number">02</span><div><span class="glyph" aria-hidden="true"><svg class="icon"><use href="#i-catalog"/></svg></span><h3>Choose how to check.</h3><p>For offline lookups, open <strong>More → Catalogs → Find release catalogs</strong> and install a catalog. For online research, open <strong>More → Agents</strong>, choose an agent and press <strong>Check connection</strong>. Paid providers bill your own account; research works without a catalog.</p></div></li>
+            <li><span class="step-number">03</span><div><span class="glyph" aria-hidden="true"><svg class="icon"><use href="#i-add"/></svg></span><h3>Add Kriko to your browser.</h3><p>Install <a href="https://chromewebstore.google.com/detail/kriko/bdifnaggafjokndlpjgmlfappcoehdjb">Kriko from the Chrome Web Store</a> in Chrome, Edge or Brave. The store handles updates. Keep the desktop app running; the extension needs it to work.</p></div></li>
+            <li><span class="step-number">04</span><div><span class="glyph" aria-hidden="true"><svg class="icon"><use href="#i-target"/></svg></span><h3>Open a listing.</h3><p>Keep Kriko running, open a product page and press <span class="keys"><kbd>Alt</kbd> + <kbd>K</kbd></span> or the toolbar button. Confirm the model and variant, then open a finding and follow its source. No findings means a gap in coverage, not proof the product is trouble-free.</p></div></li>
           </ol>
           <div>
             <div class="download-card">
-              <h3>Kriko for Windows</h3>
+              <h3><span class="glyph" aria-hidden="true"><svg class="icon"><use href="#i-desktop"/></svg></span><span>Kriko for Windows</span></h3>
               <p>For 64-bit Windows. It installs for the current user and needs no administrator rights.</p>
               <a class="button" href="https://github.com/Berbadov/kriko/releases/latest/download/kriko-0.3.7-x86_64-setup.exe"><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg><span>Download the installer</span></a>
               <p class="fine">The installer is not code-signed yet, so Windows may show a SmartScreen warning. Choose More info, then Run anyway.</p>
@@ -316,7 +346,7 @@
               <p class="fine">Read the source on <a href="https://github.com/Berbadov/kriko">GitHub</a>.</p>
             </div>
             <div class="download-card">
-              <h3>Kriko for Android</h3>
+              <h3><span class="glyph" aria-hidden="true"><svg class="icon"><use href="#i-phone"/></svg></span><span>Kriko for Android</span></h3>
               <p>The agent on a phone: ask, photograph a listing, or scan the screen in front of you. English and Turkish. Test build for friends, direct APK.</p>
               <a class="button ghost" href="https://github.com/Berbadov/kriko/tree/main/kriko-mobile"><svg class="icon" aria-hidden="true"><use href="#i-external"/></svg><span>Get the APK and the access steps</span></a>
               <p class="fine">Android will warn that the app is not from the Play Store; that is expected for a direct APK. Not on Google Play yet.</p>
@@ -332,21 +362,34 @@
         <h2>Your data, the cost and the limits.</h2>
         <div class="faq">
           <details open>
-            <summary>Where does my research live?</summary>
+            <summary><span>Where does my research live?</span><svg class="icon chev" aria-hidden="true"><use href="#i-chevron"/></svg></summary>
             <p>On your computer. Catalogs, history, your shortlist and settings stay with you, and there is no account to create. Online research sends your question and the pages it read to the provider you choose. Read the <a href="/privacy/">privacy policy</a> for every case.</p>
           </details>
           <details>
-            <summary>What is the catch?</summary>
+            <summary><span>What is the catch?</span><svg class="icon chev" aria-hidden="true"><use href="#i-chevron"/></svg></summary>
             <p>Kriko is free and open source under the MIT license. Catalog lookups need no key. If you choose a paid AI provider for research, that provider bills your own account.</p>
           </details>
           <details>
-            <summary>Can I check new products too?</summary>
+            <summary><span>Can I check new products too?</span><svg class="icon chev" aria-hidden="true"><use href="#i-chevron"/></svg></summary>
             <p>Yes. New and used products both have problems that are easy to miss: owner reports, repair findings and concerns that only affect one variant. Quick look researches beyond your installed catalogs with your chosen agent.</p>
           </details>
           <details>
-            <summary>What if a concern is not confirmed?</summary>
+            <summary><span>What if a concern is not confirmed?</span><svg class="icon chev" aria-hidden="true"><use href="#i-chevron"/></svg></summary>
             <p>A report can point at something worth checking without proving a defect. Follow the pages behind it, compare the explanations and see what is still unanswered. You decide what the evidence means for your purchase.</p>
           </details>
+        </div>
+      </div>
+    </section>
+
+    <section class="cta" aria-label="Get Kriko">
+      <div class="wrap">
+        <div class="cta-panel">
+          <h2>Know what you are buying.</h2>
+          <p class="cta-lead">Install Kriko, open a listing and read what the listing does not say.</p>
+          <div class="actions cta-actions">
+            <a class="button" href="#get"><span>Get Kriko</span><svg class="icon icon-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+            <a class="button ghost" href="/guide/"><span>See Kriko in action</span></a>
+          </div>
         </div>
       </div>
     </section>
@@ -359,6 +402,7 @@
       <div>
         <a class="brand" href="/" aria-label="Kriko home"><picture><source srcset="assets/kriko-wordmark-white.svg" media="(prefers-color-scheme: dark)"><img src="assets/kriko-wordmark.svg" alt="Kriko" width="96" height="32"></picture></a>
         <p>A little research goes a long way.</p>
+        <p>© 2026 Kriko</p>
       </div>
       <nav aria-label="Footer">
         <a href="https://github.com/Berbadov/kriko"><span>GitHub</span><svg class="icon" aria-hidden="true"><use href="#i-external"/></svg></a>

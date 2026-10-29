@@ -223,5 +223,16 @@
   "Build it from source": "Kaynaktan derle",
   "Free and open source, no account": "Ücretsiz ve açık kaynak, hesap yok",
   "Catalogs work offline, no AI key": "Kataloglar çevrimdışı çalışır, yapay zekâ anahtarı gerekmez",
-  "<a href=\"#film\">Watch the 28-second demo</a> or <a href=\"#get\">follow the setup steps</a>": "<a href=\"#film\">28 saniyelik tanıtımı izle</a> ya da <a href=\"#get\">kurulum adımlarını takip et</a>"
+  "<a href=\"#film\">Watch the 28-second demo</a> or <a href=\"#get\">follow the setup steps</a>": "<a href=\"#film\">28 saniyelik tanıtımı izle</a> ya da <a href=\"#get\">kurulum adımlarını takip et</a>",
+  "accounts to create": "açılacak hesap",
+  "100%": "100%",
+  "of your research on your machine": "araştırman bilgisayarında",
+  "MIT": "MIT",
+  "license for the whole engine": "tüm motorun lisansı",
+  "A listing is written to sell.": "Bir ilan satmak için yazılır.",
+  "Kriko is built to check.": "Kriko kontrol etmek için yapıldı.",
+  "Know what you are buying.": "Ne aldığını bil.",
+  "Install Kriko, open a listing and read what the listing does not say.": "Kriko'yu kur, bir ilan aç ve ilanın söylemediğini oku.",
+  "See Kriko in action": "Kriko'yu çalışırken gör",
+  "© 2026 Kriko": "© 2026 Kriko"
 }
