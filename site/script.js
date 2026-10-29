@@ -61,6 +61,52 @@
   }
 })();
 
+// The hero's animated gradient field: a few slow-drifting radial blooms in the
+// app's blues on a canvas. Off entirely for reduced-motion readers, when the
+// tab is hidden, and when the canvas is not there (guide, problems pages).
+(() => {
+  const canvas = document.querySelector('.hero-canvas');
+  if (!canvas) return;
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  const dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const blooms = dark
+    ? ['#2447e6', '#5a7bff', '#16277e', '#7c93ff']
+    : ['#2447e6', '#7c93ff', '#a9bcff', '#dfe7ff'];
+  let w = 0, h = 0, raf = 0, t = Math.random() * 1000;
+  const resize = () => {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    w = canvas.clientWidth; h = canvas.clientHeight;
+    canvas.width = Math.max(1, Math.round(w * dpr));
+    canvas.height = Math.max(1, Math.round(h * dpr));
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  };
+  const draw = () => {
+    t += 0.0016;
+    ctx.clearRect(0, 0, w, h);
+    for (let i = 0; i < 4; i++) {
+      const x = w * (0.5 + 0.42 * Math.sin(t * (0.7 + i * 0.23) + i * 1.9));
+      const y = h * (0.5 + 0.4 * Math.cos(t * (0.55 + i * 0.17) + i * 2.6));
+      const r = Math.max(w, h) * (0.34 + 0.1 * Math.sin(t * 0.9 + i));
+      const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+      g.addColorStop(0, blooms[i] + '59');
+      g.addColorStop(0.55, blooms[i] + '1f');
+      g.addColorStop(1, blooms[i] + '00');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, w, h);
+    }
+  };
+  const loop = () => { draw(); raf = requestAnimationFrame(loop); };
+  resize();
+  window.addEventListener('resize', resize, { passive: true });
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) cancelAnimationFrame(raf);
+    else raf = requestAnimationFrame(loop);
+  });
+  raf = requestAnimationFrame(loop);
+})();
+
 // Scroll-in reveals and the header's shadow. Both are added as classes, so a
 // page without script (or a reader who asked for less motion) sees everything
 // at once and still. The hero animates on load through CSS alone.

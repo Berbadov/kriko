@@ -23,6 +23,10 @@
   --link: #1d3fd0;
   --sky: url("assets/sky/stage-light.webp");
   --band: url("assets/sky/band-light.webp");
+  /* The one signature gradient, Kriko's own blue going deep: used for the hero
+     canvas, the closing stripe band and the dark film section. Never anywhere else. */
+  --stripe: linear-gradient(90deg, #16277e 0%, #2447e6 34%, #5a7bff 62%, #a9bcff 84%, #dfe7ff 100%);
+  --stripe-dark: linear-gradient(90deg, #0a1230 0%, #16277e 30%, #2447e6 60%, #5a7bff 82%, #a9bcff 100%);
   --display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
   --sans: "Atkinson Hyperlegible Next", "Segoe UI", system-ui, -apple-system, sans-serif;
   --gutter: clamp(20px, 5vw, 56px);
@@ -40,6 +44,7 @@
     --link: #9db3ff;
     --sky: url("assets/sky/stage-dark.webp");
     --band: url("assets/sky/band-dark.webp");
+    --stripe: var(--stripe-dark);
   }
 }
 
@@ -94,11 +99,14 @@ kbd { white-space: nowrap; font: 600 .85em var(--sans); padding: .1em .45em; bor
 .main-nav .button { color: var(--on-accent); padding: 8px 18px; font-size: 1rem; }
 .main-nav .button:hover { color: var(--on-accent); }
 
-/* Hero */
-.hero { padding-block: clamp(44px, 7vw, 96px) clamp(44px, 6vw, 80px); }
-.hero-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, .8fr); gap: clamp(32px, 5vw, 64px); align-items: center; }
-h1 { font-size: clamp(3.4rem, 7vw, 6rem); line-height: .92; letter-spacing: -.01em; }
-h1 span { color: var(--accent); display: block; }
+/* Hero — full-viewport, with a slow animated gradient field behind the copy.
+   The canvas is painted by script.js; without script it is simply absent. */
+.hero { position: relative; overflow: hidden; min-height: calc(100svh - 72px); display: flex; align-items: center; padding-block: clamp(56px, 8vw, 110px) clamp(56px, 7vw, 96px); background: var(--bg); }
+.hero-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; opacity: .9; }
+.hero::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, color-mix(in srgb, var(--bg) 55%, transparent) 0%, transparent 34%, transparent 62%, var(--bg) 100%); pointer-events: none; }
+.hero-grid { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, .8fr); gap: clamp(32px, 5vw, 64px); align-items: center; }
+h1 { font-size: clamp(3.8rem, 8.4vw, 7.2rem); line-height: .9; letter-spacing: -.015em; }
+h1 span { background: var(--stripe); -webkit-background-clip: text; background-clip: text; color: transparent; display: block; }
 .lead { margin-top: 30px; max-width: 30em; font-size: 1.3125rem; line-height: 1.6; color: var(--muted); }
 .actions { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 38px; }
 .fine { margin-top: 20px; font-size: 1rem; line-height: 1.65; color: var(--muted); }
@@ -173,8 +181,15 @@ h2 { font-size: clamp(2.5rem, 5.4vw, 4.2rem); max-width: 14em; }
 .gallery.phones { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .gallery.phones .shot img { max-width: 240px; }
 
-/* A strip of the app's own sky between the halves of the page */
-.band { height: clamp(72px, 9vw, 120px); background: var(--band) center / cover; image-rendering: pixelated; border-block: 1px solid var(--line); }
+/* The signature closing stripe: the one gradient, as a band above the footer
+   area and as the film section's backdrop. */
+.band { height: clamp(10px, 1.2vw, 16px); background: var(--stripe); }
+.band.sky { height: clamp(72px, 9vw, 120px); background: var(--band) center / cover, var(--stripe); image-rendering: pixelated; }
+.section.film { background: #070a14; color: #f3f1ea; border-block: 1px solid #1c2340; }
+.section.film .label { color: #8fa0c8; }
+.section.film h2 { color: #f3f1ea; }
+.section.film figcaption { color: #8fa0c8; }
+.section.film .window img, .section.film .window video { border-color: #1c2340; box-shadow: 0 30px 80px -30px rgba(0, 0, 0, .8); }
 
 /* Install */
 .get-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: clamp(32px, 6vw, 80px); margin-top: clamp(28px, 4vw, 48px); align-items: start; }
@@ -318,6 +333,8 @@ h2 { font-size: clamp(2.5rem, 5.4vw, 4.2rem); max-width: 14em; }
 @media (max-width: 980px) {
   .gallery, .gallery.phones { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .gallery.phones .shot img { max-width: 300px; }
+  .hero { min-height: 0; }
+  .hero-canvas { opacity: .55; }
   .hero-grid, .get-grid, .two { grid-template-columns: minmax(0, 1fr); }
   .window-pair { grid-template-columns: minmax(0, 1fr); }
   .stage { max-width: 520px; }
