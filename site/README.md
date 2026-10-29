@@ -87,7 +87,12 @@ carry the claims, and the hand-written pages carry the entity.
 - **Problem pages** (built by `tools/render_problems.py`) already carry
   `BreadcrumbList`, `CollectionPage`/`ItemList` or `Article` with `dateModified`,
   hreflang pairs and a `lastmod` in `sitemap-problems.xml`; `tools/indexnow.py`
-  tells Bing and Yandex when they change. Nothing here duplicates that.
+  tells Bing and Yandex when they change. A product page's `Article` also names
+  its subject in `about` and its source pages in `citation`, and a `FAQPage`
+  answers the two questions a buyer types: what is known to go wrong with it, and
+  what to check before buying. Both answers come from the claims the page already
+  prints, so the schema cannot describe a finding the reader cannot see.
+  Nothing here duplicates the hand-written pages' schema.
 - **Nothing is dated by this tooling** on the hand-written pages, because a
   generated date is not the day a page was checked.
 

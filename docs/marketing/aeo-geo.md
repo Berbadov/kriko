@@ -46,6 +46,21 @@ Search was not the gap. `origin/main` already publishes, from
    which sites it works on, whether there is a Mac or phone app, what a catalog
    is, and whether an AI key is needed. These match the queries people actually
    type before they download.
+5. **A question and a source graph on every product page** (`render_problems.py`).
+   The 305 product pages are where a search for a specific model lands, and they
+   answered in prose only. Each now declares two things a machine can lift:
+
+   - its `Article` names the product in `about`, belongs to the `WebSite`, and
+     lists the source pages in `citation`, so an answer engine can follow the
+     evidence instead of quoting the catalog blind;
+   - a `FAQPage` answering *what is known to go wrong with it* and *what should
+     I check before buying it*, built from the claim titles and advice the page
+     already prints. The first answer stops at 600 characters on a whole claim
+     and says how many it left out; the second stops at 700 on a whole sentence.
+
+   No question is invented that the page does not answer, and the schema cannot
+   disagree with the visible text. A test reads one English and one Turkish
+   product page and holds the two together.
 
 ## Why not more
 
