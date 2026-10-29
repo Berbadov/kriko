@@ -17,8 +17,8 @@
   <meta property="og:image:alt" content="The Kriko panel open beside an invented e-bike listing, with the headline: The listing tells half the story.">
   <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" href="assets/icon-32.png">
-  <link rel="stylesheet" href="styles.css?v=8c2233bc1798">
-  <script src="script.js?v=f9001f42e998" defer></script>
+  <link rel="stylesheet" href="styles.css?v=53ee0ca7215f">
+  <script src="script.js?v=b406b7c6bd3f" defer></script>
   <link rel="canonical" href="https://kriko.cc/">
   <link rel="alternate" href="https://kriko.cc/" hreflang="en">
   <link rel="alternate" href="https://kriko.cc/tr/" hreflang="tr">
@@ -32,6 +32,7 @@
   </svg>
 
   <header class="topbar">
+    <div class="scroll-progress" aria-hidden="true"></div>
     <div class="wrap bar">
       <a class="brand" href="/" aria-label="Kriko home"><picture><source srcset="assets/kriko-wordmark-white.svg" media="(prefers-color-scheme: dark)"><img src="assets/kriko-wordmark.svg" alt="Kriko" width="96" height="32"></picture></a>
       <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="main-nav">Menu</button>
@@ -68,7 +69,7 @@
           <p class="fine"><a href="#film">Watch the 28-second demo</a> or <a href="#get">follow the setup steps</a>.</p>
           <p class="fine">The installer is not signed yet, so Windows may stop the first run with <strong>Windows protected your PC</strong>. Choose <strong>More info</strong>, then <strong>Run anyway</strong>.</p>
         </div>
-        <figure class="stage">
+        <figure class="stage" data-depth="0.06">
           <div class="stage-sky">
             <picture>
               <source srcset="assets/examples/ebike-dark.webp" media="(prefers-color-scheme: dark)">
@@ -81,11 +82,15 @@
     </section>
 
     <section class="promises" aria-label="What Kriko promises">
-      <ul class="wrap promise-list">
+      <div class="marquee"><ul class="wrap promise-list">
         <li>A source beside every finding</li>
         <li>Your research stays on your computer</li>
         <li>Free and open source</li>
-      </ul>
+      </ul><ul class="wrap promise-list" aria-hidden="true">
+        <li>A source beside every finding</li>
+        <li>Your research stays on your computer</li>
+        <li>Free and open source</li>
+      </ul></div>
     </section>
 
     <section class="section film" id="film">
@@ -114,7 +119,7 @@
               <h3>Open a product page.</h3>
               <p>Kriko reads the page on your computer and looks that exact product up in your catalogs. Nothing leaves your computer.</p>
             </div>
-            <picture class="shot wide">
+            <picture class="shot wide" data-depth="0.04">
               <source srcset="assets/examples/hero-dark.webp" media="(prefers-color-scheme: dark)">
               <img src="assets/examples/hero-light.webp" width="760" height="800" loading="lazy" alt="The Kriko panel open beside an invented e-bike listing. It lists four things to check.">
             </picture>
@@ -125,7 +130,7 @@
               <h3>Read what to check.</h3>
               <p>Each finding says how serious it is, how well it is supported and what to ask. Open one to see its source.</p>
             </div>
-            <picture class="shot">
+            <picture class="shot" data-depth="0.05">
               <source srcset="assets/examples/claim-open-dark.webp" media="(prefers-color-scheme: dark)">
               <img src="assets/examples/claim-open-light.webp" width="400" height="768" loading="lazy" alt="One finding opened. It explains that the battery loses range after two winters, names the source and suggests what to ask the seller.">
             </picture>
@@ -136,7 +141,7 @@
               <h3>Compare, then decide.</h3>
               <p>Add the products you are torn between. The panel counts what is known to go wrong with each, and the app lines them up side by side.</p>
             </div>
-            <picture class="shot">
+            <picture class="shot" data-depth="0.05">
               <source srcset="assets/examples/compare-dark.webp" media="(prefers-color-scheme: dark)">
               <img src="assets/examples/compare-light.webp" width="400" height="768" loading="lazy" alt="The Kriko panel with a shortlist of three invented e-bikes. Each row counts its serious, to-check and minor findings.">
             </picture>
@@ -187,7 +192,7 @@
         <ul class="gallery">
           <li>
             <p class="tag">New · Robot vacuum</p>
-            <picture class="shot">
+            <picture class="shot" data-depth="0.05">
               <source srcset="assets/examples/vacuum-dark.webp" media="(prefers-color-scheme: dark)">
               <img src="assets/examples/vacuum-light.webp" width="400" height="768" loading="lazy" alt="The Kriko panel for an invented robot vacuum. Findings include a side-brush motor that fails and schedules that need a cloud account.">
             </picture>
@@ -196,7 +201,7 @@
           </li>
           <li>
             <p class="tag">Used · Phone</p>
-            <picture class="shot">
+            <picture class="shot" data-depth="0.05">
               <source srcset="assets/examples/phone-dark.webp" media="(prefers-color-scheme: dark)">
               <img src="assets/examples/phone-light.webp" width="400" height="768" loading="lazy" alt="The Kriko panel for an invented used phone. Findings include a fingerprint sensor that stops after a screen repair and battery health below 80 percent.">
             </picture>
@@ -205,7 +210,7 @@
           </li>
           <li>
             <p class="tag">Used · Washing machine</p>
-            <picture class="shot">
+            <picture class="shot" data-depth="0.05">
               <source srcset="assets/examples/washer-dark.webp" media="(prefers-color-scheme: dark)">
               <img src="assets/examples/washer-light.webp" width="400" height="768" loading="lazy" alt="The Kriko panel for an invented used washing machine. Findings include a drum bearing that grows loud and a door seal that grows mould.">
             </picture>
@@ -214,7 +219,7 @@
           </li>
           <li>
             <p class="tag">New · Cordless drill</p>
-            <picture class="shot">
+            <picture class="shot" data-depth="0.05">
               <source srcset="assets/examples/drill-dark.webp" media="(prefers-color-scheme: dark)">
               <img src="assets/examples/drill-light.webp" width="400" height="768" loading="lazy" alt="The Kriko panel for an invented cordless drill. Findings include battery contacts that overheat and a chuck that slips under load.">
             </picture>
@@ -241,7 +246,7 @@
             <p><strong>Quick look</strong> sends the agent you chose to research a product no catalog covers, and keeps the sources. It needs an internet connection. If it finds nothing, Kriko says so. It never says a product is fine.</p>
           </div>
         </div>
-        <picture class="shot">
+        <picture class="shot" data-depth="0.05">
           <source srcset="assets/examples/research-dark.webp" media="(prefers-color-scheme: dark)">
           <img src="assets/examples/research-light.webp" width="400" height="768" loading="lazy" alt="The research card for an invented air fryer. A quick look found three things to know, with the number of pages read.">
         </picture>
@@ -255,28 +260,28 @@
         <p class="section-lead">The Android app is the agent alone: ask about a product, photograph a listing, or let the floating scanner read the page you are on. Every answer cites the pages it read, in English or Turkish. It runs on API keys, so there is no agent to install on the phone.</p>
         <ul class="gallery phones">
           <li>
-            <picture class="shot">
+            <picture class="shot" data-depth="0.05">
               <img src="assets/mobile/1-ask.webp" width="360" height="800" loading="lazy" alt="The Kriko phone app's ask screen in Turkish, with example questions: what can go wrong with a Bosch GSB 600 drill, and is a used Galaxy Buds2 Pro worth the price.">
             </picture>
             <h3>Ask</h3>
             <p>One question, in either language.</p>
           </li>
           <li>
-            <picture class="shot">
+            <picture class="shot" data-depth="0.05">
               <img src="assets/mobile/3-answer.webp" width="360" height="800" loading="lazy" alt="A Turkish answer about the Bosch GSB 600 drill, with checks to run and numbered sources [1] [2] [3] under it.">
             </picture>
             <h3>Answer with sources</h3>
             <p>The numbered pages sit under the answer.</p>
           </li>
           <li>
-            <picture class="shot">
+            <picture class="shot" data-depth="0.05">
               <img src="assets/mobile/5-screenshot.webp" width="360" height="800" loading="lazy" alt="The app reading a photographed Samsung Galaxy Buds2 Pro listing in Turkish, with brand, product, model and price fields it recognised, each editable before research.">
             </picture>
             <h3>Read the listing</h3>
             <p>A photo becomes editable text first; you confirm before anything is researched.</p>
           </li>
           <li>
-            <picture class="shot">
+            <picture class="shot" data-depth="0.05">
               <img src="assets/mobile/8-light.webp" width="360" height="800" loading="lazy" alt="The Kriko phone app's ask screen in English on the light theme.">
             </picture>
             <h3>Dark, paper or white</h3>
