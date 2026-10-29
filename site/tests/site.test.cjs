@@ -19,6 +19,9 @@ const GUIDE = PAGES.slice(3, 5);
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const load = (page) => new JSDOM(read(page.file), { url: page.url }).window.document;
 const css = read('styles.css');
+// Every JSON-LD block a page carries, flattened to the nodes it declares.
+const graphOf = (page) => [...load(page).querySelectorAll('script[type="application/ld+json"]')]
+  .flatMap((script) => { const block = JSON.parse(script.textContent); return block['@graph'] || [block]; });
 
 test('every page declares its language, one heading, a description and its own address', () => {
   for (const page of PAGES) {
@@ -184,6 +187,80 @@ test('robots.txt names the sitemap, the sitemap lists exactly the pages that exi
   }
 });
 
+test('the home page tells an answer engine what Kriko is, with the questions a reader can open', () => {
+  for (const page of HOME) {
+    const d = load(page);
+    const graph = graphOf(page);
+    const ofType = (type) => graph.find((node) => node['@type'] === type);
+    const app = ofType('SoftwareApplication');
+    assert.ok(app, `${page.file} does not describe the app`);
+    assert.equal(app.name, 'Kriko');
+    assert.equal(app.applicationCategory, 'UtilitiesApplication');
+    assert.equal(app.offers.price, '0', `${page.file}: the app is not described as free`);
+    assert.equal(app.offers.priceCurrency, 'USD');
+    assert.equal(app.isAccessibleForFree, true);
+    assert.match(app.downloadUrl, /^https:\/\/github\.com\/Berbadov\/kriko\/releases\//, `${page.file}: the app names no installer`);
+    assert.ok(app.description.length > 40, `${page.file}: the app is not described`);
+    assert.equal(app.inLanguage, page.lang);
+    const org = ofType('Organization');
+    assert.equal(org.name, 'Kriko');
+    assert.deepEqual(org.sameAs, ['https://github.com/Berbadov/kriko']);
+    assert.ok(ofType('WebSite').inLanguage.includes(page.lang));
+    const faq = ofType('FAQPage');
+    assert.ok(faq, `${page.file} shows questions but declares no FAQPage`);
+    assert.deepEqual(faq.mainEntity.map((q) => q.name), [...d.querySelectorAll('.faq summary')].map((s) => s.textContent.trim()), `${page.file}: the declared questions are not the ones on the page`);
+    for (const question of faq.mainEntity) assert.ok(question.acceptedAnswer.text.length > 20, `${page.file}: ${question.name} has no answer`);
+  }
+});
+
+test('the guide tells an answer engine its steps, from the sections a reader scrolls through', () => {
+  for (const page of GUIDE) {
+    const d = load(page);
+    const how = graphOf(page).find((node) => node['@type'] === 'HowTo');
+    assert.ok(how, `${page.file} has no HowTo`);
+    const sections = [...d.querySelectorAll('.guide-step')];
+    assert.ok(sections.length > 2);
+    assert.equal(how.step.length, sections.length);
+    assert.deepEqual(how.step.map((step) => step.name), sections.map((s) => s.querySelector('h2').textContent.trim()));
+    assert.equal(how.inLanguage, page.lang);
+    for (const step of how.step) {
+      assert.ok(step.text.length > 20, step.name);
+      assert.match(step.url, /^https:\/\/kriko\.cc\/(tr\/)?guide\/#[a-z]+$/, step.name);
+    }
+  }
+});
+
+test('llms.txt says what Kriko is, links every catalog, and is what the tooling writes', () => {
+  const before = read('llms.txt');
+  try {
+    execFileSync(process.execPath, [path.join(root, 'tools/render_llms.cjs')], { stdio: 'pipe' });
+  } catch (error) {
+    assert.fail(`render_llms failed:\n${error.stderr}`);
+  }
+  const now = read('llms.txt');
+  if (now !== before) fs.writeFileSync(path.join(root, 'llms.txt'), before);
+  assert.equal(now, before, 'llms.txt is stale: run node site/tools/render_llms.cjs and commit the result');
+  assert.match(before, /^# Kriko\n\n> Kriko is a free, open-source/, 'llms.txt does not open with what Kriko is');
+  for (const link of ['https://kriko.cc/', 'https://kriko.cc/guide/', 'https://kriko.cc/privacy/', 'https://kriko.cc/tr/', 'https://kriko.cc/problems/safety/']) {
+    assert.ok(before.includes(`](${link})`), `llms.txt does not link ${link}`);
+  }
+  const hub = load({ file: 'problems/index.html', url: 'https://kriko.cc/problems/' });
+  for (const card of hub.querySelectorAll('.cards .card')) {
+    const url = new URL(card.getAttribute('href'), 'https://kriko.cc').href;
+    assert.ok(before.includes(`](${url})`), `llms.txt does not link ${url}`);
+  }
+});
+
+test('robots.txt lets the answer engines in and names the file written for them', () => {
+  const robots = read('robots.txt');
+  for (const bot of ['Googlebot', 'Bingbot', 'GPTBot', 'OAI-SearchBot', 'ChatGPT-User', 'ClaudeBot', 'Claude-SearchBot', 'PerplexityBot', 'Google-Extended']) {
+    assert.match(robots, new RegExp(`^User-agent: ${bot}$`, 'm'), `robots.txt does not name ${bot}`);
+  }
+  assert.match(robots, /^Allow: \/$/m, 'a named crawler is not allowed in');
+  assert.match(robots, /^Disallow: \/tools\/$/m);
+  assert.match(robots, /https:\/\/kriko\.cc\/llms\.txt/, 'robots.txt does not point at llms.txt');
+});
+
 test('the Turkish page is what the English page and the translations make', () => {
   const before = Object.fromEntries(PAGES.map((p) => [p.file, read(p.file)]));
   try {
@@ -264,7 +341,7 @@ test('the menu opens and closes on a narrow screen, and the pages work without i
   toggle.click();
   document.querySelector('main').dispatchEvent(new dom.window.Event('pointerdown', { bubbles: true }));
   assert.equal(toggle.getAttribute('aria-expanded'), 'false');
-  assert.ok(!/<script(?![^>]*\bsrc=)/.test(read(page.file)), 'the page carries no inline script');
+  assert.ok(!/<script(?![^>]*(?:\bsrc=|application\/ld\+json))/.test(read(page.file)), 'the page carries no inline script');
   assert.ok(document.querySelector('.faq details'), 'the questions are details elements, so they work without script');
 });
 
@@ -307,7 +384,7 @@ test('every film in the guide has a still, a size small enough to load, and a ca
     for (const a of d.querySelectorAll('.toc a')) {
       assert.ok(d.getElementById(a.getAttribute('href').slice(1)), `${page.file}: the contents name ${a.getAttribute('href')}, which is not there`);
     }
-    assert.ok(!/<script(?![^>]*\bsrc=)/.test(read(page.file)), `${page.file} carries an inline script`);
+    assert.ok(!/<script(?![^>]*(?:\bsrc=|application\/ld\+json))/.test(read(page.file)), `${page.file} carries an inline script`);
   }
 });
 

@@ -37,8 +37,11 @@ from another site.
 - `privacy/index.html`: the privacy policy. English only.
 - `404.html`: what an unknown address answers (Cloudflare Pages serves it with a 404
   status). It names its files from the root, because it answers at any depth.
-- `robots.txt` and `sitemap.xml`: add a new page to the sitemap, with its Turkish
-  twin as an alternate; a test fails when the sitemap and the pages disagree.
+- `robots.txt`: says who may read the site, including the answer engines by
+  name, and names both sitemaps. A test keeps the crawler rules and `llms.txt`
+  in place.
+- `sitemap.xml`: add a new page, with its Turkish twin as an alternate; a test
+  fails when the sitemap and the pages disagree.
 - `styles.css`, `script.js`: shared by every page. `script.js` runs the menu on a
   narrow screen and puts a pause button on each film in the guide.
 
@@ -46,15 +49,51 @@ After editing the English page, the stylesheet, the script or the translations:
 
 ```sh
 node site/tools/render-locales.cjs
+node site/tools/render_llms.cjs
 npm run test:site
 ```
 
 The renderer writes `tr/index.html` and `tr/guide/index.html`, puts a content hash
-on the stylesheet and script of every page, and fails with the list of texts that
-have no translation. A test fails if either Turkish page is stale. To give another
-page a Turkish version, add it to `PAGES` in `render-locales.cjs` and give it an
-`@meta:<name>` entry in `tr.json`. In a Turkish page a link to `/`, `/#place` or
-`/guide/` is sent to the Turkish version, and `/privacy/` stays English.
+on the stylesheet and script of every page, writes the structured data described
+below, and fails with the list of texts that have no translation. A test fails if
+either Turkish page is stale. To give another page a Turkish version, add it to
+`PAGES` in `render-locales.cjs` and give it an `@meta:<name>` entry in `tr.json`.
+In a Turkish page a link to `/`, `/#place` or `/guide/` is sent to the Turkish
+version, and `/privacy/` stays English.
+
+Run `render_llms.cjs` after `render_problems.py`: it reads the hub and the
+category pages that script writes, so it has nothing to say before they exist.
+
+## Being found
+
+A buyer's question is *what goes wrong with this car*, and an answer engine's
+job is to answer it. The site is built so both can: the generated problem pages
+carry the claims, and the hand-written pages carry the entity.
+
+- **Structured data** is written by `tools/schema.cjs`, which `render-locales.cjs`
+  calls. It reads the page a reader sees and declares what it says: on the home
+  page `Organization`, `WebSite`, `SoftwareApplication` (free, Windows, with the
+  installer the page already links) and a `FAQPage` whose questions are the
+  `<summary>` lines; on the guide a `HowTo` whose steps are its sections.
+  Because the page is the only input, the Turkish page gets Turkish statements
+  and no second copy can drift. Adding a question to the page adds it to the
+  schema; a test holds the two together. The block is marked
+  (`data-kriko-schema`), so a re-run replaces it instead of stacking another.
+- **`llms.txt`** is the plain-text map answer engines look for at the root:
+  what Kriko is, where the substance is, and how to cite it. `tools/render_llms.cjs`
+  builds it from `problems/index.html`, so a catalog that appears or disappears
+  changes the file. A test fails when it is stale. The catalog figures come from
+  the hub, not from a list kept here.
+- **Problem pages** (built by `tools/render_problems.py`) already carry
+  `BreadcrumbList`, `CollectionPage`/`ItemList` or `Article` with `dateModified`,
+  hreflang pairs and a `lastmod` in `sitemap-problems.xml`; `tools/indexnow.py`
+  tells Bing and Yandex when they change. Nothing here duplicates that.
+- **Nothing is dated by this tooling** on the hand-written pages, because a
+  generated date is not the day a page was checked.
+
+After a deploy, the one action that is not automatic is asking the search
+engines to look: `python site/tools/indexnow.py --send`. Search Console and Bing
+Webmaster Tools are the owner's accounts and are not part of this repository.
 
 ## The guide
 
