@@ -15,8 +15,8 @@
   <meta property="og:image:alt" content="Kriko paneli, uydurma bir e-bisiklet ilanının yanında açık; başlık: İlan, hikâyenin yarısını anlatır.">
   <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" href="../assets/icon-32.png">
-  <link rel="stylesheet" href="../styles.css?v=477d930103f7">
-  <script src="../script.js?v=2986ae109be7" defer=""></script>
+  <link rel="stylesheet" href="../styles.css?v=e2fab4efd728">
+  <script src="../script.js?v=b29e79b52961" defer=""></script>
   <link rel="canonical" href="https://kriko.cc/tr/">
   <link rel="alternate" href="https://kriko.cc/" hreflang="en">
   <link rel="alternate" href="https://kriko.cc/tr/" hreflang="tr">
@@ -27,6 +27,7 @@
   <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" width="0" height="0">
     <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12m-5-5 5 5 5-5M5 17v4h14v-4"></path></symbol>
     <symbol id="i-external" viewBox="0 0 24 24"><path d="M14 4h6v6m0-6L10 14M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"></path></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M4 12.5 9.5 18 20 6.5"></path></symbol>
   </svg>
 
   <header class="topbar">
@@ -35,15 +36,13 @@
       <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="main-nav">Menü</button>
       <nav class="main-nav" id="main-nav" aria-label="Ana gezinme">
         <a href="#how">Nasıl çalışır</a>
-        <a href="#app">Uygulama</a>
-        <a href="#examples">Örnekler</a>
+        <a href="#mobile">Telefon</a>
         <a href="/tr/guide/">Rehber</a>
         <a href="/tr/problems/">Bilinen sorunlar</a>
         <a href="#get">Kurulum</a>
-        <a href="#data">Sorular</a>
-        <span class="language-switch" role="group" aria-label="Dil"><a href="/" lang="en" hreflang="en">EN</a><a href="/tr/" lang="tr" hreflang="tr" aria-current="page">TR</a></span>
-        <a class="button small" href="#get">Kriko'yu indir</a>
       </nav>
+      <span class="language-switch" role="group" aria-label="Dil"><a href="/" lang="en" hreflang="en">EN</a><a href="/tr/" lang="tr" hreflang="tr" aria-current="page">TR</a></span>
+      <a class="button small bar-cta" href="#get">Kriko'yu indir</a>
     </div>
   </header>
 
@@ -59,10 +58,11 @@
             <a class="button ghost" href="https://chromewebstore.google.com/detail/kriko/bdifnaggafjokndlpjgmlfappcoehdjb">Tarayıcı uzantısını yükle</a>
             <a class="button ghost" href="https://github.com/Berbadov/kriko"><svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg><span>GitHub</span></a>
           </div>
-          <p class="fine">Windows uygulaması · Ücretsiz · Açık kaynak · Hesap gerekmez</p>
-          <p class="fine">Uzantı için Windows uygulamasının açık olması gerekir. Yüklü kataloglar yapay zekâ anahtarı olmadan çevrimdışı çalışır; çevrimiçi araştırma, bağlantısı kurulmuş bir ajan gerektirir ve sağlayıcı ücreti doğurabilir.</p>
-          <p class="fine"><a href="#film">28 saniyelik tanıtımı izle</a> ya da <a href="#get">kurulum adımlarını takip et</a>.</p>
-          <p class="fine">Yükleyici henüz imzalı değil; bu yüzden Windows ilk çalıştırmada <strong>Windows bilgisayarınızı korudu</strong> diyerek durdurabilir. <strong>Daha fazla bilgi</strong> (More info), ardından <strong>Yine de çalıştır</strong> (Run anyway) seç.</p>
+          <ul class="hero-points">
+            <li><svg class="icon" aria-hidden="true"><use href="#i-check"></use></svg><span>Ücretsiz ve açık kaynak, hesap yok</span></li>
+            <li><svg class="icon" aria-hidden="true"><use href="#i-check"></use></svg><span>Kataloglar çevrimdışı çalışır, yapay zekâ anahtarı gerekmez</span></li>
+            <li><svg class="icon" aria-hidden="true"><use href="#i-check"></use></svg><span><a href="#film">28 saniyelik tanıtımı izle</a> ya da <a href="#get">kurulum adımlarını takip et</a></span></li>
+          </ul>
         </div>
         <figure class="stage">
           <div class="stage-sky">
@@ -88,6 +88,7 @@
       <div class="wrap">
         <p class="label">Film</p>
         <h2>Yirmi sekiz saniye, sesli.</h2>
+        <p class="section-lead">Kriko'nun kurgusal bir e-bisiklet ilanını kontrol edişi: sayfayı açmaktan kaynaklı bulgulara kadar. Oynat'a basın; film kendiliğinden başlamaz.</p>
         <figure class="window">
           <video controls="" preload="none" playsinline="" width="1280" height="720" poster="../assets/film/kriko-ad-poster.webp" aria-label="Kriko'nun uydurma bir e-bisiklet ilanını kontrol ettiği 28 saniyelik film: bu üründe neyin ters gittiği bilinir, her bulgunun yanında kaynağıyla.">
             <source src="../assets/film/kriko-ad.mp4" type="video/mp4">
@@ -219,6 +220,7 @@
           </li>
         </ul>
         <p class="note">Panel şimdilik İngilizce. Türkçe site onu Türkçe anlatır.</p>
+        <p class="note"><a href="/tr/problems/">Bilinen sorunlar sayfalarında gerçek, kaynaklı bulguları oku</a> — uygulama gerekmez.</p>
       </div>
     </section>
 
@@ -244,7 +246,50 @@
       </div>
     </section>
 
-    <div class="band" role="presentation"></div>
+    <section class="section soft" id="mobile">
+      <div class="wrap">
+        <p class="label"><span class="index">05</span>Telefonunda</p>
+        <h2>Mağazadayken sor, ya da karşındaki ekranı tara.</h2>
+        <p class="section-lead">Android uygulaması tek başına ajandır: bir ürün sor, ilanını fotoğraflamaya ya da yüzen tarayıcının okuduğu sayfayı tara. Her cevap, okuduğu sayfaları kaynak gösterir; İngilizce ya da Türkçe. API anahtarlarıyla çalışır, telefona ajan kurmaya gerek yok.</p>
+        <ul class="gallery phones">
+          <li>
+            <picture class="shot">
+              <img src="../assets/mobile/1-ask.webp" width="360" height="800" loading="lazy" alt="Kriko telefon uygulamasının Türkçe sor ekranı; örnek sorular: Bosch GSB 600 matkapta ne ters gidebilir ve ikinci el Galaxy Buds2 Pro bu fiyata değer mi.">
+            </picture>
+            <h3>Sor</h3>
+            <p>Her iki dilde tek soru.</p>
+          </li>
+          <li>
+            <picture class="shot">
+              <img src="../assets/mobile/3-answer.webp" width="360" height="800" loading="lazy" alt="Bosch GSB 600 matkap hakkında Türkçe bir cevap; yapılacak kontroller ve altında [1] [2] [3] numaralı kaynaklar.">
+            </picture>
+            <h3>Kaynaklı cevap</h3>
+            <p>Numaralı sayfalar cevabın altında.</p>
+          </li>
+          <li>
+            <picture class="shot">
+              <img src="../assets/mobile/5-screenshot.webp" width="360" height="800" loading="lazy" alt="Uygulamanın fotoğrafı çekilmiş Samsung Galaxy Buds2 Pro ilanını Türkçe okuması; tanıdığı marka, ürün, model ve fiyat alanları, araştırma öncesi düzenlenebilir.">
+            </picture>
+            <h3>İlanı oku</h3>
+            <p>Fotoğraf önce düzenlenebilir metne dönüşür; araştırmadan önce sen onaylarsın.</p>
+          </li>
+          <li>
+            <picture class="shot">
+              <img src="../assets/mobile/8-light.webp" width="360" height="800" loading="lazy" alt="Kriko telefon uygulamasının İngilizce, açık temalı sor ekranı.">
+            </picture>
+            <h3>Koyu, kâğıt ya da beyaz</h3>
+            <p>Ayarlardan değişen üç palet ve iki dil.</p>
+          </li>
+        </ul>
+        <p class="note">Görüntüler bir Pixel boyutlu Android emülatöründen, taklit değil. Telefon derlemesi arkadaşlar için test APK'sıdır, henüz Google Play'de değil.</p>
+        <div class="actions">
+          <a class="button ghost" href="#get">Android APK'sını al</a>
+          <a class="button ghost" href="https://github.com/Berbadov/kriko/tree/main/kriko-mobile"><svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg><span>Kaynaktan derle</span></a>
+        </div>
+      </div>
+    </section>
+
+    <div class="band sky" role="presentation"></div>
 
     <section class="section" id="get">
       <div class="wrap">
@@ -258,14 +303,22 @@
             <li><span class="step-number">03</span><div><h3>Kriko'yu tarayıcına ekle.</h3><p>Chrome, Edge ya da Brave için <a href="https://chromewebstore.google.com/detail/kriko/bdifnaggafjokndlpjgmlfappcoehdjb">Kriko’yu Chrome Web Mağazası’ndan yükle</a>. Güncellemeleri mağaza yapar. Masaüstü uygulamasını açık tut; uzantının çalışması için gereklidir.</p></div></li>
             <li><span class="step-number">04</span><div><h3>Bir ilan aç.</h3><p>Kriko açıkken bir ürün sayfası aç; <span class="keys"><kbd>Alt</kbd> + <kbd>K</kbd></span> tuşlarına ya da araç çubuğundaki düğmeye bas. Modeli ve varyantı doğrula, ardından bir bulguyu açıp kaynağını oku. Bulgu olmaması, ürünün sorunsuz olduğunun kanıtı değil, bilgi kapsamındaki bir boşluktur.</p></div></li>
           </ol>
-          <div class="download-card">
-            <h3>Windows için Kriko</h3>
-            <p>64 bit Windows için. Geçerli kullanıcı için kurulur ve yönetici yetkisi gerekmez.</p>
-            <a class="button" href="https://github.com/Berbadov/kriko/releases/latest/download/kriko-0.3.7-x86_64-setup.exe"><svg class="icon" aria-hidden="true"><use href="#i-download"></use></svg><span>Yükleyiciyi indir</span></a>
-            <p class="fine">Yükleyici henüz kod imzalı değil; bu yüzden Windows bir SmartScreen uyarısı gösterebilir. More info, ardından Run anyway seç.</p>
-            <p class="fine"><a href="https://github.com/Berbadov/kriko/releases/latest">Taşınabilir sürümü mü tercih ediyorsun? .zip dosyasını seç.</a></p>
-            <p class="fine">macOS ya da Linux mu kullanıyorsun? <a href="https://github.com/Berbadov/kriko#build-and-verify">Kaynaktan derleme seçeneklerine bak.</a></p>
-            <p class="fine">Kaynak kodu <a href="https://github.com/Berbadov/kriko">GitHub</a>'da oku.</p>
+          <div>
+            <div class="download-card">
+              <h3>Windows için Kriko</h3>
+              <p>64 bit Windows için. Geçerli kullanıcı için kurulur ve yönetici yetkisi gerekmez.</p>
+              <a class="button" href="https://github.com/Berbadov/kriko/releases/latest/download/kriko-0.3.7-x86_64-setup.exe"><svg class="icon" aria-hidden="true"><use href="#i-download"></use></svg><span>Yükleyiciyi indir</span></a>
+              <p class="fine">Yükleyici henüz kod imzalı değil; bu yüzden Windows bir SmartScreen uyarısı gösterebilir. More info, ardından Run anyway seç.</p>
+              <p class="fine"><a href="https://github.com/Berbadov/kriko/releases/latest">Taşınabilir sürümü mü tercih ediyorsun? .zip dosyasını seç.</a></p>
+              <p class="fine">macOS ya da Linux mu kullanıyorsun? <a href="https://github.com/Berbadov/kriko#build-and-verify">Kaynaktan derleme seçeneklerine bak.</a></p>
+              <p class="fine">Kaynak kodu <a href="https://github.com/Berbadov/kriko">GitHub</a>'da oku.</p>
+            </div>
+            <div class="download-card">
+              <h3>Android için Kriko</h3>
+              <p>Telefonda ajan: sor, ilanı fotoğrafla, ya da karşındaki ekranı tara. İngilizce ve Türkçe. Arkadaşlar için test derlemesi, doğrudan APK.</p>
+              <a class="button ghost" href="https://github.com/Berbadov/kriko/tree/main/kriko-mobile"><svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg><span>APK'yı ve erişim adımlarını al</span></a>
+              <p class="fine">Android, uygulamanın Play Store'dan olmadığını uyaracak; doğrudan APK'da bu beklenir. Henüz Google Play'de değil.</p>
+            </div>
           </div>
         </div>
       </div>
@@ -296,6 +349,8 @@
       </div>
     </section>
   </main>
+
+  <div class="band" role="presentation"></div>
 
   <footer class="footer">
     <div class="wrap footer-grid">
