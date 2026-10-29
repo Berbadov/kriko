@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { CAP_ORDER, CAP_WORDS, usedToday, useCaps, type CapResource } from '../../engine/caps'
 import { useAppUpdate } from '../../engine/appupdate'
 import { useSensitivity } from '../../engine/sensitivity'
-import { useAbout, useKeys, usePrefsDoc, useSharedAccess, useSpent, type KeyRow } from '../../engine/settings'
+import { useAbout, useKeys, usePrefsDoc, usePresence, useSharedAccess, useSpent, type KeyRow } from '../../engine/settings'
 import type { Sensitivity } from '../../engine/thinness'
 import { useUsage } from '../../engine/usage'
 import { usePrefs, type Profile, type ThemePref } from '../../prefs'
@@ -54,6 +54,7 @@ export function SettingsPanel(_: { onOpen?: (lookupId: string) => void }) {
   const { doc, problem, save } = usePrefsDoc()
   const spent = useSpent()
   const about = useAbout()
+  const { presence, reload: reloadPresence } = usePresence()
   const update = useAppUpdate()
   const { sensitivity, choose } = useSensitivity()
   const { caps, setCap } = useCaps()
@@ -334,6 +335,32 @@ export function SettingsPanel(_: { onOpen?: (lookupId: string) => void }) {
             ))}
             {demoMeters && <p className="panel-note">Example numbers, because no engine answers.</p>}
           </section>
+
+          {presence && (
+            <section className="panel-group">
+              <h3>Count me as using Kriko</h3>
+              <div className="setting">
+                <span>
+                  Anonymous daily ping
+                  <small>
+                    Once a day, Kriko sends a random install id and the app version — nothing else: no question, no product, no page, no key. Off by default, and
+                    with no endpoint configured nothing is ever sent. Read the <a href="https://kriko.cc/privacy/">privacy policy</a> for the full list.
+                  </small>
+                </span>
+                <Switch
+                  label="Anonymous daily ping"
+                  on={doc?.chosen.presence_enabled === '1' || presence.enabled}
+                  onChange={(on) => void save({ presence_enabled: on ? '1' : '0' }).then(() => void reloadPresence())}
+                />
+              </div>
+              {(doc?.chosen.presence_enabled === '1' || presence.enabled) && (
+                <p className="panel-note">
+                  {presence.last_day ? `Last sent ${presence.last_day}.` : 'Sends on the next start of Kriko.'}
+                  {presence.endpoint ? '' : ' No endpoint is configured, so nothing leaves this computer.'}
+                </p>
+              )}
+            </section>
+          )}
 
           {spent && (
             <section className="panel-group">
