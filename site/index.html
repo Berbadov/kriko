@@ -17,7 +17,7 @@
   <meta property="og:image:alt" content="The Kriko panel open beside an invented e-bike listing, with the headline: The listing tells half the story.">
   <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" href="assets/icon-32.png">
-  <link rel="stylesheet" href="styles.css?v=477d930103f7">
+  <link rel="stylesheet" href="styles.css?v=32f72acb88b5">
   <script src="script.js?v=2986ae109be7" defer></script>
   <link rel="canonical" href="https://kriko.cc/">
   <link rel="alternate" href="https://kriko.cc/" hreflang="en">
@@ -39,6 +39,7 @@
         <a href="#how">How it works</a>
         <a href="#app">The app</a>
         <a href="#examples">Examples</a>
+        <a href="#mobile">Phone</a>
         <a href="/guide/">Guide</a>
         <a href="/problems/">Known problems</a>
         <a href="#get">Install</a>
@@ -234,7 +235,7 @@
             <p class="fine">You do not need the app to read them: <a href="/problems/">browse the known problems by product and part</a>.</p>
           </div>
           <div>
-            <p class="label"><span class="index">05</span>Quick look</p>
+            <p class="label"><span class="index">06</span>Quick look</p>
             <h2>No catalog? Ask your agent.</h2>
             <p><strong>Quick look</strong> sends the agent you chose to research a product no catalog covers, and keeps the sources. It needs an internet connection. If it finds nothing, Kriko says so. It never says a product is fine.</p>
           </div>
@@ -246,11 +247,50 @@
       </div>
     </section>
 
+    <section class="section soft" id="mobile">
+      <div class="wrap">
+        <p class="label"><span class="index">05</span>On your phone</p>
+        <h2>Ask from the shop, or scan the screen in front of you.</h2>
+        <p class="section-lead">The Android app is the agent alone: ask about a product, photograph a listing, or let the floating scanner read the page you are on. Every answer cites the pages it read, in English or Turkish. It runs on API keys, so there is no agent to install on the phone.</p>
+        <ul class="gallery phones">
+          <li>
+            <picture class="shot">
+              <img src="assets/mobile/1-ask.webp" width="360" height="800" loading="lazy" alt="The Kriko phone app's ask screen in Turkish, with example questions: what can go wrong with a Bosch GSB 600 drill, and is a used Galaxy Buds2 Pro worth the price.">
+            </picture>
+            <h3>Ask</h3>
+            <p>One question, in either language.</p>
+          </li>
+          <li>
+            <picture class="shot">
+              <img src="assets/mobile/3-answer.webp" width="360" height="800" loading="lazy" alt="A Turkish answer about the Bosch GSB 600 drill, with checks to run and numbered sources [1] [2] [3] under it.">
+            </picture>
+            <h3>Answer with sources</h3>
+            <p>The numbered pages sit under the answer.</p>
+          </li>
+          <li>
+            <picture class="shot">
+              <img src="assets/mobile/5-screenshot.webp" width="360" height="800" loading="lazy" alt="The app reading a photographed Samsung Galaxy Buds2 Pro listing in Turkish, with brand, product, model and price fields it recognised, each editable before research.">
+            </picture>
+            <h3>Read the listing</h3>
+            <p>A photo becomes editable text first; you confirm before anything is researched.</p>
+          </li>
+          <li>
+            <picture class="shot">
+              <img src="assets/mobile/8-light.webp" width="360" height="800" loading="lazy" alt="The Kriko phone app's ask screen in English on the light theme.">
+            </picture>
+            <h3>Dark, paper or white</h3>
+            <p>Three palettes and two languages, switched in settings.</p>
+          </li>
+        </ul>
+        <p class="note">The captures are from a Pixel-sized Android emulator, not a mock. The phone build is a friends-test APK, not yet on Google Play.</p>
+      </div>
+    </section>
+
     <div class="band" role="presentation"></div>
 
     <section class="section" id="get">
       <div class="wrap">
-        <p class="label"><span class="index">06</span>Install</p>
+        <p class="label"><span class="index">07</span>Install</p>
         <h2>Four steps, once.</h2>
         <p class="section-lead">New to Kriko? <a href="/guide/">The guide</a> shows each step as a short film.</p>
         <div class="get-grid">
@@ -260,14 +300,22 @@
             <li><span class="step-number">03</span><div><h3>Add Kriko to your browser.</h3><p>Install <a href="https://chromewebstore.google.com/detail/kriko/bdifnaggafjokndlpjgmlfappcoehdjb">Kriko from the Chrome Web Store</a> in Chrome, Edge or Brave. The store handles updates. Keep the desktop app running; the extension needs it to work.</p></div></li>
             <li><span class="step-number">04</span><div><h3>Open a listing.</h3><p>Keep Kriko running, open a product page and press <span class="keys"><kbd>Alt</kbd> + <kbd>K</kbd></span> or the toolbar button. Confirm the model and variant, then open a finding and follow its source. No findings means a gap in coverage, not proof the product is trouble-free.</p></div></li>
           </ol>
-          <div class="download-card">
-            <h3>Kriko for Windows</h3>
-            <p>For 64-bit Windows. It installs for the current user and needs no administrator rights.</p>
-            <a class="button" href="https://github.com/Berbadov/kriko/releases/latest/download/kriko-0.3.7-x86_64-setup.exe"><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg><span>Download the installer</span></a>
-            <p class="fine">The installer is not code-signed yet, so Windows may show a SmartScreen warning. Choose More info, then Run anyway.</p>
-            <p class="fine"><a href="https://github.com/Berbadov/kriko/releases/latest">Prefer a portable version? Choose the .zip.</a></p>
-            <p class="fine">On macOS or Linux? <a href="https://github.com/Berbadov/kriko#build-and-verify">See the source build options.</a></p>
-            <p class="fine">Read the source on <a href="https://github.com/Berbadov/kriko">GitHub</a>.</p>
+          <div>
+            <div class="download-card">
+              <h3>Kriko for Windows</h3>
+              <p>For 64-bit Windows. It installs for the current user and needs no administrator rights.</p>
+              <a class="button" href="https://github.com/Berbadov/kriko/releases/latest/download/kriko-0.3.7-x86_64-setup.exe"><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg><span>Download the installer</span></a>
+              <p class="fine">The installer is not code-signed yet, so Windows may show a SmartScreen warning. Choose More info, then Run anyway.</p>
+              <p class="fine"><a href="https://github.com/Berbadov/kriko/releases/latest">Prefer a portable version? Choose the .zip.</a></p>
+              <p class="fine">On macOS or Linux? <a href="https://github.com/Berbadov/kriko#build-and-verify">See the source build options.</a></p>
+              <p class="fine">Read the source on <a href="https://github.com/Berbadov/kriko">GitHub</a>.</p>
+            </div>
+            <div class="download-card">
+              <h3>Kriko for Android</h3>
+              <p>The agent on a phone: ask, photograph a listing, or scan the screen in front of you. English and Turkish. Test build for friends, direct APK.</p>
+              <a class="button ghost" href="https://github.com/Berbadov/kriko/tree/main/kriko-mobile"><svg class="icon" aria-hidden="true"><use href="#i-external"/></svg><span>Get the APK and the access steps</span></a>
+              <p class="fine">Android will warn that the app is not from the Play Store; that is expected for a direct APK. Not on Google Play yet.</p>
+            </div>
           </div>
         </div>
       </div>
@@ -275,7 +323,7 @@
 
     <section class="section soft" id="data">
       <div class="wrap narrow">
-        <p class="label"><span class="index">07</span>Questions</p>
+        <p class="label"><span class="index">08</span>Questions</p>
         <h2>Your data, the cost and the limits.</h2>
         <div class="faq">
           <details open>

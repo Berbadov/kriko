@@ -141,6 +141,9 @@ h2 { font-size: clamp(2.5rem, 5.4vw, 4.2rem); max-width: 14em; }
 .gallery { list-style: none; margin: clamp(32px, 5vw, 52px) 0 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: clamp(20px, 3vw, 36px); }
 .gallery h3 { margin-top: 20px; font-size: 1.9rem; }
 .gallery li > p:not(.tag) { margin-top: 8px; font-size: 1.0625rem; line-height: 1.55; color: var(--muted); }
+/* Phone captures are taller than they are wide: a tighter grid keeps four across. */
+.gallery.phones { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.gallery.phones .shot img { max-width: 240px; }
 
 /* A strip of the app's own sky between the halves of the page */
 .band { height: clamp(72px, 9vw, 120px); background: var(--band) center / cover; image-rendering: pixelated; border-block: 1px solid var(--line); }
@@ -155,6 +158,7 @@ h2 { font-size: clamp(2.5rem, 5.4vw, 4.2rem); max-width: 14em; }
 .download-card { padding: clamp(24px, 3vw, 36px); background: var(--bg); border: 2px solid var(--ink); border-radius: 4px; }
 .download-card h3 { font-size: 2.2rem; }
 .download-card > p:first-of-type { margin: 8px 0 22px; color: var(--muted); }
+.download-card + .download-card { margin-top: clamp(20px, 3vw, 32px); }
 
 /* Questions */
 .faq { margin-top: 36px; border-top: 1px solid var(--line); }
@@ -284,7 +288,8 @@ h2 { font-size: clamp(2.5rem, 5.4vw, 4.2rem); max-width: 14em; }
 .guide-end .actions { margin-top: 28px; }
 
 @media (max-width: 980px) {
-  .gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .gallery, .gallery.phones { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .gallery.phones .shot img { max-width: 300px; }
   .hero-grid, .get-grid, .two { grid-template-columns: minmax(0, 1fr); }
   .window-pair { grid-template-columns: minmax(0, 1fr); }
   .stage { max-width: 520px; }
@@ -310,7 +315,7 @@ h2 { font-size: clamp(2.5rem, 5.4vw, 4.2rem); max-width: 14em; }
 }
 
 @media (max-width: 520px) {
-  .gallery { grid-template-columns: minmax(0, 1fr); }
+  .gallery, .gallery.phones { grid-template-columns: minmax(0, 1fr); }
   .actions .button { width: 100%; justify-content: center; }
   .setup li { grid-template-columns: 56px minmax(0, 1fr); }
 }
