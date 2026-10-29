@@ -73,7 +73,7 @@
     onScroll();
   }
   if (!('IntersectionObserver' in window)) return;
-  const targets = document.querySelectorAll('.section .label, .section h2, .section-lead, .gallery li, .step, .setup li, .download-card, .window, .shot');
+  const targets = document.querySelectorAll('.section .label, .section h2, .section-lead, .gallery li, .step, .setup li, .download-card, .window, .shot, .stats li, .statement-line, .cta-panel, .split-copy > div');
   const seen = new WeakSet();
   const io = new IntersectionObserver((entries) => {
     let delay = 0;
@@ -89,5 +89,19 @@
   for (const el of targets) {
     el.classList.add('will-animate');
     io.observe(el);
+  }
+})();
+
+// A card catches a little light where the pointer is: the sheet knows where you are
+// looking. Only for a fine pointer, so a thumb on a phone never triggers it.
+(() => {
+  const fine = window.matchMedia && window.matchMedia('(pointer: fine)').matches;
+  if (!fine) return;
+  for (const card of document.querySelectorAll('.gallery li, .download-card')) {
+    card.addEventListener('pointermove', (event) => {
+      const box = card.getBoundingClientRect();
+      card.style.setProperty('--mx', `${event.clientX - box.left}px`);
+      card.style.setProperty('--my', `${event.clientY - box.top}px`);
+    });
   }
 })();
