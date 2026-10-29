@@ -122,15 +122,15 @@ kbd { white-space: nowrap; font: 600 .85em var(--sans); padding: .1em .45em; bor
 .button.ghost:hover { color: var(--bg); background: var(--ink); border-color: var(--ink); }
 .bar-cta { color: var(--on-accent); padding: 9px 18px; font-size: 1rem; }
 
-/* Hero — full-viewport, with a slow animated gradient field behind the copy.
-   The canvas is painted by script.js; without script it is simply absent. */
-.hero { position: relative; overflow: hidden; padding-block: clamp(72px, 10vw, 144px) clamp(72px, 9vw, 128px); background: var(--bg); }
-/* One static wash of the signature gradient, strongest at the top edge where
-   the header sits, fading into the page — Mistral's atmospheric hero sky,
-   held still. */
-.hero::before { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, color-mix(in srgb, #a9bcff 34%, transparent) 0%, transparent 46%); pointer-events: none; }
+/* Hero — the whole first screen. The app's own dithered pixel sky runs
+   edge to edge behind everything, panning slowly and dissolving into the
+   paper about halfway down, so the copy sits on solid ground and the sky
+   is weather, not wallpaper. */
+.hero { position: relative; overflow: hidden; min-height: 100svh; min-height: 100dvh; display: grid; align-content: center; padding-block: clamp(96px, 13vh, 176px) clamp(88px, 12vh, 140px); background: var(--bg); }
+.hero::before { content: ""; position: absolute; inset: 0; z-index: -2; pointer-events: none; background-image: linear-gradient(180deg, color-mix(in srgb, #a9bcff 28%, transparent) 0%, transparent 46%), var(--sky); background-size: 100% 100%, cover; background-position: 0 0, 50% 50%; image-rendering: pixelated; animation: sky-pan 80s ease-in-out infinite alternate; -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 30%, transparent 72%); mask-image: linear-gradient(180deg, #000 0%, #000 30%, transparent 72%); }
+@keyframes sky-pan { from { background-position: 0 0, 50% 50%; } to { background-position: 0 0, calc(50% + 90px) calc(50% + 36px); } }
 @media (prefers-color-scheme: dark) {
-  .hero::before { background: linear-gradient(180deg, color-mix(in srgb, #2447e6 30%, transparent) 0%, transparent 46%); }
+  .hero::before { background-image: linear-gradient(180deg, color-mix(in srgb, #2447e6 26%, transparent) 0%, transparent 46%), var(--sky); }
 }
 /* Two slow halos drift behind the hero on top of the wash: the product's blue and
    a dawn of warm light, the only moving colour on the page. */
@@ -138,7 +138,17 @@ kbd { white-space: nowrap; font: 600 .85em var(--sans); padding: .1em .45em; bor
 .hero .hero-grid::after { content: ""; position: absolute; z-index: -1; pointer-events: none; border-radius: 50%; width: min(46vw, 560px); aspect-ratio: 1; right: -12vw; bottom: -18vw; background: radial-gradient(closest-side, var(--halo-warm), transparent 70%); animation: halo-drift 32s ease-in-out infinite alternate-reverse; }
 @keyframes halo-drift { from { transform: translate3d(0, 0, 0) scale(1); } to { transform: translate3d(6vw, 5vh, 0) scale(1.14); } }
 .hero-grid { position: relative; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); gap: clamp(48px, 6vw, 96px); align-items: center; }
-h1 { font-size: clamp(2.9rem, 6.4vw, 5.4rem); line-height: 1.04; letter-spacing: -.035em; max-width: 11em; }
+h1 { font-size: clamp(3.4rem, 7.4vw, 6.6rem); line-height: 1.02; letter-spacing: -.035em; max-width: 11em; }
+/* The label carries a soft pulse: the page is alive before anything else moves. */
+.hero .label { display: flex; align-items: center; gap: 12px; }
+.hero .label::before { content: ""; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); animation: pulse 2.6s ease-out infinite; }
+@keyframes pulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 40%, transparent); } 70% { box-shadow: 0 0 0 12px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
+/* The cue at the foot of the first screen: an invitation, not an order. */
+.scroll-cue { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; font: 650 .95rem/1 var(--display); letter-spacing: .18em; text-transform: uppercase; color: var(--muted); text-decoration: none; border-radius: 999px; transition: color .18s var(--ease); }
+.scroll-cue:hover { color: var(--link); }
+.scroll-cue .icon { width: 1.1em; height: 1.1em; color: var(--accent); animation: cue-bounce 1.8s ease-in-out infinite; }
+@keyframes cue-bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(5px); } }
+@media (max-width: 760px) { .scroll-cue { display: none; } }
 h1 span { color: var(--accent); display: block; }
 .lead { margin-top: 32px; max-width: 30em; font-size: 1.375rem; line-height: 1.62; color: var(--muted); text-wrap: pretty; }
 .actions { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 38px; }
@@ -152,7 +162,8 @@ h1 span { color: var(--accent); display: block; }
    panel rises out of it, cropped at the bottom — anchored, not floating. */
 .stage { margin: 0; }
 .stage-sky { padding: clamp(32px, 4.5vw, 56px) clamp(28px, 4.5vw, 60px) 0; background: var(--sky) center / cover; image-rendering: pixelated; overflow: hidden; border-radius: 20px 20px 0 0; border: 1px solid var(--line); border-bottom: none; }
-.stage-sky img { width: 100%; max-width: 420px; margin-inline: auto; border-radius: 14px 14px 0 0; box-shadow: 0 -2px 30px rgba(10, 15, 54, .35), 0 0 0 1px var(--line); image-rendering: auto; transition: transform .5s cubic-bezier(.2, .7, .2, 1); }
+.hero .stage { justify-self: center; width: fit-content; max-width: 100%; }
+.stage-sky img { width: auto; max-width: 100%; max-height: clamp(340px, 56dvh, 620px); margin-inline: auto; border-radius: 14px 14px 0 0; box-shadow: 0 -2px 30px rgba(10, 15, 54, .35), 0 0 0 1px var(--line); image-rendering: auto; transition: transform .5s cubic-bezier(.2, .7, .2, 1); }
 .stage:hover .stage-sky img { transform: translateY(-8px); }
 .stage figcaption { padding: 0 clamp(28px, 4.5vw, 60px) 18px; background: var(--sky) center / cover; image-rendering: pixelated; border: 1px solid var(--line); border-top: none; border-radius: 0 0 20px 20px; }
 
@@ -170,7 +181,10 @@ h1 span { color: var(--accent); display: block; }
 .hero-copy > *:nth-child(5) { animation-delay: .32s; }
 .hero-copy > *:nth-child(6) { animation-delay: .4s; }
 .hero-copy > *:nth-child(7) { animation-delay: .48s; }
-.stage { animation: rise-in .9s .25s cubic-bezier(.2, .7, .2, 1) both; }
+/* The figure stays free for the parallax script to move; the entrance rides
+   on the card and its caption instead. */
+.stage-sky, .stage figcaption { animation: rise-in .9s .25s cubic-bezier(.2, .7, .2, 1) both; }
+.stage figcaption { animation-delay: .38s; }
 
 /* Cards and gallery items lift on hover. */
 .gallery .shot img, .window img, .window video { transition: transform .35s cubic-bezier(.2, .7, .2, 1), box-shadow .35s ease; }
@@ -458,7 +472,7 @@ h2 { font-size: clamp(2rem, 4.3vw, 3.3rem); max-width: 16em; letter-spacing: -.0
      which a bare `*` does not match. */
   *, *::before, *::after { transition: none !important; animation: none !important; }
   .will-animate { opacity: 1; transform: none; }
-  .hero-copy > *, .stage { animation: none; }
+  .hero-copy > *, .stage-sky, .stage figcaption { animation: none; }
 }
 
 @media (prefers-contrast: more) {
