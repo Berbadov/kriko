@@ -15,7 +15,7 @@
   <meta property="og:image:alt" content="Kriko paneli, uydurma bir e-bisiklet ilanının yanında açık; başlık: İlan, hikâyenin yarısını anlatır.">
   <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" href="../assets/icon-32.png">
-  <link rel="stylesheet" href="../styles.css?v=83c157f0ebd8">
+  <link rel="stylesheet" href="../styles.css?v=e2fab4efd728">
   <script src="../script.js?v=b29e79b52961" defer=""></script>
   <link rel="canonical" href="https://kriko.cc/tr/">
   <link rel="alternate" href="https://kriko.cc/" hreflang="en">
@@ -27,6 +27,7 @@
   <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" width="0" height="0">
     <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12m-5-5 5 5 5-5M5 17v4h14v-4"></path></symbol>
     <symbol id="i-external" viewBox="0 0 24 24"><path d="M14 4h6v6m0-6L10 14M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"></path></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M4 12.5 9.5 18 20 6.5"></path></symbol>
   </svg>
 
   <header class="topbar">
@@ -57,10 +58,11 @@
             <a class="button ghost" href="https://chromewebstore.google.com/detail/kriko/bdifnaggafjokndlpjgmlfappcoehdjb">Tarayıcı uzantısını yükle</a>
             <a class="button ghost" href="https://github.com/Berbadov/kriko"><svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg><span>GitHub</span></a>
           </div>
-          <p class="fine">Windows uygulaması · Ücretsiz · Açık kaynak · Hesap gerekmez</p>
-          <p class="fine">Uzantı için Windows uygulamasının açık olması gerekir. Yüklü kataloglar yapay zekâ anahtarı olmadan çevrimdışı çalışır; çevrimiçi araştırma, bağlantısı kurulmuş bir ajan gerektirir ve sağlayıcı ücreti doğurabilir.</p>
-          <p class="fine"><a href="#film">28 saniyelik tanıtımı izle</a> ya da <a href="#get">kurulum adımlarını takip et</a>.</p>
-          <p class="fine">Yükleyici henüz imzalı değil; bu yüzden Windows ilk çalıştırmada <strong>Windows bilgisayarınızı korudu</strong> diyerek durdurabilir. <strong>Daha fazla bilgi</strong> (More info), ardından <strong>Yine de çalıştır</strong> (Run anyway) seç.</p>
+          <ul class="hero-points">
+            <li><svg class="icon" aria-hidden="true"><use href="#i-check"></use></svg><span>Ücretsiz ve açık kaynak, hesap yok</span></li>
+            <li><svg class="icon" aria-hidden="true"><use href="#i-check"></use></svg><span>Kataloglar çevrimdışı çalışır, yapay zekâ anahtarı gerekmez</span></li>
+            <li><svg class="icon" aria-hidden="true"><use href="#i-check"></use></svg><span><a href="#film">28 saniyelik tanıtımı izle</a> ya da <a href="#get">kurulum adımlarını takip et</a></span></li>
+          </ul>
         </div>
         <figure class="stage">
           <div class="stage-sky">
@@ -86,6 +88,7 @@
       <div class="wrap">
         <p class="label">Film</p>
         <h2>Yirmi sekiz saniye, sesli.</h2>
+        <p class="section-lead">Kriko'nun kurgusal bir e-bisiklet ilanını kontrol edişi: sayfayı açmaktan kaynaklı bulgulara kadar. Oynat'a basın; film kendiliğinden başlamaz.</p>
         <figure class="window">
           <video controls="" preload="none" playsinline="" width="1280" height="720" poster="../assets/film/kriko-ad-poster.webp" aria-label="Kriko'nun uydurma bir e-bisiklet ilanını kontrol ettiği 28 saniyelik film: bu üründe neyin ters gittiği bilinir, her bulgunun yanında kaynağıyla.">
             <source src="../assets/film/kriko-ad.mp4" type="video/mp4">
@@ -217,6 +220,7 @@
           </li>
         </ul>
         <p class="note">Panel şimdilik İngilizce. Türkçe site onu Türkçe anlatır.</p>
+        <p class="note"><a href="/tr/problems/">Bilinen sorunlar sayfalarında gerçek, kaynaklı bulguları oku</a> — uygulama gerekmez.</p>
       </div>
     </section>
 
@@ -278,6 +282,10 @@
           </li>
         </ul>
         <p class="note">Görüntüler bir Pixel boyutlu Android emülatöründen, taklit değil. Telefon derlemesi arkadaşlar için test APK'sıdır, henüz Google Play'de değil.</p>
+        <div class="actions">
+          <a class="button ghost" href="#get">Android APK'sını al</a>
+          <a class="button ghost" href="https://github.com/Berbadov/kriko/tree/main/kriko-mobile"><svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg><span>Kaynaktan derle</span></a>
+        </div>
       </div>
     </section>
 

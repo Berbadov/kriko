@@ -17,7 +17,7 @@
   <meta property="og:image:alt" content="The Kriko panel open beside an invented e-bike listing, with the headline: The listing tells half the story.">
   <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" href="assets/icon-32.png">
-  <link rel="stylesheet" href="styles.css?v=83c157f0ebd8">
+  <link rel="stylesheet" href="styles.css?v=e2fab4efd728">
   <script src="script.js?v=b29e79b52961" defer></script>
   <link rel="canonical" href="https://kriko.cc/">
   <link rel="alternate" href="https://kriko.cc/" hreflang="en">
@@ -29,6 +29,7 @@
   <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" width="0" height="0">
     <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12m-5-5 5 5 5-5M5 17v4h14v-4"/></symbol>
     <symbol id="i-external" viewBox="0 0 24 24"><path d="M14 4h6v6m0-6L10 14M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M4 12.5 9.5 18 20 6.5"/></symbol>
   </svg>
 
   <header class="topbar">
@@ -59,10 +60,11 @@
             <a class="button ghost" href="https://chromewebstore.google.com/detail/kriko/bdifnaggafjokndlpjgmlfappcoehdjb">Get the browser extension</a>
             <a class="button ghost" href="https://github.com/Berbadov/kriko"><svg class="icon" aria-hidden="true"><use href="#i-external"/></svg><span>GitHub</span></a>
           </div>
-          <p class="fine">Windows app · Free · Open source · No account</p>
-          <p class="fine">The extension needs the Windows app running. Installed catalogs work offline without an AI key; online research needs a connected agent and may have provider costs.</p>
-          <p class="fine"><a href="#film">Watch the 28-second demo</a> or <a href="#get">follow the setup steps</a>.</p>
-          <p class="fine">The installer is not signed yet, so Windows may stop the first run with <strong>Windows protected your PC</strong>. Choose <strong>More info</strong>, then <strong>Run anyway</strong>.</p>
+          <ul class="hero-points">
+            <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span>Free and open source, no account</span></li>
+            <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span>Catalogs work offline, no AI key</span></li>
+            <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span><a href="#film">Watch the 28-second demo</a> or <a href="#get">follow the setup steps</a></span></li>
+          </ul>
         </div>
         <figure class="stage">
           <div class="stage-sky">
@@ -88,6 +90,7 @@
       <div class="wrap">
         <p class="label">The film</p>
         <h2>Twenty-eight seconds, with sound.</h2>
+        <p class="section-lead">Kriko checking an invented e-bike listing, from opening the page to the sourced findings. Press play; the film does not start on its own.</p>
         <figure class="window">
           <video controls preload="none" playsinline width="1280" height="720" poster="assets/film/kriko-ad-poster.webp" aria-label="A 28-second film of Kriko checking an invented e-bike listing: what is known to go wrong with it, with the source beside every finding.">
             <source src="assets/film/kriko-ad.mp4" type="video/mp4">
@@ -219,6 +222,7 @@
           </li>
         </ul>
         <p class="note">The panel is in English for now. The Turkish site describes it in Turkish.</p>
+        <p class="note"><a href="/problems/">Read real, sourced findings on the known-problems pages</a> — no app needed.</p>
       </div>
     </section>
 
@@ -280,6 +284,10 @@
           </li>
         </ul>
         <p class="note">The captures are from a Pixel-sized Android emulator, not a mock. The phone build is a friends-test APK, not yet on Google Play.</p>
+        <div class="actions">
+          <a class="button ghost" href="#get">Get the Android APK</a>
+          <a class="button ghost" href="https://github.com/Berbadov/kriko/tree/main/kriko-mobile"><svg class="icon" aria-hidden="true"><use href="#i-external"/></svg><span>Build it from source</span></a>
+        </div>
       </div>
     </section>
 
