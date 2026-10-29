@@ -8,19 +8,28 @@
 // sentence with a bold word in it is translated as one sentence and not in
 // pieces. A unit with no translation is reported, and the build fails.
 // The same step puts a content hash on the stylesheet and script of every
-// page, so a visitor with an old copy cached gets the new one.
+// page, so a visitor with an old copy cached gets the new one, and writes the
+// structured data (`schema.cjs`) an answer engine reads from each page.
 const fs = require('node:fs');
 const path = require('node:path');
 const { createHash } = require('node:crypto');
 const { JSDOM } = require('jsdom');
+const schema = require('./schema.cjs');
 
 const root = path.resolve(__dirname, '..');
 const translations = JSON.parse(fs.readFileSync(path.join(root, 'locales/tr.json'), 'utf8'));
+// The one sentence that describes Kriko itself, not the page: the home page's description in
+// each language, so Organisation reads the same on the home page and on the guide.
+const siteDescription = {
+  en: new JSDOM(fs.readFileSync(path.join(root, 'index.html'), 'utf8')).window.document.querySelector('meta[name="description"]').content,
+  tr: translations['@meta'].description,
+};
 
-// `meta` names the entry of tr.json that holds the page's title, description and share text.
+// `meta` names the entry of tr.json that holds the page's title, description and share text; `kind`
+// says which structured data the page earns (see schema.cjs).
 const PAGES = [
-  { source: 'index.html', output: 'tr/index.html', canonical: 'https://kriko.cc/tr/', meta: '@meta' },
-  { source: 'guide/index.html', output: 'tr/guide/index.html', canonical: 'https://kriko.cc/tr/guide/', meta: '@meta:guide' },
+  { source: 'index.html', output: 'tr/index.html', canonical: 'https://kriko.cc/tr/', meta: '@meta', kind: 'home' },
+  { source: 'guide/index.html', output: 'tr/guide/index.html', canonical: 'https://kriko.cc/tr/guide/', meta: '@meta:guide', kind: 'guide' },
 ];
 // Pages with no Turkish version still carry the hashes.
 const STAMPED = [...PAGES.map((page) => page.source), 'privacy/index.html', '404.html'];
@@ -45,7 +54,16 @@ function stamp(file) {
 }
 for (const file of STAMPED) if (fs.existsSync(path.join(root, file))) stamp(file);
 
-// 2. Turkish.
+// 2. Structured data, on the English source pages and on the Turkish copies below. The page's own
+// visible text is the only input, so the two languages cannot drift apart.
+for (const { source, kind } of PAGES) {
+  const file = path.join(root, source);
+  const url = 'https://kriko.cc/' + source.replace(/index\.html$/, '');
+  const document = new JSDOM(fs.readFileSync(file, 'utf8'), { url }).window.document;
+  schema.applyToFile(document, file, { url, lang: 'en', page: kind, about: siteDescription.en });
+}
+
+// 3. Turkish.
 const missing = new Set();
 const BLOCKS = 'p,h1,h2,h3,ul,ol,li,div,section,details,figure,nav,header,footer,main,table';
 
@@ -68,7 +86,7 @@ function walk(node) {
   }
 }
 
-function render({ source, output, canonical, meta: metaKey }) {
+function render({ source, output, canonical, meta: metaKey, kind }) {
   const dom = new JSDOM(fs.readFileSync(path.join(root, source), 'utf8'));
   const document = dom.window.document;
   walk(document.body);
@@ -111,6 +129,9 @@ function render({ source, output, canonical, meta: metaKey }) {
       if (value && /^(\.\.\/|assets\/|styles\.css|script\.js)/.test(value)) el.setAttribute(attribute, `../${value}`);
     }
   }
+
+  // The Turkish page's structured data comes from its own translated text.
+  schema.applyToDocument(document, { url: canonical, lang: 'tr', page: kind, about: siteDescription.tr });
 
   fs.mkdirSync(path.dirname(path.join(root, output)), { recursive: true });
   fs.writeFileSync(path.join(root, output), dom.serialize());
