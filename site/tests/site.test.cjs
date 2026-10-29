@@ -491,6 +491,29 @@ test('the problem sitemap lists exactly the generated pages, and robots.txt name
   assert.deepEqual(listed, generated().map((file) => `https://kriko.cc/${file.replace(/index\.html$/, '')}`).sort());
 });
 
+test('a product page answers the two questions a buyer asks, and names the pages behind its findings', () => {
+  for (const [file, label, ask] of [['problems/mercedes-eqb/index.html', 'Mercedes EQB', /^What is known to go wrong with Mercedes EQB\?$/],
+    ['tr/problems/mercedes-eqb/index.html', 'Mercedes EQB', /^Mercedes EQB ile ilgili bilinen sorunlar neler\?$/]]) {
+    const product = new JSDOM(read(file)).window.document;
+    const blocks = [...product.querySelectorAll('script')].map((s) => JSON.parse(s.textContent));
+    const faq = blocks.find((block) => block['@type'] === 'FAQPage');
+    assert.ok(faq, `${file} answers no question`);
+    assert.equal(faq.mainEntity.length, 2, file);
+    assert.match(faq.mainEntity[0].name, ask, `${file}: the first question is not the one a buyer types`);
+    for (const question of faq.mainEntity) {
+      assert.match(question.name, /\?$/, question.name);
+      assert.ok(question.acceptedAnswer.text.length > 40, `${file}: ${question.name} has no answer`);
+    }
+    const article = blocks.find((block) => block['@type'] === 'Article');
+    assert.equal(article.about.name, label, `${file}: the article is not about the product`);
+    assert.ok(article.isPartOf, `${file}: the article belongs to no site`);
+    // A declared citation that the page does not print would be a source only a machine sees.
+    const printed = new Set([...product.querySelectorAll('.src a')].map((a) => a.getAttribute('href')));
+    assert.ok(article.citation.length >= 3, `${file} cites ${article.citation.length} sources`);
+    for (const url of article.citation) assert.ok(printed.has(url), `${file}: ${url} is cited but not on the page`);
+  }
+});
+
 test('a product page says where it sits, with breadcrumbs that match what a reader sees', () => {
   const product = new JSDOM(read('problems/mercedes-eqb/index.html')).window.document;
   const blocks = [...product.querySelectorAll('script')].map((s) => JSON.parse(s.textContent));
