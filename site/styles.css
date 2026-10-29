@@ -61,7 +61,7 @@ p { margin: 0; }
 kbd { white-space: nowrap; font: 600 .85em var(--sans); padding: .1em .45em; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 3px; background: var(--soft); }
 .keys { white-space: nowrap; }
 
-.wrap { width: 100%; max-width: 1280px; margin-inline: auto; padding-inline: var(--gutter); }
+.wrap { width: 100%; max-width: 1360px; margin-inline: auto; padding-inline: var(--gutter); }
 .narrow { max-width: 860px; }
 .skip-link { position: absolute; left: 12px; top: -60px; z-index: 50; padding: 10px 16px; background: var(--ink); color: var(--bg); border-radius: 3px; }
 .skip-link:focus { top: 12px; }
@@ -83,7 +83,7 @@ kbd { white-space: nowrap; font: 600 .85em var(--sans); padding: .1em .45em; bor
 .brand { display: inline-flex; flex: none; }
 .brand img { height: 30px; width: auto; transition: transform .25s ease; }
 .brand:hover img { transform: scale(1.04); }
-.main-nav { display: flex; align-items: center; gap: clamp(14px, 1.6vw, 24px); margin-left: auto; font-size: 1rem; }
+.main-nav { display: flex; align-items: center; gap: clamp(16px, 1.8vw, 28px); margin-left: auto; font-size: 1rem; }
 .main-nav a { color: var(--ink); text-decoration: none; font-weight: 600; position: relative; padding-block: 6px; white-space: nowrap; }
 .main-nav a::after { content: ""; position: absolute; left: 0; right: 100%; bottom: 0; height: 2px; background: var(--stripe); transition: right .25s ease; }
 .main-nav a:hover::after, .main-nav a:focus-visible::after { right: 0; }
@@ -114,16 +114,19 @@ kbd { white-space: nowrap; font: 600 .85em var(--sans); padding: .1em .45em; bor
 @media (prefers-color-scheme: dark) {
   .hero::before { background: linear-gradient(180deg, color-mix(in srgb, #2447e6 30%, transparent) 0%, transparent 46%); }
 }
-.hero-grid { position: relative; display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr); gap: clamp(32px, 5vw, 72px); align-items: center; }
+.hero-grid { position: relative; display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); gap: clamp(40px, 5vw, 80px); align-items: center; }
 h1 { font-size: clamp(3.6rem, 7.6vw, 6.6rem); line-height: .94; letter-spacing: -.018em; max-width: 11em; }
 h1 span { color: var(--accent); display: block; }
 .lead { margin-top: 30px; max-width: 30em; font-size: 1.3125rem; line-height: 1.6; color: var(--muted); }
 .actions { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 38px; }
 .fine { margin-top: 20px; font-size: 1rem; line-height: 1.65; color: var(--muted); }
+/* The hero's stage: the sky image runs edge to edge of its column and the
+   panel rises out of it, cropped at the bottom — anchored, not floating. */
 .stage { margin: 0; }
-.stage-sky { padding: clamp(28px, 4vw, 48px) clamp(24px, 4vw, 52px) 0; background: var(--sky) center / cover; image-rendering: pixelated; overflow: hidden; }
-.stage-sky img { width: 100%; max-width: 400px; margin-inline: auto; border-radius: 16px 16px 0 0; box-shadow: 0 -2px 30px rgba(10, 15, 54, .35); image-rendering: auto; transition: transform .5s cubic-bezier(.2, .7, .2, 1); }
+.stage-sky { padding: clamp(32px, 4.5vw, 56px) clamp(28px, 4.5vw, 60px) 0; background: var(--sky) center / cover; image-rendering: pixelated; overflow: hidden; border-radius: 20px 20px 0 0; border: 1px solid var(--line); border-bottom: none; }
+.stage-sky img { width: 100%; max-width: 420px; margin-inline: auto; border-radius: 14px 14px 0 0; box-shadow: 0 -2px 30px rgba(10, 15, 54, .35), 0 0 0 1px var(--line); image-rendering: auto; transition: transform .5s cubic-bezier(.2, .7, .2, 1); }
 .stage:hover .stage-sky img { transform: translateY(-8px); }
+.stage figcaption { padding: 0 clamp(28px, 4.5vw, 60px) 18px; background: var(--sky) center / cover; image-rendering: pixelated; border: 1px solid var(--line); border-top: none; border-radius: 0 0 20px 20px; }
 
 /* Entrance and scroll-in motion, added by script.js as `.will-animate` on the
    elements it watches. Without script nothing is hidden: the rules only apply
@@ -146,7 +149,8 @@ h1 span { color: var(--accent); display: block; }
 .gallery li:hover .shot img { transform: translateY(-6px); box-shadow: 0 28px 50px -22px rgba(11, 16, 32, .45), 0 2px 6px rgba(11, 16, 32, .08); }
 .download-card { transition: transform .25s ease, box-shadow .25s ease; }
 .download-card:hover { transform: translateY(-4px); box-shadow: 0 22px 44px -24px rgba(11, 16, 32, .4); }
-.stage figcaption, .note { margin-top: 14px; font-size: 1rem; line-height: 1.6; color: var(--muted); }
+.stage figcaption { margin-top: 0; }
+.note { margin-top: 14px; font-size: 1rem; line-height: 1.6; color: var(--muted); }
 
 .promises { border-block: 1px solid var(--line); }
 .promise-list { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px 36px; list-style: none; margin: 0 auto; padding-block: 26px; font: 600 1.375rem/1.3 var(--display); letter-spacing: .04em; text-transform: uppercase; }
