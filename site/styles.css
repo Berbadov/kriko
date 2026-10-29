@@ -61,7 +61,7 @@ p { margin: 0; }
 kbd { white-space: nowrap; font: 600 .85em var(--sans); padding: .1em .45em; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 3px; background: var(--soft); }
 .keys { white-space: nowrap; }
 
-.wrap { width: 100%; max-width: 1180px; margin-inline: auto; padding-inline: var(--gutter); }
+.wrap { width: 100%; max-width: 1280px; margin-inline: auto; padding-inline: var(--gutter); }
 .narrow { max-width: 860px; }
 .skip-link { position: absolute; left: 12px; top: -60px; z-index: 50; padding: 10px 16px; background: var(--ink); color: var(--bg); border-radius: 3px; }
 .skip-link:focus { top: 12px; }
@@ -78,6 +78,7 @@ kbd { white-space: nowrap; font: 600 .85em var(--sans); padding: .1em .45em; bor
    the CTA pinned at the far right. The CTA and switch are flex children of the
    bar itself, not of the nav, so the nav's width never pushes them off. */
 .topbar { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(14px) saturate(1.4); border-bottom: 1px solid var(--line); transition: box-shadow .25s ease, background-color .25s ease; }
+.scroll-progress { position: absolute; left: 0; bottom: -1px; height: 2px; width: 100%; transform-origin: 0 50%; transform: scaleX(0); background: var(--stripe); pointer-events: none; }
 .topbar.is-scrolled { box-shadow: 0 12px 32px -20px rgba(11, 16, 32, .4); background: color-mix(in srgb, var(--bg) 97%, transparent); }
 .bar { display: flex; align-items: center; gap: 26px; min-height: 72px; }
 .brand { display: inline-flex; flex: none; }
@@ -107,9 +108,10 @@ kbd { white-space: nowrap; font: 600 .85em var(--sans); padding: .1em .45em; bor
 /* Hero — full-viewport, with a slow animated gradient field behind the copy.
    The canvas is painted by script.js; without script it is simply absent. */
 .hero { position: relative; overflow: hidden; min-height: calc(100svh - 72px); display: flex; align-items: center; padding-block: clamp(56px, 8vw, 110px) clamp(56px, 7vw, 96px); background: var(--bg); }
-.hero-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; opacity: .9; }
+.hero-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; opacity: .9; will-change: transform; }
 .hero::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, color-mix(in srgb, var(--bg) 55%, transparent) 0%, transparent 34%, transparent 62%, var(--bg) 100%); pointer-events: none; }
-.hero-grid { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, .8fr); gap: clamp(32px, 5vw, 64px); align-items: center; }
+.hero-grid { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, .75fr); gap: clamp(32px, 5vw, 64px); align-items: center; }
+.stage { will-change: transform; }
 h1 { font-size: clamp(3.8rem, 8.4vw, 7.2rem); line-height: .9; letter-spacing: -.015em; }
 h1 span { background: var(--stripe); -webkit-background-clip: text; background-clip: text; color: transparent; display: block; }
 .lead { margin-top: 30px; max-width: 30em; font-size: 1.3125rem; line-height: 1.6; color: var(--muted); }
@@ -136,15 +138,27 @@ h1 span { background: var(--stripe); -webkit-background-clip: text; background-c
 .hero-copy > *:nth-child(7) { animation-delay: .48s; }
 .stage { animation: rise-in .9s .25s cubic-bezier(.2, .7, .2, 1) both; }
 
-/* Cards and gallery items lift on hover. */
-.gallery .shot img, .window img, .window video { transition: transform .35s cubic-bezier(.2, .7, .2, 1), box-shadow .35s ease; }
-.gallery li:hover .shot img { transform: translateY(-6px); box-shadow: 0 28px 50px -22px rgba(11, 16, 32, .45), 0 2px 6px rgba(11, 16, 32, .08); }
+/* Cards and gallery items lift on hover. Images also carry a parallax depth
+   (data-depth) that script.js turns into a translateY on scroll. */
+.gallery .shot, .window, .step .shot, .split .shot { transition: transform .35s cubic-bezier(.2, .7, .2, 1); will-change: transform; }
+.gallery .shot img, .window img, .window video { transition: box-shadow .35s ease; }
+.gallery li:nth-child(odd):hover .shot { transform: translateY(-6px) rotate(-1deg) !important; }
+.gallery li:nth-child(even):hover .shot { transform: translateY(-6px) rotate(1deg) !important; }
+.gallery li:hover .shot img { box-shadow: 0 28px 50px -22px rgba(11, 16, 32, .45), 0 2px 6px rgba(11, 16, 32, .08); }
 .download-card { transition: transform .25s ease, box-shadow .25s ease; }
 .download-card:hover { transform: translateY(-4px); box-shadow: 0 22px 44px -24px rgba(11, 16, 32, .4); }
+
+/* Section labels count in with a slide. */
+.section .label .index { display: inline-block; }
 .stage figcaption, .note { margin-top: 14px; font-size: 1rem; line-height: 1.6; color: var(--muted); }
 
-.promises { border-block: 1px solid var(--line); }
-.promise-list { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px 36px; list-style: none; margin: 0 auto; padding-block: 26px; font: 600 1.375rem/1.3 var(--display); letter-spacing: .04em; text-transform: uppercase; }
+.promises { border-block: 1px solid var(--line); overflow: hidden; }
+.marquee { display: flex; width: max-content; animation: marquee 26s linear infinite; }
+.marquee:hover { animation-play-state: paused; }
+@keyframes marquee { to { transform: translateX(-50%); } }
+.promise-list { display: flex; flex: none; align-items: center; gap: clamp(40px, 6vw, 88px); list-style: none; margin: 0; padding: 24px clamp(20px, 3vw, 44px) 24px 0; font: 600 1.375rem/1.3 var(--display); letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; }
+.promise-list li { display: flex; align-items: center; gap: clamp(40px, 6vw, 88px); }
+.promise-list li::after { content: ""; width: 9px; height: 9px; background: var(--accent); transform: rotate(45deg); flex: none; }
 
 /* Sections */
 .section { padding-block: clamp(64px, 9vw, 120px); }
@@ -374,6 +388,8 @@ h2 { font-size: clamp(2.5rem, 5.4vw, 4.2rem); max-width: 14em; }
   * { transition: none !important; animation: none !important; }
   .will-animate { opacity: 1; transform: none; }
   .hero-copy > *, .stage { animation: none; }
+  .marquee { animation: none; width: 100%; }
+  .promise-list { flex-wrap: wrap; white-space: normal; }
 }
 
 @media (prefers-contrast: more) {

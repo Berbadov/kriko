@@ -119,7 +119,7 @@
     onScroll();
   }
   if (!('IntersectionObserver' in window)) return;
-  const targets = document.querySelectorAll('.section .label, .section h2, .section-lead, .gallery li, .step, .setup li, .download-card, .window, .shot');
+  const targets = document.querySelectorAll('.section .label, .section h2, .section-lead, .gallery li, .step, .setup li, .download-card, .window');
   const seen = new WeakSet();
   const io = new IntersectionObserver((entries) => {
     let delay = 0;
@@ -136,4 +136,36 @@
     el.classList.add('will-animate');
     io.observe(el);
   }
+})();
+
+// Scroll-driven motion, all in one rAF-throttled handler: the header's reading
+// progress bar, the hero canvas drifting up as you scroll away, and parallax
+// on elements carrying data-depth (gallery shots, the hero stage). Off for
+// reduced-motion readers; without script nothing moves and nothing is hidden.
+(() => {
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const progress = document.querySelector('.scroll-progress');
+  const canvas = document.querySelector('.hero-canvas');
+  const stage = document.querySelector('.stage[data-depth]');
+  const layers = [...document.querySelectorAll('[data-depth]')].filter((el) => el !== stage);
+  if (!progress && !canvas && !stage && !layers.length) return;
+  let ticking = false;
+  const update = () => {
+    ticking = false;
+    const y = window.scrollY;
+    const max = document.documentElement.scrollHeight - window.innerHeight;
+    if (progress) progress.style.transform = `scaleX(${max > 0 ? Math.min(1, y / max) : 0})`;
+    if (canvas && y < window.innerHeight * 1.2) canvas.style.transform = `translateY(${y * 0.18}px)`;
+    if (stage) stage.style.transform = `translateY(${y * -0.06}px)`;
+    for (const el of layers) {
+      const rect = el.getBoundingClientRect();
+      if (rect.bottom < -80 || rect.top > window.innerHeight + 80) continue;
+      const center = rect.top + rect.height / 2 - window.innerHeight / 2;
+      el.style.transform = `translateY(${center * -Number(el.dataset.depth)}px)`;
+    }
+  };
+  window.addEventListener('scroll', () => {
+    if (!ticking) { ticking = true; requestAnimationFrame(update); }
+  }, { passive: true });
+  update();
 })();
