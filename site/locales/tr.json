@@ -216,5 +216,12 @@
   "<span class=\"index\">05</span>On your phone": "<span class=\"index\">05</span>Telefonunda",
   "<span class=\"index\">06</span>Quick look": "<span class=\"index\">05</span>Hızlı bakış",
   "<span class=\"index\">07</span>Install": "<span class=\"index\">06</span>Kurulum",
-  "<span class=\"index\">08</span>Questions": "<span class=\"index\">07</span>Sorular"
+  "<span class=\"index\">08</span>Questions": "<span class=\"index\">07</span>Sorular",
+  "Kriko checking an invented e-bike listing, from opening the page to the sourced findings. Press play; the film does not start on its own.": "Kriko'nun kurgusal bir e-bisiklet ilanını kontrol edişi: sayfayı açmaktan kaynaklı bulgulara kadar. Oynat'a basın; film kendiliğinden başlamaz.",
+  "<a href=\"/problems/\">Read real, sourced findings on the known-problems pages</a> — no app needed.": "<a href=\"/problems/\">Bilinen sorunlar sayfalarında gerçek, kaynaklı bulguları oku</a> — uygulama gerekmez.",
+  "Get the Android APK": "Android APK'sını al",
+  "Build it from source": "Kaynaktan derle",
+  "Free and open source, no account": "Ücretsiz ve açık kaynak, hesap yok",
+  "Catalogs work offline, no AI key": "Kataloglar çevrimdışı çalışır, yapay zekâ anahtarı gerekmez",
+  "<a href=\"#film\">Watch the 28-second demo</a> or <a href=\"#get\">follow the setup steps</a>": "<a href=\"#film\">28 saniyelik tanıtımı izle</a> ya da <a href=\"#get\">kurulum adımlarını takip et</a>"
 }

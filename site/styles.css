@@ -106,7 +106,7 @@ kbd { white-space: nowrap; font: 600 .85em var(--sans); padding: .1em .45em; bor
 
 /* Hero — full-viewport, with a slow animated gradient field behind the copy.
    The canvas is painted by script.js; without script it is simply absent. */
-.hero { position: relative; overflow: hidden; padding-block: clamp(64px, 9vw, 128px) clamp(56px, 8vw, 104px); background: var(--bg); }
+.hero { position: relative; overflow: hidden; padding-block: clamp(72px, 10vw, 144px) clamp(72px, 9vw, 128px); background: var(--bg); }
 /* One static wash of the signature gradient, strongest at the top edge where
    the header sits, fading into the page — Mistral's atmospheric hero sky,
    held still. */
@@ -114,12 +114,17 @@ kbd { white-space: nowrap; font: 600 .85em var(--sans); padding: .1em .45em; bor
 @media (prefers-color-scheme: dark) {
   .hero::before { background: linear-gradient(180deg, color-mix(in srgb, #2447e6 30%, transparent) 0%, transparent 46%); }
 }
-.hero-grid { position: relative; display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); gap: clamp(40px, 5vw, 80px); align-items: center; }
+.hero-grid { position: relative; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); gap: clamp(48px, 6vw, 96px); align-items: center; }
 h1 { font-size: clamp(3.6rem, 7.6vw, 6.6rem); line-height: .94; letter-spacing: -.018em; max-width: 11em; }
 h1 span { color: var(--accent); display: block; }
-.lead { margin-top: 30px; max-width: 30em; font-size: 1.3125rem; line-height: 1.6; color: var(--muted); }
+.lead { margin-top: 32px; max-width: 30em; font-size: 1.375rem; line-height: 1.62; color: var(--muted); }
 .actions { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 38px; }
+.section .actions { margin-top: 44px; }
 .fine { margin-top: 20px; font-size: 1rem; line-height: 1.65; color: var(--muted); }
+.hero-points { list-style: none; display: flex; flex-wrap: wrap; gap: 10px 28px; margin: 34px 0 0; padding: 0; }
+.hero-points li { display: inline-flex; align-items: center; gap: 9px; font-size: 1.0625rem; font-weight: 600; color: var(--ink); }
+.hero-points .icon { width: 1.15em; height: 1.15em; color: var(--accent); stroke-width: 2.6; flex: none; }
+.hero-points a { color: var(--link); }
 /* The hero's stage: the sky image runs edge to edge of its column and the
    panel rises out of it, cropped at the bottom — anchored, not floating. */
 .stage { margin: 0; }
@@ -158,7 +163,7 @@ h1 span { color: var(--accent); display: block; }
 /* Sections */
 .section { padding-block: clamp(88px, 11vw, 160px); }
 .section.soft { background: var(--soft); border-block: 1px solid var(--line); }
-h2 { font-size: clamp(2.9rem, 6vw, 5rem); max-width: 15em; letter-spacing: -.012em; }
+h2 { font-size: clamp(2.9rem, 6vw, 5rem); max-width: 16em; letter-spacing: -.012em; margin-top: 4px; }
 .section-lead { margin-top: 26px; max-width: 40em; color: var(--muted); font-size: 1.25rem; line-height: 1.65; }
 .two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(32px, 6vw, 88px); }
 .two h2 { font-size: clamp(2.1rem, 4vw, 3.1rem); }
@@ -169,18 +174,18 @@ h2 { font-size: clamp(2.9rem, 6vw, 5rem); max-width: 15em; letter-spacing: -.012
 
 /* How it works */
 .steps { list-style: none; margin: clamp(36px, 5vw, 60px) 0 0; padding: 0; border-top: 1px solid var(--line); }
-.step { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 460px); gap: clamp(32px, 7vw, 104px); align-items: center; padding-block: clamp(44px, 6vw, 72px); border-bottom: 1px solid var(--line); }
-.step:nth-child(even) { grid-template-columns: minmax(0, 460px) minmax(0, 1fr); }
+.step { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 480px); gap: clamp(40px, 7vw, 112px); align-items: center; padding-block: clamp(48px, 6vw, 80px); border-bottom: 1px solid var(--line); }
+.step:nth-child(even) { grid-template-columns: minmax(0, 480px) minmax(0, 1fr); }
 .step:nth-child(even) .step-copy { order: 2; }
 .step-number { display: block; font: 700 clamp(3rem, 6vw, 4.6rem)/1 var(--display); color: var(--accent); margin-bottom: 8px; }
 .step h3 { font-size: clamp(2.2rem, 4vw, 3.2rem); }
-.step p { margin-top: 16px; max-width: 28em; color: var(--muted); }
+.step p { margin-top: 18px; max-width: 30em; color: var(--muted); font-size: 1.125rem; line-height: 1.65; }
 .shot img { width: 100%; max-width: 420px; margin-inline: auto; border-radius: 16px; box-shadow: 0 18px 40px -18px rgba(11, 16, 32, .35), 0 2px 6px rgba(11, 16, 32, .08); }
 .shot.wide img { max-width: 440px; border-radius: 6px; border: 1px solid var(--line); }
 
 /* Examples */
 /* The desktop app, drawn as a window: the whole picture, a hairline and a shadow. */
-.window { margin: clamp(32px, 5vw, 52px) 0 0; }
+.window { margin: clamp(36px, 5vw, 60px) auto 0; max-width: 1040px; }
 .window img, .window video { display: block; width: 100%; height: auto; border-radius: 12px; border: 1px solid var(--line); box-shadow: 0 24px 60px -26px rgba(11, 16, 32, .4), 0 2px 8px rgba(11, 16, 32, .08); }
 .window video { aspect-ratio: 16 / 9; background: #090c17; }
 .window figcaption { margin-top: 14px; max-width: 46em; font-size: 1rem; line-height: 1.6; color: var(--muted); }
@@ -193,7 +198,7 @@ h2 { font-size: clamp(2.9rem, 6vw, 5rem); max-width: 15em; letter-spacing: -.012
 .gallery li > p:not(.tag) { margin-top: 8px; font-size: 1.0625rem; line-height: 1.55; color: var(--muted); }
 /* Phone captures are taller than they are wide: a tighter grid keeps four across. */
 .gallery.phones { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-.gallery.phones .shot img { max-width: 240px; }
+.gallery.phones .shot img { max-width: 260px; }
 
 /* The signature closing stripe: the one gradient, as a band above the footer
    area and as the film section's backdrop. */
@@ -202,8 +207,9 @@ h2 { font-size: clamp(2.9rem, 6vw, 5rem); max-width: 15em; letter-spacing: -.012
 .section.film { background: #070a14; color: #f3f1ea; border-block: 1px solid #1c2340; }
 .section.film .label { color: #8fa0c8; }
 .section.film h2 { color: #f3f1ea; }
-.section.film figcaption { color: #8fa0c8; }
+.section.film figcaption { color: #8fa0c8; max-width: 1040px; margin-inline: auto; }
 .section.film .window img, .section.film .window video { border-color: #1c2340; box-shadow: 0 30px 80px -30px rgba(0, 0, 0, .8); }
+.section.film .section-lead { color: #8fa0c8; }
 
 /* Install */
 .get-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: clamp(32px, 6vw, 80px); margin-top: clamp(28px, 4vw, 48px); align-items: start; }
@@ -212,7 +218,7 @@ h2 { font-size: clamp(2.9rem, 6vw, 5rem); max-width: 15em; letter-spacing: -.012
 .setup .step-number { font-size: 3rem; margin: 0; }
 .setup h3 { font-size: 1.9rem; }
 .setup p { margin-top: 8px; color: var(--muted); max-width: 34em; }
-.download-card { padding: clamp(24px, 3vw, 36px); background: var(--bg); border: 2px solid var(--ink); border-radius: 4px; }
+.download-card { padding: clamp(28px, 3.5vw, 44px); background: var(--bg); border: 2px solid var(--ink); border-radius: 6px; box-shadow: 8px 8px 0 var(--line); }
 .download-card h3 { font-size: 2.2rem; }
 .download-card > p:first-of-type { margin: 8px 0 22px; color: var(--muted); }
 .download-card + .download-card { margin-top: clamp(20px, 3vw, 32px); }
