@@ -105,3 +105,21 @@
     });
   }
 })();
+
+// The hero's panel drifts a touch slower than the page while the first screen
+// scrolls away: depth, and nothing else. The entrance animation rides on the
+// card inside, so this transform is the figure's alone to move.
+(() => {
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const panel = document.querySelector('.hero .stage');
+  if (!panel) return;
+  let ticking = false;
+  const place = () => {
+    const y = Math.min(window.scrollY, window.innerHeight);
+    panel.style.transform = `translateY(${y * -0.05}px)`;
+    ticking = false;
+  };
+  window.addEventListener('scroll', () => {
+    if (!ticking) { ticking = true; requestAnimationFrame(place); }
+  }, { passive: true });
+})();
