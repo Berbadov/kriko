@@ -60,3 +60,34 @@
     caption.append(button);
   }
 })();
+
+// Scroll-in reveals and the header's shadow. Both are added as classes, so a
+// page without script (or a reader who asked for less motion) sees everything
+// at once and still. The hero animates on load through CSS alone.
+(() => {
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const bar = document.querySelector('.topbar');
+  if (bar) {
+    const onScroll = () => bar.classList.toggle('is-scrolled', window.scrollY > 8);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+  }
+  if (!('IntersectionObserver' in window)) return;
+  const targets = document.querySelectorAll('.section .label, .section h2, .section-lead, .gallery li, .step, .setup li, .download-card, .window, .shot');
+  const seen = new WeakSet();
+  const io = new IntersectionObserver((entries) => {
+    let delay = 0;
+    for (const entry of entries) {
+      if (!entry.isIntersecting || seen.has(entry.target)) continue;
+      seen.add(entry.target);
+      entry.target.style.setProperty('--reveal-delay', `${Math.min(delay, 240)}ms`);
+      delay += 60;
+      entry.target.classList.add('is-in');
+      io.unobserve(entry.target);
+    }
+  }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
+  for (const el of targets) {
+    el.classList.add('will-animate');
+    io.observe(el);
+  }
+})();
