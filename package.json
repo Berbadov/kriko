@@ -7,7 +7,7 @@
     "test": "node --test \"extension/tests/**/*.test.js\"",
     "test:site": "node --test \"site/tests/*.test.cjs\"",
     "serve:site": "python -m http.server 4173 --bind 127.0.0.1 --directory site",
-    "build:site": "node site/tools/render-locales.cjs"
+    "build:site": "node site/tools/render-locales.cjs && node site/tools/render_llms.cjs"
   },
   "devDependencies": {
     "jsdom": "^26.0.0"
