@@ -143,7 +143,9 @@
   const rgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
   const PALETTES = {
     light: { sky: ['#3f6be9', '#6a8cf0', '#9db2f6'].map(rgb), cloud: ['#8f82e6', '#c28fe8', '#f58fb2', '#ffbf9f', '#fff0d4'].map(rgb) },
-    dark: { sky: ['#0a0f36', '#16215f', '#2c3c9a'].map(rgb), cloud: ['#1d2260', '#43347f', '#8a4a97', '#d97aa0', '#f5b9a8'].map(rgb) },
+    dark: { sky: ['#03030c', '#0c1038', '#1d2a7a'].map(rgb), cloud: ['#1d2260', '#43347f', '#8a4a97', '#d97aa0', '#f5b9a8'].map(rgb) },
+    // Black with an ember at the edges: the film's backdrop.
+    ember: { sky: ['#000000', '#050507', '#0b0b10'].map(rgb), cloud: ['#14101f', '#2d1747', '#7a2f6e', '#d4574f', '#ffa96b'].map(rgb) },
   };
   const bayer = (() => {
     let m = [[0]];
@@ -186,7 +188,7 @@
   const skies = [];
   const paint = (sky, offset) => {
     const { canvas, ctx, image, w, h } = sky;
-    const palette = PALETTES[sky.forceDark || dark.matches ? 'dark' : 'light'];
+    const palette = PALETTES[sky.palette || (dark.matches ? 'dark' : 'light')];
     const clouds = palette.cloud.slice(0, sky.maxCloud || 5);
     const data = image.data, ox = Math.floor(offset);
     for (let y = 0; y < h; y++) {
@@ -218,7 +220,7 @@
   const sky = (selector, options) => { const host = document.querySelector(selector); if (host) addSky(host, options); };
   sky('.hero.home .stage', { w: 176, h: 196 });
   sky('.band.sky', { w: 384, h: 54 });
-  sky('.section.film', { w: 192, h: 108, forceDark: true, maxCloud: 3 });
+  sky('.section.film', { w: 192, h: 108, palette: 'ember', maxCloud: 4 });
   if (skies.length) {
     makeField();
     const watch = new IntersectionObserver((entries) => {
