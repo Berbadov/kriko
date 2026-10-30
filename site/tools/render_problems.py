@@ -13,6 +13,9 @@ new product in an old one gets its pages with no edit here.
 What a page carries: the claim's title, body and advice, how it is found, and a
 link to each page it was reported on. It never carries the quote the claim was
 checked against; that text belongs to its author, the link sends the reader there.
+The page's structured data is the same material for a machine: an `Article` about
+the product with a `citation` for each source page, and a `FAQPage` answering the
+two questions this page answers in the words a buyer types.
 
 What is never published:
   * a catalog that declares itself `synthetic` (the worked example), because a
@@ -38,6 +41,7 @@ import tempfile
 import tomllib
 import zlib
 from pathlib import Path
+from typing import Any
 from urllib.parse import quote
 
 import yaml
@@ -51,7 +55,7 @@ GLANCE_FROM = 4  # a page with this many claims opens with a list of their title
 OPEN_UP_TO = 12  # a group of more products than this starts folded
 
 # The site's own words, per language. The claims' words come from the catalog.
-UI = {
+UI: dict[str, dict[str, Any]] = {
     "en": {
         "html_lang": "en",
         "locale": "en_US",
@@ -109,6 +113,10 @@ UI = {
         "phone_a": "Email yourself the link",
         "phone_subject": "Kriko for my computer",
         "note": "These reports come from the pages linked under each item: owner forums, repair guides and workshops. They are not a diagnosis of any one unit, and a careful check of the one you are buying still applies.",
+        "faq_what": "What is known to go wrong with {label}?",
+        "faq_check": "What should I check before buying {label}?",
+        "faq_more": "{n} more reported problems",
+        "faq_note": "Each one is a sourced report, not a diagnosis of any single unit.",
         "licence": "Text from the Kriko {name} catalog, version {version}, under the {license} license.",
         "hub_title": "Known problems, by product and part",
         "hub_lead": "Pick a category. Each product page lists what owners and repairers report going wrong with it, every report linked to the page it came from.",
@@ -192,6 +200,10 @@ UI = {
         "phone_a": "Bağlantıyı kendinize e-postalayın",
         "phone_subject": "Kriko'yu bilgisayarıma kuracağım",
         "note": "Bu maddeler, her birinin altında bağlantısı verilen sayfalardan derlenmiştir: kullanıcı forumları, onarım rehberleri ve servisler. Belirli bir ürünün teşhisi değildir; satın alacağınız ürünü dikkatle kontrol etmeniz yine de gerekir.",
+        "faq_what": "{label} ile ilgili bilinen sorunlar neler?",
+        "faq_check": "{label} almadan önce neye bakmalıyım?",
+        "faq_more": "{n} bildirilen sorun daha",
+        "faq_note": "Her biri kaynaklı bir rapordur; belirli bir ürünün teşhisi değildir.",
         "licence": "Metin, Kriko {name} kataloğundan (sürüm {version}) alınmıştır, {license} lisansıyla.",
         "hub_title": "Bilinen sorunlar: ürün ve parça bazında",
         "hub_lead": "Bir kategori seçin. Her ürün sayfası, sahiplerin ve tamircilerin neyin bozulduğunu bildirdiğini listeler; her rapor, geldiği sayfaya bağlantı verir.",
@@ -383,7 +395,8 @@ def _handoff(ui: dict) -> str:
     return _e(f'mailto:?subject={quote(ui["phone_subject"])}&body={quote(ORIGIN + ui["get"], safe="")}')
 
 
-ORGANISATION = {"@type": "Organization", "name": "Kriko", "url": f"{ORIGIN}/"}
+ORGANISATION = {"@type": "Organization", "@id": f"{ORIGIN}/#organization", "name": "Kriko", "url": f"{ORIGIN}/",
+                "logo": f"{ORIGIN}/assets/icon-128.png", "sameAs": ["https://github.com/Berbadov/kriko"]}
 
 
 def _breadcrumbs(trail: list[tuple[str, str]]) -> dict:
@@ -393,13 +406,69 @@ def _breadcrumbs(trail: list[tuple[str, str]]) -> dict:
                                 for n, (name, path) in enumerate(trail, 1)]}
 
 
-def _article(lang: str, *, headline: str, description: str, path: str, modified: str) -> dict:
+def _take(parts: list[str], limit: int) -> tuple[list[str], int]:
+    """As many whole `parts` as fit in `limit`, and how many were left, never cutting one in half.
+
+    The first one is always kept: half a sentence joined to another reads worse than a long one.
+    """
+    kept: list[str] = []
+    size = 0
+    for part in parts:
+        if kept and size + len(part) + 2 > limit:
+            break
+        kept.append(part)
+        size += len(part) + 2
+    return kept, len(parts) - len(kept)
+
+
+def _article(lang: str, *, headline: str, description: str, path: str, modified: str,
+             about: str = "", citations: tuple[str, ...] = ()) -> dict:
     page = {"@context": "https://schema.org", "@type": "Article", "headline": headline, "description": description,
             "inLanguage": UI[lang]["html_lang"], "mainEntityOfPage": f"{ORIGIN}{path}",
-            "image": f"{ORIGIN}/assets/share-card.jpg", "author": ORGANISATION, "publisher": ORGANISATION}
+            "image": f"{ORIGIN}/assets/share-card.jpg", "author": ORGANISATION, "publisher": ORGANISATION,
+            "isPartOf": {"@type": "WebSite", "name": "Kriko", "url": f"{ORIGIN}/"}}
+    if about:
+        page["about"] = {"@type": "Product", "name": about}
+    if citations:
+        # The pages the findings were read from, so a machine can follow the evidence, not just us.
+        page["citation"] = list(citations)
     if modified:
         page["dateModified"] = modified
     return page
+
+
+def _product_faq(lang: str, label: str, claims: list[dict]) -> dict:
+    """The two questions this page answers, in the words a buyer types, from the claims it already shows.
+
+    It cannot disagree with the page: the first answer is the claim titles the reader can see, worst
+    first, and the second is the advice printed under them. No question is invented that the page
+    does not answer.
+    """
+    ui = UI[lang]
+    titles = [c["text"][lang]["title"].strip().rstrip(".") for c in claims]
+    shown, rest = _take(titles, 600)
+    what = "; ".join(shown)
+    if rest:
+        what += ", " + ui["faq_more"].format(n=rest)
+    sentences = [sentence for claim in claims for sentence in re.split(r"(?<=[.!?])\s+", claim["text"][lang]["advice"].strip()) if sentence]
+    advice, _ignored = _take(sentences, 700)
+    return {"@context": "https://schema.org", "@type": "FAQPage", "inLanguage": ui["html_lang"],
+            "mainEntity": [
+                {"@type": "Question", "name": ui["faq_what"].format(label=label),
+                 "acceptedAnswer": {"@type": "Answer", "text": f"{what}. {ui['faq_note']}"}},
+                {"@type": "Question", "name": ui["faq_check"].format(label=label),
+                 "acceptedAnswer": {"@type": "Answer", "text": " ".join(advice) if advice else ui["note"]}},
+            ]}
+
+
+def _citations(claims: list[dict], limit: int = 20) -> tuple[str, ...]:
+    """The source pages behind these claims, once each, in the order the page names them."""
+    seen: list[str] = []
+    for claim in claims:
+        for url, _domain in claim["sources"]:
+            if url not in seen:
+                seen.append(url)
+    return tuple(seen[:limit])
 
 
 def _collection(lang: str, *, name: str, description: str, path: str, items: list[tuple[str, str]]) -> dict:
@@ -676,7 +745,9 @@ def _subject_page(catalog: dict, entry: dict, subject: dict, lang: str, claims: 
     title = ui["title_risk" if risky else "title"].format(label=label)
     schema = (_breadcrumbs([(ui["crumb"], f'{ui["prefix"]}/problems/'),
                             (category, f'{ui["prefix"]}/problems/{entry["catalog_slug"]}/'), (label, path)]),
-              _article(lang, headline=title, description=description, path=path, modified=_updated(claims)))
+              _article(lang, headline=title, description=description, path=path, modified=_updated(claims),
+                       about=label, citations=_citations(claims)),
+              _product_faq(lang, label, claims))
     return _chrome(lang, title=title, description=description, path=path,
                    alternates=alternates, depth=3 if lang == "tr" else 2, css=css, body=body, schema=schema)
 
