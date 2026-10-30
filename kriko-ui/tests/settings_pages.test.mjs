@@ -60,6 +60,7 @@ test('the settings drawer shows one page at a time, and a requested page is the 
       '../../engine/appupdate': { useAppUpdate: () => ({ phase: 'idle', checked: false, release: null, problem: '', canInstall: false, check() {}, install() {} }) },
       '../../engine/sensitivity': { useSensitivity: () => ({ sensitivity: 'all', choose: async () => '' }) },
       '../../engine/settings': {
+        usePresence: () => ({ presence: null, reload: async () => {} }),
         useAbout: () => ({ version: '0.3.2', folder: '/data' }),
         useKeys: () => ({ doc: { providers: [] }, problem: '', tested: {}, set() {}, remove() {}, test() {} }),
         usePrefsDoc: () => ({ doc: prefsDoc, problem: '', save: async () => {} }),
