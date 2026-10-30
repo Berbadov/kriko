@@ -7,7 +7,7 @@
   <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
   <title>Kriko: what is known to go wrong with this product</title>
   <meta name="description" content="Kriko shows what is known to go wrong with the exact product you are looking at, with the source beside every finding. It runs on your computer and works on any listing site.">
-  <meta property="og:title" content="Kriko: the listing tells half the story">
+  <meta property="og:title" content="Kriko: know what can go wrong before you buy">
   <meta property="og:description" content="What is known to go wrong with this exact product, with sources you can check, beside the listing.">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Kriko">
@@ -15,11 +15,11 @@
   <meta property="og:image" content="https://kriko.cc/assets/share-card.jpg">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="The Kriko panel open beside an invented e-bike listing, with the headline: The listing tells half the story.">
+  <meta property="og:image:alt" content="The Kriko panel open beside an invented e-bike listing, with the headline: Know what can go wrong before you buy.">
   <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" href="assets/icon-32.png">
-  <link rel="stylesheet" href="styles.css?v=036ae26c468b">
-  <script src="script.js?v=b29e79b52961" defer></script>
+  <link rel="stylesheet" href="styles.css?v=855ebba7863f">
+  <script src="script.js?v=4b13653ec3c7" defer></script>
   <link rel="canonical" href="https://kriko.cc/">
   <link rel="alternate" href="https://kriko.cc/" hreflang="en">
   <link rel="alternate" href="https://kriko.cc/tr/" hreflang="tr">
@@ -32,6 +32,10 @@
     <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12m-5-5 5 5 5-5M5 17v4h14v-4"/></symbol>
     <symbol id="i-external" viewBox="0 0 24 24"><path d="M14 4h6v6m0-6L10 14M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></symbol>
     <symbol id="i-check" viewBox="0 0 24 24"><path d="M4 12.5 9.5 18 20 6.5"/></symbol>
+    <symbol id="i-windows" viewBox="0 0 24 24"><path d="M3 5.6 10.8 4.5v7H3zM13 4.2 21 3v8.5h-8zM3 12.5h7.8v7L3 18.4zM13 12.5h8V21l-8-1.2z"/></symbol>
+    <symbol id="i-android" viewBox="0 0 24 24"><path d="M7 10.5a5 5 0 0 1 10 0V17a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1zM9 5 7.6 3M15 5l1.4-2M10 9h.01M14 9h.01M4 11v5M20 11v5M10 18v3M14 18v3"/></symbol>
+    <symbol id="i-browser" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M6.5 6.5h.01M9.5 6.5h.01M12 12.5v4m-2-2 2 2 2-2"/></symbol>
+    <symbol id="i-git" viewBox="0 0 24 24"><circle cx="6" cy="5.5" r="2"/><circle cx="6" cy="18.5" r="2"/><circle cx="18" cy="8.5" r="2"/><path d="M6 7.5v9M18 10.5c0 4.5-12 2-12 6"/></symbol>
   </svg>
 
   <header class="topbar">
@@ -46,21 +50,21 @@
         <a href="#get">Install</a>
       </nav>
       <span class="language-switch" role="group" aria-label="Language"><a href="/" lang="en" hreflang="en" aria-current="page">EN</a><a href="/tr/" lang="tr" hreflang="tr">TR</a></span>
-      <a class="button small bar-cta" href="#get">Get Kriko</a>
+      <a class="button small bar-cta" href="#get"><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg><span>Get Kriko</span></a>
     </div>
   </header>
 
   <main id="main">
-    <section class="hero" id="top">
-      <div class="wrap hero-grid">
+    <section class="hero home" id="top">
+      <div class="hero-grid">
         <div class="hero-copy">
-          <p class="label">Before you buy</p>
-          <h1>The listing tells <span>half the story.</span></h1>
-          <p class="lead">Buying a used car, phone or appliance? Kriko shows known problems with the exact model, beside the listing, with sources you can open and questions to ask the seller.</p>
+          <p class="label">Known problems, with sources</p>
+          <h1>Know what can go wrong <span>before you buy.</span></h1>
+          <p class="lead">Kriko shows the known problems of the exact model you are looking at, beside the listing. Every finding comes with a source you can open and a question to ask the seller.</p>
           <div class="actions">
             <a class="button" href="https://github.com/Berbadov/kriko/releases/latest/download/kriko-0.3.7-x86_64-setup.exe"><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg><span>Download Kriko for Windows</span></a>
-            <a class="button ghost" href="https://chromewebstore.google.com/detail/kriko/bdifnaggafjokndlpjgmlfappcoehdjb">Get the browser extension</a>
-            <a class="button ghost" href="https://github.com/Berbadov/kriko"><svg class="icon" aria-hidden="true"><use href="#i-external"/></svg><span>GitHub</span></a>
+            <a class="button ghost" href="https://chromewebstore.google.com/detail/kriko/bdifnaggafjokndlpjgmlfappcoehdjb"><svg class="icon" aria-hidden="true"><use href="#i-browser"/></svg><span>Get the browser extension</span></a>
+            <a class="button quiet" href="https://github.com/Berbadov/kriko"><svg class="icon" aria-hidden="true"><use href="#i-git"/></svg><span>GitHub</span></a>
           </div>
           <ul class="hero-points">
             <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span>Free and open source, no account</span></li>
@@ -82,17 +86,19 @@
 
     <section class="promises" aria-label="What Kriko promises">
       <ul class="wrap promise-list">
-        <li>A source beside every finding</li>
-        <li>Your research stays on your computer</li>
-        <li>Free and open source</li>
+        <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span>A source beside every finding</span></li>
+        <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span>Your research stays on your computer</span></li>
+        <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span>Free and open source</span></li>
       </ul>
     </section>
 
     <section class="section film" id="film">
-      <div class="wrap">
-        <p class="label">The film</p>
-        <h2>Twenty-eight seconds, with sound.</h2>
-        <p class="section-lead">Kriko checking an invented e-bike listing, from opening the page to the sourced findings. Press play; the film does not start on its own.</p>
+      <div class="wrap film-grid">
+        <div class="film-copy">
+          <p class="label">The film</p>
+          <h2>Twenty-eight seconds, with sound.</h2>
+          <p class="section-lead">Kriko checking an invented e-bike listing, from opening the page to the sourced findings. Press play; the film does not start on its own.</p>
+        </div>
         <figure class="window">
           <video controls preload="none" playsinline width="1280" height="720" poster="assets/film/kriko-ad-poster.webp" aria-label="A 28-second film of Kriko checking an invented e-bike listing: what is known to go wrong with it, with the source beside every finding.">
             <source src="assets/film/kriko-ad.mp4" type="video/mp4">
@@ -105,8 +111,12 @@
 
     <section class="section" id="how">
       <div class="wrap">
-        <p class="label"><span class="index">01</span>How it works</p>
-        <h2>Three steps, on the page you are reading.</h2>
+        <div class="head">
+          <div>
+            <p class="label n">How it works</p>
+            <h2>Three steps, on the page you are reading.</h2>
+          </div>
+        </div>
 
         <ol class="steps">
           <li class="step">
@@ -115,7 +125,7 @@
               <h3>Open a product page.</h3>
               <p>Kriko reads the page on your computer and looks that exact product up in your catalogs. Nothing leaves your computer.</p>
             </div>
-            <picture class="shot wide">
+            <picture class="shot crop">
               <source srcset="assets/examples/hero-dark.webp" media="(prefers-color-scheme: dark)">
               <img src="assets/examples/hero-light.webp" width="760" height="800" loading="lazy" alt="The Kriko panel open beside an invented e-bike listing. It lists four things to check.">
             </picture>
@@ -126,7 +136,7 @@
               <h3>Read what to check.</h3>
               <p>Each finding says how serious it is, how well it is supported and what to ask. Open one to see its source.</p>
             </div>
-            <picture class="shot">
+            <picture class="shot crop">
               <source srcset="assets/examples/claim-open-dark.webp" media="(prefers-color-scheme: dark)">
               <img src="assets/examples/claim-open-light.webp" width="400" height="768" loading="lazy" alt="One finding opened. It explains that the battery loses range after two winters, names the source and suggests what to ask the seller.">
             </picture>
@@ -137,7 +147,7 @@
               <h3>Compare, then decide.</h3>
               <p>Add the products you are torn between. The panel counts what is known to go wrong with each, and the app lines them up side by side.</p>
             </div>
-            <picture class="shot">
+            <picture class="shot crop">
               <source srcset="assets/examples/compare-dark.webp" media="(prefers-color-scheme: dark)">
               <img src="assets/examples/compare-light.webp" width="400" height="768" loading="lazy" alt="The Kriko panel with a shortlist of three invented e-bikes. Each row counts its serious, to-check and minor findings.">
             </picture>
@@ -148,19 +158,23 @@
 
     <section class="section" id="app">
       <div class="wrap">
-        <p class="label"><span class="index">02</span>The app</p>
-        <h2>Where the findings are kept.</h2>
-        <p class="section-lead">The Windows app keeps every check on your computer, lines your shortlist up side by side and answers your follow-up questions with sources. The panel in your browser is the way in.</p>
-        <figure class="window">
-          <picture>
-            <source srcset="assets/desktop/compare-compact-dark.webp" media="(max-width: 760px) and (prefers-color-scheme: dark)" width="760" height="1000">
-            <source srcset="assets/desktop/compare-compact-light.webp" media="(max-width: 760px)" width="760" height="1000">
-            <source srcset="assets/desktop/compare-dark.webp" media="(prefers-color-scheme: dark)">
-            <img src="assets/desktop/compare-light.webp" width="1440" height="900" loading="lazy" alt="The Kriko app comparing three invented e-bikes side by side. A finding that more than one bike shares is marked, and each finding shows how well it is supported.">
-          </picture>
-          <figcaption>Three invented e-bikes, side by side. A finding that two of them share is marked, and each one says how well it is supported.</figcaption>
-        </figure>
-        <div class="window-pair">
+        <div class="head">
+          <div>
+            <p class="label n">The app</p>
+            <h2>Where the findings are kept.</h2>
+          </div>
+          <p class="section-lead">The Windows app keeps every check on your computer, lines your shortlist up side by side and answers your follow-up questions with sources. The panel in your browser is the way in.</p>
+        </div>
+        <div class="bento">
+          <figure class="window wide">
+            <picture>
+              <source srcset="assets/desktop/compare-compact-dark.webp" media="(max-width: 760px) and (prefers-color-scheme: dark)" width="760" height="1000">
+              <source srcset="assets/desktop/compare-compact-light.webp" media="(max-width: 760px)" width="760" height="1000">
+              <source srcset="assets/desktop/compare-dark.webp" media="(prefers-color-scheme: dark)">
+              <img src="assets/desktop/compare-light.webp" width="1440" height="900" loading="lazy" alt="The Kriko app comparing three invented e-bikes side by side. A finding that more than one bike shares is marked, and each finding shows how well it is supported.">
+            </picture>
+            <figcaption>Three invented e-bikes, side by side. A finding that two of them share is marked, and each one says how well it is supported.</figcaption>
+          </figure>
           <figure class="window">
             <picture>
               <source srcset="assets/desktop/product-compact-dark.webp" media="(prefers-color-scheme: dark)">
@@ -182,13 +196,17 @@
 
     <section class="section soft" id="examples">
       <div class="wrap">
-        <p class="label"><span class="index">03</span>Examples</p>
-        <h2>Four invented products, in the real panel.</h2>
-        <p class="section-lead">Nothing here is real, not the products and not the findings. They only show how the panel reads. Real findings link to a real source.</p>
+        <div class="head">
+          <div>
+            <p class="label n">Examples</p>
+            <h2>Four invented products, in the real panel.</h2>
+          </div>
+          <p class="section-lead">Nothing here is real, not the products and not the findings. They only show how the panel reads. Real findings link to a real source.</p>
+        </div>
         <ul class="gallery">
           <li>
             <p class="tag">New · Robot vacuum</p>
-            <picture class="shot">
+            <picture class="shot crop">
               <source srcset="assets/examples/vacuum-dark.webp" media="(prefers-color-scheme: dark)">
               <img src="assets/examples/vacuum-light.webp" width="400" height="768" loading="lazy" alt="The Kriko panel for an invented robot vacuum. Findings include a side-brush motor that fails and schedules that need a cloud account.">
             </picture>
@@ -197,7 +215,7 @@
           </li>
           <li>
             <p class="tag">Used · Phone</p>
-            <picture class="shot">
+            <picture class="shot crop">
               <source srcset="assets/examples/phone-dark.webp" media="(prefers-color-scheme: dark)">
               <img src="assets/examples/phone-light.webp" width="400" height="768" loading="lazy" alt="The Kriko panel for an invented used phone. Findings include a fingerprint sensor that stops after a screen repair and battery health below 80 percent.">
             </picture>
@@ -206,7 +224,7 @@
           </li>
           <li>
             <p class="tag">Used · Washing machine</p>
-            <picture class="shot">
+            <picture class="shot crop">
               <source srcset="assets/examples/washer-dark.webp" media="(prefers-color-scheme: dark)">
               <img src="assets/examples/washer-light.webp" width="400" height="768" loading="lazy" alt="The Kriko panel for an invented used washing machine. Findings include a drum bearing that grows loud and a door seal that grows mould.">
             </picture>
@@ -215,7 +233,7 @@
           </li>
           <li>
             <p class="tag">New · Cordless drill</p>
-            <picture class="shot">
+            <picture class="shot crop">
               <source srcset="assets/examples/drill-dark.webp" media="(prefers-color-scheme: dark)">
               <img src="assets/examples/drill-light.webp" width="400" height="768" loading="lazy" alt="The Kriko panel for an invented cordless drill. Findings include battery contacts that overheat and a chuck that slips under load.">
             </picture>
@@ -229,56 +247,58 @@
     </section>
 
     <section class="section" id="catalogs">
-      <div class="wrap two split">
-        <div class="split-copy">
-          <div>
-            <p class="label"><span class="index">04</span>Catalogs</p>
+      <div class="wrap trio">
+          <div class="card">
+            <p class="label n">Catalogs</p>
             <h2>Know the model before you buy.</h2>
             <p>A catalog is one product category, written down with its sources. There are catalogs for cars, phones, laptops, TVs, game consoles, kitchen and laundry appliances and more, in English and Turkish. Install one from <strong>Catalogs</strong> in the app and lookups work offline.</p>
             <p class="fine">You do not need the app to read them: <a href="/problems/">browse the known problems by product and part</a>.</p>
           </div>
-          <div>
-            <p class="label"><span class="index">06</span>Quick look</p>
+          <div class="card">
+            <p class="label">Quick look</p>
             <h2>No catalog? Ask your agent.</h2>
             <p><strong>Quick look</strong> sends the agent you chose to research a product no catalog covers, and keeps the sources. It needs an internet connection. If it finds nothing, Kriko says so. It never says a product is fine.</p>
           </div>
-        </div>
-        <picture class="shot">
-          <source srcset="assets/examples/research-dark.webp" media="(prefers-color-scheme: dark)">
-          <img src="assets/examples/research-light.webp" width="400" height="768" loading="lazy" alt="The research card for an invented air fryer. A quick look found three things to know, with the number of pages read.">
-        </picture>
+          <picture class="shot crop">
+            <source srcset="assets/examples/research-dark.webp" media="(prefers-color-scheme: dark)">
+            <img src="assets/examples/research-light.webp" width="400" height="768" loading="lazy" alt="The research card for an invented air fryer. A quick look found three things to know, with the number of pages read.">
+          </picture>
       </div>
     </section>
 
     <section class="section soft" id="mobile">
       <div class="wrap">
-        <p class="label"><span class="index">05</span>On your phone</p>
-        <h2>Ask from the shop, or scan the screen in front of you.</h2>
-        <p class="section-lead">The Android app is the agent alone: ask about a product, photograph a listing, or let the floating scanner read the page you are on. Every answer cites the pages it read, in English or Turkish. It runs on API keys, so there is no agent to install on the phone.</p>
+        <div class="head">
+          <div>
+            <p class="label n">On your phone</p>
+            <h2>Ask from the shop, or scan the screen in front of you.</h2>
+          </div>
+          <p class="section-lead">The Android app is the agent alone: ask about a product, photograph a listing, or let the floating scanner read the page you are on. Every answer cites the pages it read, in English or Turkish. It runs on API keys, so there is no agent to install on the phone.</p>
+        </div>
         <ul class="gallery phones">
           <li>
-            <picture class="shot">
+            <picture class="shot plain">
               <img src="assets/mobile/1-ask.webp" width="360" height="800" loading="lazy" alt="The Kriko phone app's ask screen in Turkish, with example questions: what can go wrong with a Bosch GSB 600 drill, and is a used Galaxy Buds2 Pro worth the price.">
             </picture>
             <h3>Ask</h3>
             <p>One question, in either language.</p>
           </li>
           <li>
-            <picture class="shot">
+            <picture class="shot plain">
               <img src="assets/mobile/3-answer.webp" width="360" height="800" loading="lazy" alt="A Turkish answer about the Bosch GSB 600 drill, with checks to run and numbered sources [1] [2] [3] under it.">
             </picture>
             <h3>Answer with sources</h3>
             <p>The numbered pages sit under the answer.</p>
           </li>
           <li>
-            <picture class="shot">
+            <picture class="shot plain">
               <img src="assets/mobile/5-screenshot.webp" width="360" height="800" loading="lazy" alt="The app reading a photographed Samsung Galaxy Buds2 Pro listing in Turkish, with brand, product, model and price fields it recognised, each editable before research.">
             </picture>
             <h3>Read the listing</h3>
             <p>A photo becomes editable text first; you confirm before anything is researched.</p>
           </li>
           <li>
-            <picture class="shot">
+            <picture class="shot plain">
               <img src="assets/mobile/8-light.webp" width="360" height="800" loading="lazy" alt="The Kriko phone app's ask screen in English on the light theme.">
             </picture>
             <h3>Dark, paper or white</h3>
@@ -287,8 +307,8 @@
         </ul>
         <p class="note">The captures are from a Pixel-sized Android emulator, not a mock. The phone build is a friends-test APK, not yet on Google Play.</p>
         <div class="actions">
-          <a class="button ghost" href="#get">Get the Android APK</a>
-          <a class="button ghost" href="https://github.com/Berbadov/kriko/tree/main/kriko-mobile"><svg class="icon" aria-hidden="true"><use href="#i-external"/></svg><span>Build it from source</span></a>
+          <a class="button ghost" href="#get"><svg class="icon" aria-hidden="true"><use href="#i-android"/></svg><span>Get the Android APK</span></a>
+          <a class="button ghost" href="https://github.com/Berbadov/kriko/tree/main/kriko-mobile"><svg class="icon" aria-hidden="true"><use href="#i-git"/></svg><span>Build it from source</span></a>
         </div>
       </div>
     </section>
@@ -297,7 +317,7 @@
 
     <section class="section" id="get">
       <div class="wrap">
-        <p class="label"><span class="index">07</span>Install</p>
+        <p class="label n">Install</p>
         <h2>Four steps, once.</h2>
         <p class="section-lead">New to Kriko? <a href="/install/">Start with the installation checklist</a>, then <a href="/guide/">see each step in the guide</a>.</p>
         <div class="get-grid">
@@ -309,7 +329,7 @@
           </ol>
           <div>
             <div class="download-card">
-              <h3>Kriko for Windows</h3>
+              <div class="dl-head"><span class="dl-icon"><svg class="icon" aria-hidden="true"><use href="#i-windows"/></svg></span><h3>Kriko for Windows</h3></div>
               <p>For 64-bit Windows. It installs for the current user and needs no administrator rights.</p>
               <a class="button" href="https://github.com/Berbadov/kriko/releases/latest/download/kriko-0.3.7-x86_64-setup.exe"><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg><span>Download the installer</span></a>
               <p class="fine">The installer is not code-signed yet, so Windows may show a SmartScreen warning. Choose More info, then Run anyway.</p>
@@ -318,9 +338,9 @@
               <p class="fine">Read the source on <a href="https://github.com/Berbadov/kriko">GitHub</a>.</p>
             </div>
             <div class="download-card">
-              <h3>Kriko for Android</h3>
+              <div class="dl-head"><span class="dl-icon"><svg class="icon" aria-hidden="true"><use href="#i-android"/></svg></span><h3>Kriko for Android</h3></div>
               <p>The agent on a phone: ask, photograph a listing, or scan the screen in front of you. English and Turkish. Test build for friends, direct APK.</p>
-              <a class="button ghost" href="https://github.com/Berbadov/kriko/tree/main/kriko-mobile"><svg class="icon" aria-hidden="true"><use href="#i-external"/></svg><span>Get the APK and the access steps</span></a>
+              <a class="button ghost" href="https://github.com/Berbadov/kriko/tree/main/kriko-mobile"><svg class="icon" aria-hidden="true"><use href="#i-android"/></svg><span>Get the APK and the access steps</span></a>
               <p class="fine">Android will warn that the app is not from the Play Store; that is expected for a direct APK. Not on Google Play yet.</p>
             </div>
           </div>
@@ -329,9 +349,11 @@
     </section>
 
     <section class="section soft" id="data">
-      <div class="wrap narrow">
-        <p class="label"><span class="index">08</span>Questions</p>
-        <h2>Your data, the cost and the limits.</h2>
+      <div class="wrap faq-grid">
+        <div class="faq-head">
+          <p class="label n">Questions</p>
+          <h2>Your data, the cost and the limits.</h2>
+        </div>
         <div class="faq">
           <details>
             <summary>What is Kriko?</summary>

@@ -115,6 +115,21 @@ UI = {
         "footer_home": "kriko.cc",
         "footer_help": "Help and feedback",
         "privacy": "Privacy",
+        "nav_how": "How it works",
+        "nav_cta": "Get Kriko",
+        "nav_guide": "Guide",
+        "stat_products": "Products",
+        "stat_reports": "Sourced reports",
+        "stat_categories": "Categories",
+        "stat_safety": "With a safety report",
+        "stat_sources": "Sources",
+        "sev": {"high": "serious", "medium": "to check", "low": "minor"},
+        "sev_label": {"high": "Serious", "medium": "To check", "low": "Minor"},
+        "browse": "Browse by category",
+        "all_products": "All products",
+        "tagline": "A little research goes a long way.",
+        "issues": "Help and feedback",
+        "language": "Language",
     },
     "tr": {
         "html_lang": "tr",
@@ -180,6 +195,21 @@ UI = {
         "footer_home": "kriko.cc",
         "footer_help": "Yardım ve geri bildirim",
         "privacy": "Gizlilik",
+        "nav_how": "Nasıl çalışır",
+        "nav_cta": "Kriko'yu indir",
+        "nav_guide": "Rehber",
+        "stat_products": "Ürün",
+        "stat_reports": "Kaynaklı rapor",
+        "stat_categories": "Kategori",
+        "stat_safety": "Güvenlik raporlu",
+        "stat_sources": "Kaynak",
+        "sev": {"high": "ciddi", "medium": "kontrol edilecek", "low": "küçük"},
+        "sev_label": {"high": "Ciddi", "medium": "Kontrol et", "low": "Küçük"},
+        "browse": "Kategoriye göre gözat",
+        "all_products": "Tüm ürünler",
+        "tagline": "Biraz araştırma büyük fark yaratır.",
+        "issues": "Yardım ve geri bildirim",
+        "language": "Dil",
     },
 }
 
@@ -418,8 +448,17 @@ def _chrome(lang: str, *, title: str, description: str, path: str, alternates: d
     links = "".join(f'  <link rel="alternate" hreflang="{code}" href="{ORIGIN}{url}">\n' for code, url in alternates.items())
     if alternates:
         links += f'  <link rel="alternate" hreflang="x-default" href="{ORIGIN}{alternates.get("en") or next(iter(alternates.values()))}">\n'
-    other = "tr" if lang == "en" else "en"
-    switch = f'<a class="back-link" href="{alternates[other]}" hreflang="{other}" lang="{other}">{_e(ui["switch"])}</a>' if other in alternates else ""
+    # The language switch is the site's own: both codes, the current one marked. It is only drawn
+    # when the page has a twin, because a switch that leads nowhere is worse than none.
+    switch = ""
+    if len(alternates) > 1:
+        names = {"en": "EN", "tr": "TR"}
+        anchors = "".join(
+            f'<a href="{alternates[code]}" lang="{code}" hreflang="{code}"' + (' aria-current="page"' if code == lang else "") + f">{names[code]}</a>"
+            for code in LANGS if code in alternates)
+        switch = f'<span class="language-switch" role="group" aria-label="{_e(ui["language"])}">{anchors}</span>'
+    brand = (f'<a class="brand" href="{ui["home"]}" aria-label="Kriko"><picture><source srcset="{up}assets/kriko-wordmark-white.svg" '
+             f'media="(prefers-color-scheme: dark)"><img src="{up}assets/kriko-wordmark.svg" alt="Kriko" width="96" height="32"></picture></a>')
     return f"""<!DOCTYPE html>
 <html lang="{ui["html_lang"]}">
 <head>
@@ -444,21 +483,30 @@ def _chrome(lang: str, *, title: str, description: str, path: str, alternates: d
   <meta name="twitter:description" content="{_e(description)}">
 {data}</head>
 <body>
-  <header class="topbar">
+  <header class="topbar lite">
     <div class="wrap bar">
-      <a class="brand" href="{ui["home"]}" aria-label="Kriko"><picture><source srcset="{up}assets/kriko-wordmark-white.svg" media="(prefers-color-scheme: dark)"><img src="{up}assets/kriko-wordmark.svg" alt="Kriko" width="96" height="32"></picture></a>
+      {brand}
+      <nav class="main-nav" id="main-nav" aria-label="Main navigation">
+        <a href="{ui["prefix"]}/#how">{_e(ui["nav_how"])}</a>
+        <a href="{ui["prefix"]}/guide/">{_e(ui["nav_guide"])}</a>
+        <a href="{ui["prefix"]}/problems/" aria-current="page">{_e(ui["crumb"])}</a>
+      </nav>
       {switch}
+      <a class="button small bar-cta" href="{ui["get"]}"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 17v4h14v-4"/></svg><span>{_e(ui["nav_cta"])}</span></a>
     </div>
   </header>
-  <main id="main" class="policy problems">
-    <div class="wrap narrow">
+  <main id="main" class="pp">
+    <div class="wrap">
 {body}
     </div>
   </main>
   <footer class="footer">
     <div class="wrap footer-grid">
-      <p>{_e(ui["footer_home"])}</p>
-      <nav aria-label="Footer"><a href="{ui["home"]}">{_e(ui["footer_home"])}</a><a href="/privacy/" hreflang="en">{_e(ui["privacy"])}</a><a href="https://github.com/Berbadov/kriko/issues">{_e(ui["footer_help"])}</a></nav>
+      <div>
+        {brand}
+        <p>{_e(ui["tagline"])}</p>
+      </div>
+      <nav aria-label="Footer"><a href="{ui["prefix"]}/guide/">{_e(ui["nav_guide"])}</a><a href="{ui["prefix"]}/problems/">{_e(ui["crumb"])}</a><a href="/privacy/" hreflang="en">{_e(ui["privacy"])}</a><a href="https://github.com/Berbadov/kriko/issues">{_e(ui["footer_help"])}</a></nav>
     </div>
   </footer>
 </body>
@@ -466,30 +514,52 @@ def _chrome(lang: str, *, title: str, description: str, path: str, alternates: d
 """
 
 
+def _sev_counts(claims: list[dict]) -> dict:
+    counts = {severity: 0 for severity in SEVERITY_ORDER}
+    for claim in claims:
+        counts[claim["severity"] if claim["severity"] in counts else "low"] += 1
+    return counts
+
+
+def _badges(counts: dict, lang: str) -> str:
+    """One small number for each severity that has any, as text a screen reader gets in words too."""
+    out = ""
+    for severity in SEVERITY_ORDER:
+        if counts[severity]:
+            label = f'{counts[severity]} {UI[lang]["sev"][severity]}'
+            out += f'<b class="sev-{severity}" title="{_e(label)}" aria-label="{_e(label)}">{counts[severity]}</b>'
+    return f'<span class="sevs">{out}</span>'
+
+
+def _stats(cells: list[tuple[str, int, str]]) -> str:
+    """A row of figures: (css class, number, label). Zero is a figure worth showing, so it stays."""
+    items = "".join(f'<li class="{cls}"><strong>{number}</strong><span>{_e(label)}</span></li>' for cls, number, label in cells)
+    return f'      <ul class="stats">{items}</ul>\n'
+
+
 def _claim_html(claim: dict, lang: str) -> str:
     ui = UI[lang]
     text = claim["text"][lang]
     severity = claim["severity"] if claim["severity"] in SEVERITY_ORDER else "low"
     detect = ui["detect"].get(claim["detection"], "")
-    sources = ", ".join(f'<a href="{_e(url)}" rel="noopener">{_e(domain or url)}</a>' for url, domain in claim["sources"])
+    sources = "".join(f'<a href="{_e(url)}" rel="noopener">{_e(domain or url)}</a>' for url, domain in claim["sources"])
     parts = [f'      <article class="claim sev-{severity}" id="c-{_e(claim["id"][:8])}">',
              f'        <h3>{icon(SEVERITY_ICON[severity])}{_e(text["title"])}</h3>']
-    tags = []
+    tags = [f'<span class="pill sev-{severity}">{_e(ui["sev_label"][severity])}</span>']
     if is_hazard(claim):
-        tags.append(f'<strong class="hazard">{icon("flame")}{_e(ui["safety"])}</strong>')
+        tags.append(f'<strong class="pill hazard">{icon("flame")}{_e(ui["safety"])}</strong>')
     if detect:
-        tags.append(_e(detect))
-    if tags:
-        parts.append(f'        <p class="how">{" · ".join(tags)}</p>')
+        tags.append(f'<span class="pill plain">{_e(detect)}</span>')
+    parts.append(f'        <p class="how">{"".join(tags)}</p>')
     if text["body"]:
-        parts.append(f'        <p>{_e(text["body"])}</p>')
+        parts.append(f'        <p class="body">{_e(text["body"])}</p>')
     if text["advice"]:
-        parts.append(f'        <p class="check"><strong>{_e(ui["check"])}.</strong> {_e(text["advice"])}</p>')
+        parts.append(f'        <p class="check"><strong>{_e(ui["check"])}</strong>{_e(text["advice"])}</p>')
     if sources:
-        parts.append(f'        <p class="src">{_e(ui["sources"])}: {sources}</p>')
+        parts.append(f'        <p class="src"><span>{_e(ui["sources"])}</span>{sources}</p>')
     if claim.get("seen"):
         day = _e(claim["seen"])
-        parts.append(f'        <p class="src">{_e(ui["retrieved"])}: <time datetime="{day}">{day}</time></p>')
+        parts.append(f'        <p class="when">{_e(ui["retrieved"])}: <time datetime="{day}">{day}</time></p>')
     parts.append("      </article>")
     return "\n".join(parts)
 
@@ -512,8 +582,9 @@ def _subject_claims(subject: dict, lang: str) -> list[dict]:
 
 
 def _chip(entry: dict, lang: str) -> str:
-    return (f'<li><a href="{UI[lang]["prefix"]}/problems/{entry["slug"]}/">{_e(entry["label"])}'
-            f'<small>{entry["counts"][lang]}</small></a></li>')
+    flame = f'<span class="flag" title="{_e(UI[lang]["safety"])}">{icon("flame")}</span>' if entry["hazard"][lang] else ""
+    return (f'<li><a class="pcard" href="{UI[lang]["prefix"]}/problems/{entry["slug"]}/"><span class="pname">{_e(entry["label"])}{flame}</span>'
+            f'<span class="pmeta"><small>{_e(UI[lang]["reports"].format(n=entry["counts"][lang]))}</small>{_badges(entry["sev"][lang], lang)}</span></a></li>')
 
 
 def _category_name(entry: dict, lang: str) -> str:
@@ -535,11 +606,12 @@ def _subject_page(catalog: dict, entry: dict, subject: dict, lang: str, claims: 
     alternates = {code: f'{UI[code]["prefix"]}/problems/{entry["slug"]}/' for code in LANGS if code in entry["have"]}
     top = "; ".join(c["text"][lang]["title"] for c in claims[:2])
     category = _category_name(entry, lang)
+    counts = _sev_counts(claims)
     sections = []
     for severity in SEVERITY_ORDER:
-        group = [c for c in claims if c["severity"] == severity]
+        group = [c for c in claims if c["severity"] == severity or (severity == "low" and c["severity"] not in SEVERITY_ORDER)]
         if group:
-            sections.append(f'      <h2>{icon(SEVERITY_ICON[severity])}{_e(ui["group"][severity])}</h2>\n'
+            sections.append(f'      <h2 class="sev-{severity}">{icon(SEVERITY_ICON[severity])}{_e(ui["group"][severity])}<span>{len(group)}</span></h2>\n'
                             + "\n".join(_claim_html(c, lang) for c in group))
     glance = ""
     if len(claims) >= GLANCE_FROM:
@@ -551,30 +623,36 @@ def _subject_page(catalog: dict, entry: dict, subject: dict, lang: str, claims: 
     fits = ""
     if subject["products"]:
         items = "".join(f"<li>{_e(p)}</li>" for p in sorted(set(subject["products"])))
-        fits = f'      <h2>{_e(ui["fits"])}</h2>\n      <ul>{items}</ul>\n'
+        fits = f'      <h2 class="plain">{_e(ui["fits"])}</h2>\n      <ul class="fits">{items}</ul>\n'
     risky = sum(1 for c in claims if is_hazard(c))
     risk = (f'      <p class="alert">{icon("flame")}{_e(ui["safety_note"].format(n=risky))}</p>\n') if risky else ""
     near = _neighbours(entry, entries, lang)
     more = ""
     if near:
         chips = "".join(_chip(e, lang) for e in near)
-        more = (f'      <h2>{_e(ui["more"].format(category=category))}</h2>\n      <ul class="chips">{chips}</ul>\n'
-                f'      <p><a href="{ui["prefix"]}/problems/{entry["catalog_slug"]}/">{_e(ui["all_in"].format(category=category))}</a></p>\n')
+        more = (f'      <section class="more"><h2 class="plain">{_e(ui["more"].format(category=category))}</h2>\n      <ul class="chips">{chips}</ul>\n'
+                f'      <p><a href="{ui["prefix"]}/problems/{entry["catalog_slug"]}/">{_e(ui["all_in"].format(category=category))}</a></p></section>\n')
+    sites = len({domain or url for c in claims for url, domain in c["sources"]})
+    stats = _stats([("sev-high", counts["high"], ui["sev"]["high"]), ("sev-medium", counts["medium"], ui["sev"]["medium"]),
+                    ("sev-low", counts["low"], ui["sev"]["low"]), ("plain", sites, ui["stat_sources"])])
     summary_links = "; ".join(f'<a href="#c-{_e(c["id"][:8])}">{_e(c["text"][lang]["title"])}</a>' for c in claims[:2])
     source_count = len({url for c in claims for url, _ in c["sources"]})
     buying_steps = "".join(f'<li>{_e(step)}</li>' for step in ui["buying_steps"])
-    body = (f'      <p class="crumb"><a href="{ui["prefix"]}/problems/">{_e(ui["crumb"])}</a> › '
+    buying = f'      <section class="buying"><h2>{_e(ui["buying"].format(label=label))}</h2><ol>{buying_steps}</ol></section>\n'
+    cta = (f'      <aside class="cta"><h2>{_e(ui["cta_h"])}</h2><p>{_e(ui["cta_p"])}</p>'
+           f'<p><a class="button" href="{ui["get"]}">{_e(ui["cta_b"])}</a></p></aside>\n')
+    body = (f'      <header class="pp-head">\n'
+            f'      <p class="crumb"><a href="{ui["prefix"]}/problems/">{_e(ui["crumb"])}</a> › '
             f'<a href="{ui["prefix"]}/problems/{entry["catalog_slug"]}/">{_e(category)}</a></p>\n'
             f'      <h1>{icon(entry["icon"], "ico big")}{_e(ui["title"].format(label=label))}</h1>\n'
             f'      <p class="lead">{_e(ui["lead"].format(n=len(claims), label=label))}</p>\n'
-            f'      <p>{_e(ui["summary"])}: {summary_links}.</p>\n'
+            f'      <p class="summary">{_e(ui["summary"])}: {summary_links}.</p>\n'
             f'      <p class="fine">{_e(ui["evidence"].format(n=source_count))}</p>\n'
-            f'      <p>{_e(ui["listing"])} <a href="{ui["get"]}">{_e(ui["install"])}</a> · '
+            f'      <p class="listing">{_e(ui["listing"])} <a href="{ui["get"]}">{_e(ui["install"])}</a> · '
             f'<a href="{ui["prefix"]}/guide/">{_e(ui["guide"])}</a></p>\n'
-            + risk + glance + f'      <h2>{_e(ui["buying"].format(label=label))}</h2><ol>{buying_steps}</ol>\n'
-            + "\n".join(sections) + "\n" + fits + _sponsored(lang, sponsors, entry["catalog_slug"]) + more +
-            f'      <div class="short"><h2>{_e(ui["cta_h"])}</h2><p>{_e(ui["cta_p"])}</p>'
-            f'<p><a class="button" href="{ui["get"]}">{_e(ui["cta_b"])}</a></p></div>\n'
+            + stats + risk + '      </header>\n' + glance +
+            '      <div class="pp-grid">\n      <div class="pp-main">\n' + buying + "\n".join(sections) + "\n" + fits + more + '      </div>\n'
+            '      <div class="pp-side">\n' + cta + _sponsored(lang, sponsors, entry["catalog_slug"]) + '      </div>\n      </div>\n'
             f'      <p class="fine">{_e(ui["note"])}</p>\n'
             f'      <p class="fine">{_e(ui["licence"].format(name=catalog["name"], version=catalog["version"], license=catalog["license"]))}</p>')
     description = ui["desc"].format(label=label, n=len(claims), top=top)
@@ -609,10 +687,10 @@ def _alert_row(lang: str, entry: dict, claim: dict, count: int) -> str:
     ui = UI[lang]
     more = f' · {_e(ui["reports"].format(n=count))}' if count > 1 else ""
     return (f'<li><a href="{ui["prefix"]}/problems/{entry["slug"]}/#c-{_e(claim["id"][:8])}">{icon("flame")}'
-            f'<span>{_e(claim["text"][lang]["title"])}<small>{_e(entry["label"])}{more}</small></span></a></li>')
+            f'<span><small>{_e(entry["label"])}{more}</small>{_e(claim["text"][lang]["title"])}</span></a></li>')
 
 
-def _safety_first(lang: str, entries: list[dict], heading: str, limit: int, everything: bool = False) -> str:
+def _safety_first(lang: str, entries: list[dict], heading: str, limit: int, everything: bool = False, compact: bool = False) -> str:
     """The worst safety reports of `entries`, one for each product, each linked to its own card.
 
     `everything` ends the strip with a link to the page that lists every one of them.
@@ -627,8 +705,10 @@ def _safety_first(lang: str, entries: list[dict], heading: str, limit: int, ever
             f'<ul class="alerts">{"".join(rows[SAFETY_SHOWN:])}</ul></details>') if len(rows) > SAFETY_SHOWN else ""
     every = (f'<p class="all"><a href="{ui["prefix"]}/problems/safety/">{_e(ui["safety_all"].format(n=len(found)))}</a></p>'
              if everything else "")
-    return (f'      <section class="serious"><h2>{icon("flame")}{_e(heading)}</h2>\n'
-            f'      <p>{_e(ui["serious_lead"])}</p>\n      <ul class="alerts">{"".join(rows[:SAFETY_SHOWN])}</ul>{rest}{every}</section>\n')
+    kind = "serious compact" if compact else "serious"
+    return (f'      <section class="{kind}"><div class="serious-head"><h2>{icon("flame")}{_e(heading)}</h2>\n'
+            f'      <p>{_e(ui["serious_lead"])}</p>{every}</div>\n'
+            f'      <div class="alert-col"><ul class="alerts">{"".join(rows[:SAFETY_SHOWN])}</ul>{rest}</div></section>\n')
 
 
 def _safety_page(lang: str, entries: list[dict], css: str, have: set[str]) -> str:
@@ -643,13 +723,15 @@ def _safety_page(lang: str, entries: list[dict], css: str, have: set[str]) -> st
     sections = ""
     for slug, rows in sorted(by_catalog.items(), key=lambda kv: (-len(kv[1]), kv[0])):
         first = rows[0][0]
-        sections += (f'      <h2>{icon(first["icon"])}<a href="{ui["prefix"]}/problems/{slug}/">{_e(_category_name(first, lang))}</a></h2>\n'
-                     f'      <ul class="alerts">{"".join(_alert_row(lang, *row) for row in rows)}</ul>\n')
-    body = (f'      <p class="crumb"><a href="{ui["prefix"]}/problems/">{_e(ui["crumb"])}</a></p>\n'
+        sections += (f'      <section class="serious"><div class="serious-head"><h2>{icon(first["icon"])}<a href="{ui["prefix"]}/problems/{slug}/">{_e(_category_name(first, lang))}</a></h2>'
+                     f'<p>{_e(ui["products"].format(n=len(rows)))}</p></div>\n'
+                     f'      <div class="alert-col"><ul class="alerts">{"".join(_alert_row(lang, *row) for row in rows)}</ul></div></section>\n')
+    cta = (f'      <aside class="cta wide"><div><h2>{_e(ui["cta_h"])}</h2><p>{_e(ui["cta_p"])}</p></div>'
+           f'<p><a class="button" href="{ui["get"]}">{_e(ui["cta_b"])}</a></p></aside>\n')
+    body = (f'      <header class="pp-head">\n      <p class="crumb"><a href="{ui["prefix"]}/problems/">{_e(ui["crumb"])}</a></p>\n'
             f'      <h1>{icon("flame", "ico big hazard")}{_e(ui["safety_title"])}</h1>\n      <p class="lead">{_e(ui["safety_lead"])}</p>\n'
-            f'      <section class="serious">\n{sections}      </section>\n'
-            f'      <div class="short"><h2>{_e(ui["cta_h"])}</h2><p>{_e(ui["cta_p"])}</p>'
-            f'<p><a class="button" href="{ui["get"]}">{_e(ui["cta_b"])}</a></p></div>\n'
+            + _stats([("sev-high", len(found), ui["stat_safety"]), ("plain", len(by_catalog), ui["stat_categories"])]) + '      </header>\n'
+            + sections + cta +
             f'      <p class="fine">{_e(ui["note"])}</p>')
     schema = (_breadcrumbs([(ui["crumb"], f'{ui["prefix"]}/problems/'), (ui["safety_title"], path)]),
               _collection(lang, name=ui["safety_title"], description=ui["safety_desc"], path=path,
@@ -677,9 +759,9 @@ def _category_page(lang: str, items: list[dict], css: str, have: set[str], spons
             fitted.setdefault(product, []).append(entry)
     for product, parts in fitted.items():
         group = first["groups"].get(product) or ui["hub_other"]
-        links = ", ".join(f'<a href="{ui["prefix"]}/problems/{p["slug"]}/">{_e(p["label"])}</a>'
-                          for p in sorted(parts, key=lambda p: p["label"]))
-        groups.setdefault(group, []).append((product, f"<li><strong>{_e(product)}</strong>: {links}</li>"))
+        links = "".join(f'<a href="{ui["prefix"]}/problems/{p["slug"]}/">{_e(p["label"])}</a>'
+                        for p in sorted(parts, key=lambda p: p["label"]))
+        groups.setdefault(group, []).append((product, f'<li><strong>{_e(product)}</strong><span class="parts">{links}</span></li>'))
     placed = {e["slug"] for e in items if e["group"] or e["products"]} | {p["slug"] for ps in fitted.values() for p in ps}
     for entry in items:
         if entry["slug"] not in placed:
@@ -691,13 +773,20 @@ def _category_page(lang: str, items: list[dict], css: str, have: set[str], spons
         opened = " open" if len(rows) <= OPEN_UP_TO else ""
         sections.append(f'      <details class="group"{opened}><summary>{_e(group)}<span>{_e(ui["products"].format(n=len(rows)))}</span></summary>\n'
                         f'      <ul class="{kind}">{"".join(row for _, row in rows)}</ul></details>')
-    body = (f'      <p class="crumb"><a href="{ui["prefix"]}/problems/">{_e(ui["crumb"])}</a></p>\n'
+    reports = sum(e["counts"][lang] for e in items)
+    flagged = len(_safety_rows(lang, items))
+    stats = _stats([("plain", len(items), ui["stat_products"]), ("plain", reports, ui["stat_reports"])]
+                   + ([("sev-high", flagged, ui["stat_safety"])] if flagged else []))
+    cta = (f'      <aside class="cta"><h2>{_e(ui["cta_h"])}</h2><p>{_e(ui["cta_p"])}</p>'
+           f'<p><a class="button" href="{ui["get"]}">{_e(ui["cta_b"])}</a></p></aside>\n')
+    body = (f'      <header class="pp-head">\n'
+            f'      <p class="crumb"><a href="{ui["prefix"]}/problems/">{_e(ui["crumb"])}</a></p>\n'
             f'      <h1>{icon(first["icon"], "ico big")}{_e(ui["cat_title"].format(name=name))}</h1>\n'
             f'      <p class="lead">{_e(ui["cat_lead"].format(n=len(items)))}</p>\n'
-            + _safety_first(lang, items, ui["serious_in"].format(name=name), 3)
-            + "\n".join(sections) + "\n" + _sponsored(lang, sponsors, first["catalog_slug"]) +
-            f'      <div class="short"><h2>{_e(ui["cta_h"])}</h2><p>{_e(ui["cta_p"])}</p>'
-            f'<p><a class="button" href="{ui["get"]}">{_e(ui["cta_b"])}</a></p></div>\n'
+            + stats + '      </header>\n      <div class="pp-grid">\n      <div class="pp-main">\n'
+            + "\n".join(sections) + '\n      </div>\n      <div class="pp-side">\n'
+            + _safety_first(lang, items, ui["serious_in"].format(name=name), 3, compact=True)
+            + cta + _sponsored(lang, sponsors, first["catalog_slug"]) + '      </div>\n      </div>\n'
             f'      <p class="fine">{_e(ui["note"])}</p>')
     title, description = ui["cat_title"].format(name=name), ui["cat_desc"].format(n=len(items), name=name)
     schema = (_breadcrumbs([(ui["crumb"], f'{ui["prefix"]}/problems/'), (name, path)]),
@@ -708,7 +797,7 @@ def _category_page(lang: str, items: list[dict], css: str, have: set[str], spons
 
 
 def _hub_page(lang: str, entries: list[dict], css: str) -> str:
-    """The front door: one card for each catalog, with what it holds."""
+    """The front door: the figures, the worst safety reports, then one card for each catalog."""
     ui = UI[lang]
     path = f'{ui["prefix"]}/problems/'
     alternates = {code: f'{UI[code]["prefix"]}/problems/' for code in LANGS}
@@ -719,15 +808,25 @@ def _hub_page(lang: str, entries: list[dict], css: str) -> str:
     for slug, items in sorted(by_catalog.items(), key=lambda kv: (-len(kv[1]), kv[0])):
         reports = sum(e["counts"][lang] for e in items)
         best = sorted(items, key=lambda e: (-e["counts"][lang], e["label"]))[:3]
+        spread = {severity: sum(e["sev"][lang][severity] for e in items) for severity in SEVERITY_ORDER}
+        total = max(sum(spread.values()), 1)
+        bar = "".join(f'<i class="sev-{severity}" style="flex-grow:{spread[severity]}"></i>' for severity in SEVERITY_ORDER if spread[severity])
         cards.append(
-            f'<li><a class="card" href="{ui["prefix"]}/problems/{slug}/">{icon(items[0]["icon"], "ico big")}<strong>{_e(_category_name(items[0], lang))}</strong>'
-            f'<span>{_e(ui["products"].format(n=len(items)))} · {_e(ui["reports"].format(n=reports))}</span>'
-            f'<small>{_e(", ".join(e["label"] for e in best))}…</small></a></li>')
-    body = (f'      <h1>{_e(ui["hub_title"])}</h1>\n      <p class="lead">{_e(ui["hub_lead"])}</p>\n'
+            f'<li><a class="card" href="{ui["prefix"]}/problems/{slug}/"><span class="tile">{icon(items[0]["icon"], "ico big")}</span>'
+            f'<strong>{_e(_category_name(items[0], lang))}</strong>'
+            f'<span class="meta">{_e(ui["products"].format(n=len(items)))} · {_e(ui["reports"].format(n=reports))}</span>'
+            f'<span class="share" aria-hidden="true">{bar}</span>'
+            f'<small>{_e(", ".join(e["label"] for e in best))}</small></a></li>')
+    flagged = len(_safety_rows(lang, entries))
+    stats = _stats([("plain", len(entries), ui["stat_products"]), ("plain", sum(e["counts"][lang] for e in entries), ui["stat_reports"]),
+                    ("plain", len(by_catalog), ui["stat_categories"])] + ([("sev-high", flagged, ui["stat_safety"])] if flagged else []))
+    cta = (f'      <aside class="cta wide"><div><h2>{_e(ui["cta_h"])}</h2><p>{_e(ui["cta_p"])}</p></div>'
+           f'<p><a class="button" href="{ui["get"]}">{_e(ui["cta_b"])}</a></p></aside>\n')
+    body = (f'      <header class="pp-head">\n      <h1>{_e(ui["hub_title"])}</h1>\n      <p class="lead">{_e(ui["hub_lead"])}</p>\n'
+            + stats + '      </header>\n'
             + _safety_first(lang, entries, ui["serious_h"], SAFETY_FIRST, everything=True) +
-            f'      <ul class="cards">{"".join(cards)}</ul>\n'
-            f'      <div class="short"><h2>{_e(ui["cta_h"])}</h2><p>{_e(ui["cta_p"])}</p>'
-            f'<p><a class="button" href="{ui["get"]}">{_e(ui["cta_b"])}</a></p></div>\n'
+            f'      <h2 class="plain browse">{_e(ui["browse"])}</h2>\n'
+            f'      <ul class="cards">{"".join(cards)}</ul>\n' + cta +
             f'      <p class="fine">{_e(ui["note"])}</p>')
     schema = (_collection(lang, name=ui["hub_title"], description=ui["hub_desc"], path=path,
                           items=[(_category_name(items[0], lang), f'{ui["prefix"]}/problems/{slug}/')
@@ -783,6 +882,8 @@ def render(packs_dir: Path, site_dir: Path) -> list[str]:
                          "catalog": catalog["name"], "catalog_slug": catalog_slug, "names": catalog["names"],
                          "group": subject["group"], "groups": catalog["groups"], "icon": catalog["icon"],
                          "claims": per_lang,
+                         "sev": {code: _sev_counts(per_lang[code]) for code in languages},
+                         "hazard": {code: any(is_hazard(c) for c in per_lang[code]) for code in languages},
                          "counts": {code: len(per_lang[code]) for code in languages}, "have": have,
                          "updated": {code: _updated(per_lang[code]) for code in languages}}
                 records.append((catalog, entry, subject, per_lang))
