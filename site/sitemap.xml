@@ -27,4 +27,16 @@
   <url>
     <loc>https://kriko.cc/privacy/</loc>
   </url>
+  <url>
+    <loc>https://kriko.cc/install/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://kriko.cc/install/"/>
+    <xhtml:link rel="alternate" hreflang="tr" href="https://kriko.cc/tr/install/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://kriko.cc/install/"/>
+  </url>
+  <url>
+    <loc>https://kriko.cc/tr/install/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://kriko.cc/install/"/>
+    <xhtml:link rel="alternate" hreflang="tr" href="https://kriko.cc/tr/install/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://kriko.cc/install/"/>
+  </url>
 </urlset>

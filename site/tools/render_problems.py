@@ -56,7 +56,7 @@ UI = {
         "locale": "en_US",
         "prefix": "",
         "home": "/",
-        "get": "/#get",
+        "get": "/install/",
         "switch": "Türkçe",
         "crumb": "Known problems",
         "glance": "At a glance",
@@ -79,7 +79,17 @@ UI = {
         "safety_all": "All {n} products with safety reports",
         "sponsored": "Sponsored",
         "sponsored_note": "A paid placement. It is not a finding, and it changes nothing reported on this page.",
-        "lead": "{n} sourced reports, with what to check before you buy. Each one links to the page it was reported on.",
+        "lead": "{n} sourced reports for {label}, with what to check before you buy. Each one links to the page it was reported on.",
+        "summary": "Reported problems include",
+        "evidence": "Evidence: {n} linked source pages. Reports describe individual experiences, not failure rates.",
+        "retrieved": "Newest linked source retrieved",
+        "listing": "Checking a listing?",
+        "install": "Install Kriko for Windows",
+        "guide": "See how it works",
+        "buying": "Before buying {label}",
+        "buying_steps": ["Confirm the model and variant against the listing and the source reports.",
+                         "Ask the seller for service history and evidence of repairs for the reported problems.",
+                         "Use the checks below to decide what needs inspection. A missing report does not prove a product is trouble-free."],
         "desc": "{n} sourced problems reported for {label}, with what to check before you buy. {top}",
         "check": "What to check",
         "sources": "Reported on",
@@ -92,8 +102,8 @@ UI = {
             "history_check": "Shown by the service history",
         },
         "cta_h": "Check the one you are about to buy",
-        "cta_p": "Kriko reads a listing and tells you which of these apply to that exact product. It runs on your computer, needs no account and is free.",
-        "cta_b": "Get Kriko",
+        "cta_p": "Use Kriko beside the listing to confirm the model and variant, open the sources and compare your options. Start with an installed catalog: no account or AI key needed. The browser extension needs the desktop app running.",
+        "cta_b": "Install Kriko for Windows",
         "note": "These reports come from the pages linked under each item: owner forums, repair guides and workshops. They are not a diagnosis of any one unit, and a careful check of the one you are buying still applies.",
         "licence": "Text from the Kriko {name} catalog, version {version}, under the {license} license.",
         "hub_title": "Known problems, by product and part",
@@ -106,6 +116,7 @@ UI = {
         "footer_help": "Help and feedback",
         "privacy": "Privacy",
         "nav_how": "How it works",
+        "nav_cta": "Get Kriko",
         "nav_guide": "Guide",
         "stat_products": "Products",
         "stat_reports": "Sourced reports",
@@ -125,7 +136,7 @@ UI = {
         "locale": "tr_TR",
         "prefix": "/tr",
         "home": "/tr/",
-        "get": "/tr/#get",
+        "get": "/tr/install/",
         "switch": "English",
         "crumb": "Bilinen sorunlar",
         "glance": "Bir bakışta",
@@ -148,7 +159,17 @@ UI = {
         "safety_all": "Güvenlik raporu olan {n} ürünün tümü",
         "sponsored": "Sponsorlu",
         "sponsored_note": "Ücretli bir yerleşimdir. Bir bulgu değildir ve bu sayfada bildirilen hiçbir şeyi değiştirmez.",
-        "lead": "{n} kaynaklı rapor ve satın almadan önce neye bakmanız gerektiği. Her biri, bildirildiği sayfaya bağlantı verir.",
+        "lead": "{label} için {n} kaynaklı rapor ve satın almadan önce neye bakmanız gerektiği. Her biri, bildirildiği sayfaya bağlantı verir.",
+        "summary": "Bildirilen sorunlar arasında",
+        "evidence": "Dayanak: bağlantısı verilen {n} kaynak sayfa. Raporlar arıza oranlarını değil, bireysel deneyimleri anlatır.",
+        "retrieved": "Bağlantılı en yeni kaynağın alınma tarihi",
+        "listing": "Bir ilanı mı kontrol ediyorsunuz?",
+        "install": "Windows için Kriko kurun",
+        "guide": "Nasıl çalıştığını görün",
+        "buying": "{label} satın almadan önce",
+        "buying_steps": ["Modeli ve varyantı ilanla ve kaynak raporlarla karşılaştırarak doğrulayın.",
+                         "Satıcıdan bildirilen sorunlarla ilgili servis geçmişini ve onarım belgelerini isteyin.",
+                         "Neyin incelenmesi gerektiğine aşağıdaki kontrollerle karar verin. Rapor olmaması, ürünün sorunsuz olduğunu kanıtlamaz."],
         "desc": "{label} için bildirilen {n} kaynaklı sorun ve satın almadan önce neye bakılacağı. {top}",
         "check": "Neye bakmalı",
         "sources": "Bildirildiği yer",
@@ -161,8 +182,8 @@ UI = {
             "history_check": "Servis geçmişinden anlaşılır",
         },
         "cta_h": "Satın alacağınız ürünü bu listeyle karşılaştırın",
-        "cta_p": "Kriko bir ilanı okur ve bu sorunlardan hangilerinin o ürüne uyduğunu söyler. Bilgisayarınızda çalışır, hesap gerektirmez ve ücretsizdir.",
-        "cta_b": "Kriko'yu indir",
+        "cta_p": "Kriko ile ilanın yanında modeli ve varyantı doğrulayın, kaynakları açın ve seçeneklerinizi karşılaştırın. Yüklü bir katalogla başlayın: hesap ya da yapay zekâ anahtarı gerekmez. Tarayıcı uzantısı için masaüstü uygulaması açık olmalıdır.",
+        "cta_b": "Windows için Kriko kurun",
         "note": "Bu maddeler, her birinin altında bağlantısı verilen sayfalardan derlenmiştir: kullanıcı forumları, onarım rehberleri ve servisler. Belirli bir ürünün teşhisi değildir; satın alacağınız ürünü dikkatle kontrol etmeniz yine de gerekir.",
         "licence": "Metin, Kriko {name} kataloğundan (sürüm {version}) alınmıştır, {license} lisansıyla.",
         "hub_title": "Bilinen sorunlar: ürün ve parça bazında",
@@ -175,6 +196,7 @@ UI = {
         "footer_help": "Yardım ve geri bildirim",
         "privacy": "Gizlilik",
         "nav_how": "Nasıl çalışır",
+        "nav_cta": "Kriko'yu indir",
         "nav_guide": "Rehber",
         "stat_products": "Ürün",
         "stat_reports": "Kaynaklı rapor",
@@ -470,7 +492,7 @@ def _chrome(lang: str, *, title: str, description: str, path: str, alternates: d
         <a href="{ui["prefix"]}/problems/" aria-current="page">{_e(ui["crumb"])}</a>
       </nav>
       {switch}
-      <a class="button small bar-cta" href="{ui["get"]}">{_e(ui["cta_b"])}</a>
+      <a class="button small bar-cta" href="{ui["get"]}"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 17v4h14v-4"/></svg><span>{_e(ui["nav_cta"])}</span></a>
     </div>
   </header>
   <main id="main" class="pp">
@@ -535,6 +557,9 @@ def _claim_html(claim: dict, lang: str) -> str:
         parts.append(f'        <p class="check"><strong>{_e(ui["check"])}</strong>{_e(text["advice"])}</p>')
     if sources:
         parts.append(f'        <p class="src"><span>{_e(ui["sources"])}</span>{sources}</p>')
+    if claim.get("seen"):
+        day = _e(claim["seen"])
+        parts.append(f'        <p class="when">{_e(ui["retrieved"])}: <time datetime="{day}">{day}</time></p>')
     parts.append("      </article>")
     return "\n".join(parts)
 
@@ -610,15 +635,23 @@ def _subject_page(catalog: dict, entry: dict, subject: dict, lang: str, claims: 
     sites = len({domain or url for c in claims for url, domain in c["sources"]})
     stats = _stats([("sev-high", counts["high"], ui["sev"]["high"]), ("sev-medium", counts["medium"], ui["sev"]["medium"]),
                     ("sev-low", counts["low"], ui["sev"]["low"]), ("plain", sites, ui["stat_sources"])])
+    summary_links = "; ".join(f'<a href="#c-{_e(c["id"][:8])}">{_e(c["text"][lang]["title"])}</a>' for c in claims[:2])
+    source_count = len({url for c in claims for url, _ in c["sources"]})
+    buying_steps = "".join(f'<li>{_e(step)}</li>' for step in ui["buying_steps"])
+    buying = f'      <section class="buying"><h2>{_e(ui["buying"].format(label=label))}</h2><ol>{buying_steps}</ol></section>\n'
     cta = (f'      <aside class="cta"><h2>{_e(ui["cta_h"])}</h2><p>{_e(ui["cta_p"])}</p>'
            f'<p><a class="button" href="{ui["get"]}">{_e(ui["cta_b"])}</a></p></aside>\n')
     body = (f'      <header class="pp-head">\n'
             f'      <p class="crumb"><a href="{ui["prefix"]}/problems/">{_e(ui["crumb"])}</a> › '
             f'<a href="{ui["prefix"]}/problems/{entry["catalog_slug"]}/">{_e(category)}</a></p>\n'
             f'      <h1>{icon(entry["icon"], "ico big")}{_e(ui["title"].format(label=label))}</h1>\n'
-            f'      <p class="lead">{_e(ui["lead"].format(n=len(claims)))}</p>\n'
+            f'      <p class="lead">{_e(ui["lead"].format(n=len(claims), label=label))}</p>\n'
+            f'      <p class="summary">{_e(ui["summary"])}: {summary_links}.</p>\n'
+            f'      <p class="fine">{_e(ui["evidence"].format(n=source_count))}</p>\n'
+            f'      <p class="listing">{_e(ui["listing"])} <a href="{ui["get"]}">{_e(ui["install"])}</a> · '
+            f'<a href="{ui["prefix"]}/guide/">{_e(ui["guide"])}</a></p>\n'
             + stats + risk + '      </header>\n' + glance +
-            '      <div class="pp-grid">\n      <div class="pp-main">\n' + "\n".join(sections) + "\n" + fits + more + '      </div>\n'
+            '      <div class="pp-grid">\n      <div class="pp-main">\n' + buying + "\n".join(sections) + "\n" + fits + more + '      </div>\n'
             '      <div class="pp-side">\n' + cta + _sponsored(lang, sponsors, entry["catalog_slug"]) + '      </div>\n      </div>\n'
             f'      <p class="fine">{_e(ui["note"])}</p>\n'
             f'      <p class="fine">{_e(ui["licence"].format(name=catalog["name"], version=catalog["version"], license=catalog["license"]))}</p>')
