@@ -74,7 +74,7 @@
 }
 
 .logs-bad {
-  color: var(--risk);
+  color: var(--risk-text);
 }
 
 .logs-main {
@@ -113,7 +113,7 @@
 }
 
 .logs-summary > div[data-bad='true'] dd {
-  color: var(--risk);
+  color: var(--risk-text);
 }
 
 /* ---- filters ---- */
@@ -159,13 +159,13 @@
 .logs-chip[data-level='error'][aria-pressed='true'] {
   border-color: var(--risk);
   background: transparent;
-  color: var(--risk);
+  color: var(--risk-text);
 }
 
 .logs-chip[data-level='warn'][aria-pressed='true'] {
   border-color: var(--warn);
   background: transparent;
-  color: var(--warn);
+  color: var(--warn-text);
 }
 
 .logs-actions {
@@ -272,7 +272,7 @@
 }
 
 .logs-step[data-level='error'] .logs-title {
-  color: var(--risk);
+  color: var(--risk-text);
 }
 
 .logs-meta {
