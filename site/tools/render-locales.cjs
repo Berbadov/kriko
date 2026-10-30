@@ -13,6 +13,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { createHash } = require('node:crypto');
 const { JSDOM } = require('jsdom');
+const { discovery } = require('./discovery.cjs');
 
 const root = path.resolve(__dirname, '..');
 const translations = JSON.parse(fs.readFileSync(path.join(root, 'locales/tr.json'), 'utf8'));
@@ -21,11 +22,12 @@ const translations = JSON.parse(fs.readFileSync(path.join(root, 'locales/tr.json
 const PAGES = [
   { source: 'index.html', output: 'tr/index.html', canonical: 'https://kriko.cc/tr/', meta: '@meta' },
   { source: 'guide/index.html', output: 'tr/guide/index.html', canonical: 'https://kriko.cc/tr/guide/', meta: '@meta:guide' },
+  { source: 'install/index.html', output: 'tr/install/index.html', canonical: 'https://kriko.cc/tr/install/', meta: '@meta:install' },
 ];
 // Pages with no Turkish version still carry the hashes.
 const STAMPED = [...PAGES.map((page) => page.source), 'privacy/index.html', '404.html'];
 // A link to one of these goes to the Turkish version of it; /privacy/ is English only.
-const LOCALISED = /^\/(?:guide\/|problems\/)?(?:#.*)?$/;
+const LOCALISED = /^\/(?:guide\/|problems\/|install\/)?(?:#.*)?$/;
 
 const hash = (file) => createHash('sha256').update(fs.readFileSync(path.join(root, file))).digest('hex').slice(0, 12);
 
@@ -44,6 +46,15 @@ function stamp(file) {
   fs.writeFileSync(target, html);
 }
 for (const file of STAMPED) if (fs.existsSync(path.join(root, file))) stamp(file);
+
+// Keep English source formatting; replace only the generated JSON-LD block.
+for (const { source } of PAGES) {
+  const target = path.join(root, source);
+  const html = fs.readFileSync(target, 'utf8').replace(/  <script id="discovery-data" type="application\/ld\+json">[\s\S]*?<\/script>\n/g, '');
+  const document = new JSDOM(html).window.document;
+  const block = `  <script id="discovery-data" type="application/ld+json">${discovery(document)}</script>\n`;
+  fs.writeFileSync(target, html.replace('</head>', `${block}</head>`));
+}
 
 // 2. Turkish.
 const missing = new Set();
@@ -112,6 +123,7 @@ function render({ source, output, canonical, meta: metaKey }) {
     }
   }
 
+  document.querySelector('#discovery-data').textContent = discovery(document);
   fs.mkdirSync(path.dirname(path.join(root, output)), { recursive: true });
   fs.writeFileSync(path.join(root, output), dom.serialize());
 }

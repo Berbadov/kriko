@@ -10,6 +10,11 @@ npm run serve:site
 npm run test:site
 ```
 
+With `serve:site` running, `npm run test:site:browser` checks the install flow
+and generated product pages in Chromium, with and without JavaScript. It needs
+Playwright. `PLAYWRIGHT_MODULE` may name its `index.mjs`, `CHROMIUM_PATH` may
+name a local Chromium executable, and `SCREENSHOTS` may name an output folder.
+
 The page is white by default and follows the visitor's system for dark. Every
 colour is a token at the top of `styles.css`; the dark theme is one block. The
 look is Kriko's own and is kept on purpose, not left to defaults:
@@ -42,6 +47,8 @@ from another site.
   English in both languages, because the app is English.
 - `guide/index.html`: how to use Kriko, one short film per step. Also a source of
   a Turkish page; see below.
+- `install/index.html`: Windows downloads, checksum verification, a first offline
+  lookup and extension connection help. The Turkish page is generated too.
 - `privacy/index.html`: the privacy policy. English only.
 - `404.html`: what an unknown address answers (Cloudflare Pages serves it with a 404
   status). It names its files from the root, because it answers at any depth.
@@ -57,12 +64,45 @@ node site/tools/render-locales.cjs
 npm run test:site
 ```
 
-The renderer writes `tr/index.html` and `tr/guide/index.html`, puts a content hash
+The renderer writes `tr/index.html`, `tr/guide/index.html` and `tr/install/index.html`, puts a content hash
 on the stylesheet and script of every page, and fails with the list of texts that
 have no translation. A test fails if either Turkish page is stale. To give another
 page a Turkish version, add it to `PAGES` in `render-locales.cjs` and give it an
 `@meta:<name>` entry in `tr.json`. In a Turkish page a link to `/`, `/#place` or
 `/guide/` is sent to the Turkish version, and `/privacy/` stays English.
+
+## Search and answer engines
+
+`tools/discovery.cjs` generates JSON-LD for the English and Turkish home and
+guide and install pages during `build:site`. It identifies the project, website and desktop
+app with stable IDs. FAQ questions and answers come from the visible HTML,
+after translation, and the guide has localized breadcrumbs. Edit the HTML and
+translations, then rebuild; do not edit the generated `discovery-data` blocks.
+No browser JavaScript is needed to read this data or the answers.
+
+`llms.txt` is a short, optional guide to the public app documentation and sourced
+product pages. It is not an indexing standard or a promise of AI citations.
+`robots.txt` already permits crawlers except under `/tools/`; keep the sitemaps
+as the complete URL inventory. FAQ markup describes the visible answers, but
+does not imply eligibility for Google's restricted FAQ rich results.
+
+After deployment, verify the new HTML at both language URLs, then run the
+IndexNow command below. Submit both sitemaps in the owner's Google Search
+Console and Bing Webmaster Tools accounts. Track non-brand search impressions,
+clicks to product pages, app downloads and identifiable AI referral traffic;
+rankings and citations require observation after engines recrawl the pages.
+
+Product pages link to the localized installation checklist near the summary and
+after the findings. Their summary links to actual findings. The linked source
+count and each claim's newest retrieval date come from the catalogs. A retrieval
+date is not a fresh source check or a failure-rate estimate. New catalogs get
+the same presentation without a category-specific edit.
+
+`tools/download-counts.py` reads GitHub's aggregate installer and portable download
+counts without adding a visitor tracker. Run it with `--save /tmp/before.json`,
+then `--previous /tmp/before.json` to compare later. Counts are downloads, not
+unique users, successful installs or page attribution. Reusable directory,
+community and reviewer copy is in `docs/distribution/launch-kit.md` at the repo root.
 
 ## The guide
 
