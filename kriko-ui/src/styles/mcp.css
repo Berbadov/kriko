@@ -7,7 +7,7 @@
   overflow: auto;
   background: var(--panel-2);
   border: 1px solid var(--edge);
-  border-radius: 12px;
+  border-radius: var(--r-l);
   color: var(--ink);
   font-family: var(--mono);
   font-size: 12px;

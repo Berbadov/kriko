@@ -1,5 +1,10 @@
 /* Every colour, size and time in the interface comes from here.
-   Dark is the first theme. `data-theme` is "system", "dark" or "light". */
+   Dark is the first theme. `data-theme` is "system", "dark" or "light".
+
+   The surfaces are neutral — charcoal in dark, paper-grey in light — so the
+   one blue below is the only hue that carries meaning. Radii run tight inside
+   and softer outside: 4 / 8 / 12 / 16. Semantic hues get a `-text` pair that
+   passes contrast as text, and an `on-` pair that passes on their solid fill. */
 
 :root {
   --font: 'Geist Variable', system-ui, sans-serif;
@@ -9,10 +14,10 @@
   --tm: 1;
   --dm: 1;
 
-  --r-s: 8px;
-  --r-m: 12px;
-  --r-l: 18px;
-  --r-xl: 26px;
+  --r-s: 4px;
+  --r-m: 8px;
+  --r-l: 12px;
+  --r-xl: 16px;
 
   --gap-1: 4px;
   --gap-2: 8px;
@@ -29,23 +34,29 @@
 
   color-scheme: dark;
 
-  /* dark */
-  --ground: #090b11;
-  --raise: #0f121a;
-  --panel: #141825;
-  --panel-2: #1a1f2f;
+  /* dark: neutral charcoal, no blue cast */
+  --ground: #0b0b0d;
+  --raise: #131316;
+  --panel: #17171a;
+  --panel-2: #1e1e22;
   --edge: rgba(255, 255, 255, 0.07);
-  --edge-strong: rgba(255, 255, 255, 0.15);
-  --ink: #eef1f9;
-  --ink-2: #a8b0c4;
-  --ink-3: #6c7489;
-  --accent: #3d6bff;
+  --edge-strong: rgba(255, 255, 255, 0.14);
+  --ink: #ededf0;
+  --ink-2: #a6a6b0;
+  --ink-3: #8a8a94;
+  --accent: #3563f5;
   --accent-hi: #7b98ff;
   --accent-ink: #ffffff;
-  --accent-soft: rgba(61, 107, 255, 0.16);
+  --accent-soft: rgba(53, 99, 245, 0.16);
   --warm: #ffb27a;
   --ok: #3ddc97;
   --warn: #f5b84b;
+  --risk: #ff6b7a;
+  --ok-text: #3ddc97;
+  --warn-text: #f5b84b;
+  --risk-text: #ff6b7a;
+  --on-risk: #2b070d;
+  --on-warn: #231a06;
   /* data companions to the brand blue: one hue each, used by bars, meters and charts */
   --violet: #9d8cff;
   --teal: #38d9e3;
@@ -56,7 +67,7 @@
   --on-fill: #ffffff;
   --lit: rgba(255, 255, 255, 0.3);
   --sunk: rgba(0, 0, 0, 0.18);
-  --pill-bg: rgba(8, 10, 22, 0.55);
+  --pill-bg: rgba(12, 12, 14, 0.6);
   --pill-edge: rgba(255, 255, 255, 0.22);
   --step-0: var(--violet);
   --step-1: var(--accent-hi);
@@ -64,32 +75,39 @@
   --step-3: var(--teal);
   --bar-done: linear-gradient(90deg, var(--teal), var(--mint));
   --inset: color-mix(in srgb, var(--ink) 5%, var(--ground));
-  --risk: #ff6b7a;
-  --scrim: rgba(4, 6, 12, 0.66);
-  --glass: rgba(22, 27, 42, 0.58);
+  --scrim: rgba(0, 0, 0, 0.66);
+  --glass: rgba(20, 20, 24, 0.6);
   --glass-edge: rgba(255, 255, 255, 0.14);
   --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
   --shadow-2: 0 18px 50px -12px rgba(0, 0, 0, 0.6), 0 2px 6px rgba(0, 0, 0, 0.35);
 }
 
+/* light: neutral paper, white surfaces, hairline grey edges */
 @media (prefers-color-scheme: light) {
   :root:not([data-theme='dark']) {
     color-scheme: light;
-    --ground: #f2f3f7;
+    --ground: #f5f5f5;
     --raise: #ffffff;
     --panel: #ffffff;
-    --panel-2: #eef0f5;
-    --edge: rgba(12, 18, 40, 0.08);
-    --edge-strong: rgba(12, 18, 40, 0.17);
-    --ink: #0d1220;
-    --ink-2: #485068;
-    --ink-3: #868ea1;
+    --panel-2: #f5f5f5;
+    --edge: rgba(0, 0, 0, 0.08);
+    --edge-strong: rgba(0, 0, 0, 0.16);
+    --ink: #1a1a1a;
+    --ink-2: #4d4d55;
+    --ink-3: #6b6b74;
     --accent: #2f5bff;
     --accent-hi: #2f5bff;
-    --accent-soft: rgba(47, 91, 255, 0.11);
+    --accent-ink: #ffffff;
+    --accent-soft: rgba(47, 91, 255, 0.1);
     --warm: #e0803a;
-    --ok: #12a66a;
+    --ok: #0a6b42;
     --warn: #c98a12;
+    --risk: #d21f3c;
+    --ok-text: #0a6b42;
+    --warn-text: #9a6a0a;
+    --risk-text: #d21f3c;
+    --on-risk: #ffffff;
+    --on-warn: #231a06;
     --violet: #6e5bf2;
     --teal: #0aa3b2;
     --mint: #12a66a;
@@ -97,32 +115,38 @@
     --bar: linear-gradient(90deg, var(--violet), var(--accent) 50%, var(--teal));
     --bar-done: linear-gradient(90deg, var(--teal), var(--mint));
     --inset: color-mix(in srgb, var(--ink) 5%, var(--panel));
-    --risk: #e04458;
-    --scrim: rgba(12, 18, 40, 0.5);
-    --glass: rgba(255, 255, 255, 0.66);
-    --glass-edge: rgba(255, 255, 255, 0.85);
-    --shadow-1: 0 1px 2px rgba(20, 30, 60, 0.08);
-    --shadow-2: 0 18px 50px -16px rgba(30, 45, 90, 0.28), 0 2px 6px rgba(30, 45, 90, 0.08);
+    --scrim: rgba(0, 0, 0, 0.45);
+    --glass: rgba(255, 255, 255, 0.7);
+    --glass-edge: rgba(255, 255, 255, 0.9);
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.06);
+    --shadow-2: 0 12px 28px -14px rgba(0, 0, 0, 0.14), 0 2px 6px rgba(0, 0, 0, 0.05);
   }
 }
 
 :root[data-theme='light'] {
   color-scheme: light;
-  --ground: #f2f3f7;
+  --ground: #f5f5f5;
   --raise: #ffffff;
   --panel: #ffffff;
-  --panel-2: #eef0f5;
-  --edge: rgba(12, 18, 40, 0.08);
-  --edge-strong: rgba(12, 18, 40, 0.17);
-  --ink: #0d1220;
-  --ink-2: #485068;
-  --ink-3: #868ea1;
+  --panel-2: #f5f5f5;
+  --edge: rgba(0, 0, 0, 0.08);
+  --edge-strong: rgba(0, 0, 0, 0.16);
+  --ink: #1a1a1a;
+  --ink-2: #4d4d55;
+  --ink-3: #6b6b74;
   --accent: #2f5bff;
   --accent-hi: #2f5bff;
-  --accent-soft: rgba(47, 91, 255, 0.11);
+  --accent-ink: #ffffff;
+  --accent-soft: rgba(47, 91, 255, 0.1);
   --warm: #e0803a;
-  --ok: #12a66a;
+  --ok: #0a6b42;
   --warn: #c98a12;
+  --risk: #d21f3c;
+  --ok-text: #0a6b42;
+  --warn-text: #9a6a0a;
+  --risk-text: #d21f3c;
+  --on-risk: #ffffff;
+  --on-warn: #231a06;
   --violet: #6e5bf2;
   --teal: #0aa3b2;
   --mint: #12a66a;
@@ -130,10 +154,9 @@
   --bar: linear-gradient(90deg, var(--violet), var(--accent) 50%, var(--teal));
   --bar-done: linear-gradient(90deg, var(--teal), var(--mint));
   --inset: color-mix(in srgb, var(--ink) 5%, var(--panel));
-  --risk: #e04458;
-  --scrim: rgba(12, 18, 40, 0.5);
-  --glass: rgba(255, 255, 255, 0.66);
-  --glass-edge: rgba(255, 255, 255, 0.85);
-  --shadow-1: 0 1px 2px rgba(20, 30, 60, 0.08);
-  --shadow-2: 0 18px 50px -16px rgba(30, 45, 90, 0.28), 0 2px 6px rgba(30, 45, 90, 0.08);
+  --scrim: rgba(0, 0, 0, 0.45);
+  --glass: rgba(255, 255, 255, 0.7);
+  --glass-edge: rgba(255, 255, 255, 0.9);
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-2: 0 12px 28px -14px rgba(0, 0, 0, 0.14), 0 2px 6px rgba(0, 0, 0, 0.05);
 }
