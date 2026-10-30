@@ -246,12 +246,19 @@ def models_for(agent: ApiAgent, home: Path | None = None) -> list[str]:
 
 def openai_compatible_converse(prompt: str, *, model: str = "", timeout: float = 45.0,
                                search: bool = True, app_state_path=None,
-                               cancel_event=None):
+                               cancel_event=None, base_url: str = "",
+                               api_key: str = "", max_tokens: int = 2048):
     """Answer through an OpenAI-compatible endpoint, optionally using search.
 
     Function calling is the common OpenAI wire shape. Search itself remains
     this installation's selected Exa or Tavily provider, and every opened page
     is returned as grounding text just as it is for the Mistral API agent.
+
+    `base_url` and `api_key` override the endpoint and key this installation
+    would default to — the escape hatch that makes this the fallback search
+    for a Mistral conversation whose own web tool did not answer: the same
+    wire format, pointed at Mistral's OpenAI-shaped endpoint with Mistral's
+    key, still searches through Kriko's own provider.
     """
     import json
     import os
@@ -261,8 +268,8 @@ def openai_compatible_converse(prompt: str, *, model: str = "", timeout: float =
     from app.providers._http import post_json_or_why
     from app.web import state
 
-    api_key = keys.require("openai")
-    base_url = os.environ.get("LLM_BASE_URL") or llm.DEFAULT_BASE_URL
+    api_key = api_key or keys.require("openai")
+    base_url = base_url or os.environ.get("LLM_BASE_URL") or llm.DEFAULT_BASE_URL
     if app_state_path is not None:
         conn = state.connect(app_state_path)
         try:
@@ -305,7 +312,7 @@ def openai_compatible_converse(prompt: str, *, model: str = "", timeout: float =
             "model": model or OPENAI_COMPATIBLE.default_model,
             "messages": messages,
             "temperature": 0.0,
-            "max_tokens": 2048,
+            "max_tokens": int(max_tokens or 2048),
         }
         if tools:
             payload["tools"] = tools
@@ -423,6 +430,9 @@ class ApiAgentResearcher(harness.HarnessResearcher):
         self.agent = agent
         self.max_tokens = max_tokens
         self.reasoning_effort = effort.strip()
+        #: The parent was constructed without it; the API search fallback reads
+        #: the reader's selected provider from the same app state.
+        self.app_state_path = app_state_path
         #: The model that runs, not the agent's id. The CLI plane names the
         #: harness here because it cannot know the model; this plane can.
         self.model = model.strip() or agent.default_model
@@ -867,6 +877,47 @@ class ApiAgentResearcher(harness.HarnessResearcher):
         if "error" in box:
             raise box["error"]
         reply = box["reply"]
+        if (
+            search
+            and self.agent.id == MISTRAL.id
+            and not mistral.search_returned(reply)
+        ):
+            # Mistral's built-in web_search connector is billed per call and is
+            # only supported on some models and accounts; when it did not run,
+            # the reply has no queries and no sources even though it answered.
+            # Search through Kriko's own provider instead, so a run is never
+            # silently ungrounded. Without one there is nothing to fall back
+            # to, and the provider's own error is the honest answer.
+            from app import keys
+
+            if keys.search_providers():
+                self._echo(
+                    f"{self.agent.label}'s built-in web search did not answer; "
+                    "trying Kriko's own search instead"
+                )
+                original = reply
+                try:
+                    reply = openai_compatible_converse(
+                        prompt,
+                        model=self.model,
+                        timeout=self.timeout,
+                        search=True,
+                        app_state_path=self.app_state_path,
+                        cancel_event=stop_deltas,
+                        base_url=mistral.base_url(),
+                        api_key=keys.require("mistral"),
+                        max_tokens=int(self.max_tokens or 0) or 4096,
+                    )
+                    self._account(original)
+                except Exception as error:  # noqa: BLE001 — the first answer still stands
+                    # A fallback that cannot run must not replace the answer
+                    # that did: the provider's own reply is read below, and an
+                    # error it carried is raised in the provider's words.
+                    self._echo(
+                        f"Kriko could not search for {self.agent.label} either "
+                        f"({type(error).__name__}: {error}); keeping its own answer"
+                    )
+                    reply = original
         self._account(reply)
         for query in reply.queries:
             self._echo(f"searched: {query}")
