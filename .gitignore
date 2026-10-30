@@ -26,6 +26,8 @@ node_modules/
 dist/
 build/
 build.log
+build-*.log
+gate-*.log
 # The desktop app. package.ps1 builds its release tree outside the checkout
 # (%LOCALAPPDATA%\Kriko\cargo-target), so this glob is for a plain `cargo build`
 # or `tauri dev` run from a checkout, which still writes kriko-ui/src-tauri/target
