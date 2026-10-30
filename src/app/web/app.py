@@ -17,6 +17,7 @@ import logging
 import os
 import sqlite3
 import sys
+import threading
 import traceback
 from contextlib import asynccontextmanager
 from dataclasses import replace
@@ -87,6 +88,98 @@ log = logging.getLogger(__name__)
 #: How many extension origins this process remembers. One dict entry per
 #: origin the caller names; a native client can name as many as it likes.
 EXTENSION_SIGHTINGS_MAX = 16
+
+#: How often the health snapshot's two "does it still work" answers are
+#: recomputed, and how long one recompute may take before it is abandoned.
+#: `/api/health` is the shell's liveness probe (polled every few seconds) and
+#: the extension's "is Kriko there", so it must answer even while every
+#: worker thread is busy — which is exactly when it is asked. Both answers
+#: come from a background refresh, and the endpoint serves the last one.
+HEALTH_REFRESH_SECONDS = 2.0
+HEALTH_PROBE_TIMEOUT = 1.0
+
+
+class HealthProbe:
+    """The two slow answers to "does it still *work*", kept off the request.
+
+    `store_readable` opens the engine's store and `jobs` asks the runner for
+    its capacity; both take locks that a busy app holds (a store write, the
+    runner's scheduler lock plus its own `app.sqlite` read), and both block
+    on SQLite's 5 s busy timeout when another process — an orphaned sidecar,
+    the MCP server — shares the file. A sync endpoint that runs them inline
+    then waits behind whatever is busy, and the shell's watchdog reads that
+    as "stopped answering" and offers a restart of a healthy process. So the
+    probe runs on its own thread, bounded by a timeout, and `/api/health`
+    serves the most recent finished answer. A probe still running when the
+    next one is due keeps its old value: staleness is the answer, a hang is
+    not.
+    """
+
+    def __init__(self, store_path, runner):
+        self._store_path = store_path
+        self._runner = runner
+        self._lock = threading.Lock()
+        # Optimistic defaults, replaced by the first refresh round: a probe
+        # that blocked in the constructor would recreate, at startup, the
+        # very hang it exists to prevent (a store another process holds open
+        # on a first run after a crash).
+        self._snapshot = {
+            "store_readable": True,
+            "jobs": {"running": 0, "queued": 0, "concurrency": 0, "agent_slots": 0},
+        }
+        self._stop = threading.Event()
+        self._thread = threading.Thread(
+            target=self._loop, name="kriko-health-probe", daemon=True
+        )
+        self._thread.start()
+        # One immediate round so the endpoint does not serve the defaults for
+        # the first HEALTH_REFRESH_SECONDS; bounded like every round, so a
+        # wedged store or runner still cannot hold the constructor.
+        store_readable, jobs = self._refresh()
+        with self._lock:
+            self._snapshot = {"store_readable": store_readable, "jobs": jobs}
+
+    def _loop(self) -> None:
+        while not self._stop.wait(HEALTH_REFRESH_SECONDS):
+            store_readable, jobs = self._refresh()
+            with self._lock:
+                self._snapshot = {"store_readable": store_readable, "jobs": jobs}
+
+    def _refresh(self) -> tuple[bool, dict]:
+        """One round of both answers, each bounded so neither can hang."""
+        results: dict[str, object] = {}
+
+        def probe_store() -> None:
+            results["store"] = _store_is_readable(self._store_path)
+
+        def probe_jobs() -> None:
+            results["jobs"] = _job_capacity(self._runner)
+
+        threads = [
+            threading.Thread(target=probe_store, name="kriko-health-store", daemon=True),
+            threading.Thread(target=probe_jobs, name="kriko-health-jobs", daemon=True),
+        ]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join(timeout=HEALTH_PROBE_TIMEOUT)
+        # A probe that outlived its budget keeps the previous answer rather
+        # than reporting a default: "unknown, still checking" is the honest
+        # value, and it is what the last finished round said.
+        with self._lock:
+            previous = dict(self._snapshot)
+        return (
+            bool(results.get("store", previous["store_readable"])),
+            results.get("jobs", previous["jobs"]),  # type: ignore[return-value]
+        )
+
+    def snapshot(self) -> dict:
+        with self._lock:
+            return dict(self._snapshot)
+
+    def stop(self) -> None:
+        self._stop.set()
+        self._thread.join(timeout=HEALTH_PROBE_TIMEOUT + 1.0)
 
 
 def _record_sighting(app_state_path, origin: str, version: str) -> None:
@@ -281,6 +374,7 @@ async def lifespan(app: FastAPI):
     finally:
         if stop_price_clock is not None:
             stop_price_clock()
+        app.state.health_probe.stop()
         app.state.jobs.shutdown()
         from app.providers import codex_profile, resident
         try:
@@ -408,6 +502,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         ) from error
     # What the open answers watch to know the knowledge moved (B152.4).
     app.state.knowledge_clock = KnowledgeClock(app.state.settings.store_path)
+    # The two "does it still work" answers to /api/health, refreshed in the
+    # background so the endpoint itself never waits on a store lock or the
+    # runner's scheduler lock (see HealthProbe).
+    app.state.health_probe = HealthProbe(
+        app.state.settings.store_path, app.state.jobs
+    )
 
     # ── the extension announces itself by calling ────────────────────────
     #
@@ -635,9 +735,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             # answer. `ok` was a constant `True`: a health check that cannot be
             # unhealthy. These two say what a reader (and the shell's own
             # watchdog) actually need — the store opens and holds what it should,
-            # and the job runner is not saturated.
-            "store_readable": _store_is_readable(app.state.settings.store_path),
-            "jobs": _job_capacity(app.state.jobs),
+            # and the job runner is not saturated. Served from the probe's
+            # snapshot, never computed inline: this endpoint is the
+            # watchdog's, and a watchdog that can be starved by the thing it
+            # watches reports a healthy process dead.
+            **app.state.health_probe.snapshot(),
         }
 
     return app
