@@ -999,7 +999,7 @@ function findResultCards() {
   }
   const best = [...groups.values()].sort((a, b) => b.length - a.length)[0];
   // A product page has one price block; a results page has many alike.
-  return best && best.length >= 6 ? best.slice(0, 60) : [];
+  return best && best.length >= 6 ? best : [];
 }
 
 function readResultCard(card) {
@@ -1009,8 +1009,11 @@ function readResultCard(card) {
     .filter((n) => !WAS_HINT.test(`${n.className}`) && !n.closest("del, s, strike"))
     .find((n) => _priceParts(n.textContent));
   const price = priceNode ? _priceParts(priceNode.textContent) : null;
-  return { name: (name || "").slice(0, 400), price: price ? price.amount : null,
-    currency: price ? price.sign : "", text: cleanText(card.textContent || "").slice(0, 600), priceNode };
+  const link = (heading && heading.closest("a[href]")) || card.querySelector("a[href]");
+  const original = card.cloneNode(true);
+  original.querySelectorAll("[data-kriko-quick],[data-kriko-risk],[data-kriko-summary],[data-kriko-fit]").forEach((node) => node.remove());
+  return { name: (name || "").slice(0, 400), url: link ? link.href : "", price: price ? price.amount : null,
+    currency: price ? price.sign : "", text: cleanText(original.textContent || "").slice(0, 600), priceNode };
 }
 
 function markResultCard(card, read, fit) {
@@ -1047,16 +1050,190 @@ function annotateResults() {
       const reads = cards.map((card) => ({ card, read: readResultCard(card) }))
         .filter((one) => one.read.name);
       if (!reads.length) return;
-      chrome.runtime.sendMessage({ type: "BUYER_FIT", payload: { items: reads.map(({ read }) => ({
-        name: read.name, text: read.text, price: read.price, currency: read.currency })) } },
-      (reply) => {
-        if (chrome.runtime.lastError || !reply || !reply.ok || !reply.profile) return;
-        reads.forEach(({ card, read }, index) => markResultCard(card, read, reply.items[index]));
-      });
+      scanResultCards(reads);
+      for (let start = 0; start < reads.length; start += 60) {
+        const batch = reads.slice(start, start + 60);
+        chrome.runtime.sendMessage({ type: "BUYER_FIT", payload: { items: batch.map(({ read }) => ({
+          name: read.name, text: read.text, price: read.price, currency: read.currency })) } },
+        (reply) => {
+          if (chrome.runtime.lastError || !reply || !reply.ok || !reply.profile) return;
+          batch.forEach(({ card, read }, index) => markResultCard(card, read, reply.items[index]));
+        });
+      }
     } catch (_) {
       // Decoration must never break the page or the scrape.
     }
   }, 1200);
+}
+
+// ── product checks in the page ──────────────────────────────────────────
+
+const KRIKO_MARK_STYLE = "display:inline-block;margin:3px 6px;padding:3px 8px;border:1px solid #748d80;border-radius:7px;font:600 12px/1.5 system-ui;color:#163b2b;background:#e5f3ea;cursor:pointer;";
+let _resultScanGeneration = 0;
+
+function scanMessage(items, callback) {
+  chrome.runtime.sendMessage({ type: "PRODUCT_SCAN", payload: { items } }, (reply) => {
+    if (chrome.runtime.lastError) callback({ ok: false, error: "Kriko is unavailable. Open the app and try again." });
+    else callback(reply || { ok: false, error: "No answer from Kriko." });
+  });
+}
+
+function drawQuickSummary(parent, result, error, anchor = null) {
+  parent.querySelector("[data-kriko-summary]")?.remove();
+  const box = document.createElement("div");
+  box.setAttribute("data-kriko-summary", "");
+  box.setAttribute("role", "status");
+  box.style.cssText = "padding:12px;margin:8px 0;border:1px solid #748d80;border-radius:8px;background:#f1f7f3;color:#173c2c;font:14px/1.5 system-ui;max-width:620px;";
+  const line = (text) => { const p = document.createElement("p"); p.textContent = text; box.appendChild(p); };
+  if (error) line(error);
+  else {
+    line(`${result.name || "Product"} · ${result.level === "unknown" ? "No catalog risk rating" : result.level + " risk"}`);
+    line(`Matched by: ${result.basis}. ${result.method || ""}`);
+    for (const claim of (result.claims || []).slice(0, 8)) line(`${claim.severity || "Unrated"}: ${claim.title}. ${claim.advice || claim.body || ""}`);
+    if (!(result.claims || []).length) line("No sourced findings on record. This does not establish that the product is safe.");
+    const fresh = result.freshness || {};
+    line(`Last verified (source retrieval): ${fresh.last_verified ? fresh.last_verified.slice(0, 10) : "Unknown"}${fresh.stale ? " · Stale or incomplete dates" : ""}`);
+    for (const finding of result.audit?.claims?.items || []) {
+      if (finding.status !== "backed") line(`Listing check: “${finding.phrase}”: ${finding.why}`);
+    }
+    for (const flag of result.audit?.flags || []) line(flag);
+    for (const cost of result.costs?.items || []) {
+      line(`${cost.title}: ${cost.prices.join(", ")} (quoted cost)`);
+      const a = document.createElement("a");
+      try { if (/^https?:$/.test(new URL(cost.url).protocol)) { a.href = cost.url; a.textContent = "Price source"; a.target = "_blank"; a.rel = "noopener noreferrer"; box.appendChild(a); } } catch (_) { /* invalid source */ }
+    }
+    if ((result.costs?.missing || []).length) line(`Part prices not recorded for ${result.costs.missing.length} findings. Research the exact part and variant before budgeting.`);
+  }
+  const close = document.createElement("button"); close.type = "button"; close.textContent = "Close";
+  close.style.cssText = KRIKO_MARK_STYLE; close.onclick = () => box.remove(); box.appendChild(close);
+  if (anchor && parent.contains(anchor)) anchor.insertAdjacentElement("afterend", box);
+  else parent.appendChild(box);
+}
+
+function addQuickButton(parent, anchor, read, known) {
+  let button = parent.querySelector("[data-kriko-quick]");
+  if (!button) {
+    button = document.createElement("button"); button.type = "button";
+    button.setAttribute("data-kriko-quick", ""); button.textContent = "Kriko · Quick check";
+    button.style.cssText = KRIKO_MARK_STYLE;
+    const link = anchor?.closest("a");
+    const beside = link && parent.contains(link) ? link : anchor;
+    if (beside && beside !== parent) beside.insertAdjacentElement("afterend", button);
+    else parent.appendChild(button);
+  }
+  button.setAttribute("aria-label", `Quick check ${read.name}`);
+  button.onclick = (event) => {
+    event.preventDefault(); event.stopPropagation();
+    if (known) { drawQuickSummary(parent, known, "", button); return; }
+    const pageUrl = location.href;
+    button.disabled = true; button.textContent = "Kriko · Checking…";
+    scanMessage([{ name: read.name, url: read.url, text: read.text || "", fields: read.fields || {} }], (reply) => {
+      if (!button.isConnected || location.href !== pageUrl) return;
+      button.disabled = false; button.textContent = "Kriko · Quick check";
+      drawQuickSummary(parent, reply.items?.[0], !reply.ok || !reply.items?.[0] ? reply.error || "No answer from Kriko." : "", button);
+      if (reply.ok && reply.items?.[0]?.audit && parent === document.body) annotateListing(reply.items[0].audit);
+    });
+  };
+  return button;
+}
+
+function scanResultCards(reads) {
+  const generation = ++_resultScanGeneration;
+  const pageUrl = location.href;
+  for (const { card, read } of reads) addQuickButton(card, card.querySelector("h2,h3,h4,a"), read);
+  for (let start = 0; start < reads.length; start += 60) {
+    const batch = reads.slice(start, start + 60);
+    scanMessage(batch.map(({ read }) => ({ name: read.name, url: read.url, text: read.text })), (reply) => {
+      if (!reply.ok || generation !== _resultScanGeneration || location.href !== pageUrl) return;
+      batch.forEach(({ card, read }, index) => {
+        const result = reply.items?.[index];
+        if (!result || !card.isConnected || readResultCard(card).name !== read.name) return;
+        card.querySelector("[data-kriko-risk]")?.remove();
+        const badge = document.createElement("span"); badge.setAttribute("data-kriko-risk", result.level);
+        const known = ["critical", "high", "medium", "low"].includes(result.level);
+        badge.textContent = known ? `Kriko · ${result.level} risk` : result.level === "uncertain" ? "Kriko · Confirm product" : "Kriko · No rating";
+        badge.title = (result.claims || []).map((one) => `${one.severity}: ${one.title}`).join("\n") || "No sourced findings. This does not establish that the product is safe.";
+        badge.style.cssText = KRIKO_MARK_STYLE + (!known ? "background:#f1f2f3;color:#555d63;"
+          : result.level === "high" || result.level === "critical" ? "background:#fff0e8;color:#842f17;"
+          : result.level === "medium" ? "background:#fff4cf;color:#765a15;" : "");
+        (read.priceNode || card).appendChild(badge);
+        addQuickButton(card, null, read, result);
+      });
+    });
+  }
+}
+
+function clearListingAnnotations() {
+  for (const mark of document.querySelectorAll("mark[data-kriko-claim]")) {
+    const parent = mark.parentNode; mark.replaceWith(document.createTextNode(mark.textContent)); parent?.normalize();
+  }
+}
+
+function annotationRange(raw, phrase) {
+  // Audit phrases are folded by the engine. Map folded positions back to
+  // original text so accented words keep every character when wrapped.
+  const chars = []; const offsets = []; let offset = 0;
+  for (const char of raw) {
+    const folded = char.normalize("NFKD").toLowerCase().replace(/\p{M}/gu, "").replace(/\u0131/g, "i");
+    for (const part of folded) { chars.push(part); offsets.push({ start: offset, end: offset + char.length }); }
+    offset += char.length;
+  }
+  const text = chars.join("");
+  const wanted = phrase.normalize("NFKD").toLowerCase().replace(/\p{M}/gu, "").replace(/\u0131/g, "i");
+  let from = 0;
+  while (wanted && from < text.length) {
+    const start = text.indexOf(wanted, from);
+    if (start < 0) return null;
+    const end = start + wanted.length;
+    const insideWord = (/[\p{L}\p{N}]/u.test(wanted[0]) && start > 0 && /[\p{L}\p{N}]/u.test(text[start - 1]))
+      || (/[\p{L}\p{N}]/u.test(wanted.at(-1)) && end < text.length && /[\p{L}\p{N}]/u.test(text[end]));
+    if (!insideWord) return [offsets[start].start, offsets[end - 1].end];
+    from = end;
+  }
+  return null;
+}
+
+function annotateListing(audit) {
+  clearListingAnnotations();
+  if (!audit) return;
+  const findings = (audit.claims?.items || []).filter((one) => one.status !== "backed" && one.phrase);
+  const tasks = findings.map((one) => ({ phrase: one.phrase, why: one.why, root: document.body }));
+  if (audit.reviews?.doubtful) {
+    for (const root of document.querySelectorAll("[itemprop='ratingValue'], [class*='rating' i], [class*='review-score' i]")) {
+      if (root.textContent.trim().length < 100) tasks.push({ phrase: root.textContent.trim(), why: audit.reviews.notes.join("; "), root });
+    }
+  }
+  if (audit.seller?.level !== "green" && audit.seller?.signals?.seller_name) tasks.push({ phrase: audit.seller.signals.seller_name, why: audit.seller.notes.join("; "), root: document.body });
+  let count = 0;
+  for (const task of tasks) {
+    if (!task.phrase) continue;
+    const walker = document.createTreeWalker(task.root, 4);
+    const nodes = []; let node; let visited = 0;
+    while ((node = walker.nextNode()) && visited++ < 6000) {
+      if (node.parentElement?.closest("script,style,noscript,textarea,input,select,button,mark,[contenteditable]:not([contenteditable='false']),[data-kriko-summary],[data-kriko-quick],[hidden],[aria-hidden='true']")) continue;
+      nodes.push(node);
+    }
+    for (const text of nodes) {
+      if (count >= 80) return;
+      const range = annotationRange(text.textContent, task.phrase);
+      if (!range) continue;
+      const hit = text.splitText(range[0]); hit.splitText(range[1] - range[0]);
+      const mark = document.createElement("mark"); mark.setAttribute("data-kriko-claim", ""); mark.tabIndex = 0;
+      mark.title = `Kriko · ${task.why}`; mark.setAttribute("aria-label", `${hit.textContent}. Kriko: ${task.why}`);
+      mark.style.cssText = "background:#fff0bd;color:inherit;text-decoration:underline dotted #946100;text-underline-offset:3px;cursor:help;";
+      hit.replaceWith(mark); mark.appendChild(hit); count++;
+    }
+  }
+}
+
+function detectQuickProduct() {
+  const heading = document.querySelector("h1");
+  if (!heading || findResultCards().length) return;
+  const scrape = buildScrape([], {});
+  if (!scrape.product?.typed && !Object.keys(readShownPrice()).length) return;
+  const name = scrape.product?.name || scrape.title;
+  if (!name) return;
+  addQuickButton(document.body, heading, { name: name.slice(0, 400), url: location.href, text: (scrape.description || "").slice(0, 2000), fields: scrape.fields });
 }
 
 // ── the scrape ──────────────────────────────────────────────────────────
@@ -1178,6 +1355,9 @@ function presentationOf(panel) {
 // ── messages ────────────────────────────────────────────────────────────
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.type === "KRIKO_INLINE_AUDIT" && request.url === location.href) {
+    annotateListing(request.audit); return;
+  }
   if (request.type === "GET_SCRAPE") {
     // Always an answer. A handler that throws sends nothing, and the worker
     // could then only say it was unable to read the page, with no reason.
@@ -1225,11 +1405,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     clearTimeout(pending);
     // The page's own router is still drawing the new product: let it finish.
     pending = setTimeout(() => {
+      clearListingAnnotations();
+      document.querySelectorAll("[data-kriko-quick],[data-kriko-summary]").forEach((node) => node.remove());
       chrome.runtime.sendMessage({
         type: "PAGE_LOADED",
         payload: { url: window.location.href, host: window.location.hostname },
       });
       annotateResults();
+      detectQuickProduct();
     }, 600);
   };
   if (window.navigation && window.navigation.addEventListener) {
@@ -1251,5 +1434,23 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       payload: { url: window.location.href, host: window.location.hostname },
     });
     annotateResults();
+    detectQuickProduct();
   }, 150);
+})();
+
+// Lazy-loaded result cards and asynchronously rendered product headings.
+// Kriko's own decorations are excluded, so they never trigger another scan.
+(function followProductRendering() {
+  if (!document.body) return;
+  let pending;
+  const observer = new MutationObserver((records) => {
+    const changed = records.some((record) => [...record.addedNodes].some((node) =>
+      node.nodeType === 1 && !node.closest("[data-kriko-quick],[data-kriko-summary],[data-kriko-risk],[data-kriko-claim],[data-kriko-fit]")
+      && (node.matches("h1,h2,h3,img,[itemprop='price'],[class*='price' i]")
+          || node.querySelector("h1,h2,h3,img,[itemprop='price'],[class*='price' i]"))));
+    if (!changed) return;
+    clearTimeout(pending);
+    pending = setTimeout(() => { annotateResults(); detectQuickProduct(); }, 300);
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
 })();
