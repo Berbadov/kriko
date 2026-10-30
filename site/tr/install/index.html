@@ -1,0 +1,106 @@
+<!DOCTYPE html><html lang="tr"><head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
+  <title>Windows için Kriko kurulumu: ilk ürün kontrolün</title>
+  <meta name="description" content="Windows için Kriko kur, çevrimdışı katalogla bir ürünü kontrol et ve tarayıcı uzantısını bağla. Katalog sorguları hesap veya yapay zekâ anahtarı gerektirmez.">
+  <meta property="og:title" content="Windows için Kriko kurulumu">
+  <meta property="og:description" content="Ücretsiz katalog sorgusuyla başla. Kurulum, tarayıcı bağlantısı ve ilk kaynaklı ürün kontrolün.">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Kriko">
+  <meta property="og:url" content="https://kriko.cc/tr/install/">
+  <meta property="og:image" content="https://kriko.cc/assets/share-card.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Kriko paneli, uydurma bir e-bisiklet ilanının yanında açık; başlık: İlan, hikâyenin yarısını anlatır.">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="../../assets/icon-32.png">
+  <link rel="stylesheet" href="../../styles.css?v=036ae26c468b">
+  <script src="../../script.js?v=b29e79b52961" defer=""></script>
+  <link rel="canonical" href="https://kriko.cc/tr/install/">
+  <link rel="alternate" href="https://kriko.cc/install/" hreflang="en">
+  <link rel="alternate" href="https://kriko.cc/tr/install/" hreflang="tr">
+  <link rel="alternate" href="https://kriko.cc/install/" hreflang="x-default">
+  <script id="discovery-data" type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"Organization","@id":"https://kriko.cc/#organization","name":"Kriko","url":"https://kriko.cc/","sameAs":["https://github.com/Berbadov/kriko"],"logo":{"@type":"ImageObject","url":"https://kriko.cc/assets/icon-128.png"}},{"@type":"WebSite","@id":"https://kriko.cc/#website","url":"https://kriko.cc/","name":"Kriko","inLanguage":["en","tr"],"publisher":{"@id":"https://kriko.cc/#organization"}},{"@type":"SoftwareApplication","@id":"https://kriko.cc/#app","name":"Kriko","url":"https://kriko.cc/","applicationCategory":"UtilitiesApplication","operatingSystem":"Windows","license":"https://opensource.org/license/mit","sameAs":["https://github.com/Berbadov/kriko"],"publisher":{"@id":"https://kriko.cc/#organization"},"downloadUrl":"https://github.com/Berbadov/kriko/releases/latest/download/kriko-0.3.7-x86_64-setup.exe"},{"@type":"WebPage","@id":"https://kriko.cc/tr/install/#page","url":"https://kriko.cc/tr/install/","name":"Windows için Kriko kurulumu: ilk ürün kontrolün","description":"Windows için Kriko kur, çevrimdışı katalogla bir ürünü kontrol et ve tarayıcı uzantısını bağla. Katalog sorguları hesap veya yapay zekâ anahtarı gerektirmez.","inLanguage":"tr","isPartOf":{"@id":"https://kriko.cc/#website"},"about":{"@id":"https://kriko.cc/#app"},"breadcrumb":{"@id":"https://kriko.cc/tr/install/#breadcrumbs"}},{"@type":"BreadcrumbList","@id":"https://kriko.cc/tr/install/#breadcrumbs","itemListElement":[{"@type":"ListItem","position":1,"name":"Kriko","item":"https://kriko.cc/tr/"},{"@type":"ListItem","position":2,"name":"Kriko kur. İlk ürününü kontrol et.","item":"https://kriko.cc/tr/install/"}]}]}</script>
+</head>
+<body>
+  <a class="skip-link" href="#main">İçeriğe geç</a>
+  <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" width="0" height="0">
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12m-5-5 5 5 5-5M5 17v4h14v-4"></path></symbol>
+    <symbol id="i-external" viewBox="0 0 24 24"><path d="M14 4h6v6m0-6L10 14M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"></path></symbol>
+  </svg>
+
+  <header class="topbar">
+    <div class="wrap bar">
+      <a class="brand" href="/tr/" aria-label="Kriko ana sayfası"><picture><source srcset="../../assets/kriko-wordmark-white.svg" media="(prefers-color-scheme: dark)"><img src="../../assets/kriko-wordmark.svg" alt="Kriko" width="96" height="32"></picture></a>
+      <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="main-nav">Menü</button>
+      <nav class="main-nav" id="main-nav" aria-label="Ana gezinme">
+        <a href="/tr/#how">Nasıl çalışır</a>
+        <a href="/tr/#mobile">Telefon</a>
+        <a href="/tr/guide/">Rehber</a>
+        <a href="/tr/problems/">Bilinen sorunlar</a>
+        <a href="/tr/install/" aria-current="page">Kurulum</a>
+      </nav>
+      <span class="language-switch" role="group" aria-label="Dil"><a href="/install/" lang="en" hreflang="en">EN</a><a href="/tr/install/" lang="tr" hreflang="tr" aria-current="page">TR</a></span>
+      <a class="button small bar-cta" href="/tr/#get">Kriko'yu indir</a>
+    </div>
+  </header>
+
+  <main id="main" class="policy">
+    <div class="wrap narrow">
+      <p class="label">Buradan başla</p>
+      <h1>Kriko kur. <span>İlk ürününü kontrol et.</span></h1>
+      <p class="lead">Ücretsiz bir katalog sorgusuyla başla. Yüklü kataloglar için Kriko hesabı, yapay zekâ anahtarı veya araştırma ücreti gerekmez.</p>
+      <div class="short" id="download">
+        <h2>1. Windows uygulamasını kur.</h2>
+        <p>x64 bilgisayarlardaki Windows içindir. Kurulum motoru da içerir; ayrıca Python kurmak veya yönetici yetkisi gerekmez.</p>
+        <p><a class="button" href="https://github.com/Berbadov/kriko/releases/latest/download/kriko-0.3.7-x86_64-setup.exe">Kriko'yu Windows için indir</a></p>
+        <p><a href="https://github.com/Berbadov/kriko/releases/latest/download/kriko-0.3.7-win64-portable.zip">Taşınabilir ZIP mi tercih edersin?</a> Kriko açılmadan önce arşivin tamamını çıkar.</p>
+        <p class="fine">Kurulum dosyası şu anda imzasızdır; Windows yayıncı uyarısı gösterebilir. Yalnızca buradaki resmi sürüm bağlantısından indir. Çalıştırmaya karar vermeden önce dosyanın özetini sürümün sağladığı özetle karşılaştır.</p>
+        <p><a href="https://github.com/Berbadov/kriko/releases/latest/download/SHA256SUMS.txt">Resmi SHA-256 özetleri</a> · <a href="https://github.com/Berbadov/kriko/releases/latest">Sürüm notları ve tüm dosyalar</a></p>
+        <details><summary>İndirdiğim dosyayı nasıl doğrularım?</summary>
+          <p>PowerShell içinde bu komutu, indirdiğin dosyanın yoluyla çalıştır. Özetini, resmi özet listesindeki aynı dosya adıyla karşılaştır.</p>
+          <pre><code>Get-FileHash -Algorithm SHA256 .\kriko-0.3.7-x86_64-setup.exe</code></pre>
+          <p>Özetler farklıysa dosyayı çalıştırma. Resmi sürümden yeniden indir.</p>
+        </details>
+      </div>
+      <h2>2. Katalog yükle. Yapay zekâ anahtarı gerekmez.</h2>
+      <p>Kriko içinde <strong>More → Catalogs → Find release catalogs</strong> yolunu aç. Kontrol etmek istediğin ürünler için bir katalog yükle. Kurulum katalog içermez.</p>
+      <p>Yüklü katalog sorguları çevrimdışı çalışır. Hiçbir şey kurmadan <a href="/tr/problems/">bu sitedeki kaynaklı ürün raporlarını</a> da okuyabilirsin.</p>
+      <h2>3. Tarayıcı uzantısını ekle.</h2>
+      <p>Masaüstü uygulamasını açık tut. Chrome, Edge veya Brave içinde <a href="https://chromewebstore.google.com/detail/kriko/bdifnaggafjokndlpjgmlfappcoehdjb">Chrome Web Store üzerinden Kriko</a> yükle. Uzantının kontrol yapabilmesi için uygulama gerekir.</p>
+      <h2>4. Bir ilanı kontrol et ve bir kaynak aç.</h2>
+      <p>Bir ürün ilanı aç. Kriko araç çubuğu düğmesine veya <strong>Alt + K</strong> tuşlarına bas. Modeli ve varyantı doğrula. Satıcıya ne soracağına karar vermeden önce bir bulguyu oku ve kaynağını aç.</p>
+      <p>Bulgu olmaması, bilgi kapsamındaki bir boşluktur. Ürünün sorunsuz olduğunu kanıtlamaz.</p>
+      <p><a class="button ghost" href="/tr/guide/">Rehberde her adımı gör</a></p>
+      <h2>Kataloğun ötesinde araştırma mı yapmak istiyorsun?</h2>
+      <p><strong>More → Agents</strong> bölümünü aç, bir ajan seç ve <strong>Check connection</strong> düğmesine bas. Çevrimiçi araştırma için internet erişimi ve bağlantısı kurulmuş bir sağlayıcı gerekir. Ücretli sağlayıcılar kendi hesabını ücretlendirir.</p>
+      <h2>Uzantı bağlanamazsa</h2>
+      <p>Masaüstü uygulamasını aç ve açık tut. <strong>More → Set up Kriko</strong> bölümünden tarayıcı bağlantısını kontrol et. Uzantı istediğinde ilan sitesine erişim izni ver.</p>
+      <h2>macOS, Linux veya telefon mu kullanıyorsun?</h2>
+      <p>Yayımlanmış masaüstü indirmesi Windows x64 içindir. Apple Silicon macOS sürümü kaynak kodundan derlenebilir. Android uygulaması test sürümüdür. Herkese açık ürün raporlarını tarayıcında okuyabilirsin.</p>
+      <p><a href="https://github.com/Berbadov/kriko/blob/main/docs/INSTALL_MACOS.md">macOS kaynak kodu talimatları</a> · <a href="https://github.com/Berbadov/kriko/tree/main/kriko-mobile">Android test sürümü</a> · <a href="/tr/problems/">Bilinen sorunlara göz at</a></p>
+      <h2>Yardım mı gerekiyor?</h2>
+      <p>Uygulama sürümünü ve hata mesajını ekleyerek <a href="https://github.com/Berbadov/kriko/issues">kurulum sorununu bildir</a>. API anahtarlarını ve özel ilan bilgilerini rapora ekleme.</p>
+    </div>
+  </main>
+  <footer class="footer">
+    <div class="wrap footer-grid">
+      <div>
+        <a class="brand" href="/tr/" aria-label="Kriko ana sayfası"><picture><source srcset="../../assets/kriko-wordmark-white.svg" media="(prefers-color-scheme: dark)"><img src="../../assets/kriko-wordmark.svg" alt="Kriko" width="96" height="32"></picture></a>
+        <p>Biraz araştırma büyük fark yaratır.</p>
+      </div>
+      <nav aria-label="Alt bilgi">
+        <a href="https://github.com/Berbadov/kriko"><span>GitHub</span><svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg></a>
+        <a href="https://github.com/Berbadov/kriko/releases"><span>Sürümler</span><svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg></a>
+        <a href="https://github.com/Berbadov/kriko/issues"><span>Yardım ve geri bildirim</span><svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg></a>
+        <a href="/tr/problems/">Bilinen sorunlar</a>
+        <a href="/privacy/">Gizlilik</a>
+        <a href="https://github.com/Berbadov/kriko/blob/main/LICENSE">MIT lisansı</a>
+      </nav>
+    </div>
+  </footer>
+
+
+</body></html>

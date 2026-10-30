@@ -6,6 +6,7 @@
     "_comment_test": "Double quotes, not single. npm runs this through cmd.exe on Windows, which does not strip single quotes -- so node was handed a pattern containing literal ' characters, matched nothing, and reported `tests 0 / fail 0` with exit 0. The gate's node leg was green and vacuous on the only host that runs the gate, hiding all 157 of these tests. tools/gate.sh now also fails a run that reports zero tests, because a passing suite and an empty one must not look alike.",
     "test": "node --test \"extension/tests/**/*.test.js\"",
     "test:site": "node --test \"site/tests/*.test.cjs\"",
+    "test:site:browser": "node site/tools/check-install.mjs",
     "serve:site": "python -m http.server 4173 --bind 127.0.0.1 --directory site",
     "build:site": "node site/tools/render-locales.cjs"
   },
