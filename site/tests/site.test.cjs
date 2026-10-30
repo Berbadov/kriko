@@ -13,6 +13,8 @@ const PAGES = [
   { file: 'privacy/index.html', url: 'https://kriko.cc/privacy/', lang: 'en' },
   { file: 'guide/index.html', url: 'https://kriko.cc/guide/', lang: 'en' },
   { file: 'tr/guide/index.html', url: 'https://kriko.cc/tr/guide/', lang: 'tr' },
+  { file: 'install/index.html', url: 'https://kriko.cc/install/', lang: 'en' },
+  { file: 'tr/install/index.html', url: 'https://kriko.cc/tr/install/', lang: 'tr' },
 ];
 const HOME = PAGES.slice(0, 2);
 const GUIDE = PAGES.slice(3, 5);

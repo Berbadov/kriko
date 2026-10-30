@@ -22,11 +22,12 @@ const translations = JSON.parse(fs.readFileSync(path.join(root, 'locales/tr.json
 const PAGES = [
   { source: 'index.html', output: 'tr/index.html', canonical: 'https://kriko.cc/tr/', meta: '@meta' },
   { source: 'guide/index.html', output: 'tr/guide/index.html', canonical: 'https://kriko.cc/tr/guide/', meta: '@meta:guide' },
+  { source: 'install/index.html', output: 'tr/install/index.html', canonical: 'https://kriko.cc/tr/install/', meta: '@meta:install' },
 ];
 // Pages with no Turkish version still carry the hashes.
 const STAMPED = [...PAGES.map((page) => page.source), 'privacy/index.html', '404.html'];
 // A link to one of these goes to the Turkish version of it; /privacy/ is English only.
-const LOCALISED = /^\/(?:guide\/|problems\/)?(?:#.*)?$/;
+const LOCALISED = /^\/(?:guide\/|problems\/|install\/)?(?:#.*)?$/;
 
 const hash = (file) => createHash('sha256').update(fs.readFileSync(path.join(root, file))).digest('hex').slice(0, 12);
 
