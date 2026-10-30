@@ -367,9 +367,11 @@ h2 { font-size: clamp(2.7rem, 5.2vw, 4.6rem); max-width: 16em; letter-spacing: -
 .policy li { margin: 8px 0; }
 .policy strong { color: var(--ink); font-weight: 700; }
 .policy code { font: .9em ui-monospace, Consolas, monospace; padding: .1em .35em; border-radius: 3px; background: var(--soft); }
+.policy pre { max-width: 100%; overflow-x: auto; padding: 12px; background: var(--soft); }
 .policy .updated { margin-top: 12px; font-size: 1rem; }
 .policy .short { margin-top: 28px; padding: 20px 24px; border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 4px; background: var(--soft); }
 .policy .short p { color: var(--ink); }
+.policy .short .button { margin: 14px 0 6px; }
 
 /* Known-problems pages (site/tools/render_problems.py). The same header, cards and
    footer as the home page. A page is a head with the figures that matter, then the
@@ -404,6 +406,16 @@ h2 { font-size: clamp(2.7rem, 5.2vw, 4.6rem); max-width: 16em; letter-spacing: -
 .stats .sev-low { border-top-color: var(--sev-low); }
 .stats .sev-high strong { color: var(--sev-high); }
 .stats .sev-medium strong { color: var(--sev-medium); }
+.pp .summary { max-width: 52em; margin-top: 14px; color: var(--ink); }
+.pp .summary a { color: var(--link); font-weight: 600; }
+.pp .pp-head .fine { margin-top: 8px; }
+.pp .listing { margin-top: 12px; font-size: 1.0625rem; color: var(--muted); }
+.pp .listing a { font-weight: 600; }
+.pp .buying { margin: 0 0 8px; padding: 22px 26px; background: var(--card); border: 1px solid var(--line); border-radius: var(--r); }
+.pp .buying h2 { font-size: 1.5rem; }
+.pp .buying ol { display: grid; gap: 10px; margin: 14px 0 0; padding: 0; list-style: none; counter-reset: step; }
+.pp .buying li { position: relative; padding-left: 42px; color: var(--muted); counter-increment: step; }
+.pp .buying li::before { content: counter(step); position: absolute; left: 0; top: .05em; display: grid; place-items: center; width: 28px; height: 28px; font: 700 1rem/1 var(--display); color: var(--on-accent); background: var(--accent); border-radius: 50%; }
 .pp .alert { display: flex; align-items: center; gap: 10px; width: fit-content; max-width: 100%; margin-top: 18px; padding: 12px 18px; font-weight: 700; color: var(--ink); background: color-mix(in srgb, var(--sev-high) 8%, var(--card)); border: 1px solid color-mix(in srgb, var(--sev-high) 30%, var(--line)); border-radius: 12px; }
 .pp .alert .ico { flex: none; width: 1.3em; height: 1.3em; color: var(--sev-high); }
 
@@ -447,6 +459,7 @@ h2 { font-size: clamp(2.7rem, 5.2vw, 4.6rem); max-width: 16em; letter-spacing: -
 .pp .check strong { display: block; margin-bottom: 4px; font-size: .9375rem; letter-spacing: .06em; text-transform: uppercase; color: var(--link); }
 .pp .src { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 16px; font-size: .9375rem; color: var(--muted); }
 .pp .src span { margin-right: 4px; font-weight: 700; }
+.pp .when { margin-top: 10px; font-size: .9375rem; color: var(--muted); }
 .pp .src a { padding: 3px 12px; color: var(--link); text-decoration: none; overflow-wrap: anywhere; border: 1px solid var(--line); border-radius: 999px; transition: border-color .2s ease; }
 .pp .src a:hover { border-color: var(--accent); text-decoration: underline; }
 
@@ -591,6 +604,7 @@ h2 { font-size: clamp(2.7rem, 5.2vw, 4.6rem); max-width: 16em; letter-spacing: -
 @media (max-width: 1060px) {
   body { font-size: 1.125rem; }
   .topbar { position: static; }
+  html:not(.menu-ready) .bar { flex-wrap: wrap; }
   html.menu-ready .topbar { position: sticky; }
   .main-nav { display: flex; flex-basis: 100%; flex-direction: column; align-items: stretch; gap: 0; margin: 0; padding: 8px 0 20px; background: color-mix(in srgb, var(--bg) 98%, transparent); border-bottom: 1px solid var(--line); order: 3; }
   html.menu-ready .menu-toggle { display: inline-block; }

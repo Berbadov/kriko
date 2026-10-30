@@ -13,6 +13,8 @@ const PAGES = [
   { file: 'privacy/index.html', url: 'https://kriko.cc/privacy/', lang: 'en' },
   { file: 'guide/index.html', url: 'https://kriko.cc/guide/', lang: 'en' },
   { file: 'tr/guide/index.html', url: 'https://kriko.cc/tr/guide/', lang: 'tr' },
+  { file: 'install/index.html', url: 'https://kriko.cc/install/', lang: 'en' },
+  { file: 'tr/install/index.html', url: 'https://kriko.cc/tr/install/', lang: 'tr' },
 ];
 const HOME = PAGES.slice(0, 2);
 const GUIDE = PAGES.slice(3, 5);
@@ -264,7 +266,7 @@ test('the menu opens and closes on a narrow screen, and the pages work without i
   toggle.click();
   document.querySelector('main').dispatchEvent(new dom.window.Event('pointerdown', { bubbles: true }));
   assert.equal(toggle.getAttribute('aria-expanded'), 'false');
-  assert.ok(!/<script(?![^>]*\bsrc=)/.test(read(page.file)), 'the page carries no inline script');
+  assert.equal(document.querySelectorAll('script:not([src]):not([type="application/ld+json"])').length, 0, 'the page carries no executable inline script');
   assert.ok(document.querySelector('.faq details'), 'the questions are details elements, so they work without script');
 });
 
@@ -307,7 +309,7 @@ test('every film in the guide has a still, a size small enough to load, and a ca
     for (const a of d.querySelectorAll('.toc a')) {
       assert.ok(d.getElementById(a.getAttribute('href').slice(1)), `${page.file}: the contents name ${a.getAttribute('href')}, which is not there`);
     }
-    assert.ok(!/<script(?![^>]*\bsrc=)/.test(read(page.file)), `${page.file} carries an inline script`);
+    assert.equal(d.querySelectorAll('script:not([src]):not([type="application/ld+json"])').length, 0, `${page.file} carries an executable inline script`);
   }
 });
 
