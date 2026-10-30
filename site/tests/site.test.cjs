@@ -454,3 +454,31 @@ test('both home pages link to the problem pages in their own language', () => {
     assert.ok(load(page).querySelector(`footer a[href="${href}"]`), `${page.file} has no footer link to ${href}`);
   }
 });
+
+// A phone cannot run Kriko, and most visitors who arrive from a search are on one. Every page that
+// asks for an install also offers a touch screen a way to carry the install page to a computer.
+test('a touch screen is offered a mailto: that sends the install page in the page\'s own language, and a mouse is not', () => {
+  assert.match(css, /\.handoff\s*\{\s*display:\s*none;\s*\}/, 'the hand-off must start hidden');
+  assert.match(css, /@media\s*\(pointer:\s*coarse\)\s*\{\s*\.handoff\s*\{\s*display:\s*block;[^}]*\}\s*\}/, 'a touch screen must show it');
+  const all = generated();
+  // JSDOM holds a whole parsed page; 676 of them at once exhausts the heap. Every
+  // 25th page is enough to catch a missing hand-off or a wrong language target.
+  const asking = [...HOME.map((page) => page.file), ...all.filter((_, i) => i % 25 === 0)];
+  assert.ok(asking.length > 20, 'too few pages were checked');
+  for (const file of asking) {
+    const lang = file.startsWith('tr/') ? 'tr' : 'en';
+    const d = new JSDOM(read(file), { url: `https://kriko.cc/${file.replace(/index\.html$/, '')}` }).window.document;
+    const links = [...d.querySelectorAll('.handoff a[href^="mailto:"]')];
+    assert.ok(links.length >= 1, `${file} offers a phone no way to carry the link to a computer`);
+    for (const link of links) {
+      const mail = new URL(link.href);
+      const body = new URLSearchParams(mail.search).get('body');
+      // The generated pages carry the reader's own install page; the hand-written
+      // home pages carry their install section, and are not rebuilt per language.
+      if (!HOME.some((page) => page.file === file)) {
+        assert.equal(body, lang === 'tr' ? 'https://kriko.cc/tr/install/' : 'https://kriko.cc/install/', `${file}: the mail carries the wrong page`);
+      }
+      assert.ok(new URLSearchParams(mail.search).get('subject'), `${file}: the mail has no subject`);
+    }
+  }
+});

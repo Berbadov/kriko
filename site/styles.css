@@ -372,6 +372,9 @@ h2 { font-size: clamp(2.7rem, 5.2vw, 4.6rem); max-width: 16em; letter-spacing: -
 .policy .short { margin-top: 28px; padding: 20px 24px; border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 4px; background: var(--soft); }
 .policy .short p { color: var(--ink); }
 .policy .short .button { margin: 14px 0 6px; }
+/* A phone cannot run Kriko, so only a touch screen is offered a way to carry the link to a computer. */
+.handoff { display: none; }
+@media (pointer: coarse) { .handoff { display: block; margin-top: 16px; } }
 
 /* Known-problems pages (site/tools/render_problems.py). The same header, cards and
    footer as the home page. A page is a head with the figures that matter, then the
