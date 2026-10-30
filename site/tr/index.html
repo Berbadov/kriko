@@ -15,8 +15,8 @@
   <meta property="og:image:alt" content="Kriko paneli, uydurma bir e-bisiklet ilanının yanında açık; başlık: İlan, hikâyenin yarısını anlatır.">
   <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" href="../assets/icon-32.png">
-  <link rel="stylesheet" href="../styles.css?v=e2fab4efd728">
-  <script src="../script.js?v=b29e79b52961" defer=""></script>
+  <link rel="stylesheet" href="../styles.css?v=59f977fa0b05">
+  <script src="../script.js?v=a53205ca70d9" defer=""></script>
   <link rel="canonical" href="https://kriko.cc/tr/">
   <link rel="alternate" href="https://kriko.cc/" hreflang="en">
   <link rel="alternate" href="https://kriko.cc/tr/" hreflang="tr">
@@ -47,8 +47,8 @@
   </header>
 
   <main id="main">
-    <section class="hero" id="top">
-      <div class="wrap hero-grid">
+    <section class="hero home" id="top">
+      <div class="hero-grid">
         <div class="hero-copy">
           <p class="label">Almadan önce</p>
           <h1>İlan, hikâyenin <span>yarısını anlatır.</span></h1>
@@ -56,7 +56,7 @@
           <div class="actions">
             <a class="button" href="https://github.com/Berbadov/kriko/releases/latest/download/kriko-0.3.7-x86_64-setup.exe"><svg class="icon" aria-hidden="true"><use href="#i-download"></use></svg><span>Kriko'yu Windows için indir</span></a>
             <a class="button ghost" href="https://chromewebstore.google.com/detail/kriko/bdifnaggafjokndlpjgmlfappcoehdjb">Tarayıcı uzantısını yükle</a>
-            <a class="button ghost" href="https://github.com/Berbadov/kriko"><svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg><span>GitHub</span></a>
+            <a class="button quiet" href="https://github.com/Berbadov/kriko"><svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg><span>GitHub</span></a>
           </div>
           <ul class="hero-points">
             <li><svg class="icon" aria-hidden="true"><use href="#i-check"></use></svg><span>Ücretsiz ve açık kaynak, hesap yok</span></li>
@@ -78,17 +78,19 @@
 
     <section class="promises" aria-label="Kriko'nun verdiği sözler">
       <ul class="wrap promise-list">
-        <li>Her bulgunun yanında bir kaynak</li>
-        <li>Araştırman bilgisayarında kalır</li>
-        <li>Ücretsiz ve açık kaynak</li>
+        <li><svg class="icon" aria-hidden="true"><use href="#i-check"></use></svg><span>Her bulgunun yanında bir kaynak</span></li>
+        <li><svg class="icon" aria-hidden="true"><use href="#i-check"></use></svg><span>Araştırman bilgisayarında kalır</span></li>
+        <li><svg class="icon" aria-hidden="true"><use href="#i-check"></use></svg><span>Ücretsiz ve açık kaynak</span></li>
       </ul>
     </section>
 
     <section class="section film" id="film">
-      <div class="wrap">
-        <p class="label">Film</p>
-        <h2>Yirmi sekiz saniye, sesli.</h2>
-        <p class="section-lead">Kriko'nun kurgusal bir e-bisiklet ilanını kontrol edişi: sayfayı açmaktan kaynaklı bulgulara kadar. Oynat'a basın; film kendiliğinden başlamaz.</p>
+      <div class="wrap film-grid">
+        <div class="film-copy">
+          <p class="label">Film</p>
+          <h2>Yirmi sekiz saniye, sesli.</h2>
+          <p class="section-lead">Kriko'nun kurgusal bir e-bisiklet ilanını kontrol edişi: sayfayı açmaktan kaynaklı bulgulara kadar. Oynat'a basın; film kendiliğinden başlamaz.</p>
+        </div>
         <figure class="window">
           <video controls="" preload="none" playsinline="" width="1280" height="720" poster="../assets/film/kriko-ad-poster.webp" aria-label="Kriko'nun uydurma bir e-bisiklet ilanını kontrol ettiği 28 saniyelik film: bu üründe neyin ters gittiği bilinir, her bulgunun yanında kaynağıyla.">
             <source src="../assets/film/kriko-ad.mp4" type="video/mp4">
@@ -101,8 +103,12 @@
 
     <section class="section" id="how">
       <div class="wrap">
-        <p class="label"><span class="index">01</span>Nasıl çalışır</p>
-        <h2>Okuduğun sayfada üç adım.</h2>
+        <div class="head">
+          <div>
+            <p class="label n">Nasıl çalışır</p>
+            <h2>Okuduğun sayfada üç adım.</h2>
+          </div>
+        </div>
 
         <ol class="steps">
           <li class="step">
@@ -111,7 +117,7 @@
               <h3>Bir ürün sayfası aç.</h3>
               <p>Kriko sayfayı bilgisayarında okur ve tam olarak o ürünü kataloglarında arar. Hiçbir şey bilgisayarından çıkmaz.</p>
             </div>
-            <picture class="shot wide">
+            <picture class="shot crop">
               <source srcset="../assets/examples/hero-dark.webp" media="(prefers-color-scheme: dark)">
               <img src="../assets/examples/hero-light.webp" width="760" height="800" loading="lazy" alt="Kurgusal bir elektrikli bisiklet ilanının yanında açık Kriko paneli. Kontrol edilecek dört şeyi listeliyor.">
             </picture>
@@ -122,7 +128,7 @@
               <h3>Kontrol edilecekleri oku.</h3>
               <p>Her bulgu ne kadar ciddi olduğunu, ne kadar sağlam desteklendiğini ve neyi sorman gerektiğini söyler. Kaynağını görmek için bir bulguyu aç.</p>
             </div>
-            <picture class="shot">
+            <picture class="shot crop">
               <source srcset="../assets/examples/claim-open-dark.webp" media="(prefers-color-scheme: dark)">
               <img src="../assets/examples/claim-open-light.webp" width="400" height="768" loading="lazy" alt="Açılmış bir bulgu. Bataryanın iki kıştan sonra menzil kaybettiğini açıklıyor, kaynağı belirtiyor ve satıcıya ne sorulacağını öneriyor.">
             </picture>
@@ -133,7 +139,7 @@
               <h3>Karşılaştır, sonra karar ver.</h3>
               <p>Arasında kaldığın ürünleri ekle. Panel her biri için bilinen sorunları sayar, uygulama da hepsini yan yana dizer.</p>
             </div>
-            <picture class="shot">
+            <picture class="shot crop">
               <source srcset="../assets/examples/compare-dark.webp" media="(prefers-color-scheme: dark)">
               <img src="../assets/examples/compare-light.webp" width="400" height="768" loading="lazy" alt="Üç kurgusal elektrikli bisikletten oluşan bir kısa liste gösteren Kriko paneli. Her satır; ciddi, kontrol edilecek ve küçük bulgularının sayısını veriyor.">
             </picture>
@@ -144,19 +150,23 @@
 
     <section class="section" id="app">
       <div class="wrap">
-        <p class="label"><span class="index">02</span>Uygulama</p>
-        <h2>Bulguların tutulduğu yer.</h2>
-        <p class="section-lead">Windows uygulaması her kontrolü bilgisayarında saklar, kısa listeni yan yana dizer ve takip sorularını kaynaklarla yanıtlar. Tarayıcındaki panel oraya açılan kapıdır.</p>
-        <figure class="window">
-          <picture>
-            <source srcset="../assets/desktop/compare-compact-dark.webp" media="(max-width: 760px) and (prefers-color-scheme: dark)" width="760" height="1000">
-            <source srcset="../assets/desktop/compare-compact-light.webp" media="(max-width: 760px)" width="760" height="1000">
-            <source srcset="../assets/desktop/compare-dark.webp" media="(prefers-color-scheme: dark)">
-            <img src="../assets/desktop/compare-light.webp" width="1440" height="900" loading="lazy" alt="Kriko uygulaması üç kurgusal elektrikli bisikleti yan yana karşılaştırıyor. Birden fazla bisikletin paylaştığı bulgu işaretli ve her bulgu ne kadar iyi desteklendiğini gösteriyor.">
-          </picture>
-          <figcaption>Yan yana üç kurgusal elektrikli bisiklet. İkisinin paylaştığı bir bulgu işaretlenir ve her bulgu ne kadar iyi desteklendiğini söyler.</figcaption>
-        </figure>
-        <div class="window-pair">
+        <div class="head">
+          <div>
+            <p class="label n">Uygulama</p>
+            <h2>Bulguların tutulduğu yer.</h2>
+          </div>
+          <p class="section-lead">Windows uygulaması her kontrolü bilgisayarında saklar, kısa listeni yan yana dizer ve takip sorularını kaynaklarla yanıtlar. Tarayıcındaki panel oraya açılan kapıdır.</p>
+        </div>
+        <div class="bento">
+          <figure class="window wide">
+            <picture>
+              <source srcset="../assets/desktop/compare-compact-dark.webp" media="(max-width: 760px) and (prefers-color-scheme: dark)" width="760" height="1000">
+              <source srcset="../assets/desktop/compare-compact-light.webp" media="(max-width: 760px)" width="760" height="1000">
+              <source srcset="../assets/desktop/compare-dark.webp" media="(prefers-color-scheme: dark)">
+              <img src="../assets/desktop/compare-light.webp" width="1440" height="900" loading="lazy" alt="Kriko uygulaması üç kurgusal elektrikli bisikleti yan yana karşılaştırıyor. Birden fazla bisikletin paylaştığı bulgu işaretli ve her bulgu ne kadar iyi desteklendiğini gösteriyor.">
+            </picture>
+            <figcaption>Yan yana üç kurgusal elektrikli bisiklet. İkisinin paylaştığı bir bulgu işaretlenir ve her bulgu ne kadar iyi desteklendiğini söyler.</figcaption>
+          </figure>
           <figure class="window">
             <picture>
               <source srcset="../assets/desktop/product-compact-dark.webp" media="(prefers-color-scheme: dark)">
@@ -178,13 +188,17 @@
 
     <section class="section soft" id="examples">
       <div class="wrap">
-        <p class="label"><span class="index">03</span>Örnekler</p>
-        <h2>Dört kurgusal ürün, gerçek panelde.</h2>
-        <p class="section-lead">Burada hiçbir şey gerçek değil; ne ürünler ne de bulgular. Bunlar yalnızca panelin nasıl göründüğünü gösteriyor. Gerçek bulguların yanında gerçek bir kaynak bağlantısı olur.</p>
+        <div class="head">
+          <div>
+            <p class="label n">Örnekler</p>
+            <h2>Dört kurgusal ürün, gerçek panelde.</h2>
+          </div>
+          <p class="section-lead">Burada hiçbir şey gerçek değil; ne ürünler ne de bulgular. Bunlar yalnızca panelin nasıl göründüğünü gösteriyor. Gerçek bulguların yanında gerçek bir kaynak bağlantısı olur.</p>
+        </div>
         <ul class="gallery">
           <li>
             <p class="tag">Sıfır · Robot süpürge</p>
-            <picture class="shot">
+            <picture class="shot crop">
               <source srcset="../assets/examples/vacuum-dark.webp" media="(prefers-color-scheme: dark)">
               <img src="../assets/examples/vacuum-light.webp" width="400" height="768" loading="lazy" alt="Kurgusal bir robot süpürge için Kriko paneli. Bulgular arasında arızalanan bir yan fırça motoru ve bulut hesabı gerektiren zamanlamalar var.">
             </picture>
@@ -193,7 +207,7 @@
           </li>
           <li>
             <p class="tag">İkinci el · Telefon</p>
-            <picture class="shot">
+            <picture class="shot crop">
               <source srcset="../assets/examples/phone-dark.webp" media="(prefers-color-scheme: dark)">
               <img src="../assets/examples/phone-light.webp" width="400" height="768" loading="lazy" alt="Kurgusal bir ikinci el telefon için Kriko paneli. Bulgular arasında ekran onarımından sonra çalışmayı bırakan bir parmak izi sensörü ve yüzde 80'in altına düşen pil sağlığı var.">
             </picture>
@@ -202,7 +216,7 @@
           </li>
           <li>
             <p class="tag">İkinci el · Çamaşır makinesi</p>
-            <picture class="shot">
+            <picture class="shot crop">
               <source srcset="../assets/examples/washer-dark.webp" media="(prefers-color-scheme: dark)">
               <img src="../assets/examples/washer-light.webp" width="400" height="768" loading="lazy" alt="Kurgusal bir ikinci el çamaşır makinesi için Kriko paneli. Bulgular arasında gürültülü hâle gelen bir tambur rulmanı ve küf tutan bir kapak contası var.">
             </picture>
@@ -211,7 +225,7 @@
           </li>
           <li>
             <p class="tag">Sıfır · Akülü matkap</p>
-            <picture class="shot">
+            <picture class="shot crop">
               <source srcset="../assets/examples/drill-dark.webp" media="(prefers-color-scheme: dark)">
               <img src="../assets/examples/drill-light.webp" width="400" height="768" loading="lazy" alt="Kurgusal bir akülü matkap için Kriko paneli. Bulgular arasında aşırı ısınan batarya kontakları ve yük altında kayan bir mandren var.">
             </picture>
@@ -225,56 +239,58 @@
     </section>
 
     <section class="section" id="catalogs">
-      <div class="wrap two split">
-        <div class="split-copy">
-          <div>
-            <p class="label"><span class="index">04</span>Kataloglar</p>
+      <div class="wrap trio">
+          <div class="card">
+            <p class="label n">Kataloglar</p>
             <h2>Almadan önce modeli tanı.</h2>
             <p>Katalog, tek bir ürün kategorisinin kaynaklarıyla birlikte yazıya geçirilmiş hâlidir. Arabalar, telefonlar, dizüstü bilgisayarlar, televizyonlar, oyun konsolları, mutfak ve çamaşır aletleri ve daha fazlası için kataloglar var; İngilizce ve Türkçe. Uygulamadaki <strong>Catalogs</strong> bölümünden birini kurduğunda aramalar çevrimdışı çalışır.</p>
             <p class="fine">Okumak için uygulama gerekmez: <a href="/tr/problems/">bilinen sorunlara ürün ve parça bazında göz at</a>.</p>
           </div>
-          <div>
-            <p class="label"><span class="index">05</span>Hızlı bakış</p>
+          <div class="card">
+            <p class="label">Hızlı bakış</p>
             <h2>Katalog yok mu? Ajanına sor.</h2>
             <p><strong>Hızlı bakış</strong>, seçtiğin ajanı hiçbir katalogda olmayan bir ürünü araştırmaya gönderir ve kaynakları saklar. İnternet bağlantısı gerekir. Hiçbir şey bulamazsa Kriko bunu söyler. Bir ürünün sorunsuz olduğunu asla söylemez.</p>
           </div>
-        </div>
-        <picture class="shot">
-          <source srcset="../assets/examples/research-dark.webp" media="(prefers-color-scheme: dark)">
-          <img src="../assets/examples/research-light.webp" width="400" height="768" loading="lazy" alt="Kurgusal bir air fryer için araştırma kartı. Hızlı bakış, okunan sayfa sayısıyla birlikte bilinmesi gereken üç şey buldu.">
-        </picture>
+          <picture class="shot crop">
+            <source srcset="../assets/examples/research-dark.webp" media="(prefers-color-scheme: dark)">
+            <img src="../assets/examples/research-light.webp" width="400" height="768" loading="lazy" alt="Kurgusal bir air fryer için araştırma kartı. Hızlı bakış, okunan sayfa sayısıyla birlikte bilinmesi gereken üç şey buldu.">
+          </picture>
       </div>
     </section>
 
     <section class="section soft" id="mobile">
       <div class="wrap">
-        <p class="label"><span class="index">05</span>Telefonunda</p>
-        <h2>Mağazadayken sor, ya da karşındaki ekranı tara.</h2>
-        <p class="section-lead">Android uygulaması tek başına ajandır: bir ürün sor, ilanını fotoğraflamaya ya da yüzen tarayıcının okuduğu sayfayı tara. Her cevap, okuduğu sayfaları kaynak gösterir; İngilizce ya da Türkçe. API anahtarlarıyla çalışır, telefona ajan kurmaya gerek yok.</p>
+        <div class="head">
+          <div>
+            <p class="label n">Telefonunda</p>
+            <h2>Mağazadayken sor, ya da karşındaki ekranı tara.</h2>
+          </div>
+          <p class="section-lead">Android uygulaması tek başına ajandır: bir ürün sor, ilanını fotoğraflamaya ya da yüzen tarayıcının okuduğu sayfayı tara. Her cevap, okuduğu sayfaları kaynak gösterir; İngilizce ya da Türkçe. API anahtarlarıyla çalışır, telefona ajan kurmaya gerek yok.</p>
+        </div>
         <ul class="gallery phones">
           <li>
-            <picture class="shot">
+            <picture class="shot plain">
               <img src="../assets/mobile/1-ask.webp" width="360" height="800" loading="lazy" alt="Kriko telefon uygulamasının Türkçe sor ekranı; örnek sorular: Bosch GSB 600 matkapta ne ters gidebilir ve ikinci el Galaxy Buds2 Pro bu fiyata değer mi.">
             </picture>
             <h3>Sor</h3>
             <p>Her iki dilde tek soru.</p>
           </li>
           <li>
-            <picture class="shot">
+            <picture class="shot plain">
               <img src="../assets/mobile/3-answer.webp" width="360" height="800" loading="lazy" alt="Bosch GSB 600 matkap hakkında Türkçe bir cevap; yapılacak kontroller ve altında [1] [2] [3] numaralı kaynaklar.">
             </picture>
             <h3>Kaynaklı cevap</h3>
             <p>Numaralı sayfalar cevabın altında.</p>
           </li>
           <li>
-            <picture class="shot">
+            <picture class="shot plain">
               <img src="../assets/mobile/5-screenshot.webp" width="360" height="800" loading="lazy" alt="Uygulamanın fotoğrafı çekilmiş Samsung Galaxy Buds2 Pro ilanını Türkçe okuması; tanıdığı marka, ürün, model ve fiyat alanları, araştırma öncesi düzenlenebilir.">
             </picture>
             <h3>İlanı oku</h3>
             <p>Fotoğraf önce düzenlenebilir metne dönüşür; araştırmadan önce sen onaylarsın.</p>
           </li>
           <li>
-            <picture class="shot">
+            <picture class="shot plain">
               <img src="../assets/mobile/8-light.webp" width="360" height="800" loading="lazy" alt="Kriko telefon uygulamasının İngilizce, açık temalı sor ekranı.">
             </picture>
             <h3>Koyu, kâğıt ya da beyaz</h3>
@@ -293,7 +309,7 @@
 
     <section class="section" id="get">
       <div class="wrap">
-        <p class="label"><span class="index">06</span>Kurulum</p>
+        <p class="label n">Kurulum</p>
         <h2>Bir kerelik dört adım.</h2>
         <p class="section-lead">Kriko'ya yeni misin? <a href="/tr/guide/">Rehber</a> her adımı kısa bir filmle gösterir.</p>
         <div class="get-grid">
@@ -325,9 +341,11 @@
     </section>
 
     <section class="section soft" id="data">
-      <div class="wrap narrow">
-        <p class="label"><span class="index">07</span>Sorular</p>
-        <h2>Verilerin, maliyet ve sınırlar.</h2>
+      <div class="wrap faq-grid">
+        <div class="faq-head">
+          <p class="label n">Sorular</p>
+          <h2>Verilerin, maliyet ve sınırlar.</h2>
+        </div>
         <div class="faq">
           <details open="">
             <summary>Araştırmalarım nerede saklanıyor?</summary>

@@ -21,6 +21,14 @@ look is Kriko's own and is kept on purpose, not left to defaults:
 - **The paper** is a warm white, with the product's blue used only for actions,
   numbers and links.
 
+The layout uses the whole width: a hero whose two halves run to the window's edges,
+tiles in rows instead of single columns, and on a phone a row of pictures becomes a
+strip to swipe. Section numbers come from a CSS counter, so a section added or moved
+renumbers itself. Motion is a rise on load, a drifting sky and stripe, scroll-in
+reveals, a light that follows the pointer over cards and a mark on the nav link of
+the section in view. `script.js` adds all of it as classes, so without script, or for
+a reader who asked for less motion, the page is complete and still.
+
 Both typefaces are served from `assets/fonts/` (OFL), so no page loads anything
 from another site.
 
