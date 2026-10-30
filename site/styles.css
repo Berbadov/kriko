@@ -25,13 +25,13 @@
   --accent-hover: #1a37bd;
   --on-accent: #ffffff;
   --link: #1d3fd0;
-  --footer: #0b1020;
+  --footer: #000000;
   --sky: url("assets/sky/stage-light.webp");
   --band: url("assets/sky/band-light.webp");
   /* The one signature gradient, Kriko's own blue going deep: used for the hero
      rule, the closing stripe band and the dark film section. Never anywhere else. */
   --stripe: linear-gradient(90deg, #16277e 0%, #2447e6 34%, #5a7bff 62%, #a9bcff 84%, #dfe7ff 100%);
-  --stripe-dark: linear-gradient(90deg, #0a1230 0%, #16277e 30%, #2447e6 60%, #5a7bff 82%, #a9bcff 100%);
+  --stripe-dark: linear-gradient(90deg, #000000 0%, #16277e 30%, #2447e6 60%, #5a7bff 82%, #a9bcff 100%);
   --display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
   --sans: "Atkinson Hyperlegible Next", "Segoe UI", system-ui, -apple-system, sans-serif;
   --gutter: clamp(20px, 5vw, 56px);
@@ -45,16 +45,16 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #090c17;
-    --soft: #0f1424;
-    --card: #0e1322;
+    --bg: #000000;
+    --soft: #0b0b0d;
+    --card: #0e0e11;
     --ink: #f3f1ea;
-    --muted: #b5bcd0;
-    --line: #262d45;
+    --muted: #b9bcc7;
+    --line: #26272d;
     --accent: #3d63f5;
     --accent-hover: #5a7bff;
     --link: #9db3ff;
-    --footer: #05070e;
+    --footer: #000000;
     --sky: url("assets/sky/stage-dark.webp");
     --band: url("assets/sky/band-dark.webp");
     --stripe: var(--stripe-dark);
@@ -144,7 +144,7 @@ main { counter-reset: section; }
 .hero { position: relative; overflow: hidden; padding-block: clamp(72px, 10vw, 144px) clamp(56px, 7vw, 96px); background: var(--bg); }
 .hero::before { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, color-mix(in srgb, #a9bcff 34%, transparent) 0%, transparent 46%); pointer-events: none; }
 @media (prefers-color-scheme: dark) {
-  .hero::before { background: linear-gradient(180deg, color-mix(in srgb, #2447e6 30%, transparent) 0%, transparent 46%); }
+  .hero::before { background: linear-gradient(180deg, color-mix(in srgb, #2447e6 14%, transparent) 0%, transparent 46%); }
 }
 h1 { font-size: clamp(3.4rem, 7.2vw, 6.4rem); line-height: .94; letter-spacing: -.018em; max-width: 11em; }
 h1 > span:not(.w) { color: var(--accent); display: block; }
@@ -270,7 +270,7 @@ h2 { font-size: clamp(2.7rem, 5.2vw, 4.6rem); max-width: 16em; letter-spacing: -
    The three of them sit in one row, the wide one taking two columns. */
 .window { margin: 0; }
 .window img, .window video { display: block; width: 100%; height: auto; border-radius: 12px; border: 1px solid var(--line); box-shadow: 0 24px 60px -26px rgba(11, 16, 32, .4), 0 2px 8px rgba(11, 16, 32, .08); transition: transform .5s var(--ease), box-shadow .5s ease; }
-.window video { aspect-ratio: 16 / 9; background: #090c17; }
+.window video { aspect-ratio: 16 / 9; background: #000000; }
 .window figcaption { margin-top: 14px; max-width: 46em; font-size: 1rem; line-height: 1.6; color: var(--muted); }
 .bento { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: clamp(16px, 2.4vw, 32px); align-items: start; }
 .bento .window.wide { grid-column: span 2; }
@@ -302,14 +302,14 @@ h2 { font-size: clamp(2.7rem, 5.2vw, 4.6rem); max-width: 16em; letter-spacing: -
 .band { height: clamp(10px, 1.2vw, 16px); background: var(--stripe); background-size: 200% 100%; animation: band-drift 18s ease-in-out infinite alternate; }
 @keyframes band-drift { to { background-position: 100% 0; } }
 .band.sky { height: clamp(72px, 9vw, 120px); background: var(--band) center / cover, var(--stripe); animation: none; image-rendering: pixelated; }
-.section.film { background: #070a14; color: #f3f1ea; border-block: 1px solid #1c2340; position: relative; overflow: hidden; }
+.section.film { background: #000000; color: #f3f1ea; border-block: 1px solid #1f2026; position: relative; overflow: hidden; }
 .section.film::before { content: ""; position: absolute; inset: auto 0 0 0; height: 6px; background: var(--stripe-dark); background-size: 200% 100%; animation: band-drift 18s ease-in-out infinite alternate; }
 .film-grid { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.5fr); gap: clamp(28px, 5vw, 80px); align-items: center; }
-.section.film .label { color: #8fa0c8; }
+.section.film .label { color: #a4a7b4; }
 .section.film h2 { color: #f3f1ea; font-size: clamp(2.6rem, 4.6vw, 4.2rem); }
-.section.film figcaption { color: #8fa0c8; }
-.section.film .window img, .section.film .window video { border-color: #1c2340; box-shadow: 0 30px 80px -30px rgba(0, 0, 0, .8); }
-.section.film .section-lead { color: #8fa0c8; }
+.section.film figcaption { color: #a4a7b4; }
+.section.film .window img, .section.film .window video { border-color: #24252b; box-shadow: 0 30px 80px -30px rgba(0, 0, 0, .8); }
+.section.film .section-lead { color: #a4a7b4; }
 .film .window video { border-radius: 8px; }
 
 /* Install: the four steps as a two-by-two, the downloads beside them. */
@@ -321,6 +321,10 @@ h2 { font-size: clamp(2.7rem, 5.2vw, 4.6rem); max-width: 16em; letter-spacing: -
 .setup p { margin-top: 10px; color: var(--muted); font-size: 1.0625rem; line-height: 1.6; }
 .download-card { padding: clamp(26px, 3vw, 40px); background: var(--card); border: 1px solid var(--line); border-radius: var(--r); box-shadow: 0 24px 48px -32px rgba(11, 16, 32, .45); transition: transform .3s var(--ease), box-shadow .3s ease, border-color .25s ease; }
 .download-card:hover { transform: translateY(-4px); border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); box-shadow: 0 30px 56px -30px rgba(11, 16, 32, .5); }
+.dl-head { display: flex; align-items: center; gap: 16px; }
+.dl-icon { display: grid; flex: none; place-items: center; width: 54px; height: 54px; color: var(--bg); background: var(--ink); border-radius: 14px; transition: transform .35s var(--ease); }
+.dl-icon .icon { width: 1.7rem; height: 1.7rem; stroke-width: 1.8; }
+.download-card:hover .dl-icon { transform: rotate(-8deg) scale(1.06); }
 .download-card h3 { font-size: 2.2rem; }
 .download-card > p:first-of-type { margin: 8px 0 22px; color: var(--muted); }
 .download-card + .download-card { margin-top: clamp(20px, 2.6vw, 32px); }
@@ -344,7 +348,7 @@ h2 { font-size: clamp(2.7rem, 5.2vw, 4.6rem); max-width: 16em; letter-spacing: -
 .footer { padding-block: clamp(44px, 5vw, 72px); background: var(--footer); color: #f3f1ea; }
 .footer .brand img { filter: invert(1); }
 .footer-grid { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 28px 48px; align-items: flex-start; }
-.footer p { margin-top: 14px; color: #b5bcd0; font-size: 1.0625rem; }
+.footer p { margin-top: 14px; color: #b9bcc7; font-size: 1.0625rem; }
 .footer nav { display: flex; flex-wrap: wrap; gap: 12px 28px; font-size: 1rem; max-width: 40em; }
 .footer nav a { display: inline-flex; align-items: center; gap: 5px; color: #f3f1ea; text-decoration: none; font-weight: 600; }
 .footer nav a:hover { color: #a9bcff; text-decoration: underline; }
@@ -516,7 +520,7 @@ h2 { font-size: clamp(2.7rem, 5.2vw, 4.6rem); max-width: 16em; letter-spacing: -
 .pp .card .share i.sev-medium { background: var(--sev-medium); }
 .pp .card small { margin-top: 0; font-size: .9375rem; line-height: 1.45; color: var(--muted); }
 
-.pp .cta { padding: 26px; color: #f3f1ea; background: var(--footer); border: 1px solid #1c2340; border-radius: var(--r); }
+.pp .cta { padding: 26px; color: #f3f1ea; background: var(--footer); border: 1px solid #24252b; border-radius: var(--r); }
 .pp .cta h2 { font-size: 1.7rem; color: #f3f1ea; }
 .pp .cta p { margin-top: 10px; font-size: 1.0625rem; color: #b5bcd0; }
 .pp .cta p + p { margin-top: 18px; }
