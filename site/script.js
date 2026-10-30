@@ -61,9 +61,11 @@
   }
 })();
 
-// Scroll-in reveals and the header's shadow. Both are added as classes, so a
-// page without script (or a reader who asked for less motion) sees everything
-// at once and still. The hero animates on load through CSS alone.
+// Scroll-in reveals, the header's shadow, the link of the section in view and the
+// light that follows the pointer over a card. All of it is added as classes or
+// custom properties, so a page without script (or a reader who asked for less
+// motion) sees everything at once and still. The hero animates on load through
+// CSS alone.
 (() => {
   if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const bar = document.querySelector('.topbar');
@@ -72,16 +74,50 @@
     window.addEventListener('scroll', onScroll, { passive: true });
     onScroll();
   }
+  if (window.matchMedia && window.matchMedia('(hover: hover)').matches) {
+    for (const card of document.querySelectorAll('.card, .step, .gallery li, .setup li, .download-card, .promise-list li')) {
+      card.classList.add('spot');
+      card.addEventListener('pointermove', (event) => {
+        const box = card.getBoundingClientRect();
+        card.style.setProperty('--mx', `${event.clientX - box.left}px`);
+        card.style.setProperty('--my', `${event.clientY - box.top}px`);
+      }, { passive: true });
+    }
+  }
   if (!('IntersectionObserver' in window)) return;
-  const targets = document.querySelectorAll('.section .label, .section h2, .section-lead, .gallery li, .step, .setup li, .download-card, .window, .shot');
+
+  // The link of the section being read gets a mark. Links to another page have no section here.
+  const links = new Map();
+  for (const link of document.querySelectorAll('.main-nav a[href^="#"]')) {
+    const section = document.getElementById(link.getAttribute('href').slice(1));
+    if (section) links.set(section, link);
+  }
+  if (links.size) {
+    const current = new Set();
+    const mark = () => {
+      let last = null;
+      for (const section of links.keys()) if (current.has(section)) last = section;
+      for (const [section, link] of links) link.classList.toggle('is-active', section === last);
+    };
+    const spy = new IntersectionObserver((entries) => {
+      for (const entry of entries) entry.isIntersecting ? current.add(entry.target) : current.delete(entry.target);
+      mark();
+    }, { rootMargin: '-40% 0px -55% 0px' });
+    for (const section of links.keys()) spy.observe(section);
+  }
+
+  // On a phone a row of cards is a strip to swipe, and a card past the edge would
+  // wait for a sideways scroll to appear, so the strip arrives as one piece.
+  const strip = window.matchMedia && window.matchMedia('(max-width: 760px)').matches;
+  const targets = document.querySelectorAll('.section .label, .section h2, .section-lead, .promise-list li, .step, .setup li, .download-card, .card, .window, .shot.plain, .faq details, ' + (strip ? '.gallery, .bento' : '.gallery li'));
   const seen = new WeakSet();
   const io = new IntersectionObserver((entries) => {
-    let delay = 0;
     for (const entry of entries) {
       if (!entry.isIntersecting || seen.has(entry.target)) continue;
       seen.add(entry.target);
-      entry.target.style.setProperty('--reveal-delay', `${Math.min(delay, 240)}ms`);
-      delay += 60;
+      // A row of siblings arrives left to right, a beat apart.
+      const index = Array.prototype.indexOf.call(entry.target.parentElement.children, entry.target);
+      entry.target.style.setProperty('--reveal-delay', `${Math.min(index, 4) * 80}ms`);
       entry.target.classList.add('is-in');
       io.unobserve(entry.target);
     }
