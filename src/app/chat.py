@@ -388,6 +388,10 @@ def chat_brief(message: str, history: Sequence[dict]) -> str:
         "nothing else. Use the specific names, models and years, and leave out",
         "filler such as please or tell me. Kriko runs the search and asks you again",
         "with the results.",
+        "When the reader sends only a product's name (a make and model, a part code,",
+        "a size) and asks nothing else, do not answer from memory: reply with",
+        f"exactly one line, {SEARCH_PREFIX} <the product> known problems and common",
+        "faults, and nothing else, so Kriko researches it before you answer.",
         "",
         "Conversation so far:",
         _history_text(history),
@@ -762,10 +766,18 @@ _FAILURE_QUESTION = re.compile(
 # A reader who names the web means the web, even when a catalogue could also
 # answer. This has to be decided before the private-record branch, or
 # "search the web for what goes wrong with X" silently becomes a catalogue
-# question (found by the 2026-10-25 routing bench).
+# question (found by the 2026-10-25 routing bench). An explicit *research*
+# request belongs here for the same reason and was found the same way: a 0.3.8
+# run answered "research the Fiat Egea's common problems from reliable sources"
+# from memory, because only the English "search the web" shapes were read.
 _EXPLICIT_WEB = re.compile(
-    r"\b(?:search|look up|browse|check)\b.{0,40}\b(?:web|internet|online)\b|"
-    r"\bonline\b",
+    r"\b(?:search|look up|browse|check|research|investigate|find out)\b"
+    r".{0,60}\b(?:web|internet|online|sources?|sites?)\b|"
+    r"\bonline\b|"
+    r"\baraştır\w*\b|\barastir\w*\b|"
+    r"\b(?:internetten|internette|webde|web'de|çevrimiçi|cevrimici)\b|"
+    r"\b(?:güvenilir|guvenilir) kaynak\w*\b|"
+    r"\bkaynaklardan\b",
     re.I)
 _LOCAL_PRODUCT_LIST = re.compile(
     r"\bdo you have\b.{0,40}\bproducts?\b|"
