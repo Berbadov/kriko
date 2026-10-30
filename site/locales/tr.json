@@ -14,9 +14,9 @@
   "@meta": {
     "title": "Kriko: baktığın ürünün bilinen sorunları",
     "description": "Kriko, baktığın ürünün bilinen sorunlarını gösterir; her bulgunun yanında kaynağı vardır. Bilgisayarında çalışır ve her ilan sitesinde işe yarar.",
-    "og:title": "Kriko: İlan, hikâyenin yarısını anlatır",
+    "og:title": "Kriko: Ters gidebilecek her şeyi satın almadan önce öğren",
     "og:description": "Bu ürünün bilinen sorunları, ilanın hemen yanında, kontrol edebileceğin kaynaklarla.",
-    "og:image:alt": "Kriko paneli, uydurma bir e-bisiklet ilanının yanında açık; başlık: İlan, hikâyenin yarısını anlatır."
+    "og:image:alt": "Kriko paneli, uydurma bir e-bisiklet ilanının yanında açık; başlık: Ters gidebilecek her şeyi satın almadan önce öğren."
   },
   "Skip to content": "İçeriğe geç",
   "Menu": "Menü",
@@ -64,7 +64,6 @@
   "Keep Kriko running, open a product page and press <span class=\"keys\"><kbd>Alt</kbd> + <kbd>K</kbd></span> or the toolbar button. Read the findings and follow the sources.": "Kriko açık dursun, bir ürün sayfası aç ve <span class=\"keys\"><kbd>Alt</kbd> + <kbd>K</kbd></span> tuşlarına ya da araç çubuğu düğmesine bas. Bulguları oku, kaynaklarını incele.",
   "Install": "Kurulum",
   "Questions": "Sorular",
-  "The listing tells <span>half the story.</span>": "İlan, hikâyenin <span>yarısını anlatır.</span>",
   "Free · Open source · No account": "Ücretsiz · Açık kaynak · Hesap gerekmez",
   "Four steps, once.": "Bir kerelik dört adım.",
   "Your data, the cost and the limits.": "Verilerin, maliyet ve sınırlar.",
@@ -184,7 +183,7 @@
     "description": "Kriko'yu adım adım, her adımın kısa bir filmiyle kullan: ilanı kontrol et, yeni bir ürünü araştır, kayıtlı bir kontrolü bul, ürünleri karşılaştır ve ne kadar şüphe göreceğini seç.",
     "og:title": "Kriko nasıl kullanılır, adım adım",
     "og:description": "Her adımın kısa bir filmi: ilanı kontrol et, yeni bir ürünü araştır, ürünleri karşılaştır ve ne kadar şüphe göreceğini seç.",
-    "og:image:alt": "Kriko paneli, uydurma bir e-bisiklet ilanının yanında açık; başlık: İlan, hikâyenin yarısını anlatır."
+    "og:image:alt": "Kriko paneli, uydurma bir e-bisiklet ilanının yanında açık; başlık: Ters gidebilecek her şeyi satın almadan önce öğren."
   },
   "Windows app · Free · Open source · No account": "Windows uygulaması · Ücretsiz · Açık kaynak · Hesap gerekmez",
   "The installer is not signed yet, so Windows may stop the first run with <strong>Windows protected your PC</strong>. Choose <strong>More info</strong>, then <strong>Run anyway</strong>.": "Yükleyici henüz imzalı değil; bu yüzden Windows ilk çalıştırmada <strong>Windows bilgisayarınızı korudu</strong> diyerek durdurabilir. <strong>Daha fazla bilgi</strong> (More info), ardından <strong>Yine de çalıştır</strong> (Run anyway) seç.",
@@ -216,5 +215,8 @@
   "Build it from source": "Kaynaktan derle",
   "Free and open source, no account": "Ücretsiz ve açık kaynak, hesap yok",
   "Catalogs work offline, no AI key": "Kataloglar çevrimdışı çalışır, yapay zekâ anahtarı gerekmez",
-  "<a href=\"#film\">Watch the 28-second demo</a> or <a href=\"#get\">follow the setup steps</a>": "<a href=\"#film\">28 saniyelik tanıtımı izle</a> ya da <a href=\"#get\">kurulum adımlarını takip et</a>"
+  "<a href=\"#film\">Watch the 28-second demo</a> or <a href=\"#get\">follow the setup steps</a>": "<a href=\"#film\">28 saniyelik tanıtımı izle</a> ya da <a href=\"#get\">kurulum adımlarını takip et</a>",
+  "Know what can go wrong <span>before you buy.</span>": "Ters gidebilecek her şeyi <span>satın almadan önce öğren.</span>",
+  "Known problems, with sources": "Bilinen sorunlar, kaynaklarıyla",
+  "Kriko shows the known problems of the exact model you are looking at, beside the listing. Every finding comes with a source you can open and a question to ask the seller.": "Kriko, baktığın modelin bilinen sorunlarını ilanın yanında gösterir. Her bulgu, açabileceğin bir kaynak ve satıcıya sorabileceğin bir soruyla gelir."
 }
