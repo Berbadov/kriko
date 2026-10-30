@@ -248,6 +248,26 @@ test('every file the stylesheet names exists, and no font comes from another sit
   assert.ok(!/@import/.test(css), 'the stylesheet imports nothing');
 });
 
+// A custom property that is read without a fallback and defined nowhere is the
+// quietest bug a stylesheet can have: the declaration using it is dropped at
+// computed-value time and the browser says nothing. `var(--r)` and the three
+// severity colours were read 53 times between them and defined zero times, so
+// every known-problems card lost its rounded corners and every severity lost its
+// colour, on every one of the 300-odd generated pages, until somebody noticed. A
+// var() with a fallback is deliberate and allowed.
+test('every custom property the stylesheet reads without a fallback is defined somewhere', () => {
+  const defined = new Set([...css.matchAll(/(--[a-z0-9-]+)\s*:/g)].map((m) => m[1]));
+  for (const page of PAGES) for (const m of read(page.file).matchAll(/(--[a-z0-9-]+)\s*:/g)) defined.add(m[1]);
+  // A property a script sets on an element at runtime is defined, just later.
+  for (const m of read('script.js').matchAll(/setProperty\(\s*['"](--[a-z0-9-]+)/g)) defined.add(m[1]);
+  const undefinedReads = new Map();
+  for (const m of css.matchAll(/var\(\s*(--[a-z0-9-]+)\s*([,)])/g)) {
+    if (m[2] === ')') undefinedReads.set(m[1], (undefinedReads.get(m[1]) || 0) + 1);
+  }
+  const missing = [...undefinedReads.keys()].filter((name) => !defined.has(name)).sort();
+  assert.deepEqual(missing, [], `read with no fallback and defined nowhere: ${missing.join(', ')}`);
+});
+
 test('the menu opens and closes on a narrow screen, and the pages work without it', () => {
   const page = PAGES[0];
   const dom = new JSDOM(read(page.file), { url: page.url, runScripts: 'outside-only' });
