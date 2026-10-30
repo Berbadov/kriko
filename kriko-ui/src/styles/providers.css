@@ -86,11 +86,11 @@
 }
 
 .test-result[data-ok='true'] > small:first-child {
-  color: var(--ok);
+  color: var(--ok-text);
 }
 
 .test-result[data-ok='false'] {
-  color: var(--risk);
+  color: var(--risk-text);
 }
 
 .test-result ul {

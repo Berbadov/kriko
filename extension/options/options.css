@@ -13,11 +13,11 @@
   /* BEGIN shared palette tokens */
 
   /* Dark palette */
-  --bg-base:     #090b11;
-  --bg-panel:    #0f121a;
-  --bg-header:   #0f121a;
-  --bg-surface:  #141825;
-  --bg-item:     #1a1f2f;
+  --bg-base:     #0b0b0d;
+  --bg-panel:    #131316;
+  --bg-header:   #131316;
+  --bg-surface:  #17171a;
+  --bg-item:     #1e1e22;
   --border:      rgba(255,255,255,0.09);
   --border-soft: rgba(255,255,255,0.06);
 
@@ -40,7 +40,7 @@
   --low-ink:     #3ddc97;
 
   /* Design system: brand, ice, LED, bezel, glass, well */
-  --brand:       #3d6bff;
+  --brand:       #3563f5;
   --brand-hover: #5a82ff;
   --brand-low:   #2c53e0;
   --brand-bright: #7b98ff;
@@ -48,13 +48,13 @@
   --ice:         #9db6ff;
   --led-off:     #2a3045;
   --led-dim:     #5a6279;
-  --bezel-hi:    #1a1f2f;
-  --bezel-lo:    #141825;
+  --bezel-hi:    #1e1e22;
+  --bezel-lo:    #17171a;
   --bezel-edge:  rgba(255,255,255,0.12);
   --glass-1:     rgba(255, 255, 255, 0.03);
   --glass-2:     rgba(255, 255, 255, 0.06);
   --glass-3:     rgba(255, 255, 255, 0.1);
-  --well:        #0f121a;
+  --well:        #131316;
   --border-control: rgba(255,255,255,0.16);
 
   /* Accent, resolved from the panel's alias */
@@ -64,9 +64,9 @@
      value rather than a second skin. */
   --hover-face:  #1f2538;
   --hover-edge:  rgba(255,255,255,0.18);
-  --row-face:    #141825;
-  --scroll-track: #0f121a;
-  --skeleton-a:  #141825;
+  --row-face:    #17171a;
+  --scroll-track: #131316;
+  --skeleton-a:  #17171a;
   --skeleton-b:  #1c2133;
   --alert-ink:   #d6c2c3;
   --ok-ink:      #3ddc97;

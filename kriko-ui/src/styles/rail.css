@@ -107,7 +107,7 @@
   flex: none;
   padding: 0 6px;
   background: var(--panel-2);
-  border-radius: 6px;
+  border-radius: var(--r-s);
   color: var(--ink-2);
 }
 
@@ -215,12 +215,12 @@
 
 .cr-tier[data-standing='trusted'] {
   border-color: color-mix(in srgb, var(--ok) 55%, transparent);
-  color: var(--ok);
+  color: var(--ok-text);
 }
 
 .cr-tier[data-standing='low'] {
   border-color: color-mix(in srgb, var(--warn) 60%, transparent);
-  color: var(--warn);
+  color: var(--warn-text);
 }
 
 .cr-tier[data-standing='none'] {
@@ -229,7 +229,7 @@
 }
 
 .cr-item[data-read='failed'] .cr-read {
-  color: var(--warn);
+  color: var(--warn-text);
 }
 
 .cr-actions {
@@ -387,11 +387,11 @@
 }
 
 .ctx[data-tone='amber'] .ctx-text {
-  color: var(--warn);
+  color: var(--warn-text);
 }
 
 .ctx[data-tone='red'] .ctx-text {
-  color: var(--risk);
+  color: var(--risk-text);
 }
 
 .ctx[data-state='not_reported'] .ctx-track,
@@ -415,7 +415,7 @@
 
 .ctx-trim {
   grid-column: 1 / -1;
-  color: var(--warn);
+  color: var(--warn-text);
   font-size: 11.5px;
 }
 
@@ -691,7 +691,7 @@
   overflow: hidden;
   background: var(--panel-2);
   border: 1px solid var(--edge);
-  border-radius: 5px;
+  border-radius: var(--r-s);
   color: var(--ink-2);
 }
 
@@ -954,7 +954,7 @@
   padding: 6px 10px;
   background: color-mix(in srgb, var(--warn) 14%, transparent);
   border-radius: var(--r-s);
-  color: var(--warn);
+  color: var(--warn-text);
   font-size: 12px;
 }
 
@@ -996,7 +996,7 @@
   height: 28px;
   background: var(--inset);
   border: 1px solid var(--edge);
-  border-radius: 9px;
+  border-radius: var(--r-m);
   color: var(--ink-2);
 }
 
@@ -1024,11 +1024,11 @@
 }
 
 .usage-limit[data-standing='warn'] .usage-limit-left {
-  color: var(--warn);
+  color: var(--warn-text);
 }
 
 .usage-limit[data-standing='out'] .usage-limit-left {
-  color: var(--risk);
+  color: var(--risk-text);
 }
 
 .usage-limit-reset {
@@ -1043,7 +1043,7 @@
 
 .usage-flag {
   grid-column: 2 / 4;
-  color: var(--warn);
+  color: var(--warn-text);
   font-size: 11px;
 }
 
@@ -1116,7 +1116,7 @@
 }
 
 .usage-cap[data-over='true'] {
-  color: var(--warn);
+  color: var(--warn-text);
 }
 
 .usage-cap-mark {
@@ -1125,7 +1125,7 @@
 
 .usage-pill[data-over='true'] {
   border-color: color-mix(in srgb, var(--warn) 55%, var(--edge));
-  color: var(--warn);
+  color: var(--warn-text);
 }
 
 .usage-pill[data-over='true'] .usage-pill-text {

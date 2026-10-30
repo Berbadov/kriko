@@ -70,7 +70,7 @@
 
 .titlebar-btn.close:hover {
   background: var(--risk);
-  color: var(--accent-ink);
+  color: var(--on-risk);
 }
 
 .titlebar-btn:focus-visible {
@@ -120,7 +120,7 @@
   gap: 8px 12px;
   padding: 8px 12px;
   border: 1px solid color-mix(in srgb, var(--warn) 38%, var(--edge));
-  border-radius: 12px;
+  border-radius: var(--r-l);
   background: color-mix(in srgb, var(--warn) 10%, var(--ground));
   color: var(--ink);
   font-size: 13px;
@@ -189,7 +189,7 @@
   padding: 3px;
   background: var(--inset);
   border: 1px solid var(--edge);
-  border-radius: 16px;
+  border-radius: var(--r-l);
   box-shadow: inset 0 1px 2px var(--sunk);
 }
 
@@ -200,7 +200,7 @@
   gap: 8px;
   height: 30px;
   padding: 0 12px;
-  border-radius: 11px;
+  border-radius: var(--r-m);
   color: var(--ink-2);
   font-size: 13.5px;
   font-weight: 520;
@@ -233,7 +233,7 @@
   inset: 0;
   background: var(--panel-2);
   border: 1px solid var(--edge-strong);
-  border-radius: 11px;
+  border-radius: var(--r-m);
   box-shadow: inset 0 1px 0 color-mix(in srgb, var(--ink) 8%, transparent), var(--shadow-1);
 }
 
@@ -399,7 +399,7 @@
   place-items: center;
   width: 34px;
   height: 34px;
-  border-radius: 10px;
+  border-radius: var(--r-m);
   color: var(--ink-2);
   transition:
     background-color calc(140ms * var(--tm)),
@@ -410,7 +410,7 @@
 .icon-btn.sm {
   width: 28px;
   height: 28px;
-  border-radius: 8px;
+  border-radius: var(--r-m);
 }
 
 .icon-btn:hover {
@@ -484,7 +484,7 @@
   list-style: none;
   background: var(--panel);
   border: 1px solid var(--edge-strong);
-  border-radius: 14px;
+  border-radius: var(--r-l);
   box-shadow: var(--shadow-2);
 }
 
@@ -494,7 +494,7 @@
   justify-content: space-between;
   width: 100%;
   padding: 9px 11px;
-  border-radius: 9px;
+  border-radius: var(--r-m);
   font-size: 13.5px;
   text-align: left;
 }
@@ -642,7 +642,7 @@
   height: 22px;
   background: var(--edge-strong);
   clip-path: polygon(var(--notch) 0, calc(100% - var(--notch)) 0, 100% var(--notch), 100% calc(100% - var(--notch)), calc(100% - var(--notch)) 100%, var(--notch) 100%, 0 calc(100% - var(--notch)), 0 var(--notch));
-  color: var(--ink-3);
+  color: var(--ink-2);
   font-size: 10.5px;
   font-weight: 500;
   line-height: 1;
@@ -824,7 +824,7 @@
   right: 0;
   bottom: 0;
   z-index: 40;
-  background: rgba(4, 6, 12, 0.5);
+  background: rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(3px);
 }
 
@@ -881,7 +881,7 @@
   gap: 12px;
   width: 100%;
   padding: 10px;
-  border-radius: 14px;
+  border-radius: var(--r-l);
   text-align: left;
   color: var(--ink-2);
   transition: background-color calc(140ms * var(--tm));
@@ -911,7 +911,7 @@
   place-items: center;
   width: 40px;
   height: 40px;
-  border-radius: 12px;
+  border-radius: var(--r-l);
   background: var(--panel-2);
   color: var(--ink);
 }
@@ -979,7 +979,7 @@
   align-items: center;
   gap: 8px;
   padding: 4px 6px;
-  border-radius: 10px;
+  border-radius: var(--r-m);
   text-align: left;
 }
 
@@ -1026,7 +1026,7 @@
 }
 
 .qc-row[data-state='done'] .qc-line {
-  color: var(--ok);
+  color: var(--ok-text);
 }
 
 .qc-row[data-state='paused'] {
@@ -1091,14 +1091,14 @@
 
 .rail-chats-note {
   margin: 0 10px 6px;
-  color: var(--risk);
+  color: var(--risk-text);
   font-size: 12.5px;
 }
 
 .rail-chat {
   display: flex;
   align-items: center;
-  border-radius: 10px;
+  border-radius: var(--r-m);
 }
 
 .rail-chat:hover,
@@ -1154,12 +1154,12 @@
 
 .rail-chat-ask button {
   padding: 4px 8px;
-  border-radius: 8px;
+  border-radius: var(--r-m);
   color: var(--accent-hi);
 }
 
 .rail-chat-ask button:first-of-type {
-  color: var(--risk);
+  color: var(--risk-text);
 }
 
 .rail-chat-ask button:hover {
@@ -1176,7 +1176,7 @@
   height: 32px;
   padding: 0 4px 0 9px;
   border: 1px solid var(--edge);
-  border-radius: 10px;
+  border-radius: var(--r-m);
   color: var(--ink-3);
 }
 
@@ -1234,7 +1234,7 @@
   padding: 5px 8px;
   background: var(--ground);
   border: 1px solid var(--accent);
-  border-radius: 8px;
+  border-radius: var(--r-m);
   outline: 0;
   color: var(--ink);
   font-size: 13.5px;
@@ -1348,7 +1348,7 @@
   z-index: 1000;
   padding: 6px 16px;
   background: var(--warn);
-  color: var(--ground);
+  color: var(--on-warn);
   text-align: center;
   line-height: 1.35;
 }

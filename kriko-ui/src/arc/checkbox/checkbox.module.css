@@ -1,7 +1,7 @@
 .field { display: inline-flex; align-items: flex-start; gap: 0; min-width: 0; }
 .box { position: relative; flex: 0 0 auto; display: grid; place-items: center; width: var(--control-height-md); height: var(--control-height-md); border: 0; border-radius: var(--radius-control); padding: 0; background: transparent; color: var(--control-glyph); cursor: pointer; -webkit-tap-highlight-color: transparent; }
 /* The square is the only part that reacts to a press, so the hit area and label never move. */
-.visual { position: relative; display: block; width: 18px; height: 18px; border: 1px solid var(--border-strong); border-radius: 5px; background: var(--surface); transition: border-color var(--duration-fast) var(--ease-standard), transform var(--duration-spring) var(--ease-spring); }
+.visual { position: relative; display: block; width: 18px; height: 18px; border: 1px solid var(--border-strong); border-radius: var(--r-s); background: var(--surface); transition: border-color var(--duration-fast) var(--ease-standard), transform var(--duration-spring) var(--ease-spring); }
 .fill { position: absolute; inset: -1px; border-radius: inherit; background: var(--control-on); }
 .mark { position: absolute; inset: -1px; width: 18px; height: 18px; overflow: visible; }
 .box[data-state="checked"] .visual, .box[data-state="indeterminate"] .visual { border-color: var(--control-on); }
