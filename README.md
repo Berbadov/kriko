@@ -1,6 +1,6 @@
 # Kriko
 
-[![version](https://img.shields.io/badge/version-0.3.7-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
+[![version](https://img.shields.io/badge/version-0.3.8-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
 [![license](https://img.shields.io/badge/license-MIT-1F4FFF?style=flat-square&labelColor=05070F)](LICENSE)
 [![stars](https://img.shields.io/github/stars/Berbadov/kriko?style=flat-square&labelColor=05070F&color=1F4FFF)](https://github.com/Berbadov/kriko/stargazers)
 [![platforms](https://img.shields.io/badge/Windows%20%C2%B7%20macOS%20%C2%B7%20Chrome%20%C2%B7%20Android-1F4FFF?style=flat-square&labelColor=05070F)](#install)
@@ -13,7 +13,7 @@ extension — and keeps the source beside every finding.
 Installed catalog lookups work offline. Research uses the agent or model you
 choose, and a paid provider bills your own account.
 
-**[Download the Windows installer](https://github.com/Berbadov/kriko/releases/latest/download/kriko-0.3.7-x86_64-setup.exe)** ·
+**[Download the Windows installer](https://github.com/Berbadov/kriko/releases/latest/download/kriko-0.3.8-x86_64-setup.exe)** ·
 [Browser extension](https://chromewebstore.google.com/detail/kriko/bdifnaggafjokndlpjgmlfappcoehdjb) ·
 [Website](https://kriko.cc) ·
 [Known problems by product](https://kriko.cc/problems/) (no app needed)
@@ -65,8 +65,8 @@ is 0.10.0, with a floating scanner you can drag, open and read. See the
 
 | Artifact | Use |
 |---|---|
-| `kriko-0.3.7-x86_64-setup.exe` | Per-user Windows installer; no administrator rights required. |
-| `kriko-0.3.7-win64-portable.zip` | Extract the whole archive and open `kriko.exe`. |
+| `kriko-0.3.8-x86_64-setup.exe` | Per-user Windows installer; no administrator rights required. |
+| `kriko-0.3.8-win64-portable.zip` | Extract the whole archive and open `kriko.exe`. |
 
 1. Open Kriko, choose an agent in **More → Agents** and press **Check connection**.
 2. Open **Catalogs → Find release catalogs** and install one, or import a
