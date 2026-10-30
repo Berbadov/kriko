@@ -32,12 +32,20 @@
 "gpt-4o-mini" = { context = 128000, usd_in = 0.15, usd_out = 0.60,  speed = "fast",     label = "GPT-4o mini" }
 
 [mistral]
-# Reached through `MISTRAL_API_KEY`. Prices from mistral.ai/pricing/api on
-# 2026-09-29. Used by the Mistral API agent (Agents) and, as a completion
-# model, by the paid plane. `-latest` names follow Mistral's own aliases.
-"mistral-small-latest"  = { context = 262144, usd_in = 0.15, usd_out = 0.60, speed = "fast",     label = "Mistral Small" }
-"mistral-large-latest"  = { context = 262144, usd_in = 0.50, usd_out = 1.50, speed = "slow",     label = "Mistral Large" }
-"mistral-medium-latest" = { context = 262144, usd_in = 1.50, usd_out = 7.50, speed = "balanced", label = "Mistral Medium" }
+# Reached through `MISTRAL_API_KEY`. Prices from mistral.ai/inference/pricing
+# on 2026-10-30. Used by the Mistral API agent (Agents) and, as a completion
+# model, by the paid plane. `-latest` names follow Mistral's own aliases and
+# resolve to the newest model in their family; the numbered rows below are the
+# current pins (Mistral Large 4, Medium 3.5, Small 4, Ministral 3).
+"mistral-small-latest"  = { context = 256000,  usd_in = 0.15, usd_out = 0.60, speed = "fast",     label = "Mistral Small (latest)" }
+"mistral-large-latest"  = { context = 1000000, usd_in = 0.70, usd_out = 2.10, speed = "slow",     label = "Mistral Large (latest)" }
+"mistral-medium-latest" = { context = 256000,  usd_in = 1.50, usd_out = 7.50, speed = "balanced", label = "Mistral Medium (latest)" }
+"mistral-small-2603"    = { context = 256000,  usd_in = 0.15, usd_out = 0.60, speed = "fast",     label = "Mistral Small 4" }
+"mistral-large-4"       = { context = 1000000, usd_in = 0.70, usd_out = 2.10, speed = "slow",     label = "Mistral Large 4" }
+"mistral-large-2512"    = { context = 256000,  usd_in = 0.50, usd_out = 1.50, speed = "slow",     label = "Mistral Large 3" }
+"mistral-medium-3-5"    = { context = 256000,  usd_in = 1.50, usd_out = 7.50, speed = "balanced", label = "Mistral Medium 3.5" }
+"ministral-14b-2512"    = { context = 256000,  usd_in = 0.20, usd_out = 0.20, speed = "fast",     label = "Ministral 3 14B" }
+"ministral-8b-2512"     = { context = 256000,  usd_in = 0.15, usd_out = 0.15, speed = "fast",     label = "Ministral 3 8B" }
 
 [mercury]
 # Mercury 3 rates used by Kriko Agent, USD per million tokens. 1M-token

@@ -125,6 +125,43 @@ TOOLLESS_NOTE = (
     "out any claim you cannot ground in text given here."
 )
 
+#: Said instead of `TOOLLESS_NOTE` when the hosted tool-less session could not
+#: be reached and the run fell back to a fresh process. That process *does*
+#: have the CLI's web tools, so telling it it has none would be the same lie in
+#: the other direction — and an agent told it cannot search tries anyway.
+TOOLLESS_FALLBACK_NOTE = (
+    "\n\nKriko's hosted session for this run was unavailable, so this is a "
+    "fresh process with web tools. Answer from this prompt first; if pages "
+    "were given to you they are the only sources you may cite. If you must "
+    "search, cite only pages you actually opened, copy every quote verbatim, "
+    "and do not keep searching after one round."
+)
+
+#: How long a hosted session that failed is skipped before it is tried again.
+#: A failing `vibe-acp` costs a worker start and a session round trip *before*
+#: the fallback begins, and a 90-second chat turn cannot pay that twice. Ten
+#: minutes is long enough to keep a broken build out of the reader's turns and
+#: short enough that a fixed one comes back without a restart.
+RESIDENT_COOLDOWN_SECONDS = 600.0
+_RESIDENT_UNHEALTHY: dict[str, float] = {}
+_RESIDENT_HEALTH_LOCK = threading.Lock()
+
+
+def _resident_unhealthy(one: "Harness") -> bool:
+    with _RESIDENT_HEALTH_LOCK:
+        until = _RESIDENT_UNHEALTHY.get(one.id)
+    return until is not None and time.monotonic() < until
+
+
+def _mark_resident_unhealthy(one: "Harness") -> None:
+    with _RESIDENT_HEALTH_LOCK:
+        _RESIDENT_UNHEALTHY[one.id] = time.monotonic() + RESIDENT_COOLDOWN_SECONDS
+
+
+def _clear_resident_health(one: "Harness") -> None:
+    with _RESIDENT_HEALTH_LOCK:
+        _RESIDENT_UNHEALTHY.pop(one.id, None)
+
 _CODEX_SUPPORT: dict[tuple[str, float], bool] = {}
 _CODEX_SUPPORT_LOCK = threading.Lock()
 
@@ -1630,6 +1667,18 @@ def _read_models(one: Harness, executable: str, key: tuple[str, str, float],
             names = list(dict.fromkeys(str(row.get("alias") or row.get("name")) for row in config.get("models", []) if isinstance(row, dict) and (row.get("alias") or row.get("name"))))
         except (OSError, ValueError):
             names = []
+        # The reader's own aliases first, then the Mistral models this
+        # installation knows about. Vibe's config is the authority on aliases,
+        # but a reader who never edited it had only the aliases Vibe shipped
+        # and could not choose a model released after that — the same stale
+        # list the API plane had. A catalogue id is a valid `active_model`.
+        from app import modelcatalogue
+
+        known = [
+            name for name, row in modelcatalogue.load().items()
+            if str(row.get("provider") or "") == "mistral"
+        ]
+        names = list(dict.fromkeys([*names, *known]))
     elif one.model_source == "codex-cache":
         try:
             cached_models = json.loads((Path.home() / ".codex" / "models_cache.json").read_text(encoding="utf-8"))
@@ -1904,8 +1953,22 @@ def _vibe_config(model: str, effort: str, sessions: Path, *, log_sessions: bool 
     text = 'enable_update_checks = false\nenable_telemetry = false\nmcp_servers = []\ndisabled_skills = ["*"]\n'
     if chosen:
         text += "active_model = " + json.dumps(chosen) + "\n"
-    if effort and not any(isinstance(r, dict) and r.get("alias") == chosen for r in rows) and chosen:
-        rows = [*rows, {"alias": chosen}]
+    # A chosen model with no row of its own needs one, or Vibe resolves it
+    # against whatever its config happens to hold. A catalogue id it cannot
+    # know (a model released after the CLI shipped) is written with its
+    # provider and name, so `active_model` names a real model rather than an
+    # alias nobody defined.
+    if chosen and not any(
+            isinstance(r, dict) and chosen in (r.get("alias"), r.get("name")) for r in rows):
+        row: dict = {"alias": chosen}
+        try:
+            from app import modelcatalogue
+
+            if str(modelcatalogue.load().get(chosen, {}).get("provider") or "") == "mistral":
+                row = {"alias": chosen, "name": chosen, "provider": "mistral"}
+        except Exception:  # noqa: BLE001 — a catalogue row is a convenience, not a requirement
+            pass
+        rows = [*rows, row]
     for row in rows:
         if not isinstance(row, dict):
             continue
@@ -3477,6 +3540,8 @@ class HarnessResearcher(AgentResearcher):
         if self.transport_mode not in {"auto", "persistent", "exec"}:
             raise ValueError("the agent transport must be auto, persistent, or exec")
         if self.harness.protocol in TOOLLESS_PROTOCOLS:
+            from app.providers.codex_transport import TransportUnavailable, TurnRejected
+
             if allow_tools:
                 if self.transport_mode == "persistent":
                     raise NoHarness(
@@ -3503,7 +3568,54 @@ class HarnessResearcher(AgentResearcher):
             previous_mode = self.transport_mode
             self.transport_mode = "persistent"
             try:
-                return self._run(prompt + TOOLLESS_NOTE)
+                if previous_mode == "auto" and _resident_unhealthy(self.harness):
+                    # A recent hosted-session failure is remembered for a few
+                    # minutes: paying the failed start again on every call is
+                    # what made a 90-second turn end at the review phase.
+                    self._echo(
+                        f"{self.harness.label}'s hosted session failed recently; "
+                        "using a fresh process for this turn"
+                    )
+                    self.transport_mode = "exec"
+                    return self._run(prompt + TOOLLESS_FALLBACK_NOTE)
+                answer = self._run(prompt + TOOLLESS_NOTE)
+                _clear_resident_health(self.harness)
+                return answer
+            except TurnRejected as error:
+                # A resident session rejected the request before it ran. Codex
+                # is never replayed, because its rejection can arrive after a
+                # delivered turn and a delivered turn must not be sent twice.
+                if previous_mode != "auto" or self.harness.protocol == "codex":
+                    raise
+                _mark_resident_unhealthy(self.harness)
+                self._echo(
+                    f"{self.harness.label}'s hosted session was unavailable "
+                    f"({error}); running a fresh process instead — this turn "
+                    "will use the tools the CLI has"
+                )
+                self.transport_mode = "exec"
+                return self._run(prompt + TOOLLESS_FALLBACK_NOTE)
+            except TransportUnavailable as error:
+                # **The hosted tool-less session is the fragile half of this
+                # plane.** On Windows `vibe-acp` has answered `session/new`
+                # with `[WinError 5] Access is denied`, and a slow start or a
+                # rejected session is not worth ending a reader's turn over.
+                # In `auto` mode a fresh process runs instead: it has the
+                # CLI's web tools, so it is told that plainly and held to the
+                # pages Kriko already read. An explicit `persistent` choice
+                # still reports the failure, because then the reader asked for
+                # exactly this and replaying it behind their back would be
+                # worse than the error.
+                if previous_mode != "auto":
+                    raise
+                _mark_resident_unhealthy(self.harness)
+                self._echo(
+                    f"{self.harness.label}'s hosted session was unavailable "
+                    f"({error}); running a fresh process instead — this turn "
+                    "will use the tools the CLI has"
+                )
+                self.transport_mode = "exec"
+                return self._run(prompt + TOOLLESS_FALLBACK_NOTE)
             finally:
                 self.transport_mode = previous_mode
 
@@ -3559,7 +3671,7 @@ class HarnessResearcher(AgentResearcher):
         if self.transport_mode not in {"auto", "persistent", "exec"}:
             raise ValueError("the agent transport must be auto, persistent, or exec")
         if self.transport_mode != "exec":
-            from app.providers.codex_transport import TransportUnavailable
+            from app.providers.codex_transport import TransportUnavailable, TurnRejected
             from app.providers.resident import ProtocolAbsent
 
             try:
@@ -3580,6 +3692,20 @@ class HarnessResearcher(AgentResearcher):
                     raise ProtocolAbsent(
                         f"{self.harness.label} has no persistent protocol; its print mode "
                         "starts one process per request")
+            except TurnRejected as error:
+                # A resident session rejected the request before it ran (for
+                # Vibe on Windows: `[WinError 5] Access is denied`). Nothing
+                # was delivered, so `auto` can answer it with a fresh process
+                # instead of failing the turn. An explicit `persistent` choice
+                # still reports it — and Codex is never replayed, because its
+                # rejection can come after a delivered turn.
+                if self.transport_mode == "persistent" or self.harness.protocol == "codex":
+                    raise
+                say = on_line if on_line is not None else self.on_action
+                if say is not None:
+                    say(f"hosted session rejected the request; using a fresh process ({error})")
+                with self._workspace():
+                    return self._invoke(prompt, on_line)
             except TransportUnavailable as error:
                 if self.transport_mode == "persistent":
                     raise
