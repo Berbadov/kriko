@@ -143,6 +143,13 @@ TOOLLESS_FALLBACK_NOTE = (
 #: minutes is long enough to keep a broken build out of the reader's turns and
 #: short enough that a fixed one comes back without a restart.
 RESIDENT_COOLDOWN_SECONDS = 600.0
+#: How long a resident worker may take to become ready before the run stops
+#: waiting for it. A healthy ACP session opens in a few seconds; a stuck one
+#: used to spend the whole answer budget (`session/new` waited on the turn's
+#: deadline), and the fresh-process fallback then had seconds left — the
+#: 102-second Mistral turn in the 0.3.8 field log. Bounded here, the fallback
+#: inherits the rest of the turn.
+RESIDENT_START_SECONDS = 10.0
 _RESIDENT_UNHEALTHY: dict[str, float] = {}
 _RESIDENT_HEALTH_LOCK = threading.Lock()
 
@@ -3905,6 +3912,7 @@ class HarnessResearcher(AgentResearcher):
         try:
             result = resident.transport().run(profile, resident.ResidentRequest(
                 prompt, timeout=self.timeout,
+                start_timeout=(RESIDENT_START_SECONDS if profile.wire == "acp" else 0.0),
                 on_line=line if profile.wire == "claude" else None,
                 on_action=action if profile.wire == "acp" else None,
                 on_text=self._append_live_text if profile.wire == "acp" else None,
