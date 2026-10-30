@@ -253,6 +253,7 @@ h2 { font-size: clamp(2.9rem, 6vw, 5rem); max-width: 16em; letter-spacing: -.012
 .policy li { margin: 8px 0; }
 .policy strong { color: var(--ink); font-weight: 700; }
 .policy code { font: .9em ui-monospace, Consolas, monospace; padding: .1em .35em; border-radius: 3px; background: var(--soft); }
+.policy pre { max-width: 100%; overflow-x: auto; padding: 12px; background: var(--soft); }
 .policy .updated { margin-top: 12px; font-size: 1rem; }
 .policy .short { margin-top: 28px; padding: 20px 24px; border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 4px; background: var(--soft); }
 .policy .short p { color: var(--ink); }
@@ -363,6 +364,7 @@ h2 { font-size: clamp(2.9rem, 6vw, 5rem); max-width: 16em; letter-spacing: -.012
 @media (max-width: 1280px) {
   body { font-size: 1.125rem; }
   .topbar { position: static; }
+  html:not(.menu-ready) .bar { flex-wrap: wrap; }
   html.menu-ready .topbar { position: sticky; }
   .main-nav { display: flex; flex-basis: 100%; flex-direction: column; align-items: stretch; gap: 0; margin: 0; padding: 8px 0 20px; background: color-mix(in srgb, var(--bg) 98%, transparent); border-bottom: 1px solid var(--line); order: 3; }
   html.menu-ready .menu-toggle { display: inline-block; }
@@ -377,6 +379,8 @@ h2 { font-size: clamp(2.9rem, 6vw, 5rem); max-width: 16em; letter-spacing: -.012
 }
 
 @media (max-width: 520px) {
+  .bar { gap: 12px; }
+  html.menu-ready .bar-cta { display: none; }
   .gallery, .gallery.phones { grid-template-columns: minmax(0, 1fr); }
   .actions .button { width: 100%; justify-content: center; }
   .setup li { grid-template-columns: 56px minmax(0, 1fr); }

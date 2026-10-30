@@ -5,7 +5,7 @@ const path = require('node:path');
 const { JSDOM } = require('jsdom');
 const root = path.resolve(__dirname, '..');
 
-for (const file of ['index.html', 'tr/index.html', 'guide/index.html', 'tr/guide/index.html']) {
+for (const file of ['index.html', 'tr/index.html', 'guide/index.html', 'tr/guide/index.html', 'install/index.html', 'tr/install/index.html']) {
   test(`${file}: crawlers receive localized entities and visible answers without running JavaScript`, () => {
     const d = new JSDOM(fs.readFileSync(path.join(root, file), 'utf8')).window.document;
     const graph = JSON.parse(d.querySelector('#discovery-data').textContent)['@graph'];

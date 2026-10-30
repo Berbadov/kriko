@@ -120,6 +120,25 @@ def test_a_subject_with_too_few_claims_gets_no_page(tmp_path):
     assert "Widget" not in (site / "problems" / "index.html").read_text(encoding="utf-8")
 
 
+def test_a_product_page_explains_the_evidence_and_reaches_localised_installation(tmp_path):
+    packs, site = tmp_path / "packs", _site(tmp_path)
+    claims = ANVIL.replace('quote: Words', "retrieved_at: '2026-10-02T09:00:00+00:00', quote: Words")
+    _write_catalog(packs, "tools", claims)
+    _load().render(packs, site)
+    for prefix, language in (("", "en"), ("tr/", "tr")):
+        page = (site / prefix / "problems/anvil/index.html").read_text(encoding="utf-8")
+        install = f'/{prefix}install/'
+        assert page.count(f'href="{install}"') >= 2
+        assert f'href="/{prefix}guide/"' in page
+        assert '<time datetime="2026-10-02">2026-10-02</time>' in page
+        assert page.count('<time datetime="2026-10-02">') == 3
+        if language == "en":
+            assert "3 sourced reports for Anvil" in page
+            assert "3 linked source pages" in page
+            assert "Confirm the model and variant" in page
+            assert 'href="#c-' in page
+
+
 def test_a_synthetic_catalog_is_never_published(tmp_path):
     # The worked example's claims are made up; on a real address they would be false statements.
     packs, site = tmp_path / "packs", _site(tmp_path)

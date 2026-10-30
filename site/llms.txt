@@ -16,6 +16,7 @@ products and their findings on the home page and in the guide are invented.
 ## App and documentation
 
 - [Kriko](https://kriko.cc/): Features, installation, costs, limits and frequently asked questions.
+- [Installation checklist](https://kriko.cc/install/): Windows download, verification, first offline lookup and extension setup.
 - [Step-by-step guide](https://kriko.cc/guide/): Check a listing, research a product and compare options.
 - [Privacy policy](https://kriko.cc/privacy/): Local storage and what online research sends to providers.
 - [Source code](https://github.com/Berbadov/kriko): MIT license, build instructions and issue tracker.
