@@ -56,7 +56,7 @@ UI = {
         "locale": "en_US",
         "prefix": "",
         "home": "/",
-        "get": "/#get",
+        "get": "/install/",
         "switch": "Türkçe",
         "crumb": "Known problems",
         "glance": "At a glance",
@@ -79,7 +79,17 @@ UI = {
         "safety_all": "All {n} products with safety reports",
         "sponsored": "Sponsored",
         "sponsored_note": "A paid placement. It is not a finding, and it changes nothing reported on this page.",
-        "lead": "{n} sourced reports, with what to check before you buy. Each one links to the page it was reported on.",
+        "lead": "{n} sourced reports for {label}, with what to check before you buy. Each one links to the page it was reported on.",
+        "summary": "Reported problems include",
+        "evidence": "Evidence: {n} linked source pages. Reports describe individual experiences, not failure rates.",
+        "retrieved": "Newest linked source retrieved",
+        "listing": "Checking a listing?",
+        "install": "Install Kriko for Windows",
+        "guide": "See how it works",
+        "buying": "Before buying {label}",
+        "buying_steps": ["Confirm the model and variant against the listing and the source reports.",
+                         "Ask the seller for service history and evidence of repairs for the reported problems.",
+                         "Use the checks below to decide what needs inspection. A missing report does not prove a product is trouble-free."],
         "desc": "{n} sourced problems reported for {label}, with what to check before you buy. {top}",
         "check": "What to check",
         "sources": "Reported on",
@@ -92,8 +102,8 @@ UI = {
             "history_check": "Shown by the service history",
         },
         "cta_h": "Check the one you are about to buy",
-        "cta_p": "Kriko reads a listing and tells you which of these apply to that exact product. It runs on your computer, needs no account and is free.",
-        "cta_b": "Get Kriko",
+        "cta_p": "Use Kriko beside the listing to confirm the model and variant, open the sources and compare your options. Start with an installed catalog: no account or AI key needed. The browser extension needs the desktop app running.",
+        "cta_b": "Install Kriko for Windows",
         "note": "These reports come from the pages linked under each item: owner forums, repair guides and workshops. They are not a diagnosis of any one unit, and a careful check of the one you are buying still applies.",
         "licence": "Text from the Kriko {name} catalog, version {version}, under the {license} license.",
         "hub_title": "Known problems, by product and part",
@@ -111,7 +121,7 @@ UI = {
         "locale": "tr_TR",
         "prefix": "/tr",
         "home": "/tr/",
-        "get": "/tr/#get",
+        "get": "/tr/install/",
         "switch": "English",
         "crumb": "Bilinen sorunlar",
         "glance": "Bir bakışta",
@@ -134,7 +144,17 @@ UI = {
         "safety_all": "Güvenlik raporu olan {n} ürünün tümü",
         "sponsored": "Sponsorlu",
         "sponsored_note": "Ücretli bir yerleşimdir. Bir bulgu değildir ve bu sayfada bildirilen hiçbir şeyi değiştirmez.",
-        "lead": "{n} kaynaklı rapor ve satın almadan önce neye bakmanız gerektiği. Her biri, bildirildiği sayfaya bağlantı verir.",
+        "lead": "{label} için {n} kaynaklı rapor ve satın almadan önce neye bakmanız gerektiği. Her biri, bildirildiği sayfaya bağlantı verir.",
+        "summary": "Bildirilen sorunlar arasında",
+        "evidence": "Dayanak: bağlantısı verilen {n} kaynak sayfa. Raporlar arıza oranlarını değil, bireysel deneyimleri anlatır.",
+        "retrieved": "Bağlantılı en yeni kaynağın alınma tarihi",
+        "listing": "Bir ilanı mı kontrol ediyorsunuz?",
+        "install": "Windows için Kriko kurun",
+        "guide": "Nasıl çalıştığını görün",
+        "buying": "{label} satın almadan önce",
+        "buying_steps": ["Modeli ve varyantı ilanla ve kaynak raporlarla karşılaştırarak doğrulayın.",
+                         "Satıcıdan bildirilen sorunlarla ilgili servis geçmişini ve onarım belgelerini isteyin.",
+                         "Neyin incelenmesi gerektiğine aşağıdaki kontrollerle karar verin. Rapor olmaması, ürünün sorunsuz olduğunu kanıtlamaz."],
         "desc": "{label} için bildirilen {n} kaynaklı sorun ve satın almadan önce neye bakılacağı. {top}",
         "check": "Neye bakmalı",
         "sources": "Bildirildiği yer",
@@ -147,8 +167,8 @@ UI = {
             "history_check": "Servis geçmişinden anlaşılır",
         },
         "cta_h": "Satın alacağınız ürünü bu listeyle karşılaştırın",
-        "cta_p": "Kriko bir ilanı okur ve bu sorunlardan hangilerinin o ürüne uyduğunu söyler. Bilgisayarınızda çalışır, hesap gerektirmez ve ücretsizdir.",
-        "cta_b": "Kriko'yu indir",
+        "cta_p": "Kriko ile ilanın yanında modeli ve varyantı doğrulayın, kaynakları açın ve seçeneklerinizi karşılaştırın. Yüklü bir katalogla başlayın: hesap ya da yapay zekâ anahtarı gerekmez. Tarayıcı uzantısı için masaüstü uygulaması açık olmalıdır.",
+        "cta_b": "Windows için Kriko kurun",
         "note": "Bu maddeler, her birinin altında bağlantısı verilen sayfalardan derlenmiştir: kullanıcı forumları, onarım rehberleri ve servisler. Belirli bir ürünün teşhisi değildir; satın alacağınız ürünü dikkatle kontrol etmeniz yine de gerekir.",
         "licence": "Metin, Kriko {name} kataloğundan (sürüm {version}) alınmıştır, {license} lisansıyla.",
         "hub_title": "Bilinen sorunlar: ürün ve parça bazında",
@@ -467,6 +487,9 @@ def _claim_html(claim: dict, lang: str) -> str:
         parts.append(f'        <p class="check"><strong>{_e(ui["check"])}.</strong> {_e(text["advice"])}</p>')
     if sources:
         parts.append(f'        <p class="src">{_e(ui["sources"])}: {sources}</p>')
+    if claim.get("seen"):
+        day = _e(claim["seen"])
+        parts.append(f'        <p class="src">{_e(ui["retrieved"])}: <time datetime="{day}">{day}</time></p>')
     parts.append("      </article>")
     return "\n".join(parts)
 
@@ -537,11 +560,19 @@ def _subject_page(catalog: dict, entry: dict, subject: dict, lang: str, claims: 
         chips = "".join(_chip(e, lang) for e in near)
         more = (f'      <h2>{_e(ui["more"].format(category=category))}</h2>\n      <ul class="chips">{chips}</ul>\n'
                 f'      <p><a href="{ui["prefix"]}/problems/{entry["catalog_slug"]}/">{_e(ui["all_in"].format(category=category))}</a></p>\n')
+    summary_links = "; ".join(f'<a href="#c-{_e(c["id"][:8])}">{_e(c["text"][lang]["title"])}</a>' for c in claims[:2])
+    source_count = len({url for c in claims for url, _ in c["sources"]})
+    buying_steps = "".join(f'<li>{_e(step)}</li>' for step in ui["buying_steps"])
     body = (f'      <p class="crumb"><a href="{ui["prefix"]}/problems/">{_e(ui["crumb"])}</a> › '
             f'<a href="{ui["prefix"]}/problems/{entry["catalog_slug"]}/">{_e(category)}</a></p>\n'
             f'      <h1>{icon(entry["icon"], "ico big")}{_e(ui["title"].format(label=label))}</h1>\n'
-            f'      <p class="lead">{_e(ui["lead"].format(n=len(claims)))}</p>\n'
-            + risk + glance + "\n".join(sections) + "\n" + fits + _sponsored(lang, sponsors, entry["catalog_slug"]) + more +
+            f'      <p class="lead">{_e(ui["lead"].format(n=len(claims), label=label))}</p>\n'
+            f'      <p>{_e(ui["summary"])}: {summary_links}.</p>\n'
+            f'      <p class="fine">{_e(ui["evidence"].format(n=source_count))}</p>\n'
+            f'      <p>{_e(ui["listing"])} <a href="{ui["get"]}">{_e(ui["install"])}</a> · '
+            f'<a href="{ui["prefix"]}/guide/">{_e(ui["guide"])}</a></p>\n'
+            + risk + glance + f'      <h2>{_e(ui["buying"].format(label=label))}</h2><ol>{buying_steps}</ol>\n'
+            + "\n".join(sections) + "\n" + fits + _sponsored(lang, sponsors, entry["catalog_slug"]) + more +
             f'      <div class="short"><h2>{_e(ui["cta_h"])}</h2><p>{_e(ui["cta_p"])}</p>'
             f'<p><a class="button" href="{ui["get"]}">{_e(ui["cta_b"])}</a></p></div>\n'
             f'      <p class="fine">{_e(ui["note"])}</p>\n'
