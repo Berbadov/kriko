@@ -1,0 +1,38 @@
+# Kriko
+
+> Kriko is a free, MIT-licensed, open-source product research app. It shows known problems with an exact model and variant, with a source beside every finding.
+
+Installed catalog lookups run locally and work offline without an AI key.
+Online research needs a connected agent and internet access; a paid provider
+bills the reader's own account. The browser extension needs the desktop app
+running. Published desktop downloads are for Windows; an Apple Silicon macOS
+build can be made from source. Product-problem pages can be read without the app.
+
+A report is evidence to investigate, not proof that every unit has a defect.
+No findings means a gap in coverage, not proof that a product is trouble-free.
+Follow the sources on each product page and check the exact variant. Demonstration
+products and their findings on the home page and in the guide are invented.
+
+## App and documentation
+
+- [Kriko](https://kriko.cc/): Features, installation, costs, limits and frequently asked questions.
+- [Step-by-step guide](https://kriko.cc/guide/): Check a listing, research a product and compare options.
+- [Privacy policy](https://kriko.cc/privacy/): Local storage and what online research sends to providers.
+- [Source code](https://github.com/Berbadov/kriko): MIT license, build instructions and issue tracker.
+- [Releases](https://github.com/Berbadov/kriko/releases): Published downloads and release notes.
+
+## Sourced product knowledge
+
+- [Known problems](https://kriko.cc/problems/): Browse product categories and exact models; each report links to its sources.
+- [Safety reports](https://kriko.cc/problems/safety/): Sourced reports of fires, explosions and electric shocks.
+- [Product sitemap](https://kriko.cc/sitemap-problems.xml): Complete generated list of published product and category pages.
+
+## Turkish
+
+- [Kriko Türkçe](https://kriko.cc/tr/): Uygulama, kurulum ve sık sorulan sorular.
+- [Adım adım rehber](https://kriko.cc/tr/guide/): Kullanım adımları.
+- [Bilinen sorunlar](https://kriko.cc/tr/problems/): Kaynaklarıyla ürün sorunları.
+
+## Optional
+
+- [Site sitemap](https://kriko.cc/sitemap.xml): English and Turkish app pages.
