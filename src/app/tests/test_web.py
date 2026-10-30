@@ -344,15 +344,19 @@ def test_a_limit_outside_its_bound_is_refused_or_clamped(client):
     clamp in the handler."""
     assert client.post("/api/lookup", json={"limit": -1}).status_code == 422
     assert client.post("/api/lookup", json={"limit": 5000}).status_code == 422
-    assert client.post(
-        "/api/analyze", json={"url": "https://a.test/x", "limit": -1}
-    ).status_code == 422
-    assert client.get(
-        "/api/packs/tools/gaps", params={"limit": -1}
-    ).json() == client.get("/api/packs/tools/gaps", params={"limit": 1}).json()
-    assert client.get(
-        "/api/health/weakest", params={"limit": -1}
-    ).json()["claims"] == []
+    assert (
+        client.post(
+            "/api/analyze", json={"url": "https://a.test/x", "limit": -1}
+        ).status_code
+        == 422
+    )
+    assert (
+        client.get("/api/packs/tools/gaps", params={"limit": -1}).json()
+        == client.get("/api/packs/tools/gaps", params={"limit": 1}).json()
+    )
+    assert (
+        client.get("/api/health/weakest", params={"limit": -1}).json()["claims"] == []
+    )
 
 
 # ── browsing ─────────────────────────────────────────────────────────────
@@ -519,7 +523,9 @@ def test_a_label_no_rule_covers_is_reported_rather_than_silently_dropped(client)
     assert r.json()["unmapped_labels"] == ["Torque"]
 
 
-def test_a_failure_to_record_a_label_never_costs_the_reader_the_answer(client, monkeypatch):
+def test_a_failure_to_record_a_label_never_costs_the_reader_the_answer(
+    client, monkeypatch
+):
     """The instrument must not break the experiment.
 
     Every caller of `record_unmapped` is on the path of a reader waiting for
@@ -652,8 +658,14 @@ def test_the_weakest_endpoint_lists_claims_worst_first(client):
 
 def test_the_weakest_endpoint_reports_each_signal_separately(client):
     claim = client.get("/api/health/weakest").json()["claims"][0]
-    for field in ("refuted_by", "independent_sources", "best_tier",
-                  "best_trust", "oldest_retrieved_at", "newest_published_at"):
+    for field in (
+        "refuted_by",
+        "independent_sources",
+        "best_tier",
+        "best_trust",
+        "oldest_retrieved_at",
+        "newest_published_at",
+    ):
         assert field in claim
 
 
@@ -708,7 +720,7 @@ def test_the_mcp_tool_and_the_dashboard_agree_on_one_store(client, monkeypatch):
 
 
 def test_health_names_every_version_a_reader_might_be_asked_for(client):
-    """"What am I running" has three answers, and they move on different clocks.
+    """ "What am I running" has three answers, and they move on different clocks.
 
     The app binary, the store's schema, and each pack's own semver are
     deliberately independent — packs update weekly through the engine, the
@@ -803,7 +815,9 @@ def test_the_skill_says_what_this_installation_considers_worth_keeping(client):
     # B178: the bar is the pack's and reaches the agent per subject, through
     # `research_brief`; the skill stays the same size whatever a pack says.
     assert "Only the expensive." not in body
-    brief = _brief(client, ids.subject_id("product", {"brand": "makita", "model": "DHP484"}))
+    brief = _brief(
+        client, ids.subject_id("product", {"brand": "makita", "model": "DHP484"})
+    )
     assert "Only the expensive." in brief
 
 
@@ -842,7 +856,9 @@ def test_the_frontmatter_description_is_one_line(client):
     assert len(description) > 40
 
 
-def test_the_brief_states_the_pack_keys_and_words_rather_than_letting_an_agent_guess(client):
+def test_the_brief_states_the_pack_keys_and_words_rather_than_letting_an_agent_guess(
+    client,
+):
     """An agent that has to guess an identity key invents a plausible one.
 
     B178 moved these from the skill, where they made its length depend on the
@@ -850,7 +866,9 @@ def test_the_brief_states_the_pack_keys_and_words_rather_than_letting_an_agent_g
     rows and the domain words off the pack's vocabulary, so a second category
     gets its own set with no edit here.
     """
-    brief = _brief(client, ids.subject_id("product", {"brand": "makita", "model": "DHP484"}))
+    brief = _brief(
+        client, ids.subject_id("product", {"brand": "makita", "model": "DHP484"})
+    )
     assert "brand=makita" in brief and "model=DHP484" in brief
     # The domain vocabulary is the other invented-value risk: a claim filed
     # under a domain the pack never declared is unfindable.
@@ -926,18 +944,23 @@ def test_a_store_with_no_packs_gets_the_authoring_skill(tmp_path):
     assert "## The five steps" not in body
 
 
-def test_connecting_installs_the_skill_next_to_the_config(client, tmp_path, monkeypatch):
+def test_connecting_installs_the_skill_next_to_the_config(
+    client, tmp_path, monkeypatch
+):
     from app import agentconfig
 
     monkeypatch.setattr(agentconfig, "_home", lambda: tmp_path / "home")
     written = client.post("/api/agent-targets/claude-code/connect").json()["skill"]
 
     assert written.endswith("SKILL.md")
-    assert "## The five steps" in (tmp_path / "home" / ".claude/skills"
-                                     / "kriko-research" / "SKILL.md").read_text(encoding="utf-8")
+    assert "## The five steps" in (
+        tmp_path / "home" / ".claude/skills" / "kriko-research" / "SKILL.md"
+    ).read_text(encoding="utf-8")
 
 
-def test_a_harness_with_nowhere_to_put_a_skill_still_connects(client, tmp_path, monkeypatch):
+def test_a_harness_with_nowhere_to_put_a_skill_still_connects(
+    client, tmp_path, monkeypatch
+):
     from app import agentconfig
 
     monkeypatch.setattr(agentconfig, "_home", lambda: tmp_path / "home")
@@ -945,4 +968,3 @@ def test_a_harness_with_nowhere_to_put_a_skill_still_connects(client, tmp_path, 
 
     assert row["state"] == "connected"
     assert row["skill"] is None
-

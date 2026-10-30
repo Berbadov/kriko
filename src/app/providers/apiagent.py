@@ -171,8 +171,12 @@ KNOWN: tuple[ApiAgent, ...] = (MISTRAL, OPENAI_COMPATIBLE, KRIKO_AGENT)
 BY_ID = {one.id: one for one in KNOWN}
 
 
-def available(path: Path | None = None, *, shared_home: Path | None = None,
-              trial_reservation_id: str = "") -> list[ApiAgent]:
+def available(
+    path: Path | None = None,
+    *,
+    shared_home: Path | None = None,
+    trial_reservation_id: str = "",
+) -> list[ApiAgent]:
     """The agents whose keys this installation has. Never raises: a broken
     env file is "none ready", not a crashed settings page.
 
@@ -202,19 +206,22 @@ def available(path: Path | None = None, *, shared_home: Path | None = None,
             # `shared_home` stays None for a caller with no app-state path: the
             # resolver then uses this process's own home, which is what that
             # caller means by "here".
-            keys.require(provider, shared_home=shared_home,
-                         reservation_id=trial_reservation_id)
+            keys.require(
+                provider, shared_home=shared_home, reservation_id=trial_reservation_id
+            )
         except Exception:  # noqa: BLE001 — an unavailable key is a missing row
             continue
         present.add(provider)
     return [
-        one for one in KNOWN
+        one
+        for one in KNOWN
         if all(name in present for name in (one.key, *one.also_needs))
     ]
 
 
-def why_unavailable(agent: ApiAgent, *, shared_home: Path | None = None,
-                    trial_reservation_id: str = "") -> str:
+def why_unavailable(
+    agent: ApiAgent, *, shared_home: Path | None = None, trial_reservation_id: str = ""
+) -> str:
     """Why `available()` does not list this agent, in the resolver's own words.
 
     A stored pick that cannot run is a dead end unless the reason travels with
@@ -227,8 +234,9 @@ def why_unavailable(agent: ApiAgent, *, shared_home: Path | None = None,
 
     for provider in (agent.key, *agent.also_needs):
         try:
-            keys.require(provider, shared_home=shared_home,
-                         reservation_id=trial_reservation_id)
+            keys.require(
+                provider, shared_home=shared_home, reservation_id=trial_reservation_id
+            )
         except Exception as error:  # noqa: BLE001 — the sentence is the answer
             return str(error)
     return ""
@@ -244,9 +252,15 @@ def models_for(agent: ApiAgent, home: Path | None = None) -> list[str]:
     return sorted(names, key=lambda name: (name != agent.default_model, name))
 
 
-def openai_compatible_converse(prompt: str, *, model: str = "", timeout: float = 45.0,
-                               search: bool = True, app_state_path=None,
-                               cancel_event=None):
+def openai_compatible_converse(
+    prompt: str,
+    *,
+    model: str = "",
+    timeout: float = 45.0,
+    search: bool = True,
+    app_state_path=None,
+    cancel_event=None,
+):
     """Answer through an OpenAI-compatible endpoint, optionally using search.
 
     Function calling is the common OpenAI wire shape. Search itself remains
@@ -275,21 +289,27 @@ def openai_compatible_converse(prompt: str, *, model: str = "", timeout: float =
     endpoint = base_url.rstrip("/") + "/chat/completions"
     messages = [{"role": "user", "content": prompt}]
     have_search = bool(keys.search_providers())
-    tools = [{
-        "type": "function",
-        "function": {
-            "name": "web_search",
-            "description": "Search the web and open a few result pages.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "query": {"type": "string"},
-                    "limit": {"type": "integer", "minimum": 1, "maximum": 5},
+    tools = (
+        [
+            {
+                "type": "function",
+                "function": {
+                    "name": "web_search",
+                    "description": "Search the web and open a few result pages.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "query": {"type": "string"},
+                            "limit": {"type": "integer", "minimum": 1, "maximum": 5},
+                        },
+                        "required": ["query"],
+                    },
                 },
-                "required": ["query"],
-            },
-        },
-    }] if search and have_search else []
+            }
+        ]
+        if search and have_search
+        else []
+    )
     reply = mistral.Reply()
     searcher = reader = None
     if tools:
@@ -311,7 +331,8 @@ def openai_compatible_converse(prompt: str, *, model: str = "", timeout: float =
             payload["tools"] = tools
             payload["tool_choice"] = "auto"
         body, why = post_json_or_why(
-            endpoint, payload, {"authorization": f"Bearer {api_key}"}, timeout=timeout)
+            endpoint, payload, {"authorization": f"Bearer {api_key}"}, timeout=timeout
+        )
         if why:
             reply.error = why
             return reply
@@ -321,12 +342,20 @@ def openai_compatible_converse(prompt: str, *, model: str = "", timeout: float =
         usage = body.get("usage")
         if isinstance(usage, dict):
             prompt_tokens = usage.get("prompt_tokens")
-            if isinstance(prompt_tokens, int) and not isinstance(prompt_tokens, bool) and prompt_tokens >= 0:
+            if (
+                isinstance(prompt_tokens, int)
+                and not isinstance(prompt_tokens, bool)
+                and prompt_tokens >= 0
+            ):
                 reply.tokens_in = (reply.tokens_in or 0) + prompt_tokens
             else:
                 reply.usage_complete = False
             completion_tokens = usage.get("completion_tokens")
-            if isinstance(completion_tokens, int) and not isinstance(completion_tokens, bool) and completion_tokens >= 0:
+            if (
+                isinstance(completion_tokens, int)
+                and not isinstance(completion_tokens, bool)
+                and completion_tokens >= 0
+            ):
                 reply.tokens_out = (reply.tokens_out or 0) + completion_tokens
             else:
                 reply.usage_complete = False
@@ -356,17 +385,28 @@ def openai_compatible_converse(prompt: str, *, model: str = "", timeout: float =
             if cancel_event is not None and cancel_event.is_set():
                 raise StreamCancelled("provider request canceled")
             function = call.get("function") if isinstance(call, dict) else None
-            name = str((function or {}).get("name") or "") if isinstance(function, dict) else ""
+            name = (
+                str((function or {}).get("name") or "")
+                if isinstance(function, dict)
+                else ""
+            )
             call_id = str(call.get("id") or "") if isinstance(call, dict) else ""
             if name != "web_search":
-                messages.append({"role": "tool", "tool_call_id": call_id,
-                                 "content": json.dumps({"error": "unsupported tool"})})
+                messages.append(
+                    {
+                        "role": "tool",
+                        "tool_call_id": call_id,
+                        "content": json.dumps({"error": "unsupported tool"}),
+                    }
+                )
                 continue
             try:
                 args = json.loads((function or {}).get("arguments") or "{}")
             except (TypeError, ValueError):
                 args = {}
-            query = str(args.get("query") or "").strip() if isinstance(args, dict) else ""
+            query = (
+                str(args.get("query") or "").strip() if isinstance(args, dict) else ""
+            )
             result_rows: list[dict] = []
             if not query:
                 pass
@@ -384,23 +424,34 @@ def openai_compatible_converse(prompt: str, *, model: str = "", timeout: float =
                     if not url:
                         continue
                     try:
-                        text = str(reader(url) or "")[:mistral.MAX_SOURCE_CHARS]
+                        text = str(reader(url) or "")[: mistral.MAX_SOURCE_CHARS]
                     except Exception:  # noqa: BLE001 — one bad page is a missed source
                         text = ""
                     if not text:
                         continue
                     title = str(hit.get("title") or "").strip()
-                    previous = reply.sources.setdefault(url, {"title": title, "text": text})
-                    result_rows.append({"url": url, "title": previous["title"], "content": previous["text"]})
-            messages.append({
-                "role": "tool",
-                "tool_call_id": call_id,
-                "content": json.dumps(
-                    {"error": "query is required", "results": []}
-                    if not query else {"results": result_rows},
-                    ensure_ascii=False,
-                ),
-            })
+                    previous = reply.sources.setdefault(
+                        url, {"title": title, "text": text}
+                    )
+                    result_rows.append(
+                        {
+                            "url": url,
+                            "title": previous["title"],
+                            "content": previous["text"],
+                        }
+                    )
+            messages.append(
+                {
+                    "role": "tool",
+                    "tool_call_id": call_id,
+                    "content": json.dumps(
+                        {"error": "query is required", "results": []}
+                        if not query
+                        else {"results": result_rows},
+                        ensure_ascii=False,
+                    ),
+                }
+            )
     reply.error = "OpenAI-compatible endpoint exceeded the search tool-call limit"
     return reply
 
@@ -411,11 +462,19 @@ class ApiAgentResearcher(harness.HarnessResearcher):
 
     cost_basis = "per_token"
 
-    def __init__(self, agent: ApiAgent, *, model: str = "",
-                 timeout: float = mistral.TIMEOUT_SECONDS, converse=None,
-                 home: Path | None = None, app_state_path=None,
-                 trial_reservation_id: str = "", max_tokens: int | None = None,
-                 effort: str = ""):
+    def __init__(
+        self,
+        agent: ApiAgent,
+        *,
+        model: str = "",
+        timeout: float = mistral.TIMEOUT_SECONDS,
+        converse=None,
+        home: Path | None = None,
+        app_state_path=None,
+        trial_reservation_id: str = "",
+        max_tokens: int | None = None,
+        effort: str = "",
+    ):
         # An `ApiAgent` where a `Harness` is annotated: the parent reads only
         # `id`, `label` and `contract_note` off it on the paths this class
         # keeps, and `_run` — the one that spawns — is overridden.
@@ -426,8 +485,9 @@ class ApiAgentResearcher(harness.HarnessResearcher):
         #: The model that runs, not the agent's id. The CLI plane names the
         #: harness here because it cannot know the model; this plane can.
         self.model = model.strip() or agent.default_model
-        self.search_provider = ("DeepSeek Search"
-                                if agent.id == KRIKO_AGENT.id else agent.label)
+        self.search_provider = (
+            "DeepSeek Search" if agent.id == KRIKO_AGENT.id else agent.label
+        )
         self.thoroughness = 50
         self.validation_sensitivity = 50
         self._cache_path = None
@@ -465,7 +525,8 @@ class ApiAgentResearcher(harness.HarnessResearcher):
             self._converse = converse
         elif agent.key == "openai":
             self._converse = lambda prompt, **kw: openai_compatible_converse(
-                prompt, **kw, app_state_path=app_state_path)
+                prompt, **kw, app_state_path=app_state_path
+            )
         elif agent.id == KRIKO_AGENT.id:
             from app.providers import kriko_agent
 
@@ -497,22 +558,32 @@ class ApiAgentResearcher(harness.HarnessResearcher):
 
             self._stream_converse: Callable[..., mistral.Reply | None] | None = (
                 lambda prompt, **kw: kriko_agent.converse(
-                prompt, max_tool_calls=self._calls_allowed(),
-                thoroughness=self.thoroughness,
-                validation_sensitivity=self.validation_sensitivity,
-                cache_path=self._cache_path,
-                shared_home=(Path(app_state_path).parent if app_state_path is not None else None),
-                trial_reservation_id=self.trial_reservation_id,
-                max_tokens=self.max_tokens,
-                reasoning_effort=self.reasoning_effort,
-                app_action=self._app_action,
-                question=self.question,
-                keep_partial=self.keep_partial,
-                scope=self.scope,
-                **kw))
+                    prompt,
+                    max_tool_calls=self._calls_allowed(),
+                    thoroughness=self.thoroughness,
+                    validation_sensitivity=self.validation_sensitivity,
+                    cache_path=self._cache_path,
+                    shared_home=(
+                        Path(app_state_path).parent
+                        if app_state_path is not None
+                        else None
+                    ),
+                    trial_reservation_id=self.trial_reservation_id,
+                    max_tokens=self.max_tokens,
+                    reasoning_effort=self.reasoning_effort,
+                    app_action=self._app_action,
+                    question=self.question,
+                    keep_partial=self.keep_partial,
+                    scope=self.scope,
+                    **kw,
+                )
+            )
         else:
-            self._stream_converse = (mistral.converse_stream
-                                     if converse is None and agent.key == "mistral" else None)
+            self._stream_converse = (
+                mistral.converse_stream
+                if converse is None and agent.key == "mistral"
+                else None
+            )
         self._home = home
         #: What the provider billed, in dollars. `None` once any call could
         #: not be priced: an under-count reported as a total is the invented
@@ -544,24 +615,28 @@ class ApiAgentResearcher(harness.HarnessResearcher):
         """Publish cumulative result-vs-readable-page counts across API calls."""
         readable = {url for url, text in self.sources.items() if text.strip()}
         status = str(self.coverage.get("status") or "partial")
-        self.coverage.update({
-            "status": status,
-            "queries_searched": len(self.searched),
-            "results_returned": len(self.result_urls),
-            "pages_read": len(readable),
-            "pages_unreadable": max(0, len(self.result_urls - readable)),
-            "retrieval_requests": self.retrieval_requests,
-            "billable_tool_calls": self.tool_calls,
-            "cache_hits": self.cache_hits,
-        })
-        self.telemetry.update({
-            "queries": list(self.searched),
-            "model_calls": int(self.telemetry.get("model_calls") or 0),
-            "retrieval_requests": self.retrieval_requests,
-            "billable_tool_calls": self.tool_calls,
-            "cache_hits": self.cache_hits,
-            "coverage": dict(self.coverage),
-        })
+        self.coverage.update(
+            {
+                "status": status,
+                "queries_searched": len(self.searched),
+                "results_returned": len(self.result_urls),
+                "pages_read": len(readable),
+                "pages_unreadable": max(0, len(self.result_urls - readable)),
+                "retrieval_requests": self.retrieval_requests,
+                "billable_tool_calls": self.tool_calls,
+                "cache_hits": self.cache_hits,
+            }
+        )
+        self.telemetry.update(
+            {
+                "queries": list(self.searched),
+                "model_calls": int(self.telemetry.get("model_calls") or 0),
+                "retrieval_requests": self.retrieval_requests,
+                "billable_tool_calls": self.tool_calls,
+                "cache_hits": self.cache_hits,
+                "coverage": dict(self.coverage),
+            }
+        )
 
     def _quicklook_shape(self, reply: str) -> bool:
         from app import quicklook
@@ -570,11 +645,13 @@ class ApiAgentResearcher(harness.HarnessResearcher):
 
     def _record_quicklook_answer(self, reply: str, *, repaired: bool = False) -> None:
         if self._quicklook_shape(reply):
-            self.coverage.update(status="answer_completed", answer_passes=1,
-                                 format_repaired=repaired)
+            self.coverage.update(
+                status="answer_completed", answer_passes=1, format_repaired=repaired
+            )
         else:
-            self.coverage.update(status="unreadable_answer", answer_passes=0,
-                                 format_repaired=False)
+            self.coverage.update(
+                status="unreadable_answer", answer_passes=0, format_repaired=False
+            )
         self._refresh_research_coverage()
 
     def scope_for(self, subject: str) -> agentplan.Scope | None:
@@ -596,10 +673,14 @@ class ApiAgentResearcher(harness.HarnessResearcher):
         kept = (self.on_text, self.timeout, self.keep_partial)
         # Not a draft for the reader's screen, and not worth a research ceiling.
         self.on_text, self.timeout, self.keep_partial = (
-            None, min(float(self.timeout), SCOPE_TIMEOUT_SECONDS), False)
+            None,
+            min(float(self.timeout), SCOPE_TIMEOUT_SECONDS),
+            False,
+        )
         try:
             self.scope = agentplan.parse_scope(
-                self.ask(agentplan.scope_prompt(subject), allow_tools=False))
+                self.ask(agentplan.scope_prompt(subject), allow_tools=False)
+            )
         except Exception:  # noqa: BLE001 — no scope is the dial's answer, not a failed run
             self.scope = None
         finally:
@@ -607,26 +688,47 @@ class ApiAgentResearcher(harness.HarnessResearcher):
         if self.check_cancelled is not None:
             self.check_cancelled()
         if self.scope is None:
-            self._echo("could not scope the subject before searching; researching on the dial")
+            self._echo(
+                "could not scope the subject before searching; researching on the dial"
+            )
         return self.scope
 
-    def ask_quick(self, product: str, *, principle: str = "", page=None,
-                  packs: str = "", attributes: str = "") -> str:
+    def ask_quick(
+        self,
+        product: str,
+        *,
+        principle: str = "",
+        page=None,
+        packs: str = "",
+        attributes: str = "",
+    ) -> str:
         """Run and, if needed, repair the Quick Look JSON without more browsing."""
         if self.agent.id != KRIKO_AGENT.id:
             return super().ask_quick(
-                product, principle=principle, page=page, packs=packs,
-                attributes=attributes)
+                product,
+                principle=principle,
+                page=page,
+                packs=packs,
+                attributes=attributes,
+            )
 
         from app import quicklook
 
         scope = self.scope_for(product)
-        prompt = quicklook.brief(
-            product, principle, page, packs, attributes,
-            max_sources=max(1, self.max_documents or 5),
-            language=str(getattr(self, "output_language", "") or "auto"),
-            scope=scope,
-        ) + getattr(self, "source_instructions", "") + self._own_search_note()
+        prompt = (
+            quicklook.brief(
+                product,
+                principle,
+                page,
+                packs,
+                attributes,
+                max_sources=max(1, self.max_documents or 5),
+                language=str(getattr(self, "output_language", "") or "auto"),
+                scope=scope,
+            )
+            + getattr(self, "source_instructions", "")
+            + self._own_search_note()
+        )
         quicklook_deadline = time.monotonic() + max(0.0, float(self.timeout))
         # `quicklook.parse` closes a cut-off answer at its last whole risk.
         self.keep_partial = True
@@ -659,24 +761,28 @@ class ApiAgentResearcher(harness.HarnessResearcher):
         )
         remaining = quicklook_deadline - time.monotonic()
         if remaining <= 0:
-            self.coverage.update(status="unreadable_answer",
-                                 format_repair_skipped="turn_deadline")
+            self.coverage.update(
+                status="unreadable_answer", format_repair_skipped="turn_deadline"
+            )
             self._refresh_research_coverage()
             return first
         if self._at_least >= self._budget():
-            self.coverage.update(status="unreadable_answer",
-                                 format_repair_skipped="spend_limit")
+            self.coverage.update(
+                status="unreadable_answer", format_repair_skipped="spend_limit"
+            )
             self._refresh_research_coverage()
             return first
-        self.telemetry["format_repair_attempts"] = int(
-            self.telemetry.get("format_repair_attempts") or 0) + 1
+        self.telemetry["format_repair_attempts"] = (
+            int(self.telemetry.get("format_repair_attempts") or 0) + 1
+        )
         original_timeout = self.timeout
         self.timeout = min(float(original_timeout), remaining)
         try:
             repaired = self.ask(repair, allow_tools=False)
         except Exception as error:  # the original answer remains available
-            self.coverage.update(status="unreadable_answer",
-                                 format_repair_error=type(error).__name__)
+            self.coverage.update(
+                status="unreadable_answer", format_repair_error=type(error).__name__
+            )
             self._refresh_research_coverage()
             return first
         finally:
@@ -711,7 +817,8 @@ class ApiAgentResearcher(harness.HarnessResearcher):
             f"\n## How much this run may spend\n\nAt most **{calls} searches "
             "and page opens in total**. Each one is billed to the reader. Stop "
             "there and report what you have.\n"
-            if calls else ""
+            if calls
+            else ""
         )
 
     def _contract(self) -> str:
@@ -726,8 +833,13 @@ class ApiAgentResearcher(harness.HarnessResearcher):
         `web_search` tool to Mistral. Prompt wording alone is not a permission
         boundary.
         """
-        if (allow_tools and self.agent.id == KRIKO_AGENT.id and not self._scope_tried
-                and self.question and agentplan.asks_for_failures(self.question)):
+        if (
+            allow_tools
+            and self.agent.id == KRIKO_AGENT.id
+            and not self._scope_tried
+            and self.question
+            and agentplan.asks_for_failures(self.question)
+        ):
             # A question about what goes wrong is scoped like a quick look is.
             self.scope_for(self.question)
         if allow_tools:
@@ -735,10 +847,12 @@ class ApiAgentResearcher(harness.HarnessResearcher):
             # generic API-agent contract tells Mercury to call a web_search
             # tool that does not exist and contradicts the actual evidence
             # sources it receives.
-            instructions = (self.agent.contract_note if self.agent.id == KRIKO_AGENT.id
-                            else TOOLS)
+            instructions = (
+                self.agent.contract_note if self.agent.id == KRIKO_AGENT.id else TOOLS
+            )
             return self._run(
-                prompt + "\n" + instructions + self._ceiling(), search=True)
+                prompt + "\n" + instructions + self._ceiling(), search=True
+            )
         return self._run(prompt, search=False)
 
     # ── one request ─────────────────────────────────────────────────────────
@@ -747,7 +861,8 @@ class ApiAgentResearcher(harness.HarnessResearcher):
         if self._at_least >= self._budget():
             raise BudgetExceeded(
                 f"{self.agent.label} has spent ${self._at_least:.2f} of this "
-                f"run's ${self._budget():.2f}; no further request was sent")
+                f"run's ${self._budget():.2f}; no further request was sent"
+            )
         if self.check_cancelled is not None:
             self.check_cancelled()
         self._echo(
@@ -807,23 +922,44 @@ class ApiAgentResearcher(harness.HarnessResearcher):
                 if self._stream_converse is not None:
                     # Only the built-in research stack narrates its retrieval;
                     # the other adapters' signatures do not take a step hook.
-                    narrates = ({"on_step": queue_step}
-                                if self.agent.id == KRIKO_AGENT.id else {})
+                    narrates = (
+                        {"on_step": queue_step}
+                        if self.agent.id == KRIKO_AGENT.id
+                        else {}
+                    )
                     box["reply"] = self._stream_converse(
-                        prompt, model=self.model, timeout=self.timeout,
-                        on_text=queue_delta, cancel_event=stop_deltas,
-                        search=search, **narrates,
+                        prompt,
+                        model=self.model,
+                        timeout=self.timeout,
+                        on_text=queue_delta,
+                        cancel_event=stop_deltas,
+                        search=search,
+                        **narrates,
                     )
                 else:
                     if search:
                         box["reply"] = self._converse(
-                            prompt, model=self.model, timeout=self.timeout,
-                            **({"cancel_event": stop_deltas} if self.agent.key == "openai" else {}))
+                            prompt,
+                            model=self.model,
+                            timeout=self.timeout,
+                            **(
+                                {"cancel_event": stop_deltas}
+                                if self.agent.key == "openai"
+                                else {}
+                            ),
+                        )
                     else:
                         box["reply"] = self._converse(
-                            prompt, model=self.model, timeout=self.timeout,
+                            prompt,
+                            model=self.model,
+                            timeout=self.timeout,
                             search=False,
-                            **({"cancel_event": stop_deltas} if self.agent.key == "openai" else {}))
+                            **(
+                                {"cancel_event": stop_deltas}
+                                if self.agent.key == "openai"
+                                else {}
+                            ),
+                        )
             except Exception as error:  # noqa: BLE001 — re-raised below
                 box["error"] = error
 
@@ -844,9 +980,13 @@ class ApiAgentResearcher(harness.HarnessResearcher):
                 if worker.is_alive() and now - started >= self.timeout:
                     stop_deltas.set()
                     raise TimeoutError(
-                        f"{self.agent.label} did not finish within {self.timeout:g}s")
-                if (worker.is_alive() and self.check_cancelled is not None
-                        and now - last_cancel_check >= self._cancel_tick):
+                        f"{self.agent.label} did not finish within {self.timeout:g}s"
+                    )
+                if (
+                    worker.is_alive()
+                    and self.check_cancelled is not None
+                    and now - last_cancel_check >= self._cancel_tick
+                ):
                     self.check_cancelled()
                     last_cancel_check = now
             publish_deltas()
@@ -882,15 +1022,19 @@ class ApiAgentResearcher(harness.HarnessResearcher):
             self.telemetry["truncated"] = True
         self._refresh_research_coverage()
         cost = f"${self.spent:.2f}" if self.spent is not None else "cost unknown"
-        billed_calls = (reply.billed_tool_calls
-                        if isinstance(reply.billed_tool_calls, int)
-                        and not isinstance(reply.billed_tool_calls, bool)
-                        else max(reply.tool_calls, len(reply.queries)))
-        retrieval_requests = (reply.retrieval_requests
-                              if isinstance(reply.retrieval_requests, int)
-                              and not isinstance(reply.retrieval_requests, bool)
-                              else billed_calls)
-        self.transcript = (reply.text or reply.error)[-harness.TRANSCRIPT_TAIL:]
+        billed_calls = (
+            reply.billed_tool_calls
+            if isinstance(reply.billed_tool_calls, int)
+            and not isinstance(reply.billed_tool_calls, bool)
+            else max(reply.tool_calls, len(reply.queries))
+        )
+        retrieval_requests = (
+            reply.retrieval_requests
+            if isinstance(reply.retrieval_requests, int)
+            and not isinstance(reply.retrieval_requests, bool)
+            else billed_calls
+        )
+        self.transcript = (reply.text or reply.error)[-harness.TRANSCRIPT_TAIL :]
         if reply.error:
             # The last word about a turn that failed is the failure. The summary
             # below is shaped like an answer, and a refusal read
@@ -899,12 +1043,16 @@ class ApiAgentResearcher(harness.HarnessResearcher):
             # empty rather than as a turn that refused. The sibling research
             # stack says `no research was run: <reason>` for the same reason
             # (`kriko_agent.converse`), and this is the line that still lied.
-            self._echo(f"{self.agent.label} did not answer in "
-                       f"{time.monotonic() - started:.0f} s: {reply.error}")
+            self._echo(
+                f"{self.agent.label} did not answer in "
+                f"{time.monotonic() - started:.0f} s: {reply.error}"
+            )
             raise RuntimeError(f"{self.agent.label}: {reply.error}")
-        self._echo(f"{self.agent.label} answered in {time.monotonic() - started:.0f} s: "
-                   f"{retrieval_requests} retrieval request(s), {billed_calls} billable, "
-                   f"{len(reply.sources)} result(s), {reply.cache_hits} cached, {cost}")
+        self._echo(
+            f"{self.agent.label} answered in {time.monotonic() - started:.0f} s: "
+            f"{retrieval_requests} retrieval request(s), {billed_calls} billable, "
+            f"{len(reply.sources)} result(s), {reply.cache_hits} cached, {cost}"
+        )
         return reply.text
 
     def _account(self, reply) -> None:
@@ -923,27 +1071,35 @@ class ApiAgentResearcher(harness.HarnessResearcher):
         # Billed calls are at least the searches the reply shows. A `usage`
         # block that omits `connectors` would otherwise make four $0.03
         # searches free.
-        calls = (reply.billed_tool_calls
-                 if isinstance(reply.billed_tool_calls, int)
-                 and not isinstance(reply.billed_tool_calls, bool)
-                 else max(reply.tool_calls, len(reply.queries)))
+        calls = (
+            reply.billed_tool_calls
+            if isinstance(reply.billed_tool_calls, int)
+            and not isinstance(reply.billed_tool_calls, bool)
+            else max(reply.tool_calls, len(reply.queries))
+        )
         self.tool_calls += calls
         self.cache_hits += max(0, int(getattr(reply, "cache_hits", 0) or 0))
         for action in getattr(reply, "actions", []) or []:
             if isinstance(action, dict) and action not in self.agent_actions:
                 self.agent_actions.append(action)
         self.agent_record = agentplan.merge_records(
-            self.agent_record, getattr(reply, "record", None))
-        requests = (reply.retrieval_requests
-                    if isinstance(reply.retrieval_requests, int)
-                    and not isinstance(reply.retrieval_requests, bool)
-                    else calls)
+            self.agent_record, getattr(reply, "record", None)
+        )
+        requests = (
+            reply.retrieval_requests
+            if isinstance(reply.retrieval_requests, int)
+            and not isinstance(reply.retrieval_requests, bool)
+            else calls
+        )
         self.retrieval_requests += requests
         tokens = (
-            None if reply.tokens_in is None or reply.tokens_out is None
+            None
+            if reply.tokens_in is None or reply.tokens_out is None
             # No usage block is "cannot count". Pricing it as zero tokens
             # would report a paid run as $0.00.
-            else modelcatalogue.price(self.model, reply.tokens_in, reply.tokens_out, self._home)
+            else modelcatalogue.price(
+                self.model, reply.tokens_in, reply.tokens_out, self._home
+            )
         )
         per_call = self._search_price()
         tools = calls * per_call if per_call is not None else None
@@ -956,7 +1112,9 @@ class ApiAgentResearcher(harness.HarnessResearcher):
     def _search_price(self) -> float | None:
         from app import modelcatalogue
 
-        return modelcatalogue.tool_price(self.agent.key, self.agent.search_tool, self._home)
+        return modelcatalogue.tool_price(
+            self.agent.key, self.agent.search_tool, self._home
+        )
 
     # ── grounding ───────────────────────────────────────────────────────────
 
@@ -981,9 +1139,15 @@ class ApiAgentResearcher(harness.HarnessResearcher):
                 if self.agent.id == KRIKO_AGENT.id:
                     from app.providers.kriko_agent import validated_quote
 
-                    span = validated_quote(
-                        source, finding.quote, self.validation_sensitivity,
-                    ) if source else ""
+                    span = (
+                        validated_quote(
+                            source,
+                            finding.quote,
+                            self.validation_sensitivity,
+                        )
+                        if source
+                        else ""
+                    )
                 else:
                     span = loose_span(source, finding.quote) if source else ""
                 if not span:
@@ -991,14 +1155,21 @@ class ApiAgentResearcher(harness.HarnessResearcher):
                     continue
                 kept.setdefault(url, []).append(replace(finding, quote=span))
             if url in kept:
-                documents.append(Document(
-                    url=url, text=source, site_or_channel=harness._site(url),
-                    title=self._titles.get(url) or kept[url][0].title,
-                    source_type="page"))
+                documents.append(
+                    Document(
+                        url=url,
+                        text=source,
+                        site_or_channel=harness._site(url),
+                        title=self._titles.get(url) or kept[url][0].title,
+                        source_type="page",
+                    )
+                )
         self._by_url = kept
         if self.dropped:
-            self.note = (f"{self.dropped} finding(s) dropped: the quote was not "
-                         "in the search result for its url")
+            self.note = (
+                f"{self.dropped} finding(s) dropped: the quote was not "
+                "in the search result for its url"
+            )
         if not documents and not self.note:
             self.note = f"{self.agent.label} reported no usable findings"
         return documents
