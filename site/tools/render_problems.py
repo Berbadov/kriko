@@ -38,6 +38,7 @@ import tempfile
 import tomllib
 import zlib
 from pathlib import Path
+from urllib.parse import quote
 
 import yaml
 
@@ -104,6 +105,9 @@ UI = {
         "cta_h": "Check the one you are about to buy",
         "cta_p": "Use Kriko beside the listing to confirm the model and variant, open the sources and compare your options. Start with an installed catalog: no account or AI key needed. The browser extension needs the desktop app running.",
         "cta_b": "Install Kriko for Windows",
+        "phone_p": "Reading this on a phone? Kriko runs on a Windows computer.",
+        "phone_a": "Email yourself the link",
+        "phone_subject": "Kriko for my computer",
         "note": "These reports come from the pages linked under each item: owner forums, repair guides and workshops. They are not a diagnosis of any one unit, and a careful check of the one you are buying still applies.",
         "licence": "Text from the Kriko {name} catalog, version {version}, under the {license} license.",
         "hub_title": "Known problems, by product and part",
@@ -184,6 +188,9 @@ UI = {
         "cta_h": "Satın alacağınız ürünü bu listeyle karşılaştırın",
         "cta_p": "Kriko ile ilanın yanında modeli ve varyantı doğrulayın, kaynakları açın ve seçeneklerinizi karşılaştırın. Yüklü bir katalogla başlayın: hesap ya da yapay zekâ anahtarı gerekmez. Tarayıcı uzantısı için masaüstü uygulaması açık olmalıdır.",
         "cta_b": "Windows için Kriko kurun",
+        "phone_p": "Bunu telefondan mı okuyorsunuz? Kriko bir Windows bilgisayarda çalışır.",
+        "phone_a": "Bağlantıyı kendinize e-postalayın",
+        "phone_subject": "Kriko'yu bilgisayarıma kuracağım",
         "note": "Bu maddeler, her birinin altında bağlantısı verilen sayfalardan derlenmiştir: kullanıcı forumları, onarım rehberleri ve servisler. Belirli bir ürünün teşhisi değildir; satın alacağınız ürünü dikkatle kontrol etmeniz yine de gerekir.",
         "licence": "Metin, Kriko {name} kataloğundan (sürüm {version}) alınmıştır, {license} lisansıyla.",
         "hub_title": "Bilinen sorunlar: ürün ve parça bazında",
@@ -367,6 +374,13 @@ def read_catalog(path: Path) -> dict:
 
 def _e(text) -> str:
     return html.escape(str(text), quote=True)
+
+
+def _handoff(ui: dict) -> str:
+    """A mailto: link that sends the reader the install page, for a phone that cannot run Kriko.
+
+    Plain HTML on purpose: these pages run no script, and the site sends nothing anywhere."""
+    return _e(f'mailto:?subject={quote(ui["phone_subject"])}&body={quote(ORIGIN + ui["get"], safe="")}')
 
 
 ORGANISATION = {"@type": "Organization", "name": "Kriko", "url": f"{ORIGIN}/"}
@@ -640,7 +654,8 @@ def _subject_page(catalog: dict, entry: dict, subject: dict, lang: str, claims: 
     buying_steps = "".join(f'<li>{_e(step)}</li>' for step in ui["buying_steps"])
     buying = f'      <section class="buying"><h2>{_e(ui["buying"].format(label=label))}</h2><ol>{buying_steps}</ol></section>\n'
     cta = (f'      <aside class="cta"><h2>{_e(ui["cta_h"])}</h2><p>{_e(ui["cta_p"])}</p>'
-           f'<p><a class="button" href="{ui["get"]}">{_e(ui["cta_b"])}</a></p></aside>\n')
+           f'<p><a class="button" href="{ui["get"]}">{_e(ui["cta_b"])}</a></p>'
+           f'<p class="handoff">{_e(ui["phone_p"])} <a href="{_handoff(ui)}">{_e(ui["phone_a"])}</a></p></aside>\n')
     body = (f'      <header class="pp-head">\n'
             f'      <p class="crumb"><a href="{ui["prefix"]}/problems/">{_e(ui["crumb"])}</a> › '
             f'<a href="{ui["prefix"]}/problems/{entry["catalog_slug"]}/">{_e(category)}</a></p>\n'
@@ -727,7 +742,8 @@ def _safety_page(lang: str, entries: list[dict], css: str, have: set[str]) -> st
                      f'<p>{_e(ui["products"].format(n=len(rows)))}</p></div>\n'
                      f'      <div class="alert-col"><ul class="alerts">{"".join(_alert_row(lang, *row) for row in rows)}</ul></div></section>\n')
     cta = (f'      <aside class="cta wide"><div><h2>{_e(ui["cta_h"])}</h2><p>{_e(ui["cta_p"])}</p></div>'
-           f'<p><a class="button" href="{ui["get"]}">{_e(ui["cta_b"])}</a></p></aside>\n')
+           f'<p><a class="button" href="{ui["get"]}">{_e(ui["cta_b"])}</a></p>'
+           f'<p class="handoff">{_e(ui["phone_p"])} <a href="{_handoff(ui)}">{_e(ui["phone_a"])}</a></p></aside>\n')
     body = (f'      <header class="pp-head">\n      <p class="crumb"><a href="{ui["prefix"]}/problems/">{_e(ui["crumb"])}</a></p>\n'
             f'      <h1>{icon("flame", "ico big hazard")}{_e(ui["safety_title"])}</h1>\n      <p class="lead">{_e(ui["safety_lead"])}</p>\n'
             + _stats([("sev-high", len(found), ui["stat_safety"]), ("plain", len(by_catalog), ui["stat_categories"])]) + '      </header>\n'
@@ -778,7 +794,8 @@ def _category_page(lang: str, items: list[dict], css: str, have: set[str], spons
     stats = _stats([("plain", len(items), ui["stat_products"]), ("plain", reports, ui["stat_reports"])]
                    + ([("sev-high", flagged, ui["stat_safety"])] if flagged else []))
     cta = (f'      <aside class="cta"><h2>{_e(ui["cta_h"])}</h2><p>{_e(ui["cta_p"])}</p>'
-           f'<p><a class="button" href="{ui["get"]}">{_e(ui["cta_b"])}</a></p></aside>\n')
+           f'<p><a class="button" href="{ui["get"]}">{_e(ui["cta_b"])}</a></p>'
+           f'<p class="handoff">{_e(ui["phone_p"])} <a href="{_handoff(ui)}">{_e(ui["phone_a"])}</a></p></aside>\n')
     body = (f'      <header class="pp-head">\n'
             f'      <p class="crumb"><a href="{ui["prefix"]}/problems/">{_e(ui["crumb"])}</a></p>\n'
             f'      <h1>{icon(first["icon"], "ico big")}{_e(ui["cat_title"].format(name=name))}</h1>\n'
@@ -821,7 +838,8 @@ def _hub_page(lang: str, entries: list[dict], css: str) -> str:
     stats = _stats([("plain", len(entries), ui["stat_products"]), ("plain", sum(e["counts"][lang] for e in entries), ui["stat_reports"]),
                     ("plain", len(by_catalog), ui["stat_categories"])] + ([("sev-high", flagged, ui["stat_safety"])] if flagged else []))
     cta = (f'      <aside class="cta wide"><div><h2>{_e(ui["cta_h"])}</h2><p>{_e(ui["cta_p"])}</p></div>'
-           f'<p><a class="button" href="{ui["get"]}">{_e(ui["cta_b"])}</a></p></aside>\n')
+           f'<p><a class="button" href="{ui["get"]}">{_e(ui["cta_b"])}</a></p>'
+           f'<p class="handoff">{_e(ui["phone_p"])} <a href="{_handoff(ui)}">{_e(ui["phone_a"])}</a></p></aside>\n')
     body = (f'      <header class="pp-head">\n      <h1>{_e(ui["hub_title"])}</h1>\n      <p class="lead">{_e(ui["hub_lead"])}</p>\n'
             + stats + '      </header>\n'
             + _safety_first(lang, entries, ui["serious_h"], SAFETY_FIRST, everything=True) +
