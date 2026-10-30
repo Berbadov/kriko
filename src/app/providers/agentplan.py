@@ -62,16 +62,18 @@ FRESHNESS_SECONDS: dict[str, int] = {
 
 #: Function words that open or carry a question without naming anything. A
 #: closed vocabulary of questions in the languages `local_search_plan` speaks.
-_FUNCTION_WORDS = frozenset((
-    "a an the and or of for to in on at with without about is are was were be do does did "
-    "has have had can could will would should what which who whom whose when where why how "
-    "tell show give find any some there this that these those it its my me you your i we "
-    "problems problem issues issue known common worth buy buying review reviews recall recalls "
-    "ne nedir nasil hangi kac mi mu var yok bu su bir ve ile icin gibi daha en cok "
-    "quel quelle quels quelles est sont comment pourquoi le la les un une des du de et ou "
-    "was wie warum welche welcher ist sind der die das ein eine und oder "
-    "que cual cuales es son como por el los las una unos y o"
-).split())
+_FUNCTION_WORDS = frozenset(
+    (
+        "a an the and or of for to in on at with without about is are was were be do does did "
+        "has have had can could will would should what which who whom whose when where why how "
+        "tell show give find any some there this that these those it its my me you your i we "
+        "problems problem issues issue known common worth buy buying review reviews recall recalls "
+        "ne nedir nasil hangi kac mi mu var yok bu su bir ve ile icin gibi daha en cok "
+        "quel quelle quels quelles est sont comment pourquoi le la les un une des du de et ou "
+        "was wie warum welche welcher ist sind der die das ein eine und oder "
+        "que cual cuales es son como por el los las una unos y o"
+    ).split()
+)
 
 _WORD = re.compile(r"[^\W_]+", re.UNICODE)
 
@@ -104,13 +106,17 @@ def identity_terms(question: str, limit: int = MAX_IDENTITY_TERMS) -> tuple[str,
     for match in _WORD.finditer(text):
         word = match.group()
         key = fold(word)
-        before = text[:match.start()].rstrip()
+        before = text[: match.start()].rstrip()
         opens_sentence = not before or before[-1] in ".?!:;"
         # A capital in the middle of a sentence is a name ("Mi 11", so a function
         # word is let through there); a function word that opens one is grammar.
-        if key in found or (key in _FUNCTION_WORDS and (opens_sentence or word[:1].islower())):
+        if key in found or (
+            key in _FUNCTION_WORDS and (opens_sentence or word[:1].islower())
+        ):
             continue
-        named = len(word) > 1 and (any(c.isupper() for c in word[1:]) or word[:1].isupper())
+        named = len(word) > 1 and (
+            any(c.isupper() for c in word[1:]) or word[:1].isupper()
+        )
         if (_is_code(word) or named) and not word.isdigit():
             found.append(key)
         if len(found) >= limit:
@@ -153,8 +159,10 @@ def make_plan(question: str, *, ceiling: int) -> Plan:
 
 def asks_for_failures(question: str) -> bool:
     """Whether the reader's words ask what goes wrong (forums, recalls)."""
-    return any(kind in FAILURE_KINDS
-               for kind in local_search_plan.choose_kinds(str(question or ""), limit=3))
+    return any(
+        kind in FAILURE_KINDS
+        for kind in local_search_plan.choose_kinds(str(question or ""), limit=3)
+    )
 
 
 def missing_kinds(plan: Plan, searched) -> list[str]:
@@ -174,13 +182,18 @@ def coverage_hint(plan: Plan, searched, calls_left: int) -> dict:
         return {}
     return {
         "still_asked": [
-            {"kind": kind, "for": local_search_plan.SOURCE_KINDS[kind],
-             "word": local_search_plan.kind_marker(kind)}
+            {
+                "kind": kind,
+                "for": local_search_plan.SOURCE_KINDS[kind],
+                "word": local_search_plan.kind_marker(kind),
+            }
             for kind in owed
         ],
         "retrievals_left": calls_left,
-        "note": ("The question also asks for the kinds above. Search each once with its "
-                 "word, or say plainly that you did not look there."),
+        "note": (
+            "The question also asks for the kinds above. Search each once with its "
+            "word, or say plainly that you did not look there."
+        ),
     }
 
 
@@ -195,18 +208,31 @@ _COUNTS = ("searches", "pages", "unreadable", "cached", "retrieved")
 _OPTIONAL_COUNTS = ("on_product", "off_product")
 
 
-def build_record(*, searches: int, kinds, missing, pages: int, unreadable: int,
-                 cached: int, retrieved: int, on_product: int | None = None,
-                 off_product: int | None = None) -> dict:
+def build_record(
+    *,
+    searches: int,
+    kinds,
+    missing,
+    pages: int,
+    unreadable: int,
+    cached: int,
+    retrieved: int,
+    on_product: int | None = None,
+    off_product: int | None = None,
+) -> dict:
     """One call's account of itself, in the shape the screens read.
 
     `on_product` and `off_product` are omitted unless the question named a
     product to check pages against: an absent key means "not checked".
     """
     record: dict = {
-        "searches": int(searches), "pages": int(pages), "unreadable": int(unreadable),
-        "cached": int(cached), "retrieved": int(retrieved),
-        "kinds": _in_order(kinds), "missing": _in_order(missing),
+        "searches": int(searches),
+        "pages": int(pages),
+        "unreadable": int(unreadable),
+        "cached": int(cached),
+        "retrieved": int(retrieved),
+        "kinds": _in_order(kinds),
+        "missing": _in_order(missing),
     }
     if on_product is not None:
         record["on_product"] = int(on_product)
@@ -241,15 +267,21 @@ def merge_records(first: dict | None, second: dict | None) -> dict:
 
 
 def _whole(value) -> int:
-    return value if isinstance(value, int) and not isinstance(value, bool) and value > 0 else 0
+    return (
+        value
+        if isinstance(value, int) and not isinstance(value, bool) and value > 0
+        else 0
+    )
 
 
 def record_line(record: dict) -> str:
     """The record as one job-log line, so the log says what the screen will."""
     if not isinstance(record, dict) or not record:
         return ""
-    parts = [f"{_whole(record.get('searches'))} search(es)",
-             f"{_whole(record.get('pages'))} page(s) read"]
+    parts = [
+        f"{_whole(record.get('searches'))} search(es)",
+        f"{_whole(record.get('pages'))} page(s) read",
+    ]
     if _whole(record.get("unreadable")):
         parts.append(f"{_whole(record['unreadable'])} unreadable")
     if "off_product" in record and _whole(record.get("off_product")):
@@ -323,7 +355,7 @@ def _json_object(text: str) -> dict | None:
     decoder = json.JSONDecoder()
     for match in re.finditer(r"\{", text):
         try:
-            found, _ = decoder.raw_decode(text[match.start():])
+            found, _ = decoder.raw_decode(text[match.start() :])
         except ValueError:
             continue
         if isinstance(found, dict):
@@ -365,8 +397,13 @@ def parse_scope(reply: str) -> Scope | None:
         return None
     complexity = str(found.get("complexity") or "").strip().casefold()
     if complexity not in COMPLEXITIES:
-        complexity = ("complex" if len(aspects) >= 6
-                      else "moderate" if len(aspects) >= 3 else "simple")
+        complexity = (
+            "complex"
+            if len(aspects) >= 6
+            else "moderate"
+            if len(aspects) >= 3
+            else "simple"
+        )
     return Scope(complexity, tuple(aspects))
 
 
@@ -385,16 +422,22 @@ def scoped_calls(scope: Scope, dial_calls: int) -> int:
 
 def risk_cap(scope: Scope | None) -> int:
     """How many findings a quick look keeps for this scope."""
-    return RISK_CAPS.get(scope.complexity, DEFAULT_RISK_CAP) if scope else DEFAULT_RISK_CAP
+    return (
+        RISK_CAPS.get(scope.complexity, DEFAULT_RISK_CAP) if scope else DEFAULT_RISK_CAP
+    )
 
 
 def scope_checklist(scope: Scope, calls: int) -> str:
     """The plan, as the section the research agent reads before its first search."""
     reachable = min(len(scope.aspects), max(1, int(calls) - 1))
-    listed = "\n".join(f"{n}. {one.name}: `{one.query}`"
-                       for n, one in enumerate(scope.aspects, 1))
-    short = ("" if reachable == len(scope.aspects) else
-             f" You cannot reach all of them: do the first {reachable} and say which you left.")
+    listed = "\n".join(
+        f"{n}. {one.name}: `{one.query}`" for n, one in enumerate(scope.aspects, 1)
+    )
+    short = (
+        ""
+        if reachable == len(scope.aspects)
+        else f" You cannot reach all of them: do the first {reachable} and say which you left."
+    )
     return (
         "\n\n## Research plan, scoped before searching\n\n"
         f"This subject is **{scope.complexity}**. You have {int(calls)} retrievals. Give each "
@@ -427,8 +470,11 @@ def _aspect_key(scope: Scope, tag: str) -> str:
     best = ""
     for one in scope.aspects:
         name = fold(one.name)
-        if (len(name) > len(best) and folded.startswith(name)
-                and not folded[len(name):][:1].isalnum()):
+        if (
+            len(name) > len(best)
+            and folded.startswith(name)
+            and not folded[len(name) :][:1].isalnum()
+        ):
             best = name
     return best
 
@@ -445,7 +491,11 @@ def scope_record(scope: Scope | None, risks, calls: int = 0) -> dict:
     counts = {fold(one.name): 0 for one in scope.aspects}
     untagged = 0
     for risk in risks or ():
-        key = _aspect_key(scope, str(risk.get("aspect") or "")) if isinstance(risk, dict) else ""
+        key = (
+            _aspect_key(scope, str(risk.get("aspect") or ""))
+            if isinstance(risk, dict)
+            else ""
+        )
         if key in counts:
             counts[key] += 1
         else:
@@ -454,8 +504,10 @@ def scope_record(scope: Scope | None, risks, calls: int = 0) -> dict:
         "complexity": scope.complexity,
         "calls": max(0, int(calls)),
         "risk_cap": risk_cap(scope),
-        "aspects": [{"name": one.name, "findings": counts[fold(one.name)]}
-                    for one in scope.aspects],
+        "aspects": [
+            {"name": one.name, "findings": counts[fold(one.name)]}
+            for one in scope.aspects
+        ],
         "untagged": untagged,
     }
 
@@ -467,10 +519,16 @@ def scope_line(record: dict) -> str:
     aspects = record["aspects"]
     covered = [one for one in aspects if one.get("findings")]
     quiet = [one["name"] for one in aspects if not one.get("findings")]
-    line = (f"scope: {record.get('complexity')} · {len(covered)} of {len(aspects)} aspects "
-            "have a sourced finding")
+    line = (
+        f"scope: {record.get('complexity')} · {len(covered)} of {len(aspects)} aspects "
+        "have a sourced finding"
+    )
     if covered:
-        line += " (" + ", ".join(f"{one['name']} {one['findings']}" for one in covered) + ")"
+        line += (
+            " ("
+            + ", ".join(f"{one['name']} {one['findings']}" for one in covered)
+            + ")"
+        )
     if quiet:
         line += " · none for: " + ", ".join(quiet)
     return line

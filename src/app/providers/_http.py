@@ -140,8 +140,9 @@ def post_json(url: str, payload: dict, headers: dict, timeout: float = TIMEOUT) 
     return post_json_or_why(url, payload, headers, timeout)[0]
 
 
-def post_json_or_why(url: str, payload: dict, headers: dict,
-                     timeout: float = TIMEOUT) -> tuple[dict, str]:
+def post_json_or_why(
+    url: str, payload: dict, headers: dict, timeout: float = TIMEOUT
+) -> tuple[dict, str]:
     """`post_json`, plus the reason in the reader's terms when it failed.
 
     For a caller whose *whole run* is this one request (B153: the API agent),
@@ -162,15 +163,21 @@ def post_json_or_why(url: str, payload: dict, headers: dict,
             break
         # `wait == 0.0` means "retry, at our own pace"; a positive value is the
         # vendor's Retry-After, honoured as given but never above the cap.
-        delay = wait or RETRY_BACKOFF * (2 ** attempt)
-        log.info("%s: retrying in %.1fs (attempt %d of %d)",
-                 _host(url), delay, attempt + 2, RETRY_ATTEMPTS)
+        delay = wait or RETRY_BACKOFF * (2**attempt)
+        log.info(
+            "%s: retrying in %.1fs (attempt %d of %d)",
+            _host(url),
+            delay,
+            attempt + 2,
+            RETRY_ATTEMPTS,
+        )
         time.sleep(min(delay, RETRY_AFTER_CAP))
     return {}, reason
 
 
-def _post_once(url: str, payload: dict, headers: dict,
-               timeout: float) -> tuple[dict, str, float | None]:
+def _post_once(
+    url: str, payload: dict, headers: dict, timeout: float
+) -> tuple[dict, str, float | None]:
     """One attempt: the reply, the reason it failed, and how long to wait.
 
     A `None` wait means do not retry; `0.0` means retry at the caller's own
@@ -196,7 +203,9 @@ def _post_once(url: str, payload: dict, headers: dict,
     except urllib.error.HTTPError as error:
         # The status is diagnostic and safe; the body may quote the request.
         log.warning("%s answered HTTP %s", _host(url), error.code)
-        reason = f"{_host(url)} answered HTTP {error.code}{_MEANING.get(error.code, '')}"
+        reason = (
+            f"{_host(url)} answered HTTP {error.code}{_MEANING.get(error.code, '')}"
+        )
         if error.code not in RETRY_STATUSES:
             return {}, reason, None
         return {}, reason, _retry_after(error) or 0.0
@@ -229,9 +238,15 @@ def _retry_after(error: urllib.error.HTTPError) -> float | None:
     return float(raw)
 
 
-def post_sse_or_why(url: str, payload: dict, headers: dict, timeout: float,
-                    on_event, *, cancel_event: threading.Event | None = None
-                    ) -> tuple[int, str]:
+def post_sse_or_why(
+    url: str,
+    payload: dict,
+    headers: dict,
+    timeout: float,
+    on_event,
+    *,
+    cancel_event: threading.Event | None = None,
+) -> tuple[int, str]:
     """POST JSON and deliver each SSE `data:` object as it is received.
 
     Provider error bodies are never returned or logged because they can echo
@@ -242,7 +257,11 @@ def post_sse_or_why(url: str, payload: dict, headers: dict, timeout: float,
     request = urllib.request.Request(
         url,
         data=json.dumps(payload).encode("utf-8"),
-        headers={"content-type": "application/json", "accept": "text/event-stream", **headers},
+        headers={
+            "content-type": "application/json",
+            "accept": "text/event-stream",
+            **headers,
+        },
         method="POST",
     )
     count = 0
@@ -297,7 +316,9 @@ def post_sse_or_why(url: str, payload: dict, headers: dict, timeout: float,
                         return
 
             watcher = threading.Thread(
-                target=watch, name="kriko-sse-cancel", daemon=True,
+                target=watch,
+                name="kriko-sse-cancel",
+                daemon=True,
             )
             watcher.start()
             try:
@@ -331,7 +352,10 @@ def post_sse_or_why(url: str, payload: dict, headers: dict, timeout: float,
         if expired.is_set():
             return count, budget_reason()
         log.warning("%s answered HTTP %s", _host(url), error.code)
-        return count, f"{_host(url)} answered HTTP {error.code}{_MEANING.get(error.code, '')}"
+        return (
+            count,
+            f"{_host(url)} answered HTTP {error.code}{_MEANING.get(error.code, '')}",
+        )
     except (urllib.error.URLError, TimeoutError, OSError) as error:
         if callback_error is not None:
             raise callback_error

@@ -156,7 +156,9 @@ class HealthProbe:
             results["jobs"] = _job_capacity(self._runner)
 
         threads = [
-            threading.Thread(target=probe_store, name="kriko-health-store", daemon=True),
+            threading.Thread(
+                target=probe_store, name="kriko-health-store", daemon=True
+            ),
             threading.Thread(target=probe_jobs, name="kriko-health-jobs", daemon=True),
         ]
         for thread in threads:
@@ -363,7 +365,8 @@ async def lifespan(app: FastAPI):
 
             sweeper = pricescheduler.Sweeper(
                 app.state.settings.app_state_path,
-                lambda: app.state.jobs.submit("price_sweep", {}))
+                lambda: app.state.jobs.submit("price_sweep", {}),
+            )
             sweeper.tick()
             stop_price_clock = pricescheduler.start(sweeper)
         except Exception:
@@ -377,6 +380,7 @@ async def lifespan(app: FastAPI):
         app.state.health_probe.stop()
         app.state.jobs.shutdown()
         from app.providers import codex_profile, resident
+
         try:
             try:
                 codex_profile.shutdown()
@@ -405,7 +409,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     from app import limits as agent_limits, usage as usage_meters
 
     _limits_path = settings.app_state_path
-    agent_limits.set_sink(lambda agent, rows: usage_meters.save_limits(_limits_path, agent, rows))
+    agent_limits.set_sink(
+        lambda agent, rows: usage_meters.save_limits(_limits_path, agent, rows)
+    )
 
     # ── the log has to be somewhere this process can actually write ───────
     #
@@ -486,8 +492,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # Idle, it hands the local model's memory back to the host: a finished run
     # must not hold video memory while Kriko sits in the background.
     try:
-        app.state.jobs = JobRunner(app.state.settings, HANDLERS,
-                                   on_idle=local_inference.release)
+        app.state.jobs = JobRunner(
+            app.state.settings, HANDLERS, on_idle=local_inference.release
+        )
     except sqlite3.Error as error:
         # `JobRunner` opens the reader's `app.sqlite` for the job ledger, and
         # this is the first thing to touch it. An unopenable one — a home
@@ -505,9 +512,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # The two "does it still work" answers to /api/health, refreshed in the
     # background so the endpoint itself never waits on a store lock or the
     # runner's scheduler lock (see HealthProbe).
-    app.state.health_probe = HealthProbe(
-        app.state.settings.store_path, app.state.jobs
-    )
+    app.state.health_probe = HealthProbe(app.state.settings.store_path, app.state.jobs)
 
     # ── the extension announces itself by calling ────────────────────────
     #
@@ -543,8 +548,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 for stale in list(loaded)[: len(loaded) - EXTENSION_SIGHTINGS_MAX + 1]:
                     loaded.pop(stale, None)
             loaded[origin] = {
-                "content_digest": digest if len(digest) == 64 and all(
-                    char in "0123456789abcdef" for char in digest) else "",
+                "content_digest": digest
+                if len(digest) == 64
+                and all(char in "0123456789abcdef" for char in digest)
+                else "",
                 "version": request.headers.get(ext.VERSION_HEADER, ""),
             }
             app.state.extension_digests = loaded
@@ -557,7 +564,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 # reader's own lookup) is waiting on.
                 await run_in_threadpool(
                     _record_sighting,
-                    app.state.settings.app_state_path, origin,
+                    app.state.settings.app_state_path,
+                    origin,
                     request.headers.get(ext.VERSION_HEADER, ""),
                 )
             except Exception:
@@ -571,12 +579,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         # fetches are exempt from CORS via `host_permissions`, but the
         # allowlist is what makes that not a thing to remember.
         response.headers[ext.MINIMUM_HEADER] = ext.MINIMUM_VERSION
-        digest_name = "firefox_staged_digest" if origin.startswith("moz-extension://") else "extension_staged_digest"
+        digest_name = (
+            "firefox_staged_digest"
+            if origin.startswith("moz-extension://")
+            else "extension_staged_digest"
+        )
         staged = getattr(app.state, digest_name, "")
         if staged:
             response.headers[ext.STAGED_HEADER] = staged
         response.headers["access-control-expose-headers"] = (
-            f"{ext.MINIMUM_HEADER}, {ext.STAGED_HEADER}")
+            f"{ext.MINIMUM_HEADER}, {ext.STAGED_HEADER}"
+        )
         return response
 
     # ── how much will be read ────────────────────────────────────────────
@@ -595,11 +608,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def not_too_large(request: Request, call_next):
         declared = request.headers.get("content-length", "")
         if declared.isdigit() and int(declared) > MAX_REQUEST_BYTES:
-            log.warning("refused %s %s: %s bytes declared",
-                        request.method, request.url.path, declared)
+            log.warning(
+                "refused %s %s: %s bytes declared",
+                request.method,
+                request.url.path,
+                declared,
+            )
             return JSONResponse(
-                {"detail": f"This request is larger than the "
-                           f"{MAX_REQUEST_BYTES // (1024 * 1024)} MB limit."},
+                {
+                    "detail": f"This request is larger than the "
+                    f"{MAX_REQUEST_BYTES // (1024 * 1024)} MB limit."
+                },
                 status_code=413,
             )
         return await call_next(request)
@@ -618,16 +637,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # browser, and 8787 is a constant published in this repository.
     @app.middleware("http")
     async def only_from_here(request: Request, call_next):
-        why = origins.refuse(
-            request.headers.get("origin"), request.headers.get("host")
-        )
+        why = origins.refuse(request.headers.get("origin"), request.headers.get("host"))
         if why is not None:
             # Logged, because the reader will see a view fail and this is the
             # only place that says why. Warning rather than error: a page
             # probing localhost is the system working, not a fault.
-            log.warning(
-                "refused %s %s: %s", request.method, request.url.path, why
-            )
+            log.warning("refused %s %s: %s", request.method, request.url.path, why)
             return JSONResponse({"detail": why}, status_code=403)
         return await call_next(request)
 
