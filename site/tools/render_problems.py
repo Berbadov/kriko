@@ -13,6 +13,9 @@ new product in an old one gets its pages with no edit here.
 What a page carries: the claim's title, body and advice, how it is found, and a
 link to each page it was reported on. It never carries the quote the claim was
 checked against; that text belongs to its author, the link sends the reader there.
+The page's structured data is the same material for a machine: an `Article` about
+the product with a `citation` for each source page, and a `FAQPage` answering the
+two questions this page answers in the words a buyer types.
 
 What is never published:
   * a catalog that declares itself `synthetic` (the worked example), because a
@@ -38,6 +41,8 @@ import tempfile
 import tomllib
 import zlib
 from pathlib import Path
+from typing import Any
+from urllib.parse import quote
 
 import yaml
 
@@ -50,7 +55,7 @@ GLANCE_FROM = 4  # a page with this many claims opens with a list of their title
 OPEN_UP_TO = 12  # a group of more products than this starts folded
 
 # The site's own words, per language. The claims' words come from the catalog.
-UI = {
+UI: dict[str, dict[str, Any]] = {
     "en": {
         "html_lang": "en",
         "locale": "en_US",
@@ -104,7 +109,14 @@ UI = {
         "cta_h": "Check the one you are about to buy",
         "cta_p": "Use Kriko beside the listing to confirm the model and variant, open the sources and compare your options. Start with an installed catalog: no account or AI key needed. The browser extension needs the desktop app running.",
         "cta_b": "Install Kriko for Windows",
+        "phone_p": "Reading this on a phone? Kriko runs on a Windows computer.",
+        "phone_a": "Email yourself the link",
+        "phone_subject": "Kriko for my computer",
         "note": "These reports come from the pages linked under each item: owner forums, repair guides and workshops. They are not a diagnosis of any one unit, and a careful check of the one you are buying still applies.",
+        "faq_what": "What is known to go wrong with {label}?",
+        "faq_check": "What should I check before buying {label}?",
+        "faq_more": "{n} more reported problems",
+        "faq_note": "Each one is a sourced report, not a diagnosis of any single unit.",
         "licence": "Text from the Kriko {name} catalog, version {version}, under the {license} license.",
         "hub_title": "Known problems, by product and part",
         "hub_lead": "Pick a category. Each product page lists what owners and repairers report going wrong with it, every report linked to the page it came from.",
@@ -184,7 +196,14 @@ UI = {
         "cta_h": "Satın alacağınız ürünü bu listeyle karşılaştırın",
         "cta_p": "Kriko ile ilanın yanında modeli ve varyantı doğrulayın, kaynakları açın ve seçeneklerinizi karşılaştırın. Yüklü bir katalogla başlayın: hesap ya da yapay zekâ anahtarı gerekmez. Tarayıcı uzantısı için masaüstü uygulaması açık olmalıdır.",
         "cta_b": "Windows için Kriko kurun",
+        "phone_p": "Bunu telefondan mı okuyorsunuz? Kriko bir Windows bilgisayarda çalışır.",
+        "phone_a": "Bağlantıyı kendinize e-postalayın",
+        "phone_subject": "Kriko'yu bilgisayarıma kuracağım",
         "note": "Bu maddeler, her birinin altında bağlantısı verilen sayfalardan derlenmiştir: kullanıcı forumları, onarım rehberleri ve servisler. Belirli bir ürünün teşhisi değildir; satın alacağınız ürünü dikkatle kontrol etmeniz yine de gerekir.",
+        "faq_what": "{label} ile ilgili bilinen sorunlar neler?",
+        "faq_check": "{label} almadan önce neye bakmalıyım?",
+        "faq_more": "{n} bildirilen sorun daha",
+        "faq_note": "Her biri kaynaklı bir rapordur; belirli bir ürünün teşhisi değildir.",
         "licence": "Metin, Kriko {name} kataloğundan (sürüm {version}) alınmıştır, {license} lisansıyla.",
         "hub_title": "Bilinen sorunlar: ürün ve parça bazında",
         "hub_lead": "Bir kategori seçin. Her ürün sayfası, sahiplerin ve tamircilerin neyin bozulduğunu bildirdiğini listeler; her rapor, geldiği sayfaya bağlantı verir.",
@@ -369,7 +388,15 @@ def _e(text) -> str:
     return html.escape(str(text), quote=True)
 
 
-ORGANISATION = {"@type": "Organization", "name": "Kriko", "url": f"{ORIGIN}/"}
+def _handoff(ui: dict) -> str:
+    """A mailto: link that sends the reader the install page, for a phone that cannot run Kriko.
+
+    Plain HTML on purpose: these pages run no script, and the site sends nothing anywhere."""
+    return _e(f'mailto:?subject={quote(ui["phone_subject"])}&body={quote(ORIGIN + ui["get"], safe="")}')
+
+
+ORGANISATION = {"@type": "Organization", "@id": f"{ORIGIN}/#organization", "name": "Kriko", "url": f"{ORIGIN}/",
+                "logo": f"{ORIGIN}/assets/icon-128.png", "sameAs": ["https://github.com/Berbadov/kriko"]}
 
 
 def _breadcrumbs(trail: list[tuple[str, str]]) -> dict:
@@ -379,13 +406,69 @@ def _breadcrumbs(trail: list[tuple[str, str]]) -> dict:
                                 for n, (name, path) in enumerate(trail, 1)]}
 
 
-def _article(lang: str, *, headline: str, description: str, path: str, modified: str) -> dict:
+def _take(parts: list[str], limit: int) -> tuple[list[str], int]:
+    """As many whole `parts` as fit in `limit`, and how many were left, never cutting one in half.
+
+    The first one is always kept: half a sentence joined to another reads worse than a long one.
+    """
+    kept: list[str] = []
+    size = 0
+    for part in parts:
+        if kept and size + len(part) + 2 > limit:
+            break
+        kept.append(part)
+        size += len(part) + 2
+    return kept, len(parts) - len(kept)
+
+
+def _article(lang: str, *, headline: str, description: str, path: str, modified: str,
+             about: str = "", citations: tuple[str, ...] = ()) -> dict:
     page = {"@context": "https://schema.org", "@type": "Article", "headline": headline, "description": description,
             "inLanguage": UI[lang]["html_lang"], "mainEntityOfPage": f"{ORIGIN}{path}",
-            "image": f"{ORIGIN}/assets/share-card.jpg", "author": ORGANISATION, "publisher": ORGANISATION}
+            "image": f"{ORIGIN}/assets/share-card.jpg", "author": ORGANISATION, "publisher": ORGANISATION,
+            "isPartOf": {"@type": "WebSite", "name": "Kriko", "url": f"{ORIGIN}/"}}
+    if about:
+        page["about"] = {"@type": "Product", "name": about}
+    if citations:
+        # The pages the findings were read from, so a machine can follow the evidence, not just us.
+        page["citation"] = list(citations)
     if modified:
         page["dateModified"] = modified
     return page
+
+
+def _product_faq(lang: str, label: str, claims: list[dict]) -> dict:
+    """The two questions this page answers, in the words a buyer types, from the claims it already shows.
+
+    It cannot disagree with the page: the first answer is the claim titles the reader can see, worst
+    first, and the second is the advice printed under them. No question is invented that the page
+    does not answer.
+    """
+    ui = UI[lang]
+    titles = [c["text"][lang]["title"].strip().rstrip(".") for c in claims]
+    shown, rest = _take(titles, 600)
+    what = "; ".join(shown)
+    if rest:
+        what += ", " + ui["faq_more"].format(n=rest)
+    sentences = [sentence for claim in claims for sentence in re.split(r"(?<=[.!?])\s+", claim["text"][lang]["advice"].strip()) if sentence]
+    advice, _ignored = _take(sentences, 700)
+    return {"@context": "https://schema.org", "@type": "FAQPage", "inLanguage": ui["html_lang"],
+            "mainEntity": [
+                {"@type": "Question", "name": ui["faq_what"].format(label=label),
+                 "acceptedAnswer": {"@type": "Answer", "text": f"{what}. {ui['faq_note']}"}},
+                {"@type": "Question", "name": ui["faq_check"].format(label=label),
+                 "acceptedAnswer": {"@type": "Answer", "text": " ".join(advice) if advice else ui["note"]}},
+            ]}
+
+
+def _citations(claims: list[dict], limit: int = 20) -> tuple[str, ...]:
+    """The source pages behind these claims, once each, in the order the page names them."""
+    seen: list[str] = []
+    for claim in claims:
+        for url, _domain in claim["sources"]:
+            if url not in seen:
+                seen.append(url)
+    return tuple(seen[:limit])
 
 
 def _collection(lang: str, *, name: str, description: str, path: str, items: list[tuple[str, str]]) -> dict:
@@ -640,7 +723,8 @@ def _subject_page(catalog: dict, entry: dict, subject: dict, lang: str, claims: 
     buying_steps = "".join(f'<li>{_e(step)}</li>' for step in ui["buying_steps"])
     buying = f'      <section class="buying"><h2>{_e(ui["buying"].format(label=label))}</h2><ol>{buying_steps}</ol></section>\n'
     cta = (f'      <aside class="cta"><h2>{_e(ui["cta_h"])}</h2><p>{_e(ui["cta_p"])}</p>'
-           f'<p><a class="button" href="{ui["get"]}">{_e(ui["cta_b"])}</a></p></aside>\n')
+           f'<p><a class="button" href="{ui["get"]}">{_e(ui["cta_b"])}</a></p>'
+           f'<p class="handoff">{_e(ui["phone_p"])} <a href="{_handoff(ui)}">{_e(ui["phone_a"])}</a></p></aside>\n')
     body = (f'      <header class="pp-head">\n'
             f'      <p class="crumb"><a href="{ui["prefix"]}/problems/">{_e(ui["crumb"])}</a> › '
             f'<a href="{ui["prefix"]}/problems/{entry["catalog_slug"]}/">{_e(category)}</a></p>\n'
@@ -661,7 +745,9 @@ def _subject_page(catalog: dict, entry: dict, subject: dict, lang: str, claims: 
     title = ui["title_risk" if risky else "title"].format(label=label)
     schema = (_breadcrumbs([(ui["crumb"], f'{ui["prefix"]}/problems/'),
                             (category, f'{ui["prefix"]}/problems/{entry["catalog_slug"]}/'), (label, path)]),
-              _article(lang, headline=title, description=description, path=path, modified=_updated(claims)))
+              _article(lang, headline=title, description=description, path=path, modified=_updated(claims),
+                       about=label, citations=_citations(claims)),
+              _product_faq(lang, label, claims))
     return _chrome(lang, title=title, description=description, path=path,
                    alternates=alternates, depth=3 if lang == "tr" else 2, css=css, body=body, schema=schema)
 
@@ -727,7 +813,8 @@ def _safety_page(lang: str, entries: list[dict], css: str, have: set[str]) -> st
                      f'<p>{_e(ui["products"].format(n=len(rows)))}</p></div>\n'
                      f'      <div class="alert-col"><ul class="alerts">{"".join(_alert_row(lang, *row) for row in rows)}</ul></div></section>\n')
     cta = (f'      <aside class="cta wide"><div><h2>{_e(ui["cta_h"])}</h2><p>{_e(ui["cta_p"])}</p></div>'
-           f'<p><a class="button" href="{ui["get"]}">{_e(ui["cta_b"])}</a></p></aside>\n')
+           f'<p><a class="button" href="{ui["get"]}">{_e(ui["cta_b"])}</a></p>'
+           f'<p class="handoff">{_e(ui["phone_p"])} <a href="{_handoff(ui)}">{_e(ui["phone_a"])}</a></p></aside>\n')
     body = (f'      <header class="pp-head">\n      <p class="crumb"><a href="{ui["prefix"]}/problems/">{_e(ui["crumb"])}</a></p>\n'
             f'      <h1>{icon("flame", "ico big hazard")}{_e(ui["safety_title"])}</h1>\n      <p class="lead">{_e(ui["safety_lead"])}</p>\n'
             + _stats([("sev-high", len(found), ui["stat_safety"]), ("plain", len(by_catalog), ui["stat_categories"])]) + '      </header>\n'
@@ -778,7 +865,8 @@ def _category_page(lang: str, items: list[dict], css: str, have: set[str], spons
     stats = _stats([("plain", len(items), ui["stat_products"]), ("plain", reports, ui["stat_reports"])]
                    + ([("sev-high", flagged, ui["stat_safety"])] if flagged else []))
     cta = (f'      <aside class="cta"><h2>{_e(ui["cta_h"])}</h2><p>{_e(ui["cta_p"])}</p>'
-           f'<p><a class="button" href="{ui["get"]}">{_e(ui["cta_b"])}</a></p></aside>\n')
+           f'<p><a class="button" href="{ui["get"]}">{_e(ui["cta_b"])}</a></p>'
+           f'<p class="handoff">{_e(ui["phone_p"])} <a href="{_handoff(ui)}">{_e(ui["phone_a"])}</a></p></aside>\n')
     body = (f'      <header class="pp-head">\n'
             f'      <p class="crumb"><a href="{ui["prefix"]}/problems/">{_e(ui["crumb"])}</a></p>\n'
             f'      <h1>{icon(first["icon"], "ico big")}{_e(ui["cat_title"].format(name=name))}</h1>\n'
@@ -821,7 +909,8 @@ def _hub_page(lang: str, entries: list[dict], css: str) -> str:
     stats = _stats([("plain", len(entries), ui["stat_products"]), ("plain", sum(e["counts"][lang] for e in entries), ui["stat_reports"]),
                     ("plain", len(by_catalog), ui["stat_categories"])] + ([("sev-high", flagged, ui["stat_safety"])] if flagged else []))
     cta = (f'      <aside class="cta wide"><div><h2>{_e(ui["cta_h"])}</h2><p>{_e(ui["cta_p"])}</p></div>'
-           f'<p><a class="button" href="{ui["get"]}">{_e(ui["cta_b"])}</a></p></aside>\n')
+           f'<p><a class="button" href="{ui["get"]}">{_e(ui["cta_b"])}</a></p>'
+           f'<p class="handoff">{_e(ui["phone_p"])} <a href="{_handoff(ui)}">{_e(ui["phone_a"])}</a></p></aside>\n')
     body = (f'      <header class="pp-head">\n      <h1>{_e(ui["hub_title"])}</h1>\n      <p class="lead">{_e(ui["hub_lead"])}</p>\n'
             + stats + '      </header>\n'
             + _safety_first(lang, entries, ui["serious_h"], SAFETY_FIRST, everything=True) +
