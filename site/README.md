@@ -56,6 +56,27 @@ page a Turkish version, add it to `PAGES` in `render-locales.cjs` and give it an
 `@meta:<name>` entry in `tr.json`. In a Turkish page a link to `/`, `/#place` or
 `/guide/` is sent to the Turkish version, and `/privacy/` stays English.
 
+## Search and answer engines
+
+`tools/discovery.cjs` generates JSON-LD for the English and Turkish home and
+guide pages during `build:site`. It identifies the project, website and desktop
+app with stable IDs. FAQ questions and answers come from the visible HTML,
+after translation, and the guide has localized breadcrumbs. Edit the HTML and
+translations, then rebuild; do not edit the generated `discovery-data` blocks.
+No browser JavaScript is needed to read this data or the answers.
+
+`llms.txt` is a short, optional guide to the public app documentation and sourced
+product pages. It is not an indexing standard or a promise of AI citations.
+`robots.txt` already permits crawlers except under `/tools/`; keep the sitemaps
+as the complete URL inventory. FAQ markup describes the visible answers, but
+does not imply eligibility for Google's restricted FAQ rich results.
+
+After deployment, verify the new HTML at both language URLs, then run the
+IndexNow command below. Submit both sitemaps in the owner's Google Search
+Console and Bing Webmaster Tools accounts. Track non-brand search impressions,
+clicks to product pages, app downloads and identifiable AI referral traffic;
+rankings and citations require observation after engines recrawl the pages.
+
 ## The guide
 
 `guide/index.html` walks through using Kriko with a film of each step: check a
