@@ -454,3 +454,85 @@ test('both home pages link to the problem pages in their own language', () => {
     assert.ok(load(page).querySelector(`footer a[href="${href}"]`), `${page.file} has no footer link to ${href}`);
   }
 });
+
+// A phone cannot run Kriko, and most visitors who arrive from a search are on one. Every page that
+// asks for an install also offers a touch screen a way to carry the install page to a computer.
+test('a touch screen is offered a mailto: that sends the install page in the page\'s own language, and a mouse is not', () => {
+  assert.match(css, /\.handoff\s*\{\s*display:\s*none;\s*\}/, 'the hand-off must start hidden');
+  assert.match(css, /@media\s*\(pointer:\s*coarse\)\s*\{\s*\.handoff\s*\{\s*display:\s*block;[^}]*\}\s*\}/, 'a touch screen must show it');
+  const all = generated();
+  // JSDOM holds a whole parsed page; 676 of them at once exhausts the heap. Every
+  // 25th page is enough to catch a missing hand-off or a wrong language target.
+  const asking = [...HOME.map((page) => page.file), ...all.filter((_, i) => i % 25 === 0)];
+  assert.ok(asking.length > 20, 'too few pages were checked');
+  for (const file of asking) {
+    const lang = file.startsWith('tr/') ? 'tr' : 'en';
+    const d = new JSDOM(read(file), { url: `https://kriko.cc/${file.replace(/index\.html$/, '')}` }).window.document;
+    const links = [...d.querySelectorAll('.handoff a[href^="mailto:"]')];
+    assert.ok(links.length >= 1, `${file} offers a phone no way to carry the link to a computer`);
+    for (const link of links) {
+      const mail = new URL(link.href);
+      const body = new URLSearchParams(mail.search).get('body');
+      // The generated pages carry the reader's own install page; the hand-written
+      // home pages carry their install section, and are not rebuilt per language.
+      if (!HOME.some((page) => page.file === file)) {
+        assert.equal(body, lang === 'tr' ? 'https://kriko.cc/tr/install/' : 'https://kriko.cc/install/', `${file}: the mail carries the wrong page`);
+      }
+      assert.ok(new URLSearchParams(mail.search).get('subject'), `${file}: the mail has no subject`);
+    }
+  }
+});
+
+test('llms.txt says what Kriko is, links every catalog, and is what the tooling writes', () => {
+  const before = read('llms.txt');
+  try {
+    execFileSync(process.execPath, [path.join(root, 'tools/render_llms.cjs')], { stdio: 'pipe' });
+  } catch (error) {
+    assert.fail(`render_llms failed:\n${error.stderr}`);
+  }
+  const now = read('llms.txt');
+  if (now !== before) fs.writeFileSync(path.join(root, 'llms.txt'), before);
+  assert.equal(now, before, 'llms.txt is stale: run node site/tools/render_llms.cjs and commit the result');
+  assert.match(before, /^# Kriko\n\n> Kriko is a free, open-source/, 'llms.txt does not open with what Kriko is');
+  for (const link of ['https://kriko.cc/', 'https://kriko.cc/guide/', 'https://kriko.cc/privacy/', 'https://kriko.cc/tr/', 'https://kriko.cc/problems/safety/']) {
+    assert.ok(before.includes(`](${link})`), `llms.txt does not link ${link}`);
+  }
+  const hub = load({ file: 'problems/index.html', url: 'https://kriko.cc/problems/' });
+  for (const card of hub.querySelectorAll('.cards .card')) {
+    const url = new URL(card.getAttribute('href'), 'https://kriko.cc').href;
+    assert.ok(before.includes(`](${url})`), `llms.txt does not link ${url}`);
+  }
+});
+
+test('robots.txt lets the answer engines in and names the file written for them', () => {
+  const robots = read('robots.txt');
+  for (const bot of ['Googlebot', 'Bingbot', 'GPTBot', 'OAI-SearchBot', 'ChatGPT-User', 'ClaudeBot', 'Claude-SearchBot', 'PerplexityBot', 'Google-Extended']) {
+    assert.match(robots, new RegExp(`^User-agent: ${bot}$`, 'm'), `robots.txt does not name ${bot}`);
+  }
+  assert.match(robots, /^Allow: \/$/m, 'a named crawler is not allowed in');
+  assert.match(robots, /^Disallow: \/tools\/$/m);
+  assert.match(robots, /https:\/\/kriko\.cc\/llms\.txt/, 'robots.txt does not point at llms.txt');
+});
+
+test('a product page answers the two questions a buyer asks, and names the pages behind its findings', () => {
+  for (const [file, label, ask] of [['problems/mercedes-eqb/index.html', 'Mercedes EQB', /^What is known to go wrong with Mercedes EQB\?$/],
+    ['tr/problems/mercedes-eqb/index.html', 'Mercedes EQB', /^Mercedes EQB ile ilgili bilinen sorunlar neler\?$/]]) {
+    const product = new JSDOM(read(file)).window.document;
+    const blocks = [...product.querySelectorAll('script')].map((s) => JSON.parse(s.textContent));
+    const faq = blocks.find((block) => block['@type'] === 'FAQPage');
+    assert.ok(faq, `${file} answers no question`);
+    assert.equal(faq.mainEntity.length, 2, file);
+    assert.match(faq.mainEntity[0].name, ask, `${file}: the first question is not the one a buyer types`);
+    for (const question of faq.mainEntity) {
+      assert.match(question.name, /\?$/, question.name);
+      assert.ok(question.acceptedAnswer.text.length > 40, `${file}: ${question.name} has no answer`);
+    }
+    const article = blocks.find((block) => block['@type'] === 'Article');
+    assert.equal(article.about.name, label, `${file}: the article is not about the product`);
+    assert.ok(article.isPartOf, `${file}: the article belongs to no site`);
+    // A declared citation that the page does not print would be a source only a machine sees.
+    const printed = new Set([...product.querySelectorAll('.src a')].map((a) => a.getAttribute('href')));
+    assert.ok(article.citation.length >= 3, `${file} cites ${article.citation.length} sources`);
+    for (const url of article.citation) assert.ok(printed.has(url), `${file}: ${url} is cited but not on the page`);
+  }
+});
