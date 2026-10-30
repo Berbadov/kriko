@@ -412,7 +412,8 @@ class ResidentTransport:
                 else:
                     remaining = deadline - time.monotonic()
                     if remaining <= 0:
-                        raise TimeoutError("timed out waiting for an idle agent worker")
+                        raise TransportUnavailable(
+                            "timed out waiting for an idle agent worker")
                     self._available.wait(min(0.05, remaining))
                     continue
             if evict is not None:
@@ -484,8 +485,11 @@ class ResidentTransport:
             wire.handshake(worker, min(20.0, max(0.0, deadline - time.monotonic())))
             worker.handshake_ms = (time.monotonic() - handshake_started) * 1000
         except TimeoutError:
+            # A worker that would not say hello in time is a slow start, not a
+            # refused turn: nothing was delivered, so `auto` can fall back to
+            # a fresh process instead of failing the run.
             _release(worker)
-            raise
+            raise TransportUnavailable(f"{wire.name} did not initialize in time") from None
         except BaseException as exc:
             _release(worker)
             raise TransportUnavailable(f"{wire.name} initialization failed: {exc}") from exc
@@ -854,8 +858,14 @@ class AcpWire(Wire):
             except BaseException as callback_error:
                 raise _PropagateCallbackError(callback_error) from None
             started = time.monotonic()
-            created = worker.rpc("session/new", {"cwd": str(Path(profile.cwd).resolve()), "mcpServers": []},
-                                 timeout=_remaining(deadline))
+            try:
+                created = worker.rpc("session/new", {"cwd": str(Path(profile.cwd).resolve()), "mcpServers": []},
+                                     timeout=_remaining(deadline))
+            except TimeoutError:
+                # The session never opened: nothing was delivered, so `auto`
+                # can fall back to a fresh process rather than failing the run.
+                raise TransportUnavailable(
+                    f"{self.name} did not open a session in time") from None
             metrics["session_start_ms"] = (time.monotonic() - started) * 1000
             session_id = str(created.get("sessionId") or "")
             if not session_id:
@@ -884,10 +894,14 @@ class AcpWire(Wire):
             def handle(message: dict[str, Any], raw: str) -> Any:
                 nonlocal events
                 if message.get("id") == prompt_id and "method" not in message:
-                    accept()
                     if "error" in message:
+                        # An error response is a *rejection*, not an accepted
+                        # turn: nothing ran, so `auto` may safely replay it on
+                        # a fresh process. Recording it as accepted made every
+                        # such failure look like a delivered turn.
                         _delivery(delivery, "rejected", session_id, str(prompt_id), message["error"])
                         raise TurnRejected(_error_message(message["error"]))
+                    accept()
                     result = message.get("result")
                     return result if isinstance(result, Mapping) else {}
                 if message.get("method") != "session/update":
