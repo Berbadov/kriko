@@ -171,6 +171,89 @@ def test_health_reports_which_store_it_is_looking_at(client):
     assert body["store"].endswith("store.sqlite")
 
 
+def test_health_serves_the_work_answers_from_the_probe_snapshot(client):
+    """`store_readable` and `jobs` come from the background probe, not inline.
+
+    The shell's watchdog polls this endpoint while the app is busy, and a
+    health check that waits on the store lock or the runner's lock reads as
+    "stopped answering" to a process that is fine. The endpoint must answer
+    from the last finished probe round, so these keys are always present and
+    shaped the way the probe computes them.
+    """
+    body = client.get("/api/health").json()
+    assert body["store_readable"] is True
+    assert set(body["jobs"]) == {"running", "queued", "concurrency", "agent_slots"}
+
+
+def test_health_answers_while_the_store_is_locked(tmp_path):
+    """A locked store must not hold the health answer.
+
+    Reproduces the wedged-watchdog report: another process holds the engine
+    store (an orphaned sidecar, the MCP server) and the sync probe's SQLite
+    read blocks on the 5 s busy timeout. With the answer served from the
+    probe snapshot the endpoint still returns immediately, carrying the last
+    finished round.
+    """
+    import time
+
+    store_path = tmp_path / "locked.sqlite"
+    conn = connect(store_path)
+    conn.execute("BEGIN EXCLUSIVE")
+    conn.execute("CREATE TABLE IF NOT EXISTS hold (x)")
+    # An exclusive transaction held open blocks every other connection's
+    # read past its busy timeout; commit nothing until the end.
+    app = create_app(
+        Settings(
+            store_path=store_path,
+            analysis_log_path=tmp_path / "analyses.jsonl",
+            app_state_path=tmp_path / "app.sqlite",
+        )
+    )
+    probe = app.state.health_probe
+    try:
+        with TestClient(app) as tc:
+            started = time.monotonic()
+            body = tc.get("/api/health").json()
+            elapsed = time.monotonic() - started
+        assert body["ok"] is True
+        # The inline probe would block for the store's 5 s busy timeout; the
+        # snapshot answer is immediate (the generous bound leaves room for a
+        # slow CI machine, not for a SQLite wait).
+        assert elapsed < 2.0, f"/api/health took {elapsed:.2f}s with the store locked"
+        assert "store_readable" in body and "jobs" in body
+    finally:
+        conn.rollback()
+        conn.close()
+        probe.stop()
+
+
+def test_the_probe_keeps_the_previous_answer_when_a_round_times_out(tmp_path):
+    """A probe round that outlives its budget reports staleness, not a default."""
+    import threading
+
+    from app.web import app as web_app
+
+    store_path = tmp_path / "store.sqlite"
+    connect(store_path).close()
+
+    class WedgedRunner:
+        def concurrency(self):
+            threading.Event().wait(30)  # never answers inside the budget
+            return {"running": 0, "queued": 0, "concurrency": 0, "agent_slots": 0}
+
+    probe = web_app.HealthProbe(store_path, WedgedRunner())
+    try:
+        first = probe.snapshot()
+        assert first["store_readable"] is True
+        # Force a refresh whose jobs probe wedges; the store half still
+        # finishes, the jobs half keeps the previous value.
+        store_readable, jobs = probe._refresh()
+        assert store_readable is True
+        assert jobs == first["jobs"], "a wedged probe must keep the last answer"
+    finally:
+        probe.stop()
+
+
 # ── packs ────────────────────────────────────────────────────────────────
 
 
@@ -752,7 +835,9 @@ def test_the_frontmatter_description_is_one_line(client):
     """A harness matches a skill by reading this line. A wrapped description
     is not a description — it is a parse error the reader never sees."""
     body = client.get("/api/agent-skill").json()["body"]
-    description = re.search(r"^description: (.+)$", body, re.M).group(1)
+    found = re.search(r"^description: (.+)$", body, re.M)
+    assert found is not None, "the skill body has no description line"
+    description = found.group(1)
     assert "\n" not in description
     assert len(description) > 40
 
