@@ -177,7 +177,8 @@ RESIDENT_COOLDOWN_SECONDS = 600.0
 #: used to spend the whole answer budget (`session/new` waited on the turn's
 #: deadline), and the fresh-process fallback then had seconds left — the
 #: 102-second Mistral turn in the 0.3.8 field log. Bounded here, the fallback
-#: inherits the rest of the turn.
+#: inherits the rest of the turn, and the same allowance bounds a warm-up
+#: started while the host reads its pages.
 RESIDENT_START_SECONDS = 10.0
 _RESIDENT_UNHEALTHY: dict[str, float] = {}
 _RESIDENT_HEALTH_LOCK = threading.Lock()
@@ -2998,6 +2999,9 @@ class HarnessResearcher(AgentResearcher):
         self._live_last_emit = 0.0
         self._live_published = ""
         self._streamed_blocks: dict[str, dict] = {}
+        #: Whether this turn has already asked a worker to start in the
+        #: background. One attempt per turn: a second saves nothing.
+        self._warm_started = False
         #: Why nothing came back, when nothing came back. `tasks.py` cannot
         #: read this yet; `_research`'s log gets it through the exception on
         #: the paths that are genuinely broken, and through an empty gather on
@@ -3428,6 +3432,38 @@ class HarnessResearcher(AgentResearcher):
             quicklook_answer=False, source_line=True,
         )
 
+    def _start_warm(self) -> None:
+        """Start this turn's agent while the host reads the pages.
+
+        A host-read turn spends one to twenty seconds searching and reading
+        before the agent is asked anything, and a resident CLI needs some of
+        those seconds to start and open a session. Warming it in the background
+        turns that cold start into time already being spent. Once per turn,
+        never blocking, and never fatal: a warm-up that fails is just the cold
+        start this turn would have paid without it.
+        """
+        if self._warm_started:
+            return
+        self._warm_started = True
+        if self.harness.protocol not in {"claude", "vibe"}:
+            return
+        if self.transport_mode not in {"auto", "persistent"}:
+            return
+        try:
+            threading.Thread(target=self._warm_worker, name="kriko-warm-agent",
+                             daemon=True).start()
+        except Exception:  # noqa: BLE001 — no thread is a cold start, not a failure
+            pass
+
+    def _warm_worker(self) -> None:
+        from app.providers import resident
+
+        try:
+            profile = self._resident_profile()
+            resident.transport().warm(profile, timeout=RESIDENT_START_SECONDS)
+        except Exception:  # noqa: BLE001 — a cold start later is the only cost
+            pass
+
     def _ask_with_pages(self, queries: list[str], prompt: str, *, product: str = "",
                         page=None, prefer_issues: bool = False,
                         quicklook_answer: bool = False,
@@ -3439,6 +3475,7 @@ class HarnessResearcher(AgentResearcher):
         reader = None
         answer_stage = {"stage": "answer", "ms": 0.0, "failed": False,
                         "tokens_in": None, "tokens_out": None, "tokens_used": None}
+        self._start_warm()
         try:
             reader, pages, identity = self._read_web_pages(
                 queries, product=product, page=page, prefer_issues=prefer_issues,
