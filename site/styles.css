@@ -151,7 +151,7 @@ kbd { white-space: nowrap; font: 600 .85em var(--sans); padding: .1em .45em; bor
 @keyframes menu-in { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
 
 /* Buttons */
-.button { display: inline-flex; align-items: center; gap: 10px; padding: 13px 27px; font: 650 1.0625rem/1.2 var(--display); color: var(--on-accent); background: var(--accent); border: 2px solid var(--accent); border-radius: 999px; text-decoration: none; transition: background-color .18s ease, border-color .18s ease, transform .18s ease, box-shadow .18s ease; }
+.button { display: inline-flex; align-items: center; gap: 10px; padding: 13px 27px; font: 650 1.0625rem/1.2 var(--display); color: var(--on-accent); background: var(--accent); border: 1px solid var(--accent); border-radius: 999px; text-decoration: none; transition: background-color .18s ease, border-color .18s ease, transform .18s ease, box-shadow .18s ease; }
 .button:hover { background: var(--accent-hover); border-color: var(--accent-hover); color: var(--on-accent); text-decoration: none; transform: translateY(-2px); box-shadow: 0 10px 24px -12px rgba(36, 71, 230, .55); }
 .button:active { transform: translateY(0); box-shadow: none; }
 .button .icon { transition: transform .2s var(--ease); }
@@ -205,6 +205,10 @@ h1 { font-size: clamp(3.6rem, 7.8vw, 7rem); line-height: 1.0; letter-spacing: -.
 h1 span { color: var(--accent); display: block; }
 .lead { margin-top: 36px; max-width: 32em; font-size: 1.375rem; line-height: 1.65; color: var(--muted); text-wrap: pretty; }
 .actions { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 38px; }
+/* In the hero the buttons sit on the moving shader, so the quiet ones get a
+   frosted chip of the page behind them to stay readable. */
+.hero.home .actions { margin-top: 30px; }
+.hero.home .actions .button.ghost, .hero.home .actions .button.quiet { background: color-mix(in srgb, var(--bg) 72%, transparent); backdrop-filter: blur(8px); }
 .section .actions { margin-top: 44px; }
 .fine { margin-top: 20px; font-size: 1rem; line-height: 1.65; color: var(--muted); }
 .hero.home .hero-copy > .label { display: inline-flex; align-items: center; gap: 10px; padding: 7px 14px; margin-bottom: 26px; font-size: 1rem; letter-spacing: .08em; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 999px; }
