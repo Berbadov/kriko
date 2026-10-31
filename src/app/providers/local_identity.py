@@ -110,8 +110,12 @@ class ProductIdentity:
         every byte of identity here is a byte of source evidence not shown.
         """
         full = self.as_dict()
-        return {key: value for key, value in full.items()
-                if value not in ("", [], ()) and key not in ("evidence", "source", "resolved")}
+        return {
+            key: value
+            for key, value in full.items()
+            if value not in ("", [], ())
+            and key not in ("evidence", "source", "resolved")
+        }
 
     @property
     def dependent(self) -> bool:
@@ -135,9 +139,11 @@ class ProductIdentity:
         }
 
 
-def identity_prompt(product_prompt: str, listing_text: str = "", search_language: str = "") -> str:
+def identity_prompt(
+    product_prompt: str, listing_text: str = "", search_language: str = ""
+) -> str:
     """Ask a small model for identity supported only by the provided text."""
-    language = (f" in language {search_language}" if search_language else "")
+    language = f" in language {search_language}" if search_language else ""
     return f"""Extract exact product identity from the reader prompt and listing. Never guess model,
 trim, year, size, revision, configuration, or identifier. Leave unsupported details empty and
 state them in unknowns. Aliases and variant must be explicit in supplied text. Evidence quotes
@@ -262,8 +268,12 @@ def _fallback(
 ) -> ProductIdentity:
     """Preserve the reader's seed without claiming a resolved variant."""
     name = clean_product_name(product_prompt or "") or "Unknown product"
-    return ProductIdentity(canonical_name=name, unknowns=unknowns, resolved=False,
-                           stated=stated_tokens(product_prompt or ""))
+    return ProductIdentity(
+        canonical_name=name,
+        unknowns=unknowns,
+        resolved=False,
+        stated=stated_tokens(product_prompt or ""),
+    )
 
 
 def _grounded(value: object, corpus: str) -> bool:
@@ -282,9 +292,14 @@ def _facets(data: dict, corpus: str) -> dict[str, Any]:
     checked against the text; it only steers searches and the page filter,
     and every finding still has to pass its own evidence check.
     """
+
     def grounded(key: str) -> str:
         value = data.get(key)
-        return " ".join(value.split()) if isinstance(value, str) and _grounded(value, corpus) else ""
+        return (
+            " ".join(value.split())
+            if isinstance(value, str) and _grounded(value, corpus)
+            else ""
+        )
 
     item = grounded("item")
     listed = data.get("item_terms")
@@ -293,13 +308,21 @@ def _facets(data: dict, corpus: str) -> dict[str, Any]:
         if not isinstance(value, str):
             continue
         term = " ".join(value.split())
-        if (term and len(term) <= 40 and len(term.split()) <= 4
-                and any(c.isalpha() for c in term) and term not in terms):
+        if (
+            term
+            and len(term) <= 40
+            and len(term.split()) <= 4
+            and any(c.isalpha() for c in term)
+            and term not in terms
+        ):
             terms.append(term)
     fits = grounded("fits")
-    return {"brand": grounded("brand"), "item": item,
-            "item_terms": tuple(terms[:5]) if fits else (),
-            "fits": fits if fits and terms else ""}
+    return {
+        "brand": grounded("brand"),
+        "item": item,
+        "item_terms": tuple(terms[:5]) if fits else (),
+        "fits": fits if fits and terms else "",
+    }
 
 
 def parse_identity(
@@ -309,9 +332,7 @@ def parse_identity(
     data = _json_object(raw)
     prompt = clean_product_name(product_prompt or "")
     if data is None:
-        return _fallback(
-            prompt, ("identity extraction failed", "exact variant")
-        )
+        return _fallback(prompt, ("identity extraction failed", "exact variant"))
     required = set(IDENTITY_SCHEMA["required"][:6])
     optional = set(IDENTITY_SCHEMA["required"][6:])
     list_fields = ("aliases", "identifiers", "unknowns", "evidence")
@@ -334,10 +355,13 @@ def parse_identity(
         # The name is the reader's own words; what the model still got right
         # about the item and what it fits is kept, because a dependent part
         # is searched and filtered by those and not by the whole title.
-        return replace(_fallback(
-            prompt,
-            ("exact identity not verified from supplied text", "exact variant"),
-        ), **facets)
+        return replace(
+            _fallback(
+                prompt,
+                ("exact identity not verified from supplied text", "exact variant"),
+            ),
+            **facets,
+        )
 
     variant = variant.strip() if _literal(variant, corpus) else ""
     aliases = tuple(
@@ -356,10 +380,15 @@ def parse_identity(
             for value in data["identifiers"]
             if isinstance(value, str)
             and _literal(value, corpus)
-            and (_distinctive_identifier(value)
-                 or (listing_text and _literal(name, listing_text)
-                     and any(c.isalpha() for c in value)
-                     and any(c.isdigit() for c in value)))
+            and (
+                _distinctive_identifier(value)
+                or (
+                    listing_text
+                    and _literal(name, listing_text)
+                    and any(c.isalpha() for c in value)
+                    and any(c.isdigit() for c in value)
+                )
+            )
         )
     )
     evidence = tuple(
@@ -451,21 +480,32 @@ def names_subject(identity: ProductIdentity, text: str) -> bool:
     """
     if identity.dependent or not identity.canonical_name.strip():
         return False
-    return any(_mentions(term, text)
-               for term in [identity.canonical_name, *identity.aliases, *identity.identifiers] if term)
+    return any(
+        _mentions(term, text)
+        for term in [identity.canonical_name, *identity.aliases, *identity.identifiers]
+        if term
+    )
 
 
 def host_codes(identity: ProductIdentity) -> list[str]:
     """Letter-and-digit codes of the product the item fits (an engine, a series)."""
-    return [token for token in _TOKEN.findall(identity.fits)
-            if _distinctive_identifier(token)]
+    return [
+        token
+        for token in _TOKEN.findall(identity.fits)
+        if _distinctive_identifier(token)
+    ]
 
 
 def _host_words(identity: ProductIdentity) -> set[str]:
     """Words of what the item fits that name it, not its year, count or size."""
-    own = _meaningful_tokens(" ".join([identity.item, identity.brand, *identity.item_terms]))
-    return {token for token in _meaningful_tokens(identity.fits)
-            if not any(c.isdigit() for c in token) and token not in own}
+    own = _meaningful_tokens(
+        " ".join([identity.item, identity.brand, *identity.item_terms])
+    )
+    return {
+        token
+        for token in _meaningful_tokens(identity.fits)
+        if not any(c.isdigit() for c in token) and token not in own
+    }
 
 
 def anchor_terms(identity: ProductIdentity) -> list[str]:
@@ -488,13 +528,16 @@ def source_scope(identity: ProductIdentity, title: str = "", snippet: str = "") 
     to be on the page, with its maker or the product it fits beside it.
     """
     text = f"{title}\n{snippet}"
-    terms =[*identity.item_terms, identity.item]
+    terms = [*identity.item_terms, identity.item]
     has_item = any(_mentions(term, text) for term in terms if term)
     codes = host_codes(identity)
     words = _host_words(identity)
     page_words = _meaningful_tokens(text)
-    has_host = (any(_literal(code, text) for code in codes) if codes
-                else bool(words) and len(words & page_words) * 2 >= len(words))
+    has_host = (
+        any(_literal(code, text) for code in codes)
+        if codes
+        else bool(words) and len(words & page_words) * 2 >= len(words)
+    )
     if has_host and codes and words:
         # A code alone (an engine) is not the host; its family name must show too.
         has_host = len(words & page_words) * 2 >= len(words) or len(codes) > 1
@@ -516,7 +559,7 @@ def relevant_source(
     if identity.dependent:
         return source_scope(identity, title, snippet) == "item"
     text = f"{title}\n{snippet}"
-    names =[identity.canonical_name, *identity.aliases]
+    names = [identity.canonical_name, *identity.aliases]
     named = any(
         _literal(name, text) and _identity_specific(name, identity.canonical_name)
         for name in names
@@ -528,10 +571,14 @@ def relevant_source(
     # Three characters is a model code (`A54`, `S23`): a page about that phone
     # does not repeat the storage size and the colour a listing's title adds,
     # and requiring the whole title turned every such page away.
-    model_tokens = [token for token in _TOKEN.findall(identity.canonical_name)
-                    if len(token) >= 3 and _distinctive_identifier(token)]
+    model_tokens = [
+        token
+        for token in _TOKEN.findall(identity.canonical_name)
+        if len(token) >= 3 and _distinctive_identifier(token)
+    ]
     other_tokens = _meaningful_tokens(identity.canonical_name) - {
-        _normalize(token) for token in model_tokens}
+        _normalize(token) for token in model_tokens
+    }
     code_match = any(_literal(token, text) for token in model_tokens)
     named = named or (code_match and bool(other_tokens & _meaningful_tokens(text)))
     if not (named or identifier_match):
@@ -557,9 +604,11 @@ def scope_note(identity: ProductIdentity) -> str:
         return ""
     item = identity.item_terms[0] if identity.item_terms else identity.item
     maker = f" made by {identity.brand}" if identity.brand else ""
-    return (f"SCOPE: reviewed product = the {item}{maker}. It fits {identity.fits}, "
-            f"which is context only: a fault of that product is NOT a finding "
-            f"unless the source ties it to the {item}.")
+    return (
+        f"SCOPE: reviewed product = the {item}{maker}. It fits {identity.fits}, "
+        f"which is context only: a fault of that product is NOT a finding "
+        f"unless the source ties it to the {item}."
+    )
 
 
 def conflicting_identity(identity: ProductIdentity, text: str) -> bool:
@@ -569,22 +618,62 @@ def conflicting_identity(identity: ProductIdentity, text: str) -> bool:
     is an unresolved suffix, unless the listing already supplied it. This is
     conservative: ambiguous comparison pages need evidence from a clear span.
     """
-    structural = {"owner", "owners", "review", "reviews", "report", "reports",
-                  "repair", "repairs", "manual", "specifications", "specs",
-                  "user", "users", "the", "a", "an", "is", "was", "has", "had"}
-    known = _meaningful_tokens(" ".join(
-        [identity.canonical_name, identity.variant, *identity.aliases, *identity.identifiers]))
+    structural = {
+        "owner",
+        "owners",
+        "review",
+        "reviews",
+        "report",
+        "reports",
+        "repair",
+        "repairs",
+        "manual",
+        "specifications",
+        "specs",
+        "user",
+        "users",
+        "the",
+        "a",
+        "an",
+        "is",
+        "was",
+        "has",
+        "had",
+    }
+    known = _meaningful_tokens(
+        " ".join(
+            [
+                identity.canonical_name,
+                identity.variant,
+                *identity.aliases,
+                *identity.identifiers,
+            ]
+        )
+    )
     phrase = r"\s+".join(re.escape(part) for part in identity.canonical_name.split())
     for match in re.finditer(r"(?<!\w)" + phrase + r"(?!\w)", text, re.IGNORECASE):
-        following = re.match(r"[ \t]+([^\W_][\w./-]*)", text[match.end():], re.UNICODE)
+        following = re.match(r"[ \t]+([^\W_][\w./-]*)", text[match.end() :], re.UNICODE)
         if not following:
             continue
         token = following.group(1).rstrip(".,:;")
         folded = token.casefold()
         if folded in structural or folded in known or fold(token) in identity.stated:
             continue
-        modifiers = {"pro", "plus", "max", "mini", "ultra", "lite", "gen",
-                     "generation", "mk", "rev", "revision", "edition", "series"}
+        modifiers = {
+            "pro",
+            "plus",
+            "max",
+            "mini",
+            "ultra",
+            "lite",
+            "gen",
+            "generation",
+            "mk",
+            "rev",
+            "revision",
+            "edition",
+            "series",
+        }
         if folded in modifiers or _distinctive_identifier(token) or token.isdigit():
             return True
     return False

@@ -8,6 +8,7 @@ import { useChat } from '../chat'
 import { useEngine, type Agent } from '../engine/Engine'
 import { useRecents } from '../engine/recents'
 import { usePrefs } from '../prefs'
+import { Orb } from '../ui/Orb'
 import { AgentMark, type AgentState } from '../ui/AgentMark'
 import { copyText } from '../ui/clipboard'
 import { ChatRail } from '../ui/ChatRail'
@@ -71,6 +72,7 @@ export function ChatScreen({ onOpen, onAction }: {
               exit={{ opacity: 0, y: -m.d(12) }}
               transition={m.tx.page}
             >
+              <Orb size={46} busy={running} />
               <h1>What do you want to check?</h1>
             </motion.header>
           )}

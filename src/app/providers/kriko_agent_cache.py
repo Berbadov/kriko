@@ -60,17 +60,28 @@ class RetrievalCache:
             if row is None:
                 return None
             if float(row[1]) <= at:
-                conn.execute("DELETE FROM retrieval_cache WHERE cache_key = ?", (digest,))
+                conn.execute(
+                    "DELETE FROM retrieval_cache WHERE cache_key = ?", (digest,)
+                )
                 return None
             try:
                 value = json.loads(row[0])
             except (TypeError, ValueError):
-                conn.execute("DELETE FROM retrieval_cache WHERE cache_key = ?", (digest,))
+                conn.execute(
+                    "DELETE FROM retrieval_cache WHERE cache_key = ?", (digest,)
+                )
                 return None
             return value if isinstance(value, dict) else None
 
-    def put(self, lane: str, key: str, payload: dict, *, ttl_seconds: float,
-            now: float | None = None) -> None:
+    def put(
+        self,
+        lane: str,
+        key: str,
+        payload: dict,
+        *,
+        ttl_seconds: float,
+        now: float | None = None,
+    ) -> None:
         if ttl_seconds <= 0:
             return
         at = time.time() if now is None else now
@@ -91,6 +102,4 @@ class RetrievalCache:
                 (MAX_CACHE_ROWS,),
             ).fetchall()
             if old:
-                conn.executemany(
-                    "DELETE FROM retrieval_cache WHERE cache_key = ?", old
-                )
+                conn.executemany("DELETE FROM retrieval_cache WHERE cache_key = ?", old)

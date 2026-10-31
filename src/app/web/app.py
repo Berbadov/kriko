@@ -17,6 +17,7 @@ import logging
 import os
 import sqlite3
 import sys
+import threading
 import traceback
 from contextlib import asynccontextmanager
 from dataclasses import replace
@@ -88,6 +89,100 @@ log = logging.getLogger(__name__)
 #: How many extension origins this process remembers. One dict entry per
 #: origin the caller names; a native client can name as many as it likes.
 EXTENSION_SIGHTINGS_MAX = 16
+
+#: How often the health snapshot's two "does it still work" answers are
+#: recomputed, and how long one recompute may take before it is abandoned.
+#: `/api/health` is the shell's liveness probe (polled every few seconds) and
+#: the extension's "is Kriko there", so it must answer even while every
+#: worker thread is busy — which is exactly when it is asked. Both answers
+#: come from a background refresh, and the endpoint serves the last one.
+HEALTH_REFRESH_SECONDS = 2.0
+HEALTH_PROBE_TIMEOUT = 1.0
+
+
+class HealthProbe:
+    """The two slow answers to "does it still *work*", kept off the request.
+
+    `store_readable` opens the engine's store and `jobs` asks the runner for
+    its capacity; both take locks that a busy app holds (a store write, the
+    runner's scheduler lock plus its own `app.sqlite` read), and both block
+    on SQLite's 5 s busy timeout when another process — an orphaned sidecar,
+    the MCP server — shares the file. A sync endpoint that runs them inline
+    then waits behind whatever is busy, and the shell's watchdog reads that
+    as "stopped answering" and offers a restart of a healthy process. So the
+    probe runs on its own thread, bounded by a timeout, and `/api/health`
+    serves the most recent finished answer. A probe still running when the
+    next one is due keeps its old value: staleness is the answer, a hang is
+    not.
+    """
+
+    def __init__(self, store_path, runner):
+        self._store_path = store_path
+        self._runner = runner
+        self._lock = threading.Lock()
+        # Optimistic defaults, replaced by the first refresh round: a probe
+        # that blocked in the constructor would recreate, at startup, the
+        # very hang it exists to prevent (a store another process holds open
+        # on a first run after a crash).
+        self._snapshot = {
+            "store_readable": True,
+            "jobs": {"running": 0, "queued": 0, "concurrency": 0, "agent_slots": 0},
+        }
+        self._stop = threading.Event()
+        self._thread = threading.Thread(
+            target=self._loop, name="kriko-health-probe", daemon=True
+        )
+        self._thread.start()
+        # One immediate round so the endpoint does not serve the defaults for
+        # the first HEALTH_REFRESH_SECONDS; bounded like every round, so a
+        # wedged store or runner still cannot hold the constructor.
+        store_readable, jobs = self._refresh()
+        with self._lock:
+            self._snapshot = {"store_readable": store_readable, "jobs": jobs}
+
+    def _loop(self) -> None:
+        while not self._stop.wait(HEALTH_REFRESH_SECONDS):
+            store_readable, jobs = self._refresh()
+            with self._lock:
+                self._snapshot = {"store_readable": store_readable, "jobs": jobs}
+
+    def _refresh(self) -> tuple[bool, dict]:
+        """One round of both answers, each bounded so neither can hang."""
+        results: dict[str, object] = {}
+
+        def probe_store() -> None:
+            results["store"] = _store_is_readable(self._store_path)
+
+        def probe_jobs() -> None:
+            results["jobs"] = _job_capacity(self._runner)
+
+        threads = [
+            threading.Thread(
+                target=probe_store, name="kriko-health-store", daemon=True
+            ),
+            threading.Thread(target=probe_jobs, name="kriko-health-jobs", daemon=True),
+        ]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join(timeout=HEALTH_PROBE_TIMEOUT)
+        # A probe that outlived its budget keeps the previous answer rather
+        # than reporting a default: "unknown, still checking" is the honest
+        # value, and it is what the last finished round said.
+        with self._lock:
+            previous = dict(self._snapshot)
+        return (
+            bool(results.get("store", previous["store_readable"])),
+            results.get("jobs", previous["jobs"]),  # type: ignore[return-value]
+        )
+
+    def snapshot(self) -> dict:
+        with self._lock:
+            return dict(self._snapshot)
+
+    def stop(self) -> None:
+        self._stop.set()
+        self._thread.join(timeout=HEALTH_PROBE_TIMEOUT + 1.0)
 
 
 def _record_sighting(app_state_path, origin: str, version: str) -> None:
@@ -271,7 +366,8 @@ async def lifespan(app: FastAPI):
 
             sweeper = pricescheduler.Sweeper(
                 app.state.settings.app_state_path,
-                lambda: app.state.jobs.submit("price_sweep", {}))
+                lambda: app.state.jobs.submit("price_sweep", {}),
+            )
             sweeper.tick()
             stop_price_clock = pricescheduler.start(sweeper)
         except Exception:
@@ -296,8 +392,10 @@ async def lifespan(app: FastAPI):
     finally:
         if stop_price_clock is not None:
             stop_price_clock()
+        app.state.health_probe.stop()
         app.state.jobs.shutdown()
         from app.providers import codex_profile, resident
+
         try:
             try:
                 codex_profile.shutdown()
@@ -326,7 +424,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     from app import limits as agent_limits, usage as usage_meters
 
     _limits_path = settings.app_state_path
-    agent_limits.set_sink(lambda agent, rows: usage_meters.save_limits(_limits_path, agent, rows))
+    agent_limits.set_sink(
+        lambda agent, rows: usage_meters.save_limits(_limits_path, agent, rows)
+    )
 
     # ── the log has to be somewhere this process can actually write ───────
     #
@@ -408,8 +508,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # Idle, it hands the local model's memory back to the host: a finished run
     # must not hold video memory while Kriko sits in the background.
     try:
-        app.state.jobs = JobRunner(app.state.settings, HANDLERS,
-                                   on_idle=local_inference.release)
+        app.state.jobs = JobRunner(
+            app.state.settings, HANDLERS, on_idle=local_inference.release
+        )
     except sqlite3.Error as error:
         # `JobRunner` opens the reader's `app.sqlite` for the job ledger, and
         # this is the first thing to touch it. An unopenable one — a home
@@ -424,6 +525,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         ) from error
     # What the open answers watch to know the knowledge moved (B152.4).
     app.state.knowledge_clock = KnowledgeClock(app.state.settings.store_path)
+    # The two "does it still work" answers to /api/health, refreshed in the
+    # background so the endpoint itself never waits on a store lock or the
+    # runner's scheduler lock (see HealthProbe).
+    app.state.health_probe = HealthProbe(app.state.settings.store_path, app.state.jobs)
 
     # ── the extension announces itself by calling ────────────────────────
     #
@@ -459,8 +564,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 for stale in list(loaded)[: len(loaded) - EXTENSION_SIGHTINGS_MAX + 1]:
                     loaded.pop(stale, None)
             loaded[origin] = {
-                "content_digest": digest if len(digest) == 64 and all(
-                    char in "0123456789abcdef" for char in digest) else "",
+                "content_digest": digest
+                if len(digest) == 64
+                and all(char in "0123456789abcdef" for char in digest)
+                else "",
                 "version": request.headers.get(ext.VERSION_HEADER, ""),
             }
             app.state.extension_digests = loaded
@@ -473,7 +580,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 # reader's own lookup) is waiting on.
                 await run_in_threadpool(
                     _record_sighting,
-                    app.state.settings.app_state_path, origin,
+                    app.state.settings.app_state_path,
+                    origin,
                     request.headers.get(ext.VERSION_HEADER, ""),
                 )
             except Exception:
@@ -487,12 +595,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         # fetches are exempt from CORS via `host_permissions`, but the
         # allowlist is what makes that not a thing to remember.
         response.headers[ext.MINIMUM_HEADER] = ext.MINIMUM_VERSION
-        digest_name = "firefox_staged_digest" if origin.startswith("moz-extension://") else "extension_staged_digest"
+        digest_name = (
+            "firefox_staged_digest"
+            if origin.startswith("moz-extension://")
+            else "extension_staged_digest"
+        )
         staged = getattr(app.state, digest_name, "")
         if staged:
             response.headers[ext.STAGED_HEADER] = staged
         response.headers["access-control-expose-headers"] = (
-            f"{ext.MINIMUM_HEADER}, {ext.STAGED_HEADER}")
+            f"{ext.MINIMUM_HEADER}, {ext.STAGED_HEADER}"
+        )
         return response
 
     # ── how much will be read ────────────────────────────────────────────
@@ -511,11 +624,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def not_too_large(request: Request, call_next):
         declared = request.headers.get("content-length", "")
         if declared.isdigit() and int(declared) > MAX_REQUEST_BYTES:
-            log.warning("refused %s %s: %s bytes declared",
-                        request.method, request.url.path, declared)
+            log.warning(
+                "refused %s %s: %s bytes declared",
+                request.method,
+                request.url.path,
+                declared,
+            )
             return JSONResponse(
-                {"detail": f"This request is larger than the "
-                           f"{MAX_REQUEST_BYTES // (1024 * 1024)} MB limit."},
+                {
+                    "detail": f"This request is larger than the "
+                    f"{MAX_REQUEST_BYTES // (1024 * 1024)} MB limit."
+                },
                 status_code=413,
             )
         return await call_next(request)
@@ -534,16 +653,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # browser, and 8787 is a constant published in this repository.
     @app.middleware("http")
     async def only_from_here(request: Request, call_next):
-        why = origins.refuse(
-            request.headers.get("origin"), request.headers.get("host")
-        )
+        why = origins.refuse(request.headers.get("origin"), request.headers.get("host"))
         if why is not None:
             # Logged, because the reader will see a view fail and this is the
             # only place that says why. Warning rather than error: a page
             # probing localhost is the system working, not a fault.
-            log.warning(
-                "refused %s %s: %s", request.method, request.url.path, why
-            )
+            log.warning("refused %s %s: %s", request.method, request.url.path, why)
             return JSONResponse({"detail": why}, status_code=403)
         return await call_next(request)
 
@@ -651,9 +766,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             # answer. `ok` was a constant `True`: a health check that cannot be
             # unhealthy. These two say what a reader (and the shell's own
             # watchdog) actually need — the store opens and holds what it should,
-            # and the job runner is not saturated.
-            "store_readable": _store_is_readable(app.state.settings.store_path),
-            "jobs": _job_capacity(app.state.jobs),
+            # and the job runner is not saturated. Served from the probe's
+            # snapshot, never computed inline: this endpoint is the
+            # watchdog's, and a watchdog that can be starved by the thing it
+            # watches reports a healthy process dead.
+            **app.state.health_probe.snapshot(),
         }
 
     return app

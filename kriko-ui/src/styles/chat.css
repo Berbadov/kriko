@@ -47,6 +47,12 @@
   justify-content: center;
 }
 
+.hello .orb {
+  display: block;
+  margin: 0 auto 26px;
+  filter: drop-shadow(0 0 22px color-mix(in srgb, var(--accent-hi) 55%, transparent));
+}
+
 .hello h1 {
   margin: 0 0 26px;
   color: #fff;
@@ -54,7 +60,7 @@
   font-weight: 600;
   letter-spacing: -0.025em;
   text-align: center;
-  text-shadow: 0 2px 28px rgba(10, 20, 70, 0.5);
+  text-shadow: 0 2px 28px rgba(0, 0, 0, 0.4);
 }
 
 .dock {
@@ -78,7 +84,7 @@
   padding: 14px 14px 10px;
   background: var(--glass);
   border: 1px solid var(--glass-edge);
-  border-radius: 24px;
+  border-radius: var(--r-xl);
   box-shadow: var(--shadow-2);
   backdrop-filter: blur(24px) saturate(1.5);
   transition: border-color calc(160ms * var(--tm));
@@ -192,7 +198,7 @@
   padding: 14px 16px;
   background: var(--panel);
   border: 1px solid var(--edge);
-  border-radius: 16px;
+  border-radius: var(--r-l);
   text-align: left;
   transition:
     border-color calc(160ms * var(--tm)),
@@ -247,7 +253,7 @@
   padding: 10px 15px;
   background: var(--accent-soft);
   border: 1px solid var(--edge);
-  border-radius: 18px 18px 6px 18px;
+  border-radius: var(--r-l) 12px 4px 12px;
   overflow-wrap: anywhere;
 }
 
@@ -270,14 +276,14 @@
   padding: 6px 10px;
   background: var(--panel);
   border: 1px solid var(--edge);
-  border-radius: 16px;
+  border-radius: var(--r-l);
 }
 
 /* More than a couple of products fold into one line the reader opens. */
 .product-list {
   background: var(--panel);
   border: 1px solid var(--edge);
-  border-radius: 16px;
+  border-radius: var(--r-l);
   overflow: hidden;
 }
 
@@ -356,7 +362,7 @@
   color: var(--ink-3);
   background: var(--glass);
   border: 1px solid var(--edge);
-  border-radius: 12px;
+  border-radius: var(--r-l);
 }
 
 .listing-image img {
@@ -457,7 +463,7 @@
 .md code {
   padding: 1px 6px;
   background: var(--panel-2);
-  border-radius: 6px;
+  border-radius: var(--r-s);
   font-family: var(--mono);
   font-size: 0.88em;
 }
@@ -466,7 +472,7 @@
   padding: 12px 14px;
   overflow: auto;
   background: var(--panel-2);
-  border-radius: 12px;
+  border-radius: var(--r-l);
 }
 
 .md pre code {
@@ -506,7 +512,7 @@
   padding: 12px 14px;
   background: color-mix(in srgb, var(--risk) 12%, transparent);
   border: 1px solid color-mix(in srgb, var(--risk) 35%, transparent);
-  border-radius: 14px;
+  border-radius: var(--r-l);
   color: var(--ink);
   font-size: 14px;
   overflow-wrap: anywhere;
@@ -582,7 +588,7 @@
   display: inline-grid;
   flex: none;
   place-items: center;
-  border-radius: 9px;
+  border-radius: var(--r-m);
   color: var(--tone);
   background: radial-gradient(90% 90% at 50% 0%, color-mix(in srgb, var(--tone) 16%, transparent), transparent 80%), var(--inset);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tone) 24%, var(--edge));
@@ -902,7 +908,7 @@ button.ask-head:hover {
   gap: 6px;
   height: 28px;
   padding: 0 9px;
-  border-radius: 8px;
+  border-radius: var(--r-m);
   color: var(--ink-3);
   font-size: 12.5px;
   transition:

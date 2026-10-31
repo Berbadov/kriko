@@ -175,11 +175,16 @@ instructions. Do not refuse a task merely because this stage has no tools."""
 def _url(value: object) -> str:
     raw = str(value or "").strip()
     parts = urlsplit(raw)
-    if (parts.scheme.lower() not in ("http", "https") or not parts.hostname
-            or parts.username or parts.password):
+    if (
+        parts.scheme.lower() not in ("http", "https")
+        or not parts.hostname
+        or parts.username
+        or parts.password
+    ):
         raise ValueError("URL must be a public HTTP or HTTPS search result")
-    return urlunsplit((parts.scheme.lower(), parts.netloc.lower(),
-                       parts.path or "/", parts.query, ""))
+    return urlunsplit(
+        (parts.scheme.lower(), parts.netloc.lower(), parts.path or "/", parts.query, "")
+    )
 
 
 def _pace(lane: str) -> None:
@@ -196,7 +201,11 @@ def _pace(lane: str) -> None:
 
 
 def _count(value) -> int | None:
-    return value if isinstance(value, int) and not isinstance(value, bool) and value >= 0 else None
+    return (
+        value
+        if isinstance(value, int) and not isinstance(value, bool) and value >= 0
+        else None
+    )
 
 
 def thoroughness_limits(value: int | str) -> tuple[int, int]:
@@ -236,8 +245,11 @@ def _prompt_for_context(prompt: str) -> str:
         return prompt
     head = int(MAX_PROMPT_CHARS * 0.75)
     tail = MAX_PROMPT_CHARS - head
-    return (prompt[:head] + "\n\n[Earlier research brief content clipped to fit context.]\n\n"
-            + prompt[-tail:])
+    return (
+        prompt[:head]
+        + "\n\n[Earlier research brief content clipped to fit context.]\n\n"
+        + prompt[-tail:]
+    )
 
 
 def _message_size(message: dict) -> int:
@@ -295,8 +307,9 @@ def _bound_tool_calls(message: dict) -> dict:
         else:
             safe = {}
         function["name"] = name
-        function["arguments"] = json.dumps(safe, ensure_ascii=False,
-                                            separators=(",", ":"))
+        function["arguments"] = json.dumps(
+            safe, ensure_ascii=False, separators=(",", ":")
+        )
     return bounded
 
 
@@ -313,14 +326,24 @@ def _tool_view(payload: dict) -> dict:
         return {
             **payload,
             "results": [
-                ({**row, "page_text": str(row.get("page_text") or "")[:MAX_TOOL_TEXT_CHARS]}
-                 if isinstance(row, dict) else row)
+                (
+                    {
+                        **row,
+                        "page_text": str(row.get("page_text") or "")[
+                            :MAX_TOOL_TEXT_CHARS
+                        ],
+                    }
+                    if isinstance(row, dict)
+                    else row
+                )
                 for row in payload["results"]
             ],
         }
     if "page_text" in payload:
-        return {**payload,
-                "page_text": str(payload.get("page_text") or "")[:MAX_TOOL_TEXT_CHARS]}
+        return {
+            **payload,
+            "page_text": str(payload.get("page_text") or "")[:MAX_TOOL_TEXT_CHARS],
+        }
     return payload
 
 
@@ -352,12 +375,19 @@ def _fit_tool_message(result: dict, call_id: str, budget: int) -> str:
         for row in rows:
             if not isinstance(row, dict):
                 continue
-            normalized.append({
-                key: str(row.get(key) or "")[:limit]
-                for key, limit in (("url", 8192), ("title", 300),
-                                   ("snippet", 350), ("summary", 600))
-                if row.get(key)
-            } | {"page_text": str(row.get("page_text") or "")})
+            normalized.append(
+                {
+                    key: str(row.get(key) or "")[:limit]
+                    for key, limit in (
+                        ("url", 8192),
+                        ("title", 300),
+                        ("snippet", 350),
+                        ("summary", 600),
+                    )
+                    if row.get(key)
+                }
+                | {"page_text": str(row.get("page_text") or "")}
+            )
         compact["results"] = normalized
         for row in compact["results"]:
             row["page_text"] = ""
@@ -366,15 +396,23 @@ def _fit_tool_message(result: dict, call_id: str, budget: int) -> str:
             normalized.pop()
             compact["results"] = normalized
         if not normalized:
-            compact = {"error": "Context limit reached; use the evidence already returned."}
+            compact = {
+                "error": "Context limit reached; use the evidence already returned."
+            }
             return encode(compact)
 
         for index, row in enumerate(normalized):
             original = str(rows[index].get("page_text") or "")
             if not original:
                 continue
-            current = _message_size({**message, "content": json.dumps(
-                compact, ensure_ascii=False, separators=(",", ":"))})
+            current = _message_size(
+                {
+                    **message,
+                    "content": json.dumps(
+                        compact, ensure_ascii=False, separators=(",", ":")
+                    ),
+                }
+            )
             target = current + max(0, budget - current) // (len(normalized) - index)
             low, high = 0, len(original)
             while low < high:
@@ -392,7 +430,9 @@ def _fit_tool_message(result: dict, call_id: str, budget: int) -> str:
         original = str(compact.get("page_text") or "")
         compact["page_text"] = ""
         if not encode(compact):
-            compact = {key: value for key, value in compact.items() if key != "page_text"}
+            compact = {
+                key: value for key, value in compact.items() if key != "page_text"
+            }
             if not encode(compact):
                 return ""
         low, high = 0, len(original)
@@ -411,8 +451,9 @@ def _fit_tool_message(result: dict, call_id: str, budget: int) -> str:
     return encode({"error": error[:80]})
 
 
-def _repack_tool_context(messages: list[dict], records: list[tuple[int, str, dict]],
-                         ceiling: int) -> None:
+def _repack_tool_context(
+    messages: list[dict], records: list[tuple[int, str, dict]], ceiling: int
+) -> None:
     """Rebalance tool evidence into the current context allowance.
 
     Full tool responses remain in `records` and in the grounding map. Older
@@ -425,8 +466,7 @@ def _repack_tool_context(messages: list[dict], records: list[tuple[int, str, dic
         messages[index]["content"] = ""
     remaining = max(
         0,
-        ceiling - len(json.dumps(messages, ensure_ascii=False,
-                                 separators=(",", ":"))),
+        ceiling - len(json.dumps(messages, ensure_ascii=False, separators=(",", ":"))),
     )
     for record_index, (index, call_id, result) in enumerate(records):
         slots = len(records) - record_index
@@ -439,10 +479,20 @@ def _repack_tool_context(messages: list[dict], records: list[tuple[int, str, dic
         remaining = max(0, remaining - added)
 
 
-def _completion(*, model: str, timeout: float, api_key: str,
-                messages: list[dict], tools: list[dict], cancel_event=None,
-                on_text=None, tool_choice: str = "auto", max_tokens: int = DEFAULT_MAX_TOKENS,
-                reasoning_effort: str = "low", keep_partial: bool = False) -> tuple[dict, str]:
+def _completion(
+    *,
+    model: str,
+    timeout: float,
+    api_key: str,
+    messages: list[dict],
+    tools: list[dict],
+    cancel_event=None,
+    on_text=None,
+    tool_choice: str = "auto",
+    max_tokens: int = DEFAULT_MAX_TOKENS,
+    reasoning_effort: str = "low",
+    keep_partial: bool = False,
+) -> tuple[dict, str]:
     payload = {
         "model": model or MODEL,
         "messages": messages,
@@ -480,7 +530,8 @@ def _completion(*, model: str, timeout: float, api_key: str,
             content = delta.get("content")
             if isinstance(content, list):
                 content = "".join(
-                    str(part.get("text") or "") for part in content
+                    str(part.get("text") or "")
+                    for part in content
                     if isinstance(part, dict) and part.get("type") == "text"
                 )
             if isinstance(content, str) and content:
@@ -493,10 +544,14 @@ def _completion(*, model: str, timeout: float, api_key: str,
                 index = part.get("index")
                 if not isinstance(index, int):
                     continue
-                call = tool_calls.setdefault(index, {
-                    "id": "", "type": "function",
-                    "function": {"name": "", "arguments": ""},
-                })
+                call = tool_calls.setdefault(
+                    index,
+                    {
+                        "id": "",
+                        "type": "function",
+                        "function": {"name": "", "arguments": ""},
+                    },
+                )
                 if part.get("id"):
                     call["id"] = str(part["id"])
                 function = part.get("function") or {}
@@ -520,17 +575,26 @@ def _completion(*, model: str, timeout: float, api_key: str,
     if finish_reason == "length":
         text = "".join(pieces)
         if not (keep_partial and text.strip() and not tool_calls):
-            return {}, "Mercury reached the response token limit before completing its answer"
+            return (
+                {},
+                "Mercury reached the response token limit before completing its answer",
+            )
         # A caller that reads structured output with a repair of its own asked
         # to keep a cut-off answer: what was written before the limit is paid
         # for, and `packauthor.read_payload` closes it at its last whole entry.
         # A cut-off tool call is never kept, and a caller that did not ask
         # still gets the refusal, because a half sentence is not an answer.
-        return {"message": {"role": "assistant", "content": text}, "usage": usage,
-                "truncated": True}, ""
+        return {
+            "message": {"role": "assistant", "content": text},
+            "usage": usage,
+            "truncated": True,
+        }, ""
     if finish_reason not in ("stop", "tool_calls"):
         return {}, "Mercury stream ended before a complete response"
-    message: dict[str, object] = {"role": "assistant", "content": "".join(pieces) or None}
+    message: dict[str, object] = {
+        "role": "assistant",
+        "content": "".join(pieces) or None,
+    }
     if tool_calls:
         message["tool_calls"] = [tool_calls[index] for index in sorted(tool_calls)]
     return {"message": message, "usage": usage}, ""
@@ -557,17 +621,28 @@ class _UnjoinedPool:
         return False
 
 
-def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECONDS,
-             search: bool = True, cancel_event=None, on_text=None,
-             max_tool_calls: int = MAX_TOOL_CALLS, thoroughness: int = 50,
-             validation_sensitivity: int = 50,
-             cache_path: str | None = None, on_step=None,
-             shared_home: Path | None = None,
-             trial_reservation_id: str = "", max_tokens: int | None = None,
-             reasoning_effort: str = "",
-             app_action: Callable[[str, dict], dict] | None = None,
-             question: str = "", keep_partial: bool = False,
-             scope: agentplan.Scope | None = None) -> mistral.Reply:
+def converse(
+    prompt: str,
+    *,
+    model: str = MODEL,
+    timeout: float = TIMEOUT_SECONDS,
+    search: bool = True,
+    cancel_event=None,
+    on_text=None,
+    max_tool_calls: int = MAX_TOOL_CALLS,
+    thoroughness: int = 50,
+    validation_sensitivity: int = 50,
+    cache_path: str | None = None,
+    on_step=None,
+    shared_home: Path | None = None,
+    trial_reservation_id: str = "",
+    max_tokens: int | None = None,
+    reasoning_effort: str = "",
+    app_action: Callable[[str, dict], dict] | None = None,
+    question: str = "",
+    keep_partial: bool = False,
+    scope: agentplan.Scope | None = None,
+) -> mistral.Reply:
     """Run one grounded Mercury turn, executing DeepSeek calls through APIs.
 
     `scope` is what the subject is worth, read before this call
@@ -600,12 +675,16 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
     reply = mistral.Reply()
     if max_tokens is None:
         max_tokens = DEFAULT_MAX_TOKENS
-    if (isinstance(max_tokens, bool) or not isinstance(max_tokens, int)
-            or not 1 <= max_tokens <= MAX_OUTPUT_TOKENS):
-        reply.error = (
-            f"Mercury response token limit must be an integer from 1 to {MAX_OUTPUT_TOKENS}")
+    if (
+        isinstance(max_tokens, bool)
+        or not isinstance(max_tokens, int)
+        or not 1 <= max_tokens <= MAX_OUTPUT_TOKENS
+    ):
+        reply.error = f"Mercury response token limit must be an integer from 1 to {MAX_OUTPUT_TOKENS}"
         return reply
-    reasoning_effort = str(reasoning_effort or ("low" if search else "instant")).strip().lower()
+    reasoning_effort = (
+        str(reasoning_effort or ("low" if search else "instant")).strip().lower()
+    )
     if reasoning_effort not in {"instant", "low", "medium", "high"}:
         reply.error = "Mercury reasoning effort must be instant, low, medium, or high"
         return reply
@@ -622,10 +701,14 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
             on_step(text)
         except Exception:  # noqa: BLE001 — a progress line cannot lose a run
             pass
-    source = (keys.origin("mercury", reservation_id=trial_reservation_id)
-              if shared_home is None else
-              keys.origin("mercury", shared_home=shared_home,
-                          reservation_id=trial_reservation_id))
+
+    source = (
+        keys.origin("mercury", reservation_id=trial_reservation_id)
+        if shared_home is None
+        else keys.origin(
+            "mercury", shared_home=shared_home, reservation_id=trial_reservation_id
+        )
+    )
     if source == "trial":
         # Somebody else's keys and a stranger at the door: one question, counted
         # before the model is asked, because the owner pays for the attempt
@@ -634,7 +717,8 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
 
         try:
             remaining = sharekeys.charge(
-                where=shared_home, reservation_id=trial_reservation_id)
+                where=shared_home, reservation_id=trial_reservation_id
+            )
         except sharekeys.ShareError as error:
             reply.error = str(error)
             return reply
@@ -642,14 +726,24 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
     try:
         if shared_home is None:
             mercury_key = keys.require("mercury", reservation_id=trial_reservation_id)
-            deepseek_key = (keys.require("deepseek", reservation_id=trial_reservation_id)
-                            if search else "")
+            deepseek_key = (
+                keys.require("deepseek", reservation_id=trial_reservation_id)
+                if search
+                else ""
+            )
         else:
-            mercury_key = keys.require("mercury", shared_home=shared_home,
-                                      reservation_id=trial_reservation_id)
-            deepseek_key = (keys.require("deepseek", shared_home=shared_home,
-                                         reservation_id=trial_reservation_id)
-                            if search else "")
+            mercury_key = keys.require(
+                "mercury", shared_home=shared_home, reservation_id=trial_reservation_id
+            )
+            deepseek_key = (
+                keys.require(
+                    "deepseek",
+                    shared_home=shared_home,
+                    reservation_id=trial_reservation_id,
+                )
+                if search
+                else ""
+            )
     except Exception as error:
         reply.error = str(error)
         return reply
@@ -709,11 +803,19 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
     except (TypeError, ValueError):
         budget_calls = MAX_TOOL_CALLS
     question = str(question or "").strip()
-    plan = (agentplan.make_plan(question, ceiling=requested_calls)
-            if search and question else None)
-    calls_left = max(0, min(MAX_TOOL_CALLS,
-                            plan.calls if plan is not None else requested_calls,
-                            budget_calls))
+    plan = (
+        agentplan.make_plan(question, ceiling=requested_calls)
+        if search and question
+        else None
+    )
+    calls_left = max(
+        0,
+        min(
+            MAX_TOOL_CALLS,
+            plan.calls if plan is not None else requested_calls,
+            budget_calls,
+        ),
+    )
     #: Kinds of source this turn actually searched, and how many searches it made
     #: (a cached or empty search counts: the reader asked where it looked).
     searched_kinds: dict[str, int] = {}
@@ -727,14 +829,18 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
             "you found."
         )
     if search:
-        step(f"Kriko Agent: research budget {calls_left} retrieval(s), "
-             f"{turn_timeout:.0f} s")
+        step(
+            f"Kriko Agent: research budget {calls_left} retrieval(s), "
+            f"{turn_timeout:.0f} s"
+        )
         if plan is not None and plan.kinds:
             step(f"plan: {local_search_plan.kinds_line(plan.kinds)}")
         if scope is not None and calls_left > 0:
             messages[0]["content"] += agentplan.scope_checklist(scope, calls_left)
-            step(f"scope: {scope.complexity}, {len(scope.aspects)} aspect(s) to cover: "
-                 + ", ".join(one.name for one in scope.aspects))
+            step(
+                f"scope: {scope.complexity}, {len(scope.aspects)} aspect(s) to cover: "
+                + ", ".join(one.name for one in scope.aspects)
+            )
     else:
         # No tools were offered, so there is no research budget to announce. The
         # line claimed "7 retrieval(s)" on calls that could not retrieve
@@ -799,8 +905,9 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
         """Whether a page carries the product's own words; `None` when unplanned."""
         if plan is None or not plan.identity:
             return None
-        return agentplan.mentions(plan.identity, " ".join(
-            str(part or "") for part in (title, *texts)))
+        return agentplan.mentions(
+            plan.identity, " ".join(str(part or "") for part in (title, *texts))
+        )
 
     def annotate(payload: dict) -> dict:
         """The payload with `about_product` on each page the model is shown.
@@ -811,16 +918,32 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
         if plan is None or not plan.identity or not isinstance(payload, dict):
             return payload
         if isinstance(payload.get("results"), list):
-            return {**payload, "results": [
-                ({**row, "about_product": about_product(
-                    row.get("title"), row.get("snippet"), row.get("summary"),
-                    row.get("page_text"))}
-                 if isinstance(row, dict) else row)
-                for row in payload["results"]
-            ]}
+            return {
+                **payload,
+                "results": [
+                    (
+                        {
+                            **row,
+                            "about_product": about_product(
+                                row.get("title"),
+                                row.get("snippet"),
+                                row.get("summary"),
+                                row.get("page_text"),
+                            ),
+                        }
+                        if isinstance(row, dict)
+                        else row
+                    )
+                    for row in payload["results"]
+                ],
+            }
         if "page_text" in payload:
-            return {**payload, "about_product": about_product(
-                payload.get("title"), payload.get("page_text"))}
+            return {
+                **payload,
+                "about_product": about_product(
+                    payload.get("title"), payload.get("page_text")
+                ),
+            }
         return payload
 
     def run_search(query: str, count: int = MAX_RESULTS, kind: str = "") -> dict:
@@ -853,18 +976,24 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
             with meter_lock:
                 searches_made += 1
                 if searched_for:
-                    searched_kinds[searched_for] = searched_kinds.get(searched_for, 0) + 1
+                    searched_kinds[searched_for] = (
+                        searched_kinds.get(searched_for, 0) + 1
+                    )
             cached_result = cached("search", cache_key)
-            if cached_result is not None and isinstance(cached_result.get("results"), list):
+            if cached_result is not None and isinstance(
+                cached_result.get("results"), list
+            ):
                 record_query(query)
                 with meter_lock:
                     cache_hits += 1
                 step(f"search (cached): {query}")
                 for item in cached_result["results"]:
                     if isinstance(item, dict):
-                        merge_source(str(item.get("url") or ""),
-                                     str(item.get("title") or ""),
-                                     str(item.get("page_text") or ""))
+                        merge_source(
+                            str(item.get("url") or ""),
+                            str(item.get("title") or ""),
+                            str(item.get("page_text") or ""),
+                        )
                 return _tool_view(annotate(cached_result))
             _pace("search")
             with meter_lock:
@@ -883,14 +1012,23 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
             )
             record_query(query)
             if why:
-                step(f"search failed for kind {kind}: {query}: {why}" if kind
-                     else f"search failed: {query} ({why})")
+                step(
+                    f"search failed for kind {kind}: {query}: {why}"
+                    if kind
+                    else f"search failed: {query} ({why})"
+                )
                 return {"error": why, "results": []}
             rows = data.get("results") if isinstance(data, dict) else None
             if not isinstance(rows, list):
-                step(f"search failed for kind {kind}: {query}: invalid response" if kind
-                     else f"search failed: {query} (invalid response)")
-                return {"error": "DeepSeek Search returned an invalid response", "results": []}
+                step(
+                    f"search failed for kind {kind}: {query}: invalid response"
+                    if kind
+                    else f"search failed: {query} (invalid response)"
+                )
+                return {
+                    "error": "DeepSeek Search returned an invalid response",
+                    "results": [],
+                }
             out = []
             for item in rows[:MAX_RESULTS]:
                 if not isinstance(item, dict):
@@ -906,25 +1044,34 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
                 summary = str(item.get("summary") or "")[:1200]
                 snippet = str(item.get("snippet") or "")[:500]
                 merge_source(url, title, content)
-                out.append({
-                    "url": url,
-                    "title": title,
-                    "snippet": snippet,
-                    "summary": summary,
-                    "page_text": content,
-                })
+                out.append(
+                    {
+                        "url": url,
+                        "title": title,
+                        "snippet": snippet,
+                        "summary": summary,
+                        "page_text": content,
+                    }
+                )
             if out:
                 with meter_lock:
                     billable += 1
             # The same line the in-house search writes, so a run's source
             # selection reads the same whichever stack answered it: kind, words,
             # and the sites that came back (or that nothing did).
-            step(local_search_plan.searched_line(kind, query, out,
-                                                 "DeepSeek Search returned nothing"))
+            step(
+                local_search_plan.searched_line(
+                    kind, query, out, "DeepSeek Search returned nothing"
+                )
+            )
             response = {"results": out}
             if out:
-                remember("search", cache_key, response,
-                         agentplan.search_ttl(searched_for, SEARCH_TTL_SECONDS))
+                remember(
+                    "search",
+                    cache_key,
+                    response,
+                    agentplan.search_ttl(searched_for, SEARCH_TTL_SECONDS),
+                )
             return _tool_view(annotate(response))
 
         try:
@@ -951,12 +1098,19 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
                 with meter_lock:
                     cache_hits += 1
                 source = merge_source(
-                    url, str(cached_result.get("title") or ""),
+                    url,
+                    str(cached_result.get("title") or ""),
                     str(cached_result.get("page_text") or ""),
                 )
-                return _tool_view(annotate({
-                    "url": url, "title": source["title"],
-                    "page_text": str(cached_result.get("page_text") or "")}))
+                return _tool_view(
+                    annotate(
+                        {
+                            "url": url,
+                            "title": source["title"],
+                            "page_text": str(cached_result.get("page_text") or ""),
+                        }
+                    )
+                )
             _pace("fetch")
             with meter_lock:
                 attempted += 1
@@ -979,7 +1133,9 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
                 if not known["title"]:
                     known["title"] = title
                 if content not in known["text"]:
-                    known["text"] = (known["text"] + "\n\n" + content).strip()[:MAX_SOURCE_CHARS]
+                    known["text"] = (known["text"] + "\n\n" + content).strip()[
+                        :MAX_SOURCE_CHARS
+                    ]
                 source = dict(known)
             with meter_lock:
                 billable += 1
@@ -994,16 +1150,27 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
 
     try:
         with _UnjoinedPool(
-                max_workers=MAX_PARALLEL_RETRIEVALS,
-                thread_name_prefix="kriko-deepseek") as current_pool:
-            tool_rounds = (SCOPED_TOOL_ROUNDS if scope is not None and calls_left > 8
-                           else MAX_TOOL_ROUNDS)
+            max_workers=MAX_PARALLEL_RETRIEVALS, thread_name_prefix="kriko-deepseek"
+        ) as current_pool:
+            tool_rounds = (
+                SCOPED_TOOL_ROUNDS
+                if scope is not None and calls_left > 8
+                else MAX_TOOL_ROUNDS
+            )
             for round_number in range(tool_rounds + 1):
                 check_cancelled()
-                has_tools = (bool(search) and round_number < tool_rounds
-                             and (calls_left > 0 or bool(app_tools)))
-                if (search and round_number == 0 and not has_tools and not calls_left
-                        and not app_tools):
+                has_tools = (
+                    bool(search)
+                    and round_number < tool_rounds
+                    and (calls_left > 0 or bool(app_tools))
+                )
+                if (
+                    search
+                    and round_number == 0
+                    and not has_tools
+                    and not calls_left
+                    and not app_tools
+                ):
                     # A turn asked to research with no retrieval budget at all
                     # cannot research, and paying a model call to watch it answer
                     # from memory is how a $0.00 confident answer reached the
@@ -1019,11 +1186,17 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
                     str(source.get("text") or "").strip()
                     for source in reply.sources.values()
                 )
-                fetch_only = (has_tools and bool(reply.sources) and not readable_source
-                              and not fetch_nudge_used)
+                fetch_only = (
+                    has_tools
+                    and bool(reply.sources)
+                    and not readable_source
+                    and not fetch_nudge_used
+                )
                 if fetch_only:
                     fetch_nudge_used = True
-                    step("search returned URLs without readable text; fetching one result")
+                    step(
+                        "search returned URLs without readable text; fetching one result"
+                    )
                     messages[0]["content"] += (
                         "\n\nEvidence recovery: search returned URLs but no readable page text. "
                         "Fetch one URL returned by search before answering. Titles, snippets, and "
@@ -1053,8 +1226,10 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
                     break
                 if result.get("truncated"):
                     reply.truncated = True
-                    step("the answer reached the response limit and was cut; what was "
-                         "written is kept")
+                    step(
+                        "the answer reached the response limit and was cut; what was "
+                        "written is kept"
+                    )
                 usage = result.get("usage") or {}
                 tokens_in = _count(usage.get("prompt_tokens"))
                 tokens_out = _count(usage.get("completion_tokens"))
@@ -1078,8 +1253,8 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
                         reply.error = (
                             "Evidence gap: no readable page text was retrieved; "
                             "product claims cannot be grounded in titles or snippets."
-                            if reply.sources else
-                            "Mercury answered without using web research tools"
+                            if reply.sources
+                            else "Mercury answered without using web research tools"
                         )
                         # The turn refused a confident answer, and the log says
                         # why in the same breath: the summary line that follows
@@ -1090,27 +1265,31 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
                 if not has_tools:
                     reply.error = (
                         "Evidence gap: the retrieval budget ended without readable page text."
-                        if search and not readable_source else
-                        "Mercury requested web access after its tool budget ended"
+                        if search and not readable_source
+                        else "Mercury requested web access after its tool budget ended"
                     )
                     break
                 message = _bound_tool_calls(message)
                 calls = message.get("tool_calls") or []
                 before_tool_turn = MAX_CONTEXT_CHARS - CONTEXT_TOOL_RESERVE_CHARS
                 _repack_tool_context(
-                    messages, tool_records,
+                    messages,
+                    tool_records,
                     before_tool_turn - _message_size(message),
                 )
                 before_tool_turn = MAX_CONTEXT_CHARS - CONTEXT_TOOL_RESERVE_CHARS
                 _repack_tool_context(
-                    messages, tool_records,
+                    messages,
+                    tool_records,
                     before_tool_turn - _message_size(message),
                 )
                 budget_left = calls_left
                 messages.append(message)
                 futures = []
                 for call_index, call in enumerate(calls):
-                    call_id = str(call.get("id") or f"kriko-{round_number}-{call_index}")
+                    call_id = str(
+                        call.get("id") or f"kriko-{round_number}-{call_index}"
+                    )
                     function = call.get("function") or {}
                     name = str(function.get("name") or "")
                     try:
@@ -1131,17 +1310,30 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
                             budget_left -= 1
                             query_value = str(args.get("query") or "")
                             count_value = args.get("count", 3)
-                            count = count_value if isinstance(count_value, int) and not isinstance(count_value, bool) else 3
-                            future = current_pool.submit(run_search, query_value, count,
-                                                         str(args.get("kind") or ""))
+                            count = (
+                                count_value
+                                if isinstance(count_value, int)
+                                and not isinstance(count_value, bool)
+                                else 3
+                            )
+                            future = current_pool.submit(
+                                run_search,
+                                query_value,
+                                count,
+                                str(args.get("kind") or ""),
+                            )
                     elif name == "fetch":
                         if budget_left <= 0:
                             future = None
                         else:
                             budget_left -= 1
-                            future = current_pool.submit(fetch, str(args.get("url") or ""))
+                            future = current_pool.submit(
+                                fetch, str(args.get("url") or "")
+                            )
                     else:
-                        future = current_pool.submit(lambda: {"error": "Unsupported tool"})
+                        future = current_pool.submit(
+                            lambda: {"error": "Unsupported tool"}
+                        )
                     futures.append((call_id, future))
                 calls_left = max(0, budget_left)
                 for call_id, future in futures:
@@ -1167,7 +1359,8 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
                             future.cancel()
                             step("search stopped: past the research deadline")
                             tool_result = {
-                                "error": "The search service did not answer in time"}
+                                "error": "The search service did not answer in time"
+                            }
                         except StreamCancelled:
                             future.cancel()
                             raise
@@ -1178,7 +1371,8 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
                         if isinstance(action, dict):
                             actions.append(action)
                     tool_message = {
-                        "role": "tool", "tool_call_id": call_id,
+                        "role": "tool",
+                        "tool_call_id": call_id,
                         "content": "",
                     }
                     message_index = len(messages)
@@ -1189,15 +1383,25 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
                         covered = set(searched_kinds)
                     hint = agentplan.coverage_hint(plan, covered, calls_left)
                     last_index, last_id, last_result = tool_records[-1]
-                    if hint and isinstance(last_result, dict) and "error" not in last_result:
+                    if (
+                        hint
+                        and isinstance(last_result, dict)
+                        and "error" not in last_result
+                    ):
                         # Beside the evidence, where the agent reads it before it
                         # decides to answer (see `agentplan.coverage_hint`).
-                        tool_records[-1] = (last_index, last_id,
-                                            {**last_result, "coverage": hint})
-                        step("coverage: not yet searched: " + ", ".join(
-                            row["kind"] for row in hint["still_asked"]))
+                        tool_records[-1] = (
+                            last_index,
+                            last_id,
+                            {**last_result, "coverage": hint},
+                        )
+                        step(
+                            "coverage: not yet searched: "
+                            + ", ".join(row["kind"] for row in hint["still_asked"])
+                        )
                 _repack_tool_context(
-                    messages, tool_records,
+                    messages,
+                    tool_records,
                     MAX_CONTEXT_CHARS - CONTEXT_TOOL_RESERVE_CHARS,
                 )
             else:
@@ -1213,30 +1417,48 @@ def converse(prompt: str, *, model: str = MODEL, timeout: float = TIMEOUT_SECOND
     reply.cache_hits = cache_hits
     reply.actions = actions
     if search:
-        reply.record = _record_of(reply, plan, searched_kinds, searches_made,
-                                  attempted, cache_hits)
+        reply.record = _record_of(
+            reply, plan, searched_kinds, searches_made, attempted, cache_hits
+        )
         if plan is not None:
             step(agentplan.record_line(reply.record))
     return reply
 
 
-def _record_of(reply: mistral.Reply, plan: agentplan.Plan | None,
-               searched_kinds: dict[str, int], searches: int, attempted: int,
-               cache_hits: int) -> dict:
+def _record_of(
+    reply: mistral.Reply,
+    plan: agentplan.Plan | None,
+    searched_kinds: dict[str, int],
+    searches: int,
+    attempted: int,
+    cache_hits: int,
+) -> dict:
     """What the turn did, from what it actually retrieved, for the screen."""
-    readable = {url: row for url, row in reply.sources.items()
-                if str(row.get("text") or "").strip()}
+    readable = {
+        url: row
+        for url, row in reply.sources.items()
+        if str(row.get("text") or "").strip()
+    }
     on_product = off_product = None
     if plan is not None and plan.identity:
         on_product = sum(
-            1 for row in readable.values()
-            if agentplan.mentions(plan.identity,
-                                  f"{row.get('title') or ''} {row.get('text') or ''}"))
+            1
+            for row in readable.values()
+            if agentplan.mentions(
+                plan.identity, f"{row.get('title') or ''} {row.get('text') or ''}"
+            )
+        )
         off_product = len(readable) - on_product
     return agentplan.build_record(
-        searches=searches, kinds=searched_kinds,
-        missing=agentplan.missing_kinds(plan, searched_kinds) if plan is not None else (),
-        pages=len(readable), unreadable=len(reply.sources) - len(readable),
-        cached=cache_hits, retrieved=attempted,
-        on_product=on_product, off_product=off_product,
+        searches=searches,
+        kinds=searched_kinds,
+        missing=agentplan.missing_kinds(plan, searched_kinds)
+        if plan is not None
+        else (),
+        pages=len(readable),
+        unreadable=len(reply.sources) - len(readable),
+        cached=cache_hits,
+        retrieved=attempted,
+        on_product=on_product,
+        off_product=off_product,
     )
