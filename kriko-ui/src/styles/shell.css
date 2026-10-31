@@ -173,6 +173,23 @@
   border-color: var(--edge-strong);
 }
 
+/* The agent's orb, next to the agent's name in the top bar: a small blue sphere,
+   calm while the agent is idle, breathing while it works. Like every animation
+   here it is cut to a still frame when motion is off. */
+.orb {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 30%, #d6e0ff 0%, var(--accent-hi) 46%, var(--accent) 72%, #101d66 100%);
+  box-shadow: 0 0 8px 1px color-mix(in srgb, var(--accent-hi) 55%, transparent);
+}
+.orb[data-on='true'] { animation: orb-pulse calc(1.6s * var(--tm)) var(--ease-out) infinite; }
+@keyframes orb-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.35); box-shadow: 0 0 14px 3px color-mix(in srgb, var(--accent-hi) 75%, transparent); }
+}
+
 .topbar-agent-name {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -273,6 +290,12 @@
   border-radius: var(--r-l);
   box-shadow: var(--shadow-2);
   transform: translateX(-50%);
+  transform-origin: top center;
+  animation: pop-in calc(180ms * var(--tm)) var(--ease-out) both;
+}
+@keyframes pop-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(-6px) scale(.97); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
 }
 
 .topbar-pop .rail-chats {
