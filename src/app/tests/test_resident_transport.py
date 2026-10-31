@@ -372,6 +372,24 @@ def test_release_idle_frees_workers_but_not_busy_ones(claude) -> None:
     assert factory.starts == 2
 
 
+def test_a_warmed_worker_is_the_one_the_turn_reuses(claude) -> None:
+    """The start a quiet turn pays is the start a later request must not."""
+    pool, factory, tmp_path = claude
+    profile = _profile("claude", tmp_path)
+
+    assert pool.warm(profile) is True
+    pool.run(profile, ResidentRequest("hello"))
+
+    assert factory.starts == 1
+
+
+def test_a_warm_up_that_cannot_start_is_not_an_error(claude) -> None:
+    pool, _factory, tmp_path = claude
+    absent = ResidentProfile("claude", (str(tmp_path / "absent"),), str(tmp_path), {})
+
+    assert pool.warm(absent) is False
+
+
 # ── ACP ──────────────────────────────────────────────────────────────────────
 
 
