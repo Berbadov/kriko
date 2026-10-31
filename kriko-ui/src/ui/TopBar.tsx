@@ -84,6 +84,7 @@ export function TopBar({
           /
         </span>
         <button className="topbar-agent" onClick={() => showDrawer('agents')} title="The agent that does the research. Open to change it." data-tour="agent-pill">
+          <span className="orb" data-on={busy ? 'true' : undefined} aria-hidden="true" />
           <span className="topbar-agent-name">{agent}</span>
           <Icon name="chevron" size={14} />
         </button>
