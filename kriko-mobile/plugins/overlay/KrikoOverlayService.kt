@@ -108,7 +108,7 @@ class KrikoOverlayService : Service() {
     private const val SETTLE_AFTER_MS = 4200L
     private const val HOLD_MS = 380L
     private const val CAPTURE_WATCHDOG_MS = 6500L
-    private const val WAVE_LIMIT_MS = 30000L
+    private const val WAVE_LIMIT_MS = 120000L
 
     /** A scanner session exists: the puck is up, whether or not capture is live. */
     @Volatile var isActive: Boolean = false
@@ -120,6 +120,8 @@ class KrikoOverlayService : Service() {
 
     /** The assistant's answer is on screen without a scanner session behind it. */
     @Volatile var assistRunning: Boolean = false
+      private set
+    @Volatile var assistResearchActive: Boolean = false
       private set
   }
 
@@ -162,8 +164,22 @@ class KrikoOverlayService : Service() {
   /** Until the app reports the scan's own row, the sheet shows this stand-in. */
   private var assistPlaceholder: JSONObject? = null
   private var assistWaiting = false
+  private var assistFailed = false
+  /** Bounds both screenshot loading and the JS scan handoff; late callbacks are ignored. */
+  private var assistGeneration = 0
+  private var assistResearchDeadline = 0L
+  private val assistTimeout = Runnable {
+    if (assistOnly && assistWaiting) failAssist("The screen was captured, but Kriko did not receive a response in time. Tap Scan again to retry.")
+  }
+  /** Provider turns allow 120 seconds; leave room for queue and UI handoff before failing visibly. */
+  private val assistResearchTimeout = Runnable {
+    if (assistOnly && !assistWaiting && (0 until jobs.length()).any { jobs.optJSONObject(it)?.let { row -> isActiveStatus(row.optString("status")) } == true }) {
+      failAssist("Research did not finish in time. Tap Scan again to retry.")
+    }
+  }
   /** Rows the app already had when the assistant scan began; they are not this answer's. */
   private var baseline: Set<String> = emptySet()
+  private var assistHidden = false
 
   private val palette: Palette get() = ui.palette
 
@@ -199,6 +215,20 @@ class KrikoOverlayService : Service() {
   private var answerBox: LinearLayout? = null
   private var stepView: TextView? = null
   private var renderedSignature: String? = null
+  private var selectedJobUpdatedAt = 0L
+  private var staleJobId = ""
+  private var lastActiveJobId = ""
+  private var expandedSourceJobId = ""
+  private val staleJobTimeout: Runnable = Runnable {
+    val item = currentJob() ?: return@Runnable
+    if (!isActiveStatus(item.optString("status")) || item.optString("id") != selectedJob) return@Runnable
+    val age = SystemClock.uptimeMillis() - selectedJobUpdatedAt
+    if (age >= 120000L) {
+      staleJobId = selectedJob
+      renderedSignature = null
+      renderSheet()
+    } else mainHandler.postDelayed(staleJobTimeout, 120000L - age)
+  }
 
   /** A UI update arrived mid-capture; apply it when the windows come back. */
   private var uiDirty = false
@@ -951,7 +981,7 @@ class KrikoOverlayService : Service() {
       }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(24)).apply { bottomMargin = dp(4) })
     }
     card.addView(
-      actionRow("scan", L("scanPage"), p.accent, KrikoTheme.ON_ACCENT, tint(KrikoTheme.ON_ACCENT, 0.24f), Color.TRANSPARENT, 52, 15f) {
+      actionRow("scan", L("scanPage"), p.accent, p.onAccent, tint(p.onAccent, 0.24f), Color.TRANSPARENT, 52, 15f) {
         removeTray(animated = false)
         requestCapture("research")
       },
@@ -1354,9 +1384,9 @@ class KrikoOverlayService : Service() {
       append(id).append('|').append(status).append('|')
       append(item?.optString("title").orEmpty()).append('|')
       append(item?.optString("error").orEmpty()).append('|')
-      append(item?.optString("image").orEmpty()).append('|')
-      append(item?.optJSONArray("sources")?.length() ?: 0).append('|')
       append(item?.optString("text").orEmpty().isNotBlank()).append('|')
+      append(item?.optString("image").orEmpty()).append('|')
+      append(item?.optJSONArray("sources")?.toString().orEmpty()).append('|')
       append(item?.optJSONArray("steps")?.length()?.let { it > 0 } ?: false).append('|')
       for (index in 0 until jobs.length()) {
         val other = jobs.optJSONObject(index) ?: continue
@@ -1414,9 +1444,14 @@ class KrikoOverlayService : Service() {
         answerBox = box
         body.addView(box, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         answer.render(box, text, item.optJSONArray("sources") ?: JSONArray())
+      } else if (active && item.optString("id") == staleJobId) {
+        body.addView(bodyText(L("stalledResearch"), 13f, p.ink2))
+        body.addView(actionRow("scan", L("openToRetry"), KrikoGlassLevel.chip(p), p.ink,
+          tint(p.ink, 0.08f), tint(p.ink, 0.16f), 46, 13.5f) { openAppQuietly() },
+          LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(46)).apply { topMargin = dp(10) })
       } else if (active) {
         // Nothing has arrived yet: show where the words will go.
-        body.addView(SkeletonView(this, tint(p.ink, 0.07f), tint(p.ink, 0.12f)),
+        body.addView(ResearchPulseView(this, p.accentHi),
           LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
             topMargin = dp(10)
             bottomMargin = dp(4)
@@ -1546,8 +1581,8 @@ class KrikoOverlayService : Service() {
     val p = palette
     row.removeAllViews()
     row.addView(
-      actionRow("scan", L(if (jobs.length() == 0) "scanPage" else "scanAgain"), p.accent, KrikoTheme.ON_ACCENT,
-        tint(KrikoTheme.ON_ACCENT, 0.24f), Color.TRANSPARENT, 46, 14f) {
+      actionRow("scan", L(if (jobs.length() == 0) "scanPage" else "scanAgain"), p.accent, p.onAccent,
+        tint(p.onAccent, 0.24f), Color.TRANSPARENT, 46, 14f) {
         if (assistOnly && !isActive) rescanViaAssistant() else requestCapture("research")
       },
       LinearLayout.LayoutParams(0, dp(46), 1f),
@@ -1579,7 +1614,7 @@ class KrikoOverlayService : Service() {
   /** The clickable sources under an answer, each a numbered row with its site. */
   private fun addSources(card: LinearLayout, sources: JSONArray) {
     val rows = mutableListOf<Triple<String, String, String>>()
-    for (index in 0 until minOf(sources.length(), 6)) {
+    for (index in 0 until minOf(sources.length(), 40)) {
       val source = sources.optJSONObject(index) ?: continue
       val url = safeHttpUrl(source.optString("url"))
       if (url.isBlank()) continue
@@ -1589,8 +1624,18 @@ class KrikoOverlayService : Service() {
       rows.add(Triple(number, label, url))
     }
     if (rows.isEmpty()) return
-    card.addView(sectionText(L("sources")))
-    for ((number, label, url) in rows) card.addView(sourceRow(number, label, url))
+    card.addView(sectionText("${L("sources")} · ${rows.size}"))
+    val currentId = currentJob()?.optString("id").orEmpty()
+    val expanded = expandedSourceJobId == currentId
+    for ((number, label, url) in if (expanded) rows else rows.take(2)) card.addView(sourceRow(number, label, url))
+    if (rows.size > 2) {
+      card.addView(actionRow("list", L(if (expanded) "showFewerSources" else "showAllSources"),
+        KrikoGlassLevel.chip(palette), palette.ink, tint(palette.ink, 0.05f), tint(palette.ink, 0.12f), 44, 12.5f) {
+        expandedSourceJobId = if (expanded) "" else currentId
+        renderedSignature = null
+        renderSheet()
+      })
+    }
   }
 
   /**
@@ -1965,9 +2010,18 @@ class KrikoOverlayService : Service() {
     }
     assistOnly = true
     assistRunning = true
+    assistResearchActive = true
+    assistHidden = false
+    KrikoOverlayModule.startHeadlessSession()
+    assistFailed = false
+    assistGeneration += 1
+    val generation = assistGeneration
     appForeground = false
     assistWaiting = true
-    baseline = emptySet()
+    baseline = KrikoOverlayModule.knownJobIds(this) + (0 until jobs.length()).mapNotNull {
+      jobs.optJSONObject(it)?.optString("id")?.takeIf { id -> id.isNotBlank() }
+    }.toSet()
+    assistResearchDeadline = 0L
     assistPlaceholder = JSONObject().apply {
       put("id", "assist-pending")
       put("title", L("assistScanning"))
@@ -1977,15 +2031,16 @@ class KrikoOverlayService : Service() {
     jobs = JSONArray().put(assistPlaceholder)
     selectedJob = ""
     renderedSignature = null
+    mainHandler.removeCallbacks(assistTimeout)
+    mainHandler.postDelayed(assistTimeout, 30000L)
     imageWorker.execute {
       val bytes = readShotBytes(shot) ?: run {
         mainHandler.post {
-          showToast(L("captureFailed"))
-          finishAssist()
+          if (assistOnly && generation == assistGeneration) failAssist(L("captureFailed"))
         }
         return@execute
       }
-      mainHandler.post { deliverAssistShot(bytes, shot) }
+      mainHandler.post { if (assistOnly && generation == assistGeneration) deliverAssistShot(bytes, shot) }
     }
     // The card and wave are up before the picture has even been read.
     startWave()
@@ -2005,12 +2060,52 @@ class KrikoOverlayService : Service() {
     if (KrikoOverlayModule.jsReady) {
       KrikoOverlayModule.emitScan(bytes, uri, "research", "")
       if (isActive) afterCapture(openSheet = true)
+      // JS must acknowledge the scan by publishing its active job before the deadline.
     } else {
       // Nobody is listening yet: keep the scan, open the app, and let it step
       // back to the page once the scan is taken.
       KrikoOverlayModule.queueScan(bytes, uri, "research", "", quiet = true)
       openAppQuietly()
     }
+  }
+
+  private fun failAssist(message: String) {
+    if (!assistOnly) return
+    mainHandler.removeCallbacks(assistTimeout)
+    mainHandler.removeCallbacks(assistResearchTimeout)
+    assistResearchDeadline = 0L
+    assistWaiting = false
+    assistFailed = true
+    KrikoOverlayModule.dropQueuedScans()
+    for (index in 0 until jobs.length()) {
+      val job = jobs.optJSONObject(index) ?: continue
+      val id = job.optString("id")
+      if (isActiveStatus(job.optString("status")) && !id.startsWith("assist-")) {
+        KrikoOverlayModule.emit("onAction", Arguments.createMap().apply {
+          putString("action", "cancel"); putString("id", id)
+        })
+      }
+    }
+    val failedGeneration = assistGeneration
+    mainHandler.postDelayed({
+      if (assistFailed && assistGeneration == failedGeneration && !isActive) {
+        assistResearchActive = false
+        KrikoOverlayModule.finishHeadlessSession()
+      }
+    }, 5000L)
+    val failed = JSONObject().apply {
+      put("id", "assist-failed")
+      put("title", L("assistScanning"))
+      put("status", "error")
+      put("error", message)
+    }
+    assistPlaceholder = failed
+    jobs = JSONArray().put(failed)
+    selectedJob = ""
+    renderedSignature = null
+    stopWave()
+    if (assistHidden) { finishAssist(); return }
+    if (sheet == null) openSheet() else renderSheet()
   }
 
   /** Bring Kriko up just long enough for its screen to mount and take the queued scan. */
@@ -2029,17 +2124,37 @@ class KrikoOverlayService : Service() {
 
   /** While the assistant is the only thing running, rows from before this scan are not its answer. */
   private fun acceptJobs(json: String) {
+    if (assistOnly && assistFailed && !isActive) return
     val incoming = try { JSONArray(json) } catch (_: Exception) { JSONArray() }
     if (!assistOnly || isActive) {
       jobs = incoming
+      val activeItem = (0 until jobs.length()).mapNotNull { jobs.optJSONObject(it) }
+        .firstOrNull { isActiveStatus(it.optString("status")) }
+      if (activeItem != null) {
+        val id = activeItem.optString("id")
+        if (id != lastActiveJobId) selectedJob = id
+        lastActiveJobId = id
+        selectedJobUpdatedAt = SystemClock.uptimeMillis()
+        staleJobId = ""
+        mainHandler.removeCallbacks(staleJobTimeout)
+        mainHandler.postDelayed(staleJobTimeout, 120000L)
+      } else mainHandler.removeCallbacks(staleJobTimeout)
       renderAll()
       return
     }
     val rows = (0 until incoming.length()).mapNotNull { incoming.optJSONObject(it) }
     if (assistWaiting) {
       // Hold the stand-in until the app reports this scan's own row.
-      if (rows.none { isActiveStatus(it.optString("status")) }) return
-      baseline = rows.filterNot { isActiveStatus(it.optString("status")) }.map { it.optString("id") }.toSet()
+      val newRows = rows.filterNot { baseline.contains(it.optString("id")) }
+      if (newRows.none { isActiveStatus(it.optString("status")) }) {
+        val failed = newRows.firstOrNull { it.optString("status") == "error" || it.optString("status") == "cancelled" }
+        if (failed != null) {
+          mainHandler.removeCallbacks(assistTimeout)
+          failAssist(failed.optString("error").ifBlank { "The screen scan could not be started. Tap Scan again to retry." })
+        }
+        return
+      }
+      mainHandler.removeCallbacks(assistTimeout)
       assistWaiting = false
       assistPlaceholder = null
     }
@@ -2047,6 +2162,19 @@ class KrikoOverlayService : Service() {
       rows.filterNot { baseline.contains(it.optString("id")) }.forEach { put(it) }
     }
     if (jobs.length() == 0) return
+    val hasActive = (0 until jobs.length()).any { jobs.optJSONObject(it)?.let { row -> isActiveStatus(row.optString("status")) } == true }
+    assistResearchActive = hasActive
+    if (hasActive) KrikoOverlayModule.startHeadlessSession()
+    else if (!isActive) KrikoOverlayModule.finishHeadlessSession()
+    if (!hasActive && assistHidden) { finishAssist(); return }
+    if (hasActive) {
+      if (assistResearchDeadline == 0L) assistResearchDeadline = SystemClock.uptimeMillis() + 150000L
+      mainHandler.removeCallbacks(assistResearchTimeout)
+      mainHandler.postDelayed(assistResearchTimeout, (assistResearchDeadline - SystemClock.uptimeMillis()).coerceAtLeast(0L))
+    } else {
+      assistResearchDeadline = 0L
+      mainHandler.removeCallbacks(assistResearchTimeout)
+    }
     renderAll()
   }
 
@@ -2078,9 +2206,24 @@ class KrikoOverlayService : Service() {
       stopIfIdle()
       return
     }
+    if (activeCount() > 0 && !assistFailed && !shuttingDown) {
+      // Dismissing a panel must not pause the research it promised to keep.
+      assistHidden = true
+      removeSheet()
+      removeWave()
+      return
+    }
     assistOnly = false
     assistRunning = false
+    assistResearchActive = false
+    assistHidden = false
+    if (!isActive) KrikoOverlayModule.finishHeadlessSession()
+    assistGeneration += 1
+    mainHandler.removeCallbacks(assistTimeout)
+    mainHandler.removeCallbacks(assistResearchTimeout)
+    assistResearchDeadline = 0L
     assistWaiting = false
+    assistFailed = false
     assistPlaceholder = null
     baseline = emptySet()
     removeSheet()
@@ -2192,10 +2335,11 @@ class KrikoOverlayService : Service() {
     return LinearLayout(this).apply {
       orientation = LinearLayout.HORIZONTAL
       gravity = Gravity.CENTER_VERTICAL
-      setPadding(dp(6), dp(6), dp(8), dp(6))
-      background = capsule(Color.TRANSPARENT, 10, Color.TRANSPARENT, tint(p.accentHi, 0.12f))
+      setPadding(dp(10), dp(9), dp(10), dp(9))
+      minimumHeight = dp(52)
+      background = capsule(tint(p.ink, 0.035f), 10, Color.TRANSPARENT, tint(p.accentHi, 0.12f))
       isClickable = true
-      contentDescription = label
+      contentDescription = "$label · $host"
       motion.pressMotion(this)
       setOnClickListener { openSource(url) }
       addView(TextView(this@KrikoOverlayService).apply {
@@ -2357,6 +2501,7 @@ class KrikoOverlayService : Service() {
     if (assistOnly) {
       assistOnly = false
       assistRunning = false
+      assistResearchActive = false
       mainHandler.removeCallbacksAndMessages(null)
       removeSheet()
       removeWave()

@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const {
+  AndroidConfig,
   withAndroidManifest,
   withDangerousMod,
   withMainApplication,
@@ -9,6 +10,7 @@ const {
 const PACKAGE_CLASS = 'KrikoOverlayPackage';
 const TEMPLATE_FILES = [
   'KrikoOverlayModule.kt',
+  'KrikoVoice.kt',
   'KrikoOverlayPackage.kt',
   'KrikoOverlayService.kt',
   'KrikoTheme.kt',
@@ -20,6 +22,18 @@ const TEMPLATE_FILES = [
   'KrikoAssist.kt',
   'KrikoUpdater.kt',
 ];
+
+/** Used by prebuild and the supported incremental native-source sync. */
+function withVoiceManifest(manifest) {
+  manifest['uses-permission'] = manifest['uses-permission'] || [];
+  const audio = manifest['uses-permission'].find((permission) => permission.$?.['android:name'] === 'android.permission.RECORD_AUDIO');
+  if (audio) delete audio.$['tools:node'];
+  else manifest['uses-permission'].push({ $: { 'android:name': 'android.permission.RECORD_AUDIO' } });
+  manifest.queries = manifest.queries || [];
+  const present = manifest.queries.some((query) => query.intent?.some((intent) =>
+    intent.action?.some((action) => action.$?.['android:name'] === 'android.speech.RecognitionService')));
+  if (!present) manifest.queries.push({ intent: [{ action: [{ $: { 'android:name': 'android.speech.RecognitionService' } }] }] });
+}
 
 /**
  * The file Android reads to learn that Kriko is a digital assistant. Both the
@@ -78,6 +92,8 @@ function withKrikoOverlay(config) {
   }
 
   config = withAndroidManifest(config, (mod) => {
+    const manifest = mod.modResults.manifest;
+    withVoiceManifest(manifest);
     const application = mod.modResults.manifest.application?.[0];
     if (!application) throw new Error('Kriko overlay could not locate the Android application manifest.');
     const serviceName = `${appPackage}.overlay.KrikoOverlayService`;
@@ -186,6 +202,9 @@ async function syncAndroidCli() {
   const appPackage = appConfig?.expo?.android?.package;
   if (!appPackage) throw new Error('app.json does not declare expo.android.package.');
   await syncNativeSources(projectRoot, platformProjectRoot, appPackage);
+  const parsedManifest = await AndroidConfig.Manifest.readAndroidManifestAsync(manifest);
+  withVoiceManifest(parsedManifest.manifest);
+  await AndroidConfig.Manifest.writeAndroidManifestAsync(manifest, parsedManifest);
   // Keep generated release metadata aligned without clearing Gradle outputs.
   const gradlePath = path.join(platformProjectRoot, 'app', 'build.gradle');
   const version = appConfig.expo.version;

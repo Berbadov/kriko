@@ -5,16 +5,17 @@
  */
 
 import { useEffect, useState } from 'react';
-import { Animated, StyleSheet, TextInput, View } from 'react-native';
+import { AccessibilityInfo, Animated, AppState, Easing, Keyboard, Linking, StyleSheet, TextInput, View } from 'react-native';
 
-import { tr } from '../i18n';
+import { tr, useLanguage } from '../i18n';
 import { impact, press } from '../theme/feedback';
 import { motion } from '../theme/motion';
 import { font, radius } from '../theme/tokens';
 import { makeStyles, useColors, useType } from '../theme/theme';
 import { Txt } from '../theme/Txt';
 import { MotionPressable, useReducedMotion } from './Motion';
-import { ImageIcon2, ScanIcon, SendIcon, StopIcon } from './Icon';
+import { ImageIcon2, MicIcon, RecordingStopIcon, ScanIcon, SendIcon, StopIcon } from './Icon';
+import { useVoiceTyping } from './useVoiceTyping';
 
 export function Composer({
   value,
@@ -26,6 +27,7 @@ export function Composer({
   streaming,
   disabled,
   placeholder = 'Ask about a product',
+  autoFocus = false,
 }: {
   value: string;
   onChangeText: (text: string) => void;
@@ -36,15 +38,45 @@ export function Composer({
   streaming: boolean;
   disabled?: boolean;
   placeholder?: string;
+  autoFocus?: boolean;
 }) {
   const color = useColors();
   const styles = useStyles();
   const type = useType();
-  const canSend = !streaming && !disabled && value.trim().length > 0;
+  const language = useLanguage();
+  const voice = useVoiceTyping(value, onChangeText, language);
+  const canSend = !streaming && !disabled && !voice.active && value.trim().length > 0;
   const reduced = useReducedMotion();
   const [focused, setFocused] = useState(false);
   const [focus] = useState(() => new Animated.Value(0));
   const [action] = useState(() => new Animated.Value(streaming ? 1 : 0));
+  const [bars] = useState(() => [0, 1, 2, 3, 4].map(() => new Animated.Value(0.35)));
+  const [systemReduced, setSystemReduced] = useState<boolean | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void AccessibilityInfo.isReduceMotionEnabled().then((value) => { if (alive) setSystemReduced(value); }).catch(() => { if (alive) setSystemReduced(true); });
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setSystemReduced);
+    return () => { alive = false; subscription.remove(); };
+  }, []);
+  useEffect(() => {
+    bars.forEach((bar) => bar.stopAnimation());
+    const reducedMotion = reduced === true || (reduced === null && systemReduced !== false);
+    if (!voice.active || AppState.currentState !== 'active' || reducedMotion) {
+      bars.forEach((bar) => bar.setValue(0.55));
+      return;
+    }
+    const loops = bars.map((bar, index) => Animated.loop(Animated.sequence([
+      Animated.delay(index * 75),
+      Animated.timing(bar, { toValue: 1, duration: 260, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+      Animated.timing(bar, { toValue: 0.25, duration: 300, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+    ])));
+    loops.forEach((loop) => loop.start());
+    const subscription = AppState.addEventListener('change', (state) => {
+      loops.forEach((loop) => loop.stop());
+      if (state === 'active' && voice.active) loops.forEach((loop) => loop.start());
+    });
+    return () => { subscription.remove(); loops.forEach((loop) => loop.stop()); };
+  }, [bars, reduced, systemReduced, voice.active]);
   useEffect(() => {
     focus.stopAnimation();
     if (reduced !== false) { focus.setValue(focused ? 1 : 0); return; }
@@ -68,28 +100,29 @@ export function Composer({
             press();
             onScan();
           }}
-          disabled={disabled}
+          disabled={disabled || voice.active}
           hitSlop={{ top: 4, bottom: 4 }}
           accessibilityRole="button"
           accessibilityLabel={tr('Scan a product')}
           style={styles.tool}
         >
-          <ScanIcon size={20} color={disabled ? color.ink4 : color.ink2} />
+          <ScanIcon size={20} color={disabled || voice.active ? color.ink4 : color.ink2} />
         </MotionPressable>
         <MotionPressable
           onPress={() => {
             press();
             onPick();
           }}
-          disabled={disabled || streaming}
+          disabled={disabled || streaming || voice.active}
           hitSlop={{ top: 4, bottom: 4 }}
           accessibilityRole="button"
           accessibilityLabel={tr('Choose a screenshot')}
           style={styles.tool}
         >
-          <ImageIcon2 size={20} color={disabled || streaming ? color.ink4 : color.ink2} />
+          <ImageIcon2 size={20} color={disabled || streaming || voice.active ? color.ink4 : color.ink2} />
         </MotionPressable>
         <TextInput
+          autoFocus={autoFocus}
           value={value}
           onChangeText={onChangeText}
           onFocus={() => setFocused(true)}
@@ -97,11 +130,29 @@ export function Composer({
           placeholder={tr(placeholder)}
           placeholderTextColor={color.ink3}
           multiline
+          editable={!voice.active}
           selectionColor={color.accent}
           style={[styles.input, type.input]}
           maxLength={2000}
           accessibilityLabel={tr('Your question')}
         />
+        {voice.supported ? (
+          <MotionPressable
+            onPress={() => {
+              press();
+              if (voice.active) voice.stop();
+              else { Keyboard.dismiss(); void voice.start(); }
+            }}
+            disabled={disabled || streaming || voice.phase === 'starting' || voice.phase === 'processing'}
+            accessibilityRole="button"
+            accessibilityLabel={tr(voice.active ? 'Finish voice typing' : 'Type with your voice')}
+            accessibilityHint={tr('Your words appear in the message field. Review them before you send.')}
+            accessibilityState={{ busy: voice.phase === 'starting' || voice.phase === 'processing', disabled: !!disabled || streaming || voice.phase === 'starting' || voice.phase === 'processing' }}
+            style={[styles.microphone, voice.active && styles.microphoneOn]}
+          >
+            {voice.active ? <View style={styles.voiceBars} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">{bars.map((bar, index) => <Animated.View key={index} style={[styles.voiceBar, { opacity: bar, transform: [{ scaleY: bar }] }]} />)}<RecordingStopIcon size={15} color={color.onAccent} /></View> : <MicIcon size={24} color={disabled || streaming ? color.ink4 : color.accentHi} />}
+          </MotionPressable>
+        ) : null}
         <Animated.View style={{ width: action.interpolate({ inputRange: [0, 1], outputRange: [SEND, 76] }), height: SEND }}>
           <MotionPressable
             onPress={() => {
@@ -125,6 +176,23 @@ export function Composer({
           </MotionPressable>
         </Animated.View>
       </Animated.View>
+      {voice.active ? (
+        <View style={styles.voiceStatus}>
+          <Txt variant="bodyTight" tone="ink2" accessibilityLiveRegion="polite" style={styles.voiceText}>
+            {voice.phase === 'starting' ? 'Opening the microphone…' : voice.phase === 'processing' ? 'Finishing your words…' : 'Listening… Speak now.'}
+          </Txt>
+          <MotionPressable onPress={() => voice.cancel(true)} accessibilityRole="button" accessibilityLabel={tr('Cancel voice typing')} style={styles.voiceCancel}>
+            <Txt variant="action" tone="ink2">Cancel</Txt>
+          </MotionPressable>
+        </View>
+      ) : voice.error ? (
+        <View>
+          <Txt variant="bodyTight" tone="risk" accessibilityLiveRegion="polite" style={styles.voiceError}>{voice.error}</Txt>
+          {voice.permissionDenied ? <MotionPressable onPress={() => { void Linking.openSettings().catch(() => {}); }} accessibilityRole="button" accessibilityLabel={tr('Open microphone settings')} style={styles.voiceCancel}>
+            <Txt variant="action" tone="fill">Open microphone settings</Txt>
+          </MotionPressable> : null}
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -151,6 +219,14 @@ const useStyles = makeStyles((color) => StyleSheet.create({
     elevation: 2,
   },
   tool: { width: 36, height: SEND, alignItems: 'center', justifyContent: 'center' },
+  microphone: { width: 48, height: 48, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: color.accentWash, borderWidth: 1, borderColor: color.accentSoft },
+  microphoneOn: { backgroundColor: color.accent, borderColor: color.accent },
+  voiceBars: { height: 28, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 3 },
+  voiceBar: { width: 3, height: 22, borderRadius: 2, backgroundColor: color.onAccent },
+  voiceStatus: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingLeft: 8 },
+  voiceText: { flex: 1 },
+  voiceCancel: { minHeight: 44, minWidth: 64, alignItems: 'center', justifyContent: 'center' },
+  voiceError: { paddingHorizontal: 8, paddingTop: 8 },
   input: {
     flex: 1,
     minHeight: SEND,

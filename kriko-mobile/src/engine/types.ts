@@ -10,10 +10,11 @@
 
 import { productReadingTitle } from './reading';
 
-/** The two keys Kriko Agent spends. They live in the phone's secure storage. */
+/** Provider keys live in the phone's secure storage. Mistral is optional. */
 export interface ProviderKeys {
   mercury: string;
   deepseek: string;
+  mistral?: string;
 }
 
 export type AccessKind = 'none' | 'trial' | 'shared' | 'own';
@@ -45,6 +46,9 @@ export interface Source {
   url: string;
   title: string;
   host: string;
+  productImageUrl?: string;
+  productPrice?: string;
+  productCard?: boolean;
 }
 
 export interface VisualCandidate {
@@ -75,6 +79,16 @@ export interface Reading {
 }
 
 export type ResearchMode = 'research' | 'site_reviews';
+
+/** Optional, turn-scoped research controls; keys and account state stay separate. */
+export interface ResearchPreferences {
+  products: string[];
+  sourceCount: number;
+  includeIsolated: boolean;
+  includeOneTimeIssues: boolean;
+  sourceLanguage: 'any' | 'en' | 'tr';
+  answerLanguage: 'auto' | 'en' | 'tr';
+}
 
 export type Role = 'user' | 'assistant';
 
@@ -110,6 +124,7 @@ export interface Message {
   error?: string;
   /** The answer rested on titles or snippets, not readable page text. */
   unverified?: boolean;
+  usage?: { promptTokens: number; completionTokens: number; totalTokens: number };
 }
 
 export interface Thread {
@@ -228,4 +243,5 @@ export interface TurnResult {
   unverified: boolean;
   stopped: boolean;
   error: string;
+  usage?: { promptTokens: number; completionTokens: number; totalTokens: number };
 }

@@ -1,5 +1,5 @@
 /**
- * The theme contract: three palettes with one vocabulary, and a resolver that
+ * The theme contract: four palettes with one vocabulary, and a resolver that
  * treats `system` as the phone's choice and an explicit choice as final.
  *
  * A missing key in one palette is a component that turns the wrong colour the
@@ -8,9 +8,10 @@
 
 import assert from 'node:assert/strict';
 
-import { darkColors, paperColors, palettes, whiteColors } from '../src/theme/palettes';
+import { darkColors, grayColors, paperColors, palettes, whiteColors } from '../src/theme/palettes';
 import {
   isAppearance,
+  isDarkPalette,
   isMotionPreference,
   isTextSize,
   nearestPuckOpacityStep,
@@ -24,18 +25,39 @@ import { toneColor } from '../src/theme/tone';
 
 const darkKeys = Object.keys(darkColors).sort();
 assert.deepEqual(Object.keys(paperColors).sort(), darkKeys, 'paper must carry every dark token');
+assert.deepEqual(Object.keys(grayColors).sort(), darkKeys, 'gray must carry every dark token');
 assert.deepEqual(Object.keys(whiteColors).sort(), darkKeys, 'white must carry every dark token');
-assert.deepEqual(Object.keys(palettes).sort(), ['dark', 'paper', 'white']);
+assert.deepEqual(Object.keys(palettes).sort(), ['dark', 'gray', 'paper', 'white']);
+assert.notEqual(grayColors.ground, darkColors.ground, 'gray must not resolve to the black background');
+assert.notEqual(grayColors.surface, darkColors.surface, 'gray cards must have their own surface');
+
+function luminance(hex: string): number {
+  const channels = [1, 3, 5].map((offset) => {
+    const value = parseInt(hex.slice(offset, offset + 2), 16) / 255;
+    return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+  });
+  return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
+}
+for (const palette of [darkColors, grayColors]) {
+  for (const ink of [palette.ink, palette.ink2, palette.ink3]) {
+    const values = [luminance(ink), luminance(palette.surface)].sort((a, b) => a - b);
+    assert.ok((values[1] + 0.05) / (values[0] + 0.05) >= 4.5, `${ink} must remain readable on ${palette.surface}`);
+  }
+}
 
 assert.equal(resolvePalette('system', 'light'), 'paper');
 assert.equal(resolvePalette('system', 'dark'), 'dark');
 assert.equal(resolvePalette('system', null), 'dark');
 assert.equal(resolvePalette('white', 'dark'), 'white');
+assert.equal(resolvePalette('gray', 'light'), 'gray');
 assert.equal(resolvePalette('paper', 'light'), 'paper');
 assert.equal(resolvePalette('dark', 'light'), 'dark');
 
 assert.equal(isAppearance('white'), true);
+assert.equal(isAppearance('gray'), true);
 assert.equal(isAppearance('blue'), false);
+assert.equal(isDarkPalette('gray'), true);
+assert.equal(isDarkPalette('paper'), false);
 assert.equal(isTextSize('large'), true);
 assert.equal(isTextSize(14), false);
 assert.equal(isMotionPreference('reduced'), true);

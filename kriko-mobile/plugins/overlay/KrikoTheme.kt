@@ -16,6 +16,7 @@ internal data class Palette(
   val ink2: Int,
   val ink3: Int,
   val accent: Int,
+  val onAccent: Int,
   val accentHi: Int,
   val risk: Int,
   val riskWash: Int,
@@ -23,9 +24,8 @@ internal data class Palette(
 )
 
 /**
- * The three palettes the app can resolve to, and the English words every native
- * window starts with. Every value mirrors `src/theme/palettes.ts`: dark, paper
- * and white. There is no fourth, hardcoded dark panel hiding anywhere.
+ * The palettes the app can resolve to, and the English words every native
+ * window starts with. Every value mirrors `src/theme/palettes.ts`.
  */
 internal object KrikoTheme {
   const val ON_ACCENT = 0xFFFFFFFF.toInt()
@@ -39,10 +39,27 @@ internal object KrikoTheme {
     ink2 = 0xFFB8B8B8.toInt(),
     ink3 = 0xFF989898.toInt(),
     accent = 0xFF3562E9.toInt(),
+    onAccent = 0xFFFFFFFF.toInt(),
     accentHi = 0xFF99B1FF.toInt(),
     risk = 0xFFFF6B7A.toInt(),
     riskWash = 0x24FF6B7A,
     ok = 0xFF3DDC97.toInt(),
+  )
+  /** Neutral charcoal surfaces remain visibly distinct from the pure-black theme. */
+  val GRAY = Palette(
+    ground = 0xFF202226.toInt(),
+    panel = 0xFF2B2E33.toInt(),
+    raised = 0xFF34383E.toInt(),
+    edge = 0x1FFFFFFF,
+    ink = 0xFFF4F5F7.toInt(),
+    ink2 = 0xFFD0D3D8.toInt(),
+    ink3 = 0xFFB2B7C0.toInt(),
+    accent = 0xFF7C9BFF.toInt(),
+    onAccent = 0xFF101522.toInt(),
+    accentHi = 0xFFB3C4FF.toInt(),
+    risk = 0xFFFF8995.toInt(),
+    riskWash = 0x29FF8995,
+    ok = 0xFF5BE0A4.toInt(),
   )
   val PAPER = Palette(
     ground = 0xFFF4F0E6.toInt(),
@@ -53,6 +70,7 @@ internal object KrikoTheme {
     ink2 = 0xFF5D5A52.toInt(),
     ink3 = 0xFF78756D.toInt(),
     accent = 0xFF2E5BEF.toInt(),
+    onAccent = 0xFFFFFFFF.toInt(),
     accentHi = 0xFF2E5BEF.toInt(),
     risk = 0xFFB74739.toInt(),
     riskWash = 0xFFF6E7DF.toInt(),
@@ -67,6 +85,7 @@ internal object KrikoTheme {
     ink2 = 0xFF4A4F57.toInt(),
     ink3 = 0xFF6B7280.toInt(),
     accent = 0xFF2E5BEF.toInt(),
+    onAccent = 0xFFFFFFFF.toInt(),
     accentHi = 0xFF2E5BEF.toInt(),
     risk = 0xFFB42318.toInt(),
     riskWash = 0xFFFDECEA.toInt(),
@@ -74,6 +93,7 @@ internal object KrikoTheme {
   )
 
   fun paletteFor(name: String?): Palette = when (name) {
+    "gray" -> GRAY
     "paper" -> PAPER
     "white" -> WHITE
     else -> DARK
@@ -102,6 +122,13 @@ internal object KrikoTheme {
     "cancelled" to "Cancelled",
     "productScan" to "Product scan",
     "sources" to "Sources",
+    "showAllSources" to "Show all sources",
+    "showFewerSources" to "Show fewer sources",
+    "stalledResearch" to "Research is taking longer than expected. It may still finish in the background.",
+    "openToRetry" to "Open Kriko to check or retry",
+    "writingAnswer" to "Writing the answer…",
+    "reviewingSources" to "Reviewing sources…",
+
     "queueFull" to "Queue is full",
     "dragHint" to "Tap Kriko to scan this page. Press and hold for more.",
     "dropToStop" to "Drop here to stop sharing",

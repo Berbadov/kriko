@@ -6,17 +6,17 @@
  */
 
 /** How the app chooses a palette. `system` follows the phone's own setting. */
-export type Appearance = 'system' | 'dark' | 'paper' | 'white';
+export type Appearance = 'system' | 'dark' | 'gray' | 'paper' | 'white';
 
 /** A resolved palette name. */
-export type PaletteName = 'dark' | 'paper' | 'white';
+export type PaletteName = 'dark' | 'gray' | 'paper' | 'white';
 
 export type TextSize = 'small' | 'default' | 'large';
 
 /** `system` follows Android's reduce-motion setting. */
 export type MotionPreference = 'system' | 'reduced' | 'full';
 
-export const APPEARANCES: readonly Appearance[] = ['system', 'dark', 'paper', 'white'];
+export const APPEARANCES: readonly Appearance[] = ['system', 'dark', 'gray', 'paper', 'white'];
 export const TEXT_SIZES: readonly TextSize[] = ['small', 'default', 'large'];
 export const MOTION_PREFERENCES: readonly MotionPreference[] = ['system', 'reduced', 'full'];
 
@@ -60,6 +60,10 @@ export function isTextSize(value: unknown): value is TextSize {
 
 export function isMotionPreference(value: unknown): value is MotionPreference {
   return typeof value === 'string' && (MOTION_PREFERENCES as readonly string[]).includes(value);
+}
+
+export function isDarkPalette(palette: PaletteName): boolean {
+  return palette === 'dark' || palette === 'gray';
 }
 
 /** Resolve `system` against the phone, leaving an explicit choice alone. */

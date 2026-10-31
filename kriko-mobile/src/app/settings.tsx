@@ -1,9 +1,10 @@
 import Constants from 'expo-constants';
 import { router, type Href } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, AppState, StyleSheet, View } from 'react-native';
+import { Alert, AppState, StyleSheet, TextInput, View } from 'react-native';
 
 import { AccessSheet } from '../components/AccessSheet';
+import { PriceTracking } from '../components/PriceTracking';
 import { Divider, HeaderAction, Hero, Page } from '../components/Chrome';
 import { BackIcon, ChevronRightIcon, GlobeIcon, KeyIcon, ShieldIcon, SparkIcon, TrashIcon } from '../components/Icon';
 import { MotionPressable, MotionView } from '../components/Motion';
@@ -31,6 +32,7 @@ import { Txt } from '../theme/Txt';
 export default function Settings() {
   const {
     access,
+    checkPriceWatch,
     trialLeft,
     threads,
     clearHistory,
@@ -52,14 +54,22 @@ export default function Settings() {
     setMotion,
     setHaptics,
     resetPreferences,
+    researchPreferences,
+    setResearchPreferences,
+    showDiagnostics,
+    setShowDiagnostics,
   } = useStore();
   const color = useColors();
   const styles = useStyles();
   const [sheet, setSheet] = useState(false);
+  const [prioritiesDraft, setPrioritiesDraft] = useState('');
+  const [prioritiesDirty, setPrioritiesDirty] = useState(false);
   const attention = updateNeedsAttention(useAppUpdate());
   const scanner = overlayAvailable();
   const assistant = usePhoneSetting(scanner, isDefaultAssistant);
   const overPage = usePhoneSetting(scanner, canDrawOverApps);
+
+  const savedPriorities = researchPreferences.products.filter((item) => item !== 'all').join(', ');
 
   const accessTitle =
     access.kind === 'trial' ? 'Free trial' : access.kind === 'shared' ? 'Shared access' :
@@ -99,7 +109,7 @@ export default function Settings() {
       tr('Every appearance, text-size, motion and answer choice goes back to its default. Keys, conversations and scans stay.'),
       [
         { text: tr('Cancel'), style: 'cancel' },
-        { text: tr('Reset'), style: 'destructive', onPress: resetPreferences },
+      { text: tr('Reset'), style: 'destructive', onPress: () => { setPrioritiesDirty(false); resetPreferences(); } },
       ],
     );
   };
@@ -115,7 +125,7 @@ export default function Settings() {
       <Hero
         crumb="kriko / settings"
         title="Settings"
-        subtitle="A few choices. Everything stays on this phone."
+        subtitle="Make Kriko work for you."
       />
 
       <View style={styles.body}>
@@ -263,6 +273,28 @@ export default function Settings() {
               options={[{ value: 'en', label: 'English' }, { value: 'tr', label: 'Türkçe' }]}
             />
           </Setting>
+          <Setting label="Sources language" description="Any searches all languages by default.">
+            <Segmented
+              value={researchPreferences.sourceLanguage}
+              onChange={(sourceLanguage) => setResearchPreferences({ ...researchPreferences, sourceLanguage })}
+              options={[
+                { value: 'any', label: 'Any' },
+                { value: 'en', label: 'English' },
+                { value: 'tr', label: 'Türkçe' },
+              ]}
+            />
+          </Setting>
+          <Setting label="Answers language" description="Auto follows your question; if unclear, uses the interface language.">
+            <Segmented
+              value={researchPreferences.answerLanguage}
+              onChange={(answerLanguage) => setResearchPreferences({ ...researchPreferences, answerLanguage })}
+              options={[
+                { value: 'auto', label: 'Auto' },
+                { value: 'en', label: 'English' },
+                { value: 'tr', label: 'Türkçe' },
+              ]}
+            />
+          </Setting>
         </MotionView>
 
         <Divider />
@@ -291,7 +323,59 @@ export default function Settings() {
               ]}
             />
           </Setting>
+          <Setting label="Products and priorities" description="Tell Kriko what you’re considering and what matters. Separate items with commas or new lines.">
+            <TextInput
+              value={prioritiesDirty ? prioritiesDraft : savedPriorities}
+              onChangeText={(value) => { setPrioritiesDraft(value); setPrioritiesDirty(true); }}
+              placeholder="Quiet laptop, USB-C monitor, small kitchen"
+              placeholderTextColor={color.ink3}
+              multiline
+              maxLength={500}
+              accessibilityLabel={tr('Products and priorities')}
+              style={styles.researchInput}
+            />
+            <Button
+              label={tr('Save priorities')}
+              variant="quiet"
+              disabled={!prioritiesDirty}
+              onPress={() => {
+                const products = prioritiesDraft.split(/[,\n;]/).map((item) => item.trim()).filter(Boolean).slice(0, 10);
+                setResearchPreferences({ ...researchPreferences, products: products.length ? products : ['all'] });
+                setPrioritiesDirty(false);
+              }}
+            />
+          </Setting>
+          <Setting label="Sources to compare" description="How many useful sources to aim for, up to ten.">
+            <Segmented<string>
+              value={String(researchPreferences.sourceCount)}
+              onChange={(value) => setResearchPreferences({ ...researchPreferences, sourceCount: Number(value) })}
+              options={[{ value: '3', label: '3' }, { value: '5', label: '5' }, { value: '8', label: '8' }, { value: '10', label: '10' }]}
+            />
+          </Setting>
+          <View style={styles.toggleRow}>
+            <View style={[styles.settingText, styles.toggleText]}>
+              <Txt variant="rowTitle" tone="ink">Include isolated reports</Txt>
+              <Txt variant="bodyTight" tone="ink3">Show concerns reported by only one source.</Txt>
+            </View>
+            <Toggle value={researchPreferences.includeIsolated} onChange={() => setResearchPreferences({ ...researchPreferences, includeIsolated: !researchPreferences.includeIsolated })} label="Include isolated reports" />
+          </View>
+          <View style={styles.toggleRow}>
+            <View style={[styles.settingText, styles.toggleText]}>
+              <Txt variant="rowTitle" tone="ink">Include one-time issues</Txt>
+              <Txt variant="bodyTight" tone="ink3">Keep rare, non-recurring faults in the summary.</Txt>
+            </View>
+            <Toggle value={researchPreferences.includeOneTimeIssues} onChange={() => setResearchPreferences({ ...researchPreferences, includeOneTimeIssues: !researchPreferences.includeOneTimeIssues })} label="Include one-time issues" />
+          </View>
+          <View style={styles.toggleRow}>
+            <View style={[styles.settingText, styles.toggleText]}>
+              <Txt variant="rowTitle" tone="ink">Show usage details</Txt>
+              <Txt variant="bodyTight" tone="ink3">Token counts and run diagnostics appear only when enabled.</Txt>
+            </View>
+            <Toggle value={showDiagnostics} onChange={() => setShowDiagnostics(!showDiagnostics)} label="Show usage details" />
+          </View>
         </MotionView>
+
+        <PriceTracking onCheck={checkPriceWatch} />
 
         <Divider />
 
@@ -301,8 +385,9 @@ export default function Settings() {
           <Fact icon={<GlobeIcon size={16} color={color.ink3} />} label="Searches and reads" value="DeepSeek Search & Fetch" />
           <Fact icon={<ShieldIcon size={16} color={color.ink3} />} label="Reads screenshots" value="DeepSeek vision" />
           <Txt variant="bodyTight" tone="ink3" style={styles.privacy}>
-            Your question and listing text go to Inception. Search queries and chosen pages go to DeepSeek. A screenshot is uploaded once for reading and kept only as a chat thumbnail. No Kriko account, server, or analytics.
+            Chats, scan results, screen-read audit thumbnails, and price watches (including merchant URLs and observed prices) stay in this phone’s app storage. Provider keys are held in secure storage. Questions and relevant context go to Mercury; search queries and selected pages go to DeepSeek. Product research can fetch the exact merchant result page for product metadata and its image URL, then request that image from its advertised HTTPS host. Screenshots are sent for vision reading and can contain sensitive information visible on screen. Kriko does not encrypt local history and this build has no Kriko account or analytics upload.
           </Txt>
+          <NavRow title="Privacy and saved data" subtitle="See the actual content kept in chat and scan history." onPress={() => router.push('/privacy' as Href)} />
         </MotionView>
 
         <Divider />
@@ -312,9 +397,7 @@ export default function Settings() {
             <SectionLabel>Saved conversations</SectionLabel>
             <Txt variant="monoSm" tone="ink3" style={styles.sectionCount}>{tr(`${threads.length} chat${threads.length === 1 ? '' : 's'} · ${messageCount} messages`)}</Txt>
           </View>
-          {threads.length ? (
-            <Button label="Clear chats and scan results" variant="danger" icon={<TrashIcon size={16} color={color.risk} />} onPress={confirmClear} />
-          ) : <Txt variant="bodyTight" tone="ink3">Nothing saved yet.</Txt>}
+          <Button label="Clear chats and scan results" variant="danger" icon={<TrashIcon size={16} color={color.risk} />} onPress={confirmClear} />
         </MotionView>
 
         <Divider />
@@ -403,6 +486,7 @@ function ThemePicker({ value, onChange }: { value: Appearance; onChange: (value:
   }[] = [
     { value: 'system', label: 'System', ground: '#2A2D33', card: '#141518', ink: '#EDEFF2', accent: '#6C8CFF' },
     { value: 'dark', label: 'Dark', ground: '#000000', card: '#1A1A1A', ink: '#F5F5F5', accent: '#3562E9' },
+    { value: 'gray', label: 'Gray', ground: '#202226', card: '#2B2E33', ink: '#F4F5F7', accent: '#7C9BFF' },
     { value: 'paper', label: 'Paper', ground: '#F4F0E6', card: '#FFFDF7', ink: '#24231F', accent: '#2E5BEF' },
     { value: 'white', label: 'White', ground: '#F7F8FA', card: '#FFFFFF', ink: '#111318', accent: '#2E5BEF' },
   ];
@@ -472,13 +556,16 @@ const useStyles = makeStyles((color) => StyleSheet.create({
   textAction: { minHeight: 44, alignSelf: 'flex-start', justifyContent: 'center', paddingHorizontal: 4 },
   setting: { gap: gap[2], paddingVertical: gap[1] },
   settingText: { gap: 2 },
+  researchInput: { minHeight: 76, textAlignVertical: 'top', borderWidth: 1, borderColor: color.edgeStrong, borderRadius: 12, color: color.ink, backgroundColor: color.surface, paddingHorizontal: gap[3], paddingVertical: gap[2], fontSize: 15, lineHeight: 21 },
   toggleRow: { flexDirection: 'row', alignItems: 'center', gap: gap[3], paddingVertical: gap[1] },
   toggleText: { flex: 1 },
   puckRow: { flexDirection: 'row', alignItems: 'center', gap: gap[3] },
   puckText: { flex: 1, gap: 3 },
-  themeRow: { flexDirection: 'row', gap: 8 },
+  themeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   themeOption: {
-    flex: 1,
+    flexGrow: 1,
+    flexBasis: '18%',
+    minWidth: 60,
     alignItems: 'center',
     gap: 7,
     paddingVertical: 9,

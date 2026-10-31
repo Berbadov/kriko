@@ -8,10 +8,13 @@
 
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
-import { router, type Href } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { router, useFocusEffect, type Href } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
+  BackHandler,
+  Keyboard,
   FlatList,
   KeyboardAvoidingView,
   Platform,
@@ -26,7 +29,7 @@ import { AppHeader, HeaderAction } from '../components/Chrome';
 import { UpdateNotice } from '../components/UpdateCard';
 import { Composer } from '../components/Composer';
 import { useDock } from '../components/dock';
-import { PlusIcon } from '../components/Icon';
+import { BackIcon, ChevronRightIcon, KeyIcon, PlusIcon } from '../components/Icon';
 import { MessageRow } from '../components/Message';
 import { MotionPressable, MotionView, useReducedMotion } from '../components/Motion';
 import { Landing } from './Landing';
@@ -58,6 +61,13 @@ const nearEnd = (place: Place) => place.offset + place.viewport >= place.content
 
 export function ChatScreen() {
   const overlay = useOverlaySession();
+  const insets = useSafeAreaInsets();
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+  useEffect(() => {
+    const shown = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
+    const hidden = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
+    return () => { shown.remove(); hidden.remove(); };
+  }, []);
   const {
     access,
     activeThread,
@@ -69,6 +79,7 @@ export function ChatScreen() {
     stop,
     streaming,
     trialLeft,
+    showDiagnostics,
   } = useStore();
   const list = useRef<FlatList<Message>>(null);
   const scrubber = useRef<ScrubberHandle>(null);
@@ -197,6 +208,7 @@ export function ChatScreen() {
     newChat();
     setDraft('');
     setShot(null);
+    dock.beginCompose();
   };
 
   const ask = async (text: string, reading?: Reading, imageUri?: string) => {
@@ -305,6 +317,19 @@ export function ChatScreen() {
     })();
   };
 
+  const goHome = useCallback(() => {
+    Keyboard.dismiss();
+    newChat();
+    dock.endCompose();
+  }, [newChat, dock]);
+  useFocusEffect(useCallback(() => {
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (!empty || dock.composing) { goHome(); return true; }
+      return false;
+    });
+    return () => subscription.remove();
+  }, [empty, dock.composing, goHome]));
+  const inChat = !empty || dock.composing;
   const exhausted = access.kind === 'trial' && trialLeft <= 0;
   /** A navigation the agent proposed. The phone performs it on the press. */
   const openAction = (action: AppAction) => {
@@ -318,13 +343,12 @@ export function ChatScreen() {
   return (
     <View style={styles.page}>
       <AppHeader
-        title={!empty ? activeThread?.title || 'Conversation' : undefined}
+        title={!empty ? activeThread?.title || 'Conversation' : dock.composing ? tr('New chat') : undefined}
         actions={
-          !empty ? (
-            <HeaderAction label="New chat" onPress={startNewChat}>
-              <PlusIcon size={20} color={color.ink} />
-            </HeaderAction>
-          ) : null
+          <>
+            {inChat ? <HeaderAction label="Home" onPress={goHome}><BackIcon size={20} color={color.ink} /></HeaderAction> : null}
+            <HeaderAction label="New chat" onPress={startNewChat}><PlusIcon size={20} color={color.ink} /></HeaderAction>
+          </>
         }
       />
 
@@ -363,6 +387,10 @@ export function ChatScreen() {
             renderItem={({ item, index }) => (
               <MessageRow
                 message={item}
+                showDiagnostics={showDiagnostics}
+                onCheckMerchant={streaming ? undefined : (source) => {
+                  void ask(`Investigate the credibility of the merchant at ${source.host}, for this exact listing: ${source.url}. Verify its identity, independent complaints, consumer protection notices, returns and payment protections. Distinguish verified evidence from unproven claims.`);
+                }}
                 scanning={working && item.role === 'user' && index === messages.length - 2}
                 onAction={openAction}
                 onOpenSources={
@@ -370,7 +398,9 @@ export function ChatScreen() {
                 }
               />
             )}
-            ListEmptyComponent={(
+            ListEmptyComponent={dock.composing ? (
+              <View style={{ paddingHorizontal: PAGE_X, paddingTop: 30 }}><Txt variant="rowTitle" tone="ink3">Ask a question</Txt></View>
+            ) : (
               <Landing
                 onScan={readScreen}
                 onPick={() => { void pick(); }}
@@ -430,23 +460,23 @@ export function ChatScreen() {
           />
         </View>
 
-        <View style={styles.footer}>
+        <View style={[styles.footer, { paddingBottom: !keyboardVisible && access.kind === 'none' ? Math.max(insets.bottom, 10) : 6 }]}>
           {notice ? (
             <Txt variant="monoSm" tone="warn" style={styles.notice}>
               {notice}
             </Txt>
           ) : null}
           {exhausted ? (
-            <MotionPressable onPress={openAccess} style={styles.trialBanner} accessibilityRole="button">
-              <Txt variant="body" tone="ink2" style={styles.trialText}>
-                The free questions on this phone are used up.
-              </Txt>
-              <Txt variant="monoSm" tone="fill" caps style={styles.trialAction}>
-                Paste an access code
-              </Txt>
+            <MotionPressable onPress={openAccess} style={styles.trialBanner} accessibilityRole="button" accessibilityLabel={tr('Trial complete. Add access to continue.')}>
+              <KeyIcon size={17} color={color.ink3} />
+              <Txt variant="bodyTight" tone="ink2" style={styles.trialText}>Trial complete</Txt>
+              <Txt variant="bodyTight" tone="fill">Add access</Txt>
+              <ChevronRightIcon size={15} color={color.ink3} />
             </MotionPressable>
           ) : null}
           <Composer
+            autoFocus={empty && dock.composing}
+            key={activeThread?.id ?? 'new-chat'}
             value={draft}
             onChangeText={setDraft}
             onSend={onSend}
@@ -516,9 +546,10 @@ const useStyles = makeStyles((color) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: gap[2],
-    backgroundColor: color.riskWash,
+    minHeight: 44,
+    backgroundColor: color.surface,
     borderWidth: 1,
-    borderColor: color.riskWash,
+    borderColor: color.edge,
     borderRadius: radius.m,
     paddingHorizontal: 11,
     paddingVertical: 8,

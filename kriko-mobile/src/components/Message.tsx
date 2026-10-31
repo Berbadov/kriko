@@ -8,8 +8,8 @@
  */
 
 import * as Clipboard from 'expo-clipboard';
-import { useState } from 'react';
-import { Linking, StyleSheet, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Animated, AppState, Easing, Linking, StyleSheet, View } from 'react-native';
 
 import { motion } from '../theme/motion';
 import type { Colors } from '../theme/palettes';
@@ -29,8 +29,8 @@ import {
 } from './Icon';
 import { Markdown } from './Markdown';
 import { AnimatedDisclosure, DisclosureChevron } from './AnimatedDisclosure';
-import { ActivityDots, MotionPressable, MotionView } from './Motion';
-import { ProductCard } from './ProductCard';
+import { MotionPressable, MotionView, useReducedMotion } from './Motion';
+import { ProductCard, ProductSearchCards } from './ProductCard';
 import { useSmoothText } from './useSmoothText';
 
 function clock(at: number): string {
@@ -64,35 +64,62 @@ export function StepLine({ step }: { step: Step }) {
   );
 }
 
-function LiveSteps({ steps }: { steps: Step[] }) {
+function ResearchIndicator() {
   const color = useColors();
-  const styles = useStyles();
-  const recent = steps.slice(-3);
-  return (
-    <MotionView style={styles.liveCard}>
-      <View style={styles.liveHead}>
-        <ActivityDots color={color.accent} />
-        <Txt variant="bodyTight" tone="ink">Checking the product</Txt>
-        <Txt variant="monoSm" tone="ink4" style={styles.liveCount}>
-          {steps.length ? `${steps.length} checks` : ''}
-        </Txt>
-      </View>
-      {recent.map((step) => (
-        <StepLine key={step.id} step={step} />
-      ))}
-    </MotionView>
-  );
+  const reduced = useReducedMotion();
+  const [travel] = useState(() => new Animated.Value(0));
+  useEffect(() => {
+    travel.stopAnimation(); travel.setValue(0.5);
+    if (reduced !== false) return;
+    const motion = Animated.loop(Animated.timing(travel, {
+      toValue: 1, duration: 1750, easing: Easing.linear, useNativeDriver: true, isInteraction: false,
+    }));
+    travel.setValue(0);
+    if (AppState.currentState === 'active') motion.start();
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') motion.start(); else motion.stop();
+    });
+    return () => { subscription.remove(); motion.stop(); };
+  }, [reduced, travel]);
+  return <View importantForAccessibility="no-hide-descendants" style={{ width: 42, height: 24, overflow: 'hidden' }}>
+    {[0, 1, 2].map((index) => <Animated.View key={index} style={{ position: 'absolute', top: 3, width: 13, height: 18,
+      borderRadius: 3, borderWidth: 1, borderColor: color.accentHi, backgroundColor: color.surface,
+      opacity: travel.interpolate({ inputRange: [0, 0.3, 0.75, 1], outputRange: [0.1, 0.9 - index * 0.16, 0.7, 0.1] }),
+      transform: [{ translateX: travel.interpolate({ inputRange: [0, 1], outputRange: [-14 + index * 10, 14 + index * 10] }) },
+        { translateY: travel.interpolate({ inputRange: [0, 0.5, 1], outputRange: [index, -index, index] }) }] }}>
+      <View style={{ height: 1, marginHorizontal: 2, marginTop: 5, backgroundColor: color.accentSoft }} />
+      <View style={{ height: 1, marginHorizontal: 2, marginTop: 3, backgroundColor: color.accentSoft }} />
+    </Animated.View>)}
+  </View>;
 }
 
-function Research({ steps }: { steps: Step[] }) {
+function LiveSteps({ steps, answering }: { steps: Step[]; answering: boolean }) {
+  const styles = useStyles();
+  const visible = steps.filter((step) => !step.text.startsWith('diagnostic:'));
+  const latest = visible[visible.length - 1];
+  const phase = answering || /Writing the answer|moving to the answer/.test(latest?.text ?? '')
+    ? 'Writing the answer…'
+    : latest?.kind === 'fetch' ? 'Reading sources…'
+      : latest?.kind === 'search' ? 'Finding sources…' : 'Reviewing sources…';
+  return <MotionView style={styles.liveCard}>
+    <View style={styles.liveHead}>
+      <ResearchIndicator />
+      <Txt variant="bodyTight" tone="ink" numberOfLines={1} style={styles.liveCount}>{tr(phase)}</Txt>
+    </View>
+  </MotionView>;
+}
+
+function Research({ steps, showDiagnostics = false }: { steps: Step[]; showDiagnostics?: boolean }) {
   const color = useColors();
   const styles = useStyles();
   const [open, setOpen] = useState(false);
-  if (!steps.length) return null;
-  const searches = steps.filter(
+  const visibleSteps = steps.filter((step) => !step.text.startsWith('diagnostic:'));
+  const diagnostics = showDiagnostics ? steps.filter((step) => step.text.startsWith('diagnostic:tokens:')) : [];
+  if (!visibleSteps.length && !diagnostics.length) return null;
+  const searches = visibleSteps.filter(
     (step) => step.kind === 'search' && step.text.startsWith('Searching'),
   ).length;
-  const reads = steps.filter(
+  const reads = visibleSteps.filter(
     (step) => step.kind === 'fetch' && step.text.startsWith('Reading'),
   ).length;
   const summary = [
@@ -111,9 +138,7 @@ function Research({ steps }: { steps: Step[] }) {
         accessibilityState={{ expanded: open }}
         style={styles.researchHead}
       >
-        <Txt variant="sectionLabel" tone="ink3">
-          Research notes
-        </Txt>
+        <Txt variant="sectionLabel" tone="ink3">Research</Txt>
         <Txt variant="monoSm" tone="ink3" numberOfLines={1} style={styles.researchSummary}>
           {summary || `${steps.length} steps`}
         </Txt>
@@ -122,9 +147,16 @@ function Research({ steps }: { steps: Step[] }) {
         </DisclosureChevron>
       </MotionPressable>
       <AnimatedDisclosure open={open} style={styles.researchBody}>
-          {steps.map((step) => (
+          {visibleSteps.map((step) => (
             <StepLine key={step.id} step={step} />
           ))}
+          {diagnostics.map((step) => {
+            const fields = step.text.split(':');
+            const prompt = fields[2] ?? '0';
+            const completion = fields[3] ?? '0';
+            const total = fields[4] ?? '0';
+            return <Txt key={step.id} variant="monoSm" tone="ink4">{`Tokens · ${prompt} input · ${completion} output · ${total} total`}</Txt>;
+          })}
       </AnimatedDisclosure>
     </View>
   );
@@ -145,7 +177,7 @@ function SourceRow({ source }: { source: Source }) {
     >
       <Txt variant="monoSm" tone="ink4" style={styles.sourceNumber}>{source.n}</Txt>
       <View style={styles.sourceText}>
-        <Txt variant="bodyTight" tone="ink2" numberOfLines={2}>
+      <Txt variant="bodyTight" tone="ink2" numberOfLines={1}>
           {source.title}
         </Txt>
         <Txt variant="monoSm" tone="ink4" numberOfLines={1}>
@@ -168,11 +200,11 @@ function Sources({
   const styles = useStyles();
   const [all, setAll] = useState(false);
   if (!sources.length) return null;
-  const shown = all ? sources : sources.slice(0, 4);
+  const shown = all ? sources : sources.slice(0, 2);
   return (
     <View style={styles.sources}>
       <View style={styles.sourcesHead}>
-        <Txt variant="sectionLabel" tone="ink3">
+          <Txt variant="sectionLabel" tone="ink3">
           {tr(`Sources · ${sources.length}`)}
         </Txt>
         <View style={styles.sourceActions}>
@@ -181,13 +213,7 @@ function Sources({
               Titles only
             </Txt>
           ) : null}
-          {onOpen ? (
-            <MotionPressable onPress={onOpen} hitSlop={6} accessibilityRole="button" accessibilityLabel={tr('Open all sources')}>
-              <Txt variant="monoSm" tone="fill">
-                All
-              </Txt>
-            </MotionPressable>
-          ) : null}
+          {onOpen ? <MotionPressable onPress={onOpen} hitSlop={6} accessibilityRole="button" accessibilityLabel={tr('Open all sources')} style={styles.sourceAll}><Txt variant="monoSm" tone="fill">All</Txt></MotionPressable> : null}
         </View>
       </View>
       {shown.map((source, index) => (
@@ -195,10 +221,10 @@ function Sources({
           <SourceRow source={source} />
         </MotionView>
       ))}
-      {sources.length > 4 ? (
-        <MotionPressable onPress={() => setAll((value) => !value)} hitSlop={6}>
+      {sources.length > 2 ? (
+        <MotionPressable onPress={() => setAll((value) => !value)} accessibilityRole="button" accessibilityState={{ expanded: all }} accessibilityLabel={tr(all ? 'Show fewer sources' : `Show all ${sources.length} sources`)} style={styles.sourceExpand}>
           <Txt variant="monoSm" tone="fill">
-            {all ? 'Show fewer' : `Show all ${sources.length}`}
+          {all ? 'Show fewer' : `Show all ${sources.length}`}
           </Txt>
         </MotionPressable>
       ) : null}
@@ -304,12 +330,17 @@ export function MessageRow({
   scanning,
   onOpenSources,
   onAction,
+  showDiagnostics = false,
+  onCheckMerchant,
 }: {
   message: Message;
   /** This is the scan whose answer is still being written. */
   scanning?: boolean;
   onOpenSources?: () => void;
   onAction?: (action: AppAction) => void;
+  /** Show provider-reported usage counts. Defaults off. */
+  showDiagnostics?: boolean;
+  onCheckMerchant?: (source: Source) => void;
 }) {
   const color = useColors();
   const styles = useStyles();
@@ -333,14 +364,14 @@ export function MessageRow({
       <View style={styles.agentRow}>
       <View style={styles.agentHead}>
         <Txt variant="sectionLabel" tone="accent" style={styles.agentLabel}>
-          Kriko&apos;s read
+          Kriko
         </Txt>
         <Txt variant="monoSm" tone="ink4">
           {running ? 'In progress' : clock(message.createdAt)}
         </Txt>
       </View>
 
-      {running ? <LiveSteps steps={message.steps ?? []} /> : null}
+      {running ? <LiveSteps steps={message.steps ?? []} answering={hasText} /> : null}
 
       {hasText ? (
         <MotionView delay={70} style={styles.answer}>
@@ -368,7 +399,7 @@ export function MessageRow({
         </Txt>
       ) : null}
 
-      {done && message.steps?.length ? <Research steps={message.steps} /> : null}
+      {done && message.steps?.length ? <Research steps={message.steps} showDiagnostics={showDiagnostics} /> : null}
 
       {message.error ? (
         <MotionView delay={100} style={styles.errorCard}>
@@ -377,6 +408,10 @@ export function MessageRow({
             {message.error}
           </Txt>
         </MotionView>
+      ) : null}
+
+      {done ? (
+        <ProductSearchCards sources={message.sources ?? []} onCheckMerchant={onCheckMerchant} />
       ) : null}
 
       {done ? (
@@ -424,6 +459,8 @@ const useStyles = makeStyles((color) => StyleSheet.create({
   },
   agentLabel: { flex: 1 },
   sourceActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  sourceAll: { minHeight: 44, minWidth: 44, alignItems: 'center', justifyContent: 'center' },
+  sourceExpand: { minHeight: 44, justifyContent: 'center' },
   answer: { gap: gap[2] },
   answerFoot: { flexDirection: 'row', alignItems: 'center', gap: gap[3], paddingTop: 2 },
   copy: { flexDirection: 'row', alignItems: 'center', gap: 5 },
