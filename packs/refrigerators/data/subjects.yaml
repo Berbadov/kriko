@@ -1,0 +1,155 @@
+# Subjects — the things this pack knows about.
+#
+# `identity` carries exactly the keys `pack.toml` declares for the
+# kind: that dictionary is hashed to the subject id.
+- kind: product
+  label: Beko 970406 MB
+  identity:
+    brand: beko
+    model: 970406 mb
+  attributes:
+    total_capacity_l:
+      value: '406'
+      source: https://www.sikayetvar.com/beko/970406-mb/970406mb
+    freezer_capacity_l:
+      value: '93'
+      source: https://www.sikayetvar.com/beko/970406-mb/970406mb
+    noise_db:
+      value: '39'
+      source: https://www.sikayetvar.com/beko/970406-mb/970406mb
+    energy_class:
+      value: F
+      source: https://www.sikayetvar.com/beko/970406-mb/970406mb
+    cooling_type:
+      value: No-Frost
+      source: https://www.sikayetvar.com/beko/970406-mb/970406mb
+  aliases:
+  - 970406MB
+- kind: product
+  label: Beko 974508 MB
+  identity:
+    brand: beko
+    model: 974508 mb
+  aliases:
+  - 974508MB
+- kind: product
+  label: Beko 970476 MB
+  identity:
+    brand: beko
+    model: 970476 mb
+  aliases:
+  - 970476MB
+- kind: product
+  label: Beko B7RCNE40HXBR
+  identity:
+    brand: beko
+    model: b7rcne40hxbr
+  aliases:
+  - B7RCNE40HXBR
+- kind: product
+  label: Beko RCNA406I30W
+  identity:
+    brand: beko
+    model: rcna406i30w
+  aliases:
+  - RCNA406I30W
+- kind: product
+  label: Beko B3RCNA364HXB1
+  identity:
+    brand: beko
+    model: b3rcna364hxb1
+  aliases:
+  - B3RCNA364HXB1
+- kind: product
+  label: Beko 970475 EB
+  identity:
+    brand: Beko
+    model: 970475 EB
+  attributes:
+    family:
+      value: No Frost
+      source: https://www.beko.com.tr/no-frost-buzdolabi?text=&q=:relevance:categoryPath:%2F1652%2F5575%2F5576:allTechnologies:beko_AeroFlow:productColor1:A1390_48353_TA4:productColor1:A1390_48353_TA3
+    cooling_type:
+      value: No Frost
+      source: https://www.beko.com.tr/no-frost-buzdolabi?text=&q=:relevance:categoryPath:%2F1652%2F5575%2F5576:allTechnologies:beko_AeroFlow:productColor1:A1390_48353_TA4:productColor1:A1390_48353_TA3
+  aliases:
+  - 970475 EB
+- kind: product
+  label: Beko 974509 MB
+  identity:
+    brand: Beko
+    model: 974509 MB
+  attributes:
+    family:
+      value: No Frost
+      source: https://www.beko.com.tr/buzdolabi?text=&q=:relevance:productColor1:A1390_48353_TA52:productColor1:A1390_48353_TA4:allTechnologies:beko_harvest_fresh:categoryPath:%2F1652
+    cooling_type:
+      value: No Frost
+      source: https://www.beko.com.tr/buzdolabi?text=&q=:relevance:productColor1:A1390_48353_TA52:productColor1:A1390_48353_TA4:allTechnologies:beko_harvest_fresh:categoryPath:%2F1652
+  aliases:
+  - 974509 MB
+- kind: product
+  label: Beko 674532 EB
+  identity:
+    brand: Beko
+    model: 674532 EB
+  attributes:
+    family:
+      value: No Frost
+      source: https://www.beko.com.tr/buzdolabi?text=&q=:relevance:categoryPath:%2F1652%2F5575%2F5573:hasOlizPrice:true:productColor1:A1390_48353_TA4
+    cooling_type:
+      value: No Frost
+      source: https://www.beko.com.tr/buzdolabi?text=&q=:relevance:categoryPath:%2F1652%2F5575%2F5573:hasOlizPrice:true:productColor1:A1390_48353_TA4
+  aliases:
+  - 674532 EB
+- kind: product
+  label: Beko 674533 MB
+  identity:
+    brand: Beko
+    model: 674533 MB
+  attributes:
+    family:
+      value: No Frost
+      source: https://www.beko.com.tr/no-frost-buzdolabi/674533-mb-buzdolabi
+    cooling_type:
+      value: No Frost
+      source: https://www.beko.com.tr/no-frost-buzdolabi/674533-mb-buzdolabi
+    total_capacity_l:
+      value: '532'
+      source: https://www.beko.com.tr/no-frost-buzdolabi/674533-mb-buzdolabi
+    energy_class:
+      value: E
+      source: https://www.hepsiburada.com/beko-674533-mb-kombi-tipi-buzdolabi-532-l-e-enerji-sinifi-no-frost-ozellikli-p-HBCV000076B1GR-yorumlari
+  aliases:
+  - 674533 MB
+- kind: product
+  label: Beko 670475 MB
+  identity:
+    brand: Beko
+    model: 670475 MB
+  attributes:
+    family:
+      value: No Frost
+      source: https://www.beko.com.tr/buzdolabi?text=&q=::productColor1:A1390_48353_TA52:productColor1:A1390_48353_TA4:categoryPath:%2F1652:productColor1:A1390_48353_TA48
+    cooling_type:
+      value: No Frost
+      source: https://www.beko.com.tr/buzdolabi?text=&q=::productColor1:A1390_48353_TA52:productColor1:A1390_48353_TA4:categoryPath:%2F1652:productColor1:A1390_48353_TA48
+  aliases:
+  - 670475 MB
+- kind: product
+  label: Beko 678551 ESC
+  identity:
+    brand: Beko
+    model: 678551 ESC
+  attributes:
+    family:
+      value: No Frost
+      source: https://www.beko.com.tr/no-frost-buzdolabi/678551-esc-buzdolabi
+    cooling_type:
+      value: No Frost
+      source: https://www.beko.com.tr/no-frost-buzdolabi/678551-esc-buzdolabi
+    total_capacity_l:
+      value: '551'
+      source: https://www.beko.com.tr/no-frost-buzdolabi/678551-esc-buzdolabi
+  aliases:
+  - 678551 ESC

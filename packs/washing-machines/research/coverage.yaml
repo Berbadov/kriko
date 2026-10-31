@@ -1,0 +1,35 @@
+lineup:
+- Arçelik 9120 DMX
+- Beko CMX 10120 S
+- Bosch WGK252Z0TR
+- Siemens WG52A2Z0TR
+- Samsung WW11DG5B25AEAH
+- LG F4Y7ER
+covered:
+- ar elik 9120 dmx
+- beko cmx 10120 s
+- bosch wgk252z0tr
+- lg f4y7er
+- product brand arcelik series 9120dmx
+- product brand beko series cmx10120s
+- product brand bosch series wgk252z0tr
+- product brand lg series f4y7er
+- product brand samsung series ww11dg5b25aeah
+- product brand siemens series wg52a2z0tr
+- samsung ww11dg5b25aeah
+- siemens wg52a2z0tr
+uncovered: []
+note: These are the models surfaced by Turkish best-seller lists and complaint records.
+  No specific Vestel model could be identified, and many other current models of each
+  brand (and the wider EU line-up) are not individually covered; Beko CMX 10120 S
+  and Siemens WG52A2Z0TR have subjects but no claims because no model-specific failure
+  evidence was found.
+out_of_scope:
+- AEG
+- Profilo
+- Ariston
+- Indesit
+- Electrolux
+- Whirlpool
+- Miele
+quarantined: []

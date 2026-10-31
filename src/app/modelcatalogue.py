@@ -158,7 +158,8 @@ def price(model: str, tokens_in: int, tokens_out: int,
 #: closed vocabulary of vendor prefixes, not a model list: a model released
 #: tomorrow routes correctly the day it exists. Anything else is sent to the
 #: OpenAI-shaped adapter, the format every gateway speaks.
-_PREFIXES = (("claude-", "anthropic"), ("mistral-", "mistral"), ("magistral-", "mistral"))
+_PREFIXES = (("claude-", "anthropic"), ("mistral-", "mistral"),
+             ("ministral-", "mistral"), ("magistral-", "mistral"))
 
 #: The providers with a completion adapter (`app/providers/__init__.py`).
 ADAPTERS = ("openai", "anthropic", "mistral", "mercury")

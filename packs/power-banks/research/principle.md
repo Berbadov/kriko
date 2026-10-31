@@ -1,0 +1,3 @@
+# What this pack surfaces
+
+This pack surfaces documented safety events for Anker ~10,000 mAh power banks sold in the US: CPSC recalls, manufacturer recalls, and reported fire/overheating incidents, each tied to a specific model number. It does not cover general reliability, charging speed, port quality, or subjective satisfaction, and it does not extend recall findings to models outside the named one. Battery swelling after years of use is reported across Anker power banks generally (e.g., a 20,000 mAh 325 Power Bank review: 'it started swelling and a crack formed where it swelled up'; a Turkish complaint of a swelled battery and cracked case), but no swelling report in this run was tied to a specific ~10,000 mAh model, so it is not attached to any subject.

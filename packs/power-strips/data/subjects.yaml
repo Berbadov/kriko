@@ -1,0 +1,103 @@
+# Subjects — the things this pack knows about.
+#
+# `identity` carries exactly the keys `pack.toml` declares for the
+# kind: that dictionary is hashed to the subject id.
+- kind: product
+  label: Belkin SurgeMaster F9G930-10
+  identity:
+    brand: belkin
+    series: f9g930-10
+  aliases:
+  - F9G930v10
+  - F9G930-10-W
+  - F9G930-10-SN
+- kind: product
+  label: Belkin BV106000-04
+  identity:
+    brand: belkin
+    series: bv106000-04
+  attributes:
+    joule_rating:
+      value: '630'
+      source: https://business.walmart.com/reviews/product/29278218
+    outlet_count:
+      value: '6'
+      source: https://business.walmart.com/reviews/product/29278218
+    cord_length_m:
+      value: '1.2'
+      source: https://business.walmart.com/reviews/product/29278218
+- kind: product
+  label: Belkin 6-outlet surge protector with rotating plug
+  identity:
+    brand: belkin
+    series: rotating-plug-surge-protector
+- kind: product
+  label: APC SurgeArrest 7 series
+  identity:
+    brand: apc
+    series: surgearrest-7
+- kind: product
+  label: APC SurgeArrest 8 series
+  identity:
+    brand: apc
+    series: surgearrest-8
+- kind: product
+  label: Anker 351 Power Strip
+  identity:
+    brand: anker
+    series: 351-power-strip
+  attributes:
+    joule_rating:
+      value: '2100'
+      source: https://arekoreshop.com/lp/en/blog/surge-protector-vs-power-strip-2026/
+    outlet_count:
+      value: '12'
+      source: https://arekoreshop.com/lp/en/blog/surge-protector-vs-power-strip-2026/
+- kind: product
+  label: Anker Power Strip Surge Protector 2100J
+  identity:
+    brand: anker
+    series: power-strip-2100j
+  attributes:
+    joule_rating:
+      value: '2100'
+      source: https://www.amazon.com/Anker-Protector-Multiple-Extension-Essential/dp/B09SG2Q23M
+    usb_ports:
+      value: '3'
+      source: https://www.amazon.com/Anker-Protector-Multiple-Extension-Essential/dp/B09SG2Q23M
+- kind: product
+  label: Ugreen Power Strip 6-in-1 (15360)
+  identity:
+    brand: ugreen
+    series: '15360'
+  attributes:
+    outlet_count:
+      value: '3'
+      source: https://www.ugreen.com/en-ae/products/ae-15360
+    usb_ports:
+      value: '3'
+      source: https://www.ugreen.com/en-ae/products/ae-15360
+- kind: product
+  label: Philips SPC3064WG/37
+  identity:
+    brand: philips
+    series: spc3064wg37
+  attributes:
+    outlet_count:
+      value: '6'
+      source: https://www.techhive.com/article/579834/philips-spc3064wg37-surge-protector-review.html
+- kind: product
+  label: Philips SPN8180GA/60
+  identity:
+    brand: philips
+    series: spn8180ga60
+  attributes:
+    joule_rating:
+      value: '2400'
+      source: https://arvutitark.ee/en/accessories/consumables/pikendusjuhtmed/philips-surge-protector-power-strip-8-sockets-4xusb-1566404
+    outlet_count:
+      value: '8'
+      source: https://arvutitark.ee/en/accessories/consumables/pikendusjuhtmed/philips-surge-protector-power-strip-8-sockets-4xusb-1566404
+    usb_ports:
+      value: '4'
+      source: https://arvutitark.ee/en/accessories/consumables/pikendusjuhtmed/philips-surge-protector-power-strip-8-sockets-4xusb-1566404

@@ -1,0 +1,77 @@
+# Subjects — the things this pack knows about.
+#
+# `identity` carries exactly the keys `pack.toml` declares for the
+# kind: that dictionary is hashed to the subject id.
+- kind: product
+  label: Roborock S8 Pro Ultra
+  identity:
+    brand: roborock
+    model: s8proultra
+  attributes:
+    dustbin_l:
+      value: '0.35'
+      source: https://dns-shop.kg/ru/product/450910f19234ed20/robot-pylesos-roborock-s8-pro-ultra-belyj/opinions/
+  aliases:
+  - S8 Pro Ultra
+- kind: product
+  label: Roborock Q Revo
+  identity:
+    brand: roborock
+    model: qrevo
+  attributes:
+    battery_min:
+      value: '180'
+      source: https://sav.darty.com/forum/ROBOROCK/Q-REVO-/ROBOROCK-QREVO---PANNES-RECURRENTES-FUITE-EAU/5497236/604948
+    water_tank_l:
+      value: '2.7'
+      source: https://sav.darty.com/forum/ROBOROCK/Q-REVO-/ROBOROCK-QREVO---PANNES-RECURRENTES-FUITE-EAU/5497236/604948
+  aliases:
+  - Q Revo
+- kind: product
+  label: Dreame L10s Ultra
+  identity:
+    brand: dreame
+    model: l10sultra
+  attributes:
+    suction_pa:
+      value: '5300'
+      source: https://sav.darty.com/forum/DREAME/L10S-ULTRA/CONSEIL/5318273/601570
+  aliases:
+  - L10s Ultra
+- kind: product
+  label: Dreame X30 Ultra
+  identity:
+    brand: dreame
+    model: x30ultra
+  aliases:
+  - X30 Ultra
+  - X30 Ultra Complete
+- kind: product
+  label: Ecovacs Deebot T20 Omni
+  identity:
+    brand: ecovacs
+    model: t20omni
+  aliases:
+  - T20 Omni
+- kind: product
+  label: Ecovacs Deebot X2 Omni
+  identity:
+    brand: ecovacs
+    model: x2omni
+  aliases:
+  - X2 Omni
+- kind: product
+  label: iRobot Roomba j7+
+  identity:
+    brand: irobot
+    model: j7plus
+  aliases:
+  - Roomba j7+
+  - Roomba Combo j7+
+- kind: product
+  label: Xiaomi Robot Vacuum X10+
+  identity:
+    brand: xiaomi
+    model: x10plus
+  aliases:
+  - X10+

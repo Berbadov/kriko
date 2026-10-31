@@ -54,6 +54,7 @@ function loadBackground({
   routes = {}, tabResponses = {}, offline = false, hung = false, statuses = {},
   grantedOrigins = [], responseHeaders = {}, loadedDigest = "", manifest = null, firefox = false,
   localState = {}, alarms = {},
+  contextMenus = null,
   // Chrome's quota, made reachable: `cacheWriteFailures` is how many of the
   // next writes to the answer cache fail with a quota error, so the recovery
   // path (prune, retry once, say so if it still fails) can be tested at all.
@@ -147,6 +148,7 @@ function loadBackground({
     performance: { now: () => 0 },
     URL,
     chrome: {
+      contextMenus,
       runtime: {
         onInstalled: { addListener: (fn) => installedListeners.push(fn) },
         reload() { state.selfReloads += 1; },

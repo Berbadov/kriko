@@ -163,6 +163,29 @@ ToolSearch and `curl` a dozen times, was refused each time, and shipped a
 catalogue with no claims. Kriko reads for it instead, and the run's note says
 that the dial asked otherwise.
 
+**A hosted session that will not start is not the end of the turn.** On Windows
+Mistral Vibe's `vibe-acp` has answered `session/new` with `[WinError 5] Access
+is denied`, and a chat turn has 90 seconds in total, so a failed worker start
+and a refused session were enough to turn a good answer into a timeout before
+its evidence review. In `auto` a pre-delivery rejection, a slow handshake or a
+missing `vibe-acp` now runs the prompt as a fresh process instead, with the
+tools that process has; the note tells the agent that and holds it to the pages
+Kriko already read. The failure is remembered for ten minutes
+(`RESIDENT_COOLDOWN_SECONDS`), so the next calls go straight to the process
+rather than paying the broken start again. An explicit `persistent` choice
+still reports the failure: the reader asked for that transport, and silently
+replaying it elsewhere is worse than the error. A turn that was already
+delivered is never replayed.
+
+**Mistral's own `web_search` connector is not available everywhere.** It is
+billed per call and some models and accounts refuse it with HTTP 400; the
+conversation then answers from memory with no `tool.execution` entries at all,
+which looks like a successful research turn with nothing behind it. When a
+Mistral API reply carries no query and no source, `ApiAgentResearcher` searches
+through Kriko's own Exa/Tavily/DeepSeek provider and grounds the answer on what
+that search returned. The provider's own error is still the answer when no
+search key exists, or when the fallback itself cannot run.
+
 ## Which kinds of source it goes to, and how that is visible
 
 The reader's words: *"make sure that source selection type is determined by the

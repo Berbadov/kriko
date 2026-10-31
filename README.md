@@ -1,6 +1,10 @@
 # Kriko
 
-[![version](https://img.shields.io/badge/version-0.3.7-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
+[![version](https://img.shields.io/badge/version-0.3.8-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
+[![license](https://img.shields.io/badge/license-MIT-1F4FFF?style=flat-square&labelColor=05070F)](LICENSE)
+[![stars](https://img.shields.io/github/stars/Berbadov/kriko?style=flat-square&labelColor=05070F&color=1F4FFF)](https://github.com/Berbadov/kriko/stargazers)
+[![platforms](https://img.shields.io/badge/Windows%20%C2%B7%20macOS%20%C2%B7%20Chrome%20%C2%B7%20Android-1F4FFF?style=flat-square&labelColor=05070F)](#install)
+[![website](https://img.shields.io/badge/kriko.cc-known%20problems-1F4FFF?style=flat-square&labelColor=05070F)](https://kriko.cc/problems/)
 
 Kriko answers one question about the product you are looking at: *what is known
 to go wrong with this exact one*. It runs on your computer — a desktop app for
@@ -9,9 +13,16 @@ extension — and keeps the source beside every finding.
 Installed catalog lookups work offline. Research uses the agent or model you
 choose, and a paid provider bills your own account.
 
-**[Download the Windows installer](https://github.com/Berbadov/kriko/releases/latest/download/kriko-0.3.7-x86_64-setup.exe)** ·
+**[Download the Windows installer](https://github.com/Berbadov/kriko/releases/latest/download/kriko-0.3.8-x86_64-setup.exe)** ·
 [Browser extension](https://chromewebstore.google.com/detail/kriko/bdifnaggafjokndlpjgmlfappcoehdjb) ·
-[Website](https://kriko.cc)
+[Website](https://kriko.cc) ·
+[Known problems by product](https://kriko.cc/problems/) (no app needed)
+
+<p align="center">
+  <a href="https://kriko.cc/guide/"><img src="docs/images/hero.webp" alt="The listing tells half the story. The Kriko panel beside a phone listing shows two reported faults, each with the page it was reported on."></a>
+  <br>
+  <sub>The real panel, from a live run: every finding names the page it came from. <a href="https://kriko.cc/#film">Watch the 28-second film</a> · <a href="https://kriko.cc/guide/">How to use it, step by step</a></sub>
+</p>
 
 0.3.7 makes the Kriko Agent size its search to the product before it goes out,
 so a car with faults in six systems is no longer reported from one. The
@@ -19,12 +30,43 @@ companion extension is 0.5.0, a quieter panel with Compare inside it, and mobile
 is 0.10.0, with a floating scanner you can drag, open and read. See the
 [changelog](CHANGELOG.md) for the release scope.
 
+## See it
+
+<table>
+  <tr>
+    <td width="50%" valign="top" align="center">
+      <a href="https://kriko.cc/guide/"><picture>
+        <source media="(prefers-color-scheme: dark)" srcset="site/assets/desktop/compare-dark.webp">
+        <img src="site/assets/desktop/compare-light.webp" alt="The desktop app comparing three invented e-bikes side by side, each risk with its sources.">
+      </picture></a>
+      <br><sub><b>Compare</b> in the desktop app: three listings, the same checks, the sources beside each.</sub>
+    </td>
+    <td width="50%" valign="top" align="center">
+      <a href="https://kriko.cc/problems/mercedes-eqb/"><img src="docs/images/known-problems-page.webp" alt="The Mercedes EQB known-problems page on kriko.cc: four sourced reports, three of them fire risks."></a>
+      <br><sub><b>Known problems by product</b> on <a href="https://kriko.cc/problems/">kriko.cc</a>: no app needed, every report links to its page.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top" align="center">
+      <a href="https://kriko.cc/guide/"><picture>
+        <source media="(prefers-color-scheme: dark)" srcset="site/assets/desktop/home-compact-dark.webp">
+        <img src="site/assets/desktop/home-compact-light.webp" width="320" alt="The desktop app's start screen with the question What do you want to check, and recent checks below.">
+      </picture></a>
+      <br><sub><b>Ask</b> about any product; the answer cites what it read.</sub>
+    </td>
+    <td width="50%" valign="top" align="center">
+      <a href="https://kriko.cc/problems/safety/"><img src="docs/images/safety-reports-page.webp" alt="The kriko.cc page of product fires, explosions and shocks, listing tumble dryers with the report behind each."></a>
+      <br><sub><b>Fires, explosions and shocks</b>, by product: the reports worth knowing before you plug it in.</sub>
+    </td>
+  </tr>
+</table>
+
 ## Install
 
 | Artifact | Use |
 |---|---|
-| `kriko-0.3.7-x86_64-setup.exe` | Per-user Windows installer; no administrator rights required. |
-| `kriko-0.3.7-win64-portable.zip` | Extract the whole archive and open `kriko.exe`. |
+| `kriko-0.3.8-x86_64-setup.exe` | Per-user Windows installer; no administrator rights required. |
+| `kriko-0.3.8-win64-portable.zip` | Extract the whole archive and open `kriko.exe`. |
 
 1. Open Kriko, choose an agent in **More → Agents** and press **Check connection**.
 2. Open **Catalogs → Find release catalogs** and install one, or import a

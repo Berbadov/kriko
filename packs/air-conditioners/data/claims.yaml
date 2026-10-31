@@ -1,0 +1,3009 @@
+# Claims — what is known to go wrong, each with the page it came from and the quote
+# that was read there. A claim without both is not in this file.
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      series: windfree
+  kind: known_issue
+  domain: general
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: cooling circuit
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Samsung Wind Free stopped cooling twice within its first year
+      body: An owner reports the Wind Free unit stopped cooling twice within a year, with the service
+        team blaming the original installation.
+      advice: Repeated loss of cooling in a near-new unit means the fault is not resolved by a single
+        visit. If a Windfree stops cooling twice in a year, insist on finding the root cause rather than
+        accepting a re-charge or re-installation claim.
+    tr:
+      title: Samsung Wind Free ilk yılında iki kez soğutmayı durdurdu
+      body: Bir sahip, Wind Free ünitesinin bir yıl içinde iki kez soğutmayı durdurduğunu ve servis ekibinin
+        suçu orijinal kuruluma yüklediğini bildiriyor.
+      advice: Neredeyse yeni bir ünitede soğutmanın tekrar tekrar kaybolması, arızanın tek bir ziyaretle
+        çözülmediği anlamına gelir. Bir Windfree bir yılda iki kez soğutmayı durdurursa, yeniden gaz dolumu
+        veya yeniden kurulum iddiasını kabul etmek yerine kök nedeni bulmakta ısrar edin.
+  evidence:
+  - url: https://www.sikayetvar.com/samsung/samsung-wind-free-klimam-sogutmuyor-tekrarlayan-ariza-ve-guvenilirligi-sorguluyorum
+    quote: Klimam bir yıl dolmadan ikinci kez aynı sorunu yaşatıyor; cihaz soğutmuyor, üç dört kez denememize
+      rağmen kesinlikle soğuk hava vermiyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:02:16+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: lg
+      series: LP portable
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: electronic component
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'LG Canada: electronic component in portable ACs can overheat and ignite'
+      body: LG's own Canadian recall FAQ confirms the root cause — an electronic component that can overheat
+        and ignite — and corroborates the four US fire reports. This is a primary manufacturer source.
+      advice: This confirms the failure is internal to the electronics, not user-caused. Owners should
+        not attempt DIY repair of the overheating component; the recall remedy was an authorized-service-center
+        repair.
+    tr:
+      title: 'LG Canada: taşınabilir klimalardaki elektronik bileşen aşırı ısınıp tutuşabilir'
+      body: LG'nin kendi Kanada geri çağırma SSS'si kök nedeni doğruluyor — aşırı ısınıp tutuşabilen bir
+        elektronik bileşen — ve ABD'deki dört yangın raporunu destekliyor. Bu birincil bir üretici kaynağıdır.
+      advice: Bu, arızanın kullanıcı kaynaklı değil, elektroniğin içinde olduğunu doğruluyor. Sahipler
+        aşırı ısınan bileşeni kendileri onarmaya çalışmamalıdır; geri çağırma çözümü yetkili servis merkezinde
+        onarımdı.
+  evidence:
+  - url: https://www.lg.com/ca_en/support/announcement/CANTC161214121440/
+    quote: An electronic component in the portable air conditioners can overheat and ignite, posing fire
+      and burn hazards.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:57:59+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: midea
+      series: porta split
+  kind: known_issue
+  domain: general
+  severity: high
+  consequence: ''
+  detection: ''
+  component: spare parts availability / main control board
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Midea Porta Split not repairable: no spare parts, EL 0C error, cooling stops'
+      body: An owner's unit threw EL 0C and stopped cooling; the retailer (OBI) said the unit could not
+        be repaired because no spare parts exist, and refunded the purchase price instead.
+      advice: A PortaSplit that fails (e.g. EL 0C, no cooling) may be unrepairable because Midea does
+        not supply spare parts; the practical outcome is a refund or replacement rather than a repair.
+        Factor in that a fault can mean losing the unit entirely even under warranty.
+    tr:
+      title: 'Midea Porta Split onarılamaz: yedek parça yok, EL 0C hatası, soğutma duruyor'
+      body: Bir sahibin ünitesi EL 0C hatası verdi ve soğutmayı durdurdu; satıcı (OBI) yedek parça bulunmadığı
+        için ünitenin onarılamayacağını söyledi ve bunun yerine satın alma bedelini iade etti.
+      advice: Arızalanan bir PortaSplit (ör. EL 0C, soğutma yok) Midea yedek parça sağlamadığı için onarılamaz
+        olabilir; pratik sonuç onarım yerine iade veya değişimdir. Bir arızanın, garanti kapsamında bile
+        olsa ünitenin tamamen kaybedilmesi anlamına gelebileceğini hesaba katın.
+  evidence:
+  - url: https://www.heise.de/forum/heise-online/Kommentare/Hitzewelle-in-Deutschland-Beliebtes-Klimageraet-Portasplit-wird-zur-Mangelware/Midea-Porta-Split-nicht-reparierbar-Keine-Ersatzteile-Stand-18-8-26/posting-46530712/show/
+    quote: Heute am Dienstag kam ein Anruf von OBI, daß das Gerät nicht repariert werden könne, weil es
+      keine Erstazteile gebe.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:59:39+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: daikin
+      series: kaira DTXR35E
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: compressor (kompresör)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Compressor diagnosed faulty as factory defect; outdoor unit replacement delayed
+      body: A Hepsiburada buyer reports the service diagnosed the compressor as faulty (factory defect)
+        and said a new outdoor unit would be sent, but the replacement dragged through the summer with
+        no resolution.
+      advice: A compressor failure is a major repair that can leave the unit unusable for the whole cooling
+        season while waiting for a replacement outdoor unit. This is a high-cost, high-impact failure.
+    tr:
+      title: Kompresör fabrika hatası olarak arızalı teşhis edildi; dış ünite değişimi gecikti
+      body: Bir Hepsiburada alıcısı, servisin kompresörü arızalı (fabrika hatası) teşhis ettiğini ve yeni
+        bir dış ünite gönderileceğini söylediğini, ancak değişimin hiçbir sonuç alınamadan yaz boyunca
+        sürüncemede kaldığını bildiriyor.
+      advice: Kompresör arızası, yedek dış ünite beklenirken üniteyi tüm soğutma sezonu boyunca kullanılamaz
+        bırakabilecek büyük bir onarımdır. Bu, yüksek maliyetli ve yüksek etkili bir arızadır.
+  evidence:
+  - url: https://www.hepsiburada.com/kaira-dtxr35a-12000-btu-h-a-wifi-inverter-duvar-tipi-klima-montaj-dahil-p-HBCV00000FR2VZ-yorumlari?magaza=Kaira%20T%C3%BCrkiye&trackingId=10868158
+    quote: Sonunda servis gönderdiler kompresör arızalı fabrika hatası diyor bildircez Daikine yeni dış
+      ünite gönderirse değiştireceğiz dediler.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:56:54+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: midea
+      series: mobile 35c
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: Verdichterstromkabel (compressor power cable)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Independent confirmation of the Mobile 35C fire-risk recall (Austrian consumer portal)
+      body: The Austrian consumer-protection portal vki.at independently republishes the same recall with
+        the identical fire mechanism, confirming the manufacturer notice is not an isolated page.
+      advice: This second independent source confirms the recall is real and widely published. Treat any
+        2019 Mobile 35C as potentially affected and verify the serial number before running it.
+    tr:
+      title: Mobile 35C yangın riski geri çağırmasının bağımsız doğrulaması (Avusturya tüketici portalı)
+      body: Avusturya tüketici koruma portalı vki.at, aynı geri çağırmayı birebir aynı yangın mekanizmasıyla
+        bağımsız olarak yeniden yayımlayarak üretici bildiriminin izole bir sayfa olmadığını doğruluyor.
+      advice: Bu ikinci bağımsız kaynak, geri çağırmanın gerçek ve geniş çapta yayımlandığını doğruluyor.
+        Herhangi bir 2019 Mobile 35C'yi potansiyel olarak etkilenmiş sayın ve çalıştırmadan önce seri
+        numarasını doğrulayın.
+  evidence:
+  - url: https://vki.at/klimageraet-midea-mobile-35c/6037
+    quote: Durch die Abnutzung kommt es zu einer elektrischen Funkenbildung an der Kupferleitung, wenn
+      das Gerät weiterläuft, wodurch sich das Kältemittel und das Gerät selbst entzünden können.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:05:44+00:00'
+- subject:
+    kind: platform
+    identity:
+      brand: midea
+      family: split
+  kind: known_issue
+  domain: general
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: whole unit (error code EL 0C)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Midea Porta Split error EL 0C, unrepairable due to missing spare parts
+      body: 'German heise.de forum post: an owner''s Midea Porta Split (bought at OBI 1.5 years earlier,
+        under warranty) showed error EL 0C and stopped cooling. OBI said the unit could not be repaired
+        because no spare parts exist, and offered a full refund of the €979 purchase price instead. This
+        documents a spare-part availability failure on a Midea split-type unit in the EU market.'
+      advice: Spare-part scarcity is a documented EU-market risk for Midea portable splits; a buyer should
+        check parts availability and service support before purchase, since a failed unit may be unrepairable
+        even under warranty.
+    tr:
+      title: Midea Porta Split EL 0C hatası, eksik yedek parça nedeniyle onarılamaz
+      body: 'Alman heise.de forum gönderisi: bir sahibin Midea Porta Split''i (1,5 yıl önce OBI''den alınmış,
+        garanti kapsamında) EL 0C hatası verdi ve soğutmayı durdurdu. OBI, yedek parça bulunmadığı için
+        ünitenin onarılamayacağını söyledi ve bunun yerine 979 € satın alma bedelinin tam iadesini teklif
+        etti. Bu, AB pazarındaki bir Midea split tipi ünitede yedek parça bulunabilirliği sorununu belgeliyor.'
+      advice: Yedek parça kıtlığı, Midea taşınabilir splitleri için belgelenmiş bir AB pazarı riskidir;
+        bir alıcı, arızalı bir ünite garanti kapsamında bile onarılamayabileceğinden, satın almadan önce
+        parça bulunabilirliğini ve servis desteğini kontrol etmelidir.
+  evidence:
+  - url: https://www.heise.de/forum/heise-online/Kommentare/Hitzewelle-in-Deutschland-Beliebtes-Klimageraet-Portasplit-wird-zur-Mangelware/Midea-Porta-Split-nicht-reparierbar-Keine-Ersatzteile-Stand-18-8-26/posting-46530712/show/
+    quote: Ich habe am Freitag von meiner Portasplit eine Fehlermeldung EL 0C bekommen und die Anlage
+      kühlte nicht mehr., kam nur noch die warme Raumluft wie vom "Fan".
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:59:39+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      series: windfree
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: main control board (kart)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Samsung Windfree control board (kart) failed on day one; replacement unit also unstable
+      body: An owner reports the control board burned on the day of installation, the unit was swapped
+        for a new one which was also unstable, and after a part change it still did not heat or cool.
+      advice: A burned control board on day one is a serious electrical failure. If a new Windfree shows
+        a dead or failed board, push for a full unit exchange and document every service visit, since
+        the same owner reports the replacement was also unstable.
+    tr:
+      title: Samsung Windfree kontrol kartı (kart) ilk günde arızalandı; yedek ünite de dengesiz
+      body: Bir sahip, kurulum gününde kontrol kartının yandığını, ünitenin yeni bir üniteyle değiştirildiğini
+        ancak bunun da dengesiz olduğunu ve parça değişiminden sonra hâlâ ısıtmadığını veya soğutmadığını
+        bildiriyor.
+      advice: İlk günde yanan bir kontrol kartı ciddi bir elektriksel arızadır. Yeni bir Windfree ölü
+        veya arızalı bir kart gösteriyorsa, tam ünite değişimi için ısrar edin ve her servis ziyaretini
+        belgeleyin, çünkü aynı sahip yedek ünitenin de dengesiz olduğunu bildiriyor.
+  evidence:
+  - url: https://www.sikayetvar.com/samsung/samsung-windfree-klima-arizasi-surekli-servis-sorunlari-ve-cozum-beklentisi
+    quote: Cihaz eve ilk geldiği gün, kartı yandı denilerek arıza verdi.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:02:16+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: midea
+      series: breezeless
+  kind: known_issue
+  domain: general
+  severity: low
+  consequence: ''
+  detection: ''
+  component: indoor/outdoor communication link and indoor fan motor
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Most common Breezeless fault codes are EL 01 communication and EH 03 fan speed
+      body: The same dealer fault-code finder reports the most frequently searched Breezeless fault codes
+        are EL 01 (communication fault between indoor and outdoor units) and EH 03 (fan speed). These
+        are recurring electronic/control faults owners search for, pointing to control-board or communication
+        reliability issues.
+      advice: Expect possible communication or fan-motor error codes; the dealer advises a 2-minute power-cycle
+        restart before replacing parts.
+    tr:
+      title: En yaygın Breezeless arıza kodları EL 01 iletişim ve EH 03 fan hızıdır
+      body: Aynı bayi arıza kodu bulucusu, en sık aranan Breezeless arıza kodlarının EL 01 (iç ve dış
+        üniteler arasında iletişim arızası) ve EH 03 (fan hızı) olduğunu bildiriyor. Bunlar, sahiplerin
+        aradığı tekrarlayan elektronik/kontrol arızalarıdır ve kontrol kartı veya iletişim güvenilirliği
+        sorunlarına işaret eder.
+      advice: Olası iletişim veya fan motoru hata kodlarını bekleyin; bayi, parçaları değiştirmeden önce
+        2 dakikalık güç döngüsüyle yeniden başlatma öneriyor.
+  evidence:
+  - url: https://aretec.nl/midea-breezeless-storingen/
+    quote: EL 01 (communicatiefout, LED 2x) en EH 03 (ventilatorsnelheid, LED 4x) zijn de meest voorkomende
+      meldingen op de Midea Breezeless.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:58:36+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      series: windfree
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: main control board / error-code logic
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Samsung Windfree throws the same error code repeatedly despite multiple service visits
+      body: An owner reports the unit threw an error code on its first day of use and kept returning the
+        same code immediately after each service visit, with the refund request refused.
+      advice: A recurring error code that reappears right after service is a sign the fault was not actually
+        fixed. Keep a log of codes and service visits; the same owner was refused a refund, so documentation
+        matters.
+    tr:
+      title: Samsung Windfree, birden fazla servis ziyaretine rağmen aynı hata kodunu tekrar tekrar veriyor
+      body: Bir sahip, ünitenin kullanımının ilk gününde bir hata kodu verdiğini ve her servis ziyaretinden
+        hemen sonra aynı kodu vermeye devam ettiğini, iade talebinin reddedildiğini bildiriyor.
+      advice: Servisten hemen sonra yeniden ortaya çıkan tekrarlayan bir hata kodu, arızanın gerçekte
+        giderilmediğinin işaretidir. Kodların ve servis ziyaretlerinin kaydını tutun; aynı sahibin iade
+        talebi reddedildi, bu nedenle belgeleme önemlidir.
+  evidence:
+  - url: https://www.sikayetvar.com/samsung/samsung-klimada-surekli-hata-kodu-servis-cozum-saglamiyor-ve-iade-talebi-reddedildi
+    quote: Ürünü haziran ayında kullanmaya başladığım ilk gün klima hata kodu verdi.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:02:16+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: midea
+      series: porta split
+  kind: known_issue
+  domain: refrigerant
+  severity: low
+  consequence: ''
+  detection: ''
+  component: R32 refrigerant
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Midea PortaSplit uses R32 refrigerant, which the EU bans from January 2027
+      body: The PortaSplit uses R32 refrigerant, which the EU regulation bans from January 2027; alternatives
+        exist.
+      advice: The unit's R32 refrigerant will be banned in the EU from January 2027, so servicing/recharging
+        this unit may become harder after that date. If you plan to keep the unit long-term, this is a
+        factor, though alternatives are available.
+    tr:
+      title: Midea PortaSplit, AB'nin Ocak 2027'den itibaren yasakladığı R32 soğutucu akışkanını kullanıyor
+      body: PortaSplit, AB düzenlemesinin Ocak 2027'den itibaren yasakladığı R32 soğutucu akışkanını kullanıyor;
+        alternatifler mevcut.
+      advice: Ünitenin R32 soğutucu akışkanı AB'de Ocak 2027'den itibaren yasaklanacak, bu nedenle bu
+        ünitenin bakımı/doldurulması o tarihten sonra zorlaşabilir. Üniteyi uzun vadeli tutmayı planlıyorsanız
+        bu bir etkendir, ancak alternatifler mevcut.
+  evidence:
+  - url: https://www.giga.de/tech/midea-portasplit-diese-probleme-solltest-du-kennen--01KXQYT2V0ENWVDJ3T5Q7CB6B4
+    quote: Der Midea PortaSplit nutzt das Kältemittel R32. Aufgrund einer neuen Verordnung der EU wird
+      genau dieses Mittel ab Januar 2027 verboten.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:59:39+00:00'
+- subject:
+    kind: platform
+    identity:
+      brand: arcelik-beko
+      family: split
+  kind: known_issue
+  domain: general
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: control board / refrigerant circuit / drain pipe
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Arçelik split AC owner reports repeated error codes and a refrigerant leak shortly after
+        purchase
+      body: 'Owner forum thread on DonanımHaber: an 18,000 BTU Arçelik split AC gave repeated error codes
+        within two weeks, then leaked water (blamed on a wrongly mounted drain pipe) and then was diagnosed
+        with a refrigerant leak, with no lasting fix. This is an owner''s own account of recurring failures.'
+      advice: This corroborates the pattern of recurring error codes and refrigerant leaks on Arçelik
+        split units in the first weeks of ownership, and shows diagnosis disputes between installer and
+        owner. A buyer should verify installation quality and be prepared for repeat service visits.
+    tr:
+      title: Arçelik split klima sahibi, satın almadan kısa süre sonra tekrarlayan hata kodları ve soğutucu
+        akışkan sızıntısı bildiriyor
+      body: 'DonanımHaber''deki sahip forum başlığı: 18.000 BTU''luk bir Arçelik split klima iki hafta
+        içinde tekrarlayan hata kodları verdi, ardından su sızdırdı (yanlış monte edilmiş tahliye borusuna
+        bağlandı) ve sonra soğutucu akışkan sızıntısı teşhisi konuldu, kalıcı bir çözüm olmadı. Bu, bir
+        sahibin tekrarlayan arızalara ilişkin kendi anlatımıdır.'
+      advice: Bu, Arçelik split ünitelerde sahipliğin ilk haftalarında tekrarlayan hata kodları ve soğutucu
+        akışkan sızıntıları örüntüsünü doğruluyor ve montajcı ile sahip arasındaki teşhis anlaşmazlıklarını
+        gösteriyor. Bir alıcı kurulum kalitesini doğrulamalı ve tekrarlayan servis ziyaretlerine hazırlıklı
+        olmalıdır.
+  evidence:
+  - url: https://mini.donanimhaber.com/arcelik-klima-alacak-arkadaslarin-dikkatine--163993106
+    quote: Başlangıçta habire hata kodu verdi,ve birkaç kez gelip baktılar.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:54:40+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: koenic
+      series: KAC 3352
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: power cable / refrigerant circuit
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Swiss consumer magazine K-Tipp: KAC 3352 can catch fire and cause electric shocks'
+      body: The Swiss consumer magazine K-Tipp (issue 18/2021) reports the recall, confirming the unit
+        can catch fire and deliver electric shocks, and lists the same four affected batch numbers. This
+        is an independent consumer-press confirmation of the regulator and manufacturer notices.
+      advice: Consumer-press confirmation of the same hazard. Buyers of affected batches should return
+        the unit to the point of sale.
+    tr:
+      title: 'İsviçre tüketici dergisi K-Tipp: KAC 3352 alev alabilir ve elektrik çarpmalarına neden olabilir'
+      body: İsviçre tüketici dergisi K-Tipp (sayı 18/2021) geri çağırmayı bildiriyor, ünitenin alev alabileceğini
+        ve elektrik çarpması verebileceğini doğruluyor ve aynı dört etkilenen parti numarasını listeliyor.
+        Bu, düzenleyici ve üretici bildirimlerinin bağımsız tüketici basını tarafından doğrulanmasıdır.
+      advice: Aynı tehlike için tüketici basını doğrulaması. Etkilenen partilerin alıcıları üniteyi satış
+        noktasına iade etmelidir.
+  evidence:
+  - url: https://www.ktipp.ch/artikel/artikeldetail/rueckrufe-gefaehrliche-produkte-klimageraet
+    quote: Das bei Media-Markt erhältliche mobile Klimagerät KAC 3352 der Marke Koenic kann in Brand geraten
+      und Stromschläge erzeugen. Betroffen sind Geräte mit den Nummern 7000008080, 7000008081, 7000008082
+      und 7000008088.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:05:29+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: midea
+      series: breezeless
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: indoor unit moving air-direction flap (hava yönlendirme flapı)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Breezeless indoor moving flap broke within a year; Midea denied warranty as 'plastic parts'
+      body: 'Owner complaint on Turkish site Şikayetvar for the exact model MSFAAU-12HRFN8-QRD6GW: the
+        indoor unit''s moving flap broke within under a year and Midea service refused warranty coverage,
+        calling it a plastic part outside warranty. This is a mechanical failure of a moving part with
+        a warranty-denial cost to the owner.'
+      advice: Before buying, confirm whether the moving flap/plastic louvres are covered by the warranty;
+        expect this part to be treated as a consumable and potentially a paid repair.
+    tr:
+      title: Breezeless iç ünitenin hareketli kapağı bir yıl içinde kırıldı; Midea 'plastik parça' diyerek
+        garantiyi reddetti
+      body: 'Türk sitesi Şikayetvar''da tam model MSFAAU-12HRFN8-QRD6GW için sahip şikayeti: iç ünitenin
+        hareketli kapağı bir yıldan kısa sürede kırıldı ve Midea servisi, garanti kapsamı dışında bir
+        plastik parça olduğunu söyleyerek garanti kapsamını reddetti. Bu, sahibine garanti reddi maliyeti
+        doğuran hareketli bir parçanın mekanik arızasıdır.'
+      advice: Satın almadan önce hareketli kapağın/plastik panjurların garanti kapsamında olup olmadığını
+        teyit edin; bu parçanın sarf malzemesi olarak değerlendirilmesini ve potansiyel olarak ücretli
+        onarım bekleyin.
+  evidence:
+  - url: https://www.sikayetvar.com/midea/midea-klimada-garanti-disi-kirik-parca-hayal-kirikligi
+    quote: Klimanın iç ünitesindeki hareketli flapın kırılmasıyla başlayan sıkıntımız, Midea servisinin
+      "Plastik aksam garanti kapsamına girmez" yanıtıyla zirveye ulaştı.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:58:36+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: koenic
+      series: KAC 3352
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: compressor power cable / refrigerant copper tube
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: KOENIC KAC 3352 recalled by Swiss regulator ESTI for fire and electric-shock hazard (compressor
+        power cable contacting refrigerant copper tube)
+      body: The Swiss federal regulator (ESTI) and the manufacturer jointly recalled the KOENIC KAC 3352
+        portable air conditioner on 20.10.2021. The compressor's power cable sheath can contact the refrigerant
+        copper tube and wear through, causing sparking and a fire/electrical-shock risk. Only batches
+        with PO numbers 7000008080, 7000008081, 7000008082, 7000008088 are affected; the regulator instructs
+        owners to stop using the unit and return it to the point of sale.
+      advice: If you own a KAC 3352, check the PO number on the type plate (right side) or packaging.
+        If it is one of the four recalled batches, stop using it immediately and contact IMTRON (0800
+        200 308 in Switzerland, 0800 7773222 in Germany, contact@imtron.eu) for an on-site inspection,
+        replacement, or refund. Units outside these batches are not affected.
+    tr:
+      title: KOENIC KAC 3352, yangın ve elektrik çarpması tehlikesi nedeniyle İsviçre düzenleyicisi ESTI
+        tarafından geri çağrıldı (kompresör güç kablosunun soğutucu bakır boruya temas etmesi)
+      body: İsviçre federal düzenleyicisi (ESTI) ve üretici, KOENIC KAC 3352 taşınabilir klimayı 20.10.2021
+        tarihinde ortaklaşa geri çağırdı. Kompresörün güç kablosu kılıfı, soğutucu bakır boruya temas
+        ederek aşınabilir ve kıvılcım ile yangın/elektrik çarpması riskine yol açabilir. Yalnızca PO numaraları
+        7000008080, 7000008081, 7000008082, 7000008088 olan partiler etkilenmiştir; düzenleyici, sahiplerine
+        üniteyi kullanmayı bırakmalarını ve satış noktasına iade etmelerini talimat veriyor.
+      advice: Bir KAC 3352'niz varsa, tip plakasındaki (sağ taraf) veya ambalajdaki PO numarasını kontrol
+        edin. Geri çağrılan dört partiden biriyse, derhal kullanmayı bırakın ve yerinde inceleme, değişim
+        veya para iadesi için IMTRON ile iletişime geçin (İsviçre'de 0800 200 308, Almanya'da 0800 7773222,
+        contact@imtron.eu). Bu partilerin dışındaki üniteler etkilenmemiştir.
+  evidence:
+  - url: https://www.admin.ch/it/nsb?id=85514
+    quote: La guaina del cavo di alimentazione del compressore potrebbe entrare in contatto con il tubo
+      di rame del liquido refrigerante, con conseguente pericolo di incendio e folgorazione.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:57:18+00:00'
+- subject:
+    kind: platform
+    identity:
+      brand: midea
+      family: split
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: air outlet
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Midea air conditioner smoking and catching fire at air outlet
+      body: AAStocks financial news (citing Chinese media) reports a Midea air conditioner that suddenly
+        started smoking and caught fire; damage to the air outlet was severe, with smoke and fire marks
+        on the ceiling and wall. Midea Group responded that it was actively addressing the issue. This
+        is a Chinese-market incident, not TR/EU, but documents a fire event on a Midea AC.
+      advice: A documented fire/smoke incident on a Midea AC exists; buyers should ensure proper installation,
+        keep the air outlet clear, and monitor the unit for unusual smells or smoke.
+    tr:
+      title: Midea klima hava çıkışında duman çıkarıp alev aldı
+      body: AAStocks finans haberleri (Çin medyasına atıfla), aniden duman çıkarmaya başlayan ve alev
+        alan bir Midea klimasını bildiriyor; hava çıkışındaki hasar ağırdı, tavanda ve duvarda duman ve
+        yangın izleri vardı. Midea Group, sorunu aktif olarak ele aldıklarını yanıtladı. Bu, TR/AB değil
+        Çin pazarına ait bir olaydır, ancak bir Midea klimada yangın olayını belgeliyor.
+      advice: Bir Midea klimada belgelenmiş bir yangın/duman olayı mevcuttur; alıcılar uygun kurulumu
+        sağlamalı, hava çıkışını açık tutmalı ve üniteyi olağandışı kokular veya duman açısından izlemelidir.
+  evidence:
+  - url: http://www.aastocks.com/en/mobile/news.aspx?newsid=NOW.1384515&newssource=AAFN
+    quote: A recent incident where a Midea air conditioner suddenly started smoking and caught fire has
+      been circulating online, Chinese media reported.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:01:22+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: daikin
+      series: ATXF25F siesta
+  kind: known_issue
+  domain: general
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: indoor unit / evaporator coil (serpantin)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: ATXF25F indoor unit develops mold/musty smell; service confirmed mold in the coils and refused
+        the indoor-unit replacement
+      body: Owner complaint on Şikayetvar for the ATXF25F Siesta Sensira 9000 BTU/h. Mold and a musty
+        smell appeared within the first week of use; the authorized service confirmed mold in the coils
+        and said replacing the indoor unit would fix it, but Daikin's regional manager declined the replacement,
+        so the smell persisted.
+      advice: Buyer should know the indoor unit can develop a mold smell early and that Daikin service
+        may not replace the unit, leaving a persistent odor. Cost is repeated service visits and an unresolved
+        smell rather than a safety hazard.
+    tr:
+      title: ATXF25F iç ünitede küf/küf kokusu oluşuyor; servis bobinlerdeki küfü doğruladı ve iç ünite
+        değişimini reddetti
+      body: Şikayetvar'da ATXF25F Siesta Sensira 9000 BTU/h için sahip şikayeti. Kullanımın ilk haftasında
+        küf ve küf kokusu ortaya çıktı; yetkili servis bobinlerdeki küfü doğruladı ve iç ünitenin değiştirilmesinin
+        sorunu çözeceğini söyledi, ancak Daikin'in bölge müdürü değişimi reddetti, bu yüzden koku devam
+        etti.
+      advice: Alıcı, iç ünitede erken dönemde küf kokusu oluşabileceğini ve Daikin servisinin üniteyi
+        değiştirmeyebileceğini, bunun da kalıcı bir koku bırakabileceğini bilmelidir. Maliyet, güvenlik
+        tehlikesi yerine tekrarlanan servis ziyaretleri ve çözülmemiş bir kokudur.
+  evidence:
+  - url: https://www.sikayetvar.com/daikin/daikin-klima-kuf-kokusu-ve-cozulmeyen-servis-sorunu
+    quote: Klimayı kullanmaya başladıktan sonraki ilk hafta içinde hafif şekilde nem ve küf kokusu oluştu,
+      zamanla bu koku belirgin şekilde arttı.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:55:45+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: midea
+      series: xtreme save
+  kind: known_issue
+  domain: general
+  severity: high
+  consequence: ''
+  detection: ''
+  component: cooling system
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Xtreme Save unit fails to cool within weeks of purchase
+      body: Turkish buyer of three Xtreme Save units reports one arrived faulty and would not cool for
+        ~1.5 months; dealer closed and Midea service unresponsive.
+      advice: A cooling failure that appears immediately means the unit is unusable from day one and warranty
+        service may be slow; verify the seller and service network before purchase.
+    tr:
+      title: Xtreme Save ünitesi satın alımdan haftalar sonra soğutmuyor
+      body: Üç Xtreme Save ünitesi satın alan Türk alıcı, birinin arızalı geldiğini ve yaklaşık 1,5 ay
+        boyunca soğutmadığını bildiriyor; bayi kapanmış ve Midea servisi yanıt vermiyor.
+      advice: Hemen ortaya çıkan bir soğutma arızası, ünitenin ilk günden itibaren kullanılamaz olduğu
+        ve garanti servisinin yavaş olabileceği anlamına gelir; satın almadan önce satıcıyı ve servis
+        ağını doğrulayın.
+  evidence:
+  - url: https://www.sikayetvar.com/midea/midea-xtreme-save-modeli-arizali-klimanin-garanti-tamiri-icin-acil-talep
+    quote: Bu klimalardan biri en baştan itibaren arızalı çıktı ve yaklaşık bir buçuk aydır soğutma yapmıyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:00:05+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: comfee
+      series: MPD1-12CRN7
+  kind: known_issue
+  domain: general
+  severity: low
+  consequence: ''
+  detection: ''
+  component: cooling performance (BTU output)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Comfee MPD1-12CRN7 cooling output reportedly falls short of rating (~10 kBtu/h instead of
+        12,000 BTU)
+      body: A buyer cites an Amazon review claiming the MPD1-12CRN7 does not even reach 10 kBtu/h of cooling
+        from its rated power draw (the unit is rated 12,000 BTU / 3.5 kW). This is a single second-hand
+        owner report, not a measured test, so it is low severity, but it suggests real-world cooling output
+        may fall short of the rating for a 31 m² room.
+      advice: If you are sizing this unit for a room near its rated capacity (about 41 m²), expect that
+        real cooling output may be lower than the 12,000 BTU rating; consider oversizing or a two-hose
+        unit for a large space.
+    tr:
+      title: Comfee MPD1-12CRN7 soğutma çıkışının beyan edilen değerin altında kaldığı bildiriliyor (~12.000
+        BTU yerine ~10 kBtu/h)
+      body: Bir alıcı, MPD1-12CRN7'nin beyan edilen güç tüketiminden 10 kBtu/h soğutmaya bile ulaşmadığını
+        iddia eden bir Amazon yorumuna atıfta bulunuyor (ünite 12.000 BTU / 3,5 kW olarak derecelendirilmiştir).
+        Bu, ölçülmüş bir test değil, tek bir ikinci el sahip raporudur, bu nedenle ciddiyeti düşüktür,
+        ancak 31 m²'lik bir oda için gerçek dünyadaki soğutma çıkışının beyan edilen değerin altında kalabileceğini
+        düşündürmektedir.
+      advice: Bu üniteyi beyan edilen kapasitesine yakın bir oda için (yaklaşık 41 m²) boyutlandırıyorsanız,
+        gerçek soğutma çıkışının 12.000 BTU değerinden daha düşük olabileceğini bekleyin; büyük bir alan
+        için daha büyük kapasiteli veya çift hortumlu bir ünite düşünün.
+  evidence:
+  - url: https://www.kaelte-treffpunkt.de/viewtopic.php?p=145193&sid=cc60bd287b15cc236be985b19a26cd93
+    quote: Einer Rezension auf Amazon zufolge kommt das MPD1-12CRN7 aber nicht einmal auf 10 kBtu/h von
+      der aufgenommenen Stromleistung her.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:54:58+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: midea
+      series: porta split
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: condensation tray filter / condensate pump
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Midea PortaSplit P1 error: condensation tray filter mesh clogs and condensate can no longer
+        be pumped out'
+      body: An owner reports the first 2024/25 version has a too-fine filter mesh in the condensation
+        tray that clogs, so the condensate pump cannot drain and the unit throws P1; Midea confirmed it
+        as a technical issue and repairs under warranty.
+      advice: On a first-generation unit the P1 'water tank full' error is often a clogged condensation-tray
+        filter, not a dead pump. You can clear it by manually draining from the bottom right, but opening
+        the unit voids warranty, so send it in if it is still covered. Newer (2026) units are said to
+        have fixed the mesh.
+    tr:
+      title: 'Midea PortaSplit P1 hatası: yoğuşma tepsisi filtre örgüsü tıkanıyor ve yoğuşma suyu artık
+        dışarı pompalanamıyor'
+      body: Bir sahip, ilk 2024/25 sürümünde yoğuşma tepsisinde çok ince bir filtre örgüsü olduğunu ve
+        bunun tıkandığını, bu yüzden yoğuşma pompasının tahliye edemediğini ve ünitenin P1 hatası verdiğini
+        bildiriyor; Midea bunu teknik bir sorun olarak doğruladı ve garanti kapsamında onarıyor.
+      advice: Birinci nesil bir ünitede P1 'su tankı dolu' hatası genellikle ölü bir pompa değil, tıkanmış
+        bir yoğuşma tepsisi filtresidir. Sağ alttan manuel olarak tahliye ederek giderebilirsiniz, ancak
+        üniteyi açmak garantiyi geçersiz kılar, bu yüzden hâlâ kapsam içindeyse gönderin. Daha yeni (2026)
+        ünitelerde örgünün düzeltildiği söyleniyor.
+  evidence:
+  - url: https://www.galaxus.at/en/s2/questionandanswer/not-a-question-but-a-point-to-notethe-first-version-202425-has-a-rather-unsightly-design-flaw-the-fi-925418
+    quote: The consequence is that the condensation can no longer be pumped out. The inner tray fills
+      up and the appliance then displays the error message ‘P1’.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:59:39+00:00'
+- subject:
+    kind: platform
+    identity:
+      brand: samsung
+      family: split
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: outdoor unit main board (PBA)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Samsung split AC outdoor main board (PBA) fails right after the 2-year warranty, ~300,000
+        KRW repair (Korea market)
+      body: Korean news reporting documents a wave of Samsung split AC owners hit by the C101 indoor-outdoor
+        communication error, many exactly when the 2-year free-service period ended, with the service
+        center quoting about 300,000 KRW to replace the outdoor main board (PBA). This is Korea-market
+        evidence, outside the TR/EU scope, but it documents the same outdoor-board failure pattern and
+        its cost.
+      advice: 'Outside the TR/EU scope but relevant as a pattern: Samsung split AC outdoor main boards
+        are documented to fail around the end of the 2-year warranty, with a costly board replacement;
+        check the warranty length and consider it when budgeting.'
+    tr:
+      title: Samsung split klima dış ana kartı (PBA) 2 yıllık garantiden hemen sonra arızalanıyor, ~300.000
+        KRW onarım (Kore pazarı)
+      body: Kore haberleri, C101 iç-dış iletişim hatasından etkilenen bir dizi Samsung split klima sahibini
+        belgeliyor; birçoğu tam da 2 yıllık ücretsiz servis süresi sona erdiğinde, servis merkezi dış
+        ana kartı (PBA) değiştirmek için yaklaşık 300.000 KRW fiyat veriyor. Bu, TR/EU kapsamı dışında
+        Kore pazarı kanıtıdır, ancak aynı dış kart arıza modelini ve maliyetini belgeliyor.
+      advice: 'TR/EU kapsamı dışında ama bir model olarak ilgili: Samsung split klima dış ana kartlarının
+        2 yıllık garanti sonunda arızalandığı, maliyetli bir kart değişimiyle belgelenmiştir; garanti
+        süresini kontrol edin ve bütçe yaparken bunu göz önünde bulundurun.'
+  evidence:
+  - url: https://www.cwoneconomy.com/news/articleView.html?idxno=10703
+    quote: 서비스 센터는 실외기 메인보드(PBA) 교체 비용으로 30만원을 청구했다.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:02:58+00:00'
+- subject:
+    kind: platform
+    identity:
+      brand: arcelik-beko
+      family: split
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: indoor unit / installation wiring (yanlış kablo)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Beko inverter 24000 BTU split AC exploded and burned the house; Beko's own service blamed
+        a wrong installation cable
+      body: 'Owner complaint on Şikayetvar (ID 33548336): a Beko inverter 24000 BTU split unit installed
+        in 2017 caught fire and destroyed the home; the fire brigade and insurance surveyor reports both
+        attributed the fire to the air conditioner, and Beko''s own technical service identified a wrong
+        cable used at installation. This is a documented ignition event, though it is a single owner report,
+        not an official recall.'
+      advice: A buyer should treat this as evidence that a Beko split AC can be a fire source and that
+        installation wiring quality matters; insist on a certified installer and check that the supply
+        cable and breaker are correctly sized. It is one incident, not a recall, so it does not prove
+        every unit is at risk.
+    tr:
+      title: Beko inverter 24000 BTU split klima patladı ve evi yaktı; Beko'nun kendi servisi yanlış montaj
+        kablosunu suçladı
+      body: 'Şikayetvar''da sahip şikayeti (ID 33548336): 2017''de kurulan bir Beko inverter 24000 BTU
+        split ünite alev aldı ve evi yok etti; itfaiye ve sigorta eksperi raporları yangını klimaya bağladı
+        ve Beko''nun kendi teknik servisi montajda yanlış kablo kullanıldığını tespit etti. Bu, resmi
+        bir geri çağırma değil, tek bir sahip raporu olsa da belgelenmiş bir tutuşma olayıdır.'
+      advice: Bir alıcı bunu, bir Beko split klimanın yangın kaynağı olabileceğine ve montaj kablolama
+        kalitesinin önemli olduğuna dair kanıt olarak değerlendirmelidir; sertifikalı bir montajcıda ısrar
+        edin ve besleme kablosu ile sigortanın doğru boyutlandırıldığını kontrol edin. Bu tek bir olaydır,
+        geri çağırma değildir, bu yüzden her ünitenin risk altında olduğunu kanıtlamaz.
+  evidence:
+  - url: https://www.sikayetvar.com/beko/beko-klima-patlamasi-sonucu-evim-yandi-magduriyetim-giderilmiyor
+    quote: 29 Haziran’da Antalya Konyaaltı Kuşkavağı Mahallesi’indeki evimde, Beko inverter 24000 BTU
+      klimamın patlaması sonucu büyük bir yangın çıktı.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:54:40+00:00'
+- subject:
+    kind: platform
+    identity:
+      brand: arcelik-beko
+      family: split
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: electrical installation (tesisat)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Beko split AC unit caught fire from the electrical installation; fire brigade report blamed
+        the AC wiring
+      body: 'Owner complaint on Şikayetvar (ID 33544106): a Beko split unit (installed with 1-year warranty)
+        caught fire from inside the unit; the fire brigade report said the fire was caused by the AC''s
+        electrical installation. Beko''s technical team inspected but the company told the owner after
+        1.5 months that there was no product fault, blaming the wiring.'
+      advice: This is a second independent owner-documented fire event for Beko split ACs in Turkey, both
+        tied to electrical installation. It reinforces that the electrical supply/installation is a real
+        hazard point, but it is an owner report, not an official recall, so it cannot be generalized to
+        all units.
+    tr:
+      title: Beko split klima ünitesi elektrik tesisatından alev aldı; itfaiye raporu klima kablolamasını
+        suçladı
+      body: 'Şikayetvar''da sahip şikayeti (ID 33544106): bir Beko split ünite (1 yıllık garantiyle kurulmuş)
+        ünitenin içinden alev aldı; itfaiye raporu yangının klimanın elektrik tesisatından kaynaklandığını
+        söyledi. Beko''nun teknik ekibi inceledi ancak şirket 1,5 ay sonra sahibine ürün hatası olmadığını,
+        kablolamayı suçladığını söyledi.'
+      advice: Bu, Türkiye'de Beko split klimalar için ikinci bağımsız sahip tarafından belgelenmiş yangın
+        olayıdır ve her ikisi de elektrik tesisatıyla bağlantılıdır. Elektrik beslemesinin/montajın gerçek
+        bir tehlike noktası olduğunu pekiştirir, ancak bu bir sahip raporudur, resmi bir geri çağırma
+        değildir, bu yüzden tüm ünitelere genellenemez.
+  evidence:
+  - url: https://www.sikayetvar.com/beko/beko-klima-yangin-cikardi-magduriyetim-giderilmiyor
+    quote: Üst katta klima ünitesinin içinden, tesisattan kaynaklı yanarak yangın çıktı.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:54:40+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: daikin
+      series: kaira DTXR35E
+  kind: known_issue
+  domain: refrigerant
+  severity: high
+  consequence: ''
+  detection: ''
+  component: capillary tube (kılcal boru) and compressor
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: New unit failed to cool next day; capillary crack causing refrigerant leak, compressor removed
+      body: A forum buyer reports a brand-new DTXR35E worked one evening then failed to cool the next
+        day; service found a capillary crack causing a refrigerant leak and took the compressor away.
+        The replacement process dragged past 1.5 months with no progress.
+      advice: A capillary leak on a new unit means no cooling almost immediately after purchase, and the
+        repair/replacement can stretch for weeks. This is a high-impact early-life failure.
+    tr:
+      title: Yeni ünite ertesi gün soğutmadı; soğutucu akışkan kaçağına neden olan kılcal çatlak, kompresör
+        söküldü
+      body: Bir forum alıcısı, yepyeni bir DTXR35E'nin bir akşam çalıştığını, ertesi gün soğutmadığını
+        bildiriyor; servis, soğutucu akışkan kaçağına neden olan bir kılcal çatlak buldu ve kompresörü
+        götürdü. Değişim süreci 1,5 ayı aşkın bir süre ilerleme olmadan sürdü.
+      advice: Yeni bir ünitede kılcal kaçak, satın almadan neredeyse hemen sonra soğutma olmaması anlamına
+        gelir ve onarım/değişim haftalar boyunca uzayabilir. Bu, yüksek etkili bir erken ömür arızasıdır.
+  evidence:
+  - url: https://inceleriz.com/forum/konular/kaira-ve-daikin-satis-sonrasi-rezilligi.12203/
+    quote: Servisi aradım ertesi gün geldiler kontrol ettiler ve kılcal çatlak var kaçak yapıyor kompresörü
+      götürmemiz lazım dediler.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:56:54+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: lg
+      series: LP portable
+  kind: known_issue
+  domain: general
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: control board
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'LG LP1020WSR error codes: control boards going bad is the common failure'
+      body: An owner of an LP1020WSR (same LP portable series) reports cryptic error codes that LG customer
+        service could not decode, and an authorized servicer told them the most common issue with these
+        units is control boards going bad. The owner notes a replacement unit costs $400+.
+      advice: A buyer should know that LP-series error codes may be undiagnosable by LG support, and control-board
+        failure is the commonly cited failure mode — with repair costs potentially approaching the price
+        of a new unit. This is a reliability/cost concern, not a safety hazard.
+    tr:
+      title: 'LG LP1020WSR hata kodları: kontrol kartlarının bozulması yaygın arıza'
+      body: Bir LP1020WSR sahibi (aynı LP taşınabilir serisi), LG müşteri hizmetlerinin çözemediği anlaşılmaz
+        hata kodları bildiriyor ve yetkili bir servis, bu ünitelerde en yaygın sorunun kontrol kartlarının
+        bozulması olduğunu söyledi. Sahip, yedek bir ünitenin 400$+ maliyeti olduğunu belirtiyor.
+      advice: Bir alıcı, LP serisi hata kodlarının LG desteği tarafından teşhis edilemeyebileceğini ve
+        kontrol kartı arızasının yaygın olarak belirtilen arıza modu olduğunu bilmelidir — onarım maliyetleri
+        potansiyel olarak yeni bir ünitenin fiyatına yaklaşabilir. Bu bir güvenlik tehlikesi değil, güvenilirlik/maliyet
+        endişesidir.
+  evidence:
+  - url: https://home.woodchuckhunters.com/blog/2025/09/03/lg-portable-air-conditioner-showing-codes/
+    quote: He said those codes don’t really mean anything and the most common issue with these is the
+      control boards going bad.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:57:59+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: vestel
+      series: klima nova inv 122 a++
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: dış ünite kontrol/kart (outdoor unit control board)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Vestel Nova Inverter 122 A++ GI Pro WiFi outdoor unit intermittently fails to engage until
+        breaker is cycled
+      body: An owner of the exact Nova inverter 122 gı Pro 12000 BTU Wi-Fi model reports the outdoor unit
+        intermittently will not start cooling until the mains breaker is switched off and on; Vestel service
+        attributed it to a voltage fault and said it was not a problem.
+      advice: If the outdoor unit will not start and only a breaker cycle restores it, this matches a
+        documented pattern on this model. Have the control board and supply voltage checked under warranty;
+        an intermittent no-start that needs a breaker reset is not normal operation and should be logged
+        with the service.
+    tr:
+      title: Vestel Nova Inverter 122 A++ GI Pro WiFi dış ünitesi, şalter sıfırlanana kadar aralıklı olarak
+        devreye girmiyor
+      body: Tam olarak Nova inverter 122 gı Pro 12000 BTU Wi-Fi modelinin bir sahibi, dış ünitenin ana
+        şalter kapatılıp açılana kadar aralıklı olarak soğutmayı başlatmadığını bildiriyor; Vestel servisi
+        bunu bir voltaj arızasına bağladı ve sorun olmadığını söyledi.
+      advice: Dış ünite çalışmıyorsa ve yalnızca şalterin sıfırlanması onu yeniden çalıştırıyorsa, bu
+        modelde belgelenmiş bir örüntüyle örtüşür. Garanti kapsamında kontrol kartını ve besleme voltajını
+        kontrol ettirin; şalter sıfırlaması gerektiren aralıklı bir çalışmama normal çalışma değildir
+        ve servise kaydettirilmelidir.
+  evidence:
+  - url: https://www.sikayetvar.com/vestel/dis-unitenin-calismamasi-ve-salterle-acma-kapanma-sorunu
+    quote: Klimayı açtığım zaman dış ünite bazen devreye girmiyor, klima soğutmaya geçmiyor. Ancak şalteri
+      kapatıp tekrar açtığımda dış ünite devreye giriyor ve ancak o zaman evi soğutmaya başlıyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:06:04+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: daikin
+      series: ATXF25F siesta
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: inverter control / control board (unit shuts down with error after ~20 min)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: New ATXF25F runs about 20 minutes then throws an error and shuts down; service could not
+        fix it and removed the unit
+      body: Owner complaint on Şikayetvar for the ATXF25F Siesta 9000 BTU/h inverter split. From the first
+        day the unit ran at most 20 minutes before throwing an error and shutting down; the authorized
+        service tried for 2–3 days without success and eventually removed the unit for inspection, with
+        only the outdoor unit replacement approved.
+      advice: Buyer should know a defective unit can fail within the first day, shutting down with an
+        error after about 20 minutes of running, and that resolution can drag on for weeks with only partial
+        (outdoor-only) replacement approved. This is a reliability/defect risk rather than a fire hazard.
+    tr:
+      title: Yeni ATXF25F yaklaşık 20 dakika çalışıyor, ardından hata verip kapanıyor; servis düzeltemedi
+        ve üniteyi söktü
+      body: ATXF25F Siesta 9000 BTU/h inverter split için Şikayetvar'da sahip şikayeti. Ünite ilk günden
+        itibaren en fazla 20 dakika çalıştı, ardından hata verip kapandı; yetkili servis 2–3 gün başarısız
+        bir şekilde denedi ve sonunda üniteyi inceleme için söktü, yalnızca dış ünite değişimi onaylandı.
+      advice: Alıcı, arızalı bir ünitenin ilk gün içinde arızalanabileceğini, yaklaşık 20 dakika çalıştıktan
+        sonra hata vererek kapanabileceğini ve çözümün yalnızca kısmi (yalnızca dış ünite) değişim onayıyla
+        haftalarca sürebileceğini bilmelidir. Bu, yangın tehlikesinden ziyade bir güvenilirlik/arıza riskidir.
+  evidence:
+  - url: https://www.sikayetvar.com/daikin/daikin-klimam-arizali-tam-yenisiyle-degistirilmesini-talep-ediyorum
+    quote: Montajdan sonra klima en fazla 20 dakika çalışıp hemen hata vererek kapanmaya başladı.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:55:45+00:00'
+- subject:
+    kind: platform
+    identity:
+      brand: midea
+      family: split
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: control board (kart) and fan motor
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Midea/Jeriyan split AC control board and fan motor burn-out after seasonal shutdown
+      body: Turkish complaint site (sikayetvar.com) documents a Midea-made Jeriyan 48 BTU salon-type split
+        unit bought July 2025, used two months, then on restart in June 2026 it failed. Authorized service
+        said the control board and fan motor had burned and replaced them; afterwards the unit repeatedly
+        tripped the building's circuit breaker. Multiple service visits (4–5) did not resolve the problem;
+        the manufacturer's customer service stopped responding.
+      advice: A buyer should verify the local service network and warranty enforcement before purchase;
+        this owner reports a burned control board and fan motor, then persistent electrical faults (breaker
+        tripping) that service could not fix, leaving the unit unusable.
+    tr:
+      title: Midea/Jeriyan split klima kontrol kartı ve fan motoru sezonluk kapatmadan sonra yandı
+      body: Türk şikayet sitesi (sikayetvar.com), Temmuz 2025'te satın alınan, iki ay kullanılan ve Haziran
+        2026'da yeniden çalıştırıldığında arızalanan Midea üretimi Jeriyan 48 BTU salon tipi split üniteyi
+        belgeliyor. Yetkili servis kontrol kartının ve fan motorunun yandığını söyleyip değiştirdi; ardından
+        ünite binanın devre kesicisini tekrar tekrar attırdı. Birden fazla servis ziyareti (4–5) sorunu
+        çözmedi; üreticinin müşteri hizmetleri yanıt vermeyi bıraktı.
+      advice: Alıcı, satın almadan önce yerel servis ağını ve garanti uygulamasını doğrulamalıdır; bu
+        sahip, yanmış bir kontrol kartı ve fan motoru, ardından servisin düzeltemediği kalıcı elektriksel
+        arızalar (devre kesici atması) bildiriyor ve ünite kullanılamaz durumda kalıyor.
+  evidence:
+  - url: https://www.sikayetvar.com/midea/midea-klima-arizasi-ve-tekrarlayan-servis-sorunlari-icin-garanti-degisimi-talebi
+    quote: Servis çağırdık, kartın ve fan motorunun yandığını söyleyip değiştirdiler.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:01:22+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: vestel
+      series: klima nova inv 122 a++
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: dış ünite anakartı (outdoor unit mainboard)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Vestel Nova Inverter 122 A++ GI Pro WiFi outdoor unit caught fire; service blamed mainboard
+        and high voltage
+      body: Owner of the exact 122 A++ GI Pro WiFi model reports the outdoor unit suddenly caught fire
+        about 8 months after purchase; the authorized service later said the mainboard had burned and
+        high voltage was present, then closed the service record without repair or a written report, while
+        the unit was still under warranty.
+      advice: This is a single owner report, not a recall, but it is the exact model and involves flame
+        and a refused warranty repair. Before buying or while owning this unit, keep the outdoor unit
+        clear of combustibles, ensure proper earthing and a surge/breaker setup, and photograph any fault.
+        If an outdoor unit ignites, treat it as a safety event and push for a written service report and
+        replacement rather than accepting a verbal 'not product-related' dismissal.
+    tr:
+      title: Vestel Nova Inverter 122 A++ GI Pro WiFi dış ünitesi alev aldı; servis ana kartı ve yüksek
+        voltajı suçladı
+      body: Tam olarak 122 A++ GI Pro WiFi modelinin sahibi, dış ünitenin satın alımdan yaklaşık 8 ay
+        sonra aniden alev aldığını bildiriyor; yetkili servis daha sonra ana kartın yandığını ve yüksek
+        voltaj bulunduğunu söyledi, ardından ünite hâlâ garanti kapsamındayken servis kaydını onarım veya
+        yazılı rapor olmadan kapattı.
+      advice: Bu, bir geri çağırma değil tek bir sahip bildirimidir, ancak tam olarak bu modeldir ve alev
+        ile reddedilen bir garanti onarımını içerir. Bu üniteyi satın almadan önce veya sahipken, dış
+        üniteyi yanıcı maddelerden uzak tutun, uygun topraklama ve bir dalgalanma/devre kesici düzeni
+        sağlayın ve herhangi bir arızayı fotoğraflayın. Bir dış ünite tutuşursa, bunu bir güvenlik olayı
+        olarak ele alın ve sözlü bir 'ürünle ilgili değil' reddini kabul etmek yerine yazılı bir servis
+        raporu ve değişim için ısrar edin.
+  evidence:
+  - url: https://www.sikayetvar.com/vestel/klimamin-dis-unitesi-yandi-vestel-servisinden-cozum-bekliyorum
+    quote: Vestel klm nova ınv. 122 A++ gı Pro wıfı model klimamı yaklaşık 8 ay sorunsuz kullandım. Ancak
+      12 gün önce dış ünitesi aniden alev aldı ve yangın tehlikesi yaşadık, zor söndürdük.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:06:04+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: midea
+      series: xtreme save
+  kind: known_issue
+  domain: general
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: heating/defrost system
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Xtreme Save chronic heating failure with DF error and cracked line set
+      body: Turkish owner reports persistent heating failure with a 'df' error; service found the line
+        set cracked during installation causing loss of cooling, and a switch-like part faulting.
+      advice: Heating failures with a 'df' error can trace to installation damage (cracked pipe) or a
+        control part; repeated service visits without a lasting fix are a pattern in these reports.
+    tr:
+      title: Xtreme Save, DF hatası ve çatlamış hat setiyle kronik ısıtma arızası
+      body: Türk sahip, 'df' hatasıyla kalıcı ısıtma arızası bildiriyor; servis, kurulum sırasında hat
+        setinin çatladığını ve bunun soğutma kaybına neden olduğunu ve anahtar benzeri bir parçanın arızalandığını
+        buldu.
+      advice: '''df'' hatasıyla ısıtma arızaları, kurulum hasarına (çatlamış boru) veya bir kontrol parçasına
+        dayanabilir; kalıcı bir çözüm olmadan tekrarlanan servis ziyaretleri bu raporlarda bir örüntüdür.'
+  evidence:
+  - url: https://www.sikayetvar.com/midea/midea-klimada-kronik-isitma-arizasi-ve-cozumsuz-servis-magduriyeti
+    quote: Klima ısıtma modunda açıldığında çalışıyor gibi görünmesine rağmen ısıtma yapmıyor, ekranda
+      “df” yazısı çıkıyor ve ısıtmayı kesiyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:00:05+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      series: windfree
+  kind: known_issue
+  domain: refrigerant
+  severity: high
+  consequence: ''
+  detection: ''
+  component: refrigerant charge / connecting lines
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Samsung Windfree 24.000 BTU recurring refrigerant leak every summer for three years
+      body: An owner of a Windfree 24.000 BTU reports a refrigerant leak every summer for three years,
+        with recharging lasting under a week before cooling fails again.
+      advice: A leak that returns within a week of a recharge is a real leak, not low charge. If a Windfree
+        loses cooling shortly after a recharge, demand a leak test and line repair rather than repeated
+        recharges, which the owner reports never fixed it.
+    tr:
+      title: Samsung Windfree 24.000 BTU, üç yıl boyunca her yaz tekrarlayan soğutucu akışkan kaçağı
+      body: Bir Windfree 24.000 BTU sahibi, üç yıl boyunca her yaz soğutucu akışkan kaçağı olduğunu ve
+        şarjın soğutma tekrar arızalanmadan önce bir haftadan kısa sürdüğünü bildiriyor.
+      advice: Bir şarjdan sonra bir hafta içinde geri dönen bir kaçak gerçek bir kaçaktır, düşük şarj
+        değildir. Bir Windfree şarjdan kısa süre sonra soğutmayı kaybederse, sahibin hiç düzeltmediğini
+        bildirdiği tekrarlanan şarjlar yerine bir kaçak testi ve hat onarımı talep edin.
+  evidence:
+  - url: https://www.sikayetvar.com/samsung/samsung-klimada-tekrarlayan-gaz-kacagi-ve-kotu-servis
+    quote: Klimada sürekli gaz kaçağı oluyor, servisler gaz basıyor, bir hafta bile geçmeden yine gaz
+      bitiyor ve cihaz soğutmamaya başlıyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:02:16+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: lg
+      series: LP portable
+  kind: known_issue
+  domain: refrigerant
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: refrigerant circuit
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'LG LP1419IVSM CH38 error: refrigerant leak after 20 days of use'
+      body: A Brazilian owner of an LG LP1419IVSM (LP portable series, inverter model) reports the unit
+        stopped working after ~20 days with error code CH38, which LG's own site indicates means loss
+        of refrigerant. The owner also reports difficulty getting any authorized service to work on the
+        unit.
+      advice: This shows LP-series portables can suffer refrigerant loss early in life, and that service
+        support for these units may be hard to obtain. The CH38 code is a specific, checkable failure
+        signature. Note this is a Brazilian-market report, not TR/EU.
+    tr:
+      title: 'LG LP1419IVSM CH38 hatası: 20 günlük kullanımdan sonra soğutucu akışkan kaçağı'
+      body: Bir LG LP1419IVSM (LP taşınabilir serisi, inverter model) sahibi Brezilyalı kullanıcı, cihazın
+        yaklaşık 20 gün sonra CH38 hata koduyla çalışmayı durdurduğunu bildiriyor; LG'nin kendi sitesi
+        bu kodun soğutucu akışkan kaybı anlamına geldiğini belirtiyor. Sahip ayrıca cihaz üzerinde çalışacak
+        yetkili servis bulmakta zorluk yaşadığını bildiriyor.
+      advice: Bu, LP serisi taşınabilir cihazların kullanım ömrünün başlarında soğutucu akışkan kaybı
+        yaşayabileceğini ve bu cihazlar için servis desteğinin zor elde edilebileceğini gösteriyor. CH38
+        kodu belirli ve kontrol edilebilir bir arıza imzasıdır. Bunun TR/AB değil, Brezilya pazarına ait
+        bir rapor olduğunu unutmayın.
+  evidence:
+  - url: https://www.reclameaqui.com.br/lg-electronics/titulo-ar-condicionado-portatil-lg-lp1419ivsm-parou-de-funcionar-apos-20-d_c8L1-QmZSolosk_8/
+    quote: e parou de funcionar apresentando o código de erro CH38. Segundo informações no site da LG,
+      esse código indica falta de fluido refrigerante, o que é inaceitável para um equipamento tão novo.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:57:59+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: midea
+      series: porta split
+  kind: known_issue
+  domain: general
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: SmartHome app / Wi-Fi module
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Midea PortaSplit app/Wi-Fi bug: units turn on/off by themselves and can be controlled by
+        third parties (1st generation)'
+      body: The Heise/connect report covers the same issue. Midea confirmed the fault is in the app and
+        limited to the first generation of the PortaSplit series; it offered replacement units and advised
+        blocking the unit's internet access via the router until a replacement arrives.
+      advice: If you buy a first-generation PortaSplit, expect that the app may switch the unit on/off
+        and change settings on its own and may pair to another owner's device. Midea's fix is a unit swap,
+        not a software patch, so check which generation you are getting and keep the unit off Wi-Fi if
+        it misbehaves.
+    tr:
+      title: 'Midea PortaSplit uygulama/Wi-Fi hatası: cihazlar kendi kendine açılıp kapanıyor ve üçüncü
+        taraflarca kontrol edilebiliyor (1. nesil)'
+      body: Heise/connect raporu aynı sorunu ele alıyor. Midea arızanın uygulamada olduğunu ve PortaSplit
+        serisinin yalnızca ilk nesliyle sınırlı olduğunu doğruladı; değişim cihazları sundu ve değişim
+        gelene kadar yönlendirici üzerinden cihazın internet erişiminin engellenmesini önerdi.
+      advice: Birinci nesil PortaSplit alırsanız, uygulamanın cihazı kendi kendine açıp kapatabileceğini
+        ve ayarları kendi kendine değiştirebileceğini ve başka bir sahibin cihazıyla eşleşebileceğini
+        bekleyin. Midea'nın çözümü yazılım yaması değil, cihaz değişimidir; bu nedenle hangi nesli aldığınızı
+        kontrol edin ve cihaz arızalı davranırsa Wi-Fi'den uzak tutun.
+  evidence:
+  - url: https://www.connect.de/news/midea-portasplit-probleme-stoerung-schaltet-sich-automatisch-ein-und-aus-app-fehler-loesung-3209868.html
+    quote: Mehrere Midea-Portasplit-Klimaanlagen verhalten sich laut Nutzern unkontrolliert. Der Hersteller
+      spricht von einem App-Fehler in der ersten Gerätegeneration und bietet Ersatzgeräte an.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:59:39+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: midea
+      series: porta split
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: condensate pump
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Midea Porta Split P1 error confirmed in a German complaint registry: condensate not pumped
+        to outdoor unit'
+      body: An independent German complaint entry independently confirms the recurring P1 error, with
+        the condensate not being pumped to the outdoor unit so the user must drain the tank manually.
+      advice: This is a second, independent confirmation of the P1 condensate-pump problem, so it is a
+        recurring pattern rather than a single owner's report. Expect manual draining or a warranty repair
+        if P1 appears.
+    tr:
+      title: 'Midea Porta Split P1 hatası bir Alman şikayet kaydında doğrulandı: yoğuşma suyu dış üniteye
+        pompalanmıyor'
+      body: Bağımsız bir Alman şikayet kaydı, tekrarlayan P1 hatasını bağımsız olarak doğruluyor; yoğuşma
+        suyu dış üniteye pompalanmıyor, bu yüzden kullanıcı tankı manuel olarak boşaltmak zorunda kalıyor.
+      advice: Bu, P1 yoğuşma suyu pompası sorununun ikinci ve bağımsız bir doğrulamasıdır; yani tek bir
+        sahibin raporu değil, tekrarlayan bir örüntüdür. P1 ortaya çıkarsa manuel boşaltma veya garanti
+        onarımı bekleyin.
+  evidence:
+  - url: https://www.reklamation24.de/midea/p1-fehler-porta-split-680233
+    quote: bei meiner Midea Porta Split Klimaanlage tritt wiederholt der Fehlercode P1 auf. Dabei wird
+      das Kondenswasser nicht wie vorgesehen zur Außeneinheit gepumpt, sodass ich den Wasserbehälter jedes
+      Mal manuell entleeren muss.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:59:39+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: vestel
+      series: klima nova inv 122 a++
+  kind: known_issue
+  domain: electrical
+  severity: low
+  consequence: ''
+  detection: ''
+  component: kompresör (compressor)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Nova Inverter 122 A++ GI Pro WiFi error codes ER11/ER13: compressor overcurrent protection'
+      body: A service-documentation page (sourced from Vestel's own published material) lists error codes
+        for the Nova Inverter 092/122/182/242 A++ GI Pro WiFi family, including ER11 and ER13 as compressor
+        overcurrent protection messages that shut the unit down.
+      advice: If the unit shows ER11/ER13, it is a protection shutdown, not a hard failure, and it can
+        be restarted from the remote; but if it recurs frequently, the page advises calling authorized
+        service because an underlying fault may exist. Knowing the code helps you avoid being talked out
+        of a warranty claim.
+    tr:
+      title: 'Nova Inverter 122 A++ GI Pro WiFi hata kodları ER11/ER13: kompresör aşırı akım koruması'
+      body: Bir servis dokümantasyonu sayfası (Vestel'in kendi yayımladığı materyalden alınmıştır), Nova
+        Inverter 092/122/182/242 A++ GI Pro WiFi ailesi için hata kodlarını listeliyor; bunlar arasında
+        cihazı kapatan kompresör aşırı akım koruması mesajları olarak ER11 ve ER13 de yer alıyor.
+      advice: Cihaz ER11/ER13 gösteriyorsa bu kesin bir arıza değil, bir koruma kapanmasıdır ve kumandadan
+        yeniden başlatılabilir; ancak sık sık tekrarlarsa, altta yatan bir arıza olabileceği için sayfa
+        yetkili servisi aramayı öneriyor. Kodu bilmek, garanti talebinden vazgeçirilmenizi önlemeye yardımcı
+        olur.
+  evidence:
+  - url: https://servisfer.com/vestel-klima-hata-kodlari
+    quote: Vestel klimada ER11 hata kodu kompresör aşırı akım koruması (arıza değil) anlamına gelir.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:06:04+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: comfee
+      series: MPD1-12CRN7
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: compressor power connection / coolant line short circuit
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'IFS-documented fire in a 2019 Comfee portable AC: short circuit between compressor power
+        connection and coolant line melted the line, flammable refrigerant leaked and ignited'
+      body: IFS investigated a real fire in a server room where a 2019 Comfee 'Eco Friendly' portable
+        AC ran about two hours before smoke was noticed; the fire was extinguished before spreading. Laboratory
+        examination found a short circuit between the compressor power connection and a coolant line,
+        which melted the line so the flammable refrigerant leaked and ignited. IFS notes this matches
+        the failure pattern of the MPD1-12CRN7 recall, though the specific unit examined was not itself
+        on the recall list. This independently corroborates the manufacturer's recall warning with an
+        actual ignition event.
+      advice: 'Treat the fire risk as real, not hypothetical: an independent laboratory documented an
+        actual ignition from this exact failure mode in a 2019 Comfee portable unit. Verify your unit''s
+        serial number against the recall and stop using it until resolved.'
+    tr:
+      title: 'IFS tarafından belgelenen 2019 Comfee taşınabilir klimada yangın: kompresör güç bağlantısı
+        ile soğutucu akışkan hattı arasındaki kısa devre hattı eritti, yanıcı soğutucu akışkan sızdı ve
+        tutuştu'
+      body: IFS, bir sunucu odasında 2019 Comfee 'Eco Friendly' taşınabilir klimanın yaklaşık iki saat
+        çalıştıktan sonra duman fark edildiği gerçek bir yangını inceledi; yangın yayılmadan söndürüldü.
+        Laboratuvar incelemesi, kompresör güç bağlantısı ile bir soğutucu akışkan hattı arasında bir kısa
+        devre buldu; bu, hattı eritti ve yanıcı soğutucu akışkan sızarak tutuştu. IFS, bunun MPD1-12CRN7
+        geri çağırma işleminin arıza örüntüsüyle eşleştiğini, ancak incelenen belirli cihazın kendisinin
+        geri çağırma listesinde olmadığını belirtiyor. Bu, üreticinin geri çağırma uyarısını gerçek bir
+        tutuşma olayıyla bağımsız olarak destekliyor.
+      advice: 'Yangın riskini varsayımsal değil gerçek olarak değerlendirin: bağımsız bir laboratuvar,
+        2019 Comfee taşınabilir cihazında tam bu arıza modundan kaynaklanan gerçek bir tutuşmayı belgeledi.
+        Cihazınızın seri numarasını geri çağırma listesiyle karşılaştırın ve sorun çözülene kadar kullanmayı
+        bırakın.'
+  evidence:
+  - url: https://www.ifs-ev.org/klimageraete/
+    quote: Bei der Laboruntersuchung stellte der IFS-Gutachter fest, dass es einen Kurzschluss zwischen
+      dem Stromanschluss des Klimakompressors und einer Kühlmittelleitung gegeben hatte. Die Leitung wurde
+      dabei aufgeschmolzen, und das brennbare Kühlmittel konnte austreten und sich entzünden.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:54:58+00:00'
+- subject:
+    kind: platform
+    identity:
+      brand: midea
+      family: split
+  kind: known_issue
+  domain: refrigerant
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: refrigerant system
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Midea error code E6 indicates refrigerant leak detection
+      body: Midea's official Spanish installation/service manual for the Minisplit Aurora Xtreme Inverter
+        lists error code E6 as 'Se detectó una fuga de refrigerante' (refrigerant leak detected). This
+        is the manufacturer's own documentation confirming the unit can detect and report refrigerant
+        leaks.
+      advice: If a Midea split displays E6, the manufacturer's documentation indicates a refrigerant leak;
+        the unit should be serviced by a professional, as refrigerant leaks are a safety and efficiency
+        hazard.
+    tr:
+      title: Midea E6 hata kodu soğutucu akışkan kaçağı algılamasını gösterir
+      body: Midea'nın Minisplit Aurora Xtreme Inverter için resmi İspanyolca kurulum/servis kılavuzu,
+        E6 hata kodunu 'Se detectó una fuga de refrigerante' (soğutucu akışkan kaçağı algılandı) olarak
+        listeliyor. Bu, üreticinin kendi dokümantasyonu olup cihazın soğutucu akışkan kaçaklarını algılayıp
+        bildirebileceğini doğruluyor.
+      advice: Bir Midea split E6 gösteriyorsa, üreticinin dokümantasyonu bir soğutucu akışkan kaçağına
+        işaret eder; soğutucu akışkan kaçakları güvenlik ve verimlilik tehlikesi olduğundan cihaz bir
+        profesyonel tarafından servis edilmelidir.
+  evidence:
+  - url: https://www.midea.com/content/dam/midea-aem/col/manuales/minisplit-aurora-xtreme-inverter-seer-19,-36000-btu,-fr%C3%ADo,-220v/Manual%20Minisplit%20Inverter%20ESPA%C3%91OL.pdf
+    quote: Se detectó una fuga de refrigerante
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:01:22+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: koenic
+      series: KAC 3352
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: compressor power cable insulation
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Manufacturer IMTRON confirms KAC 3352 recall: compressor power-line insulation can wear,
+        ignite refrigerant and the unit'
+      body: IMTRON GmbH (which manages the KOENIC house brand for MediaMarkt/Saturn) published this official
+        safety notice. It states that in very rare cases the compressor power line can contact the refrigerant
+        copper tube; with long or intensive use the cable sheath can wear, causing sparking, and continued
+        operation could ignite the refrigerant and the unit itself. The recall covers only PO batches
+        7000008080, 7000008081, 7000008082, 7000008088.
+      advice: This is the manufacturer's own confirmation of the fire hazard. Owners of an affected batch
+        should stop using the unit and contact IMTRON for a free on-site check, replacement, or refund.
+        The manufacturer explicitly advises against opening the unit yourself.
+    tr:
+      title: 'Üretici IMTRON, KAC 3352 geri çağırmasını doğruladı: kompresör elektrik hattı yalıtımı aşınabilir,
+        soğutucu akışkanı ve üniteyi tutuşturabilir'
+      body: IMTRON GmbH (MediaMarkt/Saturn için KOENIC ev markasını yöneten şirket) bu resmi güvenlik
+        bildirimini yayımladı. Bildirimde, çok nadir durumlarda kompresör elektrik hattının soğutucu bakır
+        boruya temas edebileceği; uzun veya yoğun kullanımda kablo kılıfının aşınarak kıvılcım oluşmasına
+        yol açabileceği ve çalışmaya devam edilmesinin soğutucu akışkanı ve ünitenin kendisini tutuşturabileceği
+        belirtiliyor. Geri çağırma yalnızca PO partileri 7000008080, 7000008081, 7000008082, 7000008088'i
+        kapsıyor.
+      advice: Bu, üreticinin yangın tehlikesine ilişkin kendi doğrulamasıdır. Etkilenen bir partinin sahipleri
+        üniteyi kullanmayı bırakmalı ve ücretsiz yerinde kontrol, değişim veya para iadesi için IMTRON
+        ile iletişime geçmelidir. Üretici, üniteyi kendi başınıza açmamanızı açıkça tavsiye ediyor.
+  evidence:
+  - url: https://www.koenic-online.com/sicherheitshinweise/sicherheitshinweis-koenic-kac-3352
+    quote: Bei dem mobilen Klimagerät KAC 3352 der Chargen mit der PO Nummern 7000008080, 7000008081,
+      7000008082, 7000008088 könnte in sehr seltenen Fällen die Stromleitung des Kompressors des Geräts
+      mit dem Kupferrohr des Kühlkreislaufs in Berührung kommen.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:57:18+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: daikin
+      series: kaira DTXR35E
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: outdoor unit (dış ünite)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Outdoor unit emits very loud truck-like noise and vibration since installation
+      body: An owner reports the outdoor unit has produced a very loud truck-like noise and serious vibration
+        since the day of installation, and the authorized service did not show up for two scheduled appointments
+        over 16 days.
+      advice: If the outdoor unit is loud or vibrating, it can disturb neighbors and may point to a poor
+        installation rather than a defect. Verify installation quality and service responsiveness early,
+        since the service may not return promptly.
+    tr:
+      title: Dış ünite kurulumdan bu yana çok yüksek kamyon benzeri gürültü ve titreşim yayıyor
+      body: Bir sahip, dış ünitenin kurulum gününden bu yana çok yüksek kamyon benzeri gürültü ve ciddi
+        titreşim ürettiğini ve yetkili servisin 16 gün boyunca planlanan iki randevuya gelmediğini bildiriyor.
+      advice: Dış ünite gürültülüyse veya titreşiyorsa komşuları rahatsız edebilir ve bir arızadan ziyade
+        kötü bir kuruluma işaret edebilir. Servis hemen dönmeyebileceğinden kurulum kalitesini ve servis
+        yanıt verebilirliğini erken doğrulayın.
+  evidence:
+  - url: https://www.sikayetvar.com/daikin/daikin-montaj-hatasi-ve-servis-ilgisizligi-nedeniyle-yuksek-ses-ve-titresim-sikayeti
+    quote: ancak montajın ilk gününden beri dış üniteden kamyon sesi gibi çok yüksek bir ses ve ciddi
+      titreşim gelmektedir.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:56:54+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      series: windfree
+  kind: known_issue
+  domain: mechanical
+  severity: low
+  consequence: ''
+  detection: ''
+  component: indoor fan motor
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Samsung Wind Free indoor unit emits a loud ticking noise from the motor since purchase
+      body: An owner reports a loud continuous ticking from the indoor motor since the unit was new, and
+        notes similar faults across seven Samsung units bought in the same period.
+      advice: A continuous motor ticking from day one is a comfort and durability concern, not a safety
+        one. If a new Windfree ticks loudly, raise it early under warranty rather than waiting for the
+        motor to worsen.
+    tr:
+      title: Samsung Wind Free iç ünite satın alındığından bu yana motordan yüksek bir tıkırtı sesi çıkarıyor
+      body: Bir sahip, iç ünitenin motordan yeni olduğu günden bu yana yüksek ve sürekli bir tıkırtı çıkardığını
+        bildiriyor ve aynı dönemde satın alınan yedi Samsung ünitede benzer arızalar olduğunu belirtiyor.
+      advice: İlk günden itibaren sürekli motor tıkırtısı bir konfor ve dayanıklılık sorunudur, güvenlik
+        sorunu değildir. Yeni bir Windfree yüksek sesle tıklarsa, motorun kötüleşmesini beklemek yerine
+        garanti kapsamında erken bildirin.
+  evidence:
+  - url: https://www.sikayetvar.com/samsung/samsung-windfree-klima-problemleri-video
+    quote: cihazdan motordan gelen şiddetli bir tıkırtı sesi duyuyorum.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:02:16+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: midea
+      series: xtreme save
+  kind: known_issue
+  domain: refrigerant
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: refrigerant circuit
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Xtreme Save stops with gas-release sound and QF error code
+      body: Turkish forum owner of a new Xtreme Save reports the unit stopped with a gas-release sound
+        and a QF error; forum replies attribute it to defrost (DF) but the owner experienced it as a fault.
+      advice: A gas-release sound and an error code are worth having a technician verify; if it is defrost
+        it is normal, but a refrigerant leak or compressor fault is costly to diagnose.
+    tr:
+      title: Xtreme Save gaz çıkış sesi ve QF hata koduyla duruyor
+      body: Yeni bir Xtreme Save'in Türk forum sahibi, ünitenin gaz çıkış sesi ve QF hatasıyla durduğunu
+        bildiriyor; forum yanıtları bunu buz çözme (DF) ile ilişkilendiriyor ancak sahip bunu arıza olarak
+        deneyimledi.
+      advice: Gaz çıkış sesi ve bir hata kodu bir teknisyen tarafından doğrulanmaya değer; buz çözme ise
+        normaldir, ancak soğutucu akışkan kaçağı veya kompresör arızasının teşhisi maliyetlidir.
+  evidence:
+  - url: https://inceleriz.com/forum/konular/midea-extrem-save-bir-anda-durdu.10160/?order=vote_score
+    quote: klima bir anda durdu içinden gaz boşalır gibi bir ses geldi ekran qf yazdı
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:00:05+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: midea
+      series: xtreme save
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: outdoor unit
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Xtreme Save outdoor unit emits constant noise and vibration within three months
+      body: Turkish owner complaint, Izmir, 18.000 BTU unit, noise/vibration reported within ~3 months
+        of purchase.
+      advice: Before buying, confirm the outdoor unit is firmly mounted on proper anti-vibration mounts
+        and check the unit's sound level in person; noise/vibration complaints appear early in ownership.
+    tr:
+      title: Xtreme Save dış ünite üç ay içinde sürekli gürültü ve titreşim yayıyor
+      body: Türk sahip şikayeti, İzmir, 18.000 BTU ünite, satın alımdan ~3 ay içinde gürültü/titreşim
+        bildirildi.
+      advice: Satın almadan önce dış ünitenin uygun titreşim önleyici takozlar üzerine sağlam şekilde
+        monte edildiğini doğrulayın ve ünitenin ses seviyesini bizzat kontrol edin; gürültü/titreşim şikayetleri
+        sahipliğin erken döneminde ortaya çıkıyor.
+  evidence:
+  - url: https://www.sikayetvar.com/midea/klimam-arizali-servis-destegi-saglanmiyor
+    quote: Dış üniteden sürekli garip sesler geliyor ve sarsıntı yapıyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:00:05+00:00'
+- subject:
+    kind: platform
+    identity:
+      brand: samsung
+      family: split
+  kind: known_issue
+  domain: general
+  severity: low
+  consequence: ''
+  detection: ''
+  component: indoor unit drain pipe and refrigerant lines (condensation)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Samsung split AC indoor unit and pipes sweat and drip water (Turkish owner forum)
+      body: A Turkish owner forum thread reports a Samsung split AC that has dripped and sweated heavily
+        on the drain pipe and indoor refrigerant lines since day one, with replies pointing to installation
+        leveling and drain slope as the likely cause.
+      advice: Heavy condensation and dripping on a Samsung split AC is commonly an installation issue
+        (unit not leveled, drain pipe lacking slope) rather than a defect; get the installation checked
+        before assuming a faulty unit.
+    tr:
+      title: Samsung split klima iç ünite ve borular terliyor ve su damlatıyor (Türk sahip forumu)
+      body: Bir Türk sahip forum başlığı, bir Samsung split klimanın ilk günden bu yana tahliye borusu
+        ve iç soğutucu hatlarında yoğun şekilde damladığını ve terlediğini bildiriyor; yanıtlar muhtemel
+        neden olarak kurulum seviyelendirmesini ve tahliye eğimini işaret ediyor.
+      advice: Bir Samsung split klimada yoğun yoğuşma ve damlama genellikle bir arıza değil kurulum sorunudur
+        (ünite seviyelenmemiş, tahliye borusunda eğim yok); ünitenin arızalı olduğunu varsaymadan önce
+        kurulumu kontrol ettirin.
+  evidence:
+  - url: https://techolay.net/sosyal/konu/samsung-klima-su-damlaciklari-ve-borularda-terleme-sorunu.129342/
+    quote: Bununla birlikte hem tahliye borusunda, hem de tahliye borusuyla beraber iç taraftaki kalın
+      borularda ciddi terlemeler ve su damlacıkları oluyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:02:58+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: lg
+      series: LP portable
+  kind: known_issue
+  domain: general
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: water-level float/sensor
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: LG LP0815WNR false 'FL' full-tank alerts and sensor malfunctions
+      body: An owner of an LP0815WNR (same LP portable series, adjacent model) reports the unit repeatedly
+        shows the 'FL' full-tank error even after emptying the tank, twice within two hours. The thread's
+        expert answer attributes this to a stuck or misaligned float, dirt buildup, or sensor wiring issues.
+      advice: A buyer of an LP-series portable should expect that a false 'FL' full-tank alarm may not
+        be cured by emptying the tank; it can indicate a float or sensor fault requiring service. This
+        is an inconvenience/functionality issue, not a safety hazard.
+    tr:
+      title: LG LP0815WNR yanlış 'FL' tam depo uyarıları ve sensör arızaları
+      body: Bir LP0815WNR sahibi (aynı LP taşınabilir serisi, komşu model), ünitenin depo boşaltıldıktan
+        sonra bile tekrar tekrar 'FL' tam depo hatası gösterdiğini, iki saat içinde iki kez bildiriyor.
+        Konunun uzman yanıtı bunu sıkışmış veya yanlış hizalanmış bir şamandıraya, kir birikmesine veya
+        sensör kablolama sorunlarına bağlıyor.
+      advice: Bir LP serisi taşınabilir ürün alıcısı, yanlış bir 'FL' tam depo alarmının deponun boşaltılmasıyla
+        giderilemeyebileceğini bilmelidir; bu, servis gerektiren bir şamandıra veya sensör arızasına işaret
+        edebilir. Bu bir rahatsızlık/işlevsellik sorunudur, güvenlik tehlikesi değildir.
+  evidence:
+  - url: https://www.justanswer.com/hvac/sa8f1-lg-air-conditioner-portable-model-lp0815wnr-water-tank-keeps.html
+    quote: It shows "FL," and then I emptied the tank. After that, it happened again twice over two hours.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:57:59+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: lg
+      series: LP portable
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: electronic component (unspecified by CPSC)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'CPSC recall: LG LP0711WNR/LP0813WNR/LP0814WNR portable ACs can overheat — fire hazard'
+      body: 'This is the official US CPSC recall (17-055) covering all three subject models. It is the
+        strongest evidence in this run: a regulator-confirmed fire hazard with four reported fires and
+        $380,000 in property damage. The recall remedy was a free repair, not replacement.'
+      advice: If a buyer owns or is offered an LP0711WNR, LP0813WNR, or LP0814WNR (serial numbers 311/312/401/402/403/404/405
+        for the latter), they should verify whether the unit was repaired under this recall before use.
+        The recall was US/Canada; a TR/EU-market unit may not have been covered.
+    tr:
+      title: 'CPSC geri çağırma: LG LP0711WNR/LP0813WNR/LP0814WNR taşınabilir klimalar aşırı ısınabilir
+        — yangın tehlikesi'
+      body: 'Bu, üç konu modelin tamamını kapsayan resmi ABD CPSC geri çağırmasıdır (17-055). Bu incelemedeki
+        en güçlü kanıttır: dört bildirilen yangın ve 380.000 $ maddi hasarla düzenleyici tarafından doğrulanmış
+        bir yangın tehlikesi. Geri çağırma çözümü değişim değil, ücretsiz onarımdı.'
+      advice: Bir alıcı bir LP0711WNR, LP0813WNR veya LP0814WNR'a (ikincisi için seri numaraları 311/312/401/402/403/404/405)
+        sahipse veya kendisine teklif edilmişse, kullanmadan önce ünitenin bu geri çağırma kapsamında
+        onarılıp onarılmadığını doğrulamalıdır. Geri çağırma ABD/Kanada içindi; TR/AB pazarına ait bir
+        ünite kapsam dahilinde olmamış olabilir.
+  evidence:
+  - url: https://www.cpsc.gov/Recalls/2017/LG-Electronics-Recalls-Portable-Air-Conditioners
+    quote: The portable air conditioners can overheat, posing a risk of fire.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:57:59+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: lg
+      series: LP portable
+  kind: known_issue
+  domain: fire
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: electronic component
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Dominican Republic consumer authority repeats LG portable AC fire alert
+      body: 'A national consumer-protection authority in the Dominican Republic issued a public alert
+        repeating the CPSC recall details: three LG portable models can overheat and cause a possible
+        fire, with four US fire incidents and $380,000 in damage. This shows the recall was disseminated
+        beyond North America.'
+      advice: Confirms the fire hazard was treated as serious by a consumer-protection regulator outside
+        the US/Canada, suggesting the risk was not considered US-specific.
+    tr:
+      title: Dominik Cumhuriyeti tüketici otoritesi LG taşınabilir klima yangın uyarısını yineledi
+      body: 'Dominik Cumhuriyeti''ndeki bir ulusal tüketici koruma otoritesi, CPSC geri çağırma ayrıntılarını
+        yineleyen bir kamu uyarısı yayımladı: üç LG taşınabilir model aşırı ısınabilir ve olası bir yangına
+        neden olabilir; dört ABD yangın olayı ve 380.000 $ hasar söz konusudur. Bu, geri çağırmanın Kuzey
+        Amerika dışında da yayıldığını gösteriyor.'
+      advice: Yangın tehlikesinin ABD/Kanada dışındaki bir tüketici koruma düzenleyicisi tarafından ciddiye
+        alındığını doğrular; bu da riskin ABD'ye özgü görülmediğini düşündürür.
+  evidence:
+  - url: https://proconsumidor.gob.do/Descargar/alertas-de-consumo/alerta_lg.pdf
+    quote: De acuerdo a la alerta, tres modelos de aires acondicionados de la marca LG, pueden sobrecalentarse
+      y causar un posible incendio.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:57:59+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: vestel
+      series: klima nova inv 122 a++
+  kind: known_issue
+  domain: refrigerant
+  severity: low
+  consequence: ''
+  detection: ''
+  component: R32 soğutucu gaz (R32 refrigerant)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Vestel 122 A++ GI Pro WiFi manual: R32 refrigerant is mildly flammable'
+      body: The manufacturer's user manual for the 122 A++ GI Pro WiFi (listed alongside the 092 A++ in
+        the same manual) states the unit contains R32 refrigerant, which is mildly flammable, and warns
+        against installation near flammable gases or in smoky/dusty environments. Note the manual's cover
+        names the series 'Nefes Inverter 122 A++ GI Pro WiFi'; it shares the 122 A++ GI Pro WiFi model
+        designation with the subject Nova unit, so treat this as the same hardware family.
+      advice: R32 is mildly flammable, which matters given the reported outdoor-unit ignition event on
+        this model. Keep the outdoor unit away from ignition sources and flammable materials, and have
+        any refrigerant work done by an authorized technician; a leak or a damaged line near a flame source
+        is the risk this warning targets.
+    tr:
+      title: 'Vestel 122 A++ GI Pro WiFi kılavuzu: R32 soğutucu akışkan hafif yanıcıdır'
+      body: 122 A++ GI Pro WiFi için üreticinin kullanım kılavuzu (aynı kılavuzda 092 A++ ile birlikte
+        listelenmiştir), ünitenin hafif yanıcı olan R32 soğutucu akışkan içerdiğini belirtir ve yanıcı
+        gazların yakınına veya dumanlı/tozlu ortamlara kuruluma karşı uyarır. Kılavuzun kapağının seriyi
+        'Nefes Inverter 122 A++ GI Pro WiFi' olarak adlandırdığını unutmayın; konu Nova ünitesiyle 122
+        A++ GI Pro WiFi model tanımını paylaşır, bu nedenle bunu aynı donanım ailesi olarak değerlendirin.
+      advice: R32 hafif yanıcıdır ve bu modelde bildirilen dış ünite tutuşma olayı göz önüne alındığında
+        bu önemlidir. Dış üniteyi ateşleme kaynaklarından ve yanıcı malzemelerden uzak tutun ve herhangi
+        bir soğutucu akışkan işini yetkili bir teknisyene yaptırın; bir alev kaynağı yakınındaki sızıntı
+        veya hasarlı hat, bu uyarının hedeflediği risktir.
+  evidence:
+  - url: https://maltepevestel.com.tr/en/index.php?controller=attachment&id_attachment=246
+    quote: 'UYARI: Klimanız R32 soğu- tucu gaz içerir. R32 soğutu- cu gaz hafif yanıcıdır.'
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:06:04+00:00'
+- subject:
+    kind: platform
+    identity:
+      brand: arcelik-beko
+      family: split
+  kind: known_issue
+  domain: general
+  severity: low
+  consequence: ''
+  detection: ''
+  component: room temperature sensor (CH01) / control board (CH09, CH21)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Beko official error-code guide documents CH codes for sensor, EEPROM, BLDC motor and IPM
+        faults
+      body: Beko's own Turkish support blog lists the CH error codes for its split air conditioners, covering
+        room-temperature sensor faults (CH01), EEPROM memory faults (CH09), BLDC fan motor lock (CH10)
+        and low DC current/IPM faults (CH21), each requiring authorized service. This is manufacturer
+        documentation of the failure modes the brand itself recognizes.
+      advice: This confirms that sensor and control-board faults are recognized failure modes on Beko
+        split units and that they are not user-serviceable — each requires an authorized service visit.
+        It is a guide, not evidence that these faults are frequent.
+    tr:
+      title: Beko resmi hata kodu kılavuzu sensör, EEPROM, BLDC motor ve IPM arızaları için CH kodlarını
+        belgeliyor
+      body: 'Beko''nun kendi Türkçe destek blogu, split klimaları için CH hata kodlarını listeliyor: oda
+        sıcaklığı sensörü arızaları (CH01), EEPROM bellek arızaları (CH09), BLDC fan motoru kilidi (CH10)
+        ve düşük DC akım/IPM arızaları (CH21); her biri yetkili servis gerektirir. Bu, markanın kendisinin
+        tanıdığı arıza modlarının üretici belgeleridir.'
+      advice: Bu, sensör ve kontrol kartı arızalarının Beko split ünitelerinde tanınan arıza modları olduğunu
+        ve kullanıcı tarafından servis edilebilir olmadığını doğrular — her biri yetkili bir servis ziyareti
+        gerektirir. Bu bir kılavuzdur, bu arızaların sık olduğuna dair kanıt değildir.
+  evidence:
+  - url: https://www.beko.com.tr/blog/klima-hata-kodlari-rehberi
+    quote: CH01 hata kodu, iç ünitedeki oda sıcaklık sensörünün arızalandığını gösterir.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:54:40+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: daikin
+      series: FTXF71A2V1B
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: indoor and outdoor control boards (PCB)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: FTXF71A2V1B stops on its own in hot weather and will not restart until the breaker is reset;
+        persists after indoor and outdoor board and full indoor-unit replacement
+      body: An owner in Istanbul reports the FTXF71A2V1B shuts off by itself during hot-weather operation
+        and will not restart until the breaker is cycled. The authorized service replaced the indoor-unit
+        board, then the outdoor-unit board, then the entire indoor unit, yet the fault returned the following
+        summer.
+      advice: If you own or are buying this model, know that a recurring self-shutdown fault has been
+        documented that survived replacement of both control boards and the whole indoor unit. Before
+        purchase, confirm the unit's warranty/service history; if you already own one showing this symptom,
+        push for a documented resolution rather than repeated part swaps, since the owner reports the
+        fault returned after all three replacements.
+    tr:
+      title: FTXF71A2V1B sıcak havalarda kendi kendine duruyor ve devre kesici sıfırlanana kadar yeniden
+        başlamıyor; iç ve dış kart ile tam iç ünite değişiminden sonra da devam ediyor
+      body: İstanbul'daki bir sahip, FTXF71A2V1B'nin sıcak hava çalışması sırasında kendi kendine kapandığını
+        ve devre kesici döngüye sokulana kadar yeniden başlamadığını bildiriyor. Yetkili servis önce iç
+        ünite kartını, sonra dış ünite kartını, ardından tüm iç üniteyi değiştirdi, ancak arıza ertesi
+        yaz geri döndü.
+      advice: Bu modele sahipseniz veya satın alıyorsanız, her iki kontrol kartının ve tüm iç ünitenin
+        değiştirilmesinden sonra da devam eden tekrarlayan bir kendi kendine kapanma arızasının belgelendiğini
+        bilin. Satın almadan önce ünitenin garanti/servis geçmişini doğrulayın; bu belirtiyi gösteren
+        bir üniteye zaten sahipseniz, sahip arızanın üç değişimin ardından geri döndüğünü bildirdiğinden,
+        tekrarlanan parça değişimleri yerine belgelenmiş bir çözüm için ısrar edin.
+  evidence:
+  - url: https://www.sikayetvar.com/daikin/daikin-klimada-ayipli-urun-sikayeti-ve-tam-degisim-talebi
+    quote: Daikin marka FTXF71A2V1B model klimayı 2023 yılında İstanbul’daki bir mağazadan satın aldım.
+      Ancak cihaz yaz aylarında sıcak havalarda çalışırken kendi kendine duruyor ve bir daha açılmıyor,
+      sadece sigortadan kapatıp tekrar açınca devreye giriyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:56:19+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: midea
+      series: mobile 35c
+  kind: known_issue
+  domain: general
+  severity: low
+  consequence: ''
+  detection: ''
+  component: evaporator temperature sensor
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Midea Mobile 35C E2 error code = evaporator temperature sensor fault
+      body: According to the official Midea manual for the Mobile 35C platform, error code E2 indicates
+        a fault in the evaporator temperature sensor (E1 = room temperature sensor). This is useful for
+        an owner troubleshooting an E2 display on this specific model, and the source warns that older
+        generic guides mislabel E2 as the room sensor.
+      advice: If the unit shows E2, first check that air intake/outlet are unobstructed and restart; if
+        the error persists, stop use and contact the manufacturer or a qualified technician rather than
+        opening the unit.
+    tr:
+      title: Midea Mobile 35C E2 hata kodu = evaporatör sıcaklık sensörü arızası
+      body: Mobile 35C platformu için resmi Midea kılavuzuna göre, E2 hata kodu evaporatör sıcaklık sensöründeki
+        bir arızayı gösterir (E1 = oda sıcaklık sensörü). Bu, bu belirli modelde E2 göstergesinde sorun
+        gideren bir sahip için faydalıdır ve kaynak, eski genel kılavuzların E2'yi oda sensörü olarak
+        yanlış etiketlediği konusunda uyarır.
+      advice: Ünite E2 gösteriyorsa, önce hava girişinin/çıkışının engellenmediğini kontrol edin ve yeniden
+        başlatın; hata devam ederse, üniteyi açmak yerine kullanımı durdurun ve üretici veya yetkili bir
+        teknisyenle iletişime geçin.
+  evidence:
+  - url: https://smartfehler.de/comfee-klimageraet-fehler-e2-loesung/
+    quote: In einer offiziellen Midea-Bedienungsanleitung für das mobile Klimagerät Mobile 35C steht E2
+      für einen Fehler des Verdampfer-Temperatursensors; E1 ist dort dagegen dem Raumtemperatursensor
+      zugeordnet.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:59:01+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: comfee
+      series: MPD1-12CRN7
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: compressor power cable (Verdichterstromkabel)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Comfee MPD1-12CRN7 recall: compressor power cable insulation wears against copper pipe,
+        sparking can ignite refrigerant and unit'
+      body: The recall covers the portable MPD1-12CRN7 (EAN 4048164102914, 2019 production) and the identical
+        Midea Mobile 35C. The compressor power cable can rub against the copper refrigerant pipe; with
+        prolonged/intense use the insulation wears, causing electrical sparking that can ignite the R290
+        refrigerant and the unit itself. The manufacturer asks owners to stop using the unit immediately
+        and contact their dealer. This is a high-severity fire hazard from an electrical defect.
+      advice: If you own a 2019 Comfee MPD1-12CRN7, stop using it immediately and contact the dealer/Midea
+        Europe service (free line +49 6196 90 20 290, MEG.Product@Midea.com) to arrange the recall remedy.
+        Do not continue running the unit while waiting.
+    tr:
+      title: 'Comfee MPD1-12CRN7 geri çağırma: kompresör güç kablosu yalıtımı bakır boruya sürtünerek
+        aşınıyor, kıvılcım soğutucu akışkanı ve üniteyi tutuşturabilir'
+      body: Geri çağırma, taşınabilir MPD1-12CRN7'yi (EAN 4048164102914, 2019 üretimi) ve aynı olan Midea
+        Mobile 35C'yi kapsar. Kompresör güç kablosu bakır soğutucu akışkan borusuna sürtünebilir; uzun
+        süreli/yoğun kullanımda yalıtım aşınarak R290 soğutucu akışkanı ve ünitenin kendisini tutuşturabilecek
+        elektriksel kıvılcımlara neden olur. Üretici, sahiplerden üniteyi derhal kullanmayı bırakmalarını
+        ve bayileriyle iletişime geçmelerini ister. Bu, elektriksel bir kusurdan kaynaklanan yüksek ciddiyette
+        bir yangın tehlikesidir.
+      advice: 2019 Comfee MPD1-12CRN7'niz varsa, derhal kullanmayı bırakın ve geri çağırma çözümünü ayarlamak
+        için bayi/Midea Europe servisiyle (ücretsiz hat +49 6196 90 20 290, MEG.Product@Midea.com) iletişime
+        geçin. Beklerken üniteyi çalıştırmaya devam etmeyin.
+  evidence:
+  - url: https://www.feelcomfee.com/de/ueber-uns/warnhinweis
+    quote: Wenn die Verdichterstromleitung des Geräts mit dem Kupferrohr in Berührung kommt und das Gerät
+      lange oder intensiv genutzt wird, kann sich die Ummantelung des Verdichterstromkabels abnutzen.
+      Durch die Abnutzung kommt es zu einer elektrischen Funkenbildung an der Kupferleitung, wenn das
+      Gerät weiterläuft, wodurch sich das Kältemittel und das Gerät selbst entzünden können.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:54:58+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: daikin
+      series: kaira DTXR35E
+  kind: known_issue
+  domain: general
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: indoor/outdoor unit matching
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Kaira DTXR35E is Midea-manufactured; buyer received mismatched indoor/outdoor units
+      body: An Ekşi Sözlük entry notes the Kaira is sold by Daikin Türkiye but is Midea-manufactured,
+        and one buyer received a 12000 BTU unit whose indoor unit was 18000 while the outdoor unit was
+        12000, discovered only at installation, leaving them unable to use it for ~20 days.
+      advice: Because the Kaira is a rebadged Midea unit sold under Daikin's name, buyers should verify
+        the indoor and outdoor unit capacities match at installation and confirm the warranty/service
+        channel before purchase.
+    tr:
+      title: Kaira DTXR35E Midea tarafından üretilmiştir; alıcı uyumsuz iç/dış üniteler aldı
+      body: Bir Ekşi Sözlük girdisi, Kaira'nın Daikin Türkiye tarafından satıldığını ancak Midea tarafından
+        üretildiğini ve bir alıcının iç ünitesi 18000, dış ünitesi 12000 olan 12000 BTU'luk bir ünite
+        aldığını, bunun yalnızca kurulumda fark edildiğini ve yaklaşık 20 gün boyunca kullanamadıklarını
+        belirtir.
+      advice: Kaira, Daikin'in adı altında satılan yeniden markalanmış bir Midea ünitesi olduğundan, alıcılar
+        kurulumda iç ve dış ünite kapasitelerinin eşleştiğini doğrulamalı ve satın almadan önce garanti/servis
+        kanalını teyit etmelidir.
+  evidence:
+  - url: https://eksisozluk.com/kaira--7293641?a=nice
+    quote: satın aldığım 12.000 btu klimanın iç ünitesi 18.000, dış ünitesi 12.000 gelmiş.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:56:54+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: daikin
+      series: ATXF25F siesta
+  kind: known_issue
+  domain: refrigerant
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: refrigerant circuit (U0-00 error code)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Siesta Sensira series shows U0-00 refrigerant-shortage error on the second day of use
+      body: Owner complaint on Şikayetvar for a Daikin Siesta Sensira 12000 BTU unit (the larger ATXF35F
+        sibling in the same Siesta Sensira series, not the ATXF25F itself). The unit gave a U0-00 error
+        on the second day after installation and would not run; Daikin's own error-code tables list U0
+        as insufficient refrigerant (NEDOSTATAK RASHLADNE TEČNOSTI).
+      advice: Buyer should know the Siesta Sensira series can throw a U0-00 refrigerant-shortage error
+        very early, leaving the unit non-functional. This is reported on the 12000 BTU model; no U0 report
+        was found specifically for the ATXF25F.
+    tr:
+      title: Siesta Sensira serisi kullanımın ikinci gününde U0-00 soğutucu akışkan eksikliği hatası gösteriyor
+      body: Şikayetvar'da bir Daikin Siesta Sensira 12000 BTU ünitesi (aynı Siesta Sensira serisindeki
+        daha büyük ATXF35F kardeşi, ATXF25F'in kendisi değil) için sahip şikayeti. Ünite kurulumdan sonraki
+        ikinci gün U0-00 hatası verdi ve çalışmadı; Daikin'in kendi hata kodu tabloları U0'ı yetersiz
+        soğutucu akışkan (NEDOSTATAK RASHLADNE TEČNOSTI) olarak listeler.
+      advice: Alıcı, Siesta Sensira serisinin çok erken bir aşamada U0-00 soğutucu akışkan eksikliği hatası
+        verebileceğini ve üniteyi işlevsiz bırakabileceğini bilmelidir. Bu, 12000 BTU modelinde bildirilmiştir;
+        ATXF25F için özel olarak U0 bildirimi bulunamadı.
+  evidence:
+  - url: https://www.sikayetvar.com/daikin/klima/dellyvery
+    quote: Daikin Siesta Sensira 12000 BTU klimam, kurulum...dan sonraki ikinci gün U0-00 arızası vererek
+      çalışmadı.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:55:45+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: koenic
+      series: KAC 3352
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: compressor (Verdichter) power cable
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Austrian consumer-protection body VKI lists KAC 3352 recall under 'Brandgefahr' (fire hazard)
+      body: The Austrian consumer-protection association VKI (funded by the social ministry) independently
+        lists the KAC 3352 recall under 'Brandgefahr' (fire hazard), confirming the same affected PO batches
+        and the same failure mechanism — compressor power-cable insulation wearing through and igniting
+        the refrigerant and unit.
+      advice: 'Independent corroboration of the fire hazard from a national consumer-protection body.
+        Same action as above: check the PO number, stop using affected units, contact IMTRON.'
+    tr:
+      title: Avusturya tüketici koruma kuruluşu VKI, KAC 3352 geri çağırmasını 'Brandgefahr' (yangın tehlikesi)
+        altında listeliyor
+      body: Sosyal bakanlık tarafından finanse edilen Avusturya tüketici koruma derneği VKI, KAC 3352
+        geri çağırmasını bağımsız olarak 'Brandgefahr' (yangın tehlikesi) altında listeler ve aynı etkilenen
+        PO partilerini ve aynı arıza mekanizmasını doğrular — kompresör güç kablosu yalıtımının aşınarak
+        soğutucu akışkanı ve üniteyi tutuşturması.
+      advice: 'Ulusal bir tüketici koruma kuruluşundan yangın tehlikesinin bağımsız teyidi. Yukarıdakiyle
+        aynı eylem: PO numarasını kontrol edin, etkilenen üniteleri kullanmayı bırakın, IMTRON ile iletişime
+        geçin.'
+  evidence:
+  - url: https://vki.at/mobiles-klimageraet-kac-3352-von-koenic/6056
+    quote: Wenn das Gerät lange oder intensiv genutzt wird, kann sich die Ummantelung des Verdichterstromkabels
+      abnutzen. Durch die Abnutzung kommt es zu einer elektrischen Funkenbildung an der Kupferleitung,
+      wenn das Gerät weiterläuft, wodurch sich das Kältemittel und das Gerät selbst entzünden können.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:05:29+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: midea
+      series: mobile 35c
+  kind: known_issue
+  domain: general
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: room temperature sensor / evaporator temperature sensor
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Midea''s own error-code table: E1 room-sensor and E2 evaporator-sensor failures on portable
+        units'
+      body: Midea's official support FAQ documents that its portable air conditioners throw E1/E2 codes
+        for room and evaporator temperature sensor failures; a repair-shop source (smartfehler.de) confirms
+        the same E1/E2 mapping specifically for the Mobile 35C platform.
+      advice: If the unit shows E1 or E2, the temperature sensor is the likely failed part; Midea advises
+        checking for obstructions, restarting, and if the code persists, unplugging and calling service.
+        Sensor replacement is the typical fix.
+    tr:
+      title: 'Midea''nın kendi hata kodu tablosu: taşınabilir ünitelerde E1 oda sensörü ve E2 evaporatör
+        sensörü arızaları'
+      body: Midea'nın resmi destek SSS'si, taşınabilir klimalarının oda ve evaporatör sıcaklık sensörü
+        arızaları için E1/E2 kodları verdiğini belgeler; bir tamirci kaynağı (smartfehler.de) özellikle
+        Mobile 35C platformu için aynı E1/E2 eşlemesini doğrular.
+      advice: Ünite E1 veya E2 gösteriyorsa, arızalı parça büyük olasılıkla sıcaklık sensörüdür; Midea
+        engelleri kontrol etmeyi, yeniden başlatmayı ve kod devam ederse fişi çekip servisi aramayı önerir.
+        Sensör değişimi tipik çözümdür.
+  evidence:
+  - url: https://www.midea.com/us/support/faq/air-conditioners/all-portable-air-conditioners
+    quote: E1 - Room temperature sensor error. E2 - Evaporator temperature sensor error. E3 - Condenser
+      temperature sensor error (select models). E4 - Display panel communication error.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:05:44+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: koenic
+      series: KAC 3352
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: compressor power cable insulation (Ummantelung der Stromleitung)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'KOENIC KAC 3352 manufacturer''s own safety notice: worn compressor cable sheath can cause
+        sparking and ignite the refrigerant and unit'
+      body: IMTRON GmbH, the brand owner for MediaMarkt/Saturn, issued this official safety notice. In
+        very rare cases the compressor power cable contacts the copper refrigerant tube; with long or
+        intensive use the cable sheath wears, causing electrical sparking at the copper lead that could
+        ignite the refrigerant and the unit itself. The company recalled the affected batches preventively.
+      advice: This is the manufacturer's own confirmation of the fire hazard. If your KAC 3352 is in PO
+        batches 7000008080/81/82/88, stop using it and contact IMTRON (0800 7773222 in Germany, or contact@imtron.eu)
+        for an on-site check, replacement, or refund. The recall is EU/Switzerland (MediaMarkt/Saturn);
+        no Turkish-market notice was found in this run.
+    tr:
+      title: 'KOENIC KAC 3352 üreticinin kendi güvenlik bildirimi: aşınmış kompresör kablo kılıfı kıvılcım
+        çıkararak soğutucu akışkanı ve üniteyi tutuşturabilir'
+      body: MediaMarkt/Saturn'ün marka sahibi IMTRON GmbH bu resmi güvenlik bildirimini yayımladı. Çok
+        nadir durumlarda kompresör güç kablosu bakır soğutucu akışkan borusuna temas eder; uzun veya yoğun
+        kullanımda kablo kılıfı aşınarak bakır iletkende elektriksel kıvılcım oluşur ve bu da soğutucu
+        akışkanı ve ünitenin kendisini tutuşturabilir. Şirket etkilenen partileri önleyici olarak geri
+        çağırdı.
+      advice: Bu, üreticinin yangın tehlikesine ilişkin kendi teyididir. KAC 3352'niz PO partileri 7000008080/81/82/88
+        içindeyse kullanmayı bırakın ve yerinde kontrol, değişim veya para iadesi için IMTRON ile iletişime
+        geçin (Almanya'da 0800 7773222 veya contact@imtron.eu). Geri çağırma AB/İsviçre (MediaMarkt/Saturn)
+        kapsamındadır; bu çalışmada Türkiye pazarına ait bir bildirim bulunamadı.
+  evidence:
+  - url: https://www.koenic-online.com/sicherheitshinweise/sicherheitshinweis-koenic-kac-3352
+    quote: Durch die Abnutzung kann es zu einer elektrischen Funkenbildung an der Kupferleitung kommen.
+      Bei Weiterbetrieb des betroffenen Geräts könnte sich das Kältemittel und das Gerät selbst entzünden.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:57:18+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: midea
+      series: xtreme save
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: control board (PCB)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Xtreme Save control-board error codes E7/F4 rated critical
+      body: French error-code reference lists Xtreme Save among models affected by control-board faults
+        E7 (indoor/display board communication) and F4 (outdoor EEPROM), both rated 'critique' and requiring
+        a qualified technician.
+      advice: Control-board faults are electrical and not user-serviceable; an E7/F4 error means a board
+        replacement, which is a significant repair cost and typically needs an authorised service visit.
+    tr:
+      title: Xtreme Save kontrol kartı hata kodları E7/F4 kritik olarak derecelendirildi
+      body: 'Fransız hata kodu referansı, Xtreme Save''i kontrol kartı arızalarından etkilenen modeller
+        arasında listeliyor: E7 (iç ünite/ekran kartı iletişimi) ve F4 (dış ünite EEPROM), her ikisi de
+        ''critique'' olarak derecelendirilmiş ve yetkili bir teknisyen gerektiriyor.'
+      advice: Kontrol kartı arızaları elektrikseldir ve kullanıcı tarafından servis edilemez; E7/F4 hatası
+        kart değişimi anlamına gelir; bu önemli bir onarım maliyetidir ve genellikle yetkili servis ziyareti
+        gerektirir.
+  evidence:
+  - url: https://code-erreur-pompe-a-chaleur.fr/midea/codes-erreur-midea/
+    quote: Défaut communication carte intérieure / carte d’affichage
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:00:05+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: midea
+      series: breezeless
+  kind: known_issue
+  domain: refrigerant
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: R32 refrigerant circuit
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Breezeless R32 refrigerant-leak code EL 0C requires certified refrigerant technician
+      body: Dutch Midea dealer Aretec's fault-code finder, based on the official Midea Breezeless service
+        manual (EN_SM_MSCB1BU-xxHRFN8-ME) for the MSCB1BU-09/-12 models with R32, lists EL 0C as a refrigerant-leak
+        code that always requires a certified refrigerant technician. R32 is a mildly flammable (A2L)
+        refrigerant, so a leak is a refrigerant-safety concern.
+      advice: If the unit shows EL 0C (or EC on some variants), stop use and have a certified R32 technician
+        service it; do not attempt DIY refrigerant handling.
+    tr:
+      title: Breezeless R32 soğutucu akışkan kaçağı kodu EL 0C sertifikalı soğutucu akışkan teknisyeni
+        gerektirir
+      body: Hollandalı Midea bayisi Aretec'in arıza kodu bulucusu, R32'li MSCB1BU-09/-12 modelleri için
+        resmi Midea Breezeless servis kılavuzuna (EN_SM_MSCB1BU-xxHRFN8-ME) dayanarak EL 0C'yi her zaman
+        sertifikalı bir soğutucu akışkan teknisyeni gerektiren bir soğutucu akışkan kaçağı kodu olarak
+        listeliyor. R32 hafif yanıcı (A2L) bir soğutucu akışkandır, bu nedenle kaçak bir soğutucu akışkan
+        güvenliği endişesidir.
+      advice: Ünite EL 0C (bazı varyantlarda EC) gösteriyorsa kullanımı durdurun ve sertifikalı bir R32
+        teknisyenine servis yaptırın; soğutucu akışkan işlemlerini kendiniz yapmayı denemeyin.
+  evidence:
+  - url: https://aretec.nl/midea-breezeless-storingen/
+    quote: EL 0C (koudemiddellekkage, LED 8x) vereist altijd een erkend koudemiddelmonteur.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:58:36+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: midea
+      series: mobile 35c
+  kind: known_issue
+  domain: general
+  severity: low
+  consequence: ''
+  detection: ''
+  component: WiFi module / companion app
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Midea Mobile 35C WiFi connection drops intermittently; app reported as poor
+      body: Owner reviews on digitec report the unit intermittently losing WiFi connection and describe
+        the companion app as not usable, though the unit itself cools and runs fine. This is a low-severity
+        reliability/connectivity complaint, not a safety issue.
+      advice: If remote control via app matters to you, expect possible WiFi dropouts; the unit still
+        operates via its IR remote. This is a minor convenience issue, not a reason to avoid the model
+        on safety grounds.
+    tr:
+      title: Midea Mobile 35C WiFi bağlantısı aralıklı olarak kopuyor; uygulama kötü olarak bildiriliyor
+      body: digitec'teki sahip yorumları, ünitenin WiFi bağlantısını aralıklı olarak kaybettiğini bildiriyor
+        ve yardımcı uygulamayı kullanılamaz olarak tanımlıyor, ancak ünitenin kendisi iyi soğutuyor ve
+        çalışıyor. Bu, düşük önem dereceli bir güvenilirlik/bağlantı şikayetidir, güvenlik sorunu değildir.
+      advice: Uygulama üzerinden uzaktan kontrol sizin için önemliyse olası WiFi kopmalarını bekleyin;
+        ünite yine de IR kumandasıyla çalışır. Bu küçük bir kolaylık sorunudur, modelden güvenlik gerekçesiyle
+        kaçınmak için bir neden değildir.
+  evidence:
+  - url: https://www.digitec.ch/en/s1/product/ratings/midea-mobile-35-c-41m-12000btuh-klimaanlage-12928901?supplier=406802
+    quote: In itself, the wifi connection is good, but the control over it leaves something to be desired.
+      I was able to integrate it with Home Assistant, but it is suboptimal as the unit seems to lose connection
+      every now and then....
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:59:01+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      series: windfree
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: indoor unit / self-cleaning (Dondurarak Yıkama) system
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Samsung Windfree indoor unit emitted burnt smell and white smoke after its self-cleaning
+        cycle
+      body: An owner reports the Windfree unit began emitting a burnt smell and white smoke right after
+        running its self-cleaning cycle, and they shut it off in fear.
+      advice: If a Windfree emits a burnt smell or smoke after a self-cleaning run, power it down at the
+        breaker immediately and have a service tech inspect before further use. This is a fire-domain
+        event, not a cosmetic fault.
+    tr:
+      title: Samsung Windfree iç ünitesi kendi kendini temizleme döngüsünden sonra yanık kokusu ve beyaz
+        duman yaydı
+      body: Bir sahip, Windfree ünitesinin kendi kendini temizleme döngüsünü çalıştırdıktan hemen sonra
+        yanık kokusu ve beyaz duman yaymaya başladığını ve korkuyla cihazı kapattığını bildiriyor.
+      advice: Bir Windfree kendi kendini temizleme çalıştırmasından sonra yanık kokusu veya duman yayarsa,
+        derhal şalterden gücünü kesin ve daha fazla kullanmadan önce bir servis teknisyenine kontrol ettirin.
+        Bu, kozmetik bir arıza değil, yangın alanına ait bir olaydır.
+  evidence:
+  - url: https://www.sikayetvar.com/samsung/klima/duman
+    quote: Biraz zaman sonra klimadan yanık kokusu gelmeye, beyaz duman atmaya başladı.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:02:16+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: daikin
+      series: FTXF71A2V1B
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: indoor and outdoor control board (kart)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: FTXF71A2V1B stops by itself in hot weather and will not restart until the breaker is cycled;
+        indoor and outdoor control boards and the whole indoor unit were replaced without curing it
+      body: The owner reports the unit stops by itself during hot-weather cooling and will not restart
+        until the electrical breaker is switched off and on. Authorized Daikin service replaced the indoor
+        PCB, then the outdoor PCB, then the entire indoor unit, and the fault returned the next summer.
+        Service could not identify a cause and suggested an electrical fault, which the owner disputes
+        because other appliances in the same pharmacy keep working.
+      advice: A buyer should treat this as a documented, recurring control-board/electrical failure on
+        this specific model, not a one-off. Because the fault persisted after replacing both PCBs and
+        the whole indoor unit, a warranty replacement or refund request is reasonable; expect multiple
+        service visits during the hot season. Verify the unit's warranty and Daikin TR's replacement policy
+        before relying on a repair.
+    tr:
+      title: FTXF71A2V1B sıcak havalarda kendi kendine duruyor ve şalter açılıp kapatılana kadar yeniden
+        başlamıyor; iç ve dış kontrol kartları ile tüm iç ünite düzeltilmeden değiştirildi
+      body: Sahip, ünitenin sıcak havalarda soğutma sırasında kendi kendine durduğunu ve elektrik şalteri
+        kapatılıp açılana kadar yeniden başlamadığını bildiriyor. Yetkili Daikin servisi önce iç PCB'yi,
+        sonra dış PCB'yi, ardından tüm iç üniteyi değiştirdi ve arıza ertesi yaz geri döndü. Servis bir
+        neden belirleyemedi ve elektriksel bir arıza öne sürdü; sahip ise aynı eczanedeki diğer cihazların
+        çalışmaya devam etmesi nedeniyle buna itiraz ediyor.
+      advice: Bir alıcı bunu bu belirli modelde tek seferlik değil, belgelenmiş ve tekrarlayan bir kontrol
+        kartı/elektriksel arıza olarak değerlendirmelidir. Her iki PCB ve tüm iç ünite değiştirildikten
+        sonra arıza devam ettiği için garanti kapsamında değişim veya para iadesi talebi makuldür; sıcak
+        sezonda birden fazla servis ziyareti bekleyin. Bir onarıma güvenmeden önce ünitenin garantisini
+        ve Daikin TR'nin değişim politikasını doğrulayın.
+  evidence:
+  - url: https://www.sikayetvar.com/daikin/daikin-klimada-ayipli-urun-sikayeti-ve-tam-degisim-talebi
+    quote: Daikin marka FTXF71A2V1B model klimayı 2023 yılında İstanbul’daki bir mağazadan satın aldım.
+      Ancak cihaz yaz aylarında sıcak havalarda çalışırken kendi kendine duruyor ve bir daha açılmıyor,
+      sadece sigortadan kapatıp tekrar açınca devreye giriyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:56:19+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: vestel
+      series: klima nova inv 122 a++
+  kind: known_issue
+  domain: general
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: dış ünite / drenaj (outdoor unit condensate drainage)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Vestel Nova Inverter 122 A++ outdoor unit leaks water from day one; indoor unit drips into
+        the room
+      body: Multiple owners of the Nova Inverter 122 A++ family report water leaking from the outdoor
+        unit from the first day and the indoor unit dripping water into the room, causing wall stains;
+        the authorized service repeatedly failed to resolve it and in one case charged for a follow-up
+        visit.
+      advice: Water leakage/condensation is the most frequently reported issue on this model. Check the
+        condensate drainage and installation (leveling, drain routing) at install time, and get any leak
+        complaint documented in writing while under warranty, since owners report service visits that
+        end without a fix or with a charge.
+    tr:
+      title: Vestel Nova Inverter 122 A++ dış ünitesi ilk günden su sızdırıyor; iç ünite odaya damlatıyor
+      body: Nova Inverter 122 A++ ailesinin birden fazla sahibi, dış ünitenin ilk günden su sızdırdığını
+        ve iç ünitenin odaya su damlatarak duvar lekelerine yol açtığını bildiriyor; yetkili servis sorunu
+        defalarca çözemedi ve bir vakada takip ziyareti için ücret aldı.
+      advice: Su sızıntısı/yoğuşma bu modelde en sık bildirilen sorundur. Kurulum sırasında yoğuşma drenajını
+        ve kurulumu (terazileme, dren güzergâhı) kontrol edin ve garanti kapsamındayken herhangi bir sızıntı
+        şikayetini yazılı olarak belgeleyin; çünkü sahipler, düzeltme yapılmadan veya ücret alınarak sonuçlanan
+        servis ziyaretleri bildiriyor.
+  evidence:
+  - url: https://www.sikayetvar.com/vestel/vestel-klima-dis-unitesinin-su-akitma-sorunu-ve-yetersiz-servis-hizmeti
+    quote: Vestel Nova Inverter 122A++ GL Pro Wi-Fi model klimamın dış ünitesi, takıldığı ilk günden itibaren
+      sürekli olarak su akıtıyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:06:04+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: midea
+      series: mobile 35c
+  kind: known_issue
+  domain: general
+  severity: low
+  consequence: ''
+  detection: ''
+  component: WiFi module / companion app
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Owner reports: Mobile 35C WiFi/app control unreliable, connection drops'
+      body: Owner reviews on digitec/galaxus report the WiFi connection drops periodically and the companion
+        app is not usable; a Symcon home-automation thread shows users struggling to get the Mobile 35C's
+        API token, corroborating weak connectivity control.
+      advice: Expect the smart-control features to be flaky; if you only need basic cooling, the unit
+        works, but do not rely on app-based scheduling or remote control.
+    tr:
+      title: 'Sahip bildirimi: Mobile 35C WiFi/uygulama kontrolü güvenilmez, bağlantı kopuyor'
+      body: digitec/galaxus üzerindeki sahip incelemeleri, WiFi bağlantısının periyodik olarak koptuğunu
+        ve eşlik eden uygulamanın kullanılamaz olduğunu bildiriyor; bir Symcon ev otomasyonu başlığı,
+        kullanıcıların Mobile 35C'nin API token'ını almakta zorlandığını göstererek zayıf bağlantı kontrolünü
+        doğruluyor.
+      advice: Akıllı kontrol özelliklerinin tutarsız olmasını bekleyin; yalnızca temel soğutmaya ihtiyacınız
+        varsa ünite çalışır, ancak uygulama tabanlı zamanlama veya uzaktan kumandaya güvenmeyin.
+  evidence:
+  - url: https://www.digitec.ch/en/s1/product/ratings/midea-mobile-35-c-41m-12000btuh-klimaanlage-12928901?supplier=406802
+    quote: In itself, the wifi connection is good, but the control over it leaves something to be desired.
+      I was able to integrate it with Home Assistant, but it is suboptimal as the unit seems to lose connection
+      every now and then....
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:59:01+00:00'
+- subject:
+    kind: platform
+    identity:
+      brand: midea
+      family: split
+  kind: known_issue
+  domain: general
+  severity: low
+  consequence: ''
+  detection: ''
+  component: outdoor unit
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Midea ED error code indicates outdoor unit malfunction
+      body: A Turkish Midea-focused blog explains that the Midea ED error code generally indicates a malfunction
+        in the outdoor unit or activation of system protection mode; the unit shuts itself down to protect
+        the compressor and other main components. Causes listed include indoor/outdoor communication issues,
+        grid voltage fluctuations, compressor overheating, outdoor sensor faults, and outdoor fan motor
+        problems.
+      advice: The ED error code points to the outdoor unit; a buyer seeing this code should expect a professional
+        diagnosis of the outdoor communication board, compressor, sensors, or fan motor.
+    tr:
+      title: Midea ED hata kodu dış ünite arızasına işaret ediyor
+      body: Midea odaklı bir Türk blogu, Midea ED hata kodunun genellikle dış ünitede bir arızaya veya
+        sistem koruma modunun etkinleşmesine işaret ettiğini açıklıyor; ünite kompresörü ve diğer ana
+        bileşenleri korumak için kendini kapatıyor. Listelenen nedenler arasında iç/dış iletişim sorunları,
+        şebeke voltaj dalgalanmaları, kompresör aşırı ısınması, dış sensör arızaları ve dış fan motoru
+        sorunları yer alıyor.
+      advice: ED hata kodu dış üniteye işaret eder; bu kodu gören bir alıcı, dış iletişim kartı, kompresör,
+        sensörler veya fan motoru için profesyonel bir teşhis beklemelidir.
+  evidence:
+  - url: https://www.midea-klima.com/blog/icerik/midea-ed-arizasi-nedenleri-ve-cozumleri
+    quote: Midea ED arızası, genel olarak dış ünitede meydana gelen bir aksaklık veya sistem koruma modunun
+      devreye girmesi anlamına gelir.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:01:22+00:00'
+- subject:
+    kind: platform
+    identity:
+      brand: arcelik-beko
+      family: split
+  kind: known_issue
+  domain: refrigerant
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: refrigerant charge
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Arçelik/Beko split AC recurring breakdowns resolved only by refrigerant top-ups, never permanently
+      body: 'Owner complaint on Şikayetvar: an Arçelik/Beko split AC has broken repeatedly over two years,
+        with service visits only adding refrigerant gas and returning it, and the faults continuing; the
+        unit went to service 8–10 times with no permanent fix. This is a reliability/refrigerant finding,
+        not a safety event.'
+      advice: A buyer should know that repeated 'gas top-up' service visits without a permanent fix are
+        a documented pattern for Arçelik/Beko split units, and that a refrigerant leak may not be properly
+        located. Expect possible repeat service calls rather than a one-visit repair.
+    tr:
+      title: Arçelik/Beko split klima tekrarlayan arızaları yalnızca soğutucu akışkan takviyesiyle çözülüyor,
+        asla kalıcı olarak değil
+      body: 'Şikayetvar üzerinde sahip şikayeti: bir Arçelik/Beko split klima iki yıl boyunca defalarca
+        arızalandı, servis ziyaretleri yalnızca soğutucu gaz ekleyip üniteyi geri gönderdi ve arızalar
+        devam etti; ünite 8–10 kez servise gitti ve kalıcı bir düzeltme yapılmadı. Bu bir güvenilirlik/soğutucu
+        akışkan bulgusudur, güvenlik olayı değildir.'
+      advice: Bir alıcı, kalıcı bir düzeltme olmaksızın tekrarlanan 'gaz takviyesi' servis ziyaretlerinin
+        Arçelik/Beko split üniteleri için belgelenmiş bir örüntü olduğunu ve bir soğutucu akışkan kaçağının
+        düzgün şekilde tespit edilemeyebileceğini bilmelidir. Tek ziyaretlik onarım yerine olası tekrarlayan
+        servis çağrıları bekleyin.
+  evidence:
+  - url: https://www.sikayetvar.com/arcelik/arcelik-klimam-tekrarlayan-arizalarla-cikiyor-servis-yardimci-olmuyor
+    quote: Servis her defasında klimada bir sorun olmadığını, sadece gaz eklemesi yapıp geri gönderdiklerini
+      söylüyor ancak arızalar aynı şekilde devam ediyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:54:40+00:00'
+- subject:
+    kind: platform
+    identity:
+      brand: samsung
+      family: split
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: outdoor unit electronic board (scheda elettronica)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Samsung Luzon Dual Split outdoor unit electronic board burned out twice (C203), EU market
+      body: An EU consumer's public complaint to Altroconsumo (Italy) documents a Samsung Luzon Dual Split
+        outdoor unit (AJ040TXJ2KG/EU) that locked up with error C203 and was found to have a burned electronic
+        board, replaced at €341.50, then burned out again with the same C203 code only 8 months later.
+        Samsung refused warranty coverage for the replacement board.
+      advice: In the EU market, the outdoor unit's electronic board is a documented recurring failure
+        point on the Samsung Luzon split series, with a repeat failure within months and a several-hundred-euro
+        repair cost; factor that into the running cost and warranty expectations.
+    tr:
+      title: Samsung Luzon Dual Split dış ünite elektronik kartı iki kez yandı (C203), AB pazarı
+      body: Bir AB tüketicisinin Altroconsumo'ya (İtalya) yaptığı kamuya açık şikayet, C203 hatasıyla
+        kilitlenen ve elektronik kartının yandığı tespit edilen, 341,50 € karşılığında değiştirilen, ardından
+        yalnızca 8 ay sonra aynı C203 koduyla tekrar yanan bir Samsung Luzon Dual Split dış ünitesini
+        (AJ040TXJ2KG/EU) belgeliyor. Samsung, değiştirilen kart için garanti kapsamını reddetti.
+      advice: AB pazarında, dış ünitenin elektronik kartı Samsung Luzon split serisinde belgelenmiş tekrarlayan
+        bir arıza noktasıdır; aylar içinde tekrarlayan bir arıza ve birkaç yüz euroluk onarım maliyeti
+        söz konusudur; bunu işletme maliyeti ve garanti beklentilerinize dahil edin.
+  evidence:
+  - url: https://www.altroconsumo.it/reclamare/bacheca-dei-reclami?page=90&issue=a24MI000000TIhwYAG
+    quote: '26 Marzo 2025: Interviene il centro autorizzato Tecnofrigo LB di Monsano (AN), il quale riscontra
+      la bruciatura della scheda elettronica e procede alla sostituzione della stessa. Corrispondo per
+      l''intervento la somma di € 341,50.'
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:02:58+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: midea
+      series: xtreme save
+  kind: known_issue
+  domain: mechanical
+  severity: low
+  consequence: ''
+  detection: ''
+  component: outdoor unit vibration mounts
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Xtreme Save outdoor-unit hum transmits through the wall at low fan speed
+      body: Turkish forum owner reports a wall-transmitted hum when the inverter drops frequency at set
+        temperature; replies advise checking/replacing the outdoor unit's rubber vibration mounts.
+      advice: A low-frequency hum through the wall is often the outdoor unit's vibration mounts; it is
+        fixable but may require a service visit, so factor that in if the unit sits against a bedroom
+        wall.
+    tr:
+      title: Xtreme Save dış ünite uğultusu düşük fan hızında duvardan iletilir
+      body: Türk forum sahibi, invertörün ayar sıcaklığında frekansı düşürdüğünde duvardan iletilen bir
+        uğultu bildiriyor; yanıtlar dış ünitenin kauçuk titreşim takozlarının kontrol edilmesini/değiştirilmesini
+        öneriyor.
+      advice: Duvardan geçen düşük frekanslı bir uğultu genellikle dış ünitenin titreşim takozlarından
+        kaynaklanır; düzeltilebilir ancak bir servis ziyareti gerektirebilir, bu nedenle ünite yatak odası
+        duvarına dayalıysa bunu hesaba katın.
+  evidence:
+  - url: https://inceleriz.com/forum/konular/midea-xtremesave-duvara-gelen-ugultu.13286/
+    quote: klimayı 26 C ye ayarlıyorum klima o sıcaklığa ulaştığında otomatik olarak frekansı düşürdüğünde
+      duvarda acayip kulak tırmalayan bir uğultu oluyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:00:05+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: koenic
+      series: KAC 3352
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: compressor power cable (mains lead)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: KOENIC KAC 3352 portable AC recalled by Swiss regulator ESTI for fire and electric-shock
+        risk from compressor power cable touching refrigerant tube
+      body: The Swiss federal regulator ESTI, in voluntary cooperation with Media Markt Schweiz AG / Imtron
+        GmbH, recalled the portable KAC 3352 on 20.10.2021. The compressor's power cable sheath can contact
+        the copper refrigerant tube, creating a fire and electric-shock hazard; affected units must not
+        be used and must be returned.
+      advice: 'If you own a KAC 3352, check the PO number on the type plate (right side) or packaging.
+        Units with PO 7000008080, 7000008081, 7000008082, or 7000008088 are recalled: stop using them,
+        unplug, and contact IMTRON (0800 200 308 in Switzerland, or contact@imtron.eu) for a replacement
+        or refund. Other PO numbers are not affected.'
+    tr:
+      title: KOENIC KAC 3352 taşınabilir klima, kompresör güç kablosunun soğutucu akışkan borusuna temas
+        etmesinden kaynaklanan yangın ve elektrik çarpması riski nedeniyle İsviçre düzenleyicisi ESTI
+        tarafından geri çağrıldı
+      body: İsviçre federal düzenleyicisi ESTI, Media Markt Schweiz AG / Imtron GmbH ile gönüllü işbirliği
+        içinde, 20.10.2021 tarihinde taşınabilir KAC 3352'yi geri çağırdı. Kompresörün güç kablosu kılıfı
+        bakır soğutucu akışkan borusuna temas ederek yangın ve elektrik çarpması tehlikesi oluşturabilir;
+        etkilenen üniteler kullanılmamalı ve iade edilmelidir.
+      advice: 'Bir KAC 3352''niz varsa, tip plakasındaki (sağ taraf) veya ambalajdaki PO numarasını kontrol
+        edin. PO 7000008080, 7000008081, 7000008082 veya 7000008088 olan üniteler geri çağrılmıştır: kullanmayı
+        bırakın, fişini çekin ve değişim veya para iadesi için IMTRON ile iletişime geçin (İsviçre''de
+        0800 200 308 veya contact@imtron.eu). Diğer PO numaraları etkilenmemiştir.'
+  evidence:
+  - url: https://www.admin.ch/it/nsb?id=85514
+    quote: La guaina del cavo di alimentazione del compressore potrebbe entrare in contatto con il tubo
+      di rame del liquido refrigerante, con conseguente pericolo di incendio e folgorazione.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:57:18+00:00'

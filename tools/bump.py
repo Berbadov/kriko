@@ -66,7 +66,8 @@ README_DOWNLOAD = re.compile(
 #: release that moved one and not the other is a dead button in one language.
 SITE_DOWNLOAD = re.compile(
     r"(releases/latest/download/kriko-)(\d+\.\d+\.\d+)(-x86_64-setup\.exe)")
-SITE_PAGES = (Path("site/index.html"), Path("site/tr/index.html"))
+SITE_PAGES = (Path("site/index.html"), Path("site/tr/index.html"),
+              Path("site/install/index.html"), Path("site/tr/install/index.html"))
 
 
 def current() -> dict[Path, str]:
@@ -184,9 +185,17 @@ def bump(version: str, reset: bool = False) -> int:
         text, count = SITE_DOWNLOAD.subn(rf"\g<1>{version}\g<3>", text)
         if count < 1:
             raise SystemExit(f"{page} must link the installer download at least once")
+        # Portable downloads and the checksum command name the same release.
+        text = README_DOWNLOAD.sub(rf"\g<1>{version}\g<3>", text)
         # Bytes, like the version files above: the newlines stay the file's own.
         full.write_bytes(text.encode("utf-8"))
         print(f"{page} -> {version}")
+    translations = ROOT / "site/locales/tr.json"
+    if translations.exists():
+        # Translation keys include full HTML units and the verification command.
+        # Move keys and values together, so the locale build still finds them.
+        text = translations.read_text(encoding="utf-8")
+        translations.write_bytes(README_DOWNLOAD.sub(rf"\g<1>{version}\g<3>", text).encode("utf-8"))
     for path, pattern in PLACES:
         full = ROOT / path
         text = full.read_text(encoding="utf-8")

@@ -1,0 +1,9 @@
+# Search templates for this pack. One query per line.
+#
+# Written by the agent that authored the pack, in the words
+# and the language its sources use.
+- '{label} recall'
+- '{label} şikayet'
+- '{label} yangın riski'
+- '{label} common problems'
+- '{label} fire hazard'

@@ -16,7 +16,7 @@ from fastapi.testclient import TestClient
 
 from app.web import state
 from app.web.app import create_app
-from app.web.jobs import Cancelled, JobRunner
+from app.web.jobs import Cancelled, JobRunner, Refused
 from app.web.routers.jobs import list_jobs
 from app.web.routers.queue import list_queue
 from app.web.settings import Settings
@@ -177,6 +177,26 @@ def test_a_failing_job_says_why_instead_of_vanishing(settings):
     runner.shutdown(wait=True)
 
 
+def test_a_refusal_written_for_the_reader_is_not_prefixed_with_a_python_class(settings):
+    # A shopper who asked a question with no agent set up read "ValueError: No agent
+    # to run: no coding-agent CLI on PATH ...". The sentence is the answer; the
+    # class name is for the operator, and stays in the log.
+    sentence = "Kriko needs an AI agent for this, and none is ready."
+
+    def handler(_settings, _params, _progress):
+        raise Refused(sentence)
+
+    runner = runner_with(settings, handler)
+    job_id = runner.submit("probe", {})
+    conn = state.connect(settings.app_state_path)
+    row = wait_for_done(conn, job_id)
+
+    assert row["state"] == state.FAILED
+    assert row["message"] == sentence
+    assert "Refused" in row["log"]
+    runner.shutdown(wait=True)
+
+
 def test_cancel_stops_a_running_job_at_its_next_checkpoint(settings):
     def handler(_settings, _params, progress):
         for _ in range(500):
@@ -281,6 +301,20 @@ def test_research_refuses_to_fall_back_from_an_unavailable_named_agent(client, m
     assert response.status_code == 503
     assert "missing-agent" in response.json()["detail"]
     assert submitted == []
+
+
+def test_a_catalog_draft_can_be_started_with_a_spending_ceiling(client, monkeypatch):
+    submitted = []
+    monkeypatch.setattr(client.app.state.jobs, "submit",
+                        lambda kind, params, **k: submitted.append((kind, params)) or "job-1")
+    named = client.post("/api/packs/author", json={"category": "air fryers", "budget_usd": 0.4})
+    bare = client.post("/api/packs/author", json={"category": "air fryers"})
+    assert named.status_code == bare.status_code == 200
+    assert submitted[0] == ("pack_author", {"category": "air fryers", "harness": "", "budget_usd": 0.4})
+    # Omitting it leaves the plane's own default, never zero spent or unlimited by name.
+    assert "budget_usd" not in submitted[1][1]
+    assert client.post("/api/packs/author", json={"category": "x", "budget_usd": 500}).status_code == 422
+
 
 def test_an_unknown_job_is_a_404(client):
     assert client.get("/api/jobs/missing").status_code == 404

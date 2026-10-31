@@ -35,7 +35,7 @@ def refresh_lookup(
         raise HTTPException(404, f"no such lookup: {lookup_id}")
     saved = row["request"] or {}
     try:
-        if row["source"] == "ask":
+        if row["source"] in ("ask", "product"):
             payload, _ = query.answer(store, query.LookupRequest(**saved))
         elif row["source"] in ("analyze", "extension"):
             body = analyze.ScrapeRequest(**saved)

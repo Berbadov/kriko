@@ -1,0 +1,147 @@
+# Subjects — the things this pack knows about.
+#
+# `identity` carries exactly the keys `pack.toml` declares for the
+# kind: that dictionary is hashed to the subject id.
+- kind: product
+  label: Midea Mobile 35C
+  identity:
+    brand: midea
+    series: mobile 35c
+  attributes:
+    type:
+      value: portable
+      source: https://www.midea.com/de/sicherheitshinweise/sicherheitshinweis-mobile35c
+    refrigerant:
+      value: flammable
+      source: https://www.midea.com/de/sicherheitshinweise/sicherheitshinweis-mobile35c
+- kind: product
+  label: Comfee MPD1-12CRN7
+  identity:
+    brand: comfee
+    series: MPD1-12CRN7
+  attributes:
+    type:
+      value: portable
+      source: https://www.ifs-ev.org/klimageraete/
+    refrigerant:
+      value: flammable
+      source: https://www.ifs-ev.org/klimageraete/
+- kind: product
+  label: KOENIC KAC 3352
+  identity:
+    brand: koenic
+    series: KAC 3352
+  attributes:
+    type:
+      value: portable
+      source: https://www.ifs-ev.org/klimageraete/
+- kind: product
+  label: Midea Porta Split
+  identity:
+    brand: midea
+    series: porta split
+  attributes:
+    type:
+      value: portable
+      source: https://www.heise.de/forum/heise-online/Kommentare/Hitzewelle-in-Deutschland-Beliebtes-Klimageraet-Portasplit-wird-zur-Mangelware/Midea-Porta-Split-nicht-reparierbar-Keine-Ersatzteile-Stand-18-8-26/posting-46530712/show/
+- kind: product
+  label: Midea Xtreme Save
+  identity:
+    brand: midea
+    series: xtreme save
+  attributes:
+    type:
+      value: split
+      source: https://www.sikayetvar.com/midea/midea-yetkisiz-servis-yonlendirmesi-ve-calismayan-klima
+- kind: product
+  label: Midea Breezeless
+  identity:
+    brand: midea
+    series: breezeless
+  attributes:
+    type:
+      value: split
+      source: https://www.sikayetvar.com/midea/marka-klima
+  aliases:
+  - MSFAAU-12HRFN8-QRD6GW
+- kind: product
+  label: Samsung Windfree
+  identity:
+    brand: samsung
+    series: windfree
+  attributes:
+    type:
+      value: split
+      source: https://www.sikayetvar.com/samsung/klima/duman
+- kind: product
+  label: LG portable LP series
+  identity:
+    brand: lg
+    series: LP portable
+  attributes:
+    type:
+      value: portable
+      source: https://proconsumidor.gob.do/Descargar/alertas-de-consumo/alerta_lg.pdf
+    cooling_capacity_btu:
+      value: '8000'
+      source: https://proconsumidor.gob.do/Descargar/alertas-de-consumo/alerta_lg.pdf
+  aliases:
+  - LP0711WNR
+  - LP0813WNR
+  - LP0814WNR
+- kind: product
+  label: Vestel Klima Nova Inv 122 A++
+  identity:
+    brand: vestel
+    series: klima nova inv 122 a++
+  attributes:
+    type:
+      value: split
+      source: https://www.sikayetvar.com/vestel/garanti/yangin
+- kind: product
+  label: Daikin ATXF25F Siesta
+  identity:
+    brand: daikin
+    series: ATXF25F siesta
+  attributes:
+    type:
+      value: split
+      source: https://www.sikayetvar.com/daikin/daikin-klimam-arizali-tam-yenisiyle-degistirilmesini-talep-ediyorum
+- kind: product
+  label: Daikin FTXF71A2V1B
+  identity:
+    brand: daikin
+    series: FTXF71A2V1B
+  attributes:
+    type:
+      value: split
+      source: https://www.sikayetvar.com/daikin/daikin-klimada-ayipli-urun-sikayeti-ve-tam-degisim-talebi
+- kind: product
+  label: Daikin Kaira DTXR35E
+  identity:
+    brand: daikin
+    series: kaira DTXR35E
+  attributes:
+    type:
+      value: split
+      source: https://www.sikayetvar.com/daikin/daikin-klimamiz-surekli-hata-kodu-veriyor-servis-sureci-oyaliyor
+- kind: platform
+  label: Arçelik/Beko split AC
+  identity:
+    brand: arcelik-beko
+    family: split
+- kind: platform
+  label: Midea split AC
+  identity:
+    brand: midea
+    family: split
+- kind: platform
+  label: Samsung split AC
+  identity:
+    brand: samsung
+    family: split
+- kind: platform
+  label: Vestel split AC
+  identity:
+    brand: vestel
+    family: split

@@ -201,3 +201,15 @@ def test_a_pack_declaring_no_minimum_still_gets_asked_for_sentences(store):
                         pack_id="p").rationale_rule
     assert "plain sentences" in rule
     assert "characters" not in rule, "a number nobody declared is a number invented"
+
+
+def test_the_extractor_is_told_to_write_about_the_product_and_not_about_its_own_search():
+    """Half the first catalogs' bodies opened "Found via the ... search" — the run, not the product.
+
+    A body is published on a page a buyer reads, so it states what the source reports; how the
+    agent came to the source is in the run's log.
+    """
+    from kriko.research.base import ResearchTask
+
+    rule = ResearchTask(subject_id="s", subject_label="l", subject_kind="k", pack_id="p").rationale_rule
+    assert "never how you came to it" in rule

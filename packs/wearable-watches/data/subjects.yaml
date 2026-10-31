@@ -1,0 +1,82 @@
+# Subjects — the things this pack knows about.
+#
+# `identity` carries exactly the keys `pack.toml` declares for the
+# kind: that dictionary is hashed to the subject id.
+- kind: product
+  label: Apple Watch Series 9
+  identity:
+    brand: apple
+    model: series 9
+  aliases:
+  - Watch Series 9
+- kind: product
+  label: Apple Watch Series 10
+  identity:
+    brand: apple
+    model: series 10
+  aliases:
+  - Watch Series 10
+- kind: product
+  label: Samsung Galaxy Watch 7
+  identity:
+    brand: samsung
+    model: galaxy watch 7
+  aliases:
+  - Watch 7
+- kind: product
+  label: Samsung Galaxy Watch 6 Classic
+  identity:
+    brand: samsung
+    model: galaxy watch 6 classic
+  attributes:
+    display_size_inch:
+      value: '1.5'
+      source: https://www.webtekno.com/akilli-saat-tavsiye-ve-onerileri-h152988.html
+  aliases:
+  - Watch 6 Classic
+- kind: product
+  label: Garmin Fenix 8
+  identity:
+    brand: garmin
+    model: fenix 8
+- kind: product
+  label: Xiaomi Smart Band 8
+  identity:
+    brand: xiaomi
+    model: smart band 8
+  attributes:
+    battery_life_days:
+      value: '16'
+      source: https://www.amazon.es/Xiaomi-Smart-Band-Actividad-Deportivos/dp/B0CD2MP728
+  aliases:
+  - Mi Smart Band 8
+- kind: product
+  label: Xiaomi Smart Band 11 Active
+  identity:
+    brand: xiaomi
+    model: smart band 11 active
+  attributes:
+    battery_life_days:
+      value: '21'
+      source: https://www.mi.com/pk/support/faq/details/KA-728033/
+- kind: product
+  label: Huawei Watch GT 5
+  identity:
+    brand: huawei
+    model: watch gt 5
+  aliases:
+  - Watch GT 5
+- kind: product
+  label: Huawei Watch Fit 3
+  identity:
+    brand: huawei
+    model: watch fit 3
+  attributes:
+    display_size_inch:
+      value: '1.82'
+      source: https://www.webtekno.com/akilli-saat-tavsiye-ve-onerileri-h152988.html
+- kind: product
+  label: Amazfit Bip 5
+  identity:
+    brand: amazfit
+    model: bip 5

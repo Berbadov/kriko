@@ -1,0 +1,151 @@
+# Subjects — the things this pack knows about.
+#
+# `identity` carries exactly the keys `pack.toml` declares for the
+# kind: that dictionary is hashed to the subject id.
+- kind: product
+  label: Bambu Lab A1
+  identity:
+    brand: bambu lab
+    series: a1
+  attributes:
+    build_volume_mm:
+      value: 256x256x256
+      source: https://www.octet3d.com/en/printers
+    max_speed_mm_s:
+      value: '500'
+      source: https://www.octet3d.com/en/printers
+  aliases:
+  - A1
+  - Bambu A1
+- kind: product
+  label: Bambu Lab A1 Mini
+  identity:
+    brand: bambu lab
+    series: a1 mini
+  aliases:
+  - A1 Mini
+- kind: product
+  label: Creality Ender 3
+  identity:
+    brand: creality
+    series: ender 3
+  attributes:
+    build_volume_mm:
+      value: 220x220x250
+      source: https://www.sohu.com/a/858587148_120723807
+  aliases:
+  - Ender-3
+  - Ender 3
+- kind: product
+  label: Creality Ender 3 V3 SE
+  identity:
+    brand: creality
+    series: ender 3 v3 se
+  attributes:
+    build_volume_mm:
+      value: 220x220x250
+      source: https://www.sohu.com/a/858587148_120723807
+    max_speed_mm_s:
+      value: '250'
+      source: https://www.sohu.com/a/858587148_120723807
+  aliases:
+  - Ender-3 V3 SE
+- kind: product
+  label: Creality Ender 3 V3 KE
+  identity:
+    brand: creality
+    series: ender 3 v3 ke
+  attributes:
+    build_volume_mm:
+      value: 220x220x240
+      source: https://www.octet3d.com/en/printers
+  aliases:
+  - Ender-3 V3 KE
+- kind: product
+  label: Creality K1
+  identity:
+    brand: creality
+    series: k1
+  attributes:
+    build_volume_mm:
+      value: 220x220x250
+      source: https://www.octet3d.com/en/printers
+  aliases:
+  - K1
+  - Creality K1
+- kind: product
+  label: Creality K1 Max
+  identity:
+    brand: creality
+    series: k1 max
+  aliases:
+  - K1 Max
+- kind: product
+  label: Creality K1C
+  identity:
+    brand: creality
+    series: k1c
+  attributes:
+    build_volume_mm:
+      value: 220x220x250
+      source: https://www.octet3d.com/en/printers
+  aliases:
+  - K1C
+- kind: product
+  label: Prusa MK4
+  identity:
+    brand: prusa
+    series: mk4
+  attributes:
+    build_volume_mm:
+      value: 250x210x220
+      source: https://www.octet3d.com/en/printers
+  aliases:
+  - MK4
+  - Original Prusa MK4
+- kind: product
+  label: Elegoo Neptune 4
+  identity:
+    brand: elegoo
+    series: neptune 4
+  aliases:
+  - Neptune 4
+- kind: product
+  label: Elegoo Neptune 4 Pro
+  identity:
+    brand: elegoo
+    series: neptune 4 pro
+  aliases:
+  - Neptune 4 Pro
+- kind: product
+  label: Elegoo Neptune 4 Plus
+  identity:
+    brand: elegoo
+    series: neptune 4 plus
+  aliases:
+  - Neptune 4 Plus
+- kind: product
+  label: Elegoo Neptune 4 Max
+  identity:
+    brand: elegoo
+    series: neptune 4 max
+  aliases:
+  - Neptune 4 Max
+- kind: product
+  label: Anycubic Kobra 3
+  identity:
+    brand: anycubic
+    series: kobra 3
+  aliases:
+  - Kobra 3
+- kind: product
+  label: Anycubic Kobra 3 Max
+  identity:
+    brand: anycubic
+    series: kobra 3 max
+  attributes:
+    build_volume_mm:
+      value: 450x450x500
+      source: https://www.amazon.es/ANYCUBIC-450x450x500mm-Espaguetis-Nivelaci%C3%B3n-Autom%C3%A1tica/dp/B0DSVK97F2
+  aliases:
+  - Kobra 3 Max

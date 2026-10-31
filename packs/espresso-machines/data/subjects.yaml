@@ -1,0 +1,122 @@
+# Subjects — the things this pack knows about.
+#
+# `identity` carries exactly the keys `pack.toml` declares for the
+# kind: that dictionary is hashed to the subject id.
+- kind: product
+  label: De'Longhi Magnifica S ECAM 22.110.B
+  identity:
+    brand: delonghi
+    series: magnifica-s
+  attributes:
+    water_tank_l:
+      value: '1.8'
+      source: https://website-g7g.amazon.co.uk/product-reviews/B00400OMU0/ref=zg_bs_g_368204031_d_sccl_2_cr/262-7649743-4825659
+  aliases:
+  - ECAM22.110.B
+  - Magnifica S
+- kind: product
+  label: De'Longhi Magnifica S ECAM 22.117.B
+  identity:
+    brand: delonghi
+    series: magnifica-s
+  aliases:
+  - ECAM22.117.B
+- kind: product
+  label: De'Longhi Magnifica Evo
+  identity:
+    brand: delonghi
+    series: magnifica-evo
+  aliases:
+  - Magnifica Evo
+- kind: product
+  label: De'Longhi Dedica EC685
+  identity:
+    brand: delonghi
+    series: dedica-ec685
+  aliases:
+  - EC685.BK
+  - EC685M
+  - Dedica Style
+- kind: product
+  label: Philips Series 2200 EP2200
+  identity:
+    brand: philips
+    series: ep2200
+  aliases:
+  - EP2200
+- kind: product
+  label: Philips Series 3200 EP3226/40
+  identity:
+    brand: philips
+    series: ep3226
+  attributes:
+    water_tank_l:
+      value: '1.8'
+      source: https://sav.darty.com/forum/PHILIPS/EP3226-40/AFFICHAGE-CLE-PLATE/5313665/582893
+  aliases:
+  - EP3226/40
+- kind: product
+  label: Philips Series 3200 LatteGo EP3246/70
+  identity:
+    brand: philips
+    series: ep3246-lattego
+  attributes:
+    water_tank_l:
+      value: '1.8'
+      source: https://sav.darty.com/forum/PHILIPS/EP3246-70/LE-CAFE-NE-COULE-PAS/5207661/558843
+  aliases:
+  - EP3246/70
+  - Philips LatteGo
+- kind: product
+  label: Nespresso Vertuo
+  identity:
+    brand: nespresso
+    series: vertuo
+  aliases:
+  - Vertuo Next
+  - VertuoPlus
+- kind: product
+  label: Nespresso Essenza Mini
+  identity:
+    brand: nespresso
+    series: essenza-mini
+  aliases:
+  - Essenza Mini
+- kind: product
+  label: Nespresso Citiz
+  identity:
+    brand: nespresso
+    series: citiz
+  aliases:
+  - Citiz
+- kind: product
+  label: Gaggia Classic Pro
+  identity:
+    brand: gaggia
+    series: classic-pro
+  aliases:
+  - Classic Pro
+- kind: product
+  label: Gaggia Classic EVO
+  identity:
+    brand: gaggia
+    series: classic-evo
+  aliases:
+  - Classic EVO
+  - Classic E24
+- kind: product
+  label: Sage/Breville Barista Express
+  identity:
+    brand: sage
+    series: barista-express
+  aliases:
+  - BES870
+  - BES875
+  - Breville Barista Express
+- kind: product
+  label: Sage/Breville Barista Express Impress
+  identity:
+    brand: sage
+    series: barista-express-impress
+  aliases:
+  - Barista Express Impress
