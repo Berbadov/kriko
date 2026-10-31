@@ -15,7 +15,7 @@
 
 .tour-spot {
   position: fixed;
-  border-radius: 18px;
+  border-radius: var(--r-l);
   box-shadow:
     0 0 0 100vmax var(--scrim),
     0 0 0 2px var(--accent-hi);
@@ -74,7 +74,7 @@
 
 .tour-dots i[data-on='true'] {
   width: 18px;
-  border-radius: 6px;
+  border-radius: var(--r-s);
   background: var(--accent);
 }
 

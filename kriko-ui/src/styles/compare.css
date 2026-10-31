@@ -49,25 +49,37 @@
 }
 
 .level {
-  padding: 3px 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 3px 11px 3px 9px;
   border-radius: 999px;
+  background: var(--panel-2);
+  color: var(--ink-2);
   font-size: 12px;
   font-weight: 560;
 }
 
+/* The severity is a tick, not the text colour: the words stay readable and
+   the hue is not the only carrier. Critical is the one solid badge. */
+.level::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  background: var(--tone, var(--ink-3));
+}
+
 .level[data-level='none'] {
-  background: color-mix(in srgb, var(--ok) 15%, transparent);
-  color: var(--ok);
+  --tone: var(--ok);
 }
 
 .level[data-level='low'] {
-  background: color-mix(in srgb, var(--warn) 17%, transparent);
-  color: var(--warn);
+  --tone: var(--warn);
 }
 
 .level[data-level='high'] {
-  background: color-mix(in srgb, var(--risk) 16%, transparent);
-  color: var(--risk);
+  --tone: var(--risk);
 }
 
 .is-working {
@@ -86,7 +98,7 @@
 .skeleton {
   width: 58%;
   height: 10px;
-  border-radius: 5px;
+  border-radius: var(--r-s);
   background: linear-gradient(90deg, var(--edge) 0, var(--edge-strong) 50%, var(--edge) 100%);
   background-size: 220% 100%;
   animation: skeleton calc(1.8s * var(--tm)) linear infinite;
@@ -127,7 +139,7 @@
   padding: 16px 18px;
   background: var(--panel);
   border: 1px solid var(--edge);
-  border-radius: 16px;
+  border-radius: var(--r-l);
   cursor: grab;
   list-style: none;
 }
@@ -166,17 +178,19 @@
 
 .level[data-level='critical'] {
   background: var(--risk);
-  color: #fff;
+  color: var(--on-risk);
+}
+
+.level[data-level='critical']::before {
+  content: none;
 }
 
 .level[data-level='medium'] {
-  background: color-mix(in srgb, var(--warn) 24%, transparent);
-  color: var(--warn);
+  --tone: var(--warn);
 }
 
 .level[data-level='unrated'] {
-  background: var(--edge);
-  color: var(--ink-3);
+  --tone: var(--ink-3);
 }
 
 .disputed {
@@ -224,7 +238,7 @@
   padding: 8px 14px;
   background: var(--panel);
   border: 1px solid var(--edge);
-  border-radius: 14px;
+  border-radius: var(--r-l);
   color: var(--ink);
   cursor: pointer;
   text-align: left;
@@ -304,7 +318,7 @@
   padding: 14px 16px;
   background: var(--panel);
   border: 1px solid var(--edge);
-  border-radius: 16px;
+  border-radius: var(--r-l);
 }
 
 .risk-list .level {
@@ -408,7 +422,7 @@
   overflow: hidden;
   background: var(--panel);
   border: 1px solid var(--edge);
-  border-radius: 18px;
+  border-radius: var(--r-l);
 }
 
 .mx-head {
@@ -599,7 +613,7 @@
   overflow: hidden;
   background: var(--panel);
   border: 1px solid var(--edge);
-  border-radius: 18px;
+  border-radius: var(--r-l);
 }
 
 .spec-row {
