@@ -115,6 +115,12 @@ class ResidentProfile:
 class ResidentRequest:
     prompt: str
     timeout: float = 300.0
+    #: How long the worker may take to become ready: the queue, the spawn, the
+    #: protocol handshake and an ACP `session/new`. 0 means the whole
+    #: `timeout`. A bound shorter than the turn's own is what leaves the rest
+    #: of the turn to the caller's fallback, instead of spending it waiting for
+    #: a session that will not open.
+    start_timeout: float = 0.0
     #: A decoded protocol message, for callers that want structure.
     on_event: Callable[[Mapping[str, Any]], None] | None = None
     #: The raw NDJSON line, for callers that already narrate the process
@@ -236,6 +242,7 @@ class Wire:
     def run_turn(
         self, pool: "ResidentTransport", worker: _Worker, req: ResidentRequest,
         cancel: threading.Event, deadline: float, metrics: dict[str, Any],
+        *, start_deadline: float | None = None,
     ) -> ResidentResult:
         raise NotImplementedError
 
@@ -314,8 +321,14 @@ class ResidentTransport:
 
         _delivery(request.on_delivery, "not_sent", "", "", None)
         deadline = run_started + request.timeout
+        # A cold or stuck worker is a *start* problem; it must not consume the
+        # turn's budget, or the fresh-process fallback that exists for it has
+        # nothing left to answer with.
+        start_deadline = (run_started + request.start_timeout
+                          if request.start_timeout > 0 else deadline)
         try:
-            acquisition = self._acquire(profile, wire, check_before_spawn, deadline)
+            acquisition = self._acquire(profile, wire, check_before_spawn, deadline,
+                                        start_deadline)
         except _PropagateCallbackError as exc:
             raise exc.original
         worker = acquisition.worker
@@ -332,7 +345,8 @@ class ResidentTransport:
                     "reused_worker": acquisition.reused,
                     "wire": wire.name,
                 }
-                result = wire.run_turn(self, worker, request, cancel, deadline, metrics)
+                result = wire.run_turn(self, worker, request, cancel, deadline, metrics,
+                                       start_deadline=start_deadline)
                 metrics["total_ms"] = (time.monotonic() - run_started) * 1000
                 # How long the agent took to be ready for this prompt: a reused
                 # worker's `/clear` round trip, or a new worker's start to its
@@ -388,6 +402,7 @@ class ResidentTransport:
     def _acquire(
         self, profile: ResidentProfile, wire: Wire,
         check: Callable[[], None] | None, deadline: float,
+        start_deadline: float = 0.0,
     ) -> _Acquisition:
         identity = profile.identity()
         requested_at = time.monotonic()
@@ -420,7 +435,8 @@ class ResidentTransport:
                 _release(evict)
         try:
             queue_ms = (time.monotonic() - requested_at) * 1000
-            worker = self._start_worker(profile, wire, identity, check, deadline)
+            worker = self._start_worker(profile, wire, identity, check, deadline,
+                                        start_deadline)
         except BaseException:
             with self._available:
                 self._starting -= 1
@@ -440,14 +456,20 @@ class ResidentTransport:
     def _start_worker(
         self, profile: ResidentProfile, wire: Wire, identity: str,
         check: Callable[[], None] | None, deadline: float,
+        start_deadline: float = 0.0,
     ) -> _Worker:
         if not profile.argv or not Path(profile.argv[0]).exists():
             raise TransportUnavailable("the agent executable is unavailable")
         cwd = Path(profile.cwd).resolve()
         if not cwd.is_dir():
             raise ResidentError("the worker's working folder must be an existing directory")
+        # A start that will not finish must give up early enough to leave the
+        # caller's fallback a turn to work with; `start_deadline` is that
+        # allowance, and it is never longer than the whole call.
+        start_bound = (min(deadline, start_deadline)
+                       if start_deadline > 0 else deadline)
         resource_guard = slot("agent_child", key=identity, check=check,
-                              timeout=max(0.0, deadline - time.monotonic()))
+                              timeout=max(0.0, start_bound - time.monotonic()))
         wait_started = time.monotonic()
         resource_guard.__enter__()
         startup_queue_ms = (time.monotonic() - wait_started) * 1000
@@ -482,7 +504,7 @@ class ResidentTransport:
             raise TransportUnavailable(f"could not start the {wire.name} protocol reader: {exc}") from exc
         handshake_started = time.monotonic()
         try:
-            wire.handshake(worker, min(20.0, max(0.0, deadline - time.monotonic())))
+            wire.handshake(worker, min(20.0, max(0.0, start_bound - time.monotonic())))
             worker.handshake_ms = (time.monotonic() - handshake_started) * 1000
         except TimeoutError:
             # A worker that would not say hello in time is a slow start, not a
@@ -697,6 +719,7 @@ class ClaudeWire(Wire):
     def run_turn(
         self, pool: ResidentTransport, worker: _Worker, req: ResidentRequest,
         cancel: threading.Event, deadline: float, metrics: dict[str, Any],
+        *, start_deadline: float | None = None,
     ) -> ResidentResult:
         delivery = req.on_delivery
         sent = False
@@ -841,6 +864,7 @@ class AcpWire(Wire):
     def run_turn(
         self, pool: ResidentTransport, worker: _Worker, req: ResidentRequest,
         cancel: threading.Event, deadline: float, metrics: dict[str, Any],
+        *, start_deadline: float | None = None,
     ) -> ResidentResult:
         delivery = req.on_delivery
         profile = worker.profile
@@ -858,9 +882,14 @@ class AcpWire(Wire):
             except BaseException as callback_error:
                 raise _PropagateCallbackError(callback_error) from None
             started = time.monotonic()
+            # Opening the session is part of the *start*: a session that will
+            # not open must not spend the turn's budget, or the fresh-process
+            # fallback has nothing left to answer with.
+            session_deadline = (deadline if start_deadline is None
+                                else min(deadline, start_deadline))
             try:
                 created = worker.rpc("session/new", {"cwd": str(Path(profile.cwd).resolve()), "mcpServers": []},
-                                     timeout=_remaining(deadline))
+                                     timeout=_remaining(session_deadline))
             except TimeoutError:
                 # The session never opened: nothing was delivered, so `auto`
                 # can fall back to a fresh process rather than failing the run.
