@@ -1,0 +1,63 @@
+lineup:
+- Beko 970406 MB
+- Beko 970475 EB
+- Beko 970476 MB
+- Beko 974508 MB
+- Beko 974509 MB
+- Beko 674532 EB
+- Beko 674533 MB
+- Beko 670475 MB
+- Beko 678551 ESC
+- Beko 678550 EB
+- Beko 683613 EB
+- Beko 978557 EB
+- Beko 983625 IEB
+- Beko RCNA406I30W
+- Beko B7RCNE40HXBR
+- Beko B3RCNA364HXB1
+- 678550 EB
+- 683613 EB
+- 978557 EB
+- 983625 IEB
+covered:
+- beko 670475 mb
+- beko 674532 eb
+- beko 674533 mb
+- beko 678551 esc
+- beko 970406 mb
+- beko 970475 eb
+- beko 970476 mb
+- beko 974508 mb
+- beko 974509 mb
+- beko b3rcna364hxb1
+- beko b7rcne40hxbr
+- beko rcna406i30w
+uncovered:
+- Beko 678550 EB
+- Beko 683613 EB
+- Beko 978557 EB
+- Beko 983625 IEB
+- 678550 EB
+- 683613 EB
+- 978557 EB
+- 983625 IEB
+note: No solid, domain-fitting problem evidence was found for the 970475 EB, 674532
+  EB, 674533 MB or 678551 ESC (only positive owner reviews). The 674532 EB has a documented
+  loud-noise complaint (pipes touching) that falls outside the pack's four claim domains.
+  The sibling 970475 MB has documented chronic cooling and gas-leak complaints, but
+  I did not attribute these to the requested 970475 EB variant for lack of direct
+  evidence. Tool budget was exhausted before I could open full specification pages
+  for every model, so some spec fields (freezer capacity, noise, energy class) are
+  missing where not sourced.
+out_of_scope:
+- 970475 MB (sibling model with documented cooling/gas-leak complaints; not the requested
+  EB variant)
+- Beko washing machines, dishwashers and other white goods that appear in the same
+  retailer and complaint listings
+- Other brands (Arcelik, Bosch, Samsung, LG, Siemens) named in the category brief
+  but outside this pack's Beko/TR scope
+quarantined:
+- kind: platform
+  label: Beko No Frost
+  reason: not named anywhere in this pack's own line-up — likely a different category
+    (an accessory, or a different device from the same brand)

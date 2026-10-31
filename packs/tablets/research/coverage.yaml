@@ -1,0 +1,52 @@
+lineup:
+- Apple iPad (10th generation)
+- Samsung Galaxy Tab A9
+- Samsung Galaxy Tab A9+
+- Samsung Galaxy Tab A8
+- Samsung Galaxy Tab A7 Lite
+- Xiaomi Redmi Pad
+- Xiaomi Redmi Pad SE
+- Xiaomi Pad 6
+- Lenovo Tab M11
+- Lenovo Tab M10
+- Lenovo Tab M8
+- Huawei MatePad SE 11
+- Huawei MatePad 11
+covered:
+- apple ipad 10th generation
+- huawei matepad 11
+- huawei matepad se 11
+- lenovo tab m10
+- lenovo tab m11
+- lenovo tab m8
+- product brand apple model ipad 10th gen
+- product brand huawei model matepad 11
+- product brand huawei model matepad se 11
+- product brand lenovo model tab m10
+- product brand lenovo model tab m11
+- product brand lenovo model tab m8
+- product brand samsung model galaxy tab a7 lite
+- product brand samsung model galaxy tab a8
+- product brand samsung model galaxy tab a9
+- product brand samsung model galaxy tab a9 plus
+- product brand xiaomi model pad 6
+- product brand xiaomi model redmi pad
+- product brand xiaomi model redmi pad se
+- samsung galaxy tab a7 lite
+- samsung galaxy tab a8
+- samsung galaxy tab a9
+- xiaomi pad 6
+- xiaomi redmi pad
+- xiaomi redmi pad se
+uncovered: []
+note: Entry-tier models with thin or no independent evidence (Xiaomi Redmi Pad SE,
+  Xiaomi Pad 6, Lenovo Tab M8, Huawei MatePad 11) are listed but carry no claims yet;
+  the research plane can fill them.
+out_of_scope:
+- Samsung Galaxy Tab S9 / S9 FE (flagship, not entry tier)
+- Amazon Fire tablets
+- realme Pad
+- Honor tablets
+- General Mobile tablets (Turkish brand)
+- stylus pens and keyboard accessories
+quarantined: []

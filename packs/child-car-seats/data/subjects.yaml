@@ -1,0 +1,46 @@
+# Subjects — the things this pack knows about.
+#
+# `identity` carries exactly the keys `pack.toml` declares for the
+# kind: that dictionary is hashed to the subject id.
+- kind: product
+  label: Cybex Aton G
+  identity:
+    brand: cybex
+    series: aton g
+  aliases:
+  - Aton G Swivel
+- kind: product
+  label: Chicco MyFit Zip Air
+  identity:
+    brand: chicco
+    series: myfit zip air
+- kind: product
+  label: Britax Römer BABY-SAFE PRO
+  identity:
+    brand: britax romer
+    series: baby-safe pro
+- kind: product
+  label: Graco SnugRide Turn & Slide
+  identity:
+    brand: graco
+    series: snugride turn slide
+- kind: product
+  label: Joie Serina Swivel
+  identity:
+    brand: joie
+    series: serina swivel
+- kind: product
+  label: Inglesina Quid
+  identity:
+    brand: inglesina
+    series: quid
+- kind: product
+  label: Maxi-Cosi Jay Plus
+  identity:
+    brand: maxi cosi
+    series: jay plus
+- kind: product
+  label: Maxi-Cosi FamilyFix Slide Pro
+  identity:
+    brand: maxi cosi
+    series: familyfix slide pro

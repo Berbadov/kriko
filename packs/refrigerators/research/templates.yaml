@@ -1,0 +1,9 @@
+# Search templates for this pack. One query per line.
+#
+# Written by the agent that authored the pack, in the words
+# and the language its sources use.
+- '{label} buzdolabı şikayet'
+- '{label} sorun arıza'
+- Beko {model} buzlanma su akıtıyor
+- Beko {model} soğutma sorunu
+- Beko no frost buzlanma su akıntısı

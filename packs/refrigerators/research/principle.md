@@ -1,0 +1,3 @@
+# What this pack surfaces
+
+This pack surfaces what is known to go wrong with specific Beko refrigerator models sold in Turkey (and the three European-market models named in the brief): unstable cooling that spoils food, ice/frost buildup that blocks the drain and leaks water, fresh-food compartments running too cold, and electrical failures (fan/control board). It does not cover routine, self-evident facts (a fridge must be level, doors sealed) or issues that are true of every fridge in the category. Claims are tied to the specific model code; where a fault is documented across the no-frost family it is stated as a family-level claim, not silently widened to every model.

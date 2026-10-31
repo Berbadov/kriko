@@ -1,0 +1,1183 @@
+# Claims — what is known to go wrong, each with the page it came from and the quote
+# that was read there. A claim without both is not in this file.
+- subject:
+    kind: product
+    identity:
+      brand: ecovacs
+      model: t20omni
+  kind: known_issue
+  domain: software
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: mopping task logic / firmware
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: T20 Omni stops after wetting its mop pads and does not resume the task after returning to
+        base in mopping mode
+      body: In mopping mode the robot wets its pads then stops, and after returning to the base to clean
+        the pads it declares the task finished instead of resuming; a factory reset did not fix it.
+      advice: Expect that mopping runs may need manual restarts or per-zone selection; owners report a
+        factory reset does not resolve it. Suction-only mode works, so this is specific to the mopping
+        task logic.
+    tr:
+      title: T20 Omni paspas pedlerini ıslattıktan sonra duruyor ve paspaslama modunda üsse döndükten
+        sonra görevi sürdürmüyor
+      body: Paspaslama modunda robot pedlerini ıslatıyor sonra duruyor ve pedleri temizlemek için üsse
+        döndükten sonra görevi sürdürmek yerine görevi tamamlandı olarak bildiriyor; fabrika ayarlarına
+        sıfırlama bunu düzeltmedi.
+      advice: Paspaslama çalışmalarının manuel yeniden başlatma veya bölge bazında seçim gerektirebileceğini
+        bekleyin; sahipler fabrika ayarlarına sıfırlamanın bunu çözmediğini bildiriyor. Yalnızca emiş
+        modu çalışıyor, yani bu paspaslama görev mantığına özgü.
+  evidence:
+  - url: https://sav.darty.com/forum/ECOVACS/DEEBOT-T20-OMNI/FINI-PAS-SA-TACHE-/5398263/604332
+    quote: Quand je lance mon robot celui-ci mouille ses serpillières puis s'arrête, obliger de le relancer
+      une deuxième fois pour qu'il attaque sa tâche. et lorsqu'il rentre à sa base pour nettoyer ses serpillières,
+      il ne reprend pas sa tâche en cours!! et me dit qu'il a fini.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T07:40:37+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: dreame
+      model: l10sultra
+  kind: known_issue
+  domain: general
+  severity: low
+  consequence: ''
+  detection: ''
+  component: filter
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Official troubleshooting page: a wet filter can cause abnormal noise during cleaning'
+      body: From the manufacturer's official French troubleshooting page for the L10s Ultra. It documents
+        abnormal cleaning noise and lists a wet filter as a cause, along with side-brush deformation and
+        tangled main-brush ends.
+      advice: 'Low-severity and owner-fixable: if the unit gets noisy, the official guidance is to let
+        a washed filter dry fully and check the side brush and main brush for tangling before contacting
+        service.'
+    tr:
+      title: 'Resmi sorun giderme sayfası: ıslak filtre temizlik sırasında anormal gürültüye neden olabilir'
+      body: L10s Ultra için üreticinin resmi Fransızca sorun giderme sayfasından. Anormal temizlik gürültüsünü
+        belgeliyor ve neden olarak ıslak filtreyi, yan fırça deformasyonu ve ana fırça uçlarının dolaşmasıyla
+        birlikte listeliyor.
+      advice: 'Düşük önem derecesi ve sahibi tarafından düzeltilebilir: ünite gürültülü hale gelirse resmi
+        yönlendirme, yıkanmış filtrenin tamamen kurumasını beklemek ve servisle iletişime geçmeden önce
+        yan fırça ile ana fırçada dolaşma olup olmadığını kontrol etmektir.'
+  evidence:
+  - url: https://dreametech.zendesk.com/hc/fr/articles/55082177896601-L10s-Ultra-Bruits-anormaux-pendant-le-nettoyage
+    quote: Un filtre humide peut provoquer des bruits anormaux pendant le fonctionnement.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T07:39:37+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: ecovacs
+      model: x2omni
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: fall-prevention (düşme engelleyici) sensor
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Fall-prevention sensor error stops cleaning; Ecovacs support unreachable for a month (Turkey)
+      body: A Turkish owner on Şikayetvar reports a persistent 'clean the fall-prevention sensor' error
+        that stops cleaning entirely, persists after repeated cleaning, and Ecovacs support was unreachable
+        for about a month (a WhatsApp number went unanswered for a week).
+      advice: In Turkey this unit can be stopped dead by a sensor error the owner cannot clear, with very
+        slow support response. Check the sensor area and the local service channel before buying.
+    tr:
+      title: Düşme önleme sensörü hatası temizliği durduruyor; Ecovacs desteğine bir ay boyunca ulaşılamıyor
+        (Türkiye)
+      body: Şikayetvar'da bir Türk sahibi, temizliği tamamen durduran, tekrarlanan temizlikten sonra da
+        devam eden kalıcı bir 'düşme önleme sensörünü temizleyin' hatası bildiriyor ve Ecovacs desteğine
+        yaklaşık bir ay boyunca ulaşılamamış (bir WhatsApp numarası bir hafta boyunca yanıtsız kalmış).
+      advice: Türkiye'de bu ünite, sahibinin gideremediği bir sensör hatasıyla tamamen durdurulabilir
+        ve destek yanıtı çok yavaştır. Satın almadan önce sensör bölgesini ve yerel servis kanalını kontrol
+        edin.
+  evidence:
+  - url: https://www.sikayetvar.com/ecovacs/ecovacs-x2-omni-robot-supurgede-surekli-sensor-hatasi-ve-yetersiz-musteri-hizmeti
+    quote: Cihazım son zamanlarda sürekli olarak "Düşme engelleyici sensörü temizleyin" uyarısı veriyor
+      ve bu nedenle temizlik yapmayı tamamen durdurmuş durumda.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T07:41:09+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: ecovacs
+      model: t20omni
+  kind: known_issue
+  domain: service
+  severity: high
+  consequence: ''
+  detection: ''
+  component: clean-water tank / water-drawing suction line
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: T20 Omni stops drawing water from clean-water tank within the first year; recurring failure
+        and weak service in Turkey
+      body: A verified buyer reports the robot stopped drawing water from its clean-water tank before
+        the first year was up, the fault recurred after service, and the unit failed twice within warranty
+        with inadequate service support.
+      advice: In Turkey, confirm the current authorized service provider and warranty terms before buying;
+        this owner found the service provider unclear, waited months, and the fault returned. The water-drawing
+        failure is the recurring complaint tied to this model.
+    tr:
+      title: T20 Omni ilk yıl içinde temiz su tankından su çekmeyi durduruyor; tekrarlayan arıza ve Türkiye'de
+        zayıf servis
+      body: Doğrulanmış bir alıcı, robotun ilk yıl dolmadan temiz su tankından su çekmeyi durdurduğunu,
+        arızanın servisten sonra tekrarladığını ve ünitenin garanti kapsamında iki kez arızalandığını
+        yetersiz servis desteğiyle bildiriyor.
+      advice: Türkiye'de satın almadan önce mevcut yetkili servis sağlayıcısını ve garanti koşullarını
+        teyit edin; bu sahip servis sağlayıcısını belirsiz bulmuş, aylarca beklemiş ve arıza geri dönmüş.
+        Su çekme arızası bu modelle bağlantılı tekrarlayan şikayettir.
+  evidence:
+  - url: https://www.hepsiburada.com/ecovacs-deebot-t20-omni-robot-supurge-p-HBCV00005IDM35-yorumlari
+    quote: Ancak 1 yıl dolmadan su hazinesinden su cekmemeye başladı.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T07:40:37+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: dreame
+      model: l10sultra
+  kind: known_issue
+  domain: software
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: firmware / scheduling
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: L10s Ultra scheduled cleaning stops after first cycle and robot fails to make dock contact
+        to recharge
+      body: An owner whose unit ran well for two years reports a scheduled cleaning that stopped after
+        the first cycle, with the planned intermediate charge not happening and the robot sitting in the
+        dock without making charging contact; a friend's identical unit showed the same fault, and the
+        owner attributes it to software.
+      advice: If you depend on multi-cycle scheduled cleaning, this failure mode means the robot may stop
+        mid-task and fail to recharge; the owner could not roll back the firmware, so a fix depends on
+        a software update.
+    tr:
+      title: L10s Ultra planlı temizlik ilk döngüden sonra duruyor ve robot şarj olmak için üsle temas
+        kuramıyor
+      body: Ünitesi iki yıl iyi çalışan bir sahip, planlı temizliğin ilk döngüden sonra durduğunu, planlanan
+        ara şarjın gerçekleşmediğini ve robotun şarj teması kurmadan üstte oturduğunu bildiriyor; bir
+        arkadaşının aynı ünitesi aynı arızayı göstermiş ve sahip bunu yazılıma bağlıyor.
+      advice: Çok döngülü planlı temizliğe bağlıysanız bu arıza modu, robotun görev ortasında durabileceği
+        ve şarj olamayabileceği anlamına gelir; sahip ürün yazılımını geri alamamış, yani düzeltme bir
+        yazılım güncellemesine bağlı.
+  evidence:
+  - url: https://www.computerbase.de/forum/threads/dreame-l10s-ultra-probleme-mit-automatischer-reinigung.2240749/
+    quote: Vor einigen Wochen kam ich dann nach Hause und das Gerät hatte nur den ersten Zyklus der geplanten
+      Reinigung erledigt; die geplante Zwischenladung hat nicht stattgefunden und der Robo stand in der
+      LAdestation, allerdings ohne Kontakt zum Laden herzustellen.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T07:39:37+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: ecovacs
+      model: t20omni
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: water pump (pompe) behind the station
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: T20 Omni water-delivery pump fails; mop pads stop getting wet despite full clean-water tank
+      body: Owners report the mop pads stop getting wet even with a full clean-water tank; the fix is
+        replacing the pump behind the station, which several report recurring (one owner twice) and requiring
+        sending the unit to service.
+      advice: Before buying, check whether the water-delivery pump is covered by warranty and how long
+        service takes; owners report roughly a month without the robot and recurring pump failures. A
+        full reset and cleaning the strainer/filter sometimes helps, but the pump replacement is the documented
+        repair.
+    tr:
+      title: T20 Omni su besleme pompası arızalanıyor; temiz su tankı dolu olmasına rağmen paspas pedleri
+        ıslanmayı durduruyor
+      body: Sahipler, temiz su tankı dolu olmasına rağmen paspas pedlerinin ıslanmayı durdurduğunu bildiriyor;
+        düzeltme istasyonun arkasındaki pompanın değiştirilmesi ve birkaç kişi bunun tekrarladığını (bir
+        sahip iki kez) ve ünitenin servise gönderilmesi gerektiğini bildiriyor.
+      advice: Satın almadan önce su besleme pompasının garanti kapsamında olup olmadığını ve servisin
+        ne kadar sürdüğünü kontrol edin; sahipler yaklaşık bir ay robotsuz kaldıklarını ve pompa arızalarının
+        tekrarladığını bildiriyor. Tam sıfırlama ve süzgeç/filtre temizliği bazen yardımcı olur, ancak
+        pompa değişimi belgelenmiş onarımdır.
+  evidence:
+  - url: https://sav.darty.com/forum/ECOVACS/DEEBOT-T20-OMNI/LES-SERPILLIERES-NE-SE-MOUILLENT-PLUS-L-EAU-NE-DESCENDS-PLUS/5428371/604332
+    quote: Bonjour il s'agit de la pompe qui se trouve derrière la centrale moi j'ai eu le cas et il fallait
+      la changer si c'est sous garantie vaut mieux le faire faire mais il faut compter au moins un mois
+      sans avoir le robot d'ailleurs c'est une honte d'attendre aussi longtemps sinon il y a des tutos
+      sur internet pour démonter la pompe apparemment elle est d'accès facile
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T07:40:37+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: ecovacs
+      model: x2omni
+  kind: known_issue
+  domain: service
+  severity: high
+  consequence: ''
+  detection: ''
+  component: charging contact plate (piastra di ricarica)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Charging contact plate sinks in, blocking charging; Ecovacs refuses free repair after warranty
+      body: An Italian consumer (Altroconsumo complaint board) reports the charging contact plate sank
+        in, blocking charging; it was replaced under warranty, but mapping problems, Wi-Fi disconnections
+        and abnormal suction/mop behaviour persisted, and once the warranty lapsed Ecovacs refused a free
+        repair and offered only a 10% discount code.
+      advice: Before buying, check the charging contact plate and whether the unit still charges reliably;
+        note that Ecovacs' post-warranty support here was a 10% discount rather than a repair. EU market.
+    tr:
+      title: Şarj temas plakası içeri gömülüyor ve şarjı engelliyor; Ecovacs garanti sonrası ücretsiz
+        onarımı reddediyor
+      body: İtalyan bir tüketici (Altroconsumo şikayet panosu), şarj temas plakasının içeri gömüldüğünü
+        ve şarjı engellediğini bildiriyor; plaka garanti kapsamında değiştirilmiş, ancak haritalama sorunları,
+        Wi-Fi bağlantı kopmaları ve anormal emiş/paspas davranışı devam etmiş ve garanti sona erdiğinde
+        Ecovacs ücretsiz onarımı reddederek yalnızca %10 indirim kodu teklif etmiş.
+      advice: Satın almadan önce şarj temas plakasını ve cihazın hâlâ güvenilir şekilde şarj olup olmadığını
+        kontrol edin; burada Ecovacs'in garanti sonrası desteğinin onarım yerine %10 indirim olduğunu
+        unutmayın. AB pazarı.
+  evidence:
+  - url: https://www.altroconsumo.it/reclamare/bacheca-dei-reclami/reclamo-nei-confronti-di-ecova/df3d73413575821d08
+    quote: 'Il primo problema rilevante ha riguardato il sistema di ricarica: il contatto/la piastra di
+      ricarica si è infossato, impedendo al robot di caricarsi correttamente.'
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T07:41:09+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: dreame
+      model: x30ultra
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: right drive wheel / motor
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: X30 Ultra right drive wheel blocks and robot drives in circles
+      body: A German owner reports the right wheel blocking completely three weeks after purchase, with
+        the robot driving in circles; the seller offered only a refund, not a replacement.
+      advice: Drive-wheel failure can occur early (within weeks) and may leave the robot unable to navigate;
+        check the return/refund policy before buying, as the owner was offered a refund rather than a
+        replacement.
+    tr:
+      title: X30 Ultra sağ tahrik tekerleği kilitleniyor ve robot daireler çizerek gidiyor
+      body: Alman bir sahip, satın almadan üç hafta sonra sağ tekerleğin tamamen kilitlendiğini ve robotun
+        daireler çizerek gittiğini bildiriyor; satıcı değişim değil yalnızca para iadesi teklif etmiş.
+      advice: Tahrik tekerleği arızası erken (haftalar içinde) ortaya çıkabilir ve robotu gezinemez hale
+        bırakabilir; sahibine değişim yerine para iadesi teklif edildiğinden satın almadan önce iade/para
+        iadesi politikasını kontrol edin.
+  evidence:
+  - url: https://www.roboter-forum.com/threads/dreame-x30-ultra-defekt.70497/
+    quote: Das rechte Rad blockiert total und lässt sich ganz schwer drehen manuell.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T07:40:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: dreame
+      model: l10sultra
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: L10s Ultra battery drains to 10-15% after ~70 minutes instead of ~200 minutes
+      body: From the same Turkish complaint. The owner reports runtime far below the ~200-minute spec,
+        dropping to 10-15% after about 70 minutes, and says the problem continued on the replacement unit.
+      advice: If you rely on long single-pass runs, verify real runtime early; a battery that falls short
+        of spec and is not fixed by a replacement unit is a costly thing to discover later.
+    tr:
+      title: L10s Ultra bataryası ~200 dakika yerine ~70 dakika sonra %10-15'e düşüyor
+      body: Aynı Türkçe şikayetten. Sahip, çalışma süresinin ~200 dakikalık spesifikasyonun çok altında
+        olduğunu, yaklaşık 70 dakika sonra %10-15'e düştüğünü bildiriyor ve sorunun değişim cihazında
+        da devam ettiğini söylüyor.
+      advice: Uzun tek geçişli çalışmalara güveniyorsanız gerçek çalışma süresini erkenden doğrulayın;
+        spesifikasyonun altında kalan ve değişim cihazıyla düzeltilmeyen bir batarya, sonradan keşfedilmesi
+        maliyetli bir durumdur.
+  evidence:
+  - url: https://www.sikayetvar.com/dreame/dreame-l10s-ultra-su-sizdiriyor-ve-pil-omru-kisa-olmasindan-surekli-servis-gerektiriyor
+    quote: Ayrıca teknik özelliklerinde yaklaşık 200 dakika çalışması gerekirken, cihaz 70 dakika civarında
+      çalıştıktan sonra şarjı yüzde 10–15 seviyelerine düşüyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T07:39:37+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: dreame
+      model: l10sultra
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: base station middle nozzle / valve
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: L10s Ultra base station middle nozzle pumps water continuously until the tank is empty
+      body: 'An owner reports a large puddle around the self-wash base: the middle nozzle keeps pumping
+        water after the robot leaves, overflowing the basin until the clean-water tank is empty; the owner
+        suspects the nozzle shut-off valve is defective.'
+      advice: A base-station water leak can flood the floor around the dock; this is a high-severity failure
+        that the owner could not fix by cleaning or factory reset and required contacting Dreame support
+        under warranty.
+    tr:
+      title: L10s Ultra ana istasyon orta nozulu su deposu boşalana kadar sürekli su pompalıyor
+      body: 'Bir sahip, kendini yıkama istasyonunun çevresinde büyük bir su birikintisi olduğunu bildiriyor:
+        orta nozul robot ayrıldıktan sonra su pompalamaya devam ediyor, temiz su deposu boşalana kadar
+        hazneyi taşırıyor; sahip nozul kapatma valfinin arızalı olduğundan şüpheleniyor.'
+      advice: Ana istasyon su sızıntısı, yuvanın çevresindeki zemini su basmasına yol açabilir; bu, sahibin
+        temizlik veya fabrika ayarlarına döndürme ile düzeltemediği ve garanti kapsamında Dreame desteğiyle
+        iletişime geçmesini gerektiren yüksek ciddiyette bir arızadır.
+  evidence:
+  - url: https://www.roboter-forum.com/threads/l10s-ultra-wasser-laeuft-durchgehend-aus-der-mittleren-duese.71711/
+    quote: Nach mehreren Tests habe ich festgestellt, dass die mittlere Düse nachdem der Roboter los fährt
+      nicht mehr aufhört Wasser zu pumpen und das Wasser dann irgendwann über den Rand des Beckens läuft.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T07:39:37+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: dreame
+      model: l10sultra
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: water delivery / mop system
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: L10s Ultra leaks water in place and keeps mop pads wet from first use
+      body: A Media Markt buyer in Turkey reports the unit leaks water in place from the first use, leaving
+        the mop pads permanently wet so it cannot clean properly; the fault persisted on a replacement
+        unit and after service visits.
+      advice: Before buying, check the unit's water delivery and mop system in the first weeks; a leak
+        that survives a replacement unit suggests a recurring design fault, and multiple service trips
+        were needed.
+    tr:
+      title: L10s Ultra ilk kullanımdan itibaren yerinde su sızdırıyor ve paspas yastıklarını ıslak tutuyor
+      body: Türkiye'de bir Media Markt alıcısı, cihazın ilk kullanımdan itibaren yerinde su sızdırdığını,
+        paspas yastıklarını kalıcı olarak ıslak bıraktığını ve bu nedenle düzgün temizleyemediğini bildiriyor;
+        arıza değişim cihazında ve servis ziyaretlerinden sonra da devam etmiş.
+      advice: Satın almadan önce ilk haftalarda cihazın su dağıtımını ve paspas sistemini kontrol edin;
+        değişim cihazında da süren bir sızıntı tekrarlayan bir tasarım hatasına işaret eder ve birden
+        fazla servis ziyareti gerekmiştir.
+  evidence:
+  - url: https://www.sikayetvar.com/dreame/dreame-l10s-ultra-su-sizdiriyor-ve-pil-omru-kisa-olmasindan-surekli-servis-gerektiriyor
+    quote: Cihazı ilk kullanmaya başladığımız andan itibaren olduğu yerde su akıtma sorunu yaşadık, paspaslar
+      sürekli ıslak kaldı ve sağlıklı bir temizlik yapamadı.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T07:39:37+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: ecovacs
+      model: x2omni
+  kind: known_issue
+  domain: software
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: mop mode / navigation software
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Mop mode gets lost, rinses pads but stays at dock, reports done after a quarter of the floor
+      body: A French owner reports that in mop mode the robot gets lost, often only rinses its mop pads
+        and stays at the dock, and after returning to rinse the pads reports the task finished after covering
+        only a quarter of the floor; a factory reset did not help.
+      advice: The mop cycle can end early and leave most of the floor unmopped; a factory reset did not
+        fix it. If mopping matters, verify the unit completes a full mop run before buying.
+    tr:
+      title: Paspas modu kayboluyor, yastıkları duruluyor ama yuvada kalıyor, zeminin dörtte birinden
+        sonra tamamlandı bildiriyor
+      body: Fransız bir sahip, paspas modunda robotun kaybolduğunu, çoğu zaman yalnızca paspas yastıklarını
+        durulayıp yuvada kaldığını ve yastıkları durulamak için geri döndükten sonra zeminin yalnızca
+        dörtte birini kapladıktan sonra görevi tamamlandı olarak bildirdiğini söylüyor; fabrika ayarlarına
+        döndürme işe yaramamış.
+      advice: Paspas döngüsü erken sonlanabilir ve zeminin büyük kısmını paspaslanmamış bırakabilir; fabrika
+        ayarlarına döndürme bunu düzeltmemiştir. Paspaslama sizin için önemliyse satın almadan önce cihazın
+        tam bir paspas çalışmasını tamamladığını doğrulayın.
+  evidence:
+  - url: https://fr.ifixit.com/R%C3%A9ponses/Afficher/909330/Pourquoi+mon+robot+fait+comme+il+veut
+    quote: quand il attaque sont sicle, au bout d'un moment, quand il rentre à la station, pour rincer
+      les serpillières, mais il repart pas, il m'indique qu'il a fini sa tâche, alors qu'il a fait un
+      quart de la surface!!
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T07:41:09+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: ecovacs
+      model: x2omni
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: dock water seal, dock nozzles, mop lift sensor
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Dock water-seal degradation at 12-18 months in hard-water regions; dock water leaks and nozzle
+        clogging
+      body: Robovations' maintenance database records dock water-seal degradation at 12-18 months in hard-water
+        regions, occasional dock water leaks (fixed by replacing the manufacturer seal kit), dock nozzle
+        mineral clogging in hard water, and a rare mop-lift sensor malfunction that leaves pads wet on
+        carpet.
+      advice: In hard-water areas plan for seal/nozzle maintenance around 12-18 months; the dock can leak
+        and reduce wash effectiveness. Check whether the seller covers the seal kit under warranty.
+    tr:
+      title: Sert su bölgelerinde 12-18 ayda dock su contası bozulması; dock su sızıntıları ve nozul tıkanması
+      body: Robovations'ın bakım veritabanı, sert su bölgelerinde 12-18 ayda dock su contası bozulmasını,
+        ara sıra dock su sızıntılarını (üretici conta kiti değiştirilerek giderilir), sert suda dock nozul
+        mineral tıkanmasını ve halı üzerinde pedleri ıslak bırakan nadir bir mop kaldırma sensörü arızasını
+        kaydeder.
+      advice: Sert su alanlarında 12-18 ay civarında conta/nozul bakımı planlayın; dock sızıntı yapabilir
+        ve yıkama etkinliğini azaltabilir. Satıcının conta kitini garanti kapsamında karşılayıp karşılamadığını
+        kontrol edin.
+  evidence:
+  - url: https://robovations.com/robots/ecovacs-deebot-x2-omni/
+    quote: Water seal degradation at 12-18 months in hard-water regions; preventable via filter replacement.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T07:41:09+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: dreame
+      model: x30ultra
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: wastewater tank seal ring / cleaning tray
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: X30 Ultra loses dirty water when returning to base station
+      body: An official Dreame German-forum troubleshooting reply addresses an owner's report that the
+        robot loses dirty water when returning to the base station, listing checks on the wastewater tank
+        seal ring, the cleaning tray's overflow sensor, and the wastewater drain.
+      advice: In the EU market, expect possible dirty-water leakage at the base station; the official
+        fix is checking the wastewater tank seal ring and cleaning tray, which is a DIY maintenance item
+        rather than a full unit failure.
+    tr:
+      title: X30 Ultra ana istasyona dönerken kirli su kaybediyor
+      body: Resmi bir Dreame Almanya forumu sorun giderme yanıtı, robotun ana istasyona dönerken kirli
+        su kaybettiğine dair bir sahibin bildirimini ele alıyor; atık su tankı conta halkası, temizleme
+        tepsisi taşma sensörü ve atık su tahliyesi üzerinde kontroller listeliyor.
+      advice: AB pazarında ana istasyonda olası kirli su sızıntısı bekleyin; resmi çözüm atık su tankı
+        conta halkasını ve temizleme tepsisini kontrol etmektir, bu tam bir ünite arızasından ziyade kendin
+        yap bakım maddesidir.
+  evidence:
+  - url: https://forum.dreametech.com/de/forum.php?mod=viewthread&tid=4558&extra=&ordertype=2
+    quote: bezüglich des von Ihnen geschilderten Problems, dass der Roboter beim Zurückkehren zur Basisstation
+      Schmutzwasser verliert
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T07:40:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: dreame
+      model: x30ultra
+  kind: known_issue
+  domain: general
+  severity: high
+  consequence: ''
+  detection: ''
+  component: mop pad holder / navigation system
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: X30 Ultra interrupts tasks, fails to attach mop pads, and acts lost
+      body: An owner on the official Dreame forum describes the X30 Ultra constantly interrupting cleaning,
+        failing to attach mop pads, acting lost, and occasionally editing the floor map. Dreame's own
+        after-sales reply points to the mop-pad holder magnets, the washboard, and sensor/wheel obstructions
+        as checks.
+      advice: Before buying, expect that mop-pad attachment and navigation can fail intermittently; check
+        the mop pad holder magnets and clean sensors/wheels first, and confirm warranty/return terms since
+        the owner reports the unit being unusable.
+    tr:
+      title: X30 Ultra görevleri kesiyor, mop pedlerini takamıyor ve kaybolmuş gibi davranıyor
+      body: Resmi Dreame forumunda bir sahip, X30 Ultra'nın sürekli temizliği kestiğini, mop pedlerini
+        takamadığını, kaybolmuş gibi davrandığını ve ara sıra zemin haritasını düzenlediğini anlatıyor.
+        Dreame'in kendi satış sonrası yanıtı, mop pedi tutucu mıknatısları, yıkama tahtası ve sensör/tekerlek
+        tıkanıklıklarını kontroller olarak işaret ediyor.
+      advice: Satın almadan önce mop pedi takmanın ve navigasyonun aralıklı olarak başarısız olabileceğini
+        bekleyin; önce mop pedi tutucu mıknatıslarını kontrol edin ve sensörleri/tekerlekleri temizleyin,
+        sahip ünitenin kullanılamaz olduğunu bildirdiği için garanti/iade koşullarını teyit edin.
+  evidence:
+  - url: https://us.forum.dreametech.com/forum.php?mod=viewthread&action=printable&tid=9171
+    quote: My x30 ultra is constantly interrupting task. Can't attach mop pads, acts like it's lost, it
+      doesn't even clean on its schedule sometimes.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T07:40:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: roborock
+      model: s8proultra
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: mainboard (emaplaat), drive wheel frame, battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Mainboard replaced, drive-wheel frame broke, then 'Unit temperature protection' error — Estonian
+        consumer regulator upheld refund
+      body: An official Estonian Consumer Complaints Commission decision (case 19-1/25-07524, 25.08.2025).
+      advice: This is a regulator decision, the strongest source type. The unit needed a mainboard replacement,
+        then the drive-wheel frame broke, then the battery drained fast and the robot threw a 'Unit temperature
+        protection' error and disconnected from the dock/app. The commission ordered the seller to refund
+        the full €1219. Expect multi-week service turnaround (five weeks each visit) and recurring faults
+        that can end in full refund rather than repair.
+    tr:
+      title: Anakart değiştirildi, tahrik tekerleği çerçevesi kırıldı, ardından 'Ünite sıcaklık koruması'
+        hatası — Estonya tüketici düzenleyicisi iadeyi onayladı
+      body: Resmi Estonya Tüketici Şikayetleri Komisyonu kararı (dava 19-1/25-07524, 25.08.2025).
+      advice: Bu bir düzenleyici kararıdır, en güçlü kaynak türüdür. Ünite anakart değişimi gerektirdi,
+        ardından tahrik tekerleği çerçevesi kırıldı, ardından pil hızla tükendi ve robot 'Ünite sıcaklık
+        koruması' hatası verdi ve dock/uygulamadan bağlantısı kesildi. Komisyon satıcıya tam €1219 iade
+        emri verdi. Çok haftalık servis süresi (her ziyaret beş hafta) ve onarım yerine tam iadeyle sonuçlanabilecek
+        tekrarlayan arızalar bekleyin.
+  evidence:
+  - url: https://jvis.ttja.ee/modules/media/media/download/25135892
+    quote: vahetati seadmel emaplaat. Remondiperiood kestis viis nädalat.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:23:22+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: irobot
+      model: j7plus
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: battery / charging system
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Combo j7+ stops charging within 15 days of purchase (Turkey)
+      body: A Turkish owner on Şikayetvar reports the Combo j7+ stopped charging and stopped working within
+        15 days of purchase, and the official service's steps did not fix it. This is the TR-market, model-specific
+        charging failure the pack targets.
+      advice: In the Turkish market there is a documented early-life failure where the Combo j7+ stops
+        charging within two weeks of purchase and the authorized service cannot fix it. Buyers should
+        verify warranty/service handling in Turkey before purchase, since the owner reports the unit was
+        left unresolved.
+    tr:
+      title: Combo j7+ satın alımdan sonraki 15 gün içinde şarj olmayı durduruyor (Türkiye)
+      body: Şikayetvar'da bir Türk sahip, Combo j7+'ın satın alımdan sonraki 15 gün içinde şarj olmayı
+        ve çalışmayı durdurduğunu ve resmi servisin adımlarının sorunu çözmediğini bildiriyor. Bu, paketin
+        hedeflediği TR pazarına özgü, modele özgü şarj arızasıdır.
+      advice: Türkiye pazarında, Combo j7+'ın satın alımdan sonraki iki hafta içinde şarj olmayı durdurduğu
+        ve yetkili servisin bunu çözemediği belgelenmiş bir erken dönem arızası vardır. Alıcılar, sahip
+        ünitenin çözümsüz bırakıldığını bildirdiği için satın almadan önce Türkiye'de garanti/servis işleyişini
+        doğrulamalıdır.
+  evidence:
+  - url: https://www.sikayetvar.com/irobot/yetkili-servis
+    quote: 15 gün geçmeden şarj olmama ve çalışmamaya başladı.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:24:20+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: roborock
+      model: s8proultra
+  kind: known_issue
+  domain: software
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: LDS laser unit (Lasereinheit)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Error 1 tied to the LDS laser unit — German owner forum
+      body: Galaxus (German) question-and-answer thread for the S8 Pro Ultra.
+      advice: A German owner got Error 1 within about a month of ownership; the fix discussed is manually
+        rotating the top laser unit and restarting. This is a known, usually recoverable fault, but it
+        can recur and points to the LDS turret as a weak spot.
+    tr:
+      title: Hata 1, LDS lazer ünitesine bağlı — Alman sahip forumu
+      body: S8 Pro Ultra için Galaxus (Almanca) soru-cevap dizisi.
+      advice: Bir Alman sahip, sahiplikten yaklaşık bir ay içinde Hata 1 aldı; tartışılan çözüm üst lazer
+        ünitesini manuel olarak döndürüp yeniden başlatmaktır. Bu bilinen, genellikle giderilebilir bir
+        arızadır, ancak tekrarlayabilir ve LDS kulesinin zayıf bir nokta olduğuna işaret eder.
+  evidence:
+  - url: https://www.galaxus.de/de/s1/questionandanswer/habe-den-roboter-seit-ca-1-monat-und-er-hat-schon-die-1-fehlermeldung-und-zwar-fehler-1-habe-die-sen-689735?tagIds=1249-893
+    quote: Fehler 1 ist meistens in Bezug auf die Lasereinheit (runder Sensor oben auf dem Roboter)
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:23:22+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      model: x10plus
+  kind: known_issue
+  domain: general
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: charging-station return / navigation
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Unit stopped working after ~1.5 years and could not return to charging station
+      body: Owners report the unit failing to return to its charging station and stopping working after
+        roughly 1.5 years, with one unit needing three repairs. This is a reliability/longevity concern
+        for a flagship model.
+      advice: If the robot cannot dock, it cannot recharge or self-clean, effectively ending its usefulness.
+        Several owners report this appearing after a year or more, so consider expected lifespan and warranty
+        length.
+    tr:
+      title: Ünite yaklaşık 1,5 yıl sonra çalışmayı durdurdu ve şarj istasyonuna dönemedi
+      body: Sahipler, ünitenin şarj istasyonuna dönememesi ve yaklaşık 1,5 yıl sonra çalışmayı durdurması
+        sorununu bildiriyor; bir ünite üç kez onarım gerektirdi. Bu, amiral gemisi bir model için güvenilirlik/uzun
+        ömür endişesidir.
+      advice: Robot yuvasına yerleşemezse şarj olamaz veya kendini temizleyemez; bu da kullanışlılığını
+        fiilen sona erdirir. Birkaç sahip bu sorunun bir yıl veya daha fazla süre sonra ortaya çıktığını
+        bildiriyor; bu nedenle beklenen kullanım ömrünü ve garanti süresini göz önünde bulundurun.
+  evidence:
+  - url: https://www.alza.cz/EN/reviews/xiaomi-robot-vacuum-x10-7460254.htm
+    quote: 'It stopped working after 1.5 years
+
+
+      It’s leaking water; it’s damaged the floor
+
+
+      It is unable to return to the charging station'
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:23:57+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: irobot
+      model: j7plus
+  kind: known_issue
+  domain: software
+  severity: high
+  consequence: ''
+  detection: ''
+  component: obstacle avoidance / navigation system
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: j7+ obstacle-avoidance fails — repeatedly hits furniture and skirting despite advertised
+        avoidance
+      body: A Portuguese consumer complaint to Deco Proteste states the j7+ repeatedly rammed furniture
+        and skirting boards with force, damaging the home, despite the advertised obstacle-avoidance feature;
+        the case ended with iRobot agreeing to a refund. EU-market, model-specific.
+      advice: 'The headline obstacle-avoidance feature is a documented failure point: owners report the
+        j7+ hitting furniture and skirting hard enough to damage the home. If you are buying mainly for
+        avoidance, treat it as unreliable and check the return/refund path before purchase.'
+    tr:
+      title: j7+ engelden kaçınma başarısız — reklamı yapılan kaçınmaya rağmen mobilyalara ve süpürgeliklere
+        defalarca çarpıyor
+      body: Deco Proteste'ye yapılan bir Portekiz tüketici şikayeti, j7+'ın reklamı yapılan engelden kaçınma
+        özelliğine rağmen mobilyalara ve süpürgeliklere defalarca kuvvetle çarparak eve zarar verdiğini
+        belirtiyor; dava iRobot'un para iadesini kabul etmesiyle sonuçlandı. AB pazarı, modele özgü.
+      advice: 'Öne çıkan engelden kaçınma özelliği belgelenmiş bir başarısızlık noktası: sahipler j7+''ın
+        mobilyalara ve süpürgeliklere eve zarar verecek kadar sert çarptığını bildiriyor. Esas olarak
+        kaçınma için satın alıyorsanız, bunu güvenilmez olarak değerlendirin ve satın almadan önce iade/para
+        iadesi yolunu kontrol edin.'
+  evidence:
+  - url: https://www.deco.proteste.pt/reclamar/todas-as-reclamacoes/incumprimento-do-reembolso-aco/a7ff19b598aae6010c
+    quote: o equipamento apresentou defeitos graves de navegação, embatendo repetidamente com força em
+      móveis e rodapés, causando danos na minha habitação, apesar de o produto anunciar tecnologia de
+      evitamento de obstáculos.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:24:20+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: irobot
+      model: j7plus
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: dust collection bin / self-empty mechanism
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Combo j7+ dust bin clogs with pet hair — self-empty doesn't clear it
+      body: An EU verified owner of the Combo j7+ (c7558) reports the collection container does not empty
+        itself when full of pet hair, so it must be emptied by hand after every run — defeating the self-empty
+        feature. EU-market, model-specific.
+      advice: 'If you have pets, the j7+''s self-empty bin is a documented weak point: pet hair can fail
+        to empty from the collection container, forcing manual emptying after every clean. Factor that
+        into whether the self-empty base is worth the price.'
+    tr:
+      title: Combo j7+ toz haznesi evcil hayvan tüyüyle tıkanıyor — kendini boşaltma bunu temizlemiyor
+      body: Combo j7+ (c7558) ürününün AB doğrulanmış bir sahibi, toplama kabının evcil hayvan tüyüyle
+        dolduğunda kendini boşaltmadığını, bu nedenle her çalıştırmadan sonra elle boşaltılması gerektiğini
+        bildiriyor — bu da kendini boşaltma özelliğini işlevsiz bırakıyor. AB pazarı, modele özgü.
+      advice: 'Evcil hayvanınız varsa, j7+''ın kendini boşaltan haznesi belgelenmiş bir zayıf nokta: evcil
+        hayvan tüyü toplama kabından boşalmayabilir ve her temizlikten sonra elle boşaltmayı zorunlu kılar.
+        Kendini boşaltan tabanın fiyatına değip değmeyeceğini değerlendirirken bunu hesaba katın.'
+  evidence:
+  - url: https://m.alza.sk/EN/reviews/irobot-roomba-combo-j7-c7558-7435846.htm
+    quote: It doesn't cope with pet hair - the contents of the collection container don't empty out. So
+      you have to empty it by hand after every vacuum.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:24:20+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      model: x10plus
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: dirty water pump and dirty-water-tank sealing ring
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Dirty water pump damaged by cleaning agents; sealing ring warps and leaks
+      body: Xiaomi's own UK FAQ confirms the dirty water pump can be damaged by adding cleaning agents
+        and that a warped sealing ring causes leaks, matching the owner-reported station leaks.
+      advice: Use only plain water in the tanks; adding cleaning agents is officially cited as a cause
+        of pump damage. If the pump fails or the seal warps, the station cannot drain dirty water and
+        may leak, which typically needs service.
+    tr:
+      title: Kirli su pompası temizlik maddeleriyle hasar görüyor; sızdırmazlık halkası eğilip sızdırıyor
+      body: Xiaomi'nin kendi Birleşik Krallık SSS'si, temizlik maddeleri eklenmesinin kirli su pompasına
+        zarar verebileceğini ve eğilmiş bir sızdırmazlık halkasının sızıntılara yol açtığını doğruluyor;
+        bu da sahiplerin bildirdiği istasyon sızıntılarıyla örtüşüyor.
+      advice: Tanklarda yalnızca sade su kullanın; temizlik maddeleri eklenmesi resmi olarak pompa hasarının
+        nedeni olarak gösteriliyor. Pompa arızalanırsa veya conta eğilirse, istasyon kirli suyu tahliye
+        edemez ve sızıntı yapabilir; bu da genellikle servis gerektirir.
+  evidence:
+  - url: https://www.mi.com/uk/support/faq/details/KA-617862/
+    quote: The dirty water pump is damaged, which can be due to the addition of cleaning agents.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:23:57+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: irobot
+      model: j7plus
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: cleaning pad actuator / transmission
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Combo j7+ cleaning-pad actuator stalls (error 1008) — robot will not mop
+      body: iRobot's own knowledge base documents error 1008 on the Combo j7+, where the cleaning-pad
+        drive mechanism stalls and the robot pauses mid-job and waits for the user to move it. It is a
+        documented, model-specific failure mode.
+      advice: If you buy the Combo j7+ for mopping, know that the pad actuator can stall (error 1008)
+        and the robot will stop and wait for manual help; the official fix is repositioning and a 20-second
+        reboot. Not a repair part you can buy, so it lands on warranty/service.
+    tr:
+      title: Combo j7+ temizleme pedi aktüatörü takılıyor (hata 1008) — robot paspas yapmıyor
+      body: iRobot'un kendi bilgi bankası, Combo j7+'ta temizleme pedi tahrik mekanizmasının takıldığı
+        ve robotun iş ortasında duraklayıp kullanıcının onu hareket ettirmesini beklediği hata 1008'i
+        belgeliyor. Bu, belgelenmiş ve modele özgü bir arıza modudur.
+      advice: Combo j7+'ı paspaslama için satın alıyorsanız, ped aktüatörünün takılabileceğini (hata 1008)
+        ve robotun durup manuel yardım bekleyeceğini bilin; resmi çözüm yeniden konumlandırma ve 20 saniyelik
+        yeniden başlatmadır. Satın alabileceğiniz bir onarım parçası değildir, bu nedenle garanti/servis
+        kapsamına girer.
+  evidence:
+  - url: https://answers.irobot.com/zh-CN/knowledge/78005
+    quote: 错误 1008 表示清洁垫传动装置失灵，机器人无法移动。
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:24:20+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      model: x10plus
+  kind: known_issue
+  domain: service
+  severity: high
+  consequence: ''
+  detection: ''
+  component: mainboard (scheda madre) / water ingress
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Water ingress into robot body oxidises motherboard; warranty refused with ~€187 quote
+      body: An Italian owner reports the wall base leaking water at month 23; the service centre refused
+        warranty repair citing water infiltration and motherboard oxidation, quoting €187 — nearly the
+        unit's full value. This documents both the leak and the service/warranty cost of it.
+      advice: 'The leak is not just cosmetic: water reaching the robot''s mainboard is treated as out-of-warranty
+        damage, and the quoted repair (~€187) approaches the product''s value. Verify warranty terms before
+        relying on coverage for a leak.'
+    tr:
+      title: Robot gövdesine su girmesi anakartı oksitliyor; garanti ~187 € teklifle reddedildi
+      body: İtalyan bir sahip, duvar tabanının 23. ayda su sızdırdığını bildiriyor; servis merkezi su
+        sızması ve anakart oksitlenmesini gerekçe göstererek garanti onarımını reddetti ve ünitenin neredeyse
+        tam değeri olan 187 € teklif etti. Bu, hem sızıntıyı hem de bunun servis/garanti maliyetini belgeliyor.
+      advice: 'Sızıntı yalnızca kozmetik değil: robotun ana kartına ulaşan su garanti dışı hasar olarak
+        değerlendiriliyor ve teklif edilen onarım (~187 €) ürünün değerine yaklaşıyor. Bir sızıntı için
+        kapsama güvenmeden önce garanti koşullarını doğrulayın.'
+  evidence:
+  - url: https://www.altroconsumo.it/reclamare/bacheca-dei-reclami/garanzia-legale-non-applicata/8bebb3fc1e5b9ab4e3
+    quote: rifiutava la riparazione in garanzia dichiarando una presunta "infiltrazione di acqua" nel
+      corpo macchina (robot mobile) con conseguente ossidazione della scheda madre, emettendo un preventivo
+      di € 187,00
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:23:57+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: irobot
+      model: j7plus
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: charging contacts (dock)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Combo j7+ charging contacts fail after about a year — robot won't dock-charge
+      body: An EU (Slovak) verified owner of the Combo j7+ (c7558) reports that after about a year the
+        robot stopped returning to the dock and charging, and a technician diagnosed the charging contacts
+        — yet it charges when manually placed on the dock. This is an EU-market, model-specific electrical
+        failure.
+      advice: 'The charging contacts are a known failure point on the Combo j7+ after roughly a year:
+        the robot won''t dock-charge even though it charges when placed manually. Check whether the contacts
+        are the cause before assuming a battery fault, and note the owner''s report that the warranty
+        was not honored.'
+    tr:
+      title: Combo j7+ şarj kontakları yaklaşık bir yıl sonra arızalanıyor — robot dock'ta şarj olmuyor
+      body: Combo j7+ (c7558) modelinin AB (Slovakya) doğrulanmış bir sahibi, yaklaşık bir yıl sonra robotun
+        dock'a dönmeyi ve şarj olmayı bıraktığını, bir teknisyenin şarj kontaklarını teşhis ettiğini,
+        ancak dock'a manuel olarak yerleştirildiğinde şarj olduğunu bildiriyor. Bu, AB pazarına özgü,
+        modele özgü bir elektrik arızasıdır.
+      advice: 'Şarj kontakları, Combo j7+ modelinde yaklaşık bir yıl sonra bilinen bir arıza noktasıdır:
+        robot manuel olarak yerleştirildiğinde şarj olsa bile dock''ta şarj olmaz. Pil arızası olduğunu
+        varsaymadan önce kontakların neden olup olmadığını kontrol edin ve sahibin garantinin yerine getirilmediği
+        yönündeki bildirimini dikkate alın.'
+  evidence:
+  - url: https://m.alza.sk/EN/reviews/irobot-roomba-combo-j7-c7558-7435846.htm
+    quote: after a year of occasional use it' s broken and they don' t want to honor the warranty. The
+      vacuum cleaner does not vacuum into the collection container, does not return to the docking station,
+      " wanders" in various ways, and according to the robot technician, the problem is with the charging
+      contacts
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:24:20+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      model: x10plus
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: omni station water system / mop-wash catch basin
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Omni/docking station leaks water; mop-wash catch basin overflows
+      body: Multiple independent owners report the docking station leaking water around it and the mop-wash
+        basin overflowing, with one owner noting the intake valve itself was not the leak point.
+      advice: Before buying, check the station's water plumbing and the mop-wash tray seal; a leak here
+        can damage flooring and is reported to recur even after service. Expect this to be a warranty/repair
+        issue rather than a user-fixable one.
+    tr:
+      title: Omni/dock istasyonu su sızdırıyor; paspas yıkama toplama haznesi taşıyor
+      body: Birden fazla bağımsız sahip, dock istasyonunun çevresinden su sızdırdığını ve paspas yıkama
+        haznesinin taştığını bildiriyor; bir sahip giriş valfinin kendisinin sızıntı noktası olmadığını
+        belirtiyor.
+      advice: Satın almadan önce istasyonun su tesisatını ve paspas yıkama tepsisinin contasını kontrol
+        edin; buradaki bir sızıntı zeminlere zarar verebilir ve servis sonrasında bile tekrarladığı bildirilmektedir.
+        Bunun kullanıcı tarafından düzeltilebilir bir sorun değil, garanti/onarım sorunu olmasını bekleyin.
+  evidence:
+  - url: https://www.alza.cz/EN/reviews/xiaomi-robot-vacuum-x10-7460254.htm
+    quote: Water started leaking from the docking station. The valve through which the vacuum cleaner
+      takes water from the tank is not leaking, and if the vacuum cleaner vacuums for a long time after
+      leaving the station, the catch basin for washing the mops fills up and overflows.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:23:57+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: roborock
+      model: s8proultra
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: water tank / bottom seal
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Recurring water leakage from the bottom, plus charging error — Turkish owner complaint
+      body: Turkish complaint site Şikayetvar, S8 Pro Ultra water-leakage category.
+      advice: A Turkish owner reports water leaking from the unit two weeks after purchase, followed by
+        a charging error, and four service visits that returned the unit unrepaired. This is a documented
+        water-leakage failure mode in the TR market with poor service resolution.
+    tr:
+      title: Alttan tekrarlayan su sızıntısı ve şarj hatası — Türk sahip şikayeti
+      body: Türk şikayet sitesi Şikayetvar, S8 Pro Ultra su sızıntısı kategorisi.
+      advice: Bir Türk sahip, satın almadan iki hafta sonra cihazdan su sızdığını, ardından bir şarj hatası
+        oluştuğunu ve cihazı onarılmadan geri getiren dört servis ziyaretini bildiriyor. Bu, TR pazarında
+        belgelenmiş, servis çözümü zayıf bir su sızıntısı arıza modudur.
+  evidence:
+  - url: https://www.sikayetvar.com/roborock/s8-pro-ultra/su-akitiyor
+    quote: Roborock'tan aldığım robot süpürge, aldıktan iki hafta sonra su akıtmaya başladı. Şimdi de
+      şarj hatası veriyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:23:22+00:00'

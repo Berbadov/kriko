@@ -1,0 +1,74 @@
+{
+  "version": "0.3.8",
+  "platform": "windows-x86_64",
+  "source_fingerprint": "0311164631d2a4938daf39672195d99f7ea66f778d2f838620a5ef441e9befca",
+  "recorded_at": "2026-10-30",
+  "note": "The maintainer asked for this release after merging the Mistral reliability work (#305), the product-insights work (#304) and the site integration (#295, #299, #300). The installer, portable copy, upgrade, live-provider and packaged-window journeys were not walked on this build; release_readiness.py is expected to refuse complete stable-readiness certification. The build, the frozen sidecar health check, the built app's 25-second start and the website suite were observed.",
+  "journeys": {
+    "fresh_install": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Installer built and hashed; it was not run on this machine."
+    },
+    "portable_start": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Portable archive built and hashed; the extracted portable window was not walked. The built tree's app stayed up for 25 seconds and spawned its engine."
+    },
+    "setup": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "More -> Set up Kriko was not walked on the packaged window."
+    },
+    "sourced_answer": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "No live research was run against the packed 0.3.8 engine. The Mistral fallbacks are covered by tests and the frozen sidecar's health check."
+    },
+    "follow_up": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Not walked on the packed engine."
+    },
+    "compare": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Not walked: the extension and Compare did not change in this release."
+    },
+    "stop": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Tray Quit was not walked."
+    },
+    "reconnect": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Not walked on the packaged window."
+    },
+    "upgrade_retains_data": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "No installed-version upgrade was performed."
+    }
+  },
+  "providers": {
+    "mistral-vibe": {
+      "status": "not_observed",
+      "model": "configured by the reader",
+      "version": "0.3.8",
+      "report": "src/app/tests/test_the_mistral_agent_recovers.py: hosted-session rejection, cooldown and explicit persistent choice"
+    },
+    "mistral-api": {
+      "status": "not_observed",
+      "model": "mistral-small-latest by default",
+      "version": "0.3.8",
+      "report": "src/app/tests/test_the_mistral_agent_recovers.py: connector fallback, no-search-key path, 240 s ceiling"
+    }
+  },
+  "observed_instead": [
+    "kriko-ui/package.ps1 -Version 0.3.8 completed: preflight versions agree; Python side installed; OpenSERP fetched; frozen sidecar started and answered /api/health with version 0.3.8, extension 0.5.0 and no catalogs; web interface built; app and NSIS installer built; the built app stayed up 25 seconds and spawned its engine.",
+    "Artifacts built: kriko-0.3.8-x86_64-setup.exe (31.6 MB), kriko-0.3.8-win64-portable.zip (39.6 MB), kriko-engine-0.3.8-win64.zip (26.5 MB), SHA256SUMS.txt.",
+    "Website: 676 problem pages regenerated, 3 Turkish pages rendered with all text translated, llms.txt regenerated (71 lines), and 40 site tests passed.",
+    "Mistral: the new recovery suite, the API agent plane, provider speed, resident transport, the harness research plane and the toolless authoring tests passed."
+  ]
+}

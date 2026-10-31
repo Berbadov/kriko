@@ -1,0 +1,48 @@
+lineup:
+- Anker 351 Power Strip (A9183)
+- Anker Power Strip Surge Protector 2100J (USB-C/USB-A)
+- Belkin SurgeMaster F9G930-10
+- Belkin SurgeMaster F9G930v10
+- Belkin SurgeMaster F9G930-10-W
+- Belkin SurgeMaster F9G930-10-SN
+- Belkin BV106000-04 6-outlet 630J
+- Belkin 6-outlet surge protector with rotating plug
+- APC SurgeArrest 7 series
+- APC SurgeArrest 8 series
+- APC Back-UPS (surge-protected UPS)
+- Ugreen Power Strip 6-in-1 (15360)
+- Ugreen GaN 6-in-1 Surge Protector
+- Philips SPC3064WG/37 6-outlet
+- Philips SPN8180GA/60 8-socket 4xUSB
+covered:
+- anker 351 power strip
+- anker power strip surge protector 2100j
+- apc surgearrest 7 series
+- apc surgearrest 8 series
+- belkin 6 outlet surge protector with rotating plug
+- belkin bv106000 04
+- belkin surgemaster f9g930 10
+- philips spc3064wg 37
+- philips spn8180ga 60
+- product brand anker series 351 power strip
+- product brand anker series power strip 2100j
+- product brand apc series surgearrest 7
+- product brand apc series surgearrest 8
+- product brand belkin series bv106000 04
+- product brand belkin series f9g930 10
+- product brand belkin series rotating plug surge protector
+- product brand philips series spc3064wg37
+- product brand philips series spn8180ga60
+- product brand ugreen series 15360
+- ugreen power strip 6 in 1 15360
+uncovered:
+- Belkin SurgeMaster F9G930v10
+- APC Back-UPS (surge-protected UPS)
+- Ugreen GaN 6-in-1 Surge Protector
+note: 'Ugreen and Philips subjects ship with no claims: searches returned only manufacturer
+  marketing pages and one professional review, with no documented recalls, fires or
+  shock incidents for those brands in the sources reached.'
+out_of_scope:
+- Anker power banks (2025 CPSC recall of portable chargers, not strips)
+- APC Back-UPS battery units (UPS battery overheating reports, not surge-strip fire/shock)
+quarantined: []

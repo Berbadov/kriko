@@ -1,0 +1,44 @@
+lineup:
+- Hover-1 Helix
+- Hover-1 AllStar
+- Razor Hovertrax
+- Razor Hovertrax 2.0
+- Swagway X1
+- Swagway X2
+- Gotrax Edge
+- Gotrax Hoverfly Plus
+- Gotrax Cosmos
+- Segway Ninebot N3M320
+- Unbranded import hoverboard
+covered:
+- gotrax cosmos
+- gotrax edge
+- gotrax hoverfly plus
+- hover 1 allstar
+- hover 1 helix
+- product brand gotrax series cosmos
+- product brand gotrax series edge
+- product brand gotrax series hoverfly plus
+- product brand hover 1 series allstar
+- product brand hover 1 series helix
+- product brand razor series hovertrax
+- product brand razor series hovertrax 2 0
+- product brand segway ninebot series n3m320
+- product brand swagway series x1
+- product brand swagway series x2
+- razor hovertrax
+- razor hovertrax 2 0
+- segway ninebot n3m320
+- swagway x1
+- swagway x2
+uncovered:
+- Unbranded import hoverboard
+note: No specific CPSC recalls were found for Gotrax hoverboards or Segway/Xiaomi
+  hoverboard-specific recalls in available sources; unbranded imports are covered
+  only by the general 2016 mass recall. Xiaomi hoverboard models could not be identified
+  from available sources.
+out_of_scope:
+- Electric scooters (e.g., Hover-1 Dynamo, recalled for brake failure)
+- Segway personal transporters (non-hoverboard models)
+- Hoverboard accessories (chargers, replacement batteries)
+quarantined: []

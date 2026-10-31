@@ -1,0 +1,1705 @@
+# Claims — what is known to go wrong, each with the page it came from and the quote
+# that was read there. A claim without both is not in this file.
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      model: smart band 8
+  kind: known_issue
+  domain: battery
+  severity: high
+  consequence: ''
+  detection: ''
+  component: battery / charging circuit
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Xiaomi Smart Band 8 stops accepting charge near empty battery after ~2 years
+      body: A Turkish owner reports the band stopped taking a charge at ~5% battery after two years; the
+        cable and pogo pins were verified to deliver 5V, so the fault is internal to the band.
+      advice: A band that stops charging near empty is effectively dead after warranty. The owner had
+        to troubleshoot cable, contacts and power source before concluding the fault was internal. Cost
+        is a full replacement.
+    tr:
+      title: Xiaomi Smart Band 8, yaklaşık 2 yıl sonra boş bataryaya yakınken şarj kabul etmeyi bırakıyor
+      body: Bir Türk sahibi, bandın iki yıl sonra yaklaşık %5 bataryada şarj almayı bıraktığını bildiriyor;
+        kablo ve pogo pinlerin 5V sağladığı doğrulandı, bu nedenle arıza bandın içindedir.
+      advice: Boşalmaya yakınken şarj olmayı bırakan bir band, garanti sonrasında fiilen ölmüştür. Sahibinin,
+        arızanın iç kaynaklı olduğu sonucuna varmadan önce kabloyu, temas noktalarını ve güç kaynağını
+        sorun gidermesi gerekti. Maliyet, tam bir değişimdir.
+  evidence:
+  - url: https://teknoseyir.com/durum/1768623
+    quote: İki yıl önce satın aldığım, gece gündüz keyifle kullandığım, benim kullanımımda ilk günden
+      beri şarjı istikrarlı şekilde 16-18 gün dayanan, Xiaomi Smart Band 8, geçtiğimiz hafta, şarjının
+      bitmesine yaklaşık %5 varken şarja takayım dedim, her zamanki yaptığım gibi, fakat şarj almadı.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:28:03+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: apple
+      model: series 10
+  kind: known_issue
+  domain: durability
+  severity: high
+  consequence: ''
+  detection: ''
+  component: Jet Black aluminum case coating (back, around sensors)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Jet Black aluminum case coating peels off around the sensors after months of wear
+      body: Found via 'Apple Watch Series 10 common problems'. heise reports widespread coating peeling
+        on the Jet Black Series 10, confirmed by Apple support forum and Reddit reports.
+      advice: If buying the Jet Black variant, inspect the back under bright light and keep it in warranty;
+        Apple reportedly replaces under warranty but some users are told it is user damage and quoted
+        about 350 euros.
+    tr:
+      title: Jet Black alüminyum kasa kaplaması aylarca kullanımdan sonra sensörlerin çevresinden soyuluyor
+      body: '''Apple Watch Series 10 common problems'' aracılığıyla bulundu. heise, Jet Black Series 10''da
+        yaygın kaplama soyulması bildiriyor; Apple destek forumu ve Reddit raporlarıyla doğrulandı.'
+      advice: Jet Black varyantını satın alıyorsanız, arkasını parlak ışık altında inceleyin ve garantide
+        tutun; Apple'ın garantide değiştirdiği bildiriliyor ancak bazı kullanıcılara bunun kullanıcı hasarı
+        olduğu söyleniyor ve yaklaşık 350 euro fiyat veriliyor.
+  evidence:
+  - url: https://www.heise.de/en/news/Apple-Watch-in-Jet-Black-Peeling-on-the-back-11089087.html
+    quote: After prolonged wear, some paint comes off, revealing silver areas.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:30:31+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: garmin
+      model: fenix 8
+  kind: known_issue
+  domain: battery
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: Wi-Fi radio / firmware 22.39
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Persistent Fenix 8 battery drain after firmware 22.39; Wi-Fi stays active after Spotify sync
+      body: Battery drain persists for some owners even after Garmin's 22.39 fix; a suspected cause is
+        Wi-Fi staying active after a Spotify sync.
+      advice: If battery drain persists after updating, try disabling Wi-Fi manually or re-pairing; check
+        Garmin's forum for the latest workaround.
+    tr:
+      title: Firmware 22.39 sonrası kalıcı Fenix 8 batarya tükenmesi; Spotify senkronizasyonundan sonra
+        Wi-Fi etkin kalıyor
+      body: Garmin'in 22.39 düzeltmesinden sonra bile bazı sahiplerde batarya tükenmesi devam ediyor;
+        şüpheli bir neden, bir Spotify senkronizasyonundan sonra Wi-Fi'nin etkin kalmasıdır.
+      advice: Güncellemeden sonra batarya tükenmesi devam ederse, Wi-Fi'yi manuel olarak devre dışı bırakmayı
+        veya yeniden eşleştirmeyi deneyin; en son geçici çözüm için Garmin'in forumunu kontrol edin.
+  evidence:
+  - url: https://www.notebookcheck.net/Persistent-Garmin-smartwatch-battery-drain-Potential-causes-and-possible-workarounds.1346779.0.html
+    quote: According to Mingui, recent firmware versions cause the smartwatch to maintain an active Wi-Fi
+      connection even after it is unplugged from the charger following a Spotify playlist sync.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:28:58+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: huawei
+      model: watch gt 5
+  kind: known_issue
+  domain: battery
+  severity: high
+  consequence: ''
+  detection: ''
+  component: battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: GT 5 stuck at 0% and stuck in reboot loop overnight (TR forum)
+      body: An owner reports the GT 5 waking dead at 0% and endlessly rebooting even on a fast-charge
+        powerbank, concluding the battery died.
+      advice: A GT 5 can fail to charge and loop-reboot overnight even when the battery was not low; the
+        owner had to send it to service under warranty.
+    tr:
+      title: GT 5 %0'da takılı kaldı ve gece boyunca yeniden başlatma döngüsünde sıkıştı (TR forumu)
+      body: Bir sahip, GT 5'in %0'da ölü olarak uyandığını ve hızlı şarjlı bir powerbank ile bile sonsuz
+        şekilde yeniden başladığını bildiriyor ve bataryanın öldüğü sonucuna varıyor.
+      advice: Bir GT 5, batarya düşük olmasa bile gece boyunca şarj olamayabilir ve döngüsel olarak yeniden
+        başlayabilir; sahibinin onu garanti kapsamında servise göndermesi gerekti.
+  evidence:
+  - url: https://forum.donanimhaber.com/huawei-watch-5-serisi-ana-konu--159721416-137
+    quote: Arkadaşlar GT5 kullanıyorum, sabah kalktığımda saat kapalıydı, şarja taktım, %0 gösteriyor
+      ve sürekli açılıp geri kapanıyor, yaklaşık 20 dakikadır böyle saat sürekli restart atıyor ve halen
+      %0 aynı sorun başına gelen var mı? ne şekilde çözdünüz?
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:32:20+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: huawei
+      model: watch gt 5
+  kind: known_issue
+  domain: display
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: screen/touchscreen
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: GT 5 screen freezes and stops responding (TR)
+      body: A Turkish owner reports the GT 5 screen freezing and not responding, persisting through restart,
+        reset and update.
+      advice: A frozen, unresponsive screen may not be fixable by the owner; the complaint asks for hardware/software
+        repair under warranty.
+    tr:
+      title: GT 5 ekranı donuyor ve yanıt vermeyi bırakıyor (TR)
+      body: Bir Türk sahibi, GT 5 ekranının donduğunu ve yanıt vermediğini, bunun yeniden başlatma, sıfırlama
+        ve güncelleme boyunca devam ettiğini bildiriyor.
+      advice: Donmuş, yanıt vermeyen bir ekran sahibi tarafından düzeltilemeyebilir; şikayet, garanti
+        kapsamında donanım/yazılım onarımı talep ediyor.
+  evidence:
+  - url: https://www.sikayetvar.com/huawei/huawei-watch-gt-5-ekran-donmasi-sorunu
+    quote: Huawei Watch gt 5 akıllı saatimde dün itibarıyla başlayan ciddi bir ekran donması sorunu yaşıyorum.
+      Saatin ekranı kilitleniyor, tepki vermiyor ve bu nedenle temel işlevlerini kullanamaz hale geliyorum.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:32:20+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      model: smart band 8
+  kind: known_issue
+  domain: display
+  severity: low
+  consequence: ''
+  detection: ''
+  component: display / touchscreen
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Xiaomi Smart Band 8 black screen and touchscreen errors acknowledged by manufacturer
+      body: Xiaomi's own FAQ states hardware failure can cause screen problems, and lists troubleshooting
+        for black screen and touchscreen errors.
+      advice: The manufacturer acknowledges hardware failure can cause display problems. This is troubleshooting
+        guidance rather than an owner failure report, so it is lower confidence.
+    tr:
+      title: Xiaomi Smart Band 8 siyah ekran ve dokunmatik ekran hataları üretici tarafından kabul edildi
+      body: Xiaomi'nin kendi SSS'si, donanım arızasının ekran sorunlarına neden olabileceğini belirtiyor
+        ve siyah ekran ile dokunmatik ekran hataları için sorun giderme adımlarını listeliyor.
+      advice: Üretici, donanım arızasının ekran sorunlarına neden olabileceğini kabul ediyor. Bu, bir
+        sahip arıza raporu yerine sorun giderme rehberliğidir, bu nedenle güvenilirliği daha düşüktür.
+  evidence:
+  - url: https://www.mi.com/kr/support/faq/details/KA-541388/
+    quote: 밴드의 배터리가 부족하거나 밴드의 전원이 꺼지면 화면이 검게 변하고 응답하지 않습니다. 게다가 하드웨어 고장으로 인해 밴드 화면 문제도 발생합니다.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:28:03+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      model: galaxy watch 7
+  kind: known_issue
+  domain: display
+  severity: high
+  consequence: ''
+  detection: ''
+  component: display/screen
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Galaxy Watch7 display systematically freezes, only a factory reset helps
+      body: 'Same owner report on Samsung''s official page: the display systematically freezes and the
+        only fix is a factory reset from recovery mode without restoring a backup, meaning the watch must
+        be reconfigured weekly.'
+      advice: A buyer should know that screen freezes on this unit were not fixable by normal means and
+        forced weekly factory resets, which is a serious usability cost. This is a recurring, not one-off,
+        fault for this owner.
+    tr:
+      title: Galaxy Watch7 ekranı sistematik olarak donuyor, yalnızca fabrika ayarlarına sıfırlama yardımcı
+        oluyor
+      body: 'Samsung''un resmi sayfasındaki aynı sahip raporu: ekran sistematik olarak donuyor ve tek
+        çözüm, yedek geri yüklemeden kurtarma modundan fabrika ayarlarına sıfırlama, yani saatin her hafta
+        yeniden yapılandırılması gerekiyor.'
+      advice: Bir alıcı, bu birimdeki ekran donmalarının normal yollarla düzeltilemediğini ve haftalık
+        fabrika ayarlarına sıfırlamaları zorunlu kıldığını bilmelidir; bu ciddi bir kullanılabilirlik
+        maliyetidir. Bu, bu sahip için tek seferlik değil, tekrarlayan bir arızadır.
+  evidence:
+  - url: https://www.samsung.com/si/watches/galaxy-watch/galaxy-watch7-40mm-cream-lte-sm-l305fzeaeue/
+    quote: systematycznie zacina się wyświetlacz - a wtedy pomaga TYLKO przywrócenie do ustawień fabrycznych
+      z trybu recovery bez przywracania kopii zapasowej
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:30:18+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      model: galaxy watch 7
+  kind: known_issue
+  domain: durability
+  severity: high
+  consequence: ''
+  detection: ''
+  component: battery/thermal
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Galaxy Watch7 owner reports watch heats up enough to burn the wrist
+      body: 'Same Polish owner report on Samsung''s official page: the watch heats up so much it burns
+        the wrist.'
+      advice: 'This corroborates the RTBF overheating reports: a buyer should treat strong heating as
+        a reason to stop wearing the watch. It appeared in year two alongside the battery instability.'
+    tr:
+      title: Galaxy Watch7 sahibi saatin bileği yakacak kadar ısındığını bildiriyor
+      body: 'Samsung''un resmi sayfasındaki aynı Polonyalı sahip raporu: saat o kadar ısınıyor ki bileği
+        yakıyor.'
+      advice: 'Bu, RTBF''nin aşırı ısınma raporlarını doğruluyor: bir alıcı, güçlü ısınmayı saati takmayı
+        bırakmak için bir neden olarak görmelidir. Bu, pil kararsızlığıyla birlikte ikinci yılda ortaya
+        çıktı.'
+  evidence:
+  - url: https://www.samsung.com/si/watches/galaxy-watch/galaxy-watch7-40mm-cream-lte-sm-l305fzeaeue/
+    quote: dodatkowo nagrzewa się tak, że parzy w rękę
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:30:18+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      model: galaxy watch 7
+  kind: known_issue
+  domain: durability
+  severity: high
+  consequence: ''
+  detection: ''
+  component: battery/thermal
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Galaxy Watch7 series overheating with red marks on wrists and full battery discharge
+      body: Belgian public broadcaster RTBF, citing Android Authority, reports users of the newer Galaxy
+        Watch7/8/Ultra series seeing overheating, full battery discharge, and red marks on wrists.
+      advice: A buyer should watch for the watch heating up and red marks on the wrist; RTBF advises stopping
+        wearing it if it heats strongly. This is a safety-relevant durability concern, not just an inconvenience.
+    tr:
+      title: Galaxy Watch7 serisi bileklerde kırmızı izler ve tam pil deşarjıyla aşırı ısınıyor
+      body: Belçika kamu yayıncısı RTBF, Android Authority'ye atıfta bulunarak, daha yeni Galaxy Watch7/8/Ultra
+        serisi kullanıcılarının aşırı ısınma, tam pil deşarjı ve bileklerde kırmızı izler gördüğünü bildiriyor.
+      advice: Bir alıcı, saatin ısınmasına ve bilekteki kırmızı izlere dikkat etmelidir; RTBF, güçlü şekilde
+        ısınırsa takmayı bırakmayı öneriyor. Bu, sadece bir rahatsızlık değil, güvenlikle ilgili bir dayanıklılık
+        endişesidir.
+  evidence:
+  - url: https://beta.rtbf.be/article/plusieurs-utilisateurs-de-galaxy-watch-de-samsung-signalent-des-brulures-et-des-surchauffes-11805677
+    quote: Les problèmes recensés vont d'une décharge complète de la batterie à une surchauffe, et des
+      marques rouges sur les poignets des utilisateurs.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:30:18+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: garmin
+      model: fenix 8
+  kind: known_issue
+  domain: sensors
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: GPS receiver / firmware 12.38
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Fenix 8 GPS acquisition slow (20s–3min) before firmware 12.38 fix
+      body: A GPS acquisition bug made satellite lock take up to 3 minutes; Garmin fixed it in firmware
+        12.38, restoring ~5-second locks.
+      advice: If your Fenix 8 is slow to get a GPS fix, update to firmware 12.38 or later.
+    tr:
+      title: Fenix 8 GPS edinimi yavaş (20 sn–3 dk), firmware 12.38 düzeltmesinden önce
+      body: Bir GPS edinme hatası, uydu kilidinin 3 dakikaya kadar sürmesine neden oluyordu; Garmin bunu
+        firmware 12.38'de düzelterek ~5 saniyelik kilitleri geri getirdi.
+      advice: Fenix 8'iniz GPS kilidi almada yavaşsa, firmware 12.38 veya sonrasına güncelleyin.
+  evidence:
+  - url: https://www.notebookcheck.net/Garmin-Fenix-8-gets-GPS-bug-fix-in-new-update.960784.0.html
+    quote: Recently, GPS connection times ranged from 20 seconds to around three minutes. After the update,
+      the connection is said to take around five seconds, a return to previous performance levels.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:28:58+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      model: smart band 8
+  kind: known_issue
+  domain: connectivity
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: Bluetooth pairing
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Xiaomi Smart Band 8 unresponsive and drops tracking when paired with iPhone
+      body: A Reddit user reports the band becomes unresponsive, is hard to connect, and stops tracking
+        mid-run when paired with an iPhone, while it worked with a Xiaomi phone.
+      advice: Bluetooth reliability is worse with non-Xiaomi phones, especially iPhone. A buyer using
+        an iPhone may face connection drops and lost workout tracking.
+    tr:
+      title: Xiaomi Smart Band 8 iPhone ile eşleştirildiğinde yanıt vermiyor ve takibi bırakıyor
+      body: Bir Reddit kullanıcısı, bandın yanıt vermez hale geldiğini, bağlanmasının zor olduğunu ve
+        iPhone ile eşleştirildiğinde koşu ortasında takibi durdurduğunu, Xiaomi telefonla ise çalıştığını
+        bildiriyor.
+      advice: Bluetooth güvenilirliği Xiaomi dışı telefonlarda, özellikle iPhone'da daha kötüdür. iPhone
+        kullanan bir alıcı bağlantı kopmaları ve kaybolan antrenman takibiyle karşılaşabilir.
+  evidence:
+  - url: https://redditrecs.com/fitness-tracker/model/xiaomi-smart-band-8/
+    quote: Goods sya nung naka connect pa sya sa xiaomi ko pero nung cinonnect ko na sa iPhone ko parang
+      unreaponsive, ang hirap i-connect minsan, and biglang nag stop mag track mid run.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:28:03+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      model: smart band 11 active
+  kind: known_issue
+  domain: battery
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Battery life drops below 4 days when extra functions are used
+      body: Official statement that heavy use cuts battery life below 4 days.
+      advice: Expect to charge more than twice a week if you run many features; the 21-day figure only
+        applies to the ultra-long battery mode.
+    tr:
+      title: Ekstra işlevler kullanıldığında pil ömrü 4 günün altına düşüyor
+      body: Yoğun kullanımın pil ömrünü 4 günün altına indirdiğine dair resmi açıklama.
+      advice: Birçok özelliği çalıştırırsanız haftada iki kereden fazla şarj etmeyi bekleyin; 21 gün rakamı
+        yalnızca ultra uzun pil modu için geçerlidir.
+  evidence:
+  - url: https://www.mi.com/pk/support/faq/details/KA-728033/
+    quote: If other functions are used frequently, the usage days will be further compressed to less than
+      4 days.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:34:11+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      model: smart band 8
+  kind: known_issue
+  domain: durability
+  severity: high
+  consequence: ''
+  detection: ''
+  component: case seal / waterproofing
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Xiaomi Smart Band 8 case comes unglued and water kills it after ~1 year
+      body: An owner reports the case delaminated after a year and two weeks, water entered and the band
+        died; another review on the same page says the sealing gasket leaked and the watch burned out.
+      advice: Water-resistance appears to degrade over roughly a year; once the case unglues, water kills
+        the band. A buyer should not rely on the 5 ATM rating past the first year.
+    tr:
+      title: Xiaomi Smart Band 8 kılıfı yapışkanlığını kaybediyor ve ~1 yıl sonra su girince bozuluyor
+      body: Bir kullanıcı, kılıfın bir yıl iki hafta sonra ayrıldığını, su girdiğini ve bandın bozulduğunu
+        bildiriyor; aynı sayfadaki başka bir inceleme ise sızdırmazlık contasının sızdırdığını ve saatin
+        yandığını söylüyor.
+      advice: Su direnci yaklaşık bir yıl içinde azalıyor gibi görünüyor; kılıf yapışkanlığını kaybettiğinde
+        su bandı bozuyor. Bir alıcı, ilk yıldan sonra 5 ATM derecesine güvenmemelidir.
+  evidence:
+  - url: https://dns-shop.kg/ru/product/fc1374e53733ed20/fitnes-braslet-xiaomi-smart-band-8/opinions/
+    quote: И самое "невкусное" - через год и две недели расклеился корпус, попала вода и браслет сдох.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:28:03+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: huawei
+      model: watch gt 5
+  kind: known_issue
+  domain: battery
+  severity: high
+  consequence: ''
+  detection: ''
+  component: battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Battery failure on GT 5 46mm and 2400 TL repair quote (TR)
+      body: A Turkish owner reports battery failure on the GT 5 46mm and a 2400 TL repair quote for the
+        battery on a watch that cost 4000 TL.
+      advice: If buying in TR, factor in that a battery replacement can cost over half the watch's price
+        and that the owner reports Huawei charging for it even when the watch was never submerged.
+    tr:
+      title: GT 5 46mm'de pil arızası ve 2400 TL onarım teklifi (TR)
+      body: Türkiye'deki bir kullanıcı, GT 5 46mm'de pil arızası olduğunu ve 4000 TL'ye mal olan bir saat
+        için pili 2400 TL'ye onarma teklifi aldığını bildiriyor.
+      advice: TR'de satın alıyorsanız, pil değişiminin saatin fiyatının yarısından fazlasına mal olabileceğini
+        ve kullanıcının, saat hiç suya batırılmamış olsa bile Huawei'nin bunun için ücret aldığını bildirdiğini
+        hesaba katın.
+  evidence:
+  - url: https://www.sikayetvar.com/huawei/huawei-watch-gt-5-batarya-sorunu-ve-yuksek-onarim-ucreti-hayal-kirikligi-yaratti
+    quote: Huawei watch gt 5 siyah siyah 46mm akıllı saatim 3,5 yıl içinde batarya hatası verdi. Suya
+      bile sokmayan benim başıma geldi:(( garantiye yolladım şaka gibi 2400 TL istediler batarya için.
+      Saat zaten 4000 TL.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:32:20+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: apple
+      model: series 10
+  kind: known_issue
+  domain: general
+  severity: high
+  consequence: ''
+  detection: ''
+  component: Speaker
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Speaker becomes weak and muffled after one or more months of use
+      body: Found via 'Apple Watch Series 10 common problems'. PhoneArena aggregates Reddit and Apple
+        support forum reports of the speaker going weak; Apple published a support document and offers
+        replacements, though some users report the replacement also fails.
+      advice: If the speaker sounds thin or weak, try cleaning, water ejection, restart and re-pair first
+        (Apple's official steps); otherwise claim warranty replacement, but be aware replacements may
+        repeat the fault.
+    tr:
+      title: Hoparlör bir veya daha fazla ay kullanımdan sonra zayıflıyor ve boğuklaşıyor
+      body: '''Apple Watch Series 10 common problems'' aramasıyla bulundu. PhoneArena, Reddit ve Apple
+        destek forumundaki hoparlörün zayıfladığına dair bildirimleri derliyor; Apple bir destek belgesi
+        yayımladı ve değişim sunuyor, ancak bazı kullanıcılar değişimin de arızalandığını bildiriyor.'
+      advice: Hoparlör ince veya zayıf ses çıkıyorsa önce temizlemeyi, su tahliyesini, yeniden başlatmayı
+        ve yeniden eşleştirmeyi deneyin (Apple'ın resmi adımları); aksi halde garanti değişimi talep edin,
+        ancak değişimlerin aynı arızayı tekrarlayabileceğini unutmayın.
+  evidence:
+  - url: https://www.phonearena.com/news/apple-watch-series-10-speaker-volume-low-bug_id167511
+    quote: After one or more months of use, many Apple Watch Series 10 owners noticed that the speaker
+      started sounding very weak.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:30:31+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: garmin
+      model: fenix 8
+  kind: known_issue
+  domain: battery
+  severity: high
+  consequence: ''
+  detection: ''
+  component: voice wake-word feature (OK Garmin)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: '''OK Garmin'' hands-free voice feature cuts Fenix 8 battery life by 35–50%'
+      body: The voice wake-word feature, enabled by default in a September update, listens constantly
+        and can halve battery life. Garmin acknowledges the drain but not the magnitude.
+      advice: If your Fenix 8 battery life dropped sharply after a software update, go to Settings > System
+        > Voice and disable 'OK Garmin' to restore expected runtime.
+    tr:
+      title: '''OK Garmin'' elleri serbest ses özelliği Fenix 8 pil ömrünü %35–50 azaltıyor'
+      body: Eylül güncellemesinde varsayılan olarak etkinleştirilen sesle uyandırma sözcüğü özelliği sürekli
+        dinliyor ve pil ömrünü yarıya indirebiliyor. Garmin tüketimi kabul ediyor ancak büyüklüğünü kabul
+        etmiyor.
+      advice: Bir yazılım güncellemesinden sonra Fenix 8 pil ömrünüz keskin şekilde düştüyse, Ayarlar
+        > Sistem > Ses bölümüne gidin ve beklenen çalışma süresini geri yüklemek için 'OK Garmin'i devre
+        dışı bırakın.
+  evidence:
+  - url: https://tech.yahoo.com/wearables/articles/garmin-feature-draining-battery-life-183000946.html
+    quote: it looks like "OK Garmin" in particular is what causes some watch's projected runtimes to drastically
+      drop, allegedly by roughly 35% to 50% in some cases.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:28:58+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      model: galaxy watch 7
+  kind: known_issue
+  domain: battery
+  severity: high
+  consequence: ''
+  detection: ''
+  component: battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Galaxy Watch7 battery drops from 80% to 50% in minutes in second year of use
+      body: Owner review on Samsung's official product page (Samsung Poland review republished on Samsung
+        SI). After about a year the battery became unstable, dropping from 80% to 50% within minutes during
+        normal wear.
+      advice: A buyer should not assume a healthy first year predicts the second; battery instability
+        appeared in year two and the owner sent the watch back under warranty. Expect the battery to be
+        the weak point and verify warranty terms before relying on it long-term.
+    tr:
+      title: Galaxy Watch7 pili kullanımın ikinci yılında dakikalar içinde %80'den %50'ye düşüyor
+      body: Samsung'un resmi ürün sayfasındaki kullanıcı incelemesi (Samsung Polonya incelemesi Samsung
+        SI'da yeniden yayımlanmış). Yaklaşık bir yıl sonra pil dengesizleşti ve normal kullanım sırasında
+        dakikalar içinde %80'den %50'ye düştü.
+      advice: Bir alıcı, sağlıklı bir ilk yılın ikinci yılı öngördüğünü varsaymamalıdır; pil dengesizliği
+        ikinci yılda ortaya çıktı ve kullanıcı saati garanti kapsamında geri gönderdi. Pilin zayıf nokta
+        olmasını bekleyin ve uzun vadede güvenmeden önce garanti koşullarını doğrulayın.
+  evidence:
+  - url: https://www.samsung.com/si/watches/galaxy-watch/galaxy-watch7-40mm-cream-lte-sm-l305fzeaeue/
+    quote: Niestety w drugim roku zaczęły się gigantyczne problemy ze stabilnością baterii (bateria czasem
+      potrafiła skakać z 80% na 50% w kilka minut podczas zwykłego noszenia na ręce)
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:30:18+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: garmin
+      model: fenix 8
+  kind: known_issue
+  domain: connectivity
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: Garmin Connect iOS app / Bluetooth pairing
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Garmin Connect iOS app update broke Fenix 8 smartphone connectivity
+      body: A Garmin Connect iOS update broke Bluetooth pairing for Fenix 8 owners; fixed in app version
+        5.21.1, though some users needed to re-pair manually.
+      advice: If your Fenix 8 won't connect to an iPhone, update Garmin Connect to 5.21.1+; if it still
+        fails, forget and re-pair the watch in Bluetooth settings.
+    tr:
+      title: Garmin Connect iOS uygulaması güncellemesi Fenix 8 akıllı telefon bağlantısını bozdu
+      body: Bir Garmin Connect iOS güncellemesi, Fenix 8 kullanıcıları için Bluetooth eşleştirmesini bozdu;
+        uygulama sürümü 5.21.1'de düzeltildi, ancak bazı kullanıcıların manuel olarak yeniden eşleştirmesi
+        gerekti.
+      advice: Fenix 8'iniz bir iPhone'a bağlanmıyorsa, Garmin Connect'i 5.21.1+ sürümüne güncelleyin;
+        hâlâ başarısız olursa, saati Bluetooth ayarlarında unutun ve yeniden eşleştirin.
+  evidence:
+  - url: https://www.notebookcheck.net/Garmin-confirms-new-app-update-fixes-connectivity-problem.1216292.0.html
+    quote: a bug was preventing these wearables from connecting as expected to a smartphone. The problem
+      was only affecting iOS, not Android users, and a wide range of models, including the Fenix 8
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:28:58+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: apple
+      model: series 10
+  kind: known_issue
+  domain: sensors
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: Heart rate sensor
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Heart rate sensor fails to display readings at session start and shows implausibly high values
+      body: Found via 'Apple Watch Series 10 common problems'. A marathon runner's detailed first-hand
+        account of the heart rate sensor dropping readings at session start and then showing implausibly
+        high values (e.g. 171 bpm early in a slow run).
+      advice: If you rely on heart rate for training, verify readings against a chest strap; the sensor
+        can show gaps and wrong values, which matters for zone-based training.
+    tr:
+      title: Oturum başlangıcında kalp atış hızı sensörü okumaları gösteremiyor ve akla yatkın olmayan
+        yüksek değerler gösteriyor
+      body: '''Apple Watch Series 10 common problems'' aracılığıyla bulundu. Bir maraton koşucusunun,
+        kalp atış hızı sensörünün oturum başlangıcında okumaları düşürmesi ve ardından akla yatkın olmayan
+        yüksek değerler göstermesine (ör. yavaş bir koşunun başlarında 171 bpm) ilişkin ayrıntılı birinci
+        elden anlatımı.'
+      advice: Antrenman için kalp atış hızına güveniyorsanız, okumaları bir göğüs bandıyla doğrulayın;
+        sensör boşluklar ve yanlış değerler gösterebilir, bu da bölge tabanlı antrenman için önemlidir.
+  evidence:
+  - url: https://www.bgr.com/tech/the-apple-watch-series-10-heart-rate-sensor-is-an-absolute-disaster/
+    quote: The heart rate sensor will not display the actual heart rate for several minutes at the start
+      of the session.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:30:31+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: apple
+      model: series 10
+  kind: known_issue
+  domain: battery
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: Battery / WatchOS 11 software
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Battery drain tied to a WatchOS 11 bug, fixed by updating to 11.0.1
+      body: Found via 'Apple Watch Series 10 common problems'. Android Authority attributes much of the
+        Series 10 battery drain to a WatchOS 11 bug fixed in 11.0.1, a software rather than hardware cause.
+      advice: If battery drains fast, first update to WatchOS 11.0.1 or later before assuming a hardware
+        fault; this is a software fix, not a repair cost.
+    tr:
+      title: Pil tükenmesi bir WatchOS 11 hatasına bağlı, 11.0.1'e güncelleme ile düzeltildi
+      body: '''Apple Watch Series 10 common problems'' aracılığıyla bulundu. Android Authority, Series
+        10 pil tükenmesinin büyük kısmını 11.0.1''de düzeltilen bir WatchOS 11 hatasına bağlıyor; bu,
+        donanım değil yazılım kaynaklı bir nedendir.'
+      advice: Pil hızlı tükeniyorsa, bir donanım arızası varsaymadan önce önce WatchOS 11.0.1 veya daha
+        yenisine güncelleyin; bu bir yazılım düzeltmesidir, onarım maliyeti değildir.
+  evidence:
+  - url: https://www.androidauthority.com/apple-watch-series-10-problems-3484224/
+    quote: There are many possible reasons for battery drains, though for many, it will be due to a bug
+      in Watch OS 11.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:30:31+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      model: galaxy watch 7
+  kind: known_issue
+  domain: battery
+  severity: high
+  consequence: ''
+  detection: ''
+  component: battery (software/update)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Galaxy Watch7 battery drain after software update, reported in Turkish tech news
+      body: Turkish tech site ShiftDelete reports users on Reddit seeing battery life roughly halve on
+        Galaxy Watch7 (and Watch6/8/Ultra) after recent software updates, with Google Play Services suspected.
+      advice: 'This is a post-update regression, not a hardware fault: a buyer may see battery life drop
+        sharply after an update, and standard fixes (restart, cache clear, reset) are reported as inconsistent.
+        Worth checking before assuming a faulty unit.'
+    tr:
+      title: Yazılım güncellemesi sonrası Galaxy Watch7 pil tükenmesi, Türk teknoloji haberlerinde bildirildi
+      body: Türk teknoloji sitesi ShiftDelete, Reddit'teki kullanıcıların son yazılım güncellemelerinden
+        sonra Galaxy Watch7'de (ve Watch6/8/Ultra'da) pil ömrünün yaklaşık olarak yarıya indiğini gördüğünü
+        ve Google Play Services'ten şüphelenildiğini bildiriyor.
+      advice: 'Bu, güncelleme sonrası bir gerilemedir, donanım arızası değildir: bir alıcı bir güncellemeden
+        sonra pil ömrünün keskin biçimde düşebileceğini görebilir ve standart düzeltmelerin (yeniden başlatma,
+        önbellek temizleme, sıfırlama) tutarsız olduğu bildirilmektedir. Arızalı bir birim varsaymadan
+        önce kontrol etmeye değer.'
+  evidence:
+  - url: https://shiftdelete.net/samsung-guncelleme-sonrasi-ciddi-pil-sorunu-yasiyor
+    quote: özellikle Samsung Galaxy Watch6, Watch7, Watch8 ve Watch Ultra modellerinde pil ömrünün ciddi
+      oranda azaldığını dile getiriyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:30:18+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: huawei
+      model: watch gt 5
+  kind: known_issue
+  domain: connectivity
+  severity: low
+  consequence: ''
+  detection: ''
+  component: Bluetooth
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Official Huawei TR bulletin on Bluetooth connection drops on wearables incl. GT 5
+      body: Huawei's own Turkish support bulletin lists the GT 5 among applicable products and documents
+        common Bluetooth connection-drop causes and fixes.
+      advice: Connection drops are a recognised, documented issue on the GT 5; the bulletin's fixes are
+        mostly environmental (distance, interference, app backgrounding) rather than hardware defects.
+    tr:
+      title: GT 5 dahil giyilebilir cihazlarda Bluetooth bağlantı kopmalarına ilişkin resmi Huawei TR
+        bülteni
+      body: Huawei'nin kendi Türkçe destek bülteni, GT 5'i geçerli ürünler arasında listeliyor ve yaygın
+        Bluetooth bağlantı kopması nedenlerini ve düzeltmelerini belgeliyor.
+      advice: Bağlantı kopmaları GT 5'te tanınan ve belgelenmiş bir sorundur; bültendeki düzeltmeler çoğunlukla
+        donanım kusurlarından ziyade çevreseldir (mesafe, girişim, uygulamanın arka plana atılması).
+  evidence:
+  - url: https://consumer.huawei.com/tr/support/content/tr-tr00733911/
+    quote: Bağlantı kesilmesinin yaygın nedenleri
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:32:20+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: huawei
+      model: watch gt 5
+  kind: known_issue
+  domain: general
+  severity: high
+  consequence: ''
+  detection: ''
+  component: mainboard
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: GT 5 mainboard failure within first year, watch dead (TR)
+      body: A Turkish owner reports the GT 5 dying completely from a mainboard fault within its first
+        year, requiring warranty service.
+      advice: Total failure from a mainboard fault inside the first year is reported; the owner had to
+        send it to an authorised service under warranty.
+    tr:
+      title: İlk yıl içinde GT 5 ana kart arızası, saat öldü (TR)
+      body: Bir Türk sahibi, GT 5'in ilk yılı içinde ana kart arızasından tamamen öldüğünü ve garanti
+        servisi gerektiğini bildiriyor.
+      advice: İlk yıl içinde ana kart arızasından tamamen arıza bildirilmiştir; sahibi, garanti kapsamında
+        yetkili servise göndermek zorunda kalmıştır.
+  evidence:
+  - url: https://www.sikayetvar.com/huawei/huawei-saatlerde-ust-uste-arizalar-markaya-guveni-sarsiyor
+    quote: Son olarak aldığım Huawei Watch gt 5 ise daha birinci yılında ana kart arızası vererek tamamen
+      kapandı ve hiç açılmaz hale geldi.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:32:20+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: huawei
+      model: watch gt 5
+  kind: known_issue
+  domain: durability
+  severity: high
+  consequence: ''
+  detection: ''
+  component: battery/mainboard
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: GT 5 overheated and never turned on again, no spare parts (Ukrainian owner)
+      body: A Ukrainian owner reports the GT 5 41mm suddenly overheating and never powering on again,
+        with no repair parts available.
+      advice: Sudden overheating followed by total failure is reported, and the owner says no spare parts
+        exist for repair, so the watch is a total loss.
+    tr:
+      title: GT 5 aşırı ısındı ve bir daha açılmadı, yedek parça yok (Ukraynalı sahip)
+      body: Bir Ukraynalı sahip, GT 5 41mm'nin aniden aşırı ısındığını ve bir daha açılmadığını, onarım
+        parçası bulunmadığını bildiriyor.
+      advice: Ani aşırı ısınma ve ardından tam arıza bildirilmiştir ve sahip, onarım için yedek parça
+        bulunmadığını söylüyor, bu nedenle saat tamamen kayıptır.
+  evidence:
+  - url: https://comfy.ua/smart-chasy-huawei-watch-gt-5-41mm-white-leather-otzyvy.html
+    quote: У якийсь рандомний момент годинник нагрівся і більше не ввімкнувся. Деталей для ремонту немає.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:32:20+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      model: smart band 8
+  kind: known_issue
+  domain: durability
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: strap
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Xiaomi Smart Band 8 strap breaks after ~8 months
+      body: An owner reports the strap broke after 8 months and the store said it was not a warranty case.
+      advice: The strap is a consumable that fails within the first year and is not covered by warranty;
+        the user must buy a replacement strap.
+    tr:
+      title: Xiaomi Smart Band 8 kayışı ~8 ay sonra kopuyor
+      body: Bir sahip, kayışın 8 ay sonra koptuğunu ve mağazanın bunun bir garanti kapsamı olmadığını
+        söylediğini bildiriyor.
+      advice: Kayış, ilk yıl içinde bozulan ve garanti kapsamında olmayan bir sarf malzemesidir; kullanıcı
+        yedek bir kayış satın almalıdır.
+  evidence:
+  - url: https://dns-shop.kg/ru/product/fc1374e53733ed20/fitnes-braslet-xiaomi-smart-band-8/opinions/
+    quote: Через 8 месяцев сломался ремешок, теперь носить браслет неудобно.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:28:03+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      model: galaxy watch 7
+  kind: known_issue
+  domain: battery
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: battery / display
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Galaxy Watch7 battery under 20 hours with minimal use, plus frequent screen freezes
+      body: 'Formal consumer complaint to Samsung filed via Italian consumer body Altroconsumo: within
+        under a year the Watch7 battery lasted under 20 hours even with minimal use (just checking the
+        time), alongside frequent interface/screen freezes.'
+      advice: A buyer should expect real-world battery life well under the advertised figure even with
+        light use, and that Samsung's lab tests may not reproduce the fault, making warranty replacement
+        hard to obtain. Screen freezes accompany the battery issue.
+    tr:
+      title: Galaxy Watch7 pili minimal kullanımla 20 saatin altında, ayrıca sık sık ekran donmaları
+      body: 'İtalyan tüketici kuruluşu Altroconsumo aracılığıyla Samsung''a yapılan resmi tüketici şikayeti:
+        bir yıldan kısa süre içinde Watch7 pili, minimal kullanımla (sadece saate bakmakla) bile 20 saatin
+        altında dayandı, ayrıca sık sık arayüz/ekran donmaları yaşandı.'
+      advice: Bir alıcı, hafif kullanımla bile gerçek dünya pil ömrünün reklamı yapılan rakamın oldukça
+        altında olmasını ve Samsung'un laboratuvar testlerinin arızayı yeniden üretemeyebileceğini, bunun
+        da garanti değişimini zorlaştırdığını beklemelidir. Pil sorununa ekran donmaları eşlik ediyor.
+  evidence:
+  - url: https://www.altroconsumo.it/reclamare/bacheca-dei-reclami/mancata-sostituzione-galaxy-wa/be767b5372c8b05a7a
+    quote: il dispositivo presenta un'autonomia della batteria inferiore alle 20 ore a fronte di un utilizzo
+      minimo (mera consultazione dell'ora), unitamente a frequenti blocchi dell'interfaccia/schermo e
+      malfunzionamenti nel tracciamento dei consumi nell'app.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:30:18+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      model: smart band 8
+  kind: known_issue
+  domain: battery
+  severity: high
+  consequence: ''
+  detection: ''
+  component: charging circuit
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Xiaomi Mi Band 8 stops charging after 3 days of use
+      body: An owner reports the band worked for 3 days then stopped charging entirely.
+      advice: Early charging failure means the band is unusable within days of purchase; a buyer should
+        test charging immediately and keep proof for warranty.
+    tr:
+      title: Xiaomi Mi Band 8 3 günlük kullanımdan sonra şarj olmayı durduruyor
+      body: Bir sahip, bandın 3 gün çalıştığını ve ardından tamamen şarj olmayı durdurduğunu bildiriyor.
+      advice: Erken şarj arızası, bandın satın alımdan günler sonra kullanılamaz hale geldiği anlamına
+        gelir; bir alıcı şarjı hemen test etmeli ve garanti için kanıt saklamalıdır.
+  evidence:
+  - url: https://www.technodom.kz/p/smart-braslet-xiaomi-mi-band-8-gold-m2239b1bhr7166gl-273895/reviews
+    quote: 'Недостатки: 3 дня работал потом перестал заряжаться'
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:28:03+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: garmin
+      model: fenix 8
+  kind: known_issue
+  domain: display
+  severity: high
+  consequence: ''
+  detection: ''
+  component: ambient light sensor / display backlight
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Fenix 8 display brightness stuck at maximum after sunlight exposure (firmware 23.31), draining
+        battery
+      body: Garmin confirmed the bug after dozens of forum reports; it is a firmware regression (23.31)
+        that also shortens battery life because the screen stays at max brightness.
+      advice: If your Fenix 8 screen stays stuck at full brightness after being in sunlight, touch the
+        screen or press a button to reset it until Garmin ships the fix. Check for the next firmware update.
+    tr:
+      title: Fenix 8 ekran parlaklığı güneş ışığına maruz kaldıktan sonra maksimumda takılı kalıyor (yazılım
+        23.31), pili tüketiyor
+      body: Garmin, düzinelerce forum bildiriminden sonra hatayı doğruladı; bu, pil ömrünü de kısalttığı
+        için (ekran maksimum parlaklıkta kalıyor) bir yazılım gerilemesidir (23.31).
+      advice: Fenix 8 ekranınız güneş ışığında kaldıktan sonra tam parlaklıkta takılı kalıyorsa, Garmin
+        düzeltmeyi yayınlayana kadar sıfırlamak için ekrana dokunun veya bir düğmeye basın. Bir sonraki
+        yazılım güncellemesini kontrol edin.
+  evidence:
+  - url: https://www.notebookcheck.net/Garmin-Fenix-8-Garmin-confirms-display-and-battery-bug-promises-fix.1419107.0.html
+    quote: If the always-on display is enabled and the gesture to activate the display is disabled, the
+      screen brightness can get stuck at the highest setting after the smartwatch has been exposed to
+      direct sunlight.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:28:58+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: huawei
+      model: watch gt 5
+  kind: known_issue
+  domain: display
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: screen
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: GT 5 screen shows interference/lines after ~9 months (Ukrainian owner)
+      body: A Ukrainian owner reports screen interference/lines on the GT 5 41mm after ~9 months and sent
+        it to service.
+      advice: Display faults appearing around 9 months are reported by owners; the owner faced possible
+        non-repairability and replacement.
+    tr:
+      title: GT 5 ekranı ~9 ay sonra girişim/çizgiler gösteriyor (Ukraynalı sahip)
+      body: Bir Ukraynalı sahip, GT 5 41mm'de ~9 ay sonra ekran girişimi/çizgileri bildiriyor ve servise
+        gönderdi.
+      advice: Yaklaşık 9 ay civarında ortaya çıkan ekran arızaları sahipler tarafından bildiriliyor; sahip
+        olası onarılamazlık ve değişimle karşılaştı.
+  evidence:
+  - url: https://comfy.ua/smart-chasy-huawei-watch-gt-5-41mm-white-leather-otzyvy.html
+    quote: Купила 9 месяцев назад не могла нарадоваться ну вот недавно что-то сломалось пошли помехи по
+      экрану отдала в сервис жду результата если ремонту не подлежат в замен опять хочу такие.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:32:20+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: garmin
+      model: fenix 8
+  kind: known_issue
+  domain: general
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: firmware / activity start
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Turkish owner reports Fenix 8 self-resetting when starting a run; fixed by re-update via
+        Garmin Express
+      body: A Turkish owner (Koşu Forum) reports the watch repeatedly resetting when starting a running
+        activity; re-updating via Garmin Express resolved it. This is the only TR-market owner report
+        found.
+      advice: If your Fenix 8 resets when starting an activity, re-update the firmware via Garmin Express
+        on a computer.
+    tr:
+      title: Türk sahip, Fenix 8'in koşu başlatırken kendi kendine sıfırlandığını bildiriyor; Garmin Express
+        ile yeniden güncelleme ile düzeltildi
+      body: Bir Türk sahip (Koşu Forum), saatin bir koşu aktivitesi başlatırken tekrar tekrar sıfırlandığını
+        bildiriyor; Garmin Express ile yeniden güncelleme sorunu çözdü. Bu, bulunan tek TR pazarı sahip
+        bildirimidir.
+      advice: Fenix 8'iniz bir aktivite başlatırken sıfırlanıyorsa, yazılımı bir bilgisayarda Garmin Express
+        ile yeniden güncelleyin.
+  evidence:
+  - url: https://kosuforum.com/t/garminde-neler-oluyor-28-ocak-2025/16527/23?page=2
+    quote: Her seferinde koşu etkinliğine başlamak istediğimde saat kendi kendine reset atıyor ve yeniden
+      başlıyordu… Eve dönünce garmin expresste tekrar güncelledim, şarjı fulladim vs… An itibariyle sorun
+      çözüldü ve bir problem kalmadı…
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:28:58+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      model: smart band 11 active
+  kind: known_issue
+  domain: durability
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: strap / band
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Included strap breaks quickly / rubber degrades (durability)
+      body: 'Amazon.co.jp aggregate review summary (query ''Xiaomi Smart Band 11 Active common problems''):
+        the included strap breaks quickly and the rubber degrades/tears with short use.'
+      advice: Plan to buy a spare strap; the stock strap is a reported weak point.
+    tr:
+      title: Dahil olan kayış hızla kopuyor / kauçuk bozuluyor (dayanıklılık)
+      body: 'Amazon.co.jp toplu inceleme özeti (sorgu ''Xiaomi Smart Band 11 Active common problems''):
+        dahil olan kayış hızla kopuyor ve kauçuk kısa kullanımda bozuluyor/yırtılıyor.'
+      advice: Yedek bir kayış almayı planlayın; stok kayış bildirilen bir zayıf nokta.
+  evidence:
+  - url: https://www.amazon.co.jp/Xiaomi-%E3%82%B7%E3%83%A3%E3%82%AA%E3%83%9F%E3%82%B9%E3%83%9E%E3%83%BC%E3%83%88%E3%83%90%E3%83%B3%E3%83%89-60Hz%E3%82%AB%E3%83%A9%E3%83%BC%E3%83%87%E3%82%A3%E3%82%B9%E3%83%97%E3%83%AC%E3%82%A4-%E3%82%B9%E3%83%88%E3%83%AC%E3%82%B9%E3%83%A2%E3%83%8B%E3%82%BF%E3%83%AA%E3%83%B3%E3%82%B0-50%E7%A8%AE%E3%82%B9%E3%83%9D%E3%83%BC%E3%83%84%E3%83%A2%E3%83%BC%E3%83%89/dp/B0FBWG7S2Y/ref=zg_bs_g_sports_d_sccl_28/358-0841445-7637324?psc=1&tag=run2die-22&language=ja_JP&currency=JPY
+    quote: 付属のバンドがすぐ壊れ、半年で画面が真っ暗になるなどの不具合があります。
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:53:28+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: amazfit
+      model: bip 5
+  kind: known_issue
+  domain: display
+  severity: high
+  consequence: ''
+  detection: ''
+  component: display
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Bip 5 display goes permanently black after a pool visit
+      body: German Amazon review (June 2026) — after one pool visit the screen went permanently black
+        and the watch would no longer charge; the return window had expired, leaving the owner with a
+        dead unit.
+      advice: Keep the receipt and test water resistance within the return window; the watch is not safe
+        for swimming despite marketing claims.
+    tr:
+      title: Bip 5 ekranı havuza girdikten sonra kalıcı olarak kararıyor
+      body: Alman Amazon incelemesi (Haziran 2026) — bir kez havuza girdikten sonra ekran kalıcı olarak
+        karardı ve saat artık şarj olmuyordu; iade süresi dolmuştu ve sahibi ölü bir üniteyle kaldı.
+      advice: Fişi saklayın ve suya dayanıklılığı iade süresi içinde test edin; pazarlama iddialarına
+        rağmen saat yüzmek için güvenli değil.
+  evidence:
+  - url: https://www.amazon.de/Amazfit-Fitness-Aktivit%c3%a4ts-Tracker-11-Tage-Akku-Bluetooth-Telefonanrufe-Gesundheits%c3%bcberwachung-Grau/dp/B0CX5H5ZMX?content-id=amzn1.sym.127c1341-78d4-4904-a6b2-104b1fe180ea&pd_rd_i=B0CX5H5ZMX&pd_rd_r=a527fac6-543e-4169-b502-a6c6a0d1c3e9&pd_rd_w=fiqs0&pd_rd_wg=I7wca&pf_rd_r=4YH27SYNQZD0FMGAG2D9&ref_=dossier_default_ref_B0CX5H5ZMX
+    quote: Aber nach einem Besuch im Schwimmbad ist die Uhr tot. Nur noch ein schwarzes Display und lädt
+      auch nicht mehr auf.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:52:49+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      model: smart band 11 active
+  kind: known_issue
+  domain: battery
+  severity: high
+  consequence: ''
+  detection: ''
+  component: battery / vibration motor
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Continuous vibration drains battery then unit fails at ~3 months (battery)
+      body: 'Owner review on Amazon.co.jp (query ''Xiaomi Smart Band 11 Active pil sorunu''): at 3 months
+        the vibration ran continuously, the battery drained rapidly, then the band lost connectivity.
+        Warranty reportedly not honored.'
+      advice: A runaway vibration motor that drains the battery and kills the unit is a reported failure
+        mode; buy from a channel where warranty is enforceable.
+    tr:
+      title: Sürekli titreşim pili tüketiyor, ardından ünite ~3 ayda arızalanıyor (pil)
+      body: 'Amazon.co.jp''de sahip incelemesi (sorgu ''Xiaomi Smart Band 11 Active pil sorunu''): 3.
+        ayda titreşim sürekli çalıştı, pil hızla tükendi, ardından band bağlantısını kaybetti. Garantinin
+        karşılanmadığı bildiriliyor.'
+      advice: Pili tüketen ve üniteyi öldüren kontrolden çıkmış bir titreşim motoru bildirilen bir arıza
+        modu; garantinin uygulanabilir olduğu bir kanaldan satın alın.
+  evidence:
+  - url: https://www.amazon.co.jp/Xiaomi-%E3%82%B7%E3%83%A3%E3%82%AA%E3%83%9F%E3%82%B9%E3%83%9E%E3%83%BC%E3%83%88%E3%83%90%E3%83%B3%E3%83%89-60Hz%E3%82%AB%E3%83%A9%E3%83%BC%E3%83%87%E3%82%A3%E3%82%B9%E3%83%97%E3%83%AC%E3%82%A4-%E3%82%B9%E3%83%88%E3%83%AC%E3%82%B9%E3%83%A2%E3%83%8B%E3%82%BF%E3%83%AA%E3%83%B3%E3%82%B0-50%E7%A8%AE%E3%82%B9%E3%83%9D%E3%83%BC%E3%83%84%E3%83%A2%E3%83%BC%E3%83%89/dp/B0FBWG7S2Y/ref=zg_bs_g_sports_d_sccl_28/358-0841445-7637324?psc=1&tag=run2die-22&language=ja_JP&currency=JPY
+    quote: 購入後3ヶ月で壊れました。突然バイブレーションが継続的に現れ、それに伴いバッテリーが一気に減りその後通信不良でつながりません。
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:53:28+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: amazfit
+      model: bip 5
+  kind: known_issue
+  domain: durability
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: case/buttons
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Turkish market: Bip 5 reported with poor build quality and bad service'
+      body: 'The Turkish complaints platform Şikayetvar lists these as the Bip 5''s disadvantages in its
+        comparison with the Huawei Watch Fit 3: problematic software updates, poor case/strap quality,
+        bad service, problematic buttons/sockets, and expensive service fees. This is the only Turkish-language
+        source that returned substantive complaint content.'
+      advice: In Turkey, expect weak after-sales support and high repair costs; the case and button quality
+        are reported as subpar.
+    tr:
+      title: 'Türkiye pazarı: Bip 5 kötü yapı kalitesi ve kötü hizmetle bildiriliyor'
+      body: 'Türk şikayet platformu Şikayetvar, Huawei Watch Fit 3 ile karşılaştırmasında bunları Bip
+        5''in dezavantajları olarak listeliyor: sorunlu yazılım güncellemeleri, kötü kasa/kayış kalitesi,
+        kötü hizmet, sorunlu düğmeler/soketler ve pahalı servis ücretleri. Bu, önemli şikayet içeriği
+        döndüren tek Türkçe kaynak.'
+      advice: Türkiye'de zayıf satış sonrası destek ve yüksek onarım maliyetleri bekleyin; kasa ve düğme
+        kalitesi yetersiz olarak bildiriliyor.
+  evidence:
+  - url: https://www.sikayetvar.com/karsilastir/amazfit-bip-5-vs-huawei-watch-fit-3
+    quote: '- Yazılım-güncelleme sorunlu
+
+      - Gövde-kordon kalitesiz
+
+      - Kötü servis hizmeti
+
+      - Tuş-soket sorunlu
+
+      - Pahalı servis ücreti'
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:52:49+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      model: smart band 11 active
+  kind: known_issue
+  domain: display
+  severity: high
+  consequence: ''
+  detection: ''
+  component: touch panel
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Touch panel stops responding, alarm cannot be dismissed (display/input)
+      body: 'Owner review on Amazon.co.jp (query ''Xiaomi Smart Band 11 Active common problems''): one
+        of two units bought died within a year when the touch panel stopped responding, so an active alarm
+        could not be dismissed.'
+      advice: A dead touch panel makes the band unusable and can trap an alarm; this is a hardware failure,
+        not fixable by settings.
+    tr:
+      title: Dokunmatik panel yanıt vermeyi bırakıyor, alarm kapatılamıyor (ekran/giriş)
+      body: 'Amazon.co.jp''de sahip incelemesi (sorgu ''Xiaomi Smart Band 11 Active common problems''):
+        satın alınan iki üniteden biri, dokunmatik panel yanıt vermeyi bıraktığı için bir yıl içinde öldü,
+        bu yüzden etkin bir alarm kapatılamadı.'
+      advice: Ölü bir dokunmatik panel bandı kullanılamaz hale getirir ve bir alarmı tuzağa düşürebilir;
+        bu bir donanım arızasıdır, ayarlarla düzeltilemez.
+  evidence:
+  - url: https://www.amazon.co.jp/Xiaomi-%E3%82%B7%E3%83%A3%E3%82%AA%E3%83%9F%E3%82%B9%E3%83%9E%E3%83%BC%E3%83%88%E3%83%90%E3%83%B3%E3%83%89-60Hz%E3%82%AB%E3%83%A9%E3%83%BC%E3%83%87%E3%82%A3%E3%82%B9%E3%83%97%E3%83%AC%E3%82%A4-%E3%82%B9%E3%83%88%E3%83%AC%E3%82%B9%E3%83%A2%E3%83%8B%E3%82%BF%E3%83%AA%E3%83%B3%E3%82%B0-50%E7%A8%AE%E3%82%B9%E3%83%9D%E3%83%BC%E3%83%84%E3%83%A2%E3%83%BC%E3%83%89/dp/B0FBWG7S2Y/ref=zg_bs_g_sports_d_sccl_28/358-0841445-7637324?psc=1&tag=run2die-22&language=ja_JP&currency=JPY
+    quote: 片方は動作するものの、タッチパネルが全く反応しなくなったので鳴り出したアラームを止めることもできません
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:53:28+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: amazfit
+      model: bip 5
+  kind: known_issue
+  domain: general
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: firmware
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Bip 5 software glitches: phantom alarms and failed watch-face sync'
+      body: Spanish Amazon review — after 3 months the watch began vibrating for dismissed alarms and
+        failed to sync watch faces; official service could not fix it and Amazon returned it unchanged.
+        The Turkish Şikayetvar comparison page independently lists 'Yazılım-güncelleme sorunlu' (software/update
+        problematic) among the Bip 5's disadvantages.
+      advice: Software faults may not be fixable by the official service channel; budget for the possibility
+        of a dead unit after a few months.
+    tr:
+      title: 'Bip 5 yazılım aksaklıkları: hayalet alarmlar ve başarısız saat kadranı senkronizasyonu'
+      body: İspanyol Amazon incelemesi — 3 ay sonra saat, kapatılmış alarmlar için titreşmeye başladı
+        ve saat kadranlarını senkronize edemedi; resmi servis düzeltemedi ve Amazon değiştirmeden iade
+        etti. Türk Şikayetvar karşılaştırma sayfası bağımsız olarak Bip 5'in dezavantajları arasında 'Yazılım-güncelleme
+        sorunlu' (yazılım/güncelleme sorunlu) ifadesini listeliyor.
+      advice: Yazılım arızaları resmi servis kanalı tarafından düzeltilemeyebilir; birkaç ay sonra ölü
+        bir ünite olasılığı için bütçe ayırın.
+  evidence:
+  - url: https://www.amazon.es/-/pt/dp/B0C8P8ZXQ5?crid=HGXNUELC3647&dib=eyJ2IjoiMSJ9.UrsDRLyEtO7CnggrmpZjMSX3FyH3Z13mmJvZENAHLnE04o2pwNSRHEV9xm1QSNtvaAyGRAcmrM2SeXkwsE0IEKxRGqNu0UCul--qdqvRdvW9M-3fkoLMm3wG_i6rH6N5lQMVOoT2HPe0cgUjWx-vA1OBuwmHgUlO0G9ENWshX9HHVyy8g3sLhREST7XRlJBaaNyAuGn9dylYM78JagITEsWM_7TpRr2VUg7a_XdQDeo.GfBifhA1EFp5genx12KbPzX5XO1fmSTBJ2-GQaFImu8&dib_tag=se&keywords=smart%2Bwatch&nsdOptOutParam=true&psr=EY17&qid=1732039484&s=todays-deals&sprefix=smarrtwatch%2Ctodays-deals%2C117&sr=1-22&srs=21350206031&th=1&linkCode=sl1&tag=4gnews08-21&linkId=8c068693656c1060e31eee6ae72437a5&language=pt_PT&ref_=as_li_ss_tl
+    quote: Edito porque después de 3 meses ha empezado a dar fallos de software. Empieza a vibrar con
+      alarmas descartadas, no se sincronizan esferas.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:52:49+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: amazfit
+      model: bip 5
+  kind: known_issue
+  domain: battery
+  severity: high
+  consequence: ''
+  detection: ''
+  component: battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Bip 5 battery collapses from 10 days to hours after ~2 months
+      body: Italian Amazon verified review, April 2026. Battery that was advertised at 10 days suddenly
+        lasted only hours after roughly two months of ownership; a repair attempt returned the watch unchanged
+        ('nessun riscontro') and the owner requested a refund.
+      advice: Buy with a return window long enough to test past the 2-month mark, and be prepared that
+        warranty repair may not resolve a battery fault.
+    tr:
+      title: Bip 5 bataryası ~2 ay sonra 10 günden saatlere düşüyor
+      body: İtalyan Amazon doğrulanmış incelemesi, Nisan 2026. 10 gün olarak tanıtılan batarya, yaklaşık
+        iki aylık kullanımdan sonra aniden yalnızca saatler dayandı; bir onarım girişimi saati değişmeden
+        geri döndürdü ('nessun riscontro') ve sahibi para iadesi talep etti.
+      advice: 2 aylık süreyi aşacak kadar uzun bir iade penceresiyle satın alın ve garanti onarımının
+        bir batarya arızasını çözmeyebileceğine hazırlıklı olun.
+  evidence:
+  - url: https://www.amazon.it/-/en/Amazfit-Smartwatch-Bluetooth-Battery-Fitness/dp/B08F3DKSR4/ref=pb_allspark_purchase_sims_desktop_d_sccl_2_5/257-7023155-9982902?pd_rd_w=rn7Cj&content-id=amzn1.sym.658c1114-7ef9-4b39-8f39-d0dc68616131&pf_rd_p=658c1114-7ef9-4b39-8f39-d0dc68616131&pf_rd_r=CZVFVG6CCSWT1YC4WRZR&pd_rd_wg=ohl6e&pd_rd_r=ba55f51c-1e6a-407d-afab-438d6601682b&pd_rd_i=B0CM6C6W3G&psc=1
+    quote: con una durata batteria promessa di 10 giorni, a marzo 2026 ha cominciato a dare problemi (batteria
+      che improvvisamente durava poche ore, un giorno massimo e continua disconnessione dal bluethoot).
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:52:49+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      model: smart band 11 active
+  kind: known_issue
+  domain: display
+  severity: high
+  consequence: ''
+  detection: ''
+  component: display panel
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Screen goes black and unit stops charging at ~4 months (display/early failure)
+      body: 'Owner review on Amazon.co.jp (from query ''Xiaomi Smart Band 11 Active common problems''):
+        the screen went black at 4 months and the band would no longer charge or pair. This is an early
+        hardware/display death, not a settings issue.'
+      advice: Expect a meaningful chance the display dies within the first year; keep the receipt and
+        check warranty coverage before relying on this band long-term.
+    tr:
+      title: Ekran kararıyor ve cihaz ~4 ayda şarj olmayı bırakıyor (ekran/erken arıza)
+      body: 'Amazon.co.jp üzerindeki sahip incelemesi (''Xiaomi Smart Band 11 Active common problems''
+        sorgusundan): ekran 4 ayda karardı ve bileklik artık şarj olmuyor veya eşleşmiyordu. Bu, bir ayar
+        sorunu değil, erken bir donanım/ekran ölümüdür.'
+      advice: Ekranın ilk yıl içinde ölmesi için kayda değer bir olasılık bekleyin; fişi saklayın ve bu
+        bilekliğe uzun vadeli güvenmeden önce garanti kapsamını kontrol edin.
+  evidence:
+  - url: https://www.amazon.co.jp/Xiaomi-%E3%82%B7%E3%83%A3%E3%82%AA%E3%83%9F%E3%82%B9%E3%83%9E%E3%83%BC%E3%83%88%E3%83%90%E3%83%B3%E3%83%89-60Hz%E3%82%AB%E3%83%A9%E3%83%BC%E3%83%87%E3%82%A3%E3%82%B9%E3%83%97%E3%83%AC%E3%82%A4-%E3%82%B9%E3%83%88%E3%83%AC%E3%82%B9%E3%83%A2%E3%83%8B%E3%82%BF%E3%83%AA%E3%83%B3%E3%82%B0-50%E7%A8%AE%E3%82%B9%E3%83%9D%E3%83%BC%E3%83%84%E3%83%A2%E3%83%BC%E3%83%89/dp/B0FBWG7S2Y/ref=zg_bs_g_sports_d_sccl_28/358-0841445-7637324?psc=1&tag=run2die-22&language=ja_JP&currency=JPY
+    quote: 残念ながら半年持ちませんでした。 4ヶ月で画面が真っ暗に。 充電もできず、Bluetoothも繋がらなくなりました。
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:53:28+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      model: smart band 11 active
+  kind: known_issue
+  domain: battery
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: charging contacts / pogo pins
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Charging contacts oxidize; band fails to power on (battery/charging)
+      body: Xiaomi's official FAQ (query 'Xiaomi Smart Band 11 Active pil sorunu') lists depleted battery
+        and oxidized charging contacts as the primary reasons the band fails to power on, and warns power-bank
+        charging may not reach full capacity.
+      advice: Keep the charging contacts clean and avoid power-bank charging; if the band won't power
+        on, cleaning the contacts is the first fix to try.
+    tr:
+      title: Şarj kontakları oksitleniyor; bileklik açılmıyor (batarya/şarj)
+      body: Xiaomi'nin resmi SSS'si ('Xiaomi Smart Band 11 Active pil sorunu' sorgusu), bilekliğin açılmamasının
+        başlıca nedenleri olarak tükenmiş bataryayı ve oksitlenmiş şarj kontaklarını listeler ve power-bank
+        ile şarjın tam kapasiteye ulaşmayabileceği konusunda uyarır.
+      advice: Şarj kontaklarını temiz tutun ve power-bank ile şarjdan kaçının; bileklik açılmıyorsa denenecek
+        ilk çözüm kontakları temizlemektir.
+  evidence:
+  - url: https://www.mi.com/pk/support/faq/details/KA-728033/
+    quote: The Xiaomi Smart Band 11 Active generally fails to power on because the battery is depleted.
+      If the band cannot be charged, the charging contacts may be oxidized.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:34:11+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: amazfit
+      model: bip 5
+  kind: known_issue
+  domain: durability
+  severity: high
+  consequence: ''
+  detection: ''
+  component: case/sealing
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Bip 5 IP68 claim fails in practice — watch dies on water contact
+      body: Two separate verified Czech reviews on Alza.hu (Nov 2024 and Sep 2024) report the watch dying
+        after water contact despite the IP68 rating; both warranty claims were rejected with 'unknown
+        fluid ingress'.
+      advice: Do not rely on the IP68 rating for any water exposure — even tap splash killed units, and
+        the manufacturer rejected the claims. Treat it as a splash-resistant watch at most.
+    tr:
+      title: Bip 5 IP68 iddiası pratikte başarısız — saat su temasıyla ölüyor
+      body: Alza.hu üzerindeki iki ayrı doğrulanmış Çek incelemesi (Kasım 2024 ve Eylül 2024), IP68 derecesine
+        rağmen saatin su temasından sonra öldüğünü bildiriyor; her iki garanti talebi de 'bilinmeyen sıvı
+        girişi' gerekçesiyle reddedildi.
+      advice: Herhangi bir su maruziyeti için IP68 derecesine güvenmeyin — musluk sıçraması bile cihazları
+        öldürdü ve üretici talepleri reddetti. En fazla sıçramaya dayanıklı bir saat olarak değerlendirin.
+  evidence:
+  - url: https://m.alza.hu/EN/reviews/amazfit-bip-5-pastel-pink-7844910.htm
+    quote: I also bought a watch that has a claimed IP68 protection but the user must not walk around
+      water. After 2 months they stopped working and the claim was rejected with the justification of
+      unknown fluid ingress.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:52:49+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: amazfit
+      model: bip 5
+  kind: known_issue
+  domain: connectivity
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: Bluetooth radio
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Bip 5 Bluetooth connection drops repeatedly, needs resets
+      body: 'Canadian Amazon review (July 2024) — the watch repeatedly drops the phone connection and
+        requires resets; after a software update it stopped tracking health data entirely. A Finnish retail
+        review (Verkkokauppa) independently confirms: ''Muuten toimiva laite, mutta välillä kadottaa yhteyden
+        kännykkään'' (works but occasionally loses connection to the phone).'
+      advice: Expect to re-pair the watch regularly; if you rely on notifications, verify they arrive
+        reliably before committing.
+    tr:
+      title: Bip 5 Bluetooth bağlantısı tekrar tekrar kopuyor, sıfırlama gerektiriyor
+      body: 'Kanada Amazon incelemesi (Temmuz 2024) — saat telefon bağlantısını tekrar tekrar koparıyor
+        ve sıfırlama gerektiriyor; bir yazılım güncellemesinden sonra sağlık verilerini tamamen izlemeyi
+        bıraktı. Bir Finlandiya perakende incelemesi (Verkkokauppa) bağımsız olarak doğruluyor: ''Muuten
+        toimiva laite, mutta välillä kadottaa yhteyden kännykkään'' (çalışıyor ama ara sıra telefona bağlantıyı
+        kaybediyor).'
+      advice: Saati düzenli olarak yeniden eşleştirmeyi bekleyin; bildirimlere güveniyorsanız, taahhütte
+        bulunmadan önce bunların güvenilir şekilde geldiğini doğrulayın.
+  evidence:
+  - url: https://www.amazon.ca/Amazfit-Smartwatch-Fitness-Bluetooth-Monitoring/dp/B0C7GJDZD7
+    quote: It is constantly dropping from my phone and needs to be reset, and even if I am not wearing
+      it every 8 days at 7pm it tells me I have elevated signs of stress and I need to calm down.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:52:49+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      model: smart band 11 active
+  kind: known_issue
+  domain: connectivity
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: Bluetooth radio
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Bluetooth drops frequently, requires re-pairing (connectivity)
+      body: 'Korean marketplace review on danawa (query ''Xiaomi Smart Band 11 Active şikayetvar şikayet''):
+        Bluetooth connection drops often and must be re-entered each time.'
+      advice: Expect to re-pair the band periodically; if notifications matter to you, verify pairing
+        stability before relying on it.
+    tr:
+      title: Bluetooth sık sık kopuyor, yeniden eşleştirme gerektiriyor (bağlantı)
+      body: 'danawa üzerindeki Kore pazar yeri incelemesi (''Xiaomi Smart Band 11 Active şikayetvar şikayet''
+        sorgusu): Bluetooth bağlantısı sık sık kopuyor ve her seferinde yeniden girilmesi gerekiyor.'
+      advice: Bilekliği periyodik olarak yeniden eşleştirmeyi bekleyin; bildirimler sizin için önemliyse,
+        güvenmeden önce eşleştirme kararlılığını doğrulayın.
+  evidence:
+  - url: https://prod.danawa.com/info/popup/productReviewPopup.php?productSeq=78978917&companyCode=EE128&linkProductSeq=1916762119&linkProdName=%EC%83%A4%EC%98%A4%EB%AF%B8+%EC%83%A4%EC%98%A4%EB%AF%B8+%EB%AF%B8%EB%B0%B4%EB%93%9C+11+%EC%95%A1%ED%8B%B0%EB%B8%8C+%ED%95%9C%EA%B8%80+%EC%A0%95%ED%92%88+%EA%B5%AD%EB%82%B4+A%2FS&safeTradeUrl=https%3A%2F%2Fprod.danawa.com%2Fbridge%2FloadingBridge.html%3Fcate1%3D224%26cate2%3D223027%26cate3%3D223033%26cate4%3D0%26pcode%3D78978917%26cmpnyc%3DEE128%26safe_trade%3D4%26fee_type%3DT%26link_pcode%3D1916762119%26package%3D0%26setpc%3D0%26keyword%3DMI300X%26r%3D17893932253612
+    quote: 블루트스 연결이 자주 끊겨요 매번 새로 입력해야 하네요
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:53:28+00:00'

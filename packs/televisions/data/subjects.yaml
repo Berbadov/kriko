@@ -1,0 +1,205 @@
+# Subjects — the things this pack knows about.
+#
+# `identity` carries exactly the keys `pack.toml` declares for the
+# kind: that dictionary is hashed to the subject id.
+- kind: product
+  label: Samsung Q60B
+  identity:
+    brand: samsung
+    series: Q60B
+  attributes:
+    panel_type:
+      value: QLED (VA)
+      source: https://www.altroconsumo.it/reclamare/bacheca-dei-reclami/difetto-seriale-pannello-bootl/204c7fbb8df4a92a38
+    resolution:
+      value: 4K UHD
+      source: https://www.altroconsumo.it/reclamare/bacheca-dei-reclami/difetto-seriale-pannello-bootl/204c7fbb8df4a92a38
+    smart_platform:
+      value: Tizen
+      source: https://www.altroconsumo.it/reclamare/bacheca-dei-reclami/difetto-seriale-pannello-bootl/204c7fbb8df4a92a38
+  aliases:
+  - QE50Q60BAU
+  - QE43Q60BAU
+  - QE55Q60BAU
+  - QE65Q60BAU
+- kind: product
+  label: Samsung QN90A
+  identity:
+    brand: samsung
+    series: QN90A
+  attributes:
+    panel_type:
+      value: Neo QLED (Mini LED)
+      source: https://www.computerbase.de/forum/threads/tv-knackt-nach-2-jahren.2248586/
+    resolution:
+      value: 4K UHD
+      source: https://www.computerbase.de/forum/threads/tv-knackt-nach-2-jahren.2248586/
+    smart_platform:
+      value: Tizen
+      source: https://www.computerbase.de/forum/threads/tv-knackt-nach-2-jahren.2248586/
+  aliases:
+  - QE55QN90A
+  - QE65QN90A
+  - QE75QN90A
+  - QE85QN90A
+- kind: product
+  label: Samsung QN90F
+  identity:
+    brand: samsung
+    series: QN90F
+  attributes:
+    panel_type:
+      value: Neo QLED (Mini LED)
+      source: https://www.avforums.com/threads/samsung-qn90f-neo-qled-owners.2543400/page-14
+    resolution:
+      value: 4K UHD
+      source: https://www.avforums.com/threads/samsung-qn90f-neo-qled-owners.2543400/page-14
+    smart_platform:
+      value: Tizen
+      source: https://www.avforums.com/threads/samsung-qn90f-neo-qled-owners.2543400/page-14
+  aliases:
+  - QE55QN90F
+  - QE65QN90F
+  - QE75QN90F
+- kind: product
+  label: LG C1
+  identity:
+    brand: lg
+    series: C1
+  attributes:
+    panel_type:
+      value: OLED
+      source: https://www.hardware.com.br/noticias/fire-tv-tela-parada-burn-in-tv-oled/
+    resolution:
+      value: 4K UHD
+      source: https://www.hardware.com.br/noticias/fire-tv-tela-parada-burn-in-tv-oled/
+    smart_platform:
+      value: webOS
+      source: https://www.hardware.com.br/noticias/fire-tv-tela-parada-burn-in-tv-oled/
+  aliases:
+  - OLED55C1
+  - OLED65C1
+  - OLED77C1
+- kind: product
+  label: LG QNED81
+  identity:
+    brand: lg
+    series: QNED81
+  attributes:
+    panel_type:
+      value: QNED (Mini LED)
+      source: https://techolay.net/sosyal/konu/lg-tv-isik-sizmasi-sorunu.189504/
+    resolution:
+      value: 4K UHD
+      source: https://techolay.net/sosyal/konu/lg-tv-isik-sizmasi-sorunu.189504/
+    smart_platform:
+      value: webOS
+      source: https://techolay.net/sosyal/konu/lg-tv-isik-sizmasi-sorunu.189504/
+  aliases:
+  - 65QNED81re
+- kind: product
+  label: LG QNED87
+  identity:
+    brand: lg
+    series: QNED87
+  attributes:
+    panel_type:
+      value: QNED (Mini LED)
+      source: https://emby.media/community/topic/146025-webos-25-update-question/
+    resolution:
+      value: 4K UHD
+      source: https://emby.media/community/topic/146025-webos-25-update-question/
+    smart_platform:
+      value: webOS
+      source: https://emby.media/community/topic/146025-webos-25-update-question/
+  aliases:
+  - QNED87xxx
+- kind: product
+  label: Sony Bravia XR A80C
+  identity:
+    brand: sony
+    series: A80C
+  attributes:
+    panel_type:
+      value: OLED
+      source: https://it.ifixit.com/Risposte/Visualizza/931560/Help+determining+cause+of+issues+8+Red+Flashes
+    resolution:
+      value: 4K UHD
+      source: https://it.ifixit.com/Risposte/Visualizza/931560/Help+determining+cause+of+issues+8+Red+Flashes
+    smart_platform:
+      value: Google TV
+      source: https://it.ifixit.com/Risposte/Visualizza/931560/Help+determining+cause+of+issues+8+Red+Flashes
+  aliases:
+  - XR-55A80CJ
+- kind: product
+  label: Sony Bravia 8m2
+  identity:
+    brand: sony
+    series: 8m2
+  attributes:
+    panel_type:
+      value: OLED
+      source: https://www.avmagazine.it/forum/threads/aggiornamento-bravia-8m2.344862/
+    resolution:
+      value: 4K UHD
+      source: https://www.avmagazine.it/forum/threads/aggiornamento-bravia-8m2.344862/
+    smart_platform:
+      value: Google TV
+      source: https://www.avmagazine.it/forum/threads/aggiornamento-bravia-8m2.344862/
+  aliases:
+  - Bravia 8m2
+- kind: product
+  label: TCL C805
+  identity:
+    brand: tcl
+    series: C805
+  attributes:
+    panel_type:
+      value: Mini LED
+      source: https://forum.softpedia.com/topic/1233258-televizoare-tcl-8xx-9xx-update-reglaje-probleme-etc/page__st__738__p__30864010
+    resolution:
+      value: 4K UHD
+      source: https://forum.softpedia.com/topic/1233258-televizoare-tcl-8xx-9xx-update-reglaje-probleme-etc/page__st__738__p__30864010
+    smart_platform:
+      value: Google TV
+      source: https://forum.softpedia.com/topic/1233258-televizoare-tcl-8xx-9xx-update-reglaje-probleme-etc/page__st__738__p__30864010
+  aliases:
+  - 55C805
+  - 65C805
+  - 75C805
+- kind: product
+  label: TCL C845
+  identity:
+    brand: tcl
+    series: C845
+  attributes:
+    panel_type:
+      value: Mini LED
+      source: https://forum.softpedia.com/topic/1233258-televizoare-tcl-8xx-9xx-update-reglaje-probleme-etc/page__st__738__p__30864010
+    resolution:
+      value: 4K UHD
+      source: https://forum.softpedia.com/topic/1233258-televizoare-tcl-8xx-9xx-update-reglaje-probleme-etc/page__st__738__p__30864010
+    smart_platform:
+      value: Google TV
+      source: https://forum.softpedia.com/topic/1233258-televizoare-tcl-8xx-9xx-update-reglaje-probleme-etc/page__st__738__p__30864010
+  aliases:
+  - 55C845
+  - 65C845
+  - 75C845
+- kind: product
+  label: Vestel 58UT9850
+  identity:
+    brand: vestel
+    series: 58UT9850
+  attributes:
+    panel_type:
+      value: LED
+      source: https://turkpidya.com/tvs-in-turkey/
+    resolution:
+      value: 4K UHD
+      source: https://turkpidya.com/tvs-in-turkey/
+    screen_size_inch:
+      value: '58'
+      source: https://turkpidya.com/tvs-in-turkey/
+  aliases:
+  - 58UT9850

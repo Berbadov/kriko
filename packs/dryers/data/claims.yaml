@@ -1,0 +1,2209 @@
+# Claims — what is known to go wrong, each with the page it came from and the quote
+# that was read there. A claim without both is not in this file.
+- subject:
+    kind: product
+    identity:
+      brand: Samsung
+      series: Heat pump
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: drum / overall unit
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Samsung tumble dryer burned and exploded during use (Turkey)
+      body: 'Turkish owner complaint on Şikayetvar: a Samsung tumble dryer burned and exploded despite
+        regular maintenance and surge protection. The owner reports the drum began pounding as if about
+        to burst before the failure.'
+      advice: Turkish owners of Samsung tumble dryers should not run the machine unattended, especially
+        if it makes unusual pounding or rattling noises. If a burning smell or smoke appears, unplug immediately
+        and do not restart.
+    tr:
+      title: Samsung çamaşır kurutma makinesi kullanım sırasında yandı ve patladı (Türkiye)
+      body: 'Şikayetvar''da Türk sahibinin şikayeti: bir Samsung çamaşır kurutma makinesi düzenli bakıma
+        ve dalgalanma korumasına rağmen yandı ve patladı. Sahibi, arıza öncesinde tamburun patlayacakmış
+        gibi vurmaya başladığını bildiriyor.'
+      advice: Samsung çamaşır kurutma makinelerinin Türk sahipleri, özellikle alışılmadık vurma veya takırdama
+        sesleri çıkarıyorsa makineyi gözetimsiz çalıştırmamalıdır. Yanık kokusu veya duman görülürse derhal
+        fişi çekin ve yeniden başlatmayın.
+  evidence:
+  - url: https://www.sikayetvar.com/samsung/kurutma-makinesi/kazan
+    quote: Çıkan kurutma makinesi yandı, patladı.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:54:04+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Arcelik
+      series: Ares Condenser
+  kind: known_issue
+  domain: general
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: Heat pump, condenser pump, NTC sensor, main board, door seal
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Owner complaint: Ares condenser dryer fails to dry despite multiple part replacements (seal,
+        door, heat pump, NTC sensor, main board, condenser pump)'
+      body: An owner reports an Ares condenser dryer that fails to dry clothes after 8 months, with the
+        authorized service replacing the seal, door, heat pump, NTC sensor, main board, and condenser
+        pump — none of which resolved the issue.
+      advice: This documents a persistent drying-performance defect that survives multiple part replacements,
+        suggesting a systemic design or airflow issue rather than a single failing component.
+    tr:
+      title: 'Sahip şikayeti: Ares kondenser kurutma makinesi, birden fazla parça değişimine (keçe, kapı,
+        ısı pompası, NTC sensörü, ana kart, kondenser pompası) rağmen kurutmuyor'
+      body: Bir sahip, 8 ay sonra çamaşırları kurutmayan bir Ares kondenser kurutma makinesini bildiriyor;
+        yetkili servis keçeyi, kapıyı, ısı pompasını, NTC sensörünü, ana kartı ve kondenser pompasını
+        değiştirmiş — hiçbiri sorunu çözmemiştir.
+      advice: Bu, birden fazla parça değişimine dayanan kalıcı bir kurutma performansı kusurunu belgelemektedir;
+        bu da tek bir arızalı bileşenden ziyade sistemik bir tasarım veya hava akışı sorununa işaret etmektedir.
+  evidence:
+  - url: https://www.sikayetvar.com/arcelik/arcelik-kurutma-makinesi-8-aylik-cozulmeyen-ariza-musteri-magduriyeti-ve-yenisiyle-degisim-talebi
+    quote: Yetkili servis bu süreçte sızdırmazlık contası, kapak, ısı pompası, ntc sensör, ana kart ve
+      kondanser pompası gibi pek çok parçayı değiştirdi.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:47:09+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Indesit
+      series: Post-2015 models
+  kind: known_issue
+  domain: fire
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: heating element
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'WSWS: 5.3M Indesit/Hotpoint dryers sold in UK 2004–2015 also sold across Europe; 2018 Indesit
+        dryer fire'
+      body: Confirms the affected dryers were sold across Europe (not just UK), relevant to the EU market
+        in this pack. Also records a December 2018 incident where an Indesit dryer burst into flames.
+      advice: Shows the fire defect affected units sold across Europe, not just the UK. For the EU/TR
+        market this is the relevant documented history; post-2015 units are outside the 2004–2015 window.
+    tr:
+      title: 'WSWS: 2004–2015 arasında Birleşik Krallık''ta satılan 5,3 milyon Indesit/Hotpoint kurutma
+        makinesi Avrupa genelinde de satıldı; 2018 Indesit kurutma makinesi yangını'
+      body: Etkilenen kurutma makinelerinin yalnızca Birleşik Krallık'ta değil, Avrupa genelinde satıldığını
+        doğrular; bu paketteki AB pazarıyla ilgilidir. Ayrıca bir Indesit kurutma makinesinin alevler
+        içinde kaldığı Aralık 2018 olayını kaydeder.
+      advice: Yangın kusurunun yalnızca Birleşik Krallık'ta değil, Avrupa genelinde satılan üniteleri
+        etkilediğini gösterir. AB/TR pazarı için ilgili belgelenmiş geçmiş budur; 2015 sonrası üniteler
+        2004–2015 aralığının dışındadır.
+  evidence:
+  - url: https://www.wsws.org/en/articles/2019/12/27/reca-d27.pdf
+    quote: In November 2015, Whirlpool revealed fire risks with 5.3 million dryers sold in the UK between
+      April 2004 and September 2015. These dangerous appliances were also sold throughout Europe—in Croatia,
+      Denmark, France, Germany, Ireland, Portugal, Slovakia, Slovenia and Spain.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:51:58+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Arcelik
+      series: Ares Condenser
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: Epcos B32332 capacitor (9uF)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Epcos B32332 capacitor with defective Zytel FR50 plastic caused fires; voluntary recall of
+        8-9 kg Ares Condenser Dryers
+      body: Arcelik's own court filing (response to interrogatories in Arcelik v. DuPont) confirms a voluntary
+        recall of 8-9 kg Ares Condenser Dryers with Epcos 9uF capacitors from weeks 11-19 of 2012, following
+        21 observed incidents. UK notice issued May 31, 2017.
+      advice: Owners of 8-9 kg Ares Condenser Dryers manufactured around 2012 should check whether their
+        unit contains an Epcos 9uF B32332 capacitor from weeks 11-19 of 2012 and contact Arcelik for the
+        recall rework.
+    tr:
+      title: Kusurlu Zytel FR50 plastiği içeren Epcos B32332 kondansatörü yangınlara neden oldu; 8-9 kg
+        Ares Condenser Dryers için gönüllü geri çağırma
+      body: Arcelik'in kendi mahkeme dosyası (Arcelik v. DuPont davasında sorgulara yanıt) 2012'nin 11-19.
+        haftalarından Epcos 9uF kondansatörlü 8-9 kg Ares Condenser Dryers için 21 gözlenen olayın ardından
+        gönüllü bir geri çağırma olduğunu doğrular. Birleşik Krallık bildirimi 31 Mayıs 2017'de yayımlandı.
+      advice: 2012 civarında üretilen 8-9 kg Ares Condenser Dryers sahipleri, ünitelerinin 2012'nin 11-19.
+        haftalarından bir Epcos 9uF B32332 kondansatörü içerip içermediğini kontrol etmeli ve geri çağırma
+        onarımı için Arcelik ile iletişime geçmelidir.
+  evidence:
+  - url: https://ia802201.us.archive.org/26/items/gov.uscourts.ded.58044/gov.uscourts.ded.58044.74.1.pdf
+    quote: Arcelik therefore initiated a voluntary recall of 8- 9 kg Ares Condenser Dryers that may have
+      been manufactured with Epcos 9uF capacitors produced in weeks 11- 19 of 2012. The United Kingdom
+      issued a related notice on May 31, 2017.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:47:09+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Whirlpool
+      series: Various models
+  kind: known_issue
+  domain: fire
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: heating element / lint contact
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'UK Commons Library: Whirlpool identified fault in two dryer models; consumers waited up
+        to 16 months for repair'
+      body: The UK House of Commons Library briefing confirms Whirlpool identified the fault in two dryer
+        models (April 2004–September 2015) under Hotpoint, Indesit, Creda brands, and documents that consumers
+        waited up to 16 months for repairs despite being promised 6–8 weeks.
+      advice: If you own an affected machine, expect possible long delays for repair; consider demanding
+        replacement or refund instead.
+    tr:
+      title: 'Birleşik Krallık Avam Kamarası Kütüphanesi: Whirlpool iki kurutma makinesi modelinde arıza
+        tespit etti; tüketiciler onarım için 16 aya kadar bekledi'
+      body: Birleşik Krallık Avam Kamarası Kütüphanesi brifingi, Whirlpool'un Hotpoint, Indesit, Creda
+        markaları altında iki kurutma makinesi modelinde (Nisan 2004–Eylül 2015) arızayı tespit ettiğini
+        doğrular ve tüketicilerin 6–8 hafta vaat edilmesine rağmen onarımlar için 16 aya kadar beklediğini
+        belgeler.
+      advice: Etkilenen bir makineniz varsa, onarım için olası uzun gecikmeler bekleyin; bunun yerine
+        değişim veya para iadesi talep etmeyi düşünün.
+  evidence:
+  - url: https://commonslibrary.parliament.uk/research-briefings/cdp-2017-0123/
+    quote: 'In some cases, excess fluff coming into contact with the heating element, presented a fire
+      risk. The affected brands are: Hotpoint, Indesit, and Creda.'
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:51:01+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: beko
+      series: 6-7kg-condenser-2012
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: capacitor
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Beko confirms 6kg/7kg condenser dryer (2012) electrical component failure — voluntary corrective
+        action
+      body: Beko's own official safety notice for the 6kg & 7kg condenser tumble dryers manufactured May–October
+        2012, confirming a small number of incidents where an electrical component failed and overheated,
+        and offering a free in-home modification. This is the manufacturer's primary documentation for
+        the exact subject.
+      advice: Beko itself tells owners of affected 6kg/7kg condenser dryers built May–October 2012 to
+        stop using the machine and disconnect it, then call 0800 917 2018 (UK) for a free modification.
+        The affected models and serial ranges are listed on the page.
+    tr:
+      title: Beko 6kg/7kg kondenser kurutma makinesinde (2012) elektrikli bileşen arızasını doğruladı
+        — gönüllü düzeltici eylem
+      body: Beko'nun Mayıs–Ekim 2012'de üretilen 6kg ve 7kg kondenser çamaşır kurutma makineleri için
+        kendi resmi güvenlik bildirimi, bir elektrikli bileşenin arızalandığı ve aşırı ısındığı az sayıda
+        olayı doğrular ve ücretsiz evde modifikasyon sunar. Bu, tam olarak bu konuya ilişkin üreticinin
+        birincil belgesidir.
+      advice: Beko, Mayıs–Ekim 2012'de üretilen etkilenen 6kg/7kg kondenser kurutma makinelerinin sahiplerine
+        makineyi kullanmayı bırakmalarını ve fişini çekmelerini, ardından ücretsiz modifikasyon için 0800
+        917 2018'i (Birleşik Krallık) aramalarını söylüyor. Etkilenen modeller ve seri aralıkları sayfada
+        listelenmiştir.
+  evidence:
+  - url: https://www.beko.co.uk/safety/6kg-7kg-condenser-tumble-dryers
+    quote: Beko has been made aware of a small number of incidents involving our 6kg & 7kg Condenser Tumble
+      Dryers manufactured between May 2012 and October 2012, where an electrical component has failed
+      and overheated, leading to a potential risk of fire.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:47:44+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Samsung
+      series: Heat pump
+  kind: known_issue
+  domain: fire
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: rear thermal insulation material
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Samsung DV90BB9445GM heat pump dryer leaks bitumen/tar from rear insulation onto electrical
+        cable (Turkey)
+      body: 'Turkish owner complaint (Şikayetvar): the thermal insulation material at the rear of a DV90BB9445GM
+        heat pump dryer separated and leaked bitumen/tar onto the bathroom floor and the appliance''s
+        electrical cable, raising fire/safety concerns. The unit was still under warranty.'
+      advice: If you own a Samsung DV90BB9445GM (or nearby DV90BB-series) heat pump dryer in Turkey, inspect
+        the rear insulation and power cable for tar/bitumen seepage. A contaminated cable is a fire hazard;
+        stop use and demand service under warranty.
+    tr:
+      title: Samsung DV90BB9445GM ısı pompalı kurutucu, arka izolasyondan elektrik kablosuna bitüm/katran
+        sızdırıyor (Türkiye)
+      body: 'Türk sahibinin şikayeti (Şikayetvar): DV90BB9445GM ısı pompalı kurutucunun arkasındaki ısı
+        yalıtım malzemesi ayrılarak banyo zeminine ve cihazın elektrik kablosuna bitüm/katran sızdırdı,
+        bu da yangın/güvenlik endişelerine yol açtı. Ünite hâlâ garanti kapsamındaydı.'
+      advice: Türkiye'de bir Samsung DV90BB9445GM (veya yakın DV90BB serisi) ısı pompalı kurutucunuz varsa,
+        arka izolasyonu ve güç kablosunu katran/bitüm sızıntısı açısından kontrol edin. Kirlenmiş bir
+        kablo yangın tehlikesidir; kullanımı durdurun ve garanti kapsamında servis talep edin.
+  evidence:
+  - url: https://www.sikayetvar.com/samsung/isi-pompali-kurutma-makinesinde-zift-sizintisi-ve-guvenlik-endisesi
+    quote: Samsung DV90BB9445GM model ısı pompalı kurutma makinesinin arkasındaki ısı yalıtım malzemesi
+      ayrılarak banyoya zift akıttığını 23.08.2026 tarihinde fark ettim.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:54:04+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Arcelik
+      series: Ares Condenser
+  kind: known_issue
+  domain: general
+  severity: low
+  consequence: ''
+  detection: ''
+  component: Condenser block / condenser filter
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Arcelik service guide: condenser block requires periodic cleaning; clogged condenser filter
+        stops drying'
+      body: A Turkish service guide notes that condenser-type Arcelik dryers require periodic cleaning
+        of the condenser block, and that neglecting the lower condenser filter causes the machine to stop
+        drying.
+      advice: Owners should clean the condenser filter regularly; failure to do so is the most common
+        cause of drying failure in condenser models.
+    tr:
+      title: 'Arcelik servis kılavuzu: kondenser bloğu periyodik temizlik gerektirir; tıkanmış kondenser
+        filtresi kurutmayı durdurur'
+      body: Bir Türk servis kılavuzu, kondenser tipi Arcelik kurutucuların kondenser bloğunun periyodik
+        olarak temizlenmesi gerektiğini ve alt kondenser filtresinin ihmal edilmesinin makinenin kurutmayı
+        durdurmasına neden olduğunu belirtir.
+      advice: Sahipler kondenser filtresini düzenli olarak temizlemelidir; bunu yapmamak kondenser modellerinde
+        kurutma arızasının en yaygın nedenidir.
+  evidence:
+  - url: https://www.onlineservisim.com/markalar/arcelik/kurutma-makinesi
+    quote: 'Kondenserli (yoğuşmalı): daha kısa program, daha yüksek tüketim. Kondenser bloğu periyodik
+      temizlik istiyor.'
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:47:09+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: beko
+      series: 8-9kg-condenser-2012
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: third party supplied component (not named in this source)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Beko 8/9kg condenser dryers (DCU9330W/R, DCU8230, DSC85W, TKF8439A) recalled for fire risk
+        — component may overheat
+      body: Official UK government recall notice listing exactly the subject models, with recall date
+        31/05/2017 and production window May–November 2012.
+      advice: If you own one of these models manufactured between May and November 2012, stop using it
+        and contact Beko on 0800 917 2018 for a free in-home check and modification.
+    tr:
+      title: Beko 8/9kg kondenser kurutucular (DCU9330W/R, DCU8230, DSC85W, TKF8439A) yangın riski nedeniyle
+        geri çağrıldı — bileşen aşırı ısınabilir
+      body: Tam olarak söz konusu modelleri listeleyen resmi Birleşik Krallık hükümeti geri çağırma bildirimi;
+        geri çağırma tarihi 31/05/2017 ve üretim aralığı Mayıs–Kasım 2012.
+      advice: Mayıs ile Kasım 2012 arasında üretilen bu modellerden birine sahipseniz, kullanmayı durdurun
+        ve ücretsiz yerinde kontrol ve modifikasyon için 0800 917 2018 numarasından Beko ile iletişime
+        geçin.
+  evidence:
+  - url: https://www.gov.uk/government/uploads/system/uploads/attachment_data/file/621467/beko-blomberg-condenser-tumble-dryers.pdf
+    quote: Component may overheat, posing a risk of fire.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:48:21+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Whirlpool
+      series: Various models
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: heating element / lint contact
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Produktwarnung (Germany): Whirlpool safety notice for Hotpoint and Indesit dryers — lint
+        contact with heating element fire risk'
+      body: 'The German product warning site documents Whirlpool''s official safety notice for Hotpoint
+        and Indesit dryers made April 2004–September 2015: residual lint can contact the heating element
+        and create a fire risk. Initially Whirlpool said use under supervision was OK; later advice changed
+        to unplug.'
+      advice: German owners of Hotpoint or Indesit dryers from 2004–2015 should check the model list and,
+        per later UK guidance, unplug until modified.
+    tr:
+      title: 'Produktwarnung (Almanya): Whirlpool''un Hotpoint ve Indesit kurutucular için güvenlik bildirimi
+        — havın ısıtma elemanıyla teması yangın riski'
+      body: 'Alman ürün uyarı sitesi, Whirlpool''un Nisan 2004–Eylül 2015 arasında üretilen Hotpoint ve
+        Indesit kurutucular için resmi güvenlik bildirimini belgeliyor: kalan hav, ısıtma elemanıyla temas
+        ederek yangın riski oluşturabilir. Başlangıçta Whirlpool gözetim altında kullanımın uygun olduğunu
+        söyledi; daha sonraki tavsiye fişten çekilmesi yönünde değişti.'
+      advice: 2004–2015 arası Hotpoint veya Indesit kurutucuların Alman sahipleri model listesini kontrol
+        etmeli ve daha sonraki Birleşik Krallık rehberliğine göre modifiye edilene kadar fişten çekmelidir.
+  evidence:
+  - url: https://www.produktwarnung.eu/2015/11/24/sicherheitshinweis-moegliche-brandgefahr-bei-waeschetrocknern-der-marken-hotpoint-und-indesit/1068?replytocom=1576
+    quote: Dem Unternehmen zufolge kann es in einigen seltenen Fällen vorkommen, dass überschüssige, zurückbleibende
+      Flusen mit dem Heizelement in Kontakt kommen können. Dadurch besteht ein Brandrisiko
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:55:03+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: whirlpool
+      series: 2004-2015
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: heating element
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Whirlpool-group vented & condensing dryers (2004–2015): fluff contacting heating element
+        fire risk'
+      body: Official regulator safety alert (Enterprise Singapore joining UK OPSS) covering Whirlpool-group
+        brands.
+      advice: Owners of 2004–2015 Whirlpool-group dryers should check model against the affected list
+        and stop use if unmodified.
+    tr:
+      title: 'Whirlpool grubu havalandırmalı ve kondenserli kurutucular (2004–2015): havın ısıtma elemanıyla
+        teması yangın riski'
+      body: Whirlpool grubu markalarını kapsayan resmi düzenleyici güvenlik uyarısı (Enterprise Singapore,
+        Birleşik Krallık OPSS'ye katılıyor).
+      advice: 2004–2015 Whirlpool grubu kurutucuların sahipleri modeli etkilenen listeyle karşılaştırmalı
+        ve modifiye edilmemişse kullanımı durdurmalıdır.
+  evidence:
+  - url: https://www.consumerproductsafety.gov.sg/consumers/03-product-safety-alerts-and-recalls/electrical/electrical-alert-2019-09-02-whirlpool-hotpoint-indesit-creda-swan-and-proline-tumble-dryers.pdf
+    quote: In some cases, excess fluff can come into contact with the heating element and present a risk
+      of fire.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:51:01+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: bosch
+      series: wdt67
+  kind: known_issue
+  domain: general
+  severity: low
+  consequence: ''
+  detection: ''
+  component: moisture sensor / control electronics
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Bosch WDT67 (WTW845W0/04) dries too long over sensor despite cleaning and replacing sensor
+      body: An owner of a Bosch WDT67 dryer (model WTW845W0/04) reports that the unit consistently dries
+        too long in sensor mode, even after cleaning and replacing the moisture sensor. The owner is considering
+        replacing the control electronics. This is a general reliability/complaint issue, not a safety
+        defect. It came from the query 'Bosch WDT67 heat pump dryer common problems forum'.
+      advice: Some WDT67 owners report persistent over-drying in sensor mode that is not resolved by cleaning
+        or replacing the moisture sensor. This leads to wasted energy and inconvenience, and may require
+        electronics replacement or switching brands.
+    tr:
+      title: Bosch WDT67 (WTW845W0/04) sensör temizlenip değiştirilmesine rağmen sensör modunda çok uzun
+        kurutuyor
+      body: Bir Bosch WDT67 kurutucu (model WTW845W0/04) sahibi, nem sensörünü temizleyip değiştirdikten
+        sonra bile ünitenin sensör modunda sürekli olarak çok uzun kuruttuğunu bildiriyor. Sahip, kontrol
+        elektroniğini değiştirmeyi düşünüyor. Bu, güvenlik kusuru değil, genel bir güvenilirlik/şikayet
+        sorunudur. 'Bosch WDT67 heat pump dryer common problems forum' sorgusundan geldi.
+      advice: Bazı WDT67 sahipleri, nem sensörünü temizlemek veya değiştirmekle çözülmeyen, sensör modunda
+        kalıcı aşırı kurutma bildiriyor. Bu, enerji israfına ve rahatsızlığa yol açar ve elektronik değişimi
+        veya marka değiştirmeyi gerektirebilir.
+  evidence:
+  - url: https://www.justanswer.de/haushaltsgeraete/rlnh5-ich-habe-einen-bosch-trockner-typ-wdt67-wtw845w0-04-dieser.html
+    quote: Ich habe einen Bosch Trockner Typ WDT67 WTW845W0/04. DIeser trocknet zu lange über den Sensor.
+      Ich habe den Sensor schon gereinigt und auch schon erneuert.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:53:02+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      series: dv90bb9445ghs1
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: drum thermal/acoustic dampening material (putty-like coating)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Drum dampening material melts and warps during normal use on DV90BB9445GHS1, causing drum
+        seizure and electrical odour
+      body: Owner report on Samsung's official EU community for the exact subject model DV90BB9445GHS1.
+      advice: The dampening material on the drum melts and warps in normal use, letting the drum catch
+        the water tank, adding motor friction (electrical odour) and eventually seizing the drum. This
+        is a fire-adjacent failure (overheating/friction plus melted material) that costs an out-of-warranty
+        service visit and can disable the machine. Owners should watch for loud knocking and burning smell.
+    tr:
+      title: DV90BB9445GHS1'de normal kullanım sırasında tambur sönümleme malzemesi eriyip çarpılıyor,
+        tamburun sıkışmasına ve elektriksel kokuya neden oluyor
+      body: Samsung'un resmi AB topluluğunda tam konu modeli DV90BB9445GHS1 hakkında sahip raporu.
+      advice: Tamburdaki sönümleme malzemesi normal kullanımda eriyip çarpılıyor, tamburun su tankına
+        takılmasına izin veriyor, motor sürtünmesini (elektriksel koku) artırıyor ve sonunda tamburu sıkıştırıyor.
+        Bu, garanti dışı bir servis ziyaretine mal olan ve makineyi devre dışı bırakabilen yangına yakın
+        bir arızadır (aşırı ısınma/sürtünme artı erimiş malzeme). Sahipler yüksek vurma sesi ve yanık
+        kokusuna dikkat etmelidir.
+  evidence:
+  - url: https://eu.community.samsung.com/t5/home-appliances/samsung-model-model-dv90bb9445ghs1-failure/m-p/12987465
+    quote: The tumble dryer appliance (Model DV90BB9445GHS1) started making a loud noise during operation
+      and omitting an electrical odour. After paying for a Samsung Authorised Service Partner (ASP) to
+      repair the product the engineer found that the issue was caused by a deterioration of a putty-like
+      substance coating the drum (presumably for thermal or acoustic dampening) which had melted and warped
+      during normal use.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:49:11+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: siemens
+      series: wdt67
+  kind: known_issue
+  domain: general
+  severity: low
+  consequence: ''
+  detection: ''
+  component: drum bearings and drum support holders
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: WDT67 drum bearing wear causes rumbling noises — owner report (WT47W5W0/12)
+      body: An owner reports rumbling noises during drying. Replacing the suspected bearing didn't fix
+        it; the drum support holders were found worn and the drum wobbles. This indicates drum bearing/support
+        wear as a known failure on the WDT67.
+      advice: Rumbling noises from the WDT67 may indicate worn drum bearings or support holders. Bearing
+        replacement alone may not suffice — the drum support holders may also need replacement. This is
+        a reliability issue, not a safety defect.
+    tr:
+      title: WDT67 tambur yatağı aşınması gürültülü seslere neden oluyor — sahip raporu (WT47W5W0/12)
+      body: Bir sahip kurutma sırasında gürültülü sesler bildiriyor. Şüphelenilen yatağın değiştirilmesi
+        sorunu çözmedi; tambur destek tutucularının aşındığı ve tamburun sallandığı bulundu. Bu, WDT67'de
+        bilinen bir arıza olarak tambur yatağı/destek aşınmasına işaret ediyor.
+      advice: WDT67'den gelen gürültülü sesler aşınmış tambur yataklarına veya destek tutucularına işaret
+        edebilir. Yalnızca yatak değişimi yeterli olmayabilir — tambur destek tutucularının da değiştirilmesi
+        gerekebilir. Bu bir güvenlik kusuru değil, güvenilirlik sorunudur.
+  evidence:
+  - url: https://forum.teamhack.de/user-post-list/100136-basti82/
+    quote: Vor ein paar Monaten fingen rumpelnde Geräusche während des Trockenvorgangs von sich zu geben.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:54:26+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Whirlpool
+      series: Various models
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: tumble dryer (general fire risk)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Which?: campaigned for recall of 500,000+ fire-risk Whirlpool tumble dryers after tragic
+        deaths'
+      body: The UK consumer group Which? confirms it campaigned for a recall of more than 500,000 fire-risk
+        Whirlpool tumble dryers, and links the deaths of Sohaib Ahmed and his daughter Manahal to ongoing
+        tumble dryer fire concerns.
+      advice: Consumer advocacy groups consider the fire risk serious enough to have demanded a full recall.
+        Owners should take the recall seriously.
+    tr:
+      title: 'Which?: trajik ölümlerin ardından 500.000''den fazla yangın riskli Whirlpool çamaşır kurutma
+        makinesinin geri çağrılması için kampanya yürüttü'
+      body: Birleşik Krallık tüketici grubu Which?, 500.000'den fazla yangın riskli Whirlpool çamaşır
+        kurutma makinesinin geri çağrılması için kampanya yürüttüğünü doğruluyor ve Sohaib Ahmed ile kızı
+        Manahal'ın ölümlerini devam eden çamaşır kurutma makinesi yangını endişeleriyle ilişkilendiriyor.
+      advice: Tüketici savunuculuğu grupları yangın riskini tam bir geri çağırma talep edecek kadar ciddi
+        buluyor. Sahipler geri çağırmayı ciddiye almalıdır.
+  evidence:
+  - url: https://www.which.co.uk/policy-and-insight/article/which-responds-to-tumble-dryer-safety-concerns-following-a-tragic-house-fire-anL6n3k7joyx
+    quote: Which? previously campaigned for a recall of more than 500,000 fire-risk Whirlpool tumble dryers,
+      and the tragic deaths of Sohaib Ahmed and his daughter Manahal will raise concerns that history
+      is repeating itself.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:55:03+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Whirlpool
+      series: Various models
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: fluff/lint build-up path to heating element
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Electrical Safety First: Whirlpool recall of Hotpoint/Indesit/Swan/Creda/Proline dryers
+        due to fire risk from fluff build-up'
+      body: 'The UK electrical safety charity documents the formal recall programme for Whirlpool-owned
+        brands (Hotpoint, Indesit, Swan, Creda, Proline) sold 2004–2015, with fire risk from fluff build-up,
+        and gives the consumer remedy: unplug, free replacement/repair/refund.'
+      advice: Owners of affected machines should unplug them immediately and contact Whirlpool's recall
+        line (0800 151 0905 in UK) for free replacement, repair, or refund.
+    tr:
+      title: 'Electrical Safety First: tüy birikmesinden kaynaklanan yangın riski nedeniyle Hotpoint/Indesit/Swan/Creda/Proline
+        kurutma makinelerinin Whirlpool geri çağırması'
+      body: 'Birleşik Krallık elektrik güvenliği yardım kuruluşu, 2004–2015 arasında satılan Whirlpool''a
+        ait markalar (Hotpoint, Indesit, Swan, Creda, Proline) için tüy birikmesinden kaynaklanan yangın
+        riskiyle resmi geri çağırma programını belgeliyor ve tüketici çözümünü veriyor: fişi çekin, ücretsiz
+        değişim/onarım/iade.'
+      advice: Etkilenen makinelerin sahipleri derhal fişi çekmeli ve ücretsiz değişim, onarım veya iade
+        için Whirlpool'un geri çağırma hattını (Birleşik Krallık'ta 0800 151 0905) aramalıdır.
+  evidence:
+  - url: https://www.electricalsafetyfirst.org.uk/safety-advice/product-recalls/whirlpool-tumble-dryer-recall-program-july-2019/
+    quote: Whirlpool is recalling tumbler dryers sold under the Hotpoint, Indesit, Swan, Creda and Proline
+      brands sold between 2004 and 2015.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:55:03+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Hotpoint
+      series: Post-2015 models
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: heating element (fluff contact)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Whirlpool/Hotpoint recall campaign scope: dryers sold April 2004–October 2015 under Hotpoint,
+        Indesit, Creda'
+      body: This is the manufacturer's own November 2015 announcement of the corrective campaign, confirming
+        the affected production window (April 2004–October 2015) and brands. It corroborates the recall
+        scope from the manufacturer's side.
+      advice: This confirms the manufacturer-side scope of the recall. Post-2015 Hotpoint dryers are outside
+        this documented campaign window.
+    tr:
+      title: 'Whirlpool/Hotpoint geri çağırma kampanyası kapsamı: Nisan 2004–Ekim 2015 arasında Hotpoint,
+        Indesit, Creda altında satılan kurutma makineleri'
+      body: Bu, üreticinin düzeltici kampanyaya ilişkin kendi Kasım 2015 duyurusudur ve etkilenen üretim
+        penceresini (Nisan 2004–Ekim 2015) ve markaları doğrulamaktadır. Geri çağırma kapsamını üretici
+        tarafından teyit eder.
+      advice: Bu, geri çağırmanın üretici tarafındaki kapsamını doğrular. 2015 sonrası Hotpoint kurutma
+        makineleri bu belgelenmiş kampanya penceresinin dışındadır.
+  evidence:
+  - url: https://www.businesswire.com/news/home/20151123005793/en/
+    quote: The campaign is focused on dryers sold under the brand names of Hotpoint*, Indesit and Creda
+      between April 2004 and October 2015.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:51:34+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Indesit
+      series: Post-2015 models
+  kind: known_issue
+  domain: fire
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: heating element
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'News: recall affected units manufactured April 2004–October 2015; post-2015 dryer outside
+        recall'
+      body: A news report of a real Indesit dryer fire (model IDC85UK). It records the manufacturer's
+        own statement that the recall affected units manufactured April 2004–October 2015, and that a
+        dryer made after that date was not affected — directly relevant to the post-2015 subject.
+      advice: 'Establishes the recall boundary: post-2015 Indesit dryers are outside the documented recall.
+        Note the report also shows a model (IDC85UK) flagged as affected on the manufacturer''s website,
+        so buyers of used units should verify by model number.'
+    tr:
+      title: 'Haber: geri çağırma Nisan 2004–Ekim 2015 arasında üretilen birimleri etkiledi; 2015 sonrası
+        kurutma makinesi geri çağırma dışında'
+      body: 'Gerçek bir Indesit kurutma makinesi yangınının (model IDC85UK) haber raporu. Üreticinin kendi
+        açıklamasını kaydediyor: geri çağırma Nisan 2004–Ekim 2015 arasında üretilen birimleri etkiledi
+        ve o tarihten sonra üretilen bir kurutma makinesi etkilenmedi — 2015 sonrası konuyla doğrudan
+        ilgili.'
+      advice: 'Geri çağırma sınırını belirler: 2015 sonrası Indesit kurutma makineleri belgelenmiş geri
+        çağırmanın dışındadır. Raporun ayrıca üreticinin web sitesinde etkilenen olarak işaretlenmiş bir
+        modeli (IDC85UK) gösterdiğini unutmayın, bu nedenle kullanılmış birim alanlar model numarasıyla
+        doğrulamalıdır.'
+  evidence:
+  - url: https://www.wiltsglosstandard.co.uk/news/24937681.hotpoint-indesit-tumble-dryer-fire-destroys-house/
+    quote: I can confirm that this [product recall] affected units manufactured between April 2004 and
+      October 2015.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:51:58+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: beko
+      series: 6-7kg-condenser-2012
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: electrical component (capacitor)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Beko official safety notice confirms 6kg & 7kg condenser dryer fire risk and free modification
+      body: This finding came from the search "Beko 6kg 7kg condenser dryer 2012 recall fire risk". Beko's
+        own UK safety notice confirms the same 6kg & 7kg condenser dryer population (manufactured May–October
+        2012) is affected by an electrical component that can fail and overheat, and states Beko initiated
+        a voluntary corrective action programme offering a free in-home modification. The page lists the
+        affected models and serial-number ranges.
+      advice: Check the model and serial number on the rating plate inside the door. If the serial number
+        begins with 12 and ends with 05, 06, 07, 08, 09 or 10, stop using the dryer, disconnect it, and
+        contact Beko (0800 917 2018 UK / 1800 25 29 25 Eire) for a free modification.
+    tr:
+      title: Beko resmi güvenlik bildirimi 6kg ve 7kg kondenser kurutucu yangın riskini ve ücretsiz modifikasyonu
+        doğruluyor
+      body: Bu bulgu "Beko 6kg 7kg condenser dryer 2012 recall fire risk" aramasından geldi. Beko'nun
+        kendi Birleşik Krallık güvenlik bildirimi, aynı 6kg ve 7kg kondenser kurutucu popülasyonunun (Mayıs–Ekim
+        2012'de üretilen) arızalanıp aşırı ısınabilen bir elektrikli bileşenden etkilendiğini doğruluyor
+        ve Beko'nun ücretsiz evde modifikasyon sunan gönüllü bir düzeltici eylem programı başlattığını
+        belirtiyor. Sayfa, etkilenen modelleri ve seri numarası aralıklarını listeliyor.
+      advice: Kapının içindeki etiket plakasındaki model ve seri numarasını kontrol edin. Seri numarası
+        12 ile başlıyor ve 05, 06, 07, 08, 09 veya 10 ile bitiyorsa kurutucuyu kullanmayı bırakın, fişini
+        çekin ve ücretsiz modifikasyon için Beko ile iletişime geçin (0800 917 2018 UK / 1800 25 29 25
+        Eire).
+  evidence:
+  - url: https://www.beko.co.uk/safety/6kg-7kg-condenser-tumble-dryers
+    quote: Beko has been made aware of a small number of incidents involving our 6kg & 7kg Condenser Tumble
+      Dryers manufactured between May 2012 and October 2012, where an electrical component has failed
+      and overheated, leading to a potential risk of fire.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:47:44+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Bosch
+      series: Heat pump (non-WDT67)
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: electrical / insulation
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Bosch WTY 88931 heat pump dryer tripped house circuit breaker — electrical fault (Germany)
+      body: German owner complaint (ReclaBox) for a Bosch WTY 88931 heat pump dryer, 31 months old. The
+        house circuit breaker tripped during operation and the machine would not restart; a technician
+        could not locate the fault. Single-owner report of an electrical defect.
+      advice: If a heat pump dryer trips the circuit breaker or RCD during operation, stop using it and
+        have the insulation/electrical system checked before further use.
+    tr:
+      title: Bosch WTY 88931 ısı pompalı kurutucu evin devre kesicisini attırdı — elektriksel arıza (Almanya)
+      body: 31 aylık bir Bosch WTY 88931 ısı pompalı kurutucu için Alman sahibinin şikayeti (ReclaBox).
+        Çalışma sırasında evin devre kesicisi attı ve makine yeniden çalışmadı; bir teknisyen arızayı
+        bulamadı. Elektriksel bir kusura dair tek sahipli bildirim.
+      advice: Bir ısı pompalı kurutucu çalışma sırasında devre kesicisini veya RCD'yi attırırsa, kullanmayı
+        bırakın ve daha fazla kullanmadan önce yalıtım/elektrik sistemini kontrol ettirin.
+  evidence:
+  - url: https://at.reclabox.com/beschwerde/115777/pdf
+    quote: 'Reparaturangebot gem. Servicepauschale angefordert: „Der Haussicherungsautomat wurde im Betrieb
+      ausgelöst. Die Maschine verbleibt nach Wiedereinschaltversuch ohne Funktion. "'
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:52:30+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Indesit
+      series: Post-2015 models
+  kind: known_issue
+  domain: fire
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: rear drum seal (felt) and heating element
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'iFixit: lint accumulating around rear drum seal (felt) falls into heating element housing
+        and ignites'
+      body: Identifies the concrete part involved — the felt rear drum seal — and the mechanism by which
+        lint reaches the heating element. Confirms Whirlpool implemented the modification into the manufacturing
+        process, which is why post-2015 units are outside the recall.
+      advice: The concrete part to check on any older Indesit dryer is the rear drum seal and heating
+        element housing. Post-2015 models should have the modification from manufacture, but the mechanism
+        explains why filter cleaning matters.
+    tr:
+      title: 'iFixit: arka tambur contası (keçe) çevresinde biriken tüyler ısıtma elemanı yuvasına düşüp
+        tutuşuyor'
+      body: İlgili somut parçayı — keçe arka tambur contasını — ve tüylerin ısıtma elemanına ulaşma mekanizmasını
+        tanımlar. Whirlpool'un modifikasyonu üretim sürecine uyguladığını doğrular; bu nedenle 2015 sonrası
+        üniteler geri çağırma kapsamı dışındadır.
+      advice: Herhangi bir eski Indesit kurutucuda kontrol edilecek somut parça arka tambur contası ve
+        ısıtma elemanı yuvasıdır. 2015 sonrası modellerde modifikasyon üretimden itibaren bulunmalıdır,
+        ancak mekanizma filtre temizliğinin neden önemli olduğunu açıklar.
+  evidence:
+  - url: https://it.ifixit.com/News/30181/whirlpool-says-millions-of-its-dryers-could-catch-fire-heres-how
+    quote: The fire risk is caused by lint (tiny bits of fabric fibers) accumulating around the rear drum
+      seal, which is made of felt and closes the gap between the drum and rear panel. That lint then falls
+      into the heating element housing and gets dangerously close to the heating element, eventually getting
+      hot enough to ignite.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:51:58+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Whirlpool
+      series: Various models
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: heating element / lint filter
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Lint build-up on heating element causes fire risk in Whirlpool-owned tumble dryers (2004–2015)
+      body: 'The UK Parliament BEIS Select Committee report documents the core defect: excess fluff contacting
+        the heating element, with at least 750 fires since 2004 and 5.3 million affected machines in the
+        UK alone. Whirlpool alerted UK and European authorities.'
+      advice: If the reader owns a Whirlpool, Hotpoint, Indesit, Creda, Proline or Swan tumble dryer made
+        between April 2004 and September 2015, they should check the model against the affected list and
+        stop using an unmodified machine — the documented failure is a fire risk.
+    tr:
+      title: Isıtma elemanında tüy birikmesi Whirlpool'a ait çamaşır kurutma makinelerinde yangın riskine
+        yol açıyor (2004–2015)
+      body: 'Birleşik Krallık Parlamentosu BEIS Seçim Komitesi raporu temel kusuru belgeliyor: ısıtma
+        elemanına temas eden aşırı tüy, 2004''ten bu yana en az 750 yangın ve yalnızca Birleşik Krallık''ta
+        5,3 milyon etkilenen makine. Whirlpool Birleşik Krallık ve Avrupa yetkililerini uyardı.'
+      advice: Okuyucu Nisan 2004 ile Eylül 2015 arasında üretilmiş bir Whirlpool, Hotpoint, Indesit, Creda,
+        Proline veya Swan çamaşır kurutma makinesine sahipse, modeli etkilenenler listesiyle karşılaştırmalı
+        ve modifiye edilmemiş bir makineyi kullanmayı bırakmalıdır — belgelenen arıza bir yangın riskidir.
+  evidence:
+  - url: https://publications.parliament.uk/pa/cm201719/cmselect/cmbeis/503/50306.htm
+    quote: The problem identified was that excess fluff could catch the heating element in the machine
+      and cause a fire.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:50:20+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Arcelik
+      series: Ares Condenser
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: Epcos B32332 capacitor (Zytel FR50 plastic top)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Ares Condenser Dryers caught fire due to defective Zytel plastic in Epcos capacitors; 186
+        total incidents
+      body: The amended complaint in Arcelik v. DuPont states dryers caught fire due to defects in DuPont's
+        Zytel product used in the capacitors. Arcelik's interrogatory response further states it is aware
+        of 186 such incidents in Ares Condenser Dryers.
+      advice: This is the underlying defect that triggered both recalls. Any Ares Condenser Dryer from
+        the 2009-2013 production period with an Epcos B32332 capacitor should be checked.
+    tr:
+      title: Ares Kondenser Kurutucular, Epcos kapasitörlerindeki hatalı Zytel plastiği nedeniyle alev
+        aldı; toplam 186 olay
+      body: Arcelik v. DuPont davasındaki değiştirilmiş şikayet, kurutucuların kapasitörlerde kullanılan
+        DuPont'un Zytel ürünündeki kusurlar nedeniyle alev aldığını belirtir. Arcelik'in sorgu yanıtı
+        ayrıca Ares Kondenser Kurutucularda bu tür 186 olaydan haberdar olduğunu belirtir.
+      advice: Her iki geri çağırmayı da tetikleyen temel kusur budur. 2009-2013 üretim dönemine ait ve
+        Epcos B32332 kapasitörlü herhangi bir Ares Kondenser Kurutucu kontrol edilmelidir.
+  evidence:
+  - url: https://ia802201.us.archive.org/26/items/gov.uscourts.ded.58044/gov.uscourts.ded.58044.19.0.pdf
+    quote: A number of these dryers caught fire when being used by Arcelik's customers as a result of
+      the defects in DuPont's product.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:47:09+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      series: dv90bb9445ghs1
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: rear drum insulation sponge (yalıtım süngeri)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Rear drum insulation sponge melts into tar, creating serious fire risk on DV90BB9445G/UA
+      body: Turkish consumer forum, owner's own words on the same DV9*BB9445** series.
+      advice: An owner of the same series reports the rear drum insulation sponge melted into a tar-like
+        substance after about two years of use, which they describe as a serious fire risk to both machine
+        and home. The authorized service blamed placement inside a cabinet (out of warranty) even though
+        the owner notes other units melted without being in a cabinet. This is the same melted-insulation
+        defect as the exact-model report.
+    tr:
+      title: Arka tambur yalıtım süngeri katrana eriyerek DV90BB9445G/UA'da ciddi yangın riski oluşturuyor
+      body: Türk tüketici forumu, aynı DV9*BB9445** serisi hakkında sahibinin kendi sözleri.
+      advice: Aynı serinin bir sahibi, yaklaşık iki yıllık kullanımdan sonra arka tambur yalıtım süngerinin
+        katran benzeri bir maddeye eridiğini ve bunu hem makine hem de ev için ciddi bir yangın riski
+        olarak tanımladığını bildiriyor. Yetkili servis, sahibi diğer ünitelerin dolap içinde olmadan
+        da eridiğini belirtmesine rağmen, suçu dolap içine yerleştirmeye bağladı (garanti kapsamı dışında).
+        Bu, tam model bildirimiyle aynı erimiş yalıtım kusurudur.
+  evidence:
+  - url: https://inceleriz.com/forum/konular/samsung-bespoke-kurutma-makinasi-sunger-erime-zift-dv90bb9445g-ua.11531/
+    quote: 03.04.2023 tarihinde satın aldığım Samsung DV90BB9445G/UA model kurutma makinemin arka tamburundaki
+      yalıtım süngeri, yaklaşık iki yıl kullanımın ardından eriyip zift kıvamına geldi ve bu durum hem
+      makine için hem de evim için ciddi yangın riski oluşturdu ve makinemde hasara neden oldu.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:49:11+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: siemens
+      series: wdt67
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: internal electrical/technical components (right-side damage focus)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: WDT67 heat pump dryers (2020–2022) caught fire from internal technical defects — IFS investigation
+      body: The IFS (Institut für Schadenverhütung), a German damage-investigation institute, examined
+        multiple WDT67 heat pump dryers that caught fire. Two detailed cases are described where units
+        caught fire while in operation; both showed damage concentrated on the right side. The report
+        states affected units are from build years 2020–2022 — matching the subject's date range. The
+        IFS advises having the dryer checked by a professional if drying performance drops and manufacturer-recommended
+        measures don't restore it.
+      advice: Owners of WDT67 dryers from 2020–2022 should be alert to reduced drying performance as a
+        potential warning sign. Have the unit inspected by a qualified technician if performance degrades.
+        Do not leave the dryer running unattended. This is an investigation report and warning, not a
+        formal recall — no official BSH/Siemens recall notice was found.
+    tr:
+      title: WDT67 ısı pompalı kurutucular (2020–2022) iç teknik kusurlar nedeniyle alev aldı — IFS soruşturması
+      body: Alman hasar soruşturma enstitüsü IFS (Institut für Schadenverhütung), alev alan birden fazla
+        WDT67 ısı pompalı kurutucuyu inceledi. Ünitelerin çalışma sırasında alev aldığı iki ayrıntılı
+        vaka tanımlanmıştır; her ikisinde de hasarın sağ tarafta yoğunlaştığı görülmüştür. Rapor, etkilenen
+        ünitelerin 2020–2022 üretim yıllarına ait olduğunu belirtmektedir — bu, konunun tarih aralığıyla
+        örtüşmektedir. IFS, kurutma performansı düşerse ve üretici tarafından önerilen önlemler bunu geri
+        getirmezse kurutucunun bir uzman tarafından kontrol ettirilmesini tavsiye etmektedir.
+      advice: 2020–2022 yıllarına ait WDT67 kurutucuların sahipleri, azalan kurutma performansını olası
+        bir uyarı işareti olarak dikkate almalıdır. Performans düşerse üniteyi yetkili bir teknisyene
+        kontrol ettirin. Kurutucuyu gözetimsiz çalışır durumda bırakmayın. Bu bir soruşturma raporu ve
+        uyarıdır, resmi bir geri çağırma değildir — resmi bir BSH/Siemens geri çağırma bildirimi bulunamamıştır.
+  evidence:
+  - url: https://www.ifs-ev.org/braende-an-waeschetrocknern-von-bosch-und-siemens/
+    quote: Das IFS hat mehrere Wärmepumpenwäschetrockner von des Typs WDT67 untersucht, die aufgrund eines
+      technischen Defektes in Brand geraten sind.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:49:57+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: beko
+      series: 6-7kg-condenser-2012
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: capacitor
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Fire recall notice identifies the capacitor as the failing component that can overheat
+      body: This finding came from the search "Beko condenser tumble dryer recall fire safety". A New
+        Zealand fire-and-emergency product recall notice for Beko dryers names the capacitor as the component
+        that may fail and overheat, potentially leading to a risk of fire, using the same 6kg & 7kg condenser
+        dryer incident language. Note the notice's listed model (DCU8330GX) differs from the UK 6kg/7kg
+        model list, so treat the capacitor identification as the component anchor rather than a model
+        match.
+      advice: The failing part is the capacitor. Owners of affected 6kg/7kg condenser dryers should not
+        attempt to replace it themselves — Beko's recall programme provides a free, qualified in-home
+        modification (replacement of the capacitor).
+    tr:
+      title: Yangın geri çağırma bildirimi, arızalanan ve aşırı ısınabilen bileşen olarak kondansatörü
+        tanımlıyor
+      body: Bu bulgu "Beko condenser tumble dryer recall fire safety" aramasından elde edilmiştir. Beko
+        kurutucular için Yeni Zelanda yangın ve acil durum ürün geri çağırma bildirimi, arızalanabilecek
+        ve aşırı ısınarak potansiyel yangın riskine yol açabilecek bileşen olarak kondansatörü adlandırmakta
+        ve aynı 6kg & 7kg kondansatörlü kurutucu olayı ifadesini kullanmaktadır. Bildirimde listelenen
+        modelin (DCU8330GX) Birleşik Krallık 6kg/7kg model listesinden farklı olduğunu unutmayın; bu nedenle
+        kondansatör tanımlamasını model eşleşmesi yerine bileşen dayanağı olarak değerlendirin.
+      advice: Arızalanan parça kondansatördür. Etkilenen 6kg/7kg kondansatörlü kurutucuların sahipleri
+        bunu kendileri değiştirmeye çalışmamalıdır — Beko'nun geri çağırma programı ücretsiz, yetkili
+        bir yerinde tadilat (kondansatörün değiştirilmesi) sağlamaktadır.
+  evidence:
+  - url: https://www.fireandemergency.nz/assets/Documents/Product-recall/Beko-Dryer-Recall-Notification.pdf
+    quote: The capacitor may fail and overheat, potentially leading to risk of fire.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:47:44+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: siemens
+      series: '2002'
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: electronic component in the control panel
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Defective electronic component in control panel can overheat and cause fire (2002 Siemens
+        tumble dryers)
+      body: This is the manufacturer BSH's own voluntary safety notice (10 Sept 2014) for Siemens tumble
+        dryers built Jan-May 2002. It names a defective electronic component in the control panel that
+        can overheat and, in extremely rare cases, cause a fire. BSH reports about 100,000 affected appliances
+        (majority sold in Germany) and 26 reports of smouldering fires in Germany with no injuries. The
+        fix is a free on-site repair by a service technician; until then the dryer should only be run
+        supervised and not overnight. This is the core fire finding for the 2002 Siemens dryer series
+        and applies to the EU market.
+      advice: ''
+    tr:
+      title: Kontrol panelindeki arızalı elektronik bileşen aşırı ısınarak yangına neden olabilir (2002
+        Siemens çamaşır kurutma makineleri)
+      body: Bu, üretici BSH'nin Ocak-Mayıs 2002'de üretilen Siemens çamaşır kurutma makineleri için kendi
+        gönüllü güvenlik bildirimidir (10 Eylül 2014). Bildirim, kontrol panelinde aşırı ısınabilen ve
+        son derece nadir durumlarda yangına neden olabilen arızalı bir elektronik bileşeni adlandırmaktadır.
+        BSH, yaklaşık 100.000 etkilenen cihaz (çoğunluğu Almanya'da satılmıştır) ve Almanya'da yaralanma
+        olmaksızın 26 korlaşan yangın bildirimi raporlamaktadır. Çözüm, bir servis teknisyeni tarafından
+        ücretsiz yerinde onarımdır; o zamana kadar kurutucu yalnızca gözetim altında ve gece boyunca çalıştırılmamalıdır.
+        Bu, 2002 Siemens kurutucu serisi için temel yangın bulgusudur ve AB pazarı için geçerlidir.
+  evidence:
+  - url: https://in.marketscreener.com/quote/stock/BSH-EV-ALETLERI-SANAYI-VE-9938376/news/BSH-Ev-Aletleri-Sanayi-ve-Ticaret-Safety-notice-for-Siemens-tumble-dryers-Appliances-will-be-r-19020555/
+    quote: A limited number of appliances which were manufactured in the period from January to May 2002
+      might due to a defective electronic component in the control panel possibly overheat, which can
+      in extremely rare cases lead to a potential fire hazard.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:49:44+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Whirlpool
+      series: Various models
+  kind: known_issue
+  domain: fire
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: heating element / lint contact
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Enterprise Singapore safety alert: joins UK OPSS in advising stop-use for Whirlpool/Hotpoint/Indesit/Creda/Swan/Proline
+        dryers'
+      body: Singapore's consumer product safety regulator joined the UK OPSS in advising consumers to
+        stop using affected dryers from Whirlpool, Hotpoint, Indesit, Creda, Swan and Proline brands manufactured
+        2004–2015, citing the same lint-to-heating-element fire risk.
+      advice: This confirms the recall has international reach and that regulators outside the EU/UK also
+        advise stop-use.
+    tr:
+      title: 'Enterprise Singapore güvenlik uyarısı: Whirlpool/Hotpoint/Indesit/Creda/Swan/Proline kurutucular
+        için kullanımı durdurma tavsiyesinde Birleşik Krallık OPSS''ye katılıyor'
+      body: Singapur'un tüketici ürün güvenliği düzenleyicisi, 2004–2015 yılları arasında üretilen Whirlpool,
+        Hotpoint, Indesit, Creda, Swan ve Proline markalarına ait etkilenen kurutucuların kullanımının
+        durdurulması tavsiyesinde Birleşik Krallık OPSS'ye katılmış ve aynı havdan ısıtma elemanına yangın
+        riskini gerekçe göstermiştir.
+      advice: Bu, geri çağırmanın uluslararası kapsama sahip olduğunu ve AB/Birleşik Krallık dışındaki
+        düzenleyicilerin de kullanımı durdurma tavsiyesinde bulunduğunu doğrulamaktadır.
+  evidence:
+  - url: https://www.consumerproductsafety.gov.sg/consumers/03-product-safety-alerts-and-recalls/electrical/electrical-alert-2019-09-02-whirlpool-hotpoint-indesit-creda-swan-and-proline-tumble-dryers.pdf
+    quote: In some cases, excess fluff can come into contact with the heating element and present a risk
+      of fire.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:51:01+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: beko
+      series: 6-7kg-condenser-2012
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: capacitor
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Fire authority names the failing part: the capacitor in Beko 6kg/7kg condenser dryer (2012)'
+      body: New Zealand Fire and Emergency product recall notice (7 June 2017) for Beko 6kg & 7kg condenser
+        tumble dryers manufactured May–October 2012, explicitly identifying the failing part as the capacitor,
+        which may fail and overheat and lead to a fire risk. This is the source that names the concrete
+        component.
+      advice: This notice confirms the specific part at fault is the capacitor. It is the concrete component
+        to anchor the fire risk to for these 2012 Beko 6kg/7kg condenser dryers.
+    tr:
+      title: 'Yangın otoritesi arızalanan parçayı adlandırıyor: Beko 6kg/7kg kondansatörlü kurutucudaki
+        kondansatör (2012)'
+      body: Mayıs–Ekim 2012'de üretilen Beko 6kg & 7kg kondansatörlü çamaşır kurutma makineleri için Yeni
+        Zelanda Yangın ve Acil Durum ürün geri çağırma bildirimi (7 Haziran 2017), arızalanan parçayı
+        açıkça kondansatör olarak tanımlamakta; bunun arızalanabileceğini, aşırı ısınabileceğini ve yangın
+        riskine yol açabileceğini belirtmektedir. Somut bileşeni adlandıran kaynak budur.
+      advice: Bu bildirim, kusurlu spesifik parçanın kondansatör olduğunu doğrulamaktadır. Bu 2012 Beko
+        6kg/7kg kondansatörlü kurutucular için yangın riskinin dayandırılacağı somut bileşen budur.
+  evidence:
+  - url: https://www.fireandemergency.nz/assets/Documents/Product-recall/Beko-Dryer-Recall-Notification.pdf
+    quote: The capacitor may fail and overheat, potentially leading to risk of fire.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:47:44+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Whirlpool
+      series: Various models
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: tumble dryer (recall scope)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'The Argus: Whirlpool recalls 800,000 tumble dryers after government intervention; 5.3 million
+        units affected overall'
+      body: 'News report confirming the scale: 800,000 dryers recalled after government intervention,
+        with 5.3 million units manufactured April 2004–September 2015 across Hotpoint, Indesit, Creda,
+        Swan and Proline brands. Green sticker indicates non-affected machines.'
+      advice: Check for a green sticker inside the door or on the back of the machine. No green sticker
+        means check the model against the recall list.
+    tr:
+      title: 'The Argus: Whirlpool hükümet müdahalesinin ardından 800.000 çamaşır kurutma makinesini geri
+        çağırıyor; toplamda 5,3 milyon ünite etkilendi'
+      body: 'Ölçeği doğrulayan haber raporu: hükümet müdahalesinin ardından 800.000 kurutucu geri çağrıldı;
+        Nisan 2004–Eylül 2015 arasında Hotpoint, Indesit, Creda, Swan ve Proline markaları altında 5,3
+        milyon ünite üretildi. Yeşil etiket, etkilenmemiş makineleri gösterir.'
+      advice: Kapının içinde veya makinenin arkasında yeşil bir etiket olup olmadığını kontrol edin. Yeşil
+        etiket yoksa modeli geri çağırma listesiyle karşılaştırın.
+  evidence:
+  - url: https://www.theargus.co.uk/news/17890185.whirlpool-recalls-800-000-tumble-dryers-due-fire-risk/
+    quote: WHIRLPOOL is recalling 800,000 tumble dryers following government intervention after four years
+      of pressure from consumer groups.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:55:03+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Bosch
+      series: Heat pump (non-WDT67)
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: general (post-service)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Bosch WQG244C1TR Serie 6 heat pump dryer emitted smoke after service cleaning (Turkey)
+      body: Turkish owner complaint (Şikayetvar) for a Bosch Serie 6 heat pump dryer (WQG244C1TR). After
+        a paid cleaning by a Bosch-directed service, the machine emitted smoke at night, filling the home
+        with a burnt smell; the owner demanded replacement. Single-owner report, not an official recall.
+      advice: If smoke or burning smell appears from the dryer, unplug it immediately and do not resume
+        use until an independent inspection; consider replacement if the unit has been serviced.
+    tr:
+      title: Bosch WQG244C1TR Serie 6 ısı pompalı kurutucu, servis temizliğinden sonra duman çıkardı (Türkiye)
+      body: Bosch Serie 6 ısı pompalı kurutucu (WQG244C1TR) için Türk sahibinin şikayeti (Şikayetvar).
+        Bosch yönlendirmesiyle yapılan ücretli bir temizlikten sonra makine gece duman çıkarmış ve evi
+        yanık kokusuyla doldurmuş; sahibi değişim talep etmiş. Tek sahip bildirimi, resmi geri çağırma
+        değil.
+      advice: Kurutucudan duman veya yanık kokusu gelirse derhal fişini çekin ve bağımsız bir inceleme
+        yapılana kadar kullanmaya devam etmeyin; cihaz servis görmüşse değişimi düşünün.
+  evidence:
+  - url: https://www.sikayetvar.com/bosch/bosch-kurutma-makinesinde-duman-cikti-guvenlik-sorunu-ve-hemen-degisim-talebi
+    quote: Gece saat 00.00 civarında kardeşim çocuğu eve getirdiğinde, makineden dumanlar çıktığını fark
+      edip beni aradı.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:52:30+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: siemens
+      series: wdt67
+  kind: known_issue
+  domain: general
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: drum drive motor
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: WDT67 drum motor fails to start — owner repair forum (WT47W584/07)
+      body: An owner reports the WDT67 (model WT47W584/07) stops working without an error message — the
+        program appears to start, relays click, interior light comes on, but the drum motor does not turn.
+        This is a repair-forum report of a common failure mode, not a safety defect.
+      advice: If the dryer shows no error but the drum doesn't turn, the motor drive may be at fault.
+        This requires professional diagnosis and likely motor replacement. Cost is moderate but the failure
+        makes the dryer unusable.
+    tr:
+      title: WDT67 tambur motoru çalışmıyor — sahip onarım forumu (WT47W584/07)
+      body: Bir sahip, WDT67'nin (model WT47W584/07) hata mesajı vermeden çalışmayı durdurduğunu bildiriyor
+        — program başlıyor gibi görünüyor, röleler tıklıyor, iç aydınlatma yanıyor, ancak tambur motoru
+        dönmüyor. Bu, yaygın bir arıza moduna ilişkin bir onarım forumu bildirimidir, güvenlik kusuru
+        değildir.
+      advice: Kurutucu hata göstermiyor ancak tambur dönmüyorsa motor tahriki arızalı olabilir. Bu, profesyonel
+        teşhis ve muhtemelen motor değişimi gerektirir. Maliyet orta düzeydedir ancak arıza kurutucuyu
+        kullanılamaz hale getirir.
+  evidence:
+  - url: https://forum.electronicwerkstatt.de/phpBB/Ersatzteile_Reparatur_Waeschetrockner/waeschetrockner_siemens_bsh_iq700_wdt67_wt47w584_07_motor_laeuft_nicht_an-t159779f56_bs0.html
+    quote: Das Programm wird scheinbar gestartet, Relais klicken, das Licht im Innenraum geht an, nur
+      der Motor, der die Trommel dreht, springt nicht an.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:54:26+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Hotpoint
+      series: Post-2015 models
+  kind: known_issue
+  domain: fire
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: heating element / fluff accumulation
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Which? found 80 of 93 Hotpoint tumble dryers from the period included in the safety alert
+      body: 80 of 93 Hotpoint dryers from the period were on the affected list, showing the fault was
+        widespread across the Hotpoint range rather than limited to a couple of models.
+      advice: A very high share of Hotpoint dryers from the 2004–2015 window were affected; owners should
+        check their specific model.
+    tr:
+      title: Which? güvenlik uyarısına dahil edilen döneme ait 93 Hotpoint tamburlu kurutucudan 80'ini
+        buldu
+      body: Döneme ait 93 Hotpoint kurutucudan 80'i etkilenen listedeydi; bu, arızanın birkaç modelle
+        sınırlı olmak yerine Hotpoint serisinin genelinde yaygın olduğunu gösteriyor.
+      advice: 2004–2015 aralığındaki Hotpoint kurutucuların çok yüksek bir oranı etkilendi; sahipler kendi
+        modellerini kontrol etmeli.
+  evidence:
+  - url: http://www.kitchens-kitchens.co/amp/indesit-hotpoint-and-creda-potential-fire-risk-with-tumble-dryers/
+    quote: We found that 80 out of 93 Hotpoint tumble dryers produced during the period are included in
+      the safety alert.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:55:35+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Hotpoint
+      series: Post-2015 models
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: heating element / fluff accumulation
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Hotpoint tumble dryers recalled for fire risk from fluff contacting heating element (models
+        April 2004–September 2015)
+      body: The documented fire risk is fluff contacting the heating element. The recall window ends 30
+        September 2015, so post-2015 Hotpoint dryers fall outside this recall; the risk applies to 2015
+        and earlier production.
+      advice: If the dryer was made in 2015 or earlier, check the model/serial against the affected list
+        and unplug if unmodified. Post-2015 units are outside this recall window.
+    tr:
+      title: Hotpoint tamburlu kurutucular, havın ısıtma elemanına temas etmesinden kaynaklanan yangın
+        riski nedeniyle geri çağrıldı (Nisan 2004–Eylül 2015 modelleri)
+      body: Belgelenen yangın riski, havın ısıtma elemanına temas etmesidir. Geri çağırma penceresi 30
+        Eylül 2015'te sona eriyor, dolayısıyla 2015 sonrası Hotpoint kurutucular bu geri çağırmanın dışında
+        kalıyor; risk 2015 ve öncesi üretim için geçerlidir.
+      advice: Kurutucu 2015 veya daha önce üretildiyse model/seri numarasını etkilenen listeyle karşılaştırın
+        ve değiştirilmemişse fişini çekin. 2015 sonrası cihazlar bu geri çağırma penceresinin dışındadır.
+  evidence:
+  - url: https://assets.publishing.service.gov.uk/government/uploads/system/uploads/attachment_data/file/815835/Hotpoint__Indesit__Creda__Swan_and_Proline_tumble_dryers.pdf
+    quote: Risk of fire caused by fluff coming into contact with heating elements.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:51:01+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Whirlpool
+      series: Various models
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: tumble dryer (recall)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: UK Government ordered recall of 500,000 Whirlpool tumble dryers in 2019
+      body: In June 2019 the UK Government instructed Whirlpool to recall 500,000 tumble dryers, four
+        years after the first warning, with up to 750 fires linked to the fault in an 11-year period.
+      advice: Documents the escalation to a formal recall, confirming the severity and the scale of machines
+        still unmodified.
+    tr:
+      title: Birleşik Krallık Hükümeti 2019'da 500.000 Whirlpool tamburlu kurutucunun geri çağrılmasını
+        emretti
+      body: Haziran 2019'da Birleşik Krallık Hükümeti, ilk uyarıdan dört yıl sonra Whirlpool'a 500.000
+        tamburlu kurutucuyu geri çağırma talimatı verdi; 11 yıllık bir dönemde arızayla bağlantılı 750'ye
+        kadar yangın vardı.
+      advice: Resmi geri çağırmaya yükselişi belgeliyor, ciddiyeti ve hâlâ değiştirilmemiş makinelerin
+        ölçeğini doğruluyor.
+  evidence:
+  - url: https://www.parliament.uk/business/news/2019/june/urgent-question-as-half-million-unsafe-tumblr-driers-recalled/
+    quote: The Government instructs Whirlpool to recall 500,000 tumble driers over safety concerns, four
+      years after the firm first warned customers of risk.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:50:20+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Bosch
+      series: Heat pump (non-WDT67)
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: heat pump / program termination control
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Bosch WQG244C1TR/05 heat pump dryer keeps heating after cycle ends — owner reports fire risk
+        (Turkey)
+      body: Turkish owner complaint (Şikayetvar) for a Bosch WQG244C1TR/05 purchased 23.10.2024. The owner
+        reports the machine continued running with the heat pump engaged at high heat after the programme
+        had finished, creating serious overheating and a fire risk; the fault recurred 11 times over six
+        months and Bosch service twice said there was no problem.
+      advice: If a Bosch heat pump dryer keeps heating after the cycle ends, unplug it and insist on a
+        detailed inspection; do not accept a 'no fault' finding without testing the programme-termination
+        behaviour.
+    tr:
+      title: Bosch WQG244C1TR/05 ısı pompalı kurutucu program bittikten sonra ısıtmaya devam ediyor —
+        sahip yangın riski bildiriyor (Türkiye)
+      body: 23.10.2024'te satın alınan Bosch WQG244C1TR/05 için Türk sahibinin şikayeti (Şikayetvar).
+        Sahip, makinenin program tamamlandıktan sonra ısı pompası devredeyken yüksek ısıda çalışmaya devam
+        ettiğini, ciddi aşırı ısınma ve yangın riski oluşturduğunu bildiriyor; arıza altı ay içinde 11
+        kez tekrarlamış ve Bosch servisi iki kez sorun olmadığını söylemiş.
+      advice: Bir Bosch ısı pompalı kurutucu program bittikten sonra ısıtmaya devam ederse fişini çekin
+        ve ayrıntılı bir inceleme talep edin; program sonlandırma davranışını test etmeden 'arıza yok'
+        bulgusunu kabul etmeyin.
+  evidence:
+  - url: https://www.sikayetvar.com/bosch/bosch-kurutma-makinesi-surekli-isinma-ve-yangin-riski-servis-sorumsuzlugu
+    quote: Bunun sonucunda da cihazda ciddi bir ısınma sorunu ve yangın riski ortaya çıktı.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:46:23+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Whirlpool
+      series: Various models
+  kind: known_issue
+  domain: fire
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: brand identity — Whirlpool vs Hotpoint/Indesit/Creda
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Digital Trends: Whirlpool-branded tumble dryers NOT affected by the safety notice — only
+        Hotpoint/Indesit/Creda'
+      body: 'This is a critical clarification: the major fire recall applies to dryers sold under Hotpoint,
+        Indesit, and Creda brands (Whirlpool-owned), NOT to dryers sold under the Whirlpool brand itself.
+        The pack''s subject is ''Whirlpool-brand dryers'', so this distinction matters.'
+      advice: If you are buying or own a dryer actually branded 'Whirlpool', it is not covered by this
+        recall. If it is Hotpoint, Indesit, Creda, Swan or Proline, check the recall list.
+    tr:
+      title: 'Digital Trends: Whirlpool markalı kurutma makineleri güvenlik bildiriminden ETKİLENMEMİŞTİR
+        — yalnızca Hotpoint/Indesit/Creda'
+      body: 'Bu kritik bir açıklamadır: büyük yangın geri çağırması Hotpoint, Indesit ve Creda markaları
+        altında satılan kurutma makineleri için geçerlidir (Whirlpool''a ait), Whirlpool markası altında
+        satılan kurutma makineleri için DEĞİLDİR. Paketin konusu ''Whirlpool markalı kurutma makineleri''
+        olduğundan bu ayrım önemlidir.'
+      advice: Gerçekten 'Whirlpool' markalı bir kurutma makinesi satın alıyorsanız veya sahipseniz, bu
+        geri çağırma kapsamında değildir. Hotpoint, Indesit, Creda, Swan veya Proline ise geri çağırma
+        listesini kontrol edin.
+  evidence:
+  - url: http://www.digitaltrends.com/home/whirlpool-dryer-fires/
+    quote: Whirlpool branded tumble dryers are not affected by this safety notice.
+    locator: ''
+    stance: disputes
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:55:03+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Hotpoint
+      series: Post-2015 models
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: tumble dryer (fire risk)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: UK government ordered recall of up to 500,000 unmodified Hotpoint/Indesit/Creda tumble dryers
+        (June 2019)
+      body: The Government instructed Whirlpool to recall 500,000 tumble dryers in June 2019, four years
+        after the fault was first flagged. This is the scale of the documented fire risk for Hotpoint-branded
+        dryers.
+      advice: Confirms the fire risk is real and regulator-recognised, with hundreds of fires linked to
+        these machines. Check any Hotpoint dryer made up to 2015.
+    tr:
+      title: Birleşik Krallık hükümeti 500.000'e kadar değiştirilmemiş Hotpoint/Indesit/Creda kurutma
+        makinesinin geri çağrılmasını emretti (Haziran 2019)
+      body: Hükümet, Haziran 2019'da Whirlpool'a 500.000 kurutma makinesini geri çağırma talimatı verdi;
+        bu, arızanın ilk kez bildirilmesinden dört yıl sonraydı. Bu, Hotpoint markalı kurutma makineleri
+        için belgelenmiş yangın riskinin ölçeğidir.
+      advice: Yangın riskinin gerçek ve düzenleyici tarafından tanındığını, bu makinelerle bağlantılı
+        yüzlerce yangın olduğunu doğrular. 2015'e kadar üretilmiş herhangi bir Hotpoint kurutma makinesini
+        kontrol edin.
+  evidence:
+  - url: https://www.parliament.uk/business/news/2019/june/urgent-question-as-half-million-unsafe-tumblr-driers-recalled/
+    quote: The fault, which has been linked to up to 750 fires in an 11 year period, affected as many
+      as 5.3 million machines, of which as many as 500,000 machines could still be in use unmodified.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:50:20+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Indesit
+      series: Post-2015 models
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: heating element
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Indesit/Hotpoint tumble dryer recall (2004–2015): fluff contacting heating element fire
+        risk'
+      body: 'This is the official UK OPSS recall notice for Indesit (and Hotpoint, Creda, Swan, Proline)
+        tumble dryers. It is the central documented fire defect for the brand: the recall window ends
+        30 September 2015, so post-2015 models are outside it. The fire risk is fluff coming into contact
+        with the heating element.'
+      advice: For a post-2015 Indesit dryer this recall does not apply, but it establishes the brand's
+        documented fire history and the exact mechanism (fluff on heating element). Anyone buying a used
+        Indesit dryer should confirm its manufacture date and whether it was modified, since unmodified
+        pre-2015 units carry the fire risk.
+    tr:
+      title: 'Indesit/Hotpoint kurutma makinesi geri çağırması (2004–2015): ısıtma elemanına temas eden
+        hav yangın riski'
+      body: 'Bu, Indesit (ve Hotpoint, Creda, Swan, Proline) kurutma makineleri için resmi Birleşik Krallık
+        OPSS geri çağırma bildirimidir. Marka için belgelenmiş merkezi yangın kusurudur: geri çağırma
+        penceresi 30 Eylül 2015''te sona erer, dolayısıyla 2015 sonrası modeller bunun dışındadır. Yangın
+        riski, havın ısıtma elemanıyla temas etmesidir.'
+      advice: 2015 sonrası bir Indesit kurutma makinesi için bu geri çağırma geçerli değildir, ancak markanın
+        belgelenmiş yangın geçmişini ve tam mekanizmayı (ısıtma elemanı üzerindeki hav) ortaya koyar.
+        Kullanılmış bir Indesit kurutma makinesi satın alan herkes üretim tarihini ve değiştirilip değiştirilmediğini
+        doğrulamalıdır, çünkü değiştirilmemiş 2015 öncesi birimler yangın riski taşır.
+  evidence:
+  - url: https://assets.publishing.service.gov.uk/government/uploads/system/uploads/attachment_data/file/815835/Hotpoint__Indesit__Creda__Swan_and_Proline_tumble_dryers.pdf
+    quote: The recall covers all models of vented and condensing tumble dryers produced between 1 April
+      2004 and 30 September 2015 and sold in the United Kingdom under the Hotpoint, Indesit, Creda, Proline
+      and Swan brands, with the exception of those which have been modified or replaced in accordance
+      with the agreement between Whirlpool UK Appliances Limited and Peterborough Council of September
+      2015.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:51:01+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Bosch
+      series: Heat pump (non-WDT67)
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: UMAC compressor electrical connection
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Bosch WQG24500BY heat pump dryer withdrawn from Serbian market — UMAC compressor wiring electric-shock
+        risk
+      body: 'Official CEFTA market-surveillance record (economy: Serbia) for Bosch model WQG24500BY, barcode
+        4242005303526, made in Poland. The compressor''s electrical connection was not made to specification
+        during production, creating an electric-shock risk if installed in a household whose electrical
+        installation does not meet safety guidelines. This is the only official recall/withdrawal record
+        I found for a Bosch heat pump dryer in the European region; note the market is Serbia, not EU
+        or Turkey.'
+      advice: If you own a WQG24500BY, check the serial number against the Serbian ministry list and contact
+        BSH/Bosch service for inspection; the risk depends on the household's electrical installation.
+    tr:
+      title: Bosch WQG24500BY ısı pompalı kurutma makinesi Sırbistan pazarından çekildi — UMAC kompresör
+        kablolaması elektrik çarpması riski
+      body: 'Bosch model WQG24500BY, barkod 4242005303526, Polonya üretimi için resmi CEFTA piyasa gözetimi
+        kaydı (ekonomi: Sırbistan). Kompresörün elektrik bağlantısı üretim sırasında spesifikasyona uygun
+        yapılmamış olup, elektrik tesisatı güvenlik yönergelerine uymayan bir hanede kurulması durumunda
+        elektrik çarpması riski oluşturmaktadır. Avrupa bölgesinde bir Bosch ısı pompalı kurutma makinesi
+        için bulduğum tek resmi geri çağırma/çekme kaydı budur; pazarın AB veya Türkiye değil Sırbistan
+        olduğunu unutmayın.'
+      advice: Bir WQG24500BY'ye sahipseniz, seri numarasını Sırbistan bakanlık listesiyle karşılaştırın
+        ve inceleme için BSH/Bosch servisiyle iletişime geçin; risk hanenin elektrik tesisatına bağlıdır.
+  evidence:
+  - url: https://transparency.cefta.int/ProductSafety/PublicReadOnly?id=515
+    quote: The heat pump system contains an electric UMAC compressor connected to a 220 volt power supply;
+      during production, the electrical connection of the compressor was not made according to the specification,
+      so if the product is installed in a household with an electrical installation that does not comply
+      with the safety instructions, there is a risk of electric shock.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:52:30+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: siemens
+      series: '2002'
+  kind: known_issue
+  domain: fire
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: model WTXL2100EU, batch numbers FD8201-FD8205
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Hong Kong regulator names affected model WTXL2100EU and batch numbers FD8201-FD8205
+      body: Hong Kong's Electrical & Mechanical Services Department (12 Sept 2014) issued a consumer alert
+        for the Siemens tumble dryer model WTXL2100EU with batch numbers FD8201-FD8205, sold in Hong Kong
+        Jan-Oct 2002, warning they may overheat and catch fire and urging consumers to stop using them.
+        This gives the concrete model and batch identifiers for the affected 2002 series, useful for checking
+        whether a specific unit is covered. Note this is the Hong Kong market, not EU/TR, but it identifies
+        the same 2002 defect with specific model/batch codes.
+      advice: ''
+    tr:
+      title: Hong Kong düzenleyicisi etkilenen model WTXL2100EU'yu ve FD8201-FD8205 parti numaralarını
+        belirledi
+      body: Hong Kong'un Elektrik ve Mekanik Hizmetler Departmanı (12 Eylül 2014), Hong Kong'da Ocak-Ekim
+        2002 arasında satılan FD8201-FD8205 parti numaralı Siemens kurutma makinesi model WTXL2100EU için,
+        aşırı ısınıp yangına yol açabilecekleri uyarısıyla ve tüketicileri kullanmayı bırakmaya çağırarak
+        bir tüketici uyarısı yayımladı. Bu, etkilenen 2002 serisi için somut model ve parti tanımlayıcılarını
+        verir ve belirli bir birimin kapsamda olup olmadığını kontrol etmek için faydalıdır. Bunun AB/TR
+        değil Hong Kong pazarı olduğunu unutmayın, ancak aynı 2002 kusurunu belirli model/parti kodlarıyla
+        tanımlar.
+  evidence:
+  - url: https://www.news.gov.hk/en/categories/health/html/2014/09/20140912_103732.shtml
+    quote: 'The Electrical & Mechanical Services Department today urged consumers to stop using Siemens
+      tumble dryers with the model number: WTXL2100EU, and batch numbers: FD8201 to FD8205, that were
+      sold in Hong Kong from January to October 2002.'
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:49:44+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: beko
+      series: 8-9kg-condenser-2012
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: third party supplied component (not named in this source)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Beko voluntary repair programme for 8/9kg condenser dryers — third party component can fail
+        and overheat
+      body: Manufacturer's own safety notice confirming the same affected models and describing the defect
+        as a third-party supplied component that can fail and overheat.
+      advice: Beko offers a free in-home check and modification (about 30 minutes). Owners of affected
+        models should register for the repair via Beko's website or call 0800 917 2018.
+    tr:
+      title: Beko 8/9 kg kondenserli kurutma makineleri için gönüllü onarım programı — üçüncü taraf bileşen
+        arızalanıp aşırı ısınabilir
+      body: Üreticinin kendi güvenlik bildirimi, aynı etkilenen modelleri doğrulamakta ve kusuru arızalanıp
+        aşırı ısınabilen üçüncü taraf tedarikli bir bileşen olarak tanımlamaktadır.
+      advice: Beko ücretsiz bir evde kontrol ve değişiklik sunmaktadır (yaklaşık 30 dakika). Etkilenen
+        modellerin sahipleri Beko'nun web sitesi üzerinden onarım için kayıt yaptırmalı veya 0800 917
+        2018'i aramalıdır.
+  evidence:
+  - url: https://www.beko.co.uk/dryerrepair?dm_i=Z6K,4Z6HL,FOL9EI,IXT86,1&utm_campaign=8359833_ARLA%20News%20Issue%20130
+    quote: As part of our ongoing monitoring we have identified a batch issue with a third party supplied
+      component which in rare circumstances could fail and overheat, which could lead to a risk of fire.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:48:21+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: siemens
+      series: '2002'
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: composant électronique du panneau de commande (control panel electronic component)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Swiss regulator ESTI confirms 2002 Siemens dryer overheating/fire safety warning
+      body: 'The Swiss Federal Inspectorate for Heavy Current Installations (ESTI), via the Federal Office
+        for Consumer Protection, published this safety warning on 1 Oct 2014 in cooperation with BSH.
+        It independently confirms the same defect: a limited number of Siemens dryers built Jan-May 2002
+        can overheat due to a defective control-panel electronic component, with an extremely rare potential
+        fire risk. Free home repair is offered, and affected units should only be run under supervision
+        and not at night. This corroborates the manufacturer''s notice from an official regulator source.'
+      advice: ''
+    tr:
+      title: İsviçre düzenleyicisi ESTI, 2002 Siemens kurutucu aşırı ısınma/yangın güvenliği uyarısını
+        doğruladı
+      body: 'İsviçre Federal Yüksek Akım Tesisleri Denetleme Kurumu (ESTI), Federal Tüketici Koruma Dairesi
+        aracılığıyla bu güvenlik uyarısını 1 Eki 2014 tarihinde BSH ile işbirliği içinde yayımladı. Aynı
+        kusuru bağımsız olarak doğrulamaktadır: Ocak-Mayıs 2002 arasında üretilen sınırlı sayıda Siemens
+        kurutucu, arızalı bir kontrol paneli elektronik bileşeni nedeniyle aşırı ısınabilir ve son derece
+        nadir bir potansiyel yangın riski taşır. Ücretsiz evde onarım sunulmaktadır ve etkilenen üniteler
+        yalnızca gözetim altında ve gece çalıştırılmamalıdır. Bu, üreticinin bildirimini resmi bir düzenleyici
+        kaynaktan teyit etmektedir.'
+  evidence:
+  - url: https://www.admin.ch/gov/fr/start/dokumentation/medienmitteilungen.msg-id-54673.html
+    quote: Un nombre limité d'appareils fabriqués entre janvier et mai 2002 pourrait surchauffer en raison
+      d'un composant électronique défectueux du panneau de commande, ce qui peut dans des cas extrêmement
+      rares causer un risque potentiel d'incendie.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:49:44+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Bosch
+      series: Heat pump (non-WDT67)
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: heat pump system (ısı pompası) / control electronics
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Bosch WQG244C1TR/05 heat pump dryer keeps heating after programme end; owner reports fire
+        risk (Turkey)
+      body: 'Finding came from the query ''Bosch WQG244C1TR kurutma makinesi yangın''. A verified owner
+        complaint (Şikayetvar, 29 May 2025) about a Bosch WQG244C1TR/05 heat pump dryer bought 23 Oct
+        2024 in Turkey: the machine kept running the heat pump with intense heat after the programme ended,
+        creating serious overheating and a fire risk. A technician said there was no problem; the fault
+        recurred 11 times over 6 months. This is a TR-market, non-WDT67 Bosch heat pump dryer, matching
+        the subject.'
+      advice: 'An owner reports a fire risk on this model: the dryer continued heating after the programme
+        ended. If a Bosch heat pump dryer runs hot after the cycle finishes, treat it as a safety concern,
+        stop using it, and escalate beyond a single service visit (the owner reports the fault was dismissed
+        and recurred 11 times).'
+    tr:
+      title: Bosch WQG244C1TR/05 ısı pompalı kurutucu program bittikten sonra ısıtmaya devam ediyor; sahibi
+        yangın riski bildiriyor (Türkiye)
+      body: 'Bulgı ''Bosch WQG244C1TR kurutma makinesi yangın'' sorgusundan elde edildi. Türkiye''de 23
+        Eki 2024 tarihinde satın alınan bir Bosch WQG244C1TR/05 ısı pompalı kurutucu hakkında doğrulanmış
+        bir sahip şikayeti (Şikayetvar, 29 May 2025): makine program bittikten sonra ısı pompasını yoğun
+        ısıyla çalıştırmaya devam etti ve ciddi aşırı ısınma ile yangın riski oluşturdu. Bir teknisyen
+        sorun olmadığını söyledi; arıza 6 ay içinde 11 kez tekrarladı. Bu, TR pazarına yönelik, WDT67
+        olmayan bir Bosch ısı pompalı kurutucudur ve konuyla uyuşmaktadır.'
+      advice: 'Bir sahip bu modelde yangın riski bildiriyor: kurutucu program bittikten sonra ısıtmaya
+        devam etti. Bir Bosch ısı pompalı kurutucu döngü bittikten sonra sıcak çalışırsa, bunu bir güvenlik
+        sorunu olarak değerlendirin, kullanmayı durdurun ve tek bir servis ziyaretinin ötesine taşıyın
+        (sahip, arızanın göz ardı edildiğini ve 11 kez tekrarladığını bildiriyor).'
+  evidence:
+  - url: https://www.sikayetvar.com/bosch/bosch-kurutma-makinesi-surekli-isinma-ve-yangin-riski-servis-sorumsuzlugu
+    quote: Ancak benim cihazım, sanki program hiç bitmemiş gibi ısı pompasını devreye sokarak aralıksız
+      şekilde, yoğun ısıyla çalışmaya devam etti. Bunun sonucunda da cihazda ciddi bir ısınma sorunu ve
+      yangın riski ortaya çıktı.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:46:23+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Whirlpool
+      series: Various models
+  kind: known_issue
+  domain: fire
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: tumble dryer (general fire risk)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'IFS (Germany): Whirlpool dryers among brands still causing fires investigated by German
+        insurance institute'
+      body: The German Institute for Damage Prevention and Damage Research (IFS) of public insurers reports
+        it still investigates fires in dryers from brands including Bauknecht and Whirlpool, linked to
+        an older pattern of damage accumulation. This is independent German evidence that Whirlpool dryers
+        appear in fire investigations.
+      advice: German evidence shows Whirlpool dryers appear in fire investigations; owners should follow
+        the recall guidance for affected models.
+    tr:
+      title: 'IFS (Almanya): Whirlpool kurutucular, Alman sigorta enstitüsü tarafından incelenen ve hâlâ
+        yangına neden olan markalar arasında'
+      body: Kamu sigortacılarının Alman Hasar Önleme ve Hasar Araştırma Enstitüsü (IFS), Bauknecht ve
+        Whirlpool dahil markaların kurutucularındaki yangınları, daha eski bir hasar birikimi örüntüsüyle
+        bağlantılı olarak hâlâ incelediğini bildiriyor. Bu, Whirlpool kurutucuların yangın incelemelerinde
+        yer aldığına dair bağımsız Alman kanıtıdır.
+      advice: Alman kanıtları Whirlpool kurutucuların yangın incelemelerinde yer aldığını gösteriyor;
+        sahipler etkilenen modeller için geri çağırma rehberliğine uymalıdır.
+  evidence:
+  - url: https://www.ifs-ev.org/?s=w%C3%A4schetrockner
+    quote: Betroffen sind nach Kenntnis des IFS Geräte der Marken Bauknecht, Whirlpool,…
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:55:03+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Samsung
+      series: Heat pump
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: rear panel / drum assembly
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Samsung DV90T8240SH/S2 heat pump dryer rear panel melting during normal use (EU)
+      body: 'Owner report on Samsung''s EU community forum: a DV90T8240SH/S2 heat pump dryer produced
+        rattling and scraping noises, and the owner found melting at the rear of the appliance, warning
+        other owners to check for melting and fire risk.'
+      advice: If you own a DV90T8240-series heat pump dryer, inspect the rear of the machine for melted
+        plastic or scorching before running it unattended. Stop use and contact Samsung service if any
+        melting, rattling, or burning smell appears.
+    tr:
+      title: Samsung DV90T8240SH/S2 ısı pompalı kurutucu normal kullanım sırasında arka paneli eriyor
+        (AB)
+      body: 'Samsung''un AB topluluk forumunda sahip bildirimi: bir DV90T8240SH/S2 ısı pompalı kurutucu
+        takırtı ve sürtünme sesleri çıkardı ve sahip cihazın arkasında erime tespit ederek diğer sahipleri
+        erime ve yangın riski açısından kontrol yapmaları konusunda uyardı.'
+      advice: Bir DV90T8240 serisi ısı pompalı kurutucunuz varsa, gözetimsiz çalıştırmadan önce makinenin
+        arkasını erimiş plastik veya kavrulma açısından inceleyin. Herhangi bir erime, takırtı veya yanık
+        kokusu ortaya çıkarsa kullanımı durdurun ve Samsung servisiyle iletişime geçin.
+  evidence:
+  - url: https://eu.community.samsung.com/t5/home-appliances/dv90t8240sh-s2-heat-pump-dryer-melting/m-p/14800500
+    quote: does anyone know if there is some division I can contact at Samsung to look into a safety issue
+      with their DV90T8240SH/S2 (not sure if every related model DV90T8240xx/xx is impacted)? If not,
+      let this at least be a PSA.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:54:04+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: siemens
+      series: wdt67
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: interner technischer Defekt (Schadenschwerpunkt rechte Seite)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Siemens/Bosch WDT67 heat pump dryer (2020–2022) internal technical defect causes fires —
+        IFS investigation
+      body: The IFS (Institut für Schadenverhütung) is an independent German damage-prevention institute
+        that examined multiple WDT67 heat pump dryers that caught fire while in operation. The fires were
+        caused by an internal technical defect, with damage concentrated on the right side of the unit.
+        Affected units are from build years 2020–2022. The IFS advises having the dryer checked by a qualified
+        technician if drying performance drops and the manufacturer's manual remedies do not restore it.
+      advice: Owners of a Siemens/Bosch WDT67 (build years 2020–2022) should not run the dryer unattended,
+        and should have it inspected by a qualified technician if drying performance declines. This is
+        a documented fire risk, not a general reliability issue.
+    tr:
+      title: Siemens/Bosch WDT67 ısı pompalı kurutucu (2020–2022) iç teknik kusur yangınlara neden oluyor
+        — IFS incelemesi
+      body: IFS (Institut für Schadenverhütung), çalışma sırasında yangın çıkan birden fazla WDT67 ısı
+        pompalı kurutucuyu inceleyen bağımsız bir Alman hasar önleme enstitüsüdür. Yangınlara iç teknik
+        bir kusur neden oldu ve hasar ünitenin sağ tarafında yoğunlaştı. Etkilenen üniteler 2020–2022
+        üretim yıllarına aittir. IFS, kurutma performansı düşerse ve üreticinin kılavuzundaki çözümler
+        bunu geri getirmezse kurutucunun nitelikli bir teknisyen tarafından kontrol ettirilmesini önermektedir.
+      advice: Bir Siemens/Bosch WDT67 (üretim yılları 2020–2022) sahibiyseniz, kurutucuyu gözetimsiz çalıştırmamalı
+        ve kurutma performansı düşerse nitelikli bir teknisyen tarafından incelenmesini sağlamalısınız.
+        Bu, belgelenmiş bir yangın riskidir, genel bir güvenilirlik sorunu değildir.
+  evidence:
+  - url: https://www.ifs-ev.org/braende-an-waeschetrocknern-von-bosch-und-siemens/
+    quote: Das IFS hat mehrere Wärmepumpenwäschetrockner von des Typs WDT67 untersucht, die aufgrund eines
+      technischen Defektes in Brand geraten sind.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:49:57+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: bosch
+      series: wdt67
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: internal electrical/technical components (right side of unit)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Bosch/Siemens WDT67 heat pump dryer internal technical defect causes fires (IFS investigation)
+      body: The IFS (Institut für Schadenverhütung und Schadenforschung), an independent German damage
+        investigation institute, reports investigating multiple WDT67 heat pump dryers from Bosch and
+        Siemens that caught fire while in operation. In each case, an internal technical defect was identified
+        as the cause. The affected units showed a clear damage focus on the right side. Search snippets
+        also indicate the affected units date from build years 2020–2022, matching the subject's timeframe.
+        This came from the query 'Bosch WDT67 heat pump dryer recall fire'.
+      advice: Owners of Bosch/Siemens WDT67 heat pump dryers from 2020–2022 should be aware of a documented
+        fire risk from internal technical defects. Do not run the dryer unattended, especially overnight,
+        and consider having the unit inspected. A smoke detector near the dryer is strongly advisable.
+    tr:
+      title: Bosch/Siemens WDT67 ısı pompalı kurutucu iç teknik kusur yangınlara neden oluyor (IFS incelemesi)
+      body: Bağımsız bir Alman hasar araştırma enstitüsü olan IFS (Institut für Schadenverhütung und Schadenforschung),
+        çalışma sırasında yangın çıkan Bosch ve Siemens'e ait birden fazla WDT67 ısı pompalı kurutucuyu
+        incelediğini bildiriyor. Her vakada iç teknik bir kusur neden olarak tespit edildi. Etkilenen
+        üniteler sağ tarafta belirgin bir hasar odağı gösterdi. Arama snippet'leri ayrıca etkilenen ünitelerin
+        2020–2022 üretim yıllarına ait olduğunu gösteriyor ve bu da konunun zaman aralığıyla uyuşuyor.
+        Bu, 'Bosch WDT67 heat pump dryer recall fire' sorgusundan elde edildi.
+      advice: 2020–2022 yıllarına ait Bosch/Siemens WDT67 ısı pompalı kurutucu sahipleri, iç teknik kusurlardan
+        kaynaklanan belgelenmiş bir yangın riskinin farkında olmalıdır. Kurutucuyu gözetimsiz, özellikle
+        gece boyunca çalıştırmayın ve ünitenin incelenmesini düşünün. Kurutucunun yakınında bir duman
+        dedektörü kesinlikle tavsiye edilir.
+  evidence:
+  - url: https://www.ifs-ev.org/braende-an-waeschetrocknern-von-bosch-und-siemens/
+    quote: Das IFS hat mehrere Wärmepumpenwäschetrockner von des Typs WDT67 untersucht, die aufgrund eines
+      technischen Defektes in Brand geraten sind.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:49:57+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: beko
+      series: 8-9kg-condenser-2012
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: third party supplied component (not named in this source)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Isle of Man Office of Fair Trading confirms Beko 8/9kg condenser dryer fire risk notice
+      body: Independent regulator (Isle of Man OFT) confirming the same recall details, providing a second
+        independent source for the fire risk claim.
+      advice: This is an independent regulator confirming the manufacturer's recall. Owners should check
+        their model and serial number and contact Beko if affected.
+    tr:
+      title: Man Adası Adil Ticaret Ofisi, Beko 8/9kg kondenser kurutucu yangın riski bildirimini doğruladı
+      body: Bağımsız düzenleyici (Man Adası OFT), aynı geri çağırma ayrıntılarını doğrulayarak yangın
+        riski iddiası için ikinci bir bağımsız kaynak sağlıyor.
+      advice: Bu, üreticinin geri çağırmasını doğrulayan bağımsız bir düzenleyicidir. Sahipler model ve
+        seri numaralarını kontrol etmeli ve etkilenmişlerse Beko ile iletişime geçmelidir.
+  evidence:
+  - url: https://www.gov.im/lib/news/personnel/ViewNews.gov?page=lib/news/oft/safetynoticebeko.xml&menuid=11570
+    quote: In rare circumstances, the component concerned could fail and overheat, leading to a risk of
+      fire.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:48:21+00:00'

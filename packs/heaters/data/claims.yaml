@@ -1,0 +1,1865 @@
+# Claims — what is known to go wrong, each with the page it came from and the quote
+# that was read there. A claim without both is not in this file.
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      model: fan heater
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: internal heating element / housing (plastic body)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Xiaomi Fan Heater internal melting and fire risk after ~1 month of use
+      body: An owner who bought the Xiaomi fan heater from Teknosa reports that after about one month
+        of use, left on overnight, the unit produced a strong smell and melted internally; the authorized
+        service refused repair calling it 'user error', and the owner states this is a serious fire and
+        life-safety risk especially while sleeping.
+      advice: Do not run this fan heater unattended (e.g. overnight). If you smell burning or see signs
+        of internal melting, stop using it immediately and do not accept a 'user error' dismissal — push
+        for inspection or replacement. The owner's report shows the unit did not protect itself from an
+        internal melt condition.
+    tr:
+      title: Xiaomi Fan Heater ~1 ay kullanımdan sonra içten erime ve yangın riski
+      body: Teknosa'dan Xiaomi fanlı ısıtıcı satın alan bir sahip, yaklaşık bir ay kullanımdan sonra,
+        gece boyunca açık bırakıldığında, cihazın güçlü bir koku yaydığını ve içten eridiğini bildiriyor;
+        yetkili servis bunu 'kullanıcı hatası' diyerek onarımı reddetti ve sahip bunun özellikle uyurken
+        ciddi bir yangın ve can güvenliği riski olduğunu belirtiyor.
+      advice: Bu fanlı ısıtıcıyı gözetimsiz (ör. gece boyunca) çalıştırmayın. Yanık kokusu alırsanız veya
+        içten erime belirtileri görürseniz, kullanmayı hemen durdurun ve 'kullanıcı hatası' gerekçesiyle
+        reddedilmeyi kabul etmeyin — inceleme veya değişim için ısrar edin. Sahibin raporu, cihazın içten
+        erime durumuna karşı kendini korumadığını gösteriyor.
+  evidence:
+  - url: https://www.sikayetvar.com/xiaomi/xiaomi-fan-heater-icten-erime-ve-yangin-riski
+    quote: 02.01.2026 tarihinde Teknosa’nın web sitesi üzerinden Xiaomi marka fan heater satın aldım.
+      Ürünü yaklaşık 1 ay kadar kullandıktan sonra, gece açık bırakıp uyudum ve sabah uyandığımda cihazdan
+      gelen ağır bir koku ve iç kısmında erime olduğunu fark ettim.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:49:36+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      model: mi smart space heater
+  kind: known_issue
+  domain: fire
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: power/switch block plastic housing
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Owner reports plastic of power/switch block melting on Xiaomi Mi Smart Space Heater S
+      body: An owner of the international version (KRDNQ03ZM) reports that on inspection the plastic of
+        the on/off switch block is visibly melting, alongside a persistent smell and a loose internal
+        part that causes the unit to switch off when moved. Visible melting of switch-block plastic is
+        an overheating/fire hazard signal independent of the Turkish report.
+      advice: Inspect the switch block area for deformation or melting; if the plastic is softening, stop
+        using the heater and seek service or replacement.
+    tr:
+      title: Sahip, Xiaomi Mi Smart Space Heater S'te güç/açma-kapama bloğunun plastiğinin eridiğini bildiriyor
+      body: Uluslararası sürümün (KRDNQ03ZM) bir sahibi, incelemede açma/kapama anahtarı bloğunun plastiğinin
+        gözle görülür şekilde eridiğini, bunun yanı sıra kalıcı bir koku ve cihaz hareket ettirildiğinde
+        kapanmasına neden olan gevşek bir iç parça olduğunu bildiriyor. Anahtar bloğu plastiğinin gözle
+        görülür şekilde erimesi, Türkiye'deki rapordan bağımsız bir aşırı ısınma/yangın tehlikesi işaretidir.
+      advice: Anahtar bloğu bölgesini deformasyon veya erime açısından inceleyin; plastik yumuşuyorsa
+        ısıtıcıyı kullanmayı durdurun ve servis veya değişim talep edin.
+  evidence:
+  - url: https://catalog.onliner.by/heater/xiaomi/bhr4037gl/reviews?boost=shop.5105
+    quote: При осмотре видно что пластик блока включения и переключения оплавляется.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:50:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: kobe
+      model: kbe8280200k
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: plug (mains plug and cable)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Ireland consumer protection (CCPC) recalls Kobe KBE8280200K, ~11 units sold via ted.ie
+      body: Official recall notice from the Competition and Consumer Protection Commission of Ireland
+        (CCPC), publication date 3 September 2026, confirming the same plug defect and the recall by Cromwell
+        Tools Limited.
+      advice: 'Confirms the recall applies in Ireland too; ~11 units were sold via ted.ie. Same action:
+        stop use, return for refund.'
+    tr:
+      title: İrlanda tüketici koruması (CCPC), ted.ie üzerinden satılan ~11 adet Kobe KBE8280200K'yı geri
+        çağırıyor
+      body: İrlanda Rekabet ve Tüketiciyi Koruma Komisyonu'nun (CCPC) resmi geri çağırma bildirimi, yayın
+        tarihi 3 Eylül 2026, aynı fiş kusurunu ve Cromwell Tools Limited tarafından yapılan geri çağırmayı
+        doğruluyor.
+      advice: 'Geri çağırmanın İrlanda''da da geçerli olduğunu doğruluyor; ted.ie üzerinden ~11 adet satıldı.
+        Aynı işlem: kullanımı durdurun, para iadesi için iade edin.'
+  evidence:
+  - url: https://www.ccpc.ie/consumer-advice/product-safety/product-safety-notifications/details/cromwell-tools-limited-recalls-kobe-2kw-oil-filled-9-fin-radiator
+    quote: The product presents a risk of fire because the plug has a manufacturing defect and may overheat.
+      This could lead to the plug and cable melting and/or catching fire.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:46:20+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: philips
+      model: hd3478
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: oil heater body (production-stage defective unit)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Philips HD3478 oil heater recall — production-stage defective unit can smoke/ignite
+      body: The Japan Consumer Affairs Agency recall database lists the HD3478 (JAN 87 10103 094012, 9,976
+        units) among the Philips oil heaters recalled for a smoke/fire risk, and records that a product-burnout
+        fire occurred.
+      advice: If you own or are considering a Philips HD3478 oil heater, treat it as a recalled fire-risk
+        unit. Stop using it immediately and contact Philips' recall center for the free inspection/recall.
+        Do not buy a used HD3478 without confirming it has been inspected.
+    tr:
+      title: Philips HD3478 yağlı radyatör geri çağırması — üretim aşamasında kusurlu cihaz duman çıkarabilir/tutuşabilir
+      body: Japonya Tüketici İşleri Ajansı geri çağırma veritabanı, duman/yangın riski nedeniyle geri
+        çağrılan Philips yağlı radyatörler arasında HD3478'i (JAN 87 10103 094012, 9.976 adet) listeliyor
+        ve bir ürün yanması yangınının meydana geldiğini kaydediyor.
+      advice: Bir Philips HD3478 yağlı radyatöre sahipseniz veya almayı düşünüyorsanız, bunu geri çağrılmış
+        bir yangın riski taşıyan cihaz olarak değerlendirin. Kullanmayı hemen durdurun ve ücretsiz inceleme/geri
+        çağırma için Philips'in geri çağırma merkeziyle iletişime geçin. İncelendiği doğrulanmadan ikinci
+        el bir HD3478 satın almayın.
+  evidence:
+  - url: https://www.recall.caa.go.jp/result/detail.php?rcl=00000007540&screenkbn=06
+    quote: 平成10年9月から生産・販売していた日本フィリップス製オイルヒーターの一部に、生産初期段階での作業不良品が混入し、長期間の使用中に、まれに発煙、発火に至る可能性があることが判明した。
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:46:40+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      model: mi smart space heater
+  kind: known_issue
+  domain: fire
+  severity: low
+  consequence: ''
+  detection: ''
+  component: power plug / power cord
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Xiaomi EU manual warns of molten plug or fire from plug overheating and prohibits extension
+        cords
+      body: The EU-market user manual explicitly ties plug overheating to a fire risk, instructing users
+        to check the plug prongs (above 55°C) to avoid a molten plug or fire and never to use an extension
+        cord. This corroborates the manufacturer FAQ's plug-overheating warning and documents the fire
+        risk in the EU market.
+      advice: Use a grounded 10 A outlet directly, never an extension cord, and check the plug for excessive
+        heat after the first ~30 minutes of use.
+    tr:
+      title: Xiaomi AB kılavuzu, fişin aşırı ısınmasından kaynaklanan erimiş fiş veya yangın konusunda
+        uyarıyor ve uzatma kablolarını yasaklıyor
+      body: AB pazarına yönelik kullanım kılavuzu, fişin aşırı ısınmasını açıkça yangın riskiyle ilişkilendiriyor,
+        kullanıcılara erimiş fiş veya yangından kaçınmak için fiş uçlarını (55°C üzeri) kontrol etmelerini
+        ve asla uzatma kablosu kullanmamalarını talimat veriyor. Bu, üreticinin SSS'lerindeki fiş aşırı
+        ısınma uyarısını destekliyor ve AB pazarındaki yangın riskini belgeliyor.
+      advice: Doğrudan topraklı 10 A priz kullanın, asla uzatma kablosu kullanmayın ve kullanımın ilk
+        ~30 dakikasından sonra fişi aşırı ısı açısından kontrol edin.
+  evidence:
+  - url: https://aio.lv/document/product/3624473/1824434
+    quote: To prevent the risk of overheating or fire, never use an extension cord.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:50:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: philips
+      model: hd3478
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: internal heating element / production workmanship (production initial-stage defect)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Philips Japan confirms free inspection/collection for HD3478 oil heater smoke/fire risk
+      body: The manufacturer's own recall page names HD3478 among the three recalled oil heater models
+        and confirms the smoke/fire risk, offering free inspection and collection. This is the manufacturer's
+        own documentation.
+      advice: This is the manufacturer's own confirmation of the hazard. Philips' page tells owners to
+        stop using the unit immediately and contact the recall center for free inspection/collection.
+        Because the units are now over a decade old, Philips also flags age-related deterioration as a
+        general concern.
+    tr:
+      title: Philips Japonya, HD3478 yağlı radyatör duman/yangın riski için ücretsiz inceleme/toplama
+        işlemini doğruluyor
+      body: Üreticinin kendi geri çağırma sayfası, geri çağrılan üç yağlı radyatör modeli arasında HD3478'i
+        adlandırıyor ve duman/yangın riskini doğrulayarak ücretsiz inceleme ve toplama sunuyor. Bu, üreticinin
+        kendi belgesidir.
+      advice: Bu, üreticinin tehlikenin kendi onayıdır. Philips'in sayfası, sahiplerine cihazı hemen kullanmayı
+        durdurmalarını ve ücretsiz inceleme/toplama için geri çağırma merkeziyle iletişime geçmelerini
+        söylüyor. Cihazlar artık on yıldan eski olduğu için Philips ayrıca yaşa bağlı bozulmayı genel
+        bir endişe olarak işaret ediyor.
+  evidence:
+  - url: https://www.philips.co.jp/c-e/recall/recall/oil-heater-safety-use
+    quote: フィリップスが1998年～99年に生産・販売いたしましたオイルヒーター3機種の一部に、生産初期段階での作業不良品が混入し、長期間のご使用中にまれに発煙、発火に至る可能性がございます。
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:46:40+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: dyson
+      model: am04
+  kind: known_issue
+  domain: general
+  severity: low
+  consequence: ''
+  detection: ''
+  component: entire unit (recall eligibility)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: AM04 recall applies only to units bought before April 2014
+      body: The German-language recall page states that heaters bought after April 2014 should not be
+        affected by the recall, giving EU buyers a practical cutoff date for the hazard.
+      advice: For the EU market, a unit purchased after April 2014 is stated to be outside the recall;
+        Dyson still asks owners to confirm by serial number at dysonrecall.com.
+    tr:
+      title: AM04 geri çağırma yalnızca Nisan 2014'ten önce satın alınan birimler için geçerlidir
+      body: Almanca geri çağırma sayfası, Nisan 2014'ten sonra satın alınan ısıtıcıların geri çağırmadan
+        etkilenmemesi gerektiğini belirterek AB alıcılarına tehlike için pratik bir son tarih veriyor.
+      advice: AB pazarı için, Nisan 2014'ten sonra satın alınan bir birimin geri çağırma kapsamı dışında
+        olduğu belirtiliyor; Dyson yine de sahiplerden dysonrecall.com adresinde seri numarasıyla doğrulama
+        yapmalarını istiyor.
+  evidence:
+  - url: https://www.dysonrecall.com/de-DE/Info
+    quote: Falls Sie Ihren Heizlüfter nach April 2014 gekauft haben, sollte Ihr Gerät davon nicht betroffen
+      sein.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:46:07+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: delonghi
+      model: trd40820e
+  kind: known_issue
+  domain: general
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: radiator housing / body surface
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Body surface exceeds 70°C even in minimum mode — burn risk for children
+      body: An owner measured surface temperatures above 70°C even in minimum mode and about 90°C at maximum,
+        calling it a hazard where small children are present. This is an owner-reported burn risk on the
+        hot metal body, consistent with the manufacturer's own 'can become very hot and cause burns' warning.
+        It came from the 'common problems' search.
+      advice: Keep children and pets away from the body, and position the heater at least the manual's
+        recommended distance from furniture; the outer surfaces get hot enough to cause burns even on
+        the lowest setting.
+    tr:
+      title: Gövde yüzeyi minimum modda bile 70°C'yi aşıyor — çocuklar için yanık riski
+      body: Bir sahip, minimum modda bile 70°C'nin üzerinde ve maksimumda yaklaşık 90°C yüzey sıcaklıkları
+        ölçtü ve küçük çocukların bulunduğu yerlerde bunu bir tehlike olarak nitelendirdi. Bu, üreticinin
+        kendi "çok sıcak hale gelebilir ve yanıklara neden olabilir" uyarısıyla tutarlı olarak, sıcak
+        metal gövdede sahip tarafından bildirilen bir yanık riskidir. "Yaygın sorunlar" aramasından geldi.
+      advice: Çocukları ve evcil hayvanları gövdeden uzak tutun ve ısıtıcıyı kılavuzun önerdiği mesafeden
+        en az mobilyalardan uzak konumlandırın; dış yüzeyler en düşük ayarda bile yanıklara neden olacak
+        kadar ısınır.
+  evidence:
+  - url: https://hotline.ua/ua/bt-obogrevateli/delonghi-trd40820e/?tab=reviews
+    quote: сверху и по бокам есть области, температура которых превышает 70 градусов даже в минимальном
+      режиме (в максимальном - около 90) - это может быть проблемой, если в доме есть маленькие дети.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:45:02+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: delonghi
+      model: trd41025
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: safety cut-out device
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: TRD41025B enters an un-resettable safety mode and will not turn back on
+      body: On the Darty certified-owner forum for the TRD41025B, an owner reports the radiator went into
+        safety mode and could not be turned back on; the manual directs them to contact service, with
+        the repair quoted at over 100 euros. A second owner reports the same 'won't turn on' failure.
+        The manual confirms the unit has a safety device that switches it off on accidental overheating
+        and must be reset via Customer Experience, so a lockout is a real, costly failure mode for this
+        exact model. This came from the 'De'Longhi Dragon4 TRD41025 common problems' search.
+      advice: If the unit trips into safety mode, expect that it may not reset without service support;
+        factor in the cost and distance of an authorized repair when buying.
+    tr:
+      title: TRD41025B sıfırlanamayan bir güvenlik moduna giriyor ve tekrar açılmıyor
+      body: TRD41025B için Darty sertifikalı sahip forumunda bir sahip, radyatörün güvenlik moduna girdiğini
+        ve tekrar açılamadığını bildiriyor; kılavuz onları servisle iletişime geçmeye yönlendiriyor ve
+        onarım için 100 avronun üzerinde fiyat veriliyor. İkinci bir sahip de aynı "açılmıyor" arızasını
+        bildiriyor. Kılavuz, birimin kazara aşırı ısınma durumunda onu kapatan ve Müşteri Deneyimi aracılığıyla
+        sıfırlanması gereken bir güvenlik cihazına sahip olduğunu doğruluyor, dolayısıyla kilitlenme bu
+        tam model için gerçek ve maliyetli bir arıza modudur. Bu, "De'Longhi Dragon4 TRD41025 yaygın sorunlar"
+        aramasından geldi.
+      advice: Birim güvenlik moduna girerse, servis desteği olmadan sıfırlanmayabileceğini bekleyin; satın
+        alırken yetkili onarımın maliyetini ve mesafesini hesaba katın.
+  evidence:
+  - url: https://sav.darty.com/forum/DELONGHI/TRD41025B/PANNE-RADIATEUR-DELONGHI/4033713/471532
+    quote: Même souci mon radiateur c est mis en sécurité impossible de la rallumer la notice dit contacter
+      SAV
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:45:22+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: philips
+      model: hd3478
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: oil heater body (production-stage defective unit)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Philips Japan official recall notice — HD3478 owners told to stop use and contact recall
+        center
+      body: Philips Japan's own recall page names the HD3478 among the three oil heater models subject
+        to free inspection/recall, and instructs owners to stop using them immediately.
+      advice: This is the manufacturer's own confirmation of the fire hazard. The free inspection/recall
+        is the remedy; owners who have not had the unit inspected should stop using it and call the Philips
+        recall center (0120-666-105).
+    tr:
+      title: Philips Japonya resmi geri çağırma bildirimi — HD3478 sahiplerine kullanımı durdurmaları
+        ve geri çağırma merkeziyle iletişime geçmeleri söyleniyor
+      body: Philips Japonya'nın kendi geri çağırma sayfası, ücretsiz inceleme/geri çağırma kapsamındaki
+        üç yağlı ısıtıcı modeli arasında HD3478'i adlandırıyor ve sahiplerine bunları derhal kullanmayı
+        bırakmalarını talimat veriyor.
+      advice: Bu, üreticinin yangın tehlikesine ilişkin kendi teyididir. Ücretsiz inceleme/geri çağırma
+        çözümdür; birimi inceletmemiş sahipler kullanmayı bırakmalı ve Philips geri çağırma merkezini
+        (0120-666-105) aramalıdır.
+  evidence:
+  - url: https://www.philips.co.jp/c-e/recall/recall/oil-heater-safety-use
+    quote: フィリップスが1998年～99年に生産・販売いたしましたオイルヒーター3機種の一部に、生産初期段階での作業不良品が混入し、長期間のご使用中にまれに発煙、発火に至る可能性がございます。
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:46:40+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: kobe
+      model: kbe8280200k
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: plug (mains plug and cable)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Kobe KBE8280200K oil radiator recalled for fire risk from plug overheating defect
+      body: Official UK Trading Standards recall (PSD case 2606-0205) for the Kobe 2kW Oil-Filled 9 Fin
+        Radiator, product code KBE8280200K, sold from January 2024 onwards.
+      advice: If you own this radiator, stop using it immediately and arrange a refund with Cromwell Tools
+        Limited (0800 33 88 77 / hsqeteam@cromwell.co.uk). Check the batch numbers 0081430138-151 and
+        0081476187-538. The failure is in the mains plug, which can overheat and ignite during normal
+        use.
+    tr:
+      title: Kobe KBE8280200K yağlı radyatör, fiş aşırı ısınma kusurundan kaynaklanan yangın riski nedeniyle
+        geri çağrıldı
+      body: Kobe 2kW Yağ Doldurulmuş 9 Kanatlı Radyatör, ürün kodu KBE8280200K, Ocak 2024'ten itibaren
+        satılan için resmi UK Trading Standards geri çağırması (PSD dosya 2606-0205).
+      advice: Bu radyatöre sahipseniz derhal kullanmayı bırakın ve Cromwell Tools Limited (0800 33 88
+        77 / hsqeteam@cromwell.co.uk) ile para iadesi düzenleyin. Parti numaralarını 0081430138-151 ve
+        0081476187-538 kontrol edin. Arıza, normal kullanım sırasında aşırı ısınıp tutuşabilen ana fiştedir.
+  evidence:
+  - url: https://www.gov.uk/product-safety-alerts-reports-recalls/product-recall-kobe-2kw-oil-filled-9-fin-radiator-2606-0205
+    quote: The product presents a risk of fire because the plug has a manufacturing defect and may overheat.
+      This could lead to the plug and cable melting and/or catching fire.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:46:20+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: philips
+      model: hd3479
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: internal heating/wiring assembly (production-stage defective workmanship)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Philips itself warns HD3479 owners to stop use immediately and request free inspection
+      body: This finding came from the search 'Philips HD3479 recall'. Philips' own Japanese recall page
+        names HD3477/HD3478/HD3479, confirms the smoke/fire risk from production-stage defective units,
+        and tells owners of untreated units to stop using them immediately and contact the free recall
+        line (0120-666-105) for free inspection/collection.
+      advice: The manufacturer itself instructs owners to stop using the HD3479 immediately. Contact Philips'
+        recall center for free inspection, repair, or disposal support.
+    tr:
+      title: Philips'in kendisi HD3479 sahiplerini derhal kullanımı durdurmaya ve ücretsiz inceleme talep
+        etmeye uyarıyor
+      body: Bu bulgu "Philips HD3479 geri çağırma" aramasından geldi. Philips'in kendi Japonca geri çağırma
+        sayfası HD3477/HD3478/HD3479'u adlandırıyor, üretim aşamasındaki kusurlu birimlerden kaynaklanan
+        duman/yangın riskini doğruluyor ve işlem görmemiş birimlerin sahiplerine derhal kullanmayı bırakmalarını
+        ve ücretsiz inceleme/toplama için ücretsiz geri çağırma hattıyla (0120-666-105) iletişime geçmelerini
+        söylüyor.
+      advice: Üreticinin kendisi sahiplere HD3479'u derhal kullanmayı bırakmalarını talimat veriyor. Ücretsiz
+        inceleme, onarım veya bertaraf desteği için Philips'in geri çağırma merkeziyle iletişime geçin.
+  evidence:
+  - url: https://www.philips.co.jp/c-e/recall/recall/oil-heater-safety-use
+    quote: フィリップスが1998年～99年に生産・販売いたしましたオイルヒーター3機種の一部に、生産初期段階での作業不良品が混入し、長期間のご使用中にまれに発煙、発火に至る可能性がございます。
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:46:40+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: philips
+      model: hd3478
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: internal heating element / production workmanship (production initial-stage defect)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Philips HD3478 oil heater recalled in Japan for smoke/fire risk from production workmanship
+        defect
+      body: The Japanese Consumer Affairs Agency recall database lists HD3478 among the recalled Philips
+        oil heaters (9,976 units of HD3478), and records that a fire which burned the product occurred.
+        This is an official regulator recall notice.
+      advice: 'A buyer or owner of a Philips HD3478 should treat this as a documented fire hazard: the
+        unit can rarely emit smoke or ignite during long-term use due to a production-stage workmanship
+        defect. Philips Japan offers free inspection/collection; owners should stop using the unit and
+        contact the recall center. Note the recall covers the Japanese-market version of this model.'
+    tr:
+      title: Philips HD3478 yağlı radyatör, üretim işçilik hatasından kaynaklanan duman/yangın riski nedeniyle
+        Japonya'da geri çağrıldı
+      body: Japon Tüketici İşleri Ajansı geri çağırma veritabanı, geri çağrılan Philips yağlı radyatörler
+        arasında HD3478'i listeliyor (9.976 adet HD3478) ve ürünü yakan bir yangının meydana geldiğini
+        kaydediyor. Bu resmi bir düzenleyici geri çağırma bildirimidir.
+      advice: 'Bir Philips HD3478 alıcısı veya sahibi bunu belgelenmiş bir yangın tehlikesi olarak değerlendirmelidir:
+        ünite, üretim aşamasındaki bir işçilik hatası nedeniyle uzun süreli kullanımda nadiren duman çıkarabilir
+        veya tutuşabilir. Philips Japan ücretsiz inceleme/toplama sunuyor; sahipler üniteyi kullanmayı
+        bırakmalı ve geri çağırma merkeziyle iletişime geçmelidir. Geri çağırmanın bu modelin Japon pazarı
+        sürümünü kapsadığını unutmayın.'
+  evidence:
+  - url: https://www.recall.caa.go.jp/result/detail.php?rcl=00000007540&screenkbn=06
+    quote: 平成10年9月から生産・販売していた日本フィリップス製オイルヒーターの一部に、生産初期段階での作業不良品が混入し、長期間の使用中に、まれに発煙、発火に至る可能性があることが判明した。
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:46:40+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      model: mi smart space heater
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: power plug
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Xiaomi confirms power-plug overheating is abnormal and requires immediate unplugging
+      body: Xiaomi's own FAQ states that an overheating power plug is not normal and instructs the user
+        to unplug immediately. This is the manufacturer's own acknowledgment that plug overheating is
+        a real failure mode on this product, and it aligns with the EU manual's instruction to check plug
+        prongs above 55°C to avoid a molten plug or fire.
+      advice: Check the plug and outlet for heat during use; if the plug gets hot, unplug and stop using
+        the heater, and have the outlet checked.
+    tr:
+      title: Xiaomi, fişin aşırı ısınmasının anormal olduğunu ve derhal fişten çekilmesi gerektiğini doğruluyor
+      body: Xiaomi'nin kendi SSS'si, aşırı ısınan bir fişin normal olmadığını belirtiyor ve kullanıcıya
+        derhal fişten çekmesini talimat veriyor. Bu, üreticinin kendi beyanıyla fiş aşırı ısınmasının
+        bu üründe gerçek bir arıza modu olduğunu kabul etmesidir ve AB kılavuzunun erimiş bir fiş veya
+        yangını önlemek için fiş uçlarını 55°C üzerinde kontrol etme talimatıyla uyumludur.
+      advice: Kullanım sırasında fişi ve prizi ısı açısından kontrol edin; fiş ısınırsa fişten çekin ve
+        ısıtıcıyı kullanmayı bırakın ve prizi kontrol ettirin.
+  evidence:
+  - url: https://www.mi.com/my/support/faq/details/KA-07607/
+    quote: No, it is not normal. Immediately unplug the heater when this happens. Only use power outlets
+      that comply with national standards, and fulfill the heater's power requirements.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:47:37+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: philips
+      model: hd3479
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: oil heater (production-stage defect)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Philips Japan official recall notice for HD3477/3478/3479 oil heaters
+      body: Philips Japan's own recall page confirms HD3479 is one of the three recalled oil heater models.
+        It instructs owners of untreated units to stop use immediately and contact the recall center for
+        free pickup/inspection.
+      advice: The manufacturer itself confirms the fire risk and asks owners to stop using the unit. For
+        a TR/EU buyer this is the authoritative confirmation that HD3479 carries a real fire hazard, and
+        Philips offers free inspection/repair/collection.
+    tr:
+      title: Philips Japan'ın HD3477/3478/3479 yağlı radyatörler için resmi geri çağırma bildirimi
+      body: Philips Japan'ın kendi geri çağırma sayfası, HD3479'un geri çağrılan üç yağlı radyatör modelinden
+        biri olduğunu doğruluyor. İşlem görmemiş ünitelerin sahiplerine kullanımı derhal durdurmalarını
+        ve ücretsiz teslim alma/inceleme için geri çağırma merkeziyle iletişime geçmelerini talimat veriyor.
+      advice: Üreticinin kendisi yangın riskini doğruluyor ve sahiplerden üniteyi kullanmayı bırakmalarını
+        istiyor. Bir TR/AB alıcısı için bu, HD3479'un gerçek bir yangın tehlikesi taşıdığının yetkili
+        teyididir ve Philips ücretsiz inceleme/onarım/toplama sunuyor.
+  evidence:
+  - url: https://www.philips.co.jp/c-e/recall/recall/oil-heater-safety-use
+    quote: フィリップスが1998年～99年に生産・販売いたしましたオイルヒーター3機種の一部に、生産初期段階での作業不良品が混入し、長期間のご使用中にまれに発煙、発火に至る可能性がございます。
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:46:40+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: dyson
+      model: am04
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: internal electrical short circuit
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Dyson AM04 short-circuit recall — burned and melted internal parts
+      body: Dyson's own recall site confirms a voluntary worldwide recall of all AM04 and AM05 heaters
+        because a small number short-circuited and produced burned/melted internal parts. This is the
+        manufacturer's primary notice, so it is the strongest available evidence of a fire hazard in the
+        AM04.
+      advice: Before buying or using an AM04, check the serial number at dysonrecall.com. Affected units
+        should be unplugged and sent in for the free engineering fix; Dyson says no injuries or property
+        damage have occurred, but the short-circuit is a documented fire risk.
+    tr:
+      title: Dyson AM04 kısa devre geri çağırması — yanmış ve erimiş iç parçalar
+      body: Dyson'ın kendi geri çağırma sitesi, küçük bir kısmının kısa devre yapması ve yanmış/erimiş
+        iç parçalar üretmesi nedeniyle tüm AM04 ve AM05 ısıtıcılarının dünya çapında gönüllü geri çağrıldığını
+        doğruluyor. Bu, üreticinin birincil bildirimidir, dolayısıyla AM04'teki bir yangın tehlikesinin
+        mevcut en güçlü kanıtıdır.
+      advice: Bir AM04 satın almadan veya kullanmadan önce seri numarasını dysonrecall.com adresinde kontrol
+        edin. Etkilenen üniteler fişten çekilmeli ve ücretsiz mühendislik düzeltmesi için gönderilmelidir;
+        Dyson herhangi bir yaralanma veya maddi hasar meydana gelmediğini söylüyor, ancak kısa devre belgelenmiş
+        bir yangın riskidir.
+  evidence:
+  - url: https://www.dysonrecall.com/en-us/Info
+    quote: Of a million Dyson heaters sold around the world, a small number are known to have short-circuited,
+      leading to burned and melted internal parts.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:46:07+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: delonghi
+      model: trd41025
+  kind: known_issue
+  domain: general
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: heating surface
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: TRD41025B surface gets hot enough to burn, owners warn around children
+      body: On the Darty certified-owner forum for the TRD41025B, multiple owners confirm the radiator
+        surface burns on contact at high power, with one explicitly warning to keep children away. The
+        Turkish manual likewise warns that parts can get very hot and cause burns, especially around children.
+        This is a documented burn hazard inherent to the oil radiator's surface, not a comfort complaint.
+        This came from the 'De'Longhi Dragon4 TRD41025 yangın riski' search.
+      advice: Expect a hot exposed surface; place it out of reach of small children and do not touch the
+        fins while running.
+    tr:
+      title: TRD41025B yüzeyi yakacak kadar ısınıyor, sahipler çocuklar konusunda uyarıyor
+      body: TRD41025B için Darty sertifikalı sahip forumunda, birden fazla sahip radyatör yüzeyinin yüksek
+        güçte temas halinde yaktığını doğruluyor ve biri açıkça çocukları uzak tutma konusunda uyarıyor.
+        Türkçe kılavuz da parçaların çok ısınabileceği ve özellikle çocukların etrafında yanıklara neden
+        olabileceği konusunda uyarıyor. Bu, yağlı radyatörün yüzeyine özgü belgelenmiş bir yanık tehlikesidir,
+        bir konfor şikayeti değildir. Bu, 'De'Longhi Dragon4 TRD41025 yangın riski' aramasından geldi.
+      advice: Sıcak ve açıkta bir yüzey bekleyin; küçük çocukların erişemeyeceği bir yere yerleştirin
+        ve çalışırken kanatçıklara dokunmayın.
+  evidence:
+  - url: https://sav.darty.com/forum/DELONGHI/TRD41025B/CHALEUR/3518836/471532
+    quote: Évidemment que vous allez vous brûler.Il chauffe très bien
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:45:22+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: dyson
+      model: am05
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: printed circuit board (PCB)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Dyson identifies the printed circuit board short as the defect and installs a protective
+        part
+      body: 'Dyson''s Japanese notice names the concrete part: an electrical short on the printed circuit
+        board, fixed by fitting a protective board component.'
+      advice: The defect is on the PCB; the recall remedy is a free engineering fix (protective part)
+        or replacement, so an affected unit should not be used until fixed.
+    tr:
+      title: Dyson kusuru baskılı devre kartındaki kısa devre olarak tanımlıyor ve koruyucu bir parça
+        takıyor
+      body: 'Dyson''ın Japonca bildirimi somut parçayı adlandırıyor: baskılı devre kartındaki bir elektriksel
+        kısa devre, koruyucu bir kart bileşeni takılarak gideriliyor.'
+      advice: Kusur PCB'dedir; geri çağırma çözümü ücretsiz bir mühendislik düzeltmesi (koruyucu parça)
+        veya değişimdir, bu nedenle etkilenen bir ünite düzeltilene kadar kullanılmamalıdır.
+  evidence:
+  - url: https://www.dyson.co.jp/support/customer-notice
+    quote: 対象製品内部におけるプリント基板上の電気ショートによる製品機能障害が起きる可能性を改善するために、弊社技術者によって改善対策（基板保護部品の取り付け）を行います。
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:46:07+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      model: fan heater
+  kind: known_issue
+  domain: fire
+  severity: low
+  consequence: ''
+  detection: ''
+  component: body plastic / tilt switch / overheating protection
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Xiaomi's own FAQ claims flame-retardant body and overheating/tip-over protection
+      body: Xiaomi's own FAQ states the fan heater has overheating protection, a tip-over switch, and
+        a flame-retardant body, and asserts it 'can be used for a long time'. This is the manufacturer's
+        claim and stands in tension with the owner report of internal melting.
+      advice: Treat the manufacturer's safety claims as marketing until verified. The owner-reported internal
+        melting occurred despite these claimed protections, so do not rely on 'flame-retardant' or 'overheating
+        protection' as a reason to run the unit unattended.
+    tr:
+      title: Xiaomi'nin kendi SSS'si alev geciktirici gövde ve aşırı ısınma/devrilme koruması olduğunu
+        iddia ediyor
+      body: Xiaomi'nin kendi SSS'si, fanlı ısıtıcının aşırı ısınma koruması, devrilme anahtarı ve alev
+        geciktirici bir gövdesi olduğunu belirtiyor ve "uzun süre kullanılabileceğini" iddia ediyor. Bu,
+        üreticinin iddiasıdır ve içten erimeye dair sahip raporuyla çelişmektedir.
+      advice: Üreticinin güvenlik iddialarını doğrulanana kadar pazarlama olarak değerlendirin. Sahip
+        tarafından bildirilen iç erime, bu iddia edilen korumalara rağmen meydana geldi; bu nedenle üniteyi
+        gözetimsiz çalıştırmak için "alev geciktirici" veya "aşırı ısınma koruması"na güvenmeyin.
+  evidence:
+  - url: https://www.mi.com/global/support/faq/details/KA-257315/
+    quote: With overheating protection, tip-over protection and flame-retardant materials, multiple safeguards
+      are provided.
+    locator: ''
+    stance: disputes
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:49:36+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: philips
+      model: hd3478
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: internal heating element / production workmanship (production initial-stage defect)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: NITE records Philips HD3477/3478/3479 oil heater recall for smoke/fire risk
+      body: NITE (Japan's product safety agency) independently records the same recall of the HD3477/HD3478/HD3479
+        oil heaters, confirming the smoke/fire risk and the free inspection/repair remedy. This is an
+        independent regulator/agency record corroborating the manufacturer and consumer agency notices.
+      advice: This independent agency record corroborates the recall. It confirms the affected models
+        and the free inspection/repair remedy, giving an owner a second, independent source to verify
+        the hazard before spending money on a unit or its repair.
+    tr:
+      title: NITE, Philips HD3477/3478/3479 yağlı ısıtıcı geri çağırmasını duman/yangın riski nedeniyle
+        kaydediyor
+      body: NITE (Japonya'nın ürün güvenliği kurumu) HD3477/HD3478/HD3479 yağlı ısıtıcıların aynı geri
+        çağırmasını bağımsız olarak kaydederek duman/yangın riskini ve ücretsiz inceleme/onarım çözümünü
+        doğruluyor. Bu, üretici ve tüketici kurumu bildirimlerini destekleyen bağımsız bir düzenleyici/kurum
+        kaydıdır.
+      advice: Bu bağımsız kurum kaydı geri çağırmayı desteklemektedir. Etkilenen modelleri ve ücretsiz
+        inceleme/onarım çözümünü doğrulayarak, bir üniteye veya onarımına para harcamadan önce tehlikeyi
+        doğrulamak için sahibine ikinci, bağımsız bir kaynak sunar.
+  evidence:
+  - url: https://warp.ndl.go.jp/info:ndljp/pid/8197573/www.nite.go.jp/jiko/reports/H13-3/shakoku13_3.htm
+    quote: 一部の製品に、生産初期段階での作業不良品が混入し、長期間の使用中にまれに発煙・発火にいたる可能性があることが判明した。
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:50:16+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: delonghi
+      model: trd40820e
+  kind: known_issue
+  domain: electrical
+  severity: low
+  consequence: ''
+  detection: ''
+  component: temperature sensor, part 5210810111
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Temperature sensor (part 5210810111) linked to shut-off and overheating faults
+      body: A replacement-parts seller lists a temperature sensor (part 5210810111) as fitting the TRD40820E
+        and links it to heaters shutting off unexpectedly and incorrect temperature readings or overheating.
+        This is a weak source (a parts seller, not an owner or recall), so it is kept only as a low-severity
+        component hint for the overheating domain. It came from the 'common problems' search.
+      advice: If the heater shuts off unexpectedly or misreads temperature, the internal temperature sensor
+        (5210810111) is a candidate part, but confirm fitment with the model number before buying; this
+        is a parts-seller claim, not an owner or official report.
+    tr:
+      title: Sıcaklık sensörü (parça 5210810111) kapanma ve aşırı ısınma arızalarıyla ilişkilendiriliyor
+      body: Bir yedek parça satıcısı, bir sıcaklık sensörünü (parça 5210810111) TRD40820E'ye uygun olarak
+        listeliyor ve bunu ısıtıcıların beklenmedik şekilde kapanması ve hatalı sıcaklık okumaları veya
+        aşırı ısınma ile ilişkilendiriyor. Bu zayıf bir kaynaktır (bir sahip veya geri çağırma değil,
+        bir parça satıcısı), bu nedenle yalnızca aşırı ısınma alanı için düşük önem dereceli bir bileşen
+        ipucu olarak tutulmuştur. "Yaygın sorunlar" aramasından gelmiştir.
+      advice: Isıtıcı beklenmedik şekilde kapanırsa veya sıcaklığı yanlış okursa, dahili sıcaklık sensörü
+        (5210810111) aday bir parçadır, ancak satın almadan önce model numarasıyla uyumunu doğrulayın;
+        bu bir parça satıcısı iddiasıdır, sahip veya resmi bir rapor değildir.
+  evidence:
+  - url: https://senecarivertrading.com/sensor-fits-delonghi-space-heaters-5210810111/
+    quote: '- ❌ Heater shutting off unexpectedly
+
+      - ⚠️ Incorrect temperature readings or overheating'
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:45:02+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: dyson
+      model: am05
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: heater electrical circuit / wall socket
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Owner reports AM05 overheated, tripped circuit breaker and blew out wall socket
+      body: 'A verified-buyer review on a retailer site reports a real overheating incident: burning smell,
+        tripped breaker, blown wall socket after the second use.'
+      advice: This is an owner-reported incident consistent with the documented short-circuit hazard;
+        treat any burning smell or tripped breaker as a reason to stop using and unplug the unit immediately.
+    tr:
+      title: Sahip, AM05'in aşırı ısındığını, devre kesiciyi attırdığını ve duvar prizini patlattığını
+        bildiriyor
+      body: 'Bir perakendeci sitesindeki doğrulanmış alıcı incelemesi gerçek bir aşırı ısınma olayını
+        bildiriyor: ikinci kullanımdan sonra yanık kokusu, atan devre kesici, patlayan duvar prizi.'
+      advice: Bu, belgelenmiş kısa devre tehlikesiyle tutarlı, sahip tarafından bildirilen bir olaydır;
+        herhangi bir yanık kokusu veya atan devre kesiciyi üniteyi kullanmayı bırakıp derhal fişten çekmek
+        için bir neden olarak değerlendirin.
+  evidence:
+  - url: https://www.appliancesonline.com.au/product/dyson-hot-cool-air-multiplier-300110-01/
+    quote: My heater overheated and blew out my electric wall socket. It tripped my circuit breaker and
+      blew out the lights in my house.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:47:54+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      model: mi smart space heater
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: power plug / power cord
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Xiaomi Mi Smart Space Heater power plug overheating is abnormal per manufacturer FAQ
+      body: 'Xiaomi''s own FAQ states that a power plug that overheats is not normal and the user should
+        unplug immediately. The user manual adds a check: after ~30 minutes, verify the plug prongs are
+        not hotter than 55°C, otherwise try another outlet to avoid a molten plug or fire. This documents
+        a recognized electrical/overheating risk on this model.'
+      advice: Check the plug temperature after the first ~30 minutes of use; if it exceeds ~55°C, stop
+        using that outlet. Never use an extension cord (manual warns of overheating/fire risk). This is
+        manufacturer guidance, not a recall.
+    tr:
+      title: Xiaomi Mi Smart Space Heater güç fişinin aşırı ısınması üretici SSS'sine göre anormaldir
+      body: 'Xiaomi''nin kendi SSS''si, aşırı ısınan bir güç fişinin normal olmadığını ve kullanıcının
+        derhal fişi çekmesi gerektiğini belirtiyor. Kullanım kılavuzu bir kontrol daha ekliyor: yaklaşık
+        30 dakika sonra fiş uçlarının 55°C''den daha sıcak olmadığını doğrulayın, aksi takdirde erimiş
+        bir fiş veya yangından kaçınmak için başka bir priz deneyin. Bu, bu modelde tanınan bir elektriksel/aşırı
+        ısınma riskini belgelemektedir.'
+      advice: İlk yaklaşık 30 dakikalık kullanımdan sonra fiş sıcaklığını kontrol edin; yaklaşık 55°C'yi
+        aşarsa o prizi kullanmayı bırakın. Asla uzatma kablosu kullanmayın (kılavuz aşırı ısınma/yangın
+        riski konusunda uyarır). Bu, geri çağırma değil, üretici yönlendirmesidir.
+  evidence:
+  - url: https://www.mi.com/my/support/faq/details/KA-07607/
+    quote: No, it is not normal. Immediately unplug the heater when this happens.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:47:37+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: philips
+      model: hd3479
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: internal heating/wiring assembly (production-stage defective workmanship, 作業不良品)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Philips HD3479 oil heater recalled in Japan for smoke/fire risk from production defects
+      body: This finding came from the search 'Philips HD3479 recall'. Japan's Consumer Affairs Agency
+        recall database lists the Philips HD3479 oil heater (JAN 87 10103 094029, 4,037 units, sold 1998/08–1999/12)
+        among the HD3477/3478/3479 models recalled because defective units mixed in during early production
+        could rarely emit smoke or catch fire during long-term use. The same record notes an actual fire
+        occurred that burned the product (製品を焼損する火災が発生).
+      advice: Do not use a Philips HD3479 oil heater. Philips' recall center offers free inspection/repair
+        or disposal; the unit is decades old and the recall is a documented fire hazard.
+    tr:
+      title: Philips HD3479 yağlı ısıtıcı, üretim hatalarından kaynaklanan duman/yangın riski nedeniyle
+        Japonya'da geri çağrıldı
+      body: Bu bulgu "Philips HD3479 recall" aramasından geldi. Japonya Tüketici İşleri Ajansı geri çağırma
+        veritabanı, Philips HD3479 yağlı ısıtıcıyı (JAN 87 10103 094029, 4.037 adet, 1998/08–1999/12 arasında
+        satıldı) HD3477/3478/3479 modelleri arasında listeliyor; çünkü erken üretim sırasında karışan
+        hatalı üniteler uzun süreli kullanımda nadiren duman çıkarabilir veya alev alabilir. Aynı kayıt,
+        ürünü yakan (製品を焼損する火災が発生) gerçek bir yangının meydana geldiğini de belirtiyor.
+      advice: Bir Philips HD3479 yağlı ısıtıcı kullanmayın. Philips'in geri çağırma merkezi ücretsiz inceleme/onarım
+        veya bertaraf sunuyor; ünite onlarca yıllıktır ve geri çağırma belgelenmiş bir yangın tehlikesidir.
+  evidence:
+  - url: https://www.recall.caa.go.jp/result/detail.php?rcl=00000007540&screenkbn=06
+    quote: 平成10年9月から生産・販売していた日本フィリップス製オイルヒーターの一部に、生産初期段階での作業不良品が混入し、長期間の使用中に、まれに発煙、発火に至る可能性があることが判明した。
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:46:40+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: delonghi
+      model: oil radiators 1980 1988
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: oil-filled radiator (whole unit)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: De'Longhi official recall list confirms 1980–1988 oil-filled radiator recall
+      body: De'Longhi's own corrective actions page lists the 08/15/1991 recall of oil-filled radiators
+        manufactured 1980–1988, confirming the manufacturer acknowledges the recall.
+      advice: This confirms the recall is recognized by the manufacturer. Follow the CPSC guidance to
+        get the free control panel replacement.
+    tr:
+      title: De'Longhi resmi geri çağırma listesi 1980–1988 yağ dolu radyatör geri çağırmasını doğruluyor
+      body: De'Longhi'nin kendi düzeltici eylemler sayfası, 1980–1988 arasında üretilen yağ dolu radyatörlerin
+        08/15/1991 tarihli geri çağırmasını listeler ve üreticinin geri çağırmayı kabul ettiğini doğrular.
+      advice: Bu, geri çağırmanın üretici tarafından tanındığını doğrular. Ücretsiz kontrol paneli değişimi
+        için CPSC yönergelerini izleyin.
+  evidence:
+  - url: https://www.delonghi.com/en-ca/customer-service/corrective-actions-and-recalls
+    quote: 08/15/1991 | De’Longhi Oil filled radiators manufactured from 1980 through 1988
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:45:43+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: delonghi
+      model: trd40820e
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: mains plug / plug contacts
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Mains plug and contacts overheat at maximum power — owner-reported fire hazard
+      body: An owner of the TRD40820E reports the plug heats up at maximum power and warns the temperature
+        rises over time, blaming poorly made plug contacts. This is an owner-reported fire hazard on the
+        mains plug, not a manufacturer recall. It came from the 'De'Longhi Dragon4 TRD40820E fire hazard'
+        and 'yangın riski' searches.
+      advice: Run the heater at max power only with the plug fully seated in a good socket; check the
+        plug for heat during use and stop using it if the plug gets hot, since a hot plug indicates high-resistance
+        contacts that can ignite.
+    tr:
+      title: Fiş ve kontaklar maksimum güçte aşırı ısınıyor — sahibi tarafından bildirilen yangın tehlikesi
+      body: Bir TRD40820E sahibi, fişin maksimum güçte ısındığını bildiriyor ve sıcaklığın zamanla yükseldiği
+        konusunda uyararak bunu kötü yapılmış fiş kontaklarına bağlıyor. Bu, fiş üzerinde sahibi tarafından
+        bildirilen bir yangın tehlikesidir, üretici geri çağırması değildir. 'De'Longhi Dragon4 TRD40820E
+        fire hazard' ve 'yangın riski' aramalarından geldi.
+      advice: Isıtıcıyı maksimum güçte yalnızca fiş iyi bir prize tam oturmuş haldeyken çalıştırın; kullanım
+        sırasında fişte ısı olup olmadığını kontrol edin ve fiş ısınırsa kullanmayı bırakın, çünkü sıcak
+        fiş tutuşabilecek yüksek dirençli kontaklara işaret eder.
+  evidence:
+  - url: https://www.220-volt.ru/catalog-212537/0/0/
+    quote: ПОЖАРООПАСЕН!!! При работе на макс мощности греется вилка! Со временем температура нагрева
+      увеличится. Контакты в вилке сделаны плохо.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:45:02+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: kobe
+      model: kbe8280200k
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: plug (mains plug and cable)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: EU Safety Gate lists Kobe 9-fin 2kW radiator as serious fire risk, non-compliant with Low
+        Voltage Directive
+      body: EU Safety Gate / RAPEX notification (Safety Gate 37/2026) notifying country Ireland, alert
+        level 'Serious risk', for the same Kobe 9-fin 2kW oil-filled radiator.
+      advice: This confirms the hazard is recognised across the EU, not just the UK. The radiator fails
+        the Low Voltage Directive and was withdrawn from the market and recalled from end users. Do not
+        use it.
+    tr:
+      title: AB Güvenlik Kapısı, Kobe 9 kanatlı 2kW radyatörü ciddi yangın riski olarak listeliyor, Alçak
+        Gerilim Direktifi ile uyumsuz
+      body: AB Güvenlik Kapısı / RAPEX bildirimi (Safety Gate 37/2026), bildirimde bulunan ülke İrlanda,
+        uyarı seviyesi 'Ciddi risk', aynı Kobe 9 kanatlı 2kW yağ dolu radyatör için.
+      advice: Bu, tehlikenin yalnızca Birleşik Krallık'ta değil AB genelinde tanındığını doğrular. Radyatör
+        Alçak Gerilim Direktifi'ni karşılamıyor ve piyasadan çekildi ve son kullanıcılardan geri çağrıldı.
+        Kullanmayın.
+  evidence:
+  - url: https://infocons.org/alerts/infocons-consumer-protection-alert-kobe-radiator/
+    quote: The product’s plug has a manufacturing defect and may therefore overheat. This could lead to
+      the plug and cable melting and/or catching fire. The product does not comply with the requirements
+      of the Low Voltage Directive.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:46:20+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: delonghi
+      model: oil radiators 1980 1988
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: control panel (electric controls)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: De'Longhi oil-filled radiator control panel (1980–1988) — CPSC fire hazard recall
+      body: The CPSC issued this recall on August 15, 1991, covering De'Longhi oil-filled radiator-type
+        electric heaters manufactured 1980–1988. The hazard is electrical failures within control panels
+        that could cause fires. De'Longhi offered free replacement control panels.
+      advice: If you own a De'Longhi oil-filled radiator from 1980–1988, check for the silver sticker
+        on the underside of the metal control box; stickers starting with '80' through '88' identify affected
+        units. Contact De'Longhi for the free control panel replacement. Do not continue using an unrepaired
+        unit.
+    tr:
+      title: De'Longhi yağ dolu radyatör kontrol paneli (1980–1988) — CPSC yangın tehlikesi geri çağırması
+      body: CPSC bu geri çağırmayı 15 Ağustos 1991'de yayımladı ve 1980–1988 arasında üretilen De'Longhi
+        yağ dolu radyatör tipi elektrikli ısıtıcıları kapsıyor. Tehlike, kontrol panelleri içindeki yangına
+        yol açabilecek elektriksel arızalardır. De'Longhi ücretsiz yedek kontrol panelleri sundu.
+      advice: 1980–1988'den kalma bir De'Longhi yağ dolu radyatörünüz varsa, metal kontrol kutusunun alt
+        tarafındaki gümüş çıkartmayı kontrol edin; '80' ile '88' arasında başlayan çıkartmalar etkilenen
+        birimleri tanımlar. Ücretsiz kontrol paneli değişimi için De'Longhi ile iletişime geçin. Onarılmamış
+        bir birimi kullanmaya devam etmeyin.
+  evidence:
+  - url: https://www.cpsc.gov/ko/Recalls/1991/delonghi-voluntarily-to-replace-control-panels-on-oil-filled-electric-heaters
+    quote: Reports of electrical failures within some control panels which the Commission believes could
+      cause fires.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:45:43+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: delonghi
+      model: trd41025
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: tip-over safety switch
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: TRD41025 has no tip-over protection and keeps running on its side
+      body: A teardown-style owner review of the TRD41025 states the radiator has no tip-over protection
+        and continues operating while lying on its side. The manufacturer's own manual warns that any
+        non-upright position 'could create a hazardous situation', so a unit that keeps heating when knocked
+        over is a documented fire risk, especially in a home with children or pets. This came from the
+        'De'Longhi TRD41025 şikayet' search.
+      advice: Keep the radiator upright and in a stable spot where it cannot be knocked over; do not rely
+        on an automatic tip-over cut-out, as this unit does not appear to have one.
+    tr:
+      title: TRD41025'te devrilme koruması yok ve yan yatarken çalışmaya devam ediyor
+      body: TRD41025 hakkında söküm tarzı bir sahip incelemesi, radyatörde devrilme koruması olmadığını
+        ve yan yatarken çalışmaya devam ettiğini belirtiyor. Üreticinin kendi kılavuzu, dik olmayan herhangi
+        bir konumun 'tehlikeli bir durum yaratabileceği' konusunda uyarıyor, bu nedenle devrildiğinde
+        ısınmaya devam eden bir birim, özellikle çocuklu veya evcil hayvanlı bir evde belgelenmiş bir
+        yangın riskidir. Bu, 'De'Longhi TRD41025 şikayet' aramasından geldi.
+      advice: Radyatörü dik ve devrilemeyeceği sabit bir yerde tutun; otomatik devrilme kesicisine güvenmeyin,
+        çünkü bu birimde böyle bir kesici yok gibi görünüyor.
+  evidence:
+  - url: https://drotokrut.blogspot.com/2025/12/electric-oil-filled-radiator-delonghi.html
+    quote: Обогреватель не имеет защиты от опрокидывания - лежа на боку продолжает работать!
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:45:22+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: philips
+      model: hd3479
+  kind: known_issue
+  domain: fire
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: oil heater (production-stage defect)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'METI recall notice: HD3479 target units and remedy'
+      body: METI's official recall notice (dated 2001-10-16) lists HD3479 (JAN 87 10103 094029, 1,344
+        units) and gives the remedy as free inspection and repair. It independently confirms the same
+        fire/smoke risk.
+      advice: This is a second independent regulator source confirming the fire hazard and the free remedy.
+        It corroborates the CAA and Philips records, so the finding is well established across multiple
+        official sources.
+    tr:
+      title: 'METI geri çağırma bildirimi: HD3479 hedef birimleri ve çözüm'
+      body: METI'nin resmi geri çağırma bildirimi (2001-10-16 tarihli) HD3479'u (JAN 87 10103 094029,
+        1.344 adet) listeler ve çözüm olarak ücretsiz inceleme ve onarım belirtir. Aynı yangın/duman riskini
+        bağımsız olarak doğrular.
+      advice: Bu, yangın tehlikesini ve ücretsiz çözümü doğrulayan ikinci bağımsız düzenleyici kaynaktır.
+        CAA ve Philips kayıtlarını destekler, dolayısıyla bulgu birden fazla resmi kaynakta iyi şekilde
+        tesis edilmiştir.
+  evidence:
+  - url: https://www.meti.go.jp/product%5Fsafety/recall/file/011016-1.html
+    quote: 生産初期段階での作業不良品が混入し、まれに長期間の使用中に発煙、発火に至るおそれがあるため。
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:48:41+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: dyson
+      model: am04
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: printed circuit board (プリント基板)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: AM04/AM05 printed-circuit-board short-circuit — Dyson fits a board protection part as the
+        fix
+      body: Dyson Japan's official customer notice identifies the failing part as the printed circuit
+        board, where an electrical short could cause product malfunction, and says the engineering fix
+        is fitting a board protection component. This anchors the hazard to a concrete part.
+      advice: The recall fix is a PCB protection part installed by Dyson technicians. A used AM04 that
+        has not been through the recall program may still carry the unmodified board, so verify recall
+        status before relying on a second-hand unit.
+    tr:
+      title: AM04/AM05 baskı devre kartı kısa devresi — Dyson düzeltme olarak bir kart koruma parçası
+        takıyor
+      body: Dyson Japonya'nın resmi müşteri bildirimi, arızalı parçayı baskı devre kartı olarak tanımlıyor;
+        burada bir elektriksel kısa devre ürün arızasına yol açabilir ve mühendislik düzeltmesinin bir
+        kart koruma bileşeni takmak olduğunu söylüyor. Bu, tehlikeyi somut bir parçaya bağlıyor.
+      advice: Geri çağırma düzeltmesi, Dyson teknisyenleri tarafından takılan bir PCB koruma parçasıdır.
+        Geri çağırma programından geçmemiş kullanılmış bir AM04 hâlâ değiştirilmemiş kartı taşıyor olabilir,
+        bu nedenle ikinci el bir üniteye güvenmeden önce geri çağırma durumunu doğrulayın.
+  evidence:
+  - url: https://www.dyson.co.jp/support/customer-notice
+    quote: 対象製品内部におけるプリント基板上の電気ショートによる製品機能障害が起きる可能性を改善するために、弊社技術者によって改善対策（基板保護部品の取り付け）を行います。
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:46:07+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: delonghi
+      model: oil radiators 1980 1988
+  kind: known_issue
+  domain: fire
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: unidentified (model plate burned off)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: DeLonghi oil heater fire incident (2026) — model unidentified
+      body: A law firm reports a January 13, 2026 incident where a DeLonghi oil-filled radiant heater
+        sprayed oil and caught fire with 5-foot flames after ~2 weeks of continuous operation. The model
+        could not be identified because the ID plate burned off, so it is unknown whether this is a 1980–1988
+        unit or a newer model.
+      advice: This shows that oil-filled radiator fire incidents involving DeLonghi are not limited to
+        the historical recall era. If you own any DeLonghi oil heater, inspect it regularly for signs
+        of overheating, oil leakage, or hot plugs. The specific model in this incident could not be confirmed.
+    tr:
+      title: DeLonghi yağlı radyatör yangın olayı (2026) — model tanımlanamadı
+      body: 'Bir hukuk firması, 13 Ocak 2026 tarihli bir olayı bildiriyor: bir DeLonghi yağ dolu radyan
+        ısıtıcı, yaklaşık 2 hafta sürekli çalışmanın ardından yağ püskürttü ve 5 fitlik alevlerle alev
+        aldı. Kimlik plakası yandığı için model tanımlanamadı, dolayısıyla bunun 1980–1988 ünitesi mi
+        yoksa daha yeni bir model mi olduğu bilinmiyor.'
+      advice: Bu, DeLonghi'yi içeren yağ dolu radyatör yangın olaylarının tarihsel geri çağırma dönemiyle
+        sınırlı olmadığını gösteriyor. Herhangi bir DeLonghi yağlı ısıtıcınız varsa, aşırı ısınma, yağ
+        sızıntısı veya sıcak fiş belirtileri için düzenli olarak kontrol edin. Bu olaydaki spesifik model
+        doğrulanamadı.
+  evidence:
+  - url: https://farzanlaw.com/delonghi-oil-heater-sprays-oil-catches-fire-with-5-foot-flames/
+    quote: A DeLonghi oil-filled radiant heater reportedly malfunctioned, spraying oil and erupting into
+      5-foot flames in a dining area on January 13, 2026.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:49:04+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: delonghi
+      model: trd40820e
+  kind: known_issue
+  domain: fire
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: whole appliance (overheating safety system)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Manufacturer warns covering the appliance causes dangerous overheating
+      body: The official De'Longhi TRD40820E instruction manual warns that covering the appliance during
+        operation leads to dangerous overheating, and separately advises against extension leads because
+        they may overheat. These are the manufacturer's own documented overheating hazards for this model.
+        It came from the 'common problems' and manual searches.
+      advice: Never cover the radiator or dry laundry on it, and avoid extension leads; covering the unit
+        can cause dangerous overheating and a potential fire.
+    tr:
+      title: Üretici, cihazın kapatılmasının tehlikeli aşırı ısınmaya neden olduğu konusunda uyarıyor
+      body: Resmi De'Longhi TRD40820E kullanım kılavuzu, cihazın çalışma sırasında kapatılmasının tehlikeli
+        aşırı ısınmaya yol açtığı konusunda uyarıyor ve ayrıca aşırı ısınabilecekleri için uzatma kablolarına
+        karşı tavsiyede bulunuyor. Bunlar, bu model için üreticinin kendi belgelenmiş aşırı ısınma tehlikeleridir.
+        'Yaygın sorunlar' ve kılavuz aramalarından geldi.
+      advice: Radyatörü asla kapatmayın veya üzerinde çamaşır kurutmayın ve uzatma kablolarından kaçının;
+        ünitenin kapatılması tehlikeli aşırı ısınmaya ve potansiyel yangına neden olabilir.
+  evidence:
+  - url: https://www.manualzz.com/doc/52444173/de%E2%80%99longhi-dragon4-trd40820e-oil-filled-radiator-instructi...
+    quote: In order to avoid overheating, never under any circumstances cover the appliances during operation,
+      as this would lead to dangerous overheating.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:45:02+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: delonghi
+      model: oil radiators 1980 1988
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: control panel / electric controls
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: De'Longhi 1980–1988 oil-filled radiator models and scale of defect (HeaterRecall.com)
+      body: This litigation-focused site provides specific model numbers covered by the recall (9306,
+        9308, 9608, 5108, 5108T, 4308, 5307, 4707, 3107, 3107T) and claims 3.6 million units were manufactured,
+        with only ~250,000 replaced, and 85 lawsuits related to fires/explosions/black smoke.
+      advice: If you own one of the listed models, verify the sticker code and contact De'Longhi for the
+        free replacement. This source is a law firm site, so treat the lawsuit count and replacement figures
+        as secondary claims, but the model list is concrete.
+    tr:
+      title: De'Longhi 1980–1988 yağ dolu radyatör modelleri ve kusurun ölçeği (HeaterRecall.com)
+      body: Bu dava odaklı site, geri çağırma kapsamındaki belirli model numaralarını (9306, 9308, 9608,
+        5108, 5108T, 4308, 5307, 4707, 3107, 3107T) sağlıyor ve 3,6 milyon ünitenin üretildiğini, yalnızca
+        ~250.000'inin değiştirildiğini ve yangınlar/patlamalar/siyah dumanla ilgili 85 dava olduğunu iddia
+        ediyor.
+      advice: Listelenen modellerden birine sahipseniz, etiket kodunu doğrulayın ve ücretsiz değişim için
+        De'Longhi ile iletişime geçin. Bu kaynak bir hukuk firması sitesidir, bu nedenle dava sayısını
+        ve değişim rakamlarını ikincil iddialar olarak değerlendirin, ancak model listesi somuttur.
+  evidence:
+  - url: https://www.heaterrecall.com/what-the-delonghi-website-isnt-telling-you-about-its-delonghi-oil-filled-heaters/
+    quote: 'The recall included these Delonghi oil-filled heater models: 9306, 9308, 9608, 5108, 5108T
+      4308, 5307, 4707, 3107, 3107T'
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:49:04+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: delonghi
+      model: oil radiators 1980 1988
+  kind: known_issue
+  domain: general
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: oil-filled radiator (1980–1988)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: De'Longhi's own corrective-actions page lists the 1980–1988 oil-filled radiator action
+      body: The manufacturer's own corrective-actions/recalls page confirms a corrective action dated
+        08/15/1991 for 'De’Longhi Oil filled radiators manufactured from 1980 through 1988', matching
+        the CPSC recall date. This corroborates the recall exists and is acknowledged by De'Longhi.
+      advice: This confirms the recall is a real, manufacturer-acknowledged corrective action, not a third-party
+        claim. A buyer or owner of a 1980–1988 De'Longhi oil-filled radiator should treat the control-panel
+        fire hazard as documented by both the regulator and the maker.
+    tr:
+      title: De'Longhi'nin kendi düzeltici eylemler sayfası 1980–1988 yağ dolu radyatör eylemini listeliyor
+      body: Üreticinin kendi düzeltici eylemler/geri çağırmalar sayfası, 'De’Longhi 1980'den 1988'e kadar
+        üretilen yağ dolu radyatörler' için 08/15/1991 tarihli bir düzeltici eylemi doğruluyor ve CPSC
+        geri çağırma tarihiyle eşleşiyor. Bu, geri çağırmanın var olduğunu ve De'Longhi tarafından kabul
+        edildiğini destekliyor.
+      advice: Bu, geri çağırmanın üçüncü taraf iddiası değil, gerçek, üretici tarafından kabul edilmiş
+        bir düzeltici eylem olduğunu doğruluyor. 1980–1988 De'Longhi yağ dolu radyatörünün bir alıcısı
+        veya sahibi, kontrol paneli yangın tehlikesini hem düzenleyici hem de üretici tarafından belgelenmiş
+        olarak değerlendirmelidir.
+  evidence:
+  - url: https://www.delonghi.com/en-ca/customer-service/corrective-actions-and-recalls
+    quote: 08/15/1991 | De’Longhi Oil filled radiators manufactured from 1980 through 1988
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:45:43+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      model: mi smart space heater
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: main control board (ana kart)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Xiaomi Mi Smart Space Heater emitted sparks, burning smell and burned main board after ~3
+        weeks
+      body: A Turkish owner (sikayetvar.com) reports that about 3 weeks after purchase, the Xiaomi Mi
+        Smart Space Heater started emitting sparks and a burning smell, and the main board apparently
+        burned out, causing the device to disappear from the Xiaomi Home app. The seller refused a refund
+        because the invoice lacked a serial number, and the consumer escalated to the Consumer Arbitration
+        Committee. This is an owner-reported fire/safety hazard in the TR market.
+      advice: If a unit sparks, smells of burning, or drops off the app, unplug it immediately and stop
+        using it. Keep the invoice with the serial number visible to preserve warranty/refund rights.
+        This finding is a single owner report, not an official recall.
+    tr:
+      title: Xiaomi Mi Smart Space Heater yaklaşık 3 hafta sonra kıvılcım, yanık kokusu yaydı ve ana kartı
+        yandı
+      body: Türk bir sahip (sikayetvar.com), satın almadan yaklaşık 3 hafta sonra Xiaomi Mi Smart Space
+        Heater'ın kıvılcım ve yanık kokusu yaymaya başladığını ve ana kartın görünüşe göre yandığını,
+        cihazın Xiaomi Home uygulamasından kaybolmasına neden olduğunu bildiriyor. Satıcı, faturada seri
+        numarası olmadığı için iadeyi reddetti ve tüketici Tüketici Hakem Heyeti'ne başvurdu. Bu, TR pazarında
+        sahip tarafından bildirilen bir yangın/güvenlik tehlikesidir.
+      advice: Bir ünite kıvılcım çıkarırsa, yanık kokusu verirse veya uygulamadan düşerse, derhal fişini
+        çekin ve kullanmayı bırakın. Garanti/iade haklarını korumak için seri numarası görünür olan faturayı
+        saklayın. Bu bulgu resmi bir geri çağırma değil, tek bir sahip bildirimidir.
+  evidence:
+  - url: https://www.sikayetvar.com/trendyol/kivilcim-cikaran-xiaomi-isiticida-guvenlik-riski-ve-iade-reddi
+    quote: Cihazı aldıktan yaklaşık 3 hafta sonra üründen kıvılcımlar çıkmaya başladı, yanık kokusu geldi
+      ve muhtemelen ana kartı yandığı için Xiaomi Home uygulamasında da cihaz görünmez hale geldi.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:47:37+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      model: fan heater
+  kind: known_issue
+  domain: fire
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: main control board (ana kart)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Xiaomi Mi Smart Space Heater emitted sparks and burnt smell, main board burned
+      body: A separate Xiaomi heater model (Mi Smart Space Heater, a convection heater, not the fan heater)
+        began emitting sparks and a burnt smell about three weeks after purchase, with the main board
+        apparently burned out. The retailer refused a refund/return and the user had to escalate to the
+        Consumer Arbitration Committee.
+      advice: This is a different model from the fan heater, but it is a second documented Xiaomi heater
+        fire-related incident in the same market. If any Xiaomi heater sparks, smells burnt, or drops
+        off the app, stop using it and insist on a safety inspection — do not accept a 'not resaleable'
+        refusal without escalation.
+    tr:
+      title: Xiaomi Mi Smart Space Heater kıvılcım ve yanık kokusu yaydı, ana kart yandı
+      body: Ayrı bir Xiaomi ısıtıcı modeli (Mi Smart Space Heater, konveksiyon ısıtıcı, fanlı ısıtıcı
+        değil) satın alındıktan yaklaşık üç hafta sonra kıvılcım ve yanık kokusu yaymaya başladı, ana
+        kart görünüşe göre yanmıştı. Satıcı iade/değişimi reddetti ve kullanıcı Tüketici Hakem Heyeti'ne
+        başvurmak zorunda kaldı.
+      advice: Bu, fanlı ısıtıcıdan farklı bir model, ancak aynı pazarda belgelenmiş ikinci Xiaomi ısıtıcı
+        yangınla ilgili olaydır. Herhangi bir Xiaomi ısıtıcı kıvılcım çıkarır, yanık kokusu verir veya
+        uygulamadan düşerse, kullanmayı bırakın ve güvenlik denetimi talep edin — tırmandırma yapmadan
+        'yeniden satılamaz' reddini kabul etmeyin.
+  evidence:
+  - url: https://www.sikayetvar.com/trendyol/kivilcim-cikaran-xiaomi-isiticida-guvenlik-riski-ve-iade-reddi
+    quote: Cihazı aldıktan yaklaşık 3 hafta sonra üründen kıvılcımlar çıkmaya başladı, yanık kokusu geldi
+      ve muhtemelen ana kartı yandığı için Xiaomi Home uygulamasında da cihaz görünmez hale geldi.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:47:37+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      model: mi smart space heater
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: main board (ana kart) / internal electronics
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Xiaomi Mi Smart Space Heater emits sparks, burning smell; main board burns out after ~3 weeks
+        (TR owner report)
+      body: 'A Turkish buyer reports that about three weeks after purchase the unit began throwing sparks
+        and giving off a burning smell, and the device disappeared from the Xiaomi Home app, which the
+        owner attributes to a burned main board. This is a documented owner-reported fire/electrical incident
+        in the Turkish market, exactly the kind the pack tracks. The complaint also shows the practical
+        cost: the seller refused a refund and the technical service refused to act because no serial number
+        was on the invoice, leaving the owner with a hazardous, unrepaired unit.'
+      advice: If you own this unit and see sparks, a burning smell, or the heater vanishing from the app,
+        unplug it immediately and stop using it; do not rely on the seller's return window. Buyers should
+        keep proof of serial number on the invoice.
+    tr:
+      title: Xiaomi Mi Smart Space Heater kıvılcım, yanık koku yayıyor; ana kart ~3 hafta sonra yanıyor
+        (TR sahip raporu)
+      body: 'Bir Türk alıcı, satın alındıktan yaklaşık üç hafta sonra cihazın kıvılcım çıkarmaya ve yanık
+        kokusu vermeye başladığını ve cihazın Xiaomi Home uygulamasından kaybolduğunu bildiriyor; sahibi
+        bunu yanmış ana karta bağlıyor. Bu, Türkiye pazarında belgelenmiş, sahip tarafından bildirilen
+        bir yangın/elektrik olayıdır; tam olarak paketin izlediği türdendir. Şikayet ayrıca pratik maliyeti
+        de gösteriyor: satıcı iadeyi reddetti ve teknik servis faturada seri numarası olmadığı için işlem
+        yapmayı reddetti, sahibi tehlikeli ve onarılmamış bir cihazla baş başa kaldı.'
+      advice: Bu cihaza sahipseniz ve kıvılcım, yanık kokusu görürseniz veya ısıtıcı uygulamadan kaybolursa,
+        derhal fişini çekin ve kullanmayı bırakın; satıcının iade süresine güvenmeyin. Alıcılar faturada
+        seri numarası kanıtını saklamalıdır.
+  evidence:
+  - url: https://www.sikayetvar.com/trendyol/kivilcim-cikaran-xiaomi-isiticida-guvenlik-riski-ve-iade-reddi
+    quote: Cihazı aldıktan yaklaşık 3 hafta sonra üründen kıvılcımlar çıkmaya başladı, yanık kokusu geldi
+      ve muhtemelen ana kartı yandığı için Xiaomi Home uygulamasında da cihaz görünmez hale geldi.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:47:37+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: delonghi
+      model: oil radiators 1980 1988
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: control panel (electric controls)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: De'Longhi oil-filled radiator control panel (1980–1988) electrical failures — CPSC recall
+        91-108
+      body: 'Primary regulator recall (CPSC Release #91-108, 1991-08-15) covering De''Longhi oil-filled
+        radiators made 1980–1988. Identified units by a silver sticker on the underside of the control
+        box beginning with digits 80–88; a small number sold under Sears/Welbilt carry code 816F. The
+        Commission judged electrical failures inside the control panels a potential fire hazard; De''Longhi
+        offered free replacement control panels.'
+      advice: An owner of a 1980–1988 De'Longhi oil-filled radiator should check the sticker on the underside
+        of the control box; if it begins with 80–88 (or the unit is a Sears/Welbilt with code 816F), the
+        control panel carries a documented potential fire hazard and was subject to a free replacement
+        program. The CPSC noted no fires or injuries were reported at the time of the recall, but the
+        hazard is fire-classified and high severity.
+    tr:
+      title: De'Longhi yağ dolu radyatör kontrol paneli (1980–1988) elektriksel arızalar — CPSC geri çağırma
+        91-108
+      body: '1980–1988 yıllarında üretilen De''Longhi yağ dolu radyatörleri kapsayan birincil düzenleyici
+        geri çağırma (CPSC Yayın #91-108, 1991-08-15). Birimleri kontrol kutusunun altındaki 80–88 rakamlarıyla
+        başlayan gümüş bir etiketle tanımladı; Sears/Welbilt altında satılan az sayıda birim 816F kodunu
+        taşıyor. Komisyon, kontrol panelleri içindeki elektriksel arızaları potansiyel yangın tehlikesi
+        olarak değerlendirdi; De''Longhi ücretsiz yedek kontrol panelleri sundu.'
+      advice: 1980–1988 De'Longhi yağ dolu radyatör sahibi, kontrol kutusunun altındaki etiketi kontrol
+        etmelidir; 80–88 ile başlıyorsa (veya birim 816F kodlu bir Sears/Welbilt ise), kontrol paneli
+        belgelenmiş bir potansiyel yangın tehlikesi taşır ve ücretsiz değişim programına tabiydi. CPSC,
+        geri çağırma sırasında yangın veya yaralanma bildirilmediğini belirtti, ancak tehlike yangın sınıfında
+        ve yüksek ciddiyettedir.
+  evidence:
+  - url: https://www.cpsc.gov/ko/Recalls/1991/delonghi-voluntarily-to-replace-control-panels-on-oil-filled-electric-heaters
+    quote: Reports of electrical failures within some control panels which the Commission believes could
+      cause fires.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:45:43+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      model: fan heater
+  kind: known_issue
+  domain: general
+  severity: low
+  consequence: ''
+  detection: ''
+  component: heating element / fan (no airflow, thermal shutdown)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Xiaomi Smart Graphene Heater 2000W emitted smoke and bad smell on first use, shut down
+      body: A new Xiaomi Smart Graphene Heater 2000W emitted light smoke and a bad smell on first use,
+        then shut itself off after 1–2 minutes without blowing air. This is a different model from the
+        fan heater and reads more like a defective unit than a systemic hazard, but it is a third Xiaomi
+        heater safety complaint in the same market.
+      advice: Lower severity and a different model. If a new Xiaomi heater smokes on first power-on, stop
+        using it and return it under warranty rather than continuing to run it.
+    tr:
+      title: Xiaomi Smart Graphene Heater 2000W ilk kullanımda duman ve kötü koku yaydı, kapandı
+      body: Yeni bir Xiaomi Smart Graphene Heater 2000W ilk kullanımda hafif duman ve kötü koku yaydı,
+        ardından hava üflemeden 1–2 dakika sonra kendini kapattı. Bu, fanlı ısıtıcıdan farklı bir modeldir
+        ve sistemik bir tehlikeden çok arızalı bir birim gibi okunur, ancak aynı pazarda üçüncü Xiaomi
+        ısıtıcı güvenlik şikayetidir.
+      advice: Daha düşük ciddiyet ve farklı bir model. Yeni bir Xiaomi ısıtıcı ilk açılışta duman çıkarırsa,
+        kullanmayı bırakın ve çalıştırmaya devam etmek yerine garanti kapsamında iade edin.
+  evidence:
+  - url: https://www.sikayetvar.com/a101/sifir-alinan-isiticida-guvenlik-endisesi-ve-ariza-soku
+    quote: İlk çalıştırmamda cihaz kısa süre çalıştıktan sonra durdu, hafif duman çıkardı ve kötü bir
+      koku yaydı.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:49:36+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: dyson
+      model: am05
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: internal electrical short
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Dyson voluntarily recalls all AM04/AM05 heaters after short-circuits burned and melted internal
+        parts
+      body: This is Dyson's own official recall site, confirming the voluntary recall and free fix.
+      advice: Register the unit's serial number at dysonrecall.com to get the free fix or replacement;
+        this is the manufacturer's own remedy.
+    tr:
+      title: Dyson, kısa devreler iç parçaları yakıp erittikten sonra tüm AM04/AM05 ısıtıcılarını gönüllü
+        olarak geri çağırdı
+      body: Bu, Dyson'ın kendi resmi geri çağırma sitesidir ve gönüllü geri çağırmayı ve ücretsiz onarımı
+        doğrular.
+      advice: Ücretsiz onarım veya değişim için birimin seri numarasını dysonrecall.com adresinde kaydedin;
+        bu, üreticinin kendi çözümüdür.
+  evidence:
+  - url: https://www.dysonrecall.com/en-us/Info
+    quote: Of a million Dyson heaters sold around the world, a small number are known to have short-circuited,
+      leading to burned and melted internal parts.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:46:07+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: delonghi
+      model: trd41025
+  kind: known_issue
+  domain: fire
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: body / overheat protection
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Official Turkish manual: covering the running TRD41025 causes dangerously high overheating'
+      body: The official Turkish instruction manual for the TRD41025 (shared with TRD40820/TRD40615) warns
+        in bold that covering the running appliance can cause dangerously high overheating, and that any
+        oil leak must be reported to Customer Experience. These are the manufacturer's own documented
+        fire hazards for the unit sold in the Turkish market, and they give a buyer clear things to avoid.
+        This came from the 'De'Longhi TRD41025 şikayet' search.
+      advice: Never cover the radiator while it is on, and do not use it to dry laundry; if oil ever leaks
+        from the body, stop using it and report it to De'Longhi service.
+    tr:
+      title: 'Resmi Türkçe kılavuz: çalışan TRD41025''in üstünü örtmek tehlikeli derecede yüksek aşırı
+        ısınmaya neden olur'
+      body: TRD41025 için resmi Türkçe kullanım kılavuzu (TRD40820/TRD40615 ile paylaşılan), çalışan cihazın
+        üstünün örtülmesinin tehlikeli derecede yüksek aşırı ısınmaya neden olabileceğini ve herhangi
+        bir yağ sızıntısının Müşteri Deneyimi'ne bildirilmesi gerektiğini kalın harflerle uyarır. Bunlar,
+        Türkiye pazarında satılan birim için üreticinin kendi belgelenmiş yangın tehlikeleridir ve alıcıya
+        kaçınılacak net şeyler verir. Bu, 'De'Longhi TRD41025 şikayet' aramasından geldi.
+      advice: Radyatör açıkken asla üstünü örtmeyin ve çamaşır kurutmak için kullanmayın; gövdeden hiç
+        yağ sızarsa, kullanmayı bırakın ve De'Longhi servisine bildirin.
+  evidence:
+  - url: https://manualmachine.com/delonghi/trd41025/18818045-instruction-manuals/
+    quote: 'UYARI: Aşırı ısınmayı önlemek için, hiçbir koşul altında asla çalışır durumdaki cihazı örtmeyin,
+      bu tehlikeli düzeyde aşırı ısınmaya neden olabilir.'
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:45:22+00:00'

@@ -1,0 +1,68 @@
+lineup:
+- Roborock S7
+- Roborock S7 MaxV
+- Roborock S8
+- Roborock S8 Pro Ultra
+- Roborock S8 MaxV Ultra
+- Roborock Q Revo
+- Roborock Q Revo Pro
+- Roborock S9
+- Xiaomi Robot Vacuum X10+
+- Xiaomi Robot Vacuum S10
+- Xiaomi Robot Vacuum S20
+- Xiaomi Mijia
+- Dreame L10s Ultra
+- Dreame L20 Ultra
+- Dreame X30 Ultra
+- Dreame X40
+- Dreame D10 Plus
+- iRobot Roomba j7+
+- iRobot Roomba Combo j9+
+- iRobot Roomba s9+
+- iRobot Roomba i7+
+- Ecovacs Deebot T20 Omni
+- Ecovacs Deebot X2 Omni
+- Ecovacs Deebot T30
+- Ecovacs Deebot N8 Pro+
+covered:
+- dreame l10s ultra
+- dreame x30 ultra
+- ecovacs deebot t20 omni
+- ecovacs deebot x2 omni
+- irobot roomba j7
+- product brand dreame model l10sultra
+- product brand dreame model x30ultra
+- product brand ecovacs model t20omni
+- product brand ecovacs model x2omni
+- product brand irobot model j7plus
+- product brand roborock model qrevo
+- product brand roborock model s8proultra
+- product brand xiaomi model x10plus
+- roborock q revo
+- roborock s8 pro ultra
+- xiaomi robot vacuum x10
+uncovered:
+- Roborock S7
+- Roborock S7 MaxV
+- Roborock S8 MaxV Ultra
+- Roborock S9
+- Xiaomi Robot Vacuum S10
+- Xiaomi Robot Vacuum S20
+- Xiaomi Mijia
+- Dreame L20 Ultra
+- Dreame X40
+- Dreame D10 Plus
+- iRobot Roomba Combo j9+
+- iRobot Roomba s9+
+- iRobot Roomba i7+
+- Ecovacs Deebot T30
+- Ecovacs Deebot N8 Pro+
+note: Subjects with claims cover the flagship-with-dock models most relevant to the
+  brief (Roborock S8 Pro Ultra and Q Revo, Dreame L10s Ultra and X30 Ultra, Ecovacs
+  T20 Omni and X2 Omni, Roomba j7+/Combo j7+, Xiaomi X10+). The rest of the line-up
+  is named but not yet researched.
+out_of_scope:
+- robot vacuum accessories and replacement parts
+- handheld vacuums
+- robot mops sold without a vacuum function
+quarantined: []

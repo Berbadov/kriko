@@ -1,0 +1,30 @@
+lineup:
+- Redmi Buds 5
+- Redmi Buds 5 Pro
+- Redmi Buds 6
+- Redmi Buds 6 Lite
+- Redmi Buds 6 Active
+- Redmi Buds 6 Play
+- Redmi Buds 6 Pro
+- Redmi Buds 6S
+- Redmi Buds 5 Lite
+covered:
+- redmi buds 5
+- redmi buds 5 lite
+- redmi buds 5 pro
+- redmi buds 6
+- redmi buds 6 active
+- redmi buds 6 lite
+- redmi buds 6 play
+- redmi buds 6 pro
+- redmi buds 6s
+uncovered: []
+note: Could not find owner-forum or repair-record failure reports for these four models
+  in the searches performed; they are added as subjects with specifications only.
+  Battery playback hours for Redmi Buds 6 Pro and Bluetooth version for Redmi Buds
+  6 Lite were not found in the sources opened.
+out_of_scope:
+- Bluetooth adapter hardware (TP-Link UB500)
+- Xiaomi Buds 4/5 (non-Redmi line)
+- Xiaomi Earbuds app
+quarantined: []

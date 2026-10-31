@@ -10,16 +10,34 @@ npm run serve:site
 npm run test:site
 ```
 
+With `serve:site` running, `npm run test:site:browser` checks the install flow
+and generated product pages in Chromium, with and without JavaScript. It needs
+Playwright. `PLAYWRIGHT_MODULE` may name its `index.mjs`, `CHROMIUM_PATH` may
+name a local Chromium executable, and `SCREENSHOTS` may name an output folder.
+
 The page is white by default and follows the visitor's system for dark. Every
 colour is a token at the top of `styles.css`; the dark theme is one block. The
 look is Kriko's own and is kept on purpose, not left to defaults:
 
-- **Headings** are Barlow Condensed, which is the wordmark's own proportion.
-- **Body text** is Atkinson Hyperlegible Next, a face drawn for reading.
+- **Headings** are Space Grotesk; **body text** is Inter. Both are variable
+  fonts, bundled in `assets/fonts/` with their OFL licences.
+- **The hero aurora** is a WebGL shader on a `<canvas class="hero-shader">`,
+  drawn by `script.js` in the product's own blues. It draws one static frame
+  for a reader who asked for less motion, and pauses when hidden or off screen.
+- **The agent's orb** is the `.orb` class — a small breathing blue sphere — used
+  in the hero's label chip and free to use anywhere an agent works.
 - **The sky** is the app's dithered pixel sky, drawn by `tools/dither_sky.py` with
   the app's own method and palette, in a light and a dark version.
 - **The paper** is a warm white, with the product's blue used only for actions,
   numbers and links.
+
+The layout uses the whole width: a hero whose two halves run to the window's edges,
+tiles in rows instead of single columns, and on a phone a row of pictures becomes a
+strip to swipe. Section numbers come from a CSS counter, so a section added or moved
+renumbers itself. Motion is a rise on load, a drifting sky and stripe, scroll-in
+reveals, a light that follows the pointer over cards and a mark on the nav link of
+the section in view. `script.js` adds all of it as classes, so without script, or for
+a reader who asked for less motion, the page is complete and still.
 
 Both typefaces are served from `assets/fonts/` (OFL), so no page loads anything
 from another site.
@@ -34,7 +52,13 @@ from another site.
   English in both languages, because the app is English.
 - `guide/index.html`: how to use Kriko, one short film per step. Also a source of
   a Turkish page; see below.
+- `install/index.html`: Windows downloads, checksum verification, a first offline
+  lookup and extension connection help. The Turkish page is generated too.
 - `privacy/index.html`: the privacy policy. English only.
+- `404.html`: what an unknown address answers (Cloudflare Pages serves it with a 404
+  status). It names its files from the root, because it answers at any depth.
+- `robots.txt` and `sitemap.xml`: add a new page to the sitemap, with its Turkish
+  twin as an alternate; a test fails when the sitemap and the pages disagree.
 - `styles.css`, `script.js`: shared by every page. `script.js` runs the menu on a
   narrow screen and puts a pause button on each film in the guide.
 
@@ -45,12 +69,45 @@ node site/tools/render-locales.cjs
 npm run test:site
 ```
 
-The renderer writes `tr/index.html` and `tr/guide/index.html`, puts a content hash
+The renderer writes `tr/index.html`, `tr/guide/index.html` and `tr/install/index.html`, puts a content hash
 on the stylesheet and script of every page, and fails with the list of texts that
 have no translation. A test fails if either Turkish page is stale. To give another
 page a Turkish version, add it to `PAGES` in `render-locales.cjs` and give it an
 `@meta:<name>` entry in `tr.json`. In a Turkish page a link to `/`, `/#place` or
 `/guide/` is sent to the Turkish version, and `/privacy/` stays English.
+
+## Search and answer engines
+
+`tools/discovery.cjs` generates JSON-LD for the English and Turkish home and
+guide and install pages during `build:site`. It identifies the project, website and desktop
+app with stable IDs. FAQ questions and answers come from the visible HTML,
+after translation, and the guide has localized breadcrumbs. Edit the HTML and
+translations, then rebuild; do not edit the generated `discovery-data` blocks.
+No browser JavaScript is needed to read this data or the answers.
+
+`llms.txt` is a short, optional guide to the public app documentation and sourced
+product pages. It is not an indexing standard or a promise of AI citations.
+`robots.txt` already permits crawlers except under `/tools/`; keep the sitemaps
+as the complete URL inventory. FAQ markup describes the visible answers, but
+does not imply eligibility for Google's restricted FAQ rich results.
+
+After deployment, verify the new HTML at both language URLs, then run the
+IndexNow command below. Submit both sitemaps in the owner's Google Search
+Console and Bing Webmaster Tools accounts. Track non-brand search impressions,
+clicks to product pages, app downloads and identifiable AI referral traffic;
+rankings and citations require observation after engines recrawl the pages.
+
+Product pages link to the localized installation checklist near the summary and
+after the findings. Their summary links to actual findings. The linked source
+count and each claim's newest retrieval date come from the catalogs. A retrieval
+date is not a fresh source check or a failure-rate estimate. New catalogs get
+the same presentation without a category-specific edit.
+
+`tools/download-counts.py` reads GitHub's aggregate installer and portable download
+counts without adding a visitor tracker. Run it with `--save /tmp/before.json`,
+then `--previous /tmp/before.json` to compare later. Counts are downloads, not
+unique users, successful installs or page attribution. Reusable directory,
+community and reviewer copy is in `docs/distribution/launch-kit.md` at the repo root.
 
 ## The guide
 
@@ -133,6 +190,20 @@ desktop screen, and narrow, for a phone. The checked product and the start
 screen are only shown narrow, so they are drawn only at that size. `ONLY=compare`
 draws one picture.
 
+## The share card
+
+A link to kriko.cc pasted into X, Bluesky, Slack or a chat unfurls into
+`assets/share-card.jpg` (1200x630). `tools/share-card.html` lays it out from the site's
+own fonts and the hero picture, and `tools/share-card.mjs` photographs it:
+
+```sh
+PLAYWRIGHT_MODULE=/path/to/playwright/index.mjs node site/tools/share-card.mjs
+```
+
+The home page and the guide name it in `og:image` with its size and a description,
+and a test reads the JPEG's own size against those tags. The Turkish pages get their
+own address and description from `tr.json` (`og:image:alt`).
+
 ## The advertisement
 
 `tools/ad/` draws a 28.5-second advertisement, 1920x1080 at 30 fps, with a
@@ -149,18 +220,85 @@ PLAYWRIGHT_MODULE=/path/to/playwright/index.mjs node site/tools/ad/render.mjs st
 python3 site/tools/ad/sheet.py site/tools/ad/out/sheet.png 2.6 13 24.8   # from site/tools/ad
 PLAYWRIGHT_MODULE=/path/to/playwright/index.mjs FFMPEG=/path/to/ffmpeg node site/tools/ad/render.mjs video out/kriko-ad-silent.mp4
 python3 -I site/tools/ad/score.py                                         # out/kriko-ad.wav
-ffmpeg -i out/kriko-ad-silent.mp4 -i out/kriko-ad.wav -c:v copy -c:a aac -b:a 192k -af alimiter=limit=0.89 -shortest out/kriko-ad.mp4
-ffmpeg -i out/kriko-ad.mp4 -c:v libx264 -crf 22 -preset slow -c:a copy -movflags +faststart out/kriko-ad-web.mp4
+ffmpeg -i out/kriko-ad.wav -af "loudnorm=I=-14:TP=-2:LRA=7,aresample=48000" out/kriko-ad-norm.wav
+ffmpeg -i out/kriko-ad-silent.mp4 -i out/kriko-ad-norm.wav -c:v copy -c:a aac -b:a 192k -shortest out/kriko-ad.mp4
+ffmpeg -i out/kriko-ad-silent.mp4 -i out/kriko-ad-norm.wav -vf scale=1280:720:flags=lanczos -c:v libx264 -crf 28 -preset slow -pix_fmt yuv420p -c:a aac -b:a 192k -shortest -movflags +faststart ../../assets/film/kriko-ad.mp4
 ```
 
 `score.py` makes the sound from sine, saw and noise (numpy and scipy), so there is
 nothing to license, and it lands its hits on the same times `scenes.js` lands the
-pictures. Change one file and change the other. The last command makes the copy for
-a page or a social post (about 26 MB); the first is 54 MB.
+pictures. Change one file and change the other. The sound goes through `loudnorm` because
+the raw mix peaks above full scale, and a mux limiter alone left a true peak of
++0.8 dBTP after AAC, which clips on some players; this lands at about -14 LUFS with a
+true peak near -1.7 dBTP. Keep `-b:a 192k`: at 128k the same mix came out at -0.4 dBTP.
+The first mux is the full-size file for a social post (about 54 MB); the last is the
+film on the home page, 720p and about 9.5 MB, which has to stay well under the 25 MiB
+a Cloudflare Pages file may be (a test keeps it under 12 MB). Cut its still with
+`ffmpeg -ss 1.2 -i assets/film/kriko-ad.mp4 -frames:v 1 poster.png` and save it as
+`assets/film/kriko-ad-poster.webp`.
 
 The text on screen is the sound-off script, and the three promises are the page's
 own lines word for word. `out/` (stills and the videos) is not committed. The ad
 says in its corner that the products and findings are invented.
+
+## The problem pages
+
+`problems/` and `tr/problems/` are not written by hand. `tools/render_problems.py`
+builds each catalog under `packs/` the way `kriko build` does and writes one page
+for every part or product it holds at least three claims about, in each language
+the claims are written in, plus a hub that lists them and `sitemap-problems.xml`.
+It names no category, so a new catalog or a new car in an old one gets its pages
+on the next run.
+
+```sh
+PYTHONPATH=src python site/tools/render_problems.py
+```
+
+Run it after `render-locales.cjs` whenever a catalog or `styles.css` changes,
+because the pages carry the stylesheet's hash. `test_the_pages_in_the_repo_are_what_the_catalogs_say_today`
+fails until you do, so a claim the catalog has dropped does not stay on the site.
+
+A page carries a claim's title, body and advice, how it is found, and a link to
+each page it was reported on. It never carries the quote the claim was checked
+against: that text belongs to its author, and the link sends the reader there.
+A catalog that declares itself `synthetic` (the worked example) is never
+published, because a made-up claim on a real address is a false statement. The
+page text is under the catalog's own licence, which each page names.
+
+### Being found
+
+Each page carries structured data (breadcrumbs and an article for a product, a
+collection for a list), a title that names a safety risk when the page reports
+one, social tags, and a `lastmod` in the sitemap that is the day the newest
+source behind the page was read, so it moves only when the knowledge does.
+`problems/safety/` lists every product with a serious fire, explosion or shock
+report, and the hub links to it.
+
+After a deploy, once the pages answer on kriko.cc, tell the engines that take
+IndexNow (Bing, Yandex and others) what exists. The key file at the root
+(`<key>.txt`) is the proof; no account is involved:
+
+```sh
+python site/tools/indexnow.py          # what would be sent
+python site/tools/indexnow.py --send   # send it
+```
+
+Google takes its sitemaps through Search Console, which needs the owner's own
+Google account.
+
+### Sponsored placements
+
+`sponsors.json` lists the paid placements, and is empty until there is one. A
+placement is `{id, url, name: {en, tr}, text: {en, tr}, catalogs: [slug, ...]}`
+(`catalogs` is optional; without it the placement is for every catalog). The
+generator shows the first one that fits as a box labelled Sponsored, set apart
+by a dashed edge, on a product page and a catalog page, never on the hubs, the
+home pages, the guide or the policy, and never inside a finding. It is a plain
+link with `rel="sponsored nofollow noopener"`: no script, no cookie, nothing
+loaded from the advertiser. A placement whose address is not https, or that has
+no words in a page's language, is left out and named on stderr. Add the first
+one and the privacy policy already says what it is; a test fails if the policy
+stops saying so while any is listed.
 
 ## Readability
 

@@ -1,0 +1,87 @@
+# Subjects — the things this pack knows about.
+#
+# `identity` carries exactly the keys `pack.toml` declares for the
+# kind: that dictionary is hashed to the subject id.
+- kind: product
+  label: PlayStation 5 (Disc)
+  identity:
+    brand: sony
+    series: playstation 5
+  aliases:
+  - PS5
+  - PS5 Disc
+  - PS5 Digital Edition
+  - PS5 Pro
+  attributes:
+    storage_gb:
+      value: '1000'
+      source: https://blog.ko.playstation.com/2023/10/12/20231012-ps5/
+    weight_g:
+      value: '3100'
+      source: https://www.playstation.com/es-es/ps5/ps5-pro/buy-now/
+- kind: product
+  label: Xbox Series X
+  identity:
+    brand: microsoft
+    series: xbox series x
+  aliases:
+  - Series X
+- kind: product
+  label: Nintendo Switch OLED
+  identity:
+    brand: nintendo
+    series: switch oled
+  aliases:
+  - Switch OLED
+- kind: product
+  label: Steam Deck OLED
+  identity:
+    brand: valve
+    series: steam deck oled
+  aliases:
+  - Steam Deck OLED 512GB
+  - Steam Deck OLED 1TB
+- kind: product
+  label: ROG Ally Z1 Extreme
+  identity:
+    brand: asus
+    series: rog ally z1 extreme
+  aliases:
+  - ROG Ally RC71L
+  - RC71L
+- kind: product
+  label: Xbox Series S
+  identity:
+    brand: Microsoft
+    series: Xbox Series
+  attributes:
+    storage_gb:
+      value: '512'
+      source: https://www.google.it/shopping/product/5012984311413446012/reviews
+  aliases:
+  - Xbox S
+- kind: product
+  label: Nintendo Switch Lite
+  identity:
+    brand: Nintendo
+    series: Nintendo Switch
+  aliases:
+  - Switch Lite
+- kind: product
+  label: Steam Deck LCD
+  identity:
+    brand: Valve
+    series: Steam Deck
+  attributes:
+    storage_gb:
+      value: '64'
+      source: https://github.com/ValveSoftware/SteamOS/issues/1927
+  aliases:
+  - Steam Deck LCD
+- kind: product
+  label: ROG Ally X
+  identity:
+    brand: ASUS
+    series: ROG Ally
+  aliases:
+  - ROG Ally X

@@ -1,0 +1,1589 @@
+# Claims — what is known to go wrong, each with the page it came from and the quote
+# that was read there. A claim without both is not in this file.
+- subject:
+    kind: product
+    identity:
+      brand: beko
+      model: b3rcna364hxb1
+  kind: known_issue
+  domain: general
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: control/electronics (red warning light; unspecified part ordered)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: No-frost Beko B3RCNA364HXB stopped working after about one year (defrosted, red warning light)
+      body: A Ukrainian owner review on the retailer Comfy.ua for the near-identical no-frost code B3RCNA364HXB
+        (this subject's code is B3RCNA364HXB1) reports the fridge stopped working after exactly one year,
+        defrosted, and showed a red warning light; Beko service could not name a cause and ordered a part.
+        Model code differs by the final '1', so this is reported as a family-level claim, not an exact-model
+        match.
+      advice: 'Treat this as a no-frost-family reliability signal rather than a confirmed fault for this
+        exact code: a failure around the one-year mark with a red warning light may require a service
+        visit and a replacement part.'
+    tr:
+      title: Yaklaşık bir yıl sonra çalışmayı durduran no-frost Beko B3RCNA364HXB (çözüldü, kırmızı uyarı
+        ışığı)
+      body: Perakendeci Comfy.ua'da neredeyse aynı olan no-frost kodu B3RCNA364HXB (bu konunun kodu B3RCNA364HXB1)
+        için bir Ukraynalı sahip incelemesi, buzdolabının tam olarak bir yıl sonra çalışmayı durdurduğunu,
+        çözüldüğünü ve kırmızı bir uyarı ışığı gösterdiğini bildiriyor; Beko servisi bir neden belirleyemedi
+        ve bir parça sipariş etti. Model kodu son '1' ile farklılık gösteriyor, bu nedenle bu, tam model
+        eşleşmesi değil, aile düzeyinde bir iddia olarak bildirilmektedir.
+      advice: 'Bunu bu tam kod için doğrulanmış bir arıza yerine no-frost ailesi güvenilirlik sinyali
+        olarak değerlendirin: bir yıl civarında kırmızı uyarı ışığıyla birlikte bir arıza, servis ziyareti
+        ve parça değişimi gerektirebilir.'
+  evidence:
+  - url: https://comfy.ua/holodil-nik-beko-b3rcna364hxb-ucenka-1-1-otzyvy.html
+    quote: Пройшов рівно рік і він перестав працювати. Спочатку булькотів, потім розморозився і почав
+      світитися червоним.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:40:33+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Beko
+      model: 674532 EB
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: control/display board (arıza göstergesi)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 674532 EB shows error indicator on first plug-in after installation rest
+      body: 'Owner complaint on ŞikayetVar (query: ''Beko 674532 EB sorun arıza''). A new 674532 EB Kombi
+        NF showed an error indicator immediately when first plugged in after the required 6-hour rest;
+        Beko only logged the call, and the owner requested a return as a defective unit. This is a first-use
+        electrical/control-board failure on this model.'
+      advice: Test the unit at first plug-in; if an error indicator appears immediately, document it and
+        insist on an exchange under the defective-product rules rather than accepting a repair.
+    tr:
+      title: 674532 EB, kurulum dinlenmesinden sonra ilk fişe takıldığında hata göstergesi veriyor
+      body: 'ŞikayetVar''da sahip şikayeti (sorgu: ''Beko 674532 EB sorun arıza''). Yeni bir 674532 EB
+        Kombi NF, gerekli 6 saatlik dinlenmeden sonra ilk fişe takıldığında hemen bir hata göstergesi
+        gösterdi; Beko yalnızca çağrıyı kaydetti ve sahip, arızalı bir ünite olarak iade talep etti. Bu,
+        bu modelde ilk kullanımda elektriksel/kontrol kartı arızasıdır.'
+      advice: Üniteyi ilk fişe takıldığında test edin; hemen bir hata göstergesi görünürse bunu belgeleyin
+        ve onarımı kabul etmek yerine arızalı ürün kuralları kapsamında değişim talep edin.
+  evidence:
+  - url: https://www.sikayetvar.com/beko/ilk-gun-arizali-beko-buzdolabi-iade-talebi
+    quote: Gimsa Park Eryaman Beko bayisinden Beko yd 674532 eb Kombi nf buzdolabı satın aldım. Ürün bugün
+      öğleden sonra evime teslim edildi ve kurulum için 6 saat dinlendirmemiz gerektiği söylendi. Talimatlara
+      uygun olarak 6 saat bekledikten sonra fişe taktığımız anda buzdolabı doğrudan arıza göstergesi vererek
+      çalışmaya başladı.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:42:56+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: beko
+      model: b3rcna364hxb1
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: evaporator fan (ventola) and electronic control board (scheda elettronica)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Fan and electronic board failure on Beko B3RCNA364HXB1 (fridge not cooling, compressor overheating)
+      body: A consumer complaint naming the exact model B3RCNA364HXB1 reports the fridge compartment failed
+        to cool and the compressor overheated; a Beko technician diagnosed a fault in the fan and the
+        electronic board, replaced the parts under warranty, but the repair did not restore function.
+      advice: If you buy this model, budget for the possibility of an evaporator-fan or control-board
+        failure that may require a service visit and parts replacement; the complaint shows a warranty
+        repair did not resolve the fault on the first attempt.
+    tr:
+      title: Beko B3RCNA364HXB1'de fan ve elektronik kart arızası (buzdolabı soğutmuyor, kompresör aşırı
+        ısınıyor)
+      body: Tam model B3RCNA364HXB1'i adlandıran bir tüketici şikayeti, buzdolabı bölmesinin soğutmadığını
+        ve kompresörün aşırı ısındığını bildiriyor; bir Beko teknisyeni fandaki ve elektronik karttaki
+        bir arızayı teşhis etti, parçaları garanti kapsamında değiştirdi, ancak onarım işlevi geri getirmedi.
+      advice: Bu modeli satın alırsanız, servis ziyareti ve parça değişimi gerektirebilecek bir evaporatör
+        fanı veya kontrol kartı arızası olasılığını hesaba katın; şikayet, garanti onarımının arızayı
+        ilk denemede çözmediğini gösteriyor.
+  evidence:
+  - url: https://www.altroconsumo.it/reclamare/bacheca-dei-reclami/beko-frigorifero-guasto-da-du/e653a38e9d7fa90a93
+    quote: Intervento del tecnico che riscontra un guasto alla ventola e alla scheda elettronica, promettendo
+      i pezzi in una settimana.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:40:33+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Beko
+      model: 674532 EB
+  kind: known_issue
+  domain: electrical
+  severity: low
+  consequence: ''
+  detection: ''
+  component: main electronic control board (Beko 7281620217 / 5929763600)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 674532 EB main electronic control board is a real replaceable part (Beko 7281620217)
+      body: Parts catalog confirms the 674532 EB uses a main electronic board (Beko code 7281620217; board
+        5929763600) that controls compressor, fan, sensors and lighting; the same board is also listed
+        on penguensogutma.com for this model.
+      advice: If the unit shows electrical faults, the control board is the concrete part a repairer will
+        replace; it is a stocked, priced spare for this model.
+    tr:
+      title: 674532 EB ana elektronik kontrol kartı gerçek bir değiştirilebilir parçadır (Beko 7281620217)
+      body: Parça kataloğu, 674532 EB'nin kompresör, fan, sensörler ve aydınlatmayı kontrol eden bir ana
+        elektronik kart (Beko kodu 7281620217; kart 5929763600) kullandığını doğruluyor; aynı kart bu
+        model için penguensogutma.com'da da listelenmiştir.
+      advice: Ünite elektriksel arızalar gösterirse, kontrol kartı bir tamircinin değiştireceği somut
+        parçadır; bu model için stoklanan, fiyatlandırılmış bir yedek parçadır.
+  evidence:
+  - url: https://www.uygunparca.com/buzdolabi-elektronik-kart-5929763600
+    quote: 7 | Beko | 7281620217 | 674532 EB_74cm_NF_Kombi_Disp___Buzdolabı
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:47:45+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Beko
+      model: 674532 EB
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: compressor/motor (loud operation); service attempted board software re-flash
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 674532 EB runs very loud from new, unresolved after 3 service visits
+      body: Owner Selman reports loud operation within the first week; three service visits and a board
+        software re-flash did not fix it.
+      advice: Loud operation on a new unit is a recurring complaint for this model; a software re-flash
+        may not fix it, so ask for a replacement early.
+    tr:
+      title: 674532 EB yeniden itibaren çok gürültülü çalışıyor, 3 servis ziyaretinden sonra çözülmedi
+      body: Sahip Selman, ilk hafta içinde gürültülü çalışma bildiriyor; üç servis ziyareti ve bir kart
+        yazılımı yeniden yüklemesi bunu düzeltmedi.
+      advice: Yeni bir ünitede gürültülü çalışma bu model için tekrarlayan bir şikayettir; bir yazılım
+        yeniden yüklemesi bunu düzeltmeyebilir, bu nedenle erken bir değişim talep edin.
+  evidence:
+  - url: https://www.sikayetvar.com/beko/beko-1-hafta-olmadan-yeni-aldigim-buzdolabim-asiri-ses-yapiyor-video
+    quote: Ürünü henüz alalı 1 hafta olmasına rağmen buzdolabı aşırı derecede yüksek sesle çalışıyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:47:45+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Beko
+      model: 674533 MB
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: fan motoru (fan motor)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Fan motoru sekiz ayda bozuluyor
+      body: Owner's 674533 MB started making noise in month ~6 and by month ~8 the fan motor (which pushes
+        cold air) failed; service ordered a part without opening the unit. Owner notes Beko gives 10-year
+        warranty on the main compressor but not the fan motor.
+      advice: Expect the fan motor to be the first electrical part to fail (around 6–8 months). A noisy
+        fan is the early sign; if it fails, cooling stops and food spoils. Check whether the fan motor
+        is covered before relying on the compressor's 10-year warranty.
+    tr:
+      title: Fan motoru sekiz ayda bozuluyor
+      body: Sahibin 674533 MB'si yaklaşık 6. ayda ses çıkarmaya başladı ve yaklaşık 8. ayda fan motoru
+        (soğuk havayı iten) arızalandı; servis üniteyi açmadan bir parça sipariş etti. Sahip, Beko'nun
+        ana kompresör için 10 yıl garanti verdiğini ancak fan motoru için vermediğini belirtiyor.
+      advice: Fan motorunun arızalanacak ilk elektriksel parça olmasını bekleyin (yaklaşık 6–8 ay). Gürültülü
+        fan erken işarettir; arızalanırsa soğutma durur ve yiyecek bozulur. Kompresörün 10 yıllık garantisine
+        güvenmeden önce fan motorunun kapsam dahilinde olup olmadığını kontrol edin.
+  evidence:
+  - url: https://www.sikayetvar.com/beko/sekiz-ayda-arizalanan-buzdolabi-ve-yetersiz-servis-deneyimi
+    quote: Sekiz ayda fan motoru bozulacak.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:43:44+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Beko
+      model: 974509 MB
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: kompresör üstü plastik aksam (compressor cover plastic assembly)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Beko 974509 MB kompresör üstü plastik aksam aşırı ses çıkarıyor
+      body: Owner reports excessive noise from the plastic assembly above the compressor after about 6
+        months of use.
+      advice: Expect the 974509 MB to develop a noisy compressor-area rattle within the first year; it
+        is a nuisance rather than a cooling failure, but it may require a service visit to silence.
+    tr:
+      title: Beko 974509 MB kompresör üstü plastik aksam aşırı ses çıkarıyor
+      body: Sahibi, yaklaşık 6 aylık kullanımdan sonra kompresörün üzerindeki plastik aksamdan aşırı ses
+        geldiğini bildiriyor.
+      advice: 974509 MB modelinin ilk yıl içinde kompresör bölgesinde gürültülü bir takırtı geliştirmesini
+        bekleyin; bu bir soğutma arızası değil can sıkıcı bir durumdur, ancak sesi kesmek için servis
+        ziyareti gerekebilir.
+  evidence:
+  - url: https://www.sikayetvar.com/beko/beko-buzdolabi-gurultulu-calisiyor-video
+    quote: Beko 974509 MB 6 ay oldu alalı sesten gürültüden artık çok rahatsız oluyoruz. Kompresörün üstündeki
+      plastik aksam aşırı ses çıkarıyor çözüm bulunmasını istiyorum.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:39:45+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: beko
+      model: rcna406i30w
+  kind: known_issue
+  domain: ice_frost
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: freezer floor/evaporator area under the bottom drawer
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Freezer ice/frost builds up under the bottom drawer on Beko RCNA406I30W
+      body: An owner of this exact model reports that after about a year, ice/frost starts accumulating
+        under the bottom freezer drawer; it does not stop the fridge working but requires periodic manual
+        cleaning of the frost. This matches the pack's ice/frost family concern (frost blocking the drain
+        area), reported on this specific model code. Evidence is from a Ukrainian buyer of the same model;
+        no Turkish-specific report was found.
+      advice: Expect to periodically defrost/clean under the bottom freezer drawer even though the unit
+        is No Frost; budget for this maintenance rather than assuming a fully self-defrosting freezer.
+    tr:
+      title: Beko RCNA406I30W alt çekmece altında buzlanma/kırağı birikiyor
+      body: Bu modelin bir sahibi, yaklaşık bir yıl sonra alt dondurucu çekmecesinin altında buz/kırağı
+        birikmeye başladığını bildiriyor; buzdolabının çalışmasını durdurmuyor ancak kırağının periyodik
+        olarak elle temizlenmesini gerektiriyor. Bu, paketin buz/kırağı ailesi endişesiyle (kırağın drenaj
+        alanını tıkaması) örtüşüyor ve bu özel model kodunda bildirilmiş. Kanıt aynı modeli satın alan
+        bir Ukraynalı alıcıdan geliyor; Türkiye'ye özgü bir bildirim bulunamadı.
+      advice: Ünite No Frost olsa bile alt dondurucu çekmecesinin altını periyodik olarak çözün/temizleyin;
+        tamamen kendi kendine çözülen bir dondurucu varsaymak yerine bu bakım için bütçe ayırın.
+  evidence:
+  - url: https://comfy.ua/ua/holodil-nik-beko-rcna406i30w-ucenka-50-1-otzyvy.html
+    quote: через рік почало намерзати під нижнім ящиком у морозильній камері! як би на роботу сильно не
+      впливає,але періодично потрібно чистити низ від намерзання в цілому ніби не поганий і місткий,але
+      ось ця проблемка псує загальне враження!
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:47:18+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Beko
+      model: 974509 MB
+  kind: known_issue
+  domain: general
+  severity: low
+  consequence: ''
+  detection: ''
+  component: sebzelik (fresh-food/vegetable compartment)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Beko 974509 MB sebzelik bölmesi çok yavaş soğuyor (+12'den +4'e 18 saat)
+      body: A verified buyer notes the freezer reached -18 quickly but the vegetable compartment stayed
+        at +12 and took about 18 hours to reach +4 on first startup.
+      advice: On first power-up the fresh-food compartment of the 974509 MB can be very slow to reach
+        temperature; allow up to ~18 hours before loading perishables, and don't treat the slow initial
+        cooldown as a defect.
+    tr:
+      title: Beko 974509 MB sebzelik bölmesi çok yavaş soğuyor (+12'den +4'e 18 saat)
+      body: Doğrulanmış bir alıcı, dondurucunun hızla -18'e ulaştığını ancak sebzelik bölmesinin +12'de
+        kaldığını ve ilk çalıştırmada +4'e ulaşmasının yaklaşık 18 saat sürdüğünü belirtiyor.
+      advice: 974509 MB modelinin taze gıda bölmesi ilk elektrik verilişte sıcaklığa ulaşmakta çok yavaş
+        olabilir; bozulabilir gıdaları yüklemeden önce ~18 saate kadar bekleyin ve yavaş ilk soğumayı
+        arıza olarak değerlendirmeyin.
+  evidence:
+  - url: https://www.n11.com/urun/beko-974509-mb-no-frost-buzdolabi-77949362?magaza=aldemira-s
+    quote: dondurucusu soguttu- 18 sebzeligi sogutmadi + 12 oldu 9 saat sonra + 9 oldu 18 saaat sonrasinda
+      olması gereken +4 oldu baya beklemek gerekiyor kendine gelmesi için
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:39:45+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Beko
+      model: 670475 MB
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: soğutma sistemi / kompresör
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Beko 670475 MB üst bölümü en yüksek ayarda bile soğutmuyor
+      body: Bu bulgu 'Beko 670475 MB sorun arıza' aramasından geldi. Kullanıcı, ürünü satın aldıktan 10
+        gün sonra üst bölümün en yüksek ayarda bile soğutmadığını bildiriyor. Servis ilgisizliği de şikayetin
+        başlığında yer alıyor.
+      advice: Satın almadan önce bu modelin soğutma performansıyla ilgili tekrarlayan şikayetler olduğunu
+        göz önünde bulundurun. Garanti kapsamında servis çağırmak gerekebilir, ancak bazı kullanıcılar
+        servisin kalıcı çözüm sunmadığını belirtiyor.
+    tr:
+      title: Beko 670475 MB üst bölümü en yüksek ayarda bile soğutmuyor
+      body: Bu bulgu 'Beko 670475 MB sorun arıza' aramasından geldi. Kullanıcı, ürünü satın aldıktan 10
+        gün sonra üst bölümün en yüksek ayarda bile soğutmadığını bildiriyor. Servis ilgisizliği de şikayetin
+        başlığında yer alıyor.
+      advice: Satın almadan önce bu modelin soğutma performansıyla ilgili tekrarlayan şikayetler olduğunu
+        göz önünde bulundurun. Garanti kapsamında servis çağırmak gerekebilir, ancak bazı kullanıcılar
+        servisin kalıcı çözüm sunmadığını belirtiyor.
+  evidence:
+  - url: https://www.sikayetvar.com/uye/ahmet-17566192
+    quote: 17.08.2025 tarihinde 670475 MB model Beko marka buzdolabı satın aldım. Buzd...olabının üst
+      kısmı en yüksek ayarda çalışmasına rağmen soğutmuyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:45:55+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: beko
+      model: 974508 mb
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: dış gövde sacı
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Beko 974508 MB gövde hatası — dış sacda yanma, paslanma ve delinme
+      body: Bu bulgu 'Beko 974508 MB gövde pas yanma delinme şikayet' aramasından geldi. Kullanıcı, buzdolabının
+        dış gövde sacında yanma, paslanma ve delinme meydana geldiğini ve bunun üretim aşamasındaki yalıtım
+        köpüğü basım hatasından kaynaklandığını belirtiyor.
+      advice: Gövde hatası üretim kaynaklı olabilir ve garanti dışında bile değişim talep edilebilir.
+        Bu, ürünün ömrünü ciddi şekilde kısaltabilir.
+    tr:
+      title: Beko 974508 MB gövde hatası — dış sacda yanma, paslanma ve delinme
+      body: Bu bulgu 'Beko 974508 MB gövde pas yanma delinme şikayet' aramasından geldi. Kullanıcı, buzdolabının
+        dış gövde sacında yanma, paslanma ve delinme meydana geldiğini ve bunun üretim aşamasındaki yalıtım
+        köpüğü basım hatasından kaynaklandığını belirtiyor.
+      advice: Gövde hatası üretim kaynaklı olabilir ve garanti dışında bile değişim talep edilebilir.
+        Bu, ürünün ömrünü ciddi şekilde kısaltabilir.
+  evidence:
+  - url: https://www.sikayetvar.com/beko/beko-buzdolabindaki-govde-hatasi-ucretsiz-degisim-ve-servis-denetimi-talebi
+    quote: Tarafımdan kullanılan Beko 974508 MB model buzdolabının dış gövde sacında, fotoğraflarda da
+      görüleceği üzere yanma, paslanma ve delinme meydana gelmiştir. Yapılan teknik incelemelerde, bu
+      durumun kullanıcı hatasıyla oluşmasının mümkün olmadığı, üretim aşamasındaki yalıtım köpüğü (poliüretan)
+      basım hatasından kaynaklanan bir gizli ayıp olduğu anlaşılmıştır.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:39:23+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Beko
+      model: 674532 EB
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: main electronic control board / fault indicator
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 674532 EB shows fault indicator on first plug-in (day one)
+      body: Owner Şeyma reports the new 674532 EB showed a fault indicator immediately on first plug-in
+        and demanded a refund.
+      advice: If you buy this model, test it on first plug-in and keep the receipt; a day-one electrical
+        fault is documented and the owner had to push for a return.
+    tr:
+      title: 674532 EB ilk takıldığında arıza göstergesi veriyor (birinci gün)
+      body: Sahibi Şeyma, yeni 674532 EB'nin ilk takıldığında hemen arıza göstergesi verdiğini ve para
+        iadesi talep ettiğini bildiriyor.
+      advice: Bu modeli satın alırsanız ilk takıldığında test edin ve fişi saklayın; birinci gün elektriksel
+        arızası belgelenmiş ve sahibi iade için ısrar etmek zorunda kalmış.
+  evidence:
+  - url: https://www.sikayetvar.com/beko/ilk-gun-arizali-beko-buzdolabi-iade-talebi
+    quote: Talimatlara uygun olarak 6 saat bekledikten sonra fişe taktığımız anda buzdolabı doğrudan arıza
+      göstergesi vererek çalışmaya başladı.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:42:56+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Beko
+      model: 974509 MB
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: fan motoru (fan motor)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Beko 974509 MB fan motoru arızalı, değişim sonrası da soğutmuyor
+      body: Owner reports the 974509 MB never cooled from day one; authorized service replaced the fan
+        motor but cooling still failed, and Beko refused a refund.
+      advice: If a 974509 MB fails to cool, the fan motor is a known first suspect, but this owner shows
+        replacement alone did not fix it — expect possible repeat visits and a hard time getting a refund
+        even under warranty.
+    tr:
+      title: Beko 974509 MB fan motoru arızalı, değişim sonrası da soğutmuyor
+      body: Sahibi, 974509 MB'nin ilk günden beri hiç soğutmadığını bildiriyor; yetkili servis fan motorunu
+        değiştirmiş ancak soğutma yine de sağlanamamış ve Beko para iadesini reddetmiş.
+      advice: Bir 974509 MB soğutmuyorsa, fan motoru bilinen ilk şüphelidir, ancak bu sahibin durumu tek
+        başına değişimin sorunu çözmediğini gösteriyor — olası tekrar ziyaretleri ve garanti kapsamında
+        bile para iadesi almanın zorluğunu bekleyin.
+  evidence:
+  - url: https://www.sikayetvar.com/beko/ayipli-beko-buzdolabi-sogutmuyor-fan-degisimine-ragmen-iade-talebi-reddedildi
+    quote: Yetkili servis eve geldiğinde fan motorunun arızalı olduğunu tespit etti ve birkaç gün sonra
+      fan motoru değişti. Ancak parça değişimine rağmen buzdolabı yine doğru düzgün soğutmadı.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:39:45+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Beko
+      model: 678551 ESC
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: control board (kart)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Control board (kart) failure stopped cooling on Beko 678551 ESC
+      body: Owner of a 3-year-old 678551 ESC reports sudden loss of cooling; Beko service diagnosed a
+        card (kart) fault, fitted a replacement card that did not fix it, then ordered a compressor. The
+        fridge was unusable for days and the food spoiled. This is a model-specific electrical failure
+        on the exact subject code.
+      advice: The control board is a known failure point on this model; a card fault can take the whole
+        fridge down and may not be resolved by the first card swap, and parts can take days to arrive.
+    tr:
+      title: Control board (kart) failure stopped cooling on Beko 678551 ESC
+      body: 3 yaşındaki bir 678551 ESC'nin sahibi ani soğutma kaybı bildiriyor; Beko servisi bir kart
+        arızası teşhis etmiş, sorunu çözmeyen bir yedek kart takmış ve ardından kompresör sipariş etmiş.
+        Buzdolabı günlerce kullanılamamış ve yiyecekler bozulmuş. Bu, tam olarak konu kodundaki modele
+        özgü bir elektriksel arızadır.
+      advice: Kontrol kartı bu modelde bilinen bir arıza noktasıdır; bir kart arızası tüm buzdolabını
+        devre dışı bırakabilir ve ilk kart değişimiyle çözülmeyebilir, ayrıca parçaların gelmesi günler
+        alabilir.
+  evidence:
+  - url: https://www.sikayetvar.com/beko/sogutmayan-beko-buzdolabi-uzun-servis-bekleyisi-ve-saygisiz-tutum-magduriyet-yaratiyor
+    quote: 3. günün sonunda gelen servis, kart arızası olduğunu söyleyerek sipariş geçtiler ve birkaç
+      gün süreceğini belirttiler.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:44:34+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Beko
+      model: 674532 EB
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: refrigerant pipes/tubing touching each other
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 674532 EB loud noise 2 days after delivery, fixed by adjusting touching pipes
+      body: Owner Gülşah reports loud noise starting 2 days after delivery, worsening over time; a later
+        service found the noise was pipes touching and fixed it.
+      advice: A loud new unit may be a simple pipe-contact issue that a service visit can fix, but it
+        can take multiple visits to diagnose.
+    tr:
+      title: 674532 EB loud noise 2 days after delivery, fixed by adjusting touching pipes
+      body: Sahibi Gülşah, teslimattan 2 gün sonra başlayan ve zamanla kötüleşen yüksek ses bildiriyor;
+        daha sonraki bir servis, sesin birbirine temas eden borulardan kaynaklandığını tespit edip sorunu
+        gidermiş.
+      advice: Yeni ve gürültülü bir ünite, bir servis ziyaretinin çözebileceği basit bir boru teması sorunu
+        olabilir, ancak teşhis birkaç ziyaret alabilir.
+  evidence:
+  - url: https://www.sikayetvar.com/beko/beko-buzdolabi-teslimattan-sonra-surekli-yuksek-sesle-calisiyor-cozum-sunulmuyor
+    quote: 12 Temmuz 2025 tarihinde Beko yetkili bayisinden aldığım 674532 eb model buzdolabı, teslimattan
+      sadece 2 gün sonra aşırı sesli çalışmaya başladı.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:42:56+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: beko
+      model: 974508 mb
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: fan motoru
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Beko 974508 MB fan motoru arızası — havalandırma gözlerinde karlama, soğutmuyor
+      body: Bu bulgu 'Beko 974508 MB buzdolabı şikayet' aramasından geldi. Kullanıcı, buzdolabının içindeki
+        havalandırma gözlerinde karlama oluştuğunu, cihazın tam olarak soğutmadığını ve servisin fan motorunun
+        arızalı olduğunu tespit ettiğini belirtiyor.
+      advice: Fan motoru arızası bu modelde yaygın bir sorundur. Garanti kapsamında ücretsiz tamir yapılabilir,
+        ancak tekrarlama riski vardır.
+    tr:
+      title: Beko 974508 MB fan motoru arızası — havalandırma gözlerinde karlama, soğutmuyor
+      body: Bu bulgu 'Beko 974508 MB buzdolabı şikayet' aramasından geldi. Kullanıcı, buzdolabının içindeki
+        havalandırma gözlerinde karlama oluştuğunu, cihazın tam olarak soğutmadığını ve servisin fan motorunun
+        arızalı olduğunu tespit ettiğini belirtiyor.
+      advice: Fan motoru arızası bu modelde yaygın bir sorundur. Garanti kapsamında ücretsiz tamir yapılabilir,
+        ancak tekrarlama riski vardır.
+  evidence:
+  - url: https://www.sikayetvar.com/beko/yeni-alinan-buzdolabinda-erken-ariza-ve-magduriyet
+    quote: Yaklaşık 15 gündür buzdolabının içindeki havalandırma gözlerinde karlama oluşuyor ve cihaz
+      tam olarak soğutmuyor. Sorun nedeniyle yetkili servise başvurdum; kontrol sonucunda fan motorunun
+      arızalı olduğu ve değişmesi gerektiği belirtildi.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:39:23+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: beko
+      model: b7rcne40hxbr
+  kind: known_issue
+  domain: ice_frost
+  severity: high
+  consequence: ''
+  detection: ''
+  component: fresh-food compartment / defrost drain
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: B7RCNE40HXBR fresh-food compartment runs near 0°C, freezes food and sheds water from melting
+        ice; recurs on a replacement unit of the same model
+      body: 'An owner complaint naming the exact model code B7RCNE40HXBR: the fresh-food compartment ran
+        near 0°C, froze food, and produced abnormal water from melting ice. The unit was replaced under
+        warranty with a new unit of the same model, which developed the same fault months later. The owner
+        describes it as a recurring bug. Note this evidence is from the Italian market; I found no Turkish-market
+        complaint specific to this exact code.'
+      advice: 'Before buying, treat this model''s fresh-food compartment and defrost drain as a known
+        weak point: verify the actual fridge temperature (not just the setpoint) early, watch for food
+        freezing in the fresh compartment, and for water pooling from the defrost cycle. Because the fault
+        recurred on a replacement unit, a single service visit may not be conclusive — keep records and
+        push for a lasting fix or exchange if it repeats.'
+    tr:
+      title: B7RCNE40HXBR fresh-food compartment runs near 0°C, freezes food and sheds water from melting
+        ice; recurs on a replacement unit of the same model
+      body: 'Tam model kodunu B7RCNE40HXBR olarak belirten bir sahip şikayeti: taze gıda bölmesi 0°C civarında
+        çalışmış, yiyecekleri dondurmuş ve eriyen buzdan anormal su üretmiş. Ünite garanti kapsamında
+        aynı modelin yeni bir ünitesiyle değiştirilmiş ve bu ünite aylar sonra aynı arızayı geliştirmiş.
+        Sahibi bunu tekrarlayan bir hata olarak tanımlıyor. Bu kanıtın İtalya pazarından olduğunu unutmayın;
+        bu tam koda özgü Türkiye pazarından bir şikayet bulamadım.'
+      advice: 'Satın almadan önce, bu modelin taze gıda bölmesini ve buz çözme tahliyesini bilinen bir
+        zayıf nokta olarak değerlendirin: gerçek buzdolabı sıcaklığını (yalnızca ayar değerini değil)
+        erkenden doğrulayın, taze bölmede yiyeceklerin donmasına ve buz çözme döngüsünden su birikmesine
+        dikkat edin. Arıza bir yedek ünitede tekrarladığı için tek bir servis ziyareti kesin sonuç vermeyebilir
+        — kayıtları tutun ve tekrarlanırsa kalıcı bir çözüm veya değişim için ısrar edin.'
+  evidence:
+  - url: https://www.altroconsumo.it/reclamare/bacheca-dei-reclami/richiesta-intervento-in-garanz/b19dc02a037102eaac
+    quote: il fatto che il frigo avesse il comparto dei cibi freschi ad una temperatura intorno a 0 gradi
+      c°, con conseguente congelamento dei cibi e produzione abnorme di acqua dallo scioglimento di tale
+      ghiaccio
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:41:31+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: beko
+      model: 974508 mb
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: fan motoru
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Beko 974508 MB fan motoru arızası — cihaz soğutmuyor, tekrarlayan arıza
+      body: Bu bulgu 'Beko 974508 MB sorun arıza' aramasından geldi. Kullanıcı, Beko 974508 model buzdolabında
+        fan ve fan motoru arızasının tekrarladığını, her tamirden sonra 1–2 hafta içinde tekrar bozulduğunu
+        ve cihazın soğutmadığını belirtiyor.
+      advice: Fan motoru arızası bu modelde tekrarlayan bir sorundur. Satın almadan önce garanti kapsamını
+        ve servis desteğini göz önünde bulundurun; fan değişimi geçici bir çözüm olabilir.
+    tr:
+      title: Beko 974508 MB fan motoru arızası — cihaz soğutmuyor, tekrarlayan arıza
+      body: Bu bulgu 'Beko 974508 MB sorun arıza' aramasından geldi. Kullanıcı, Beko 974508 model buzdolabında
+        fan ve fan motoru arızasının tekrarladığını, her tamirden sonra 1–2 hafta içinde tekrar bozulduğunu
+        ve cihazın soğutmadığını belirtiyor.
+      advice: Fan motoru arızası bu modelde tekrarlayan bir sorundur. Satın almadan önce garanti kapsamını
+        ve servis desteğini göz önünde bulundurun; fan değişimi geçici bir çözüm olabilir.
+  evidence:
+  - url: https://www.sikayetvar.com/beko/surekli-fan-arizasiyla-bozulmus-beko-buzdolabi-degisim-talebi
+    quote: Sürekli aynı sorunla, fan ve fan motoru arızasıyla karşılaşıyoruz ve bu nedenle cihaz soğutmuyor.
+      Her tamirden sonra en fazla 1–2 hafta içinde tekrar bozuluyor
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:39:23+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Beko
+      model: 670475 MB
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: soğutma sistemi
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Beko 670475 MB satın alındığı günden beri doğru dürüst soğutmuyor
+      body: Bu bulgu 'Beko 670475 MB soğutma sorunu' aramasından geldi. Kullanıcı, ürünü aldığı günden
+        beri soğutma problemi yaşadığını ve defalarca servis çağırmasına rağmen çözüm bulunamadığını belirtiyor.
+        İki yıl boyunca süren bir sorun.
+      advice: Bu modelde soğutma sorununun kalıcı olabileceğini ve servis müdahalelerinin çözüm sağlamayabileceğini
+        gösteren güçlü bir kanıt. Satın almadan önce bu riski değerlendirin.
+    tr:
+      title: Beko 670475 MB satın alındığı günden beri doğru dürüst soğutmuyor
+      body: Bu bulgu 'Beko 670475 MB soğutma sorunu' aramasından geldi. Kullanıcı, ürünü aldığı günden
+        beri soğutma problemi yaşadığını ve defalarca servis çağırmasına rağmen çözüm bulunamadığını belirtiyor.
+        İki yıl boyunca süren bir sorun.
+      advice: Bu modelde soğutma sorununun kalıcı olabileceğini ve servis müdahalelerinin çözüm sağlamayabileceğini
+        gösteren güçlü bir kanıt. Satın almadan önce bu riski değerlendirin.
+  evidence:
+  - url: https://www.sikayetvar.com/beko/buzdolabi/degisim/servis?page=4
+    quote: Ekonomik bütçeme uygun olduğu için yaklaşık 2 yıl önce Malatya merkezdeki bayiden Beko 670475
+      MB model buzdolabı aldım; ancak aldığım günden beri buzdolabı doğru dürüst soğutmadığı için pişman
+      oldum.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:45:55+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: beko
+      model: b7rcne40hxbr
+  kind: known_issue
+  domain: ice_frost
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: defrost system / fan
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Beko no-frost builds up frost/ice and leaks water from below despite fan and gasket replacements
+      body: 'A Turkish-market complaint on Şikayetvar about a Beko no-frost model (K83720NE): persistent
+        frost/ice buildup in the freezer, a noise, and intermittent water leaking from below, which persisted
+        after a motor change and after the service first blamed the fan then replaced the gasket. This
+        is a family-level Turkish no-frost claim, not specific to the B7RCNE40HXBR code.'
+      advice: 'This shows the Turkish-market pattern for Beko no-frost units: frost/ice buildup with water
+        leaking from below, and service visits that blame different parts (fan, gasket) without resolving
+        it. A buyer should not assume a single part swap fixes it, and should keep a record of repeated
+        visits.'
+    tr:
+      title: Beko no-frost, fan ve conta değişimlerine rağmen kırağı/buz biriktiriyor ve alttan su sızdırıyor
+      body: 'Şikayetvar''da bir Beko no-frost modeli (K83720NE) hakkında Türkiye pazarına ait bir şikayet:
+        dondurucuda kalıcı kırağı/buz birikmesi, bir gürültü ve alttan aralıklı su sızması; bunlar bir
+        motor değişiminden sonra ve servisin önce fanı suçlayıp ardından contayı değiştirmesinden sonra
+        da devam etmiş. Bu, B7RCNE40HXBR koduna özgü değil, aile düzeyinde bir Türk no-frost iddiasıdır.'
+      advice: 'Bu, Beko no-frost üniteleri için Türkiye pazarındaki örüntüyü gösteriyor: alttan su sızmasıyla
+        birlikte kırağı/buz birikmesi ve sorunu çözmeden farklı parçaları (fan, conta) suçlayan servis
+        ziyaretleri. Bir alıcı tek bir parça değişiminin bunu düzelteceğini varsaymamalı ve tekrarlanan
+        ziyaretlerin kaydını tutmalıdır.'
+  evidence:
+  - url: https://www.sikayetvar.com/beko/beko-buzdolabinda-cozulmeyen-buzlanma-ses-ve-su-sizintisi-ve-servis-oyalama
+    quote: bu kez buzluk kısmında sürekli karlanma ve buzlanma problemi başladı. Ayrıca buzdolabından
+      her an patlayacakmış gibi gelen rahatsız edici bir ses var ve zaman zaman alt kısmından su akıntısı
+      oluyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:41:31+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Beko
+      model: 678551 ESC
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: control card (kart)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: No-frost control card fault on Beko 678551 family
+      body: A separate complaint on a 678551 no-frost unit (the 'edi' variant of the same base model)
+        reports the control card failed and the replacement had to be sourced from production, causing
+        a long wait. This corroborates the control-card failure pattern across the 678551 no-frost family.
+      advice: Control-card failure appears across the 678551 no-frost family, and replacement cards may
+        be slow to source, leaving the fridge down for days.
+    tr:
+      title: Beko 678551 ailesinde no-frost kontrol kartı arızası
+      body: Aynı temel modelin 'edi' varyantı olan 678551 no-frost ünitesi hakkında ayrı bir şikayet,
+        kontrol kartının arızalandığını ve yedeğinin üretimden tedarik edilmesi gerektiğini, bunun da
+        uzun bir beklemeye yol açtığını bildiriyor. Bu, 678551 no-frost ailesi genelindeki kontrol kartı
+        arızası örüntüsünü destekliyor.
+      advice: Kontrol kartı arızası 678551 no-frost ailesi genelinde görülüyor ve yedek kartların tedariki
+        yavaş olabilir, bu da buzdolabını günlerce devre dışı bırakabilir.
+  evidence:
+  - url: https://www.sikayetvar.com/beko/buzdolabi/buzdolabi-kart-arizasi
+    quote: Beko 678551 edi Tencere Soğutma Teknolojili No Frost buzdolabımın kartı arızalandı
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:44:34+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: beko
+      model: b3rcna364hxb1
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: main unit / control electronics (unspecified)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'B3RCNA364HXB (related no-frost model): unit stopped working after ~1 year, defrosted, red
+        error light'
+      body: An owner review of the sibling model B3RCNA364HXB (same no-frost family, code without the
+        trailing '1') reports the fridge stopped working after exactly one year, defrosted, and showed
+        a red indicator; the Beko service centre did not name a cause and ordered a part.
+      advice: This is a family-level electrical failure report for the B3RCNA364HXB series rather than
+        the exact B3RCNA364HXB1 code; the technician did not identify the failed part. Treat it as supporting
+        evidence of a control/electronics failure risk in this family, not as a confirmed part diagnosis.
+    tr:
+      title: 'B3RCNA364HXB (ilgili no-frost modeli): ünite yaklaşık 1 yıl sonra çalışmayı durdurdu, buz
+        çözdü, kırmızı hata ışığı'
+      body: Kardeş model B3RCNA364HXB (aynı no-frost ailesi, sonundaki '1' olmayan kod) hakkında bir sahip
+        incelemesi, buzdolabının tam bir yıl sonra çalışmayı durdurduğunu, buzunun çözüldüğünü ve kırmızı
+        bir gösterge yandığını bildiriyor; Beko servis merkezi bir neden belirtmemiş ve bir parça sipariş
+        etmiş.
+      advice: Bu, tam B3RCNA364HXB1 kodu yerine B3RCNA364HXB serisi için aile düzeyinde bir elektriksel
+        arıza raporudur; teknisyen arızalı parçayı tespit etmemiştir. Bunu bu ailede bir kontrol/elektronik
+        arızası riskinin destekleyici kanıtı olarak değerlendirin, doğrulanmış bir parça teşhisi olarak
+        değil.
+  evidence:
+  - url: https://comfy.ua/holodil-nik-beko-b3rcna364hxb-ucenka-1-1-otzyvy.html
+    quote: Пройшов рівно рік і він перестав працювати. Спочатку булькотів, потім розморозився і почав
+      світитися червоним.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:40:33+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: beko
+      model: b7rcne40hxbr
+  kind: known_issue
+  domain: ice_frost
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: rear evaporator / defrost drain
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Beko no-frost freezes behind the back plate and leaks water out the door, recurring yearly
+      body: 'A consumer complaint about a Beko no-frost fridge (model not specified): ice formed behind
+        the back plate, blocked the defrost drain, and water leaked out the door; it recurred at the same
+        time of year across three consecutive years. This is a family-level no-frost claim, not specific
+        to the B7RCNE40HXBR code.'
+      advice: For any Beko no-frost unit, expect that frost can build on the rear evaporator and block
+        the defrost drain, causing water to leak out. This is a recurring pattern rather than a one-off,
+        so a buyer should check the drain area periodically and not assume a single repair is permanent.
+    tr:
+      title: Beko no-frost arka plakanın arkasında donuyor ve kapıdan su sızdırıyor, her yıl tekrarlıyor
+      body: 'Bir Beko no-frost buzdolabı (model belirtilmemiş) hakkında bir tüketici şikayeti: arka plakanın
+        arkasında buz oluşmuş, buz çözme tahliyesini tıkamış ve kapıdan su sızmış; bu, üç ardışık yıl
+        boyunca yılın aynı zamanında tekrarlamış. Bu, B7RCNE40HXBR koduna özgü değil, aile düzeyinde bir
+        no-frost iddiasıdır.'
+      advice: Herhangi bir Beko no-frost ünitesinde, kırağının arka buharlaştırıcıda birikebileceğini
+        ve buz çözme tahliyesini tıkayarak suyun dışarı sızmasına neden olabileceğini bekleyin. Bu tek
+        seferlik değil tekrarlayan bir örüntüdür, bu nedenle bir alıcı tahliye bölgesini düzenli olarak
+        kontrol etmeli ve tek bir onarımın kalıcı olduğunu varsaymamalıdır.
+  evidence:
+  - url: https://www.ocu.org/reclamar/lista-reclamaciones-publicas/problema-con-frigor-C3-ADfico/cd91f3a81b5cb01d47
+    quote: un técnico tuvo que venir a "repararlo" porque congelaba detrás de la placa trasera y acababa
+      saliendo agua por la puerta del frigorífico
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:38:56+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: beko
+      model: 970406 mb
+  kind: known_issue
+  domain: ice_frost
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: freezer / defrost system
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Beko 970406 MB freezer runs like water under warranty
+      body: Complaint listed under the 970406 MB 'buzdolabı soğutmuyor' category on Şikayetvar. The owner
+        reports the freezer compartment is 'literally like water' — i.e. thawing/melting rather than freezing
+        — within the warranty period. This matches the pack's ice/frost and cooling-failure domains on
+        this model.
+      advice: A freezer that runs like water means frozen goods thaw and spoil; verify freezing performance
+        early in the warranty period rather than after it lapses.
+    tr:
+      title: Beko 970406 MB dondurucu garanti kapsamında su gibi çalışıyor
+      body: Şikayetvar'da 970406 MB 'buzdolabı soğutmuyor' kategorisi altında listelenen şikayet. Sahibi,
+        dondurucu bölmesinin garanti süresi içinde 'tam anlamıyla su gibi' olduğunu — yani dondurmak yerine
+        çözüldüğünü/eridiğini — bildiriyor. Bu, paketin bu modeldeki buz/kırağı ve soğutma arızası alanlarıyla
+        örtüşüyor.
+      advice: Su gibi çalışan bir dondurucu, dondurulmuş gıdaların çözülüp bozulması anlamına gelir; dondurma
+        performansını garanti süresi dolduktan sonra değil, sürenin başında doğrulayın.
+  evidence:
+  - url: https://www.sikayetvar.com/beko/970406-mb/buzdolabi-sogutmuyor
+    quote: Daha garantisi olmasına rağmen soğutmuyor, buzluğu resmen su gibi.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:38:21+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: beko
+      model: 974508 mb
+  kind: known_issue
+  domain: general
+  severity: high
+  consequence: ''
+  detection: ''
+  component: sıcaklık kontrolü
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Beko 974508 MB sebzeleri donduruyor — sıcaklık -2°C'ye düşüyor
+      body: Bu bulgu 'Beko 974508 MB sebzeleri donduruyor şikayet' aramasından geldi. Kullanıcı, buzdolabının
+        8 dereceye ayarlanmasına rağmen iç sıcaklığın -2 dereceye düştüğünü ve sebzelerin donduğunu belirtiyor.
+      advice: Bu modelde sıcaklık kontrolü düzgün çalışmıyor olabilir. Sebzelerin donması gıda israfına
+        yol açar; satın almadan önce bu sorunun farkında olun.
+    tr:
+      title: Beko 974508 MB sebzeleri donduruyor — sıcaklık -2°C'ye düşüyor
+      body: Bu bulgu 'Beko 974508 MB sebzeleri donduruyor şikayet' aramasından geldi. Kullanıcı, buzdolabının
+        8 dereceye ayarlanmasına rağmen iç sıcaklığın -2 dereceye düştüğünü ve sebzelerin donduğunu belirtiyor.
+      advice: Bu modelde sıcaklık kontrolü düzgün çalışmıyor olabilir. Sebzelerin donması gıda israfına
+        yol açar; satın almadan önce bu sorunun farkında olun.
+  evidence:
+  - url: https://www.sikayetvar.com/beko/beko-yeni-alinan-buzdolabi-sebzeleri-donduruyor-servis-cozum-sunamiyor
+    quote: 8 dereceye ayarladığım halde dolabın içi -2 dereceye kadar düşüyor ve tüm sebze alışverişim
+      sürekli çöpe gidiyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:39:23+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Beko
+      model: 674533 MB
+  kind: known_issue
+  domain: ice_frost
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: tahliye (drain/defrost drain)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Tahliye hattı tıkanıyor, donma ve terleme tekrarlıyor
+      body: Owner's 674533 MB No Frost had a clogged drain in the first 2 months, then a freezing fault
+        in July requiring service, and ongoing intermittent freezing and sweating. Owner also reports
+        rough, burred drain air holes and dirt/yellowing inside, calling the unit defective from production.
+      advice: The defrost drain is prone to clogging, which leads to ice buildup and water leaking/freezing.
+        If you see frost or water, check the drain before assuming a bigger fault. The recurring freezing/sweating
+        suggests a design-level issue rather than a one-off.
+    tr:
+      title: Tahliye hattı tıkanıyor, donma ve terleme tekrarlıyor
+      body: Owner's 674533 MB No Frost had a clogged drain in the first 2 months, then a freezing fault
+        in July requiring service, and ongoing intermittent freezing and sweating. Owner also reports
+        rough, burred drain air holes and dirt/yellowing inside, calling the unit defective from production.
+      advice: The defrost drain is prone to clogging, which leads to ice buildup and water leaking/freezing.
+        If you see frost or water, check the drain before assuming a bigger fault. The recurring freezing/sweating
+        suggests a design-level issue rather than a one-off.
+  evidence:
+  - url: https://www.sikayetvar.com/beko/beko-buzdolabinda-surekli-donma-ve-terleme-hatali-tahliye-delikleri-ve-kirli-ic-kisim
+    quote: İlk 2 ay içinde tahliye tıkanma problemi yaşadım.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:43:44+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: beko
+      model: rcna406i30w
+  kind: known_issue
+  domain: general
+  severity: low
+  consequence: ''
+  detection: ''
+  component: temperature control / thermostat calibration
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Fresh-food compartment runs uniformly cold at 3°C with no freshness zone on Beko RCNA406I30W
+      body: An owner of this exact model reports the temperature reads 3°C on every shelf and in both
+        drawers, so there is no separate freshness (zero) zone — the compartment runs uniformly cold rather
+        than having the advertised temperature zones. This is a low-severity behavior/expectation mismatch
+        rather than a food-spoiling failure, but it is documented on this specific model code.
+      advice: If you expect a separate zero/freshness zone, this model reportedly runs everything at ~3°C;
+        verify actual shelf temperatures rather than relying on the zone marketing.
+    tr:
+      title: Fresh-food compartment runs uniformly cold at 3°C with no freshness zone on Beko RCNA406I30W
+      body: An owner of this exact model reports the temperature reads 3°C on every shelf and in both
+        drawers, so there is no separate freshness (zero) zone — the compartment runs uniformly cold rather
+        than having the advertised temperature zones. This is a low-severity behavior/expectation mismatch
+        rather than a food-spoiling failure, but it is documented on this specific model code.
+      advice: If you expect a separate zero/freshness zone, this model reportedly runs everything at ~3°C;
+        verify actual shelf temperatures rather than relying on the zone marketing.
+  evidence:
+  - url: https://comfy.ua/ua/holodil-nik-beko-rcna406i30w-ucenka-1-1-otzyvy.html?p=4
+    quote: Что насчет температуры, то температура на всех полка 3 градуса и в двух ящиках тоже 3. Так
+      что зоны свежести нет.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:47:18+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Beko
+      model: 674533 MB
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: fan (evaporator fan)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Fan arızası cihazı çalışmaz hale getiriyor, gıdalar bozuluyor
+      body: Owner bought the 674533 MB No Frost on 17/07/2025; shortly after delivery the fan fault stopped
+        the unit and spoiled the food. Service opened a replacement record.
+      advice: 'If buying, treat the fan as the weak point: check cooling within the first weeks and keep
+        the warranty/receipt, since a fan failure can stop the fridge and spoil contents. The replacement
+        unit also failed to cool, so the fault may recur across units.'
+    tr:
+      title: Fan arızası cihazı çalışmaz hale getiriyor, gıdalar bozuluyor
+      body: Owner bought the 674533 MB No Frost on 17/07/2025; shortly after delivery the fan fault stopped
+        the unit and spoiled the food. Service opened a replacement record.
+      advice: 'If buying, treat the fan as the weak point: check cooling within the first weeks and keep
+        the warranty/receipt, since a fan failure can stop the fridge and spoil contents. The replacement
+        unit also failed to cool, so the fault may recur across units.'
+  evidence:
+  - url: https://www.sikayetvar.com/beko/beko-buzdolabi-arizasi-ve-tekrarlayan-magduriyet
+    quote: fan arızası nedeniyle cihaz çalışmaz hale geldi ve içerisindeki gıdalar bozuldu
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:43:44+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Beko
+      model: 674532 EB
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: compressor / refrigerant pipes
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 674532 EB runs loudly from day two; traced to refrigerant pipes touching
+      body: 'Owner complaint on ŞikayetVar (query: ''Beko 674532 EB buzdolabı şikayet''). Loud operation
+        began 2 days after delivery, escalated from 10-20 min to 60 min of noise, and was initially dismissed
+        as normal motor sound; a later service visit attributed it to refrigerant pipes touching and fixed
+        it. Buyer should expect possible noise complaints and repeated service visits.'
+      advice: Before buying, verify the unit is quiet on delivery and be ready to insist on a service
+        visit that checks pipe contact, not just the motor.
+    tr:
+      title: 674532 EB runs loudly from day two; traced to refrigerant pipes touching
+      body: 'Owner complaint on ŞikayetVar (query: ''Beko 674532 EB buzdolabı şikayet''). Loud operation
+        began 2 days after delivery, escalated from 10-20 min to 60 min of noise, and was initially dismissed
+        as normal motor sound; a later service visit attributed it to refrigerant pipes touching and fixed
+        it. Buyer should expect possible noise complaints and repeated service visits.'
+      advice: Before buying, verify the unit is quiet on delivery and be ready to insist on a service
+        visit that checks pipe contact, not just the motor.
+  evidence:
+  - url: https://www.sikayetvar.com/beko/beko-buzdolabi-teslimattan-sonra-surekli-yuksek-sesle-calisiyor-cozum-sunulmuyor
+    quote: 12 Temmuz 2025 tarihinde Beko yetkili bayisinden aldığım 674532 eb model buzdolabı, teslimattan
+      sadece 2 gün sonra aşırı sesli çalışmaya başladı.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:42:56+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: beko
+      model: rcna406i30w
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: sealed refrigerant system (freon circuit)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Refrigerant (freon) leak after three years on Beko RCNA406I30W
+      body: An owner of this exact model reports the unit broke after three years of use due to a freon
+        (refrigerant) leak. A refrigerant leak is a sealed-system failure that typically cannot be repaired
+        cheaply and usually means the fridge stops cooling. Evidence is from a Ukrainian buyer of the
+        same model code; no Turkish-specific report was found.
+      advice: A freon leak after ~3 years is a costly sealed-system failure (often not worth repairing).
+        If buying, weigh the warranty length against this reported lifespan.
+    tr:
+      title: Refrigerant (freon) leak after three years on Beko RCNA406I30W
+      body: An owner of this exact model reports the unit broke after three years of use due to a freon
+        (refrigerant) leak. A refrigerant leak is a sealed-system failure that typically cannot be repaired
+        cheaply and usually means the fridge stops cooling. Evidence is from a Ukrainian buyer of the
+        same model code; no Turkish-specific report was found.
+      advice: A freon leak after ~3 years is a costly sealed-system failure (often not worth repairing).
+        If buying, weigh the warranty length against this reported lifespan.
+  evidence:
+  - url: https://comfy.ua/ua/holodil-nik-beko-rcna406i30w-ucenka-1-1-otzyvy.html?p=4
+    quote: Холодильник зламався через три роки роботи. Витік фріон.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:47:18+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Beko
+      model: 678551 ESC
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: dampered glass door
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Dampered glass door broke on Beko 678551 ESC
+      body: An owner of the 678551 ESC reports the front dampered glass door broke shortly after purchase
+        and the claim became a warranty dispute. The glass front is a fragile, expensive part on this
+        model.
+      advice: The 678551 ESC has a dampered glass front that an owner reports breaking, leading to a warranty
+        fight; the glass door is a costly part to replace out of warranty.
+    tr:
+      title: Beko 678551 ESC'de amortisörlü cam kapı kırıldı
+      body: 678551 ESC sahibi, satın alımdan kısa süre sonra ön amortisörlü cam kapının kırıldığını ve
+        talebin garanti anlaşmazlığına dönüştüğünü bildiriyor. Cam ön, bu modelde hassas ve pahalı bir
+        parçadır.
+      advice: 678551 ESC, bir sahibinin kırıldığını bildirdiği ve garanti tartışmasına yol açan amortisörlü
+        cam öne sahiptir; cam kapı, garanti dışında değiştirilmesi maliyetli bir parçadır.
+  evidence:
+  - url: https://www.sikayetvar.com/beko/buzdolabi/678551-esc
+    quote: 678551 ESC seri numaralı Beko buzdolabını yaklaşık 1 ay önce G**** A****** Beko bayisinden
+      satın aldım.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:44:34+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: beko
+      model: 970406 mb
+  kind: known_issue
+  domain: general
+  severity: high
+  consequence: ''
+  detection: ''
+  component: cooling system / thermostat
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Beko 970406 MB unstable cooling — temperature swings spoil food
+      body: 'Owner complaint filed under the exact model code 970406 MB on Şikayetvar (found via query
+        ''Beko 970406 MB soğutma sorunu''). The unit never cools stably from day one: service measurements
+        show swings from 3–4 °C up to 20–25 °C with the door closed, and the owner reports dairy and vegetables
+        moulding within days. Six service visits and a filter/gas recharge did not fix it. This is the
+        pack''s core ''unstable cooling spoils food'' failure, documented on this specific model.'
+      advice: If buying, budget for the risk that the unit may not hold temperature and that Beko service
+        may call it 'normal' despite food spoilage; keep purchase records and be ready to escalate to
+        the Tüketici Hakem Heyeti as this owner did.
+    tr:
+      title: Beko 970406 MB dengesiz soğutma — sıcaklık dalgalanmaları gıdayı bozuyor
+      body: 'Şikayetvar''da tam model kodu 970406 MB altında sahip şikayeti (''Beko 970406 MB soğutma
+        sorunu'' sorgusuyla bulundu). Ünite ilk günden itibaren asla istikrarlı soğutmuyor: servis ölçümleri
+        kapı kapalıyken 3–4 °C''den 20–25 °C''ye kadar dalgalanmalar gösteriyor ve sahip süt ürünleri
+        ile sebzelerin günler içinde küflendiğini bildiriyor. Altı servis ziyareti ve filtre/gaz dolumu
+        sorunu çözmedi. Bu, paketin bu belirli modelde belgelenen temel ''dengesiz soğutma gıdayı bozar''
+        arızasıdır.'
+      advice: Satın alıyorsanız, ünitenin sıcaklığı tutamayabileceği ve gıda bozulmasına rağmen Beko servisinin
+        bunu 'normal' sayabileceği riskini hesaba katın; satın alma kayıtlarını saklayın ve bu sahibin
+        yaptığı gibi Tüketici Hakem Heyeti'ne başvurmaya hazır olun.
+  evidence:
+  - url: https://www.sikayetvar.com/beko/buzdolabinin-sogutma-sorunu-ve-surekli-servis-mudahalelerine-ragmen-cozulmemesi
+    quote: 21 Temmuz tarihinde tarafıma teslim edilerek kurulumu yapılan Beko 970406 MB model buzdolabı,
+      ilk günden itibaren stabil bir şekilde soğutma yapmamaktadır.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:38:21+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Beko
+      model: 670475 MB
+  kind: known_issue
+  domain: general
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: değişim ücreti / fiyatlandırma
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Beko 670475 MB değişim tekliflerinde yüksek ücret farkı talepleri
+      body: Bu bulgu 'Beko 670475 MB sorun arıza' aramasından geldi. Beko, arızalı eski modeller için
+        670475 MB'yi değişim ürünü olarak öneriyor, ancak kullanıcılar piyasa fiyatının üzerinde ücret
+        talep edildiğini bildiriyor. Bu, modelin Beko'nun değişim programında standart bir ürün olduğunu
+        gösteriyor.
+      advice: 670475 MB, Beko'nun arızalı eski modeller için önerdiği standart değişim ürünüdür. Bu modeli
+        satın almayı düşünenler, Beko'nun değişim politikalarındaki yüksek ücret farkı şikayetlerinin
+        farkında olmalıdır.
+    tr:
+      title: Beko 670475 MB değişim tekliflerinde yüksek ücret farkı talepleri
+      body: Bu bulgu 'Beko 670475 MB sorun arıza' aramasından geldi. Beko, arızalı eski modeller için
+        670475 MB'yi değişim ürünü olarak öneriyor, ancak kullanıcılar piyasa fiyatının üzerinde ücret
+        talep edildiğini bildiriyor. Bu, modelin Beko'nun değişim programında standart bir ürün olduğunu
+        gösteriyor.
+      advice: 670475 MB, Beko'nun arızalı eski modeller için önerdiği standart değişim ürünüdür. Bu modeli
+        satın almayı düşünenler, Beko'nun değişim politikalarındaki yüksek ücret farkı şikayetlerinin
+        farkında olmalıdır.
+  evidence:
+  - url: https://www.sikayetvar.com/beko/beko-buzdolabinda-uretim-kaynakli-sorun-ve-yuksek-degisim-ucreti-magduriyeti
+    quote: Müşteri hizmetleriyle tekrar görüştüğümde, aynı modelin üretimde olmaması nedeniyle bir üst
+      model olan 670475 MB için değişim önerildi ve benden 19.297 TL talep edildi.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:45:55+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: beko
+      model: 974508 mb
+  kind: known_issue
+  domain: ice_frost
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: sıcaklık kontrolü / buzlanma
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Beko 974508 MB buzlanma ve sıcaklık dalgalanması — aşırı soğutma/ısınma
+      body: Bu bulgu 'Beko 974508 MB buzdolabı şikayet' aramasından geldi. Kullanıcı, buzdolabının bazen
+        aşırı soğuttuğunu, bazen çok sıcak kaldığını ve buzluk kısmında ciddi buzlanma yaşandığını belirtiyor.
+      advice: Sıcaklık dalgalanması ve buzlanma birlikte görülüyor. Bu, gıdaların bozulmasına ve enerji
+        tüketiminin artmasına yol açabilir.
+    tr:
+      title: Beko 974508 MB buzlanma ve sıcaklık dalgalanması — aşırı soğutma/ısınma
+      body: Bu bulgu 'Beko 974508 MB buzdolabı şikayet' aramasından geldi. Kullanıcı, buzdolabının bazen
+        aşırı soğuttuğunu, bazen çok sıcak kaldığını ve buzluk kısmında ciddi buzlanma yaşandığını belirtiyor.
+      advice: Sıcaklık dalgalanması ve buzlanma birlikte görülüyor. Bu, gıdaların bozulmasına ve enerji
+        tüketiminin artmasına yol açabilir.
+  evidence:
+  - url: https://www.sikayetvar.com/beko/beko-buzdolabinda-surekli-sicaklik-dalgalanmasi-ve-buzlanma-servis-sorunu-cozulmedi-ucretsiz-ust-model-degisim-talebi
+    quote: Yaklaşık 1 aydır buzdolabı bazen aşırı soğutuyor, bazen de çok sıcak kalıyor ve özellikle buzluk
+      kısmında ciddi buzlanma sorunu yaşıyoruz.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:39:23+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: beko
+      model: b3rcna364hxb1
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: evaporator fan + electronic control board
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'B3RCNA364HXB1: fan and electronic control board failure — fresh compartment not cooling,
+        compressor overheating'
+      body: A consumer complaint on Altroconsumo for this exact model code (B3RCNA364HXB1) reports a technician
+        diagnosing a fault in the fan and the electronic board, with the fresh-food compartment failing
+        to cool and the compressor overheating; after parts were replaced the unit still did not work.
+      advice: If you own or are buying this model, be aware of a documented electrical failure (fan +
+        control board) that left the fridge not cooling and the compressor overheating, and that a parts
+        replacement did not fix it. This is a warranty-relevant failure; check service coverage early.
+    tr:
+      title: 'B3RCNA364HXB1: fan ve elektronik kontrol kartı arızası — taze bölme soğutmuyor, kompresör
+        aşırı ısınıyor'
+      body: Altroconsumo'da bu tam model kodu (B3RCNA364HXB1) için bir tüketici şikayeti, bir teknisyenin
+        fanda ve elektronik kartta arıza teşhis ettiğini, taze gıda bölmesinin soğutmadığını ve kompresörün
+        aşırı ısındığını bildiriyor; parçalar değiştirildikten sonra ünite hâlâ çalışmıyordu.
+      advice: Bu modele sahipseniz veya satın alıyorsanız, buzdolabının soğutmamasına ve kompresörün aşırı
+        ısınmasına yol açan belgelenmiş bir elektriksel arızanın (fan + kontrol kartı) olduğunu ve parça
+        değişiminin bunu çözmediğini bilin. Bu, garantiyle ilgili bir arızadır; servis kapsamını erken
+        kontrol edin.
+  evidence:
+  - url: https://www.altroconsumo.it/reclamare/bacheca-dei-reclami/beko-frigorifero-guasto-da-du/e653a38e9d7fa90a93
+    quote: '26/08/2026: Intervento del tecnico che riscontra un guasto alla ventola e alla scheda elettronica,
+      promettendo i pezzi in una settimana.'
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:40:33+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: beko
+      model: 970406 mb
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: compressor / control board
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Beko 970406 MB compressor replaced but fault persists; service blames control-card software
+      body: Complaint listed under the 970406 MB arıza category on Şikayetvar (found via query 'Beko 970406
+        MB sorun arıza'). A 4-month-old unit had its compressor replaced yet the fault continued, and
+        service then blamed the control card's software. This is the pack's electrical-failure domain
+        (control board) tied to this model.
+      advice: Expect that a compressor swap may not resolve the fault and that the control board/software
+        may be the real culprit; a repair path can involve multiple visits while food is at risk.
+    tr:
+      title: Beko 970406 MB kompresör değiştirildi ama arıza sürüyor; servis kontrol kartı yazılımını
+        suçluyor
+      body: Şikayetvar'da 970406 MB arıza kategorisi altında listelenen şikayet ('Beko 970406 MB sorun
+        arıza' sorgusuyla bulundu). 4 aylık bir ünitenin kompresörü değiştirildi ancak arıza devam etti
+        ve servis bu kez kontrol kartının yazılımını suçladı. Bu, paketin bu modelle bağlantılı elektriksel
+        arıza alanıdır (kontrol kartı).
+      advice: Kompresör değişiminin arızayı çözmeyebileceğini ve gerçek suçlunun kontrol kartı/yazılımı
+        olabileceğini bekleyin; bir onarım süreci, gıda risk altındayken birden fazla ziyaret içerebilir.
+  evidence:
+  - url: https://www.sikayetvar.com/beko/970406-mb/ariza
+    quote: kompresör değişimi yaptılar fakat hata ...devam ediyor. Karta yazılım dediler.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:38:21+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Beko
+      model: 674533 MB
+  kind: known_issue
+  domain: mechanical
+  severity: low
+  consequence: ''
+  detection: ''
+  component: yan duvar (side wall / cabinet panel)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Yan duvarda garanti kapsamında sararma
+      body: A 674533 MB bought 10.04.2025 developed a visible yellowing on the side wall within about
+        3 months, still under warranty, and it does not resolve on its own.
+      advice: A cosmetic side-wall yellowing appears within the first months on some units. It does not
+        affect cooling, but if it matters to you, raise it early while under warranty since it does not
+        self-correct.
+    tr:
+      title: Yan duvarda garanti kapsamında sararma
+      body: 10.04.2025 tarihinde satın alınan A 674533 MB, yaklaşık 3 ay içinde yan duvarda görünür bir
+        sararma geliştirdi, hâlâ garanti kapsamında ve kendiliğinden geçmiyor.
+      advice: Bazı ünitelerde ilk aylarda kozmetik bir yan duvar sararması ortaya çıkar. Soğutmayı etkilemez,
+        ancak sizin için önemliyse, kendiliğinden düzelmediği için garanti kapsamındayken erken bildirin.
+  evidence:
+  - url: https://www.sikayetvar.com/beko/674533-mb/yetkili-servis
+    quote: Yaklaş...ık 3 aydır buzdolabının yan duvarında belirgin bir sararma sorunu yaşıyorum
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:43:44+00:00'

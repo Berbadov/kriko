@@ -1,0 +1,113 @@
+# Subjects — the things this pack knows about.
+#
+# `identity` carries exactly the keys `pack.toml` declares for the
+# kind: that dictionary is hashed to the subject id.
+- kind: product
+  label: Sony WH-1000XM5
+  identity:
+    brand: sony
+    series: wh-1000xm5
+  aliases:
+  - WH1000XM5
+  - XM5
+- kind: product
+  label: Bose QuietComfort Ultra
+  identity:
+    brand: bose
+    series: quietcomfort-ultra
+  aliases:
+  - QC Ultra
+  - QuietComfort Ultra
+- kind: product
+  label: Bose QuietComfort 45
+  identity:
+    brand: bose
+    series: quietcomfort-45
+  aliases:
+  - QC45
+- kind: product
+  label: Apple AirPods Max
+  identity:
+    brand: apple
+    series: airpods-max
+  aliases:
+  - AirPods Max
+- kind: product
+  label: Sennheiser Momentum 4 Wireless
+  identity:
+    brand: sennheiser
+    series: momentum-4
+  aliases:
+  - Momentum 4
+- kind: product
+  label: JBL Tour One M2
+  identity:
+    brand: jbl
+    series: tour-one-m2
+  attributes:
+    battery_hours:
+      value: '50'
+      source: https://www.coolblue.de/en/advice/expert-review-jbl-tour-one-m2.html
+  aliases:
+  - Tour One M2
+- kind: product
+  label: Sony WH-1000XM3
+  identity:
+    brand: Sony
+    series: WH-1000XM3
+  attributes:
+    battery_hours:
+      value: '30'
+      source: https://www.galaxus.ch/en/s1/questionandanswer/kurze-frage-an-die-uebrigen-besitzer-bei-mir-knackst-das-linke-scharnier-der-ohrmuschel-sobald-ich-d-170712
+  aliases:
+  - WH-1000XM3
+  - Sony WH1000XM3
+  - 1000XM3
+- kind: product
+  label: Sony WH-1000XM4
+  identity:
+    brand: Sony
+    series: WH-1000XM4
+  aliases:
+  - WH-1000XM4
+  - Sony WH1000XM4
+  - 1000XM4
+- kind: product
+  label: Bose QuietComfort (2023)
+  identity:
+    brand: Bose
+    series: QuietComfort (2023)
+  attributes:
+    battery_hours:
+      value: '24'
+      source: https://www.amazon.co.uk/product-reviews/B0CCZ1SQ8G/ref=acr_dp_hist_3?ie=UTF8&filterByStar=three_star&reviewerType=all_reviews
+  aliases:
+  - Bose QuietComfort 2023
+  - Bose QC 2023
+  - QuietComfort SC
+- kind: product
+  label: Bose Noise Cancelling Headphones 700
+  identity:
+    brand: Bose
+    series: Noise Cancelling Headphones 700
+  aliases:
+  - Bose NC 700
+  - Bose Headphones 700
+  - Bose 700
+- kind: product
+  label: Sennheiser Momentum Wireless 3
+  identity:
+    brand: Sennheiser
+    series: Momentum Wireless 3
+  aliases:
+  - Momentum 3 Wireless
+  - M3AEBTXL
+  - Momentum 3
+- kind: product
+  label: JBL Live 770NC
+  identity:
+    brand: JBL
+    series: Live 770NC
+  aliases:
+  - JBL Live770NC
+  - Live 770NC
