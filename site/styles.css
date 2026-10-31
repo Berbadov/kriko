@@ -1,66 +1,92 @@
-/* Kriko website. Warm white by default, dark when the visitor's system asks for it.
-   The look is Kriko's own: Geist for display and interface, a body face drawn for
-   reading, the dithered pixel sky the app opens with, and two slow halos — one
-   blue, one dawn — drifting behind the hero under a faint grain. Colours are
-   tokens, so a theme is one block. No text is under 15px. */
+/* Kriko website. Neutral white by default, neutral charcoal when the visitor's
+   system asks for it — no blue cast in either theme. The look is Kriko's own:
+   Space Grotesk for display, Inter for reading, a WebGL blue aurora drifting
+   behind the hero, the dithered pixel sky on the app panel, and a faint grain
+   over everything. Colours, spacing and radii are tokens, so a theme is one
+   block. No text is under 15px. */
 
 
-@font-face { font-family: "Barlow Condensed"; font-weight: 600; font-display: swap; src: url("assets/fonts/barlow-condensed-latin-600-normal.woff2") format("woff2"); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
-@font-face { font-family: "Barlow Condensed"; font-weight: 600; font-display: swap; src: url("assets/fonts/barlow-condensed-latin-ext-600-normal.woff2") format("woff2"); unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
-@font-face { font-family: "Barlow Condensed"; font-weight: 700; font-display: swap; src: url("assets/fonts/barlow-condensed-latin-700-normal.woff2") format("woff2"); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
-@font-face { font-family: "Barlow Condensed"; font-weight: 700; font-display: swap; src: url("assets/fonts/barlow-condensed-latin-ext-700-normal.woff2") format("woff2"); unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
-@font-face { font-family: "Atkinson Hyperlegible Next"; font-weight: 200 800; font-display: swap; src: url("assets/fonts/atkinson-hyperlegible-next-latin-wght-normal.woff2") format("woff2"); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
-@font-face { font-family: "Atkinson Hyperlegible Next"; font-weight: 200 800; font-display: swap; src: url("assets/fonts/atkinson-hyperlegible-next-latin-ext-wght-normal.woff2") format("woff2"); unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
-@font-face { font-family: "Geist"; font-weight: 100 900; font-display: swap; src: url("assets/fonts/Geist-latin.woff2") format("woff2"); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
-@font-face { font-family: "Geist"; font-weight: 100 900; font-display: swap; src: url("assets/fonts/Geist-latin-ext.woff2") format("woff2"); unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+@font-face { font-family: "Inter"; font-weight: 100 900; font-display: swap; src: url("assets/fonts/inter-latin-wght-normal.woff2") format("woff2"); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+@font-face { font-family: "Inter"; font-weight: 100 900; font-display: swap; src: url("assets/fonts/inter-latin-ext-wght-normal.woff2") format("woff2"); unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+@font-face { font-family: "Space Grotesk"; font-weight: 300 700; font-display: swap; src: url("assets/fonts/space-grotesk-latin-wght-normal.woff2") format("woff2"); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+@font-face { font-family: "Space Grotesk"; font-weight: 300 700; font-display: swap; src: url("assets/fonts/space-grotesk-latin-ext-wght-normal.woff2") format("woff2"); unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
 
 :root {
   color-scheme: light dark;
-  --bg: #fcfbf8;
-  --soft: #f3efe7;
+  --bg: #fafaf9;
+  --soft: #f3f3f0;
   --card: #ffffff;
-  --ink: #0b1020;
-  --muted: #4a5167;
-  --line: #ddd6c8;
-  --accent: #2447e6;
-  --accent-hover: #1a37bd;
+  --ink: #111114;
+  --muted: #55555e;
+  --line: #e7e7e3;
+  --accent: #2f5bff;
+  --accent-hover: #1e46d8;
+  /* The accent as small text. In the dark theme the fill blue is a shade too dark
+     to read at 15px on black; this is the same blue lifted for type. */
+  --accent-text: #2447e6;
   --on-accent: #ffffff;
-  --link: #1d3fd0;
+  --link: #2447e6;
+  --on-panel-link: #a9bcff;
   --footer: #000000;
+  /* The bar's own height, so the hero can be exactly one screen and the phone
+     menu can size itself against the same number. It was only ever defined in
+     the phone block, so on every other screen `min-height: var(--bar-h)` and the
+     hero's `calc(100svh - var(--bar-h))` were invalid and quietly did nothing. */
+  --bar-h: 76px;
+  /* One radius for cards and boxes. Every known-problems card asked for
+     `var(--r)` and got a square box beside the site's rounded pills. */
+  --r: 12px;
+  /* Severity, the app's own three colours: serious, to check, minor. Used on the
+     known-problems pages for icons, pills, borders and bars — and never defined,
+     so every one of those fell back to the inherited colour. */
+  --sev-high: #c0273c;
+  --sev-medium: #8a5f00;
+  --sev-low: #0e7a4f;
   --sky: url("assets/sky/stage-light.webp");
   --band: url("assets/sky/band-light.webp");
   /* The one signature gradient, Kriko's own blue going deep: used for the hero
      rule, the closing stripe band and the dark film section. Never anywhere else. */
   --stripe: linear-gradient(90deg, #16277e 0%, #2447e6 34%, #5a7bff 62%, #a9bcff 84%, #dfe7ff 100%);
   --stripe-dark: linear-gradient(90deg, #0a1230 0%, #16277e 30%, #2447e6 60%, #5a7bff 82%, #a9bcff 100%);
-  --display: "Geist", "Barlow Condensed", "Segoe UI", system-ui, sans-serif;
-  --sans: "Atkinson Hyperlegible Next", "Segoe UI", system-ui, -apple-system, sans-serif;
-  --gutter: clamp(20px, 5vw, 56px);
+  --display: "Space Grotesk", "Inter", "Segoe UI", system-ui, sans-serif;
+  --sans: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --gutter: clamp(20px, 6vw, 72px);
+  /* One spacing scale, 4px base, used for gaps, padding and margins alike. */
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+  --space-5: 24px; --space-6: 32px; --space-7: 48px; --space-8: 64px; --space-9: 96px;
+  --r-sm: 8px; --r-lg: 16px; --r-xl: 20px;
   --ease: cubic-bezier(.22, 1, .36, 1);
   --halo: rgba(36, 71, 230, .13);
   --halo-warm: rgba(255, 159, 67, .18);
-  --panel: #0b1020;
+  --panel: #101014;
   --panel-ink: #f3f1ea;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #000000;
-    --soft: #0b0b0d;
-    --card: #0e0e11;
-    --ink: #f3f1ea;
-    --muted: #b9bcc7;
+    --bg: #0a0a0c;
+    --soft: #141417;
+    --card: #17171a;
+    --ink: #f2f2ef;
+    --muted: #a6a6ae;
     --line: #26272d;
-    --accent: #3d63f5;
-    --accent-hover: #5a7bff;
+    --accent: #5c7bff;
+    --accent-hover: #7d97ff;
+    --accent-text: #93a8ff;
+    /* Dark text on the bright blue fill, same trick the light theme uses in reverse. */
+    --on-accent: #0b0c10;
     --link: #9db3ff;
     --footer: #000000;
+    /* The same three colours, lightened for a black page. */
+    --sev-high: #ff8a93;
+    --sev-medium: #e7b64a;
+    --sev-low: #4fd39b;
     --sky: url("assets/sky/stage-dark.webp");
     --band: url("assets/sky/band-dark.webp");
     --stripe: var(--stripe-dark);
     --halo: rgba(61, 99, 245, .20);
     --halo-warm: rgba(255, 159, 67, .15);
-    --panel: #131c3a;
+    --panel: #101014;
   }
 }
 
@@ -75,13 +101,13 @@ body::after { content: ""; position: fixed; inset: 0; z-index: 80; pointer-event
 img, picture { display: block; max-width: 100%; height: auto; }
 a { color: var(--link); text-underline-offset: .18em; }
 a:hover { text-decoration-thickness: 2px; }
-h1, h2, h3 { margin: 0; font-family: var(--display); font-weight: 660; line-height: 1.08; letter-spacing: -.022em; }
+h1, h2, h3 { margin: 0; font-family: var(--display); font-weight: 620; line-height: 1.05; letter-spacing: -.03em; }
 p { margin: 0; }
 :focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; border-radius: 3px; }
 kbd { white-space: nowrap; font: 600 .85em var(--sans); padding: .1em .45em; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 6px; background: var(--soft); }
 .keys { white-space: nowrap; }
 
-.wrap { width: 100%; max-width: 1360px; margin-inline: auto; padding-inline: var(--gutter); }
+.wrap { width: 100%; max-width: 1280px; margin-inline: auto; padding-inline: var(--gutter); }
 .narrow { max-width: 860px; }
 .skip-link { position: absolute; left: 12px; top: -60px; z-index: 50; padding: 10px 16px; background: var(--ink); color: var(--bg); border-radius: 3px; }
 .skip-link:focus { top: 12px; }
@@ -90,7 +116,7 @@ kbd { white-space: nowrap; font: 600 .85em var(--sans); padding: .1em .45em; bor
 
 /* The small caps label above every heading */
 .label { font: 650 .95rem/1.2 var(--display); letter-spacing: .16em; text-transform: uppercase; color: var(--muted); margin-bottom: 18px; }
-.label .index { color: var(--accent); margin-right: 12px; }
+.label .index { color: var(--accent-text); margin-right: 12px; }
 .label .index::after { content: ""; display: inline-block; width: 28px; height: 2px; margin-left: 12px; vertical-align: .28em; background: currentColor; }
 .tag { font: 650 .95rem/1.2 var(--display); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
 
@@ -111,15 +137,21 @@ kbd { white-space: nowrap; font: 600 .85em var(--sans); padding: .1em .45em; bor
 .main-nav a:hover::after, .main-nav a:focus-visible::after { right: 0; }
 .main-nav a:hover { color: var(--link); }
 .language-switch { display: inline-flex; flex: none; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
-.language-switch a { padding: 6px 12px; font-size: .9375rem; font-weight: 700; color: var(--muted); text-decoration: none; transition: background-color .18s ease, color .18s ease; }
+.language-switch a { display: inline-flex; align-items: center; justify-content: center; min-height: 34px; padding: 6px 14px; font-size: .9375rem; font-weight: 700; color: var(--muted); text-decoration: none; transition: background-color .18s ease, color .18s ease; }
 .language-switch a:hover { color: var(--ink); }
 .language-switch a[aria-current="page"] { background: var(--ink); color: var(--bg); }
+/* The group clips its children's backgrounds, so an outline drawn outside a link
+   is cut to a sliver. Draw the ring inside the link instead, and on the current
+   language draw it in the chip's own text colour: the accent blue on the dark
+   chip was a ring nobody could see. */
+.language-switch a:focus-visible { outline-offset: -4px; }
+.language-switch a[aria-current="page"]:focus-visible { outline-color: var(--bg); }
 .bar-cta { flex: none; }
 .menu-toggle { display: none; margin-left: auto; padding: 9px 18px; font: 700 1rem var(--sans); color: var(--ink); background: transparent; border: 1px solid var(--line); border-radius: 999px; cursor: pointer; }
 @keyframes menu-in { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
 
 /* Buttons */
-.button { display: inline-flex; align-items: center; gap: 10px; padding: 13px 27px; font: 650 1.0625rem/1.2 var(--display); color: var(--on-accent); background: var(--accent); border: 2px solid var(--accent); border-radius: 999px; text-decoration: none; transition: background-color .18s ease, border-color .18s ease, transform .18s ease, box-shadow .18s ease; }
+.button { display: inline-flex; align-items: center; gap: 10px; padding: 13px 27px; font: 650 1.0625rem/1.2 var(--display); color: var(--on-accent); background: var(--accent); border: 1px solid var(--accent); border-radius: 999px; text-decoration: none; transition: background-color .18s ease, border-color .18s ease, transform .18s ease, box-shadow .18s ease; }
 .button:hover { background: var(--accent-hover); border-color: var(--accent-hover); color: var(--on-accent); text-decoration: none; transform: translateY(-2px); box-shadow: 0 10px 24px -12px rgba(36, 71, 230, .55); }
 .button:active { transform: translateY(0); box-shadow: none; }
 .button .icon { transition: transform .2s var(--ease); }
@@ -127,13 +159,24 @@ kbd { white-space: nowrap; font: 600 .85em var(--sans); padding: .1em .45em; bor
 .button:hover .icon-arrow { transform: translateX(4px); }
 .button.ghost { color: var(--ink); background: transparent; border-color: var(--ink); }
 .button.ghost:hover { color: var(--bg); background: var(--ink); border-color: var(--ink); }
+/* A third weight, quieter than ghost: the link-shaped action beside two buttons.
+   The markup used `.quiet` and no rule ever defined it, so GitHub came out as a
+   second filled primary in the hero's row of three. */
+.button.quiet { color: var(--ink); background: transparent; border-color: transparent; padding-inline: 14px; box-shadow: none; }
+.button.quiet:hover { color: var(--ink); background: var(--soft); border-color: var(--line); }
+.button.quiet .icon { width: 1em; height: 1em; }
 .bar-cta { color: var(--on-accent); padding: 9px 18px; font-size: 1rem; }
 
 /* Hero — the whole first screen. The app's own dithered pixel sky runs
    edge to edge behind everything, panning slowly and dissolving into the
    paper about halfway down, so the copy sits on solid ground and the sky
    is weather, not wallpaper. */
-.hero { position: relative; overflow: hidden; min-height: 100svh; min-height: 100dvh; display: grid; align-content: center; padding-block: clamp(96px, 13vh, 176px) clamp(88px, 12vh, 140px); background: var(--bg); }
+/* `isolation` is load-bearing: without it `.hero` is not a stacking context, so
+   the sky at z-index -2 and the halos at -1 escape past the hero's own opaque
+   background and paint behind it. The page's signature visual — the dithered sky
+   — was simply not there. Isolating the hero keeps the negative layers inside it,
+   above its background. */
+.hero { position: relative; isolation: isolate; overflow: hidden; min-height: 100svh; min-height: 100dvh; display: grid; align-content: center; padding-block: clamp(120px, 16vh, 210px) clamp(96px, 13vh, 160px); background: var(--bg); }
 .hero::before { content: ""; position: absolute; inset: 0; z-index: -2; pointer-events: none; background-image: linear-gradient(180deg, color-mix(in srgb, #a9bcff 28%, transparent) 0%, transparent 46%), var(--sky); background-size: 100% 100%, cover; background-position: 0 0, 50% 50%; image-rendering: pixelated; animation: sky-pan 80s ease-in-out infinite alternate; -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 30%, transparent 72%); mask-image: linear-gradient(180deg, #000 0%, #000 30%, transparent 72%); }
 @keyframes sky-pan { from { background-position: 0 0, 50% 50%; } to { background-position: 0 0, calc(50% + 90px) calc(50% + 36px); } }
 @media (prefers-color-scheme: dark) {
@@ -141,11 +184,14 @@ kbd { white-space: nowrap; font: 600 .85em var(--sans); padding: .1em .45em; bor
 }
 /* Two slow halos drift behind the hero on top of the wash: the product's blue and
    a dawn of warm light, the only moving colour on the page. */
-.hero::after { content: ""; position: absolute; z-index: -1; pointer-events: none; border-radius: 50%; width: min(58vw, 720px); aspect-ratio: 1; left: -14vw; top: -20vw; background: radial-gradient(closest-side, var(--halo), transparent 72%); animation: halo-drift 26s ease-in-out infinite alternate; }
-.hero .hero-grid::after { content: ""; position: absolute; z-index: -1; pointer-events: none; border-radius: 50%; width: min(46vw, 560px); aspect-ratio: 1; right: -12vw; bottom: -18vw; background: radial-gradient(closest-side, var(--halo-warm), transparent 70%); animation: halo-drift 32s ease-in-out infinite alternate-reverse; }
+/* The hero shader: a slow blue aurora drawn on a canvas by script.js, sitting
+   between the sky wash and the copy. Without WebGL or script the canvas is
+   simply absent and the sky alone carries the hero. */
+.hero-shader { position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; pointer-events: none; opacity: .42; -webkit-mask-image: linear-gradient(180deg, #000 52%, transparent 96%); mask-image: linear-gradient(180deg, #000 52%, transparent 96%); }
+@media (prefers-color-scheme: dark) { .hero-shader { opacity: .9; } }
 @keyframes halo-drift { from { transform: translate3d(0, 0, 0) scale(1); } to { transform: translate3d(6vw, 5vh, 0) scale(1.14); } }
-.hero-grid { position: relative; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); gap: clamp(48px, 6vw, 96px); align-items: center; }
-h1 { font-size: clamp(3.4rem, 7.4vw, 6.6rem); line-height: 1.02; letter-spacing: -.035em; max-width: 11em; }
+.hero-grid { position: relative; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); gap: clamp(56px, 7vw, 112px); align-items: center; }
+h1 { font-size: clamp(3.6rem, 7.8vw, 7rem); line-height: 1.0; letter-spacing: -.038em; max-width: 11em; text-wrap: balance; }
 /* The label carries a soft pulse: the page is alive before anything else moves. */
 .hero .label { display: flex; align-items: center; gap: 12px; }
 .hero .label::before { content: ""; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); animation: pulse 2.6s ease-out infinite; }
@@ -157,35 +203,43 @@ h1 { font-size: clamp(3.4rem, 7.4vw, 6.6rem); line-height: 1.02; letter-spacing:
 @keyframes cue-bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(5px); } }
 @media (max-width: 760px) { .scroll-cue { display: none; } }
 h1 span { color: var(--accent); display: block; }
-.lead { margin-top: 32px; max-width: 30em; font-size: 1.375rem; line-height: 1.62; color: var(--muted); text-wrap: pretty; }
+.lead { margin-top: 36px; max-width: 32em; font-size: 1.375rem; line-height: 1.65; color: var(--muted); text-wrap: pretty; }
 .actions { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 38px; }
+/* In the hero the buttons sit on the moving shader, so the quiet ones get a
+   frosted chip of the page behind them to stay readable. */
+.hero.home .actions { margin-top: 30px; }
+.hero.home .actions .button.ghost, .hero.home .actions .button.quiet { background: color-mix(in srgb, var(--bg) 72%, transparent); backdrop-filter: blur(8px); }
 .section .actions { margin-top: 44px; }
 .fine { margin-top: 20px; font-size: 1rem; line-height: 1.65; color: var(--muted); }
 .hero.home .hero-copy > .label { display: inline-flex; align-items: center; gap: 10px; padding: 7px 14px; margin-bottom: 26px; font-size: 1rem; letter-spacing: .08em; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 999px; }
-.hero.home .hero-copy > .label::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent); }
+.hero.home .hero-copy > .label::before { content: ""; width: 10px; height: 10px; border-radius: 50%; flex: none; background: radial-gradient(circle at 32% 30%, #d6e0ff 0%, #5c7bff 46%, #2447e6 72%, #101d66 100%); box-shadow: 0 0 10px 1px rgba(92, 123, 255, .55), inset -1px -2px 3px rgba(6, 10, 40, .5); animation: orb-pulse 2.8s var(--ease) infinite; }
+/* The agent's orb, for every place an agent works: a small blue sphere that
+   breathes. Pure CSS, and still for a reader who asked for less motion. */
+.orb { display: inline-block; width: 10px; height: 10px; border-radius: 50%; flex: none; background: radial-gradient(circle at 32% 30%, #d6e0ff 0%, #5c7bff 46%, #2447e6 72%, #101d66 100%); box-shadow: 0 0 10px 1px rgba(92, 123, 255, .55), inset -1px -2px 3px rgba(6, 10, 40, .5); animation: orb-pulse 2.8s var(--ease) infinite; }
+@keyframes orb-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.28); box-shadow: 0 0 18px 4px rgba(92, 123, 255, .7), inset -1px -2px 3px rgba(6, 10, 40, .5); } }
 .hero-points { list-style: none; display: flex; flex-wrap: wrap; gap: 10px 28px; margin: 32px 0 0; padding: 0; }
 .hero-points li { display: inline-flex; align-items: center; gap: 9px; font-size: 1.0625rem; font-weight: 600; color: var(--ink); }
 .hero-points .icon { width: 1.15em; height: 1.15em; color: var(--accent); stroke-width: 2.6; flex: none; }
 .hero-points a { color: var(--link); }
 /* The hero's stage: the sky image runs edge to edge of its column and the
-   panel rises out of it, cropped at the bottom — anchored, not floating. */
+   panel floats whole inside it — every row and the action button in view. */
 .stage { margin: 0; }
 .stage-sky { padding: clamp(32px, 4.5vw, 56px) clamp(28px, 4.5vw, 60px) 0; background: var(--sky) center / cover; image-rendering: pixelated; overflow: hidden; border-radius: 20px 20px 0 0; border: 1px solid var(--line); border-bottom: none; }
 .hero .stage { justify-self: center; width: fit-content; max-width: 100%; }
-.stage-sky img { width: auto; max-width: 100%; max-height: clamp(340px, 56dvh, 620px); margin-inline: auto; border-radius: 14px 14px 0 0; box-shadow: 0 -2px 30px rgba(10, 15, 54, .35), 0 0 0 1px var(--line); image-rendering: auto; transition: transform .5s cubic-bezier(.2, .7, .2, 1); }
+.stage-sky img { width: auto; max-width: 100%; max-height: 100%; margin-inline: auto; border-radius: var(--r-lg); box-shadow: 0 -2px 30px rgba(10, 15, 54, .35), 0 0 0 1px var(--line); image-rendering: auto; transition: transform .5s cubic-bezier(.2, .7, .2, 1); }
 .stage:hover .stage-sky img { transform: translateY(-8px); }
 .stage figcaption { padding: 0 clamp(28px, 4.5vw, 60px) 18px; background: var(--sky) center / cover; image-rendering: pixelated; border: 1px solid var(--line); border-top: none; border-radius: 0 0 20px 20px; }
 
 .hero.home { display: block; padding: 0; min-height: calc(100svh - var(--bar-h)); }
 .hero.home .hero-grid { position: relative; display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); min-height: inherit; }
 .hero.home .hero-copy { align-self: center; padding: clamp(48px, 7vw, 104px) clamp(28px, 4vw, 72px) clamp(48px, 7vw, 104px) max(var(--gutter), calc((100vw - 1360px) / 2 + var(--gutter))); }
-.hero.home h1 { max-width: none; font-size: clamp(2.8rem, 4.6vw, 4.5rem); line-height: 1; }
+.hero.home h1 { max-width: none; font-size: clamp(3rem, 5.2vw, 5.2rem); line-height: 1; }
 .hero.home h1 > span:not(.w) { display: block; width: fit-content; }
 .hero.home h1 > span:not(.w)::after { content: ""; display: block; width: 100%; height: .09em; margin-top: .12em; background: var(--stripe); transform-origin: left; animation: draw-in 1.1s .7s var(--ease) both; }
 @keyframes draw-in { from { transform: scaleX(0); } to { transform: scaleX(1); } }
-.stage { position: relative; margin: 0; display: flex; flex-direction: column; overflow: hidden; background: var(--sky) 0 20% / 130% auto; image-rendering: pixelated; animation: sky-drift 48s ease-in-out infinite alternate; }
+.stage { position: relative; margin: 0; display: flex; flex-direction: column; overflow: hidden; background: var(--sky) 0 20% / 130% auto; image-rendering: pixelated; animation: sky-drift 48s ease-in-out infinite alternate; border: 1px solid var(--line); border-radius: var(--r-xl); }
 @keyframes sky-drift { to { background-position: 100% 80%; } }
-.stage-sky { position: relative; z-index: 1; flex: 1; display: flex; justify-content: center; align-items: flex-start; padding: clamp(72px, 9vw, 120px) clamp(24px, 4vw, 64px) 0; transform: perspective(1100px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); transition: transform .5s var(--ease); }
+.stage-sky { position: relative; z-index: 1; flex: 1; display: flex; justify-content: center; align-items: center; border: 0; border-radius: 0; padding: clamp(48px, 6vw, 88px) clamp(24px, 4vw, 64px) clamp(28px, 4vw, 56px); transform: perspective(1100px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); transition: transform .5s var(--ease); }
 /* A beam sweeps down the panel, as if the page were being read. */
 .stage-sky::after { content: ""; position: absolute; z-index: 2; left: 50%; top: clamp(72px, 9vw, 120px); width: min(430px, calc(100% - clamp(48px, 8vw, 128px))); height: 110px; margin-left: calc(min(430px, calc(100% - clamp(48px, 8vw, 128px))) / -2); pointer-events: none; background: linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--accent) 20%, transparent) 78%, color-mix(in srgb, #ffffff 80%, transparent) 99%, transparent 100%); border-radius: 14px 14px 0 0; opacity: 0; animation: scan 7.5s 2.2s cubic-bezier(.55, 0, .35, 1) infinite; }
 @keyframes scan { 0% { transform: translateY(-110px); opacity: 0; } 12% { opacity: .9; } 78% { opacity: .9; } 100% { transform: translateY(540px); opacity: 0; } }
@@ -195,7 +249,7 @@ h1 span { color: var(--accent); display: block; }
 .band.sky .dither { inset: 0; width: 100%; height: 100%; transform: none; }
 .section.film .dither { inset: 0; width: 100%; height: 100%; opacity: .34; transform: none; z-index: 0; }
 .section.film .wrap { position: relative; z-index: 1; }
-.stage-sky img { width: 100%; max-width: 430px; border-radius: 14px 14px 0 0; box-shadow: 0 -2px 40px rgba(10, 15, 54, .38), 0 0 0 1px var(--line); image-rendering: auto; animation: float 7s ease-in-out infinite alternate; }
+.stage-sky img { width: auto; max-width: min(400px, 100%); max-height: 100%; border-radius: var(--r-lg); box-shadow: 0 24px 60px -24px rgba(10, 15, 54, .5); image-rendering: auto; animation: float 7s ease-in-out infinite alternate; }
 @keyframes float { to { transform: translateY(-14px); } }
 .stage figcaption { z-index: 2; border-radius: 8px; position: absolute; top: clamp(18px, 2.4vw, 32px); left: clamp(18px, 2.4vw, 32px); max-width: calc(100% - 40px); padding: 7px 14px; font-size: .9375rem; font-weight: 700; line-height: 1.3; color: var(--ink); background: var(--bg); border: 1px solid var(--line); image-rendering: auto; }
 
@@ -241,20 +295,38 @@ h1 span { color: var(--accent); display: block; }
 .note { margin-top: 14px; font-size: 1rem; line-height: 1.6; color: var(--muted); }
 
 .promises { border-block: 1px solid var(--line); }
-.promise-list { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px 36px; list-style: none; margin: 0 auto; padding-block: 26px; font: 650 1.0625rem/1.3 var(--display); letter-spacing: .1em; text-transform: uppercase; }
+.promise-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 36px; list-style: none; margin: 0 auto; padding-block: 26px; font: 650 1.0625rem/1.3 var(--display); letter-spacing: .1em; text-transform: uppercase; }
 .promise-list li { display: flex; align-items: center; gap: 14px; }
 .promise-list .icon { width: 1.5em; height: 1.5em; flex: none; color: var(--accent); }
-/* The promises, counted: three numbers a reader can hold onto */
-.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(24px, 4vw, 56px); margin: 24px auto 0; padding: 30px 0 8px; border-top: 1px solid var(--line); list-style: none; }
-.stat { display: block; font: 700 clamp(2.4rem, 4.8vw, 3.8rem)/1 var(--display); letter-spacing: -.03em; color: var(--ink); }
+/* The promises, counted: three figures a reader can hold onto. One definition for
+   both mark-ups — the home page reads a `.stat` span, the known-problems pages a
+   `strong` — because the second definition used to override the first and the
+   home page's figures ended up as a borderless strip with square corners. */
+.stats { display: flex; flex-wrap: wrap; gap: 14px; margin: 26px 0 0; padding: 0; list-style: none; }
+.stats li { flex: 1 1 190px; min-width: 0; display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 16px 22px 14px; background: var(--card); border: 1px solid var(--line); border-top-width: 3px; border-radius: var(--r); }
+.stats .stat, .stats strong { display: block; font: 700 clamp(2.2rem, 3.6vw, 3rem)/1 var(--display); letter-spacing: -.02em; color: var(--ink); }
 .stats li:first-child .stat { color: var(--accent); }
-.stat + span { display: block; margin-top: 10px; font-size: 1rem; line-height: 1.5; color: var(--muted); }
+.stats span { display: block; margin: 0; font-size: 1rem; font-weight: 600; line-height: 1.5; color: var(--muted); }
+.stats .sev-high { border-top-color: var(--sev-high); }
+.stats .sev-medium { border-top-color: var(--sev-medium); }
+.stats .sev-low { border-top-color: var(--sev-low); }
+.stats .sev-high strong, .stats .sev-high .stat { color: var(--sev-high); }
+.stats .sev-medium strong, .stats .sev-medium .stat { color: var(--sev-medium); }
+.stats .sev-low strong, .stats .sev-low .stat { color: var(--sev-low); }
 
 /* Sections */
 .section { padding-block: clamp(56px, 6.5vw, 96px); }
 .section.soft { background: var(--soft); border-block: 1px solid var(--line); }
 h2 { font-size: clamp(2rem, 4.3vw, 3.3rem); max-width: 16em; letter-spacing: -.012em; margin-top: 4px; text-wrap: balance; }
 .section-lead { margin-top: 26px; max-width: 40em; color: var(--muted); font-size: 1.25rem; line-height: 1.65; }
+/* A section header: the heading on the left, its lead beside it on the right, so
+   the page does not spend a screen's height stacking one under the other. A
+   header with no lead keeps the whole width for its heading. The tablet block
+   below collapses both back to one column. */
+.head { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px clamp(32px, 6vw, 88px); align-items: end; }
+.head:has(.section-lead) { grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); }
+.head h2 { max-width: 14em; }
+.head .section-lead { margin-top: 0; max-width: 36em; }
 .two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(32px, 6vw, 88px); }
 .two h2 { font-size: clamp(1.75rem, 3.2vw, 2.5rem); }
 .two p:not(.label) { margin-top: 18px; max-width: 32em; color: var(--muted); }
@@ -262,21 +334,25 @@ h2 { font-size: clamp(2rem, 4.3vw, 3.3rem); max-width: 16em; letter-spacing: -.0
 .split { align-items: center; }
 .split-copy > div + div { margin-top: clamp(48px, 6vw, 80px); }
 
-/* How it works */
-.steps { list-style: none; margin: clamp(36px, 5vw, 60px) 0 0; padding: 0; border-top: 1px solid var(--line); }
-.step { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 480px); gap: clamp(40px, 7vw, 112px); align-items: center; padding-block: clamp(48px, 6vw, 80px); border-bottom: 1px solid var(--line); }
-.step:nth-child(even) { grid-template-columns: minmax(0, 480px) minmax(0, 1fr); }
-.step:nth-child(even) .step-copy { order: 2; }
-.step-number { display: block; font: 700 clamp(2.4rem, 5vw, 3.8rem)/1 var(--display); color: var(--accent); margin-bottom: 8px; }
 /* A glyph chip: one icon, one meaning, beside a number or a heading. */
 .glyph { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; flex: none; color: var(--accent); background: color-mix(in srgb, var(--accent) 9%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); border-radius: 12px; }
 .glyph .icon { width: 22px; height: 22px; }
 .step-head { display: flex; align-items: center; gap: 16px; margin-bottom: 8px; }
 .step-head .step-number { margin-bottom: 0; }
-.step h3 { font-size: clamp(1.6rem, 2.8vw, 2.2rem); }
-.step p { margin-top: 18px; max-width: 30em; color: var(--muted); font-size: 1.125rem; line-height: 1.65; }
-.shot img { width: 100%; max-width: 420px; margin-inline: auto; border-radius: 16px; box-shadow: 0 18px 40px -18px rgba(11, 16, 32, .35), 0 2px 6px rgba(11, 16, 32, .08); }
-.shot.wide img { max-width: 440px; border-radius: 6px; border: 1px solid var(--line); }
+
+/* How it works: three tiles in a row, all the same shape — number, heading, copy,
+   then the panel cropped out of the sky at the foot. The row carries one rule
+   above and one below. A tile never reorders its own copy against its picture:
+   the old alternating layout's `.step:nth-child(even)` rule survived the switch
+   to tiles and pushed the middle tile's heading under its image. */
+.steps { list-style: none; margin: clamp(36px, 5vw, 60px) 0 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(14px, 2vw, 24px); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.step { display: flex; flex-direction: column; padding-block: clamp(8px, 1.4vw, 18px); }
+.step-copy { padding: clamp(24px, 2.6vw, 32px) clamp(20px, 2.4vw, 32px) 24px; }
+.step-number { display: block; font: 700 clamp(3rem, 5vw, 4.2rem)/1 var(--display); color: var(--accent); margin-bottom: 10px; }
+.step h3 { font-size: clamp(2rem, 3vw, 2.7rem); }
+.step p { margin-top: 14px; max-width: 30em; color: var(--muted); font-size: 1.0625rem; line-height: 1.6; }
+.step .shot { margin-top: auto; }
+.step .shot img { max-width: none; }
 
 /* A picture that rises out of the dithered sky. `crop` holds it to a fixed
    height so its lower part runs off the tile; hovering lifts it to show more. */
@@ -293,18 +369,11 @@ h2 { font-size: clamp(2rem, 4.3vw, 3.3rem); max-width: 16em; letter-spacing: -.0
 .shot.plain img { max-width: 230px; border-radius: 22px; box-shadow: 0 18px 36px -16px rgba(11, 16, 32, .4), 0 0 0 1px var(--line); }
 .gallery.phones li:hover .shot img { transform: translateY(-6px); }
 
-/* How it works: three tiles in a row. */
-.steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(14px, 2vw, 24px); }
-.step { display: flex; flex-direction: column; }
-.step-copy { padding: clamp(24px, 2.6vw, 36px) clamp(24px, 2.6vw, 36px) 26px; }
-.step-number { display: block; font: 700 clamp(3rem, 5vw, 4.2rem)/1 var(--display); color: var(--accent); margin-bottom: 10px; }
-.step h3 { font-size: clamp(2rem, 3vw, 2.7rem); }
-.step p { margin-top: 14px; max-width: 30em; color: var(--muted); font-size: 1.0625rem; line-height: 1.6; }
-.step .shot { margin-top: auto; }
-.step .shot img { max-width: none; }
-
 /* The desktop app, drawn as windows: the whole picture, a hairline and a shadow.
-   The three of them sit in one row, the wide one taking two columns. */
+   The wide one takes the whole row and the two below it share the next, which is
+   what `.bento` is for — it had no base rule, so all three stacked. */
+.bento { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(20px, 3vw, 36px); align-items: start; }
+.bento .window.wide { grid-column: span 2; }
 .window { margin: 0; }
 .window img, .window video { display: block; width: 100%; height: auto; border-radius: 12px; border: 1px solid var(--line); box-shadow: 0 24px 60px -26px rgba(11, 16, 32, .4), 0 2px 8px rgba(11, 16, 32, .08); transition: transform .5s var(--ease), box-shadow .5s ease; }
 .window video { aspect-ratio: 16 / 9; background: #000000; }
@@ -313,25 +382,21 @@ h2 { font-size: clamp(2rem, 4.3vw, 3.3rem); max-width: 16em; letter-spacing: -.0
 .window-pair .window { margin-top: clamp(24px, 4vw, 40px); }
 .window-pair .window img { max-width: 560px; margin-inline: auto; }
 .window-pair .window figcaption { max-width: 560px; margin-inline: auto; }
-.gallery { list-style: none; margin: clamp(40px, 6vw, 64px) 0 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: clamp(24px, 3.5vw, 44px); }
-.gallery li { position: relative; padding: 16px; border: 1px solid var(--line); border-radius: 20px; background: var(--bg); }
 /* A card catches a little light where the pointer is, and a ring of the same blue. */
-.gallery li::after { content: ""; position: absolute; inset: -1px; border-radius: 20px; pointer-events: none; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent); background: radial-gradient(260px circle at var(--mx, 50%) var(--my, 50%), color-mix(in srgb, var(--accent) 8%, transparent), transparent 72%); opacity: 0; transition: opacity .3s var(--ease); }
+.gallery li::after { content: ""; position: absolute; inset: -1px; border-radius: var(--r-lg); pointer-events: none; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent); background: radial-gradient(260px circle at var(--mx, 50%) var(--my, 50%), color-mix(in srgb, var(--accent) 8%, transparent), transparent 72%); opacity: 0; transition: opacity .3s var(--ease); }
 .gallery li:hover::after, .gallery li:focus-within::after { opacity: 1; }
-.gallery h3 { margin-top: 16px; font-size: 1.5rem; }
-.gallery li > p:not(.tag) { margin-top: 8px; font-size: 1.0625rem; line-height: 1.55; color: var(--muted); }
-/* Phone captures are taller than they are wide: a tighter grid keeps four across. */
-.gallery.phones { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-.gallery.phones .shot img { max-width: 260px; }
 
-/* Examples and the phone captures. */
+/* Examples and the phone captures. A card's inset is the card's own padding; the
+   text inside it does not add a second, wider one, or the heading sits 40px in
+   while its picture sits 16px in. */
 .bento + .note, .gallery + .note { margin-top: 28px; }
-.gallery { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: clamp(14px, 2vw, 24px); }
-.gallery li { position: relative; display: flex; flex-direction: column; }
-.gallery .tag { margin: 18px 24px 16px; font-size: 1rem; }
-.gallery h3 { margin: 22px 24px 0; font-size: 2.1rem; }
-.gallery li > p:not(.tag) { margin: 8px 24px 26px; font-size: 1.0625rem; line-height: 1.55; color: var(--muted); }
+.gallery { list-style: none; margin: 40px 0 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: clamp(14px, 2vw, 24px); }
+.gallery li { position: relative; display: flex; flex-direction: column; padding: 16px 16px 22px; background: var(--bg); border: 1px solid var(--line); border-radius: var(--r-lg); }
+.gallery .tag { margin: 14px 0 12px; font-size: .9375rem; letter-spacing: .1em; }
+.gallery h3 { margin: 20px 0 0; font-size: 2rem; min-height: 2.16em; }
+.gallery li > p:not(.tag) { margin: 8px 0 0; font-size: 1.0625rem; line-height: 1.55; color: var(--muted); }
 .gallery .shot img { max-width: none; }
+.gallery.phones { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .gallery.phones .shot img { max-width: 230px; }
 
 /* Install */
@@ -342,10 +407,10 @@ h2 { font-size: clamp(2rem, 4.3vw, 3.3rem); max-width: 16em; letter-spacing: -.0
 .setup .glyph { margin-bottom: 10px; }
 .setup h3 { font-size: 1.5rem; }
 .setup p { margin-top: 8px; color: var(--muted); max-width: 34em; }
-.download-card { position: relative; padding: clamp(28px, 3.5vw, 44px); background: var(--bg); border: 1px solid var(--line); border-radius: 20px; }
+.download-card { position: relative; padding: clamp(28px, 3.5vw, 44px); background: var(--bg); border: 1px solid var(--line); border-radius: var(--r-lg); }
 /* The card's hover light lives on a layer of its own, so it never fights the
    scroll-in motion on the card itself. */
-.download-card::after { content: ""; position: absolute; inset: -1px; border-radius: 20px; pointer-events: none; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 50%, transparent), 0 18px 40px -22px rgba(36, 71, 230, .38); background: radial-gradient(320px circle at var(--mx, 50%) var(--my, 50%), color-mix(in srgb, var(--accent) 7%, transparent), transparent 72%); opacity: 0; transition: opacity .3s var(--ease); }
+.download-card::after { content: ""; position: absolute; inset: -1px; border-radius: var(--r-lg); pointer-events: none; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 50%, transparent), 0 18px 40px -22px rgba(36, 71, 230, .38); background: radial-gradient(320px circle at var(--mx, 50%) var(--my, 50%), color-mix(in srgb, var(--accent) 7%, transparent), transparent 72%); opacity: 0; transition: opacity .3s var(--ease); }
 .download-card:hover::after { opacity: 1; }
 .download-card h3 { display: flex; align-items: center; gap: 14px; font-size: 1.7rem; }
 .download-card h3 .glyph { width: 1.35em; height: 1.35em; border-radius: .32em; }
@@ -371,6 +436,10 @@ h2 { font-size: clamp(2rem, 4.3vw, 3.3rem); max-width: 16em; letter-spacing: -.0
 .faq details p { padding-bottom: 24px; max-width: 40em; color: var(--muted); }
 .faq details[open] p { animation: rise-in .45s var(--ease) both; }
 
+/* The film: the words beside the video, not stacked under it. `.film-grid` had no
+   base rule at all, so a 1248px video sat on top of its own copy. */
+.film-grid { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: clamp(28px, 5vw, 64px); align-items: center; }
+.film-copy h2 { font-size: clamp(1.9rem, 3.4vw, 2.8rem); max-width: 12em; }
 /* One editorial line between the halves of the page: the whole product in two sentences. */
 .statement { padding-block: clamp(72px, 10vw, 140px); }
 .statement-line { max-width: 24em; margin-inline: auto; text-align: center; text-wrap: balance; font: 600 clamp(1.75rem, 3.8vw, 3rem)/1.22 var(--display); letter-spacing: -.02em; color: var(--ink); }
@@ -379,28 +448,38 @@ h2 { font-size: clamp(2rem, 4.3vw, 3.3rem); max-width: 16em; letter-spacing: -.0
 
 /* The close: one dark panel, a dawn of the product's own blues, and two doors out. */
 .cta { padding-block: clamp(56px, 8vw, 104px) clamp(64px, 9vw, 120px); }
-.cta-panel { position: relative; overflow: hidden; border-radius: 28px; padding: clamp(44px, 6vw, 84px) clamp(26px, 5vw, 76px); color: var(--panel-ink); background: radial-gradient(640px 340px at 16% 0%, rgba(61, 99, 245, .38), transparent 62%), radial-gradient(520px 300px at 88% 100%, var(--halo-warm), transparent 60%), var(--panel); }
+.cta-panel { position: relative; overflow: hidden; border-radius: var(--r-xl); padding: clamp(44px, 6vw, 84px) clamp(26px, 5vw, 76px); color: var(--panel-ink); background: radial-gradient(640px 340px at 16% 0%, rgba(61, 99, 245, .38), transparent 62%), radial-gradient(520px 300px at 88% 100%, var(--halo-warm), transparent 60%), var(--panel); }
 .cta-panel::before { content: ""; position: absolute; width: 440px; aspect-ratio: 1; right: -130px; top: -170px; border-radius: 50%; pointer-events: none; background: radial-gradient(closest-side, var(--halo-warm), transparent 70%); animation: halo-drift 22s ease-in-out infinite alternate; }
 .cta-panel h2 { color: var(--panel-ink); max-width: 15em; }
 .cta-lead { margin-top: 18px; max-width: 34em; font-size: 1.25rem; line-height: 1.6; color: color-mix(in srgb, var(--panel-ink) 82%, transparent); text-wrap: pretty; }
 .cta-actions { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 34px; }
 .cta-panel .button.ghost { color: var(--panel-ink); border-color: var(--panel-ink); background: transparent; }
 .cta-panel .button.ghost:hover { color: var(--panel); background: var(--panel-ink); border-color: var(--panel-ink); box-shadow: 0 14px 26px -14px rgba(0, 0, 0, .5); }
+/* Any plain link on a dark panel — the phone hand-off, a footer note — reads in a
+   light blue. The page's link colour on a black panel was 2.67:1. */
+.cta-panel a:not(.button), .pp .cta a:not(.button) { color: var(--on-panel-link); }
 
 /* Footer */
-.footer { padding-block: 48px; background: var(--bg); }
+/* Footer. The page is paper in light and black in dark; the footer sits on the
+   page, so it takes the page's own ink. It used to carry the dark panel's colours
+   written out as hexes, which left every link near-white on cream. */
+.footer { padding-block: 48px; background: var(--bg); border-top: 1px solid var(--line); }
 .footer-grid { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 28px 48px; align-items: flex-start; }
-.footer p { margin-top: 14px; color: #b9bcc7; font-size: 1.0625rem; }
+.footer p { margin-top: 14px; color: var(--muted); font-size: 1.0625rem; }
 .footer nav { display: flex; flex-wrap: wrap; gap: 12px 28px; font-size: 1rem; max-width: 40em; }
-.footer nav a { display: inline-flex; align-items: center; gap: 5px; color: #f3f1ea; text-decoration: none; font-weight: 600; }
-.footer nav a:hover { color: #a9bcff; text-decoration: underline; }
-.footer nav .icon { width: .9em; height: .9em; color: #b5bcd0; }
+.footer nav a { display: inline-flex; align-items: center; gap: 5px; color: var(--ink); text-decoration: none; font-weight: 600; }
+.footer nav a:hover { color: var(--link); text-decoration: underline; }
+.footer nav .icon { width: .9em; height: .9em; color: var(--muted); }
 @media (prefers-color-scheme: dark) { .footer .brand img { filter: none; } }
 
 /* Privacy policy */
 .back-link { margin-left: auto; color: var(--ink); font-weight: 600; text-decoration: none; }
 .back-link:hover { color: var(--link); text-decoration: underline; }
+/* Privacy policy: the reading column starts on the same edge as the header's
+   wordmark instead of floating 250px in from it. */
 .policy .wrap { padding-block: 56px 72px; }
+.policy .wrap.narrow { margin-inline: 0 auto; }
+.policy a:not(.button) { color: var(--link); }
 .policy h1 { font-size: clamp(2.3rem, 5.5vw, 4rem); }
 .policy h1 span { display: inline; }
 .policy h2 { font-size: 1.75rem; margin: 48px 0 10px; }
@@ -411,7 +490,7 @@ h2 { font-size: clamp(2rem, 4.3vw, 3.3rem); max-width: 16em; letter-spacing: -.0
 .policy code { font: .9em ui-monospace, Consolas, monospace; padding: .1em .35em; border-radius: 3px; background: var(--soft); }
 .policy pre { max-width: 100%; overflow-x: auto; padding: 12px; background: var(--soft); }
 .policy .updated { margin-top: 12px; font-size: 1rem; }
-.policy .short { margin-top: 28px; padding: 20px 24px; border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 4px; background: var(--soft); }
+.policy .short { margin-top: 28px; padding: 20px 24px; border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: var(--r); background: var(--soft); }
 .policy .short p { color: var(--ink); }
 .policy .short .button { margin: 14px 0 6px; }
 /* A phone cannot run Kriko, so only a touch screen is offered a way to carry the link to a computer. */
@@ -436,21 +515,12 @@ h2 { font-size: clamp(2rem, 4.3vw, 3.3rem); max-width: 16em; letter-spacing: -.0
 .pp .crumb a { color: var(--muted); font-weight: 600; text-decoration: none; }
 .pp .crumb a:hover { color: var(--link); text-decoration: underline; }
 .pp h1 { display: flex; align-items: center; gap: .28em; max-width: 18em; font-size: clamp(2.5rem, 5vw, 4.4rem); line-height: 1; }
-.pp h1 .ico.big { flex: none; width: 1.05em; height: 1.05em; padding: .2em; border-radius: 14px; color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--card)); border: 1px solid var(--line); }
+.pp h1 .ico.big { flex: none; width: 1.05em; height: 1.05em; padding: .2em; border-radius: var(--r); color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--card)); border: 1px solid var(--line); }
 .pp h1 .ico.hazard { color: var(--sev-high); background: color-mix(in srgb, var(--sev-high) 10%, var(--card)); }
 .pp .lead { max-width: 46em; margin-top: 16px; font-size: 1.25rem; }
 .pp h2 { max-width: none; margin: 0; font-size: 1.9rem; letter-spacing: 0; }
 .pp .fine { max-width: 60em; }
 
-.stats { display: flex; flex-wrap: wrap; gap: 12px; margin: 28px 0 0; padding: 0; list-style: none; }
-.stats li { display: flex; flex-direction: column; gap: 4px; min-width: 150px; padding: 16px 22px 14px; background: var(--card); border: 1px solid var(--line); border-top: 3px solid var(--line); border-radius: var(--r); }
-.stats strong { font: 700 2.5rem/1 var(--display); letter-spacing: -.01em; }
-.stats span { font-size: 1rem; font-weight: 600; color: var(--muted); }
-.stats .sev-high { border-top-color: var(--sev-high); }
-.stats .sev-medium { border-top-color: var(--sev-medium); }
-.stats .sev-low { border-top-color: var(--sev-low); }
-.stats .sev-high strong { color: var(--sev-high); }
-.stats .sev-medium strong { color: var(--sev-medium); }
 .pp .summary { max-width: 52em; margin-top: 14px; color: var(--ink); }
 .pp .summary a { color: var(--link); font-weight: 600; }
 .pp .pp-head .fine { margin-top: 8px; }
@@ -534,8 +604,10 @@ h2 { font-size: clamp(2rem, 4.3vw, 3.3rem); max-width: 16em; letter-spacing: -.0
 .pp details.group summary::-webkit-details-marker { display: none; }
 .pp details.group summary:hover { border-color: var(--accent); }
 .pp details.group summary span { margin-left: auto; font: 600 .9375rem var(--sans); color: var(--muted); }
-.pp details.group summary::after { content: "+"; flex: none; font: 600 1.9rem/1 var(--display); color: var(--accent); transition: transform .3s var(--ease); }
-.pp details.group[open] summary::after { transform: rotate(135deg); }
+.pp details.group summary::after { content: "+"; flex: none; width: 1.4em; text-align: center; font: 600 1.9rem/1 var(--display); color: var(--accent); }
+/* Open, the marker is a minus. It used to be the same "+" rotated 135deg, which
+   reads as a close/delete cross on every group that happens to be open. */
+.pp details.group[open] summary::after { content: "\2212"; }
 .pp details.group[open] > ul { animation: rise-in .4s var(--ease) both; }
 .pp .more { margin-top: 8px; }
 .pp .more p { margin-top: 16px; font-weight: 600; }
@@ -566,7 +638,8 @@ h2 { font-size: clamp(2rem, 4.3vw, 3.3rem); max-width: 16em; letter-spacing: -.0
 .pp h2.browse { margin-top: 8px; font-size: 1.7rem; }
 .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; margin: 18px 0 0; padding: 0; list-style: none; }
 .cards li { margin: 0; }
-.pp a.card { display: flex; flex-direction: column; height: 100%; padding: 22px; color: var(--ink); text-decoration: none; }
+.pp a.card { display: flex; flex-direction: column; height: 100%; padding: 22px; color: var(--ink); text-decoration: none; background: var(--card); border: 1px solid var(--line); border-radius: var(--r); box-shadow: 0 1px 2px rgba(11, 16, 32, .04); transition: transform .25s var(--ease), border-color .2s ease, box-shadow .25s ease; }
+.pp a.card:hover { border-color: var(--accent); box-shadow: 0 16px 30px -20px rgba(11, 16, 32, .45); }
 .pp a.card:hover { transform: translateY(-3px); }
 .pp .card .tile { display: grid; place-items: center; width: 48px; height: 48px; margin-bottom: 14px; color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--card)); border: 1px solid var(--line); border-radius: 12px; }
 .pp .card .tile .ico { width: 1.5rem; height: 1.5rem; }
@@ -593,7 +666,7 @@ h2 { font-size: clamp(2rem, 4.3vw, 3.3rem); max-width: 16em; letter-spacing: -.0
 .guide-hero { padding-bottom: clamp(28px, 4vw, 48px); }
 .toc ol { display: flex; flex-wrap: wrap; gap: 10px 12px; margin: 36px 0 0; padding: 0; list-style: none; counter-reset: toc; }
 .toc a { display: inline-flex; align-items: center; gap: 10px; padding: 9px 18px; font-size: 1.0625rem; font-weight: 600; color: var(--ink); text-decoration: none; background: var(--soft); border: 1px solid var(--line); border-radius: 999px; }
-.toc a::before { counter-increment: toc; content: counter(toc, decimal-leading-zero); font: 700 1.125rem/1 var(--display); letter-spacing: .06em; color: var(--accent); }
+.toc a::before { counter-increment: toc; content: counter(toc, decimal-leading-zero); font: 700 1.125rem/1 var(--display); letter-spacing: .06em; color: var(--accent-text); }
 .toc a:hover { color: var(--link); border-color: var(--accent); }
 .guide-step { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: clamp(28px, 5vw, 72px); align-items: center; padding-block: clamp(40px, 6vw, 72px); border-top: 1px solid var(--line); }
 .guide-step.tall { grid-template-columns: minmax(0, 1fr) minmax(0, 440px); }
@@ -658,6 +731,12 @@ h2 { font-size: clamp(2rem, 4.3vw, 3.3rem); max-width: 16em; letter-spacing: -.0
   .main-nav a { padding: 15px 0; border-bottom: 1px solid var(--line); font-size: 1.0625rem; }
   .main-nav a::after { display: none; }
   .language-switch { margin-left: auto; }
+  /* Without script there is no menu button to press, so the links become one
+     wrapped row of their own instead of a five-row column that pushed the brand,
+     the switch and the call to action into two ragged rows. */
+  html:not(.menu-ready) .bar { padding-block: 8px 0; row-gap: 0; }
+  html:not(.menu-ready) .main-nav { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 2px 22px; padding: 0 0 12px; border-bottom: 0; box-shadow: none; }
+  html:not(.menu-ready) .main-nav a { padding: 8px 0; border-bottom: 0; font-size: 1rem; }
 }
 
 /* A phone: pictures that were a row become a strip to swipe, so no section is
@@ -667,7 +746,7 @@ h2 { font-size: clamp(2rem, 4.3vw, 3.3rem); max-width: 16em; letter-spacing: -.0
   .topbar.lite .main-nav a:first-child { display: none; }
   .pp .claim { padding: 20px 20px 18px; }
   .pp .claim h3 { font-size: 1.45rem; }
-  .stats li { flex: 1 1 140px; min-width: 0; }
+  .stats { flex-direction: column; }
   .bar { gap: 12px; }
   .bar-cta { display: none; }
   .promise-list { grid-template-columns: minmax(0, 1fr); }

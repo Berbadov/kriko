@@ -15,13 +15,15 @@ from PIL import Image
 OUT = Path(__file__).resolve().parents[1] / "assets" / "sky"
 
 PALETTES = {
+    # One ramp per theme: the product's own blue, from pale to deep. No second
+    # hue, so the dither reads as sky and not as confetti.
     "light": {
-        "sky": ["#3f6be9", "#6a8cf0", "#9db2f6"],
-        "cloud": ["#8f82e6", "#c28fe8", "#f58fb2", "#ffbf9f", "#fff0d4"],
+        "sky": ["#8fa6ff", "#6a8cf0", "#a9bcff"],
+        "cloud": ["#f4f7ff", "#e3ebff", "#cdd9ff", "#b9c8ff", "#dfe7ff"],
     },
     "dark": {
-        "sky": ["#0a0f36", "#16215f", "#2c3c9a"],
-        "cloud": ["#1d2260", "#43347f", "#8a4a97", "#d97aa0", "#f5b9a8"],
+        "sky": ["#0a1230", "#16277e", "#2447e6"],
+        "cloud": ["#16215f", "#2447e6", "#3d63f5", "#5c7bff", "#9db3ff"],
     },
 }
 

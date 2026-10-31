@@ -91,7 +91,7 @@ export const stub = ({ quick = null, shortlist = [], own = [] } = {}) => (page) 
 export const deliver = (page, entry) => page.evaluate((e) => window.__preview.deliver('result', e), entry);
 export const panel = (page) => page.locator('kriko-panel-host >> .lite-panel');
 export const hidePage = (page) => page.addStyleTag({ content: '.page{display:none!important}' });
-export const SIZE = { width: 432, height: 800 };
+export const SIZE = { width: 432, height: 980 };
 export const severities = (key) => data[key].claims.map((c) => c.severity);
 
 // A drawn bicycle: the listing beside the panel in hero-*.png is invented too.
