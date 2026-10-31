@@ -105,11 +105,20 @@ tag-triggered workflow does this. A release built by hand does it too, or the
 website's second step ends in an error:
 
 ```
-for n in cars drill; do python -m app.cli build packs/$n --out release/$n.kpack; done
+for root in packs/*/; do
+    [ -f "$root/pack.toml" ] || continue
+    python -m app.cli build "$root" --out "release/$(basename "$root").kpack"
+done
 python packaging/publish_index.py --base-url https://github.com/Berbadov/kriko/releases/download/vX.Y.Z     --out release/packs.json release/*.kpack
-# attach release/packs.json and release/*.kpack to the release, then:
+python packaging/make_packs_bundle.py --out release/packs-vX.Y.Z.zip release/packs.json release/*.kpack
+# attach release/packs.json, release/*.kpack and release/packs-vX.Y.Z.zip to the release, then:
 python packaging/verify_pack_index.py https://github.com/Berbadov/kriko/releases/latest/download/packs.json
 ```
+
+The `.kpack` files and `packs.json` are what the app installs and updates from,
+one verified download at a time. `packs-<version>.zip` is the same set in one
+folder for an offline copy or a hand-off; the workflow attaches both, and the
+bundle is checked against the index it carries before either is uploaded.
 
 The last command does what the app does (reads the index, downloads each catalog,
 checks its sha256) and exits 1 with the address that failed. 0.3.6 and 0.3.7
