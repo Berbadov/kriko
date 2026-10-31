@@ -218,11 +218,11 @@ h1 span { color: var(--accent); display: block; }
 .hero-points .icon { width: 1.15em; height: 1.15em; color: var(--accent); stroke-width: 2.6; flex: none; }
 .hero-points a { color: var(--link); }
 /* The hero's stage: the sky image runs edge to edge of its column and the
-   panel rises out of it, cropped at the bottom — anchored, not floating. */
+   panel floats whole inside it — every row and the action button in view. */
 .stage { margin: 0; }
 .stage-sky { padding: clamp(32px, 4.5vw, 56px) clamp(28px, 4.5vw, 60px) 0; background: var(--sky) center / cover; image-rendering: pixelated; overflow: hidden; border-radius: 20px 20px 0 0; border: 1px solid var(--line); border-bottom: none; }
 .hero .stage { justify-self: center; width: fit-content; max-width: 100%; }
-.stage-sky img { width: auto; max-width: 100%; max-height: clamp(340px, 56dvh, 620px); margin-inline: auto; border-radius: 14px 14px 0 0; box-shadow: 0 -2px 30px rgba(10, 15, 54, .35), 0 0 0 1px var(--line); image-rendering: auto; transition: transform .5s cubic-bezier(.2, .7, .2, 1); }
+.stage-sky img { width: auto; max-width: 100%; max-height: 100%; margin-inline: auto; border-radius: var(--r-lg); box-shadow: 0 -2px 30px rgba(10, 15, 54, .35), 0 0 0 1px var(--line); image-rendering: auto; transition: transform .5s cubic-bezier(.2, .7, .2, 1); }
 .stage:hover .stage-sky img { transform: translateY(-8px); }
 .stage figcaption { padding: 0 clamp(28px, 4.5vw, 60px) 18px; background: var(--sky) center / cover; image-rendering: pixelated; border: 1px solid var(--line); border-top: none; border-radius: 0 0 20px 20px; }
 
@@ -235,7 +235,7 @@ h1 span { color: var(--accent); display: block; }
 @keyframes draw-in { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 .stage { position: relative; margin: 0; display: flex; flex-direction: column; overflow: hidden; background: var(--sky) 0 20% / 130% auto; image-rendering: pixelated; animation: sky-drift 48s ease-in-out infinite alternate; }
 @keyframes sky-drift { to { background-position: 100% 80%; } }
-.stage-sky { position: relative; z-index: 1; flex: 1; display: flex; justify-content: center; align-items: flex-start; padding: clamp(72px, 9vw, 120px) clamp(24px, 4vw, 64px) 0; transform: perspective(1100px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); transition: transform .5s var(--ease); }
+.stage-sky { position: relative; z-index: 1; flex: 1; display: flex; justify-content: center; align-items: center; padding: clamp(48px, 6vw, 88px) clamp(24px, 4vw, 64px) clamp(28px, 4vw, 56px); transform: perspective(1100px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); transition: transform .5s var(--ease); }
 /* A beam sweeps down the panel, as if the page were being read. */
 .stage-sky::after { content: ""; position: absolute; z-index: 2; left: 50%; top: clamp(72px, 9vw, 120px); width: min(430px, calc(100% - clamp(48px, 8vw, 128px))); height: 110px; margin-left: calc(min(430px, calc(100% - clamp(48px, 8vw, 128px))) / -2); pointer-events: none; background: linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--accent) 20%, transparent) 78%, color-mix(in srgb, #ffffff 80%, transparent) 99%, transparent 100%); border-radius: 14px 14px 0 0; opacity: 0; animation: scan 7.5s 2.2s cubic-bezier(.55, 0, .35, 1) infinite; }
 @keyframes scan { 0% { transform: translateY(-110px); opacity: 0; } 12% { opacity: .9; } 78% { opacity: .9; } 100% { transform: translateY(540px); opacity: 0; } }
@@ -245,7 +245,7 @@ h1 span { color: var(--accent); display: block; }
 .band.sky .dither { inset: 0; width: 100%; height: 100%; transform: none; }
 .section.film .dither { inset: 0; width: 100%; height: 100%; opacity: .34; transform: none; z-index: 0; }
 .section.film .wrap { position: relative; z-index: 1; }
-.stage-sky img { width: 100%; max-width: 430px; border-radius: 14px 14px 0 0; box-shadow: 0 -2px 40px rgba(10, 15, 54, .38), 0 0 0 1px var(--line); image-rendering: auto; animation: float 7s ease-in-out infinite alternate; }
+.stage-sky img { width: auto; max-width: min(400px, 100%); max-height: 100%; border-radius: var(--r-lg); box-shadow: 0 24px 60px -24px rgba(10, 15, 54, .5), 0 0 0 1px var(--line); image-rendering: auto; animation: float 7s ease-in-out infinite alternate; }
 @keyframes float { to { transform: translateY(-14px); } }
 .stage figcaption { z-index: 2; border-radius: 8px; position: absolute; top: clamp(18px, 2.4vw, 32px); left: clamp(18px, 2.4vw, 32px); max-width: calc(100% - 40px); padding: 7px 14px; font-size: .9375rem; font-weight: 700; line-height: 1.3; color: var(--ink); background: var(--bg); border: 1px solid var(--line); image-rendering: auto; }
 
