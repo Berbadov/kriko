@@ -1,0 +1,59 @@
+# Vocabulary — every kind, key, domain and attribute this pack uses.
+#
+# Written from the pack an agent proposed. Declared before use: the
+# builder refuses a row naming a term that is not here, which is also
+# why a domain used by a claim and never declared is added above.
+- term_id: product
+  role: subject_kind
+  label:
+    en: product
+- term_id: brand
+  role: attribute
+  datatype: text
+  label:
+    en: brand
+- term_id: series
+  role: attribute
+  datatype: text
+  label:
+    en: series
+- term_id: capacity_place_settings
+  role: attribute
+  datatype: number
+  label:
+    en: Capacity (place settings)
+- term_id: energy_class
+  role: attribute
+  datatype: text
+  label:
+    en: Energy class
+- term_id: water_consumption_l
+  role: attribute
+  datatype: number
+  label:
+    en: Water consumption (L/cycle)
+- term_id: noise_db
+  role: attribute
+  datatype: number
+  label:
+    en: Noise (dB)
+- term_id: water
+  role: domain
+  label:
+    en: Water intake, drainage and leaks
+- term_id: mechanical
+  role: domain
+  label:
+    en: Pumps, spray arms, filters and door mechanisms
+- term_id: electrical
+  role: domain
+  label:
+    en: Control board, touch panel and electronics
+- term_id: drying
+  role: domain
+  label:
+    en: Drying performance
+- term_id: general
+  role: domain
+  label:
+    en: General

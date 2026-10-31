@@ -99,6 +99,23 @@ Both programs ship in every Windows package, because the app starts the engine
 from its own folder. The installer stops a running Kriko first, because a live
 engine holds its own program file (`src-tauri/windows/hooks.nsh`).
 
+The installer carries no catalogs, so a release must publish them beside it:
+the app's Find release catalogs reads `releases/latest/download/packs.json`. The
+tag-triggered workflow does this. A release built by hand does it too, or the
+website's second step ends in an error:
+
+```
+for n in cars drill; do python -m app.cli build packs/$n --out release/$n.kpack; done
+python packaging/publish_index.py --base-url https://github.com/Berbadov/kriko/releases/download/vX.Y.Z     --out release/packs.json release/*.kpack
+# attach release/packs.json and release/*.kpack to the release, then:
+python packaging/verify_pack_index.py https://github.com/Berbadov/kriko/releases/latest/download/packs.json
+```
+
+The last command does what the app does (reads the index, downloads each catalog,
+checks its sha256) and exits 1 with the address that failed. 0.3.6 and 0.3.7
+shipped without a `packs.json`, and 0.3.5's index named catalogs that were never
+attached, so for those releases no reader could install one.
+
 The Windows installer is unsigned. Windows can show a SmartScreen warning.
 
 ## Build the macOS package

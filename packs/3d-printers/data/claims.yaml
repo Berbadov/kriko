@@ -1,0 +1,3142 @@
+# Claims — what is known to go wrong, each with the page it came from and the quote
+# that was read there. A claim without both is not in this file.
+- subject:
+    kind: product
+    identity:
+      brand: bambu lab
+      series: a1 mini
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: extruder gear
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: A1 series extruder accumulates filament debris and dust, causing gear jamming or stall
+      body: Bambu Lab's official Chinese wiki states that after long use, the A1 series extruder assembly
+        can retain filament debris and dust, causing the extruder gear to jam or stop turning; the guide
+        provides disassembly and deep-cleaning steps.
+      advice: The extruder gear can jam from accumulated debris over time. Bambu Lab's own maintenance
+        guide requires disassembling the extruder front cover and idler assembly to clean it, which is
+        a non-trivial repair for an owner.
+    tr:
+      title: A1 serisi ekstrüder, dişli sıkışmasına veya durmasına neden olan filament kalıntısı ve toz
+        biriktiriyor
+      body: Bambu Lab'in resmi Çince wiki'si, uzun kullanımdan sonra A1 serisi ekstrüder düzeneğinin filament
+        kalıntısı ve toz tutabileceğini, bunun da ekstrüder dişlisinin sıkışmasına veya dönmeyi durdurmasına
+        neden olabileceğini belirtiyor; kılavuz sökme ve derin temizleme adımlarını sunuyor.
+      advice: Ekstrüder dişlisi zamanla biriken kalıntı nedeniyle sıkışabilir. Bambu Lab'in kendi bakım
+        kılavuzu, temizlemek için ekstrüder ön kapağının ve avara düzeneğinin sökülmesini gerektiriyor;
+        bu, bir sahip için önemsiz olmayan bir onarımdır.
+  evidence:
+  - url: https://wiki.bambulab.com/zh/a1-mini/troubleshooting/extruder-clog
+    quote: 长时间使用打印机后，挤出机组件内部有可能残留有耗材碎屑和灰尘，容易导致挤出齿轮工作时卡顿甚至无法转动的情况。
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:19:36+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: creality
+      series: ender 3 v3 ke
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: belts / extruder mounting
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Layer shifting on Ender 3 V3 KE (loose belt, loose extruder kit)
+      body: Creality's official Japanese troubleshooting guide lists layer shifting as a known issue,
+        with loose belts and a loose extruder kit among the named causes.
+      advice: Layer shifting is a maintenance item (belt tension, extruder mounting screws) rather than
+        a defect; it shows up on large prints and is fixable by tightening.
+    tr:
+      title: Ender 3 V3 KE'de katman kayması (gevşek kayış, gevşek ekstrüder kiti)
+      body: Creality'nin resmi Japonca sorun giderme kılavuzu, katman kaymasını bilinen bir sorun olarak
+        listeliyor; belirtilen nedenler arasında gevşek kayışlar ve gevşek ekstrüder kiti yer alıyor.
+      advice: Katman kayması bir kusur değil, bir bakım kalemidir (kayış gerginliği, ekstrüder montaj
+        vidaları); büyük baskılarda ortaya çıkar ve sıkılarak düzeltilebilir.
+  evidence:
+  - url: https://store.creality.com/jp/blogs/using-guide/creality-ender-3-v3-ke-troubleshooting-guide
+    quote: 印刷中にレイヤーがずれます。（レイヤーの位置ずれとレイヤーラインの問題の違いに注意してください）
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:20:36+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: creality
+      series: ender 3 v3 ke
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: nozzle / hotend heat block
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Hotend nozzle and heat block clog repeatedly on Ender 3 V3 KE
+      body: A new owner reports the nozzle and heating block clogging repeatedly within days, even after
+        replacing the nozzle and purging; forum replies point to heatbreak cooling and hot-tightening
+        of the nozzle as the cause.
+      advice: Expect to clear nozzle clogs and check the heatbreak fan and hot-tightening of the nozzle
+        early on; a clogged hotend stops extrusion entirely and costs time and replacement nozzles.
+    tr:
+      title: Ender 3 V3 KE'de hotend nozulu ve ısı bloğu tekrar tekrar tıkanıyor
+      body: Yeni bir sahip, nozulu değiştirip temizledikten sonra bile nozul ve ısıtma bloğunun günler
+        içinde tekrar tekrar tıkandığını bildiriyor; forum yanıtları neden olarak heatbreak soğutmasına
+        ve nozulun sıcak sıkılmasına işaret ediyor.
+      advice: Başlangıçta nozul tıkanıklıklarını açmayı ve heatbreak fanını ve nozulun sıcak sıkılmasını
+        kontrol etmeyi bekleyin; tıkanmış bir hotend ekstrüzyonu tamamen durdurur ve zaman ile yedek nozul
+        maliyeti getirir.
+  evidence:
+  - url: https://www.lesimprimantes3d.fr/forum/topic/65431-creality-imprimante-3d-ender-3-v3-ke-bouchon-et-buse/
+    quote: Pour la 4ème impression, j'ai un bouchon dans la buse et dans le coeur de chauffe
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:20:36+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: creality
+      series: k1
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: head PCB / nozzle board (carte de la tête)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: K1 head PCB (nozzle board) failure stops extrusion mid-print
+      body: An owner reports the K1 stops extruding mid-print at the same height; replacing the hotend
+        and extruder motor did not help, and the fix was replacing the head PCB. This is a first-hand
+        owner account on a French 3D printing forum.
+      advice: If a K1 stops extruding mid-print at a consistent height and a hotend swap does not fix
+        it, suspect the nozzle/head board rather than a clog. This is a board-level electrical failure,
+        not a user-tunable setting.
+    tr:
+      title: K1 kafa PCB'si (nozul kartı) arızası baskı ortasında ekstrüzyonu durduruyor
+      body: Bir sahip, K1'in baskı ortasında aynı yükseklikte ekstrüzyonu durdurduğunu bildiriyor; hotend
+        ve ekstrüder motorunu değiştirmek yardımcı olmadı ve çözüm kafa PCB'sini değiştirmek oldu. Bu,
+        bir Fransız 3D baskı forumunda bir sahibin birinci elden anlatımıdır.
+      advice: Bir K1 tutarlı bir yükseklikte baskı ortasında ekstrüzyonu durdurursa ve hotend değişimi
+        bunu düzeltmezse, tıkanıklık yerine nozul/kafa kartından şüphelenin. Bu, kullanıcının ayarlayabileceği
+        bir ayar değil, kart düzeyinde bir elektriksel arızadır.
+  evidence:
+  - url: https://www.lesimprimantes3d.fr/forum/topic/62174-sos-probl%C3%A8me-extrusion-k1/
+    quote: Merci à tous pour vos message, en faites c'était le pcb de la tête. Je l'ai changé et cela
+      refonctionne normalement
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:17:40+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: creality
+      series: ender 3
+  kind: known_issue
+  domain: firmware
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: mainboard firmware (STM32F4)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Flashing custom firmware bricks Ender 3 S1 to splash screen
+      body: On the Ender 3 S1 (STM32F4 SoC), flashing a custom firmware build left the printer stuck on
+        the Creality splash screen; recovery required downgrading to an older Creality build first. This
+        is a variant-specific brick path, not the original Ender 3's 8-bit board.
+      advice: On Ender 3 S1/V2-style STM32F4 boards, a failed custom-firmware flash can leave the machine
+        bricked on the splash screen; keep the official firmware image on an SD card to recover before
+        re-flashing.
+    tr:
+      title: Özel firmware yüklemek Ender 3 S1'i açılış ekranında tuğlaya çeviriyor
+      body: Ender 3 S1'de (STM32F4 SoC), özel bir firmware derlemesi yüklemek yazıcıyı Creality açılış
+        ekranında takılı bıraktı; kurtarma, önce daha eski bir Creality derlemesine düşürmeyi gerektirdi.
+        Bu, orijinal Ender 3'ün 8 bitlik kartı değil, varyanta özgü bir tuğlalama yoludur.
+      advice: Ender 3 S1/V2 tarzı STM32F4 kartlarında, başarısız bir özel firmware yüklemesi makineyi
+        açılış ekranında tuğlaya çevirebilir; yeniden yüklemeden önce kurtarmak için resmi firmware imajını
+        bir SD kartta bulundurun.
+  evidence:
+  - url: https://github.com/mriscoc/Ender3V2S1/discussions/1531?sort=top
+    quote: However trying with this firmware results in it bricking
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:18:56+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: elegoo
+      series: neptune 4 plus
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: heater cartridge / thermistor
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Nozzle temperature runaway to 300°C+ after hotend replacement
+      body: French owner forum thread. After replacing the extruder kit, the nozzle temperature climbed
+        uncontrolled past 300°C until firmware faulted and smoke escaped from the ceramic plate. A forum
+        reply notes the thermistor may be short-circuited. This is a thermal runaway scenario with fire
+        risk.
+      advice: If you replace the hotend, verify the thermistor reads correctly before powering on. An
+        uncontrolled temperature climb past 300°C indicates a shorted thermistor or heater fault — power
+        off immediately.
+    tr:
+      title: Hotend değişiminden sonra nozul sıcaklığı 300°C+ üzerine kontrolsüz yükseliyor
+      body: Fransız sahip forumu konusu. Ekstrüder kitini değiştirdikten sonra nozul sıcaklığı, firmware
+        hata verip seramik plakadan duman çıkana kadar 300°C'nin üzerine kontrolsüz şekilde tırmandı.
+        Bir forum yanıtı termistörün kısa devre yapmış olabileceğini belirtiyor. Bu, yangın riski taşıyan
+        bir termal kaçak senaryosudur.
+      advice: Hotend'i değiştirirseniz, gücü açmadan önce termistörün doğru okuduğunu doğrulayın. 300°C'nin
+        üzerine kontrolsüz sıcaklık tırmanışı, kısa devre yapmış bir termistör veya ısıtıcı arızasına
+        işaret eder — hemen gücü kapatın.
+  evidence:
+  - url: https://www.lesimprimantes3d.fr/forum/topic/62589-la-buse-de-mon-elegoo-neptune-4-plus-chauffe-trop/
+    quote: je me rends compte que la température de la buse monte toute seule en permanence, et à plus
+      de 300°C, jusqu'à ce que le firmware de l'imprimante se mette en défaut et que de la fumée s'échappe
+      de la plaque céramique
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:23:35+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: anycubic
+      series: kobra 3 max
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: extruder / ACE Pro / hotend
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Recurring filament clogging error 11518 after first color change
+      body: 'German owner forum thread: the printer repeatedly threw the filament-clogging error right
+        after the first color change. Cleaning the ACE Pro and the extruder did not clear it; the thread
+        points to checking the hotend. This matches Anycubic''s official 11518 ''Filament clogging detected''
+        error page.'
+      advice: Error 11518 (filament clogging) is a documented, recurring failure that can persist after
+        cleaning the ACE Pro and extruder, sometimes requiring hotend inspection. If you print multi-color,
+        expect this error and budget time for clearing jams.
+    tr:
+      title: İlk renk değişiminden sonra tekrarlayan filament tıkanması hatası 11518
+      body: 'Alman sahibi forum başlığı: yazıcı, ilk renk değişiminden hemen sonra filament tıkanması
+        hatasını tekrar tekrar verdi. ACE Pro ve ekstrüderin temizlenmesi sorunu gidermedi; başlık, hotend''in
+        kontrol edilmesine işaret ediyor. Bu, Anycubic''in resmi 11518 ''Filament clogging detected''
+        hata sayfasıyla örtüşüyor.'
+      advice: Hata 11518 (filament tıkanması), ACE Pro ve ekstrüder temizlendikten sonra da devam edebilen,
+        bazen hotend denetimi gerektiren belgelenmiş, tekrarlayan bir arızadır. Çok renkli baskı yapıyorsanız
+        bu hatayı bekleyin ve tıkanıklıkları gidermek için zaman ayırın.
+  evidence:
+  - url: https://forum.drucktipps3d.de/forum/thread/45327-fehler-an-anycubic-kobra-3-max/?postID=543691
+    quote: Mein Drucker bring mir permanent nach dem Beginn des Druckes und der ersten Farbe die folgende
+      Meldung
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:20:06+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: creality
+      series: ender 3
+  kind: known_issue
+  domain: print_quality
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: extruder (stock Bowden, non-geared)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Stock Bowden extruder motor skips and clogs on Ender 3
+      body: Polymaker's wiki describes the stock original Ender 3's non-geared Bowden extruder as prone
+        to motor skips (clicking) and under-extrusion because the stepper lacks torque; the plastic extruder
+        also cannot have its tension adjusted.
+      advice: Expect extruder clicking and clogs on the stock Ender 3 extruder; a geared or direct-drive
+        extruder upgrade is the standard fix, and print speeds should be kept low (about 40 mm/s with
+        a 0.4 mm nozzle).
+    tr:
+      title: Stok Bowden ekstrüder motoru Ender 3'te atlıyor ve tıkanıyor
+      body: Polymaker'ın wiki'si, stok orijinal Ender 3'ün dişlisiz Bowden ekstrüderini, step motorun
+        torku olmadığı için motor atlamasına (tıklama) ve yetersiz ekstrüzyona yatkın olarak tanımlıyor;
+        plastik ekstrüderin gerginliği de ayarlanamıyor.
+      advice: Stok Ender 3 ekstrüderinde ekstrüder tıklaması ve tıkanıklıklar bekleyin; dişli veya doğrudan
+        tahrikli ekstrüder yükseltmesi standart çözümdür ve baskı hızları düşük tutulmalıdır (0,4 mm nozul
+        ile yaklaşık 40 mm/s).
+  evidence:
+  - url: https://wiki.polymaker.com/printing-tips/common-printing-issues/extruder-motor-skipping-nozzle-clogs
+    quote: If you are using a non-geared extruder, especially one set up in a Bowden fashion – such as
+      a stock original Ender 3, it is likely you will eventually run into extruder motor skips, where
+      you hear a clicking noise coming out of your extruder.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:18:56+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: creality
+      series: ender 3 v3 se
+  kind: known_issue
+  domain: general
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: mainboard / hotend / hotbed
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: After a year of use the Ender 3 V3 SE needed a new motherboard, head plate and hotbed repaint
+      body: 'Verified owner review on the Alza retailer site (query: ''Creality Ender 3 V3 SE reliability
+        forum''). One owner reports that after a year of use the machine required service with a new motherboard,
+        new head plate and a hotbed repaint.'
+      advice: Long-term reliability can require mainboard and hotend replacement within the first year;
+        factor in service cost when budgeting.
+    tr:
+      title: Bir yıllık kullanımdan sonra Ender 3 V3 SE yeni bir anakart, kafa plakası ve ısıtmalı tabla
+        boyası gerektirdi
+      body: 'Alza perakendeci sitesinde doğrulanmış sahip incelemesi (sorgu: ''Creality Ender 3 V3 SE
+        reliability forum''). Bir sahip, bir yıllık kullanımdan sonra makinenin yeni anakart, yeni kafa
+        plakası ve ısıtmalı tabla boyası ile servis gerektirdiğini bildiriyor.'
+      advice: Uzun vadeli güvenilirlik, ilk yıl içinde ana kart ve hotend değişimi gerektirebilir; bütçe
+        yaparken servis maliyetini hesaba katın.
+  evidence:
+  - url: https://m.alza.sk/EN/reviews/creality-ender-3-v3-se-7866275.htm
+    quote: After 1 year complaint. Alza put it in for service. New motherboard, new head plate + hotbed
+      repaint.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:21:09+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: creality
+      series: ender 3 v3 se
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: extruder gear / nozzle
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Worn extruder gear slips under load and combines with a partial nozzle clog
+      body: 'Repair-record case study (query: ''Creality Ender 3 V3 SE extruder clog''). A repairer diagnosed
+        a worn extruder gear slipping under load combined with a partial nozzle clog, and fixed it by
+        replacing the gear, cleaning the hotend and recalibrating E-steps.'
+      advice: The extruder gear is a wear item; a partially clogged nozzle increases load and accelerates
+        gear wear, so a printer that stops extruding may need the gear replaced, not just the nozzle cleared.
+    tr:
+      title: Aşınmış ekstrüder dişlisi yük altında kayıyor ve kısmi nozul tıkanıklığıyla birleşiyor
+      body: 'Onarım kaydı vaka çalışması (sorgu: ''Creality Ender 3 V3 SE extruder clog''). Bir tamirci,
+        yük altında kayan aşınmış bir ekstrüder dişlisinin kısmi nozul tıkanıklığıyla birleştiğini teşhis
+        etti ve dişliyi değiştirip hotend''i temizleyerek ve E-adımlarını yeniden kalibre ederek düzeltti.'
+      advice: Ekstrüder dişlisi bir aşınma parçasıdır; kısmen tıkanmış bir nozul yükü artırır ve dişli
+        aşınmasını hızlandırır, bu nedenle ekstrüzyonu duran bir yazıcıda sadece nozulun temizlenmesi
+        değil, dişlinin de değiştirilmesi gerekebilir.
+  evidence:
+  - url: https://pcmacgicians.co.uk/support-centre/case-studies/creality-ender-3-v3-se-not-extruding-wandsworth/
+    quote: We cleared a partial nozzle clog, replaced the extruder gear, and recalibrated E-steps — same-day
+      fix.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:21:09+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: creality
+      series: ender 3 v3 se
+  kind: known_issue
+  domain: firmware
+  severity: high
+  consequence: ''
+  detection: ''
+  component: mainboard/firmware
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Wrong firmware version for the C13/C14 board revision bricks the Ender 3 V3 SE
+      body: 'Community firmware documentation (query: ''Creality Ender 3 V3 SE firmware update bricked'').
+        The Ender 3 V3 SE ships with two incompatible mainboard revisions (C13/STM32F103 and C14/STM32F401)
+        that need different firmware files and folder layouts; flashing the wrong one causes boot failure
+        or a black/unresponsive screen.'
+      advice: Before any firmware update, identify whether the board is C13 or C14 (via the silkscreen
+        or the About screen), because installing the wrong firmware can brick the printer into a black
+        screen.
+    tr:
+      title: C13/C14 kart revizyonu için yanlış firmware sürümü Ender 3 V3 SE'yi tuğlaya çeviriyor
+      body: 'Topluluk firmware belgeleri (sorgu: ''Creality Ender 3 V3 SE firmware update bricked'').
+        Ender 3 V3 SE, farklı firmware dosyaları ve klasör düzenleri gerektiren iki uyumsuz anakart revizyonuyla
+        (C13/STM32F103 ve C14/STM32F401) gelir; yanlış olanı yüklemek önyükleme hatasına veya siyah/tepkisiz
+        bir ekrana neden olur.'
+      advice: Herhangi bir firmware güncellemesinden önce kartın C13 mü C14 mü olduğunu belirleyin (serigrafi
+        veya Hakkında ekranı aracılığıyla), çünkü yanlış firmware yüklemek yazıcıyı siyah ekrana düşürerek
+        tuğlaya çevirebilir.
+  evidence:
+  - url: https://deepwiki.com/navaismo/Ender-3V3-SE/14.1-installation-issues
+    quote: Installing the wrong firmware version will result in boot failure or unpredictable behavior.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:21:09+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: elegoo
+      series: neptune 4 plus
+  kind: known_issue
+  domain: firmware
+  severity: high
+  consequence: ''
+  detection: ''
+  component: firmware / motherboard (Klipper)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Firmware updated via Fluidd bricks the Neptune 4
+      body: From Elegoo's official wiki. The Neptune 4 series uses a customized Klipper build; updating
+        firmware via Fluidd (rather than Elegoo's official method) is incompatible and can brick the printer.
+        Recovery requires an eMMC adapter and fix pack flashing.
+      advice: Never update Neptune 4 Plus firmware through Fluidd. Use only Elegoo's official firmware
+        update process (fix pack + motherboard + touchscreen firmware). A bricked unit requires hardware
+        recovery via eMMC adapter.
+    tr:
+      title: Fluidd üzerinden güncellenen firmware Neptune 4'ü tuğlaya çeviriyor
+      body: Elegoo'nun resmi wiki'sinden. Neptune 4 serisi özelleştirilmiş bir Klipper yapısı kullanır;
+        firmware'i Fluidd üzerinden (Elegoo'nun resmi yöntemi yerine) güncellemek uyumsuzdur ve yazıcıyı
+        tuğlaya çevirebilir. Kurtarma, bir eMMC adaptörü ve fix pack yüklenmesi gerektirir.
+      advice: Neptune 4 Plus firmware'ini asla Fluidd üzerinden güncellemeyin. Yalnızca Elegoo'nun resmi
+        firmware güncelleme sürecini kullanın (fix pack + anakart + dokunmatik ekran firmware'i). Tuğlaya
+        çevrilmiş bir birim, eMMC adaptörü aracılığıyla donanım kurtarması gerektirir.
+  evidence:
+  - url: http://wiki.elegoo.com/neptune/neptune-4-series-option-serial-insection-mcumustbespecified
+    quote: The firmware is updated via Fluidd. The Neptune 4 series printers are equipped with the customised
+      version of Klipper. Firmware updated via Fluidd is not compatible, which results in the printer
+      becoming bricked.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:17:53+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: elegoo
+      series: neptune 4 max
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: hotend / heatsink
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Nozzle rammed into bed during calibration due to faulty firmware, bending heatsink
+      body: A verified buyer on 3DJake (German) reports that upon arrival, the Neptune 4 Max rammed its
+        nozzle into the print bed during calibration due to faulty Elegoo firmware, bending the heatsink
+        and making the printer unusable out of the box. The owner had to buy a replacement hotend. This
+        came from the 'Elegoo Neptune 4 Max problems thread' search.
+      advice: When first powering on a new Neptune 4 Max, watch the first calibration/homing cycle closely.
+        If the nozzle appears to plunge toward the bed, power off immediately. Consider checking the firmware
+        version before first use.
+    tr:
+      title: Hatalı yazılım nedeniyle kalibrasyon sırasında nozül yatağa çarptı ve soğutucu bloğu büktü
+      body: 3DJake (Almanca) üzerinde doğrulanmış bir alıcı, teslimattan sonra Neptune 4 Max'in hatalı
+        Elegoo yazılımı nedeniyle kalibrasyon sırasında nozülünü baskı yatağına çarptığını, soğutucu bloğu
+        büktüğünü ve yazıcıyı kutudan çıktığı gibi kullanılamaz hale getirdiğini bildiriyor. Sahibi yedek
+        bir hotend satın almak zorunda kaldı. Bu, 'Elegoo Neptune 4 Max problems thread' aramasından geldi.
+      advice: Yeni bir Neptune 4 Max'i ilk kez açtığınızda, ilk kalibrasyon/homing döngüsünü yakından
+        izleyin. Nozül yatağa doğru dalıyormuş gibi görünürse hemen gücü kapatın. İlk kullanımdan önce
+        yazılım sürümünü kontrol etmeyi düşünün.
+  evidence:
+  - url: https://www.3djake.ch/de-CH/bewertungen/elegoo/neptune-4-max
+    quote: Als der Neptune 4 Max ankam, rammte er gleich beim Kalibrieren aufgrund fehlerhafter Firmware
+      von Elegoo die Düse in das Druckbett, verbog die Heatsink und war ab Empfang unbrauchbar.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:22:56+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: creality
+      series: k1c
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: hotend / Teflon tube / nozzle
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: K1C nozzle clogs after printing ABS — filament blocked in hotend/Teflon pipe
+      body: Creality official troubleshooting page for the K1 series, from seed 'Creality K1C extruder
+        clog'. Creality documents that after printing ABS, switching filament can fail because the filament
+        is blocked in the extrusion kit, the Teflon pipe, or the nozzle throat, requiring disassembly
+        to clear.
+      advice: If you print ABS on a K1C, expect hotend clogging when switching materials; the fix involves
+        disassembling the extrusion kit and possibly replacing the blue Teflon tube. Factor in this maintenance
+        when choosing materials.
+    tr:
+      title: K1C nozülü ABS baskıdan sonra tıkanıyor — filament hotend/Teflon boruda bloke
+      body: K1 serisi için Creality resmi sorun giderme sayfası, 'Creality K1C extruder clog' tohumundan.
+        Creality, ABS baskıdan sonra filament değiştirmenin başarısız olabileceğini, çünkü filamentin
+        ekstrüzyon kitinde, Teflon boruda veya nozül boğazında bloke olduğunu ve temizlemek için sökme
+        gerektiğini belgeliyor.
+      advice: Bir K1C'de ABS basarsanız, malzeme değiştirirken hotend tıkanması bekleyin; çözüm ekstrüzyon
+        kitini sökmeyi ve muhtemelen mavi Teflon boruyu değiştirmeyi içerir. Malzeme seçerken bu bakımı
+        hesaba katın.
+  evidence:
+  - url: https://wiki.creality.com/en/k1-flagship-series/k1-max/troubleshooting/hotend-clogging-toubleshooting-after-printing-abs-by-k1-series-machine
+    quote: After printing ABS, try to use other filament and cannot feed.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:22:09+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: anycubic
+      series: kobra 3
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: strain gauge / leveling sensor assembly
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Kobra 3 error 10237: auto-leveling strain gauge sensor failure'
+      body: Anycubic's official wiki documents error 10237, an auto-leveling failure requiring inspection
+        of the strain gauge assembly. The wiki warns that if the hot bed touches the hot end and cannot
+        be paused, the user must immediately power off to avoid damage. This indicates the leveling sensor
+        is a known failure point.
+      advice: If auto-leveling fails with error 10237, the strain gauge assembly may be faulty. The wiki
+        warns of potential damage if the bed contacts the hotend during a sensor failure — power off immediately.
+        Sensor repair requires disassembling the print head housing.
+    tr:
+      title: 'Kobra 3 hata 10237: otomatik seviyelendirme gerinim ölçer sensörü arızası'
+      body: Anycubic'in resmi wiki'si, gerinim ölçer düzeneğinin incelenmesini gerektiren bir otomatik
+        seviyelendirme arızası olan hata 10237'yi belgeliyor. Wiki, sıcak yatak sıcak uca temas ederse
+        ve duraklatılamazsa, kullanıcının hasarı önlemek için hemen gücü kapatması gerektiği konusunda
+        uyarıyor. Bu, seviyelendirme sensörünün bilinen bir arıza noktası olduğunu gösteriyor.
+      advice: Otomatik seviyelendirme hata 10237 ile başarısız olursa, gerinim ölçer düzeneği arızalı
+        olabilir. Wiki, sensör arızası sırasında yatak hotend'e temas ederse olası hasar konusunda uyarıyor
+        — hemen gücü kapatın. Sensör onarımı baskı kafası muhafazasının sökülmesini gerektirir.
+  evidence:
+  - url: https://wiki.anycubic.com/en/error-codes/10237-code/k3
+    quote: If an error occurs during the automatic leveling process, or if there is a problem with the
+      heated bed, we need to further check the status of the strain gauge assembly.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:17:06+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: bambu lab
+      series: a1 mini
+  kind: known_issue
+  domain: firmware
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: TH board / firmware
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Firmware upgrade on A1/A1 mini fails due to TH board mismatch, network, or SD card issues
+      body: Bambu Lab's official wiki documents that firmware upgrades on the A1/A1 mini fail from TH
+        board hardware version mismatch, network/cloud connection problems, insufficient SD card space,
+        cross-version upgrade incompatibility, unplugged TH signal cable, or mainboard/TH board hardware
+        failure.
+      advice: Firmware updates can fail and leave the printer in a bad state. Before updating, ensure
+        the TH board is compatible, SD card has space, and the network is stable; if an upgrade fails
+        after replacing the TH board, the hardware version may be incompatible with the firmware.
+    tr:
+      title: A1/A1 mini'de yazılım yükseltmesi TH kartı uyuşmazlığı, ağ veya SD kart sorunları nedeniyle
+        başarısız oluyor
+      body: Bambu Lab'in resmi wiki'si, A1/A1 mini'de yazılım yükseltmelerinin TH kartı donanım sürümü
+        uyuşmazlığı, ağ/bulut bağlantı sorunları, yetersiz SD kart alanı, sürümler arası yükseltme uyumsuzluğu,
+        takılı olmayan TH sinyal kablosu veya ana kart/TH kartı donanım arızası nedeniyle başarısız olduğunu
+        belgeliyor.
+      advice: Yazılım güncellemeleri başarısız olabilir ve yazıcıyı kötü bir durumda bırakabilir. Güncellemeden
+        önce TH kartının uyumlu olduğundan, SD kartta alan bulunduğundan ve ağın kararlı olduğundan emin
+        olun; TH kartını değiştirdikten sonra bir yükseltme başarısız olursa, donanım sürümü yazılımla
+        uyumsuz olabilir.
+  evidence:
+  - url: https://wiki.bambulab.com/en/a1/troubleshooting/upgrade-failed
+    quote: 'Common reasons for firmware upgrade failure include:
+
+
+      - TH board hardware version mismatch
+
+      - Abnormal connection between printer and cloud network or insufficient storage space on SD card,
+      resulting in firmware download failure.'
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:19:36+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: creality
+      series: ender 3
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: mainboard
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Mainboard fails after about 10 models on Ender 3
+      body: A verified buyer review on the Austrian retailer Alza reports the Ender 3's mainboard probably
+        failed after printing only about 10 models.
+      advice: A small share of owners report the stock mainboard dying early (within a handful of prints);
+        this is a low-probability but high-cost failure that is hard to predict before it happens.
+    tr:
+      title: Ender 3'te yaklaşık 10 modelden sonra ana kart arızalanıyor
+      body: Avusturyalı perakendeci Alza'daki doğrulanmış bir alıcı incelemesi, Ender 3'ün ana kartının
+        muhtemelen yalnızca yaklaşık 10 model bastıktan sonra arızalandığını bildiriyor.
+      advice: Sahiplerin küçük bir kısmı stok ana kartın erken öldüğünü (birkaç baskı içinde) bildiriyor;
+        bu, gerçekleşmeden önce tahmin edilmesi zor, düşük olasılıklı ama yüksek maliyetli bir arızadır.
+  evidence:
+  - url: https://m.alza.at/bewertungen/creality-ender-3-5462906.htm
+    quote: Sie druckte etwa 10 Modelle und die Hauptplatine ging wahrscheinlich kaputt.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:18:56+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: creality
+      series: k1 max
+  kind: known_issue
+  domain: firmware
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: mainboard / firmware
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Creality publishes a USB 'brick recovery' flashing process for the K1 Max
+      body: Creality maintains an official 'brick rescue / line flashing' procedure for the K1 Max, which
+        confirms that firmware-level bricking is a recognized failure mode requiring USB boot flashing
+        to recover.
+      advice: Firmware updates can brick the K1 Max to the point where it needs a USB boot-mode reflash.
+        A buyer should keep the official recovery procedure and firmware image handy before updating,
+        and be prepared for a non-trivial recovery if an update fails.
+    tr:
+      title: Creality, K1 Max için bir USB 'brick recovery' flaşlama süreci yayınlıyor
+      body: Creality, K1 Max için resmi bir 'brick rescue / line flashing' prosedürü sürdürüyor; bu, yazılım
+        düzeyinde brick olmanın kurtarmak için USB önyükleme flaşlaması gerektiren tanınmış bir arıza
+        modu olduğunu doğruluyor.
+      advice: Yazılım güncellemeleri K1 Max'i USB önyükleme modunda yeniden flaşlama gerektirecek noktaya
+        kadar brick edebilir. Bir alıcı, güncellemeden önce resmi kurtarma prosedürünü ve yazılım imajını
+        hazır bulundurmalı ve bir güncelleme başarısız olursa önemsiz olmayan bir kurtarmaya hazır olmalıdır.
+  evidence:
+  - url: https://wiki.creality.com/zh/k1-flagship-series/k1-max/troubleshooting/brick-recovery-and-line-brushing-process
+    quote: 此教程适配于K1系列所有型号主板（除2025系列，刷新之前请确认自己的机器是官方原装固件！）
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:17:40+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: creality
+      series: k1
+  kind: known_issue
+  domain: general
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: auto-leveling / balance pad, first-layer adhesion
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: K1 reliability and first-layer complaints from verified buyers
+      body: Verified-purchase customer reviews on retailer Alza.cz report constant tuning, unreliable
+        auto-leveling, and difficulty getting a good first layer; one unit 'lasted a month' (low endurance).
+      advice: Multiple verified buyers describe the K1 as needing constant tuning and report poor first-layer
+        adhesion and short-lived units. Budget for setup time and possible early failure.
+    tr:
+      title: Doğrulanmış alıcılardan K1 güvenilirliği ve ilk katman şikayetleri
+      body: Perakendeci Alza.cz üzerindeki doğrulanmış satın alma müşteri yorumları sürekli ayar, güvenilmez
+        otomatik seviyelendirme ve iyi bir ilk katman elde etme zorluğu bildiriyor; bir ünite 'bir ay
+        dayandı' (düşük dayanıklılık).
+      advice: Birden fazla doğrulanmış alıcı K1'i sürekli ayar gerektiren olarak tanımlıyor ve zayıf ilk
+        katman yapışması ile kısa ömürlü üniteler bildiriyor. Kurulum süresi ve olası erken arıza için
+        bütçe ayırın.
+  evidence:
+  - url: https://m.alza.cz/EN/reviews/creality-k1-7763628.htm
+    quote: in general, everything from creality looks nice and cheap, but in reality it is a constant
+      tuning and dissatisfaction
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:17:40+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: bambu lab
+      series: a1
+  kind: known_issue
+  domain: firmware
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: firmware / TH board
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: A1 firmware update fails at 32% download with no error code
+      body: A French owner forum thread reports the A1 firmware update stalling at 32% download and failing
+        with no error code. The user lists Bambu wiki causes including TH board hardware version incompatibility,
+        abnormal cloud connection, insufficient SD space, and TH signal cable not connected. Another reply
+        notes the A1 mini firmware update also blocks over Wi-Fi and recommends a local SD-card update.
+      advice: Firmware updates can stall/fail with no error code, leaving the printer unable to update
+        or connect to Bambu Studio. The workaround documented by owners is downloading the firmware and
+        updating offline via microSD. This is a nuisance-level reliability issue, not hardware damage.
+    tr:
+      title: A1 ürün yazılımı güncellemesi indirmede %32'de hata kodu olmadan başarısız oluyor
+      body: Bir Fransız sahip forum başlığı, A1 ürün yazılımı güncellemesinin indirmede %32'de takıldığını
+        ve hata kodu olmadan başarısız olduğunu bildiriyor. Kullanıcı, TH kartı donanım sürümü uyumsuzluğu,
+        anormal bulut bağlantısı, yetersiz SD alanı ve TH sinyal kablosunun bağlı olmaması dahil Bambu
+        wiki nedenlerini listeliyor. Başka bir yanıt, A1 mini ürün yazılımı güncellemesinin de Wi-Fi üzerinden
+        engellendiğini belirtiyor ve yerel SD kart güncellemesi öneriyor.
+      advice: Ürün yazılımı güncellemeleri hata kodu olmadan takılabilir/başarısız olabilir ve yazıcıyı
+        güncelleyemez veya Bambu Studio'ya bağlanamaz halde bırakabilir. Sahipler tarafından belgelenen
+        geçici çözüm, ürün yazılımını indirip microSD ile çevrimdışı güncellemektir. Bu, donanım hasarı
+        değil, can sıkıcı düzeyde bir güvenilirlik sorunudur.
+  evidence:
+  - url: https://www.lesimprimantes3d.fr/forum/topic/65339-echec-maj-a1/
+    quote: évidemment çà bloque a 32% du telechargement et puis "echec de la maj" sans code d'erreur.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:18:37+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: elegoo
+      series: neptune 4 plus
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: extruder / hotend assembly
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Blob of death forces full extruder replacement
+      body: From a Polish professional review (ithardware.pl). Before a firmware update, the printer lost
+        Z-offset settings on power-off, causing poor first layers. When the reviewer forgot to re-level,
+        a 'blob of death' formed around the nozzle, completely clogging the hotend and requiring a full
+        extruder replacement (Elegoo sent a new one under warranty).
+      advice: The Z-offset loss issue was firmware-related and reportedly fixed by updating. But if you
+        see poor first-layer adhesion, fix it before it becomes a blob of death — a full extruder replacement
+        is the cost of ignoring it.
+    tr:
+      title: Ölüm yumağı tam ekstrüder değişimini zorunlu kılıyor
+      body: Bir Polonyalı profesyonel incelemeden (ithardware.pl). Bir ürün yazılımı güncellemesinden
+        önce, yazıcı kapatıldığında Z-offset ayarlarını kaybediyor ve zayıf ilk katmanlara neden oluyordu.
+        İnceleyen kişi yeniden seviyelendirmeyi unuttuğunda, nozul çevresinde bir 'ölüm yumağı' oluştu,
+        hotend'i tamamen tıkadı ve tam ekstrüder değişimi gerektirdi (Elegoo garanti kapsamında yeni bir
+        tane gönderdi).
+      advice: Z-offset kaybı sorunu ürün yazılımıyla ilgiliydi ve bildirildiğine göre güncellemeyle düzeltildi.
+        Ancak zayıf ilk katman yapışması görürseniz, bir ölüm yumağına dönüşmeden önce düzeltin — tam
+        ekstrüder değişimi bunu görmezden gelmenin maliyetidir.
+  evidence:
+  - url: https://ithardware.pl/testyirecenzje/elegoo_neptune_4_plus-34537.html
+    quote: a kiedy o tym zapomniałem występował tzw. blob of death, czyli nabudowanie się filamentu wokół
+      dyszy do tego stopnia, że następuje całkowite zaklejenie jej i elementów dookoła, co w praktyce
+      wymusiło wymianę całego extrudera (element z dyszą i podgrzewaczem filamentu)
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:23:35+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: creality
+      series: ender 3 v3 se
+  kind: known_issue
+  domain: print_quality
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: bed leveling / Z offset
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: First-layer adhesion fails despite auto leveling because the bed is not physically trammed
+      body: 'Owner thread (query: ''Ender 3 V3 SE first layer calibration problems''). Owners report first-layer
+        adhesion gaps despite the automatic leveling; forum replies explain the sensor only compensates
+        for bed flatness and the bed still needs physical tramming, with one owner measuring over half
+        a millimetre of variance.'
+      advice: The auto-leveling sensor does not replace physical bed tramming; expect to manually level
+        the four corners or first-layer quality will suffer.
+    tr:
+      title: Otomatik seviyelendirmeye rağmen ilk katman yapışması başarısız oluyor çünkü tabla fiziksel
+        olarak tesviye edilmemiş
+      body: 'Sahip başlığı (sorgu: ''Ender 3 V3 SE first layer calibration problems''). Sahipler otomatik
+        seviyelendirmeye rağmen ilk katman yapışma boşlukları bildiriyor; forum yanıtları sensörün yalnızca
+        tabla düzlüğünü telafi ettiğini ve tablanın hâlâ fiziksel tesviye gerektirdiğini açıklıyor, bir
+        sahip yarım milimetreden fazla sapma ölçtüğünü belirtiyor.'
+      advice: Otomatik seviyelendirme sensörü fiziksel tabla tesviyesinin yerini almaz; dört köşeyi manuel
+        olarak seviyelendirmeyi bekleyin yoksa ilk katman kalitesi zarar görür.
+  evidence:
+  - url: https://www.lesimprimantes3d.fr/forum/topic/62052-probl%C3%A8mes-dadh%C3%A9rence-de-la-premi%C3%A8re-couche-malgr%C3%A9-le-nivellement-automatique-du-plateau-sur-ender-3-v3-se/
+    quote: Je rencontre des problèmes d'adhérence avec la première couche de mes impressions sur mon Ender
+      3 V3 SE.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:21:09+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: creality
+      series: k1c
+  kind: known_issue
+  domain: general
+  severity: low
+  consequence: ''
+  detection: ''
+  component: filament runout sensor / PTFE tube
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: K1C filament end detector sits 30cm from nozzle — runout leaves filament stuck in tube
+      body: Customer review on Alza.sk for the K1C, from seed 'Creality K1C reliability forum'. A long-term
+        owner describes the filament end detector being 30cm from the nozzle, making runout removal require
+        disassembling the tube, and reports the failed-print detection never worked.
+      advice: The runout sensor placement can make filament changes awkward (disassembling the tube),
+        and failed-print detection reportedly did not work for this owner. Minor but worth knowing if
+        you rely on unattended printing.
+    tr:
+      title: K1C filament uç dedektörü nozuldan 30cm uzakta — bitiş filamentin tüpte sıkışmasına neden
+        oluyor
+      body: Alza.sk üzerinde K1C için müşteri yorumu, 'Creality K1C reliability forum' tohumundan. Uzun
+        süreli bir sahip, filament uç dedektörünün nozuldan 30cm uzakta olduğunu, bunun bitişte filamenti
+        çıkarmak için tüpün sökülmesini gerektirdiğini ve başarısız baskı algılamasının hiç çalışmadığını
+        bildiriyor.
+      advice: Filament bitiş sensörünün konumu filament değişimlerini zahmetli hale getirebilir (tüpün
+        sökülmesi) ve başarısız baskı algılaması bildirildiğine göre bu sahip için çalışmadı. Küçük ama
+        gözetimsiz baskıya güveniyorsanız bilmeye değer.
+  evidence:
+  - url: https://m.alza.sk/EN/reviews/creality-k1c-8602468.htm
+    quote: The filament end detector is 30cm from the nozzle, so even if it could print it won't. Once
+      the filament runs out, it is often necessary to disassemble the tube to remove it.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:22:09+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: creality
+      series: ender 3 v3 ke
+  kind: known_issue
+  domain: firmware
+  severity: low
+  consequence: ''
+  detection: ''
+  component: firmware / slicer G-code
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Error key 2111 'Unknown Exception' at print start on Ender 3 V3 KE
+      body: Creality's own wiki documents a 2111 'Unknown Exception' error at print start, attributed
+        to wrong start G-code or not selecting the Ender-3 V3 KE model in the slicer.
+      advice: A 2111 error at print start is usually a slicer/profile mismatch, not a hardware fault;
+        using the correct model profile and default parameters resolves it.
+    tr:
+      title: Ender 3 V3 KE'de baskı başlangıcında 2111 'Unknown Exception' hata anahtarı
+      body: Creality'nin kendi wiki'si, baskı başlangıcında yanlış başlangıç G-code'una veya dilimleyicide
+        Ender-3 V3 KE modelinin seçilmemesine atfedilen 2111 'Unknown Exception' hatasını belgeliyor.
+      advice: Baskı başlangıcında bir 2111 hatası genellikle donanım arızası değil, dilimleyici/profil
+        uyumsuzluğudur; doğru model profilini ve varsayılan parametreleri kullanmak sorunu çözer.
+  evidence:
+  - url: https://wiki.creality.com/en/ender-series/ender-3-v3-ke/troubleshooting/2111-error-trouble-shooting
+    quote: 'Printing start encountered key: 2111 Unknown Exception.'
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:20:36+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: prusa
+      series: mk4
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: hotend thermistor/heater
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Hotend thermal runaway error #13204 on MK4 (thermistor/heater wiring)'
+      body: Prusa's own knowledge base documents a MK4-specific thermal runaway error (#13204) that stops
+        heating when the nozzle temperature drops 12°C and does not recover within 60s; it is traced to
+        a damaged hotend heater or thermistor and the xBuddy fuse.
+      advice: A buyer should expect a thermal-runaway shutdown to be a real, documented MK4 failure mode.
+        It is safety-critical (heating stops) and the fix is checking/replacing the thermistor, heater,
+        or the hotend fuse on the xBuddy board, which means opening the electronics.
+    tr:
+      title: 'MK4''te Hotend termal kaçak hatası #13204 (termistör/ısıtıcı kablolaması)'
+      body: Prusa'nın kendi bilgi tabanı, nozul sıcaklığı 12°C düştüğünde ve 60s içinde toparlanmadığında
+        ısıtmayı durduran MK4'e özgü bir termal kaçak hatasını (#13204) belgeliyor; bunun kaynağı hasarlı
+        bir hotend ısıtıcısı veya termistörü ile xBuddy sigortasına dayandırılıyor.
+      advice: Bir alıcı, termal kaçak kapanmasının gerçek, belgelenmiş bir MK4 arıza modu olduğunu beklemelidir.
+        Bu güvenlik açısından kritiktir (ısıtma durur) ve çözümü termistörü, ısıtıcıyı veya xBuddy kartındaki
+        hotend sigortasını kontrol etmek/değiştirmektir, bu da elektroniği açmak anlamına gelir.
+  evidence:
+  - url: http://cdn.help.prusa3d.com/ja/article/%e3%83%9b%e3%83%83%e3%83%88%e3%82%a8%e3%83%b3%e3%83%89%e3%81%ae%e7%86%b1%e6%9a%b4%e8%b5%b0-13204-mk4-21204-mk3-9_401076
+    quote: 'Hotend thermal runaway: Check the print head thermistor wiring for potential damage'
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:18:16+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: anycubic
+      series: kobra 3 max
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: print bed / LeviQ 3.0 auto-leveling
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: LeviQ 3.0 auto-leveling damaged the print bed and produced wildly inconsistent first-layer
+        height
+      body: Owner thread (lesimprimantes3d.fr) reporting that two leveling runs physically damaged the
+        print bed on both faces, and that the measured first-layer height oscillated between 0.34 and
+        0.4 mm instead of the set 0.2 mm. This is a physical-damage and accuracy complaint about the auto-leveling
+        system, not a tuning tip.
+      advice: Before buying, expect that the auto-leveling may not hold a consistent first layer and that
+        a leveling run can gouge the bed. Budget for a replacement PEI bed plate and verify first-layer
+        height after every leveling.
+    tr:
+      title: LeviQ 3.0 otomatik seviyelendirme baskı tablasına zarar verdi ve son derece tutarsız ilk
+        katman yüksekliği üretti
+      body: Sahip konusu (lesimprimantes3d.fr), iki seviyelendirme çalışmasının baskı tablasına her iki
+        yüzeyde fiziksel olarak zarar verdiğini ve ölçülen ilk katman yüksekliğinin ayarlanan 0.2 mm yerine
+        0.34 ile 0.4 mm arasında salındığını bildiriyor. Bu, otomatik seviyelendirme sistemi hakkında
+        bir ayar ipucu değil, fiziksel hasar ve doğruluk şikayetidir.
+      advice: Satın almadan önce, otomatik seviyelendirmenin tutarlı bir ilk katmanı koruyamayabileceğini
+        ve bir seviyelendirme çalışmasının tablayı oyabileceğini bekleyin. Yedek bir PEI tabla plakası
+        için bütçe ayırın ve her seviyelendirmeden sonra ilk katman yüksekliğini doğrulayın.
+  evidence:
+  - url: https://www.lesimprimantes3d.fr/forum/topic/62601-kobra-3-max-combo-ou-limpression-davoir-fait-une-erreur/
+    quote: J'ai eu un souci sur un capteur de filament dans le ACE Pro, et un problème sur 2 nivellements
+      qui m'a abimé le plateau (sur les 2 faces et à 2 endroits différents).
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:20:06+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: creality
+      series: ender 3 v3 se
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: bed thermistor
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Bed thermistor false readings trigger spurious Thermal Runaway cancellations
+      body: 'Community firmware thermal-protection documentation (query: ''Ender 3 V3 SE thermal runaway
+        error''). Reports intermittent false readings from the bed thermistor from mid-2024 that halt
+        prints with a Thermal Runaway error even when the temperature is actually stable.'
+      advice: A spurious Thermal Runaway halt is a known failure mode on this model; if the temperature
+        reads stable, suspect the bed thermistor rather than a genuine heater fault.
+    tr:
+      title: Tabla termistörünün yanlış okumaları asılsız Termal Kaçak iptallerini tetikliyor
+      body: 'Topluluk ürün yazılımı termal koruma belgeleri (sorgu: ''Ender 3 V3 SE thermal runaway error'').
+        2024 ortasından itibaren tabla termistöründen gelen aralıklı yanlış okumaların, sıcaklık gerçekte
+        sabit olsa bile baskıları bir Termal Kaçak hatasıyla durdurduğunu bildiriyor.'
+      advice: Asılsız bir Termal Kaçak durdurması bu modelde bilinen bir arıza modudur; sıcaklık sabit
+        okunuyorsa gerçek bir ısıtıcı arızasından çok tabla termistöründen şüphelenin.
+  evidence:
+  - url: https://deepwiki.com/navaismo/Ender-3V3-SE/10.3-thermal-protection
+    quote: Starting from mid-2024, some Ender-3 V3 SE printers experienced intermittent false readings
+      from the bed thermistor, causing unexpected print job cancellations.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:21:09+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: bambu lab
+      series: a1 mini
+  kind: known_issue
+  domain: mechanical
+  severity: low
+  consequence: ''
+  detection: ''
+  component: nozzle / extrusion force sensor
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'A1 series nozzle clumping detection error: nozzle wrapped in filament or build plate placed
+        incorrectly'
+      body: 'Bambu Lab''s official wiki documents the HMS_0300-1A00-0002-0001 error on the A1 mini: the
+        nozzle is wrapped in filament or the build plate is placed incorrectly, detected via the extrusion
+        force sensor (eddy current sensor coil).'
+      advice: The A1 mini can halt prints when filament accumulates on the nozzle and triggers the clumping
+        detection. The official fix is to clean the material off the nozzle and check build plate placement.
+    tr:
+      title: 'A1 serisi nozul topaklanma algılama hatası: nozul filamente sarılmış veya baskı tablası
+        yanlış yerleştirilmiş'
+      body: 'Bambu Lab''in resmi wiki''si A1 mini''deki HMS_0300-1A00-0002-0001 hatasını belgeliyor: nozul
+        filamente sarılmıştır veya baskı tablası yanlış yerleştirilmiştir, ekstrüzyon kuvvet sensörü (eddy
+        akım sensör bobini) aracılığıyla algılanır.'
+      advice: A1 mini, nozul üzerinde filament birikip topaklanma algılamasını tetiklediğinde baskıları
+        durdurabilir. Resmi çözüm, malzemeyi nozuldan temizlemek ve baskı tablası yerleşimini kontrol
+        etmektir.
+  evidence:
+  - url: https://wiki.bambulab.com/en/a1-mini/troubleshooting/hmscode/0300_1A00_0002_0001
+    quote: The nozzle is wrapped in the filament or the build plate is placed incorrectly
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:19:36+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: prusa
+      series: mk4
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: Nextruder drive gear / nozzle / hotend
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Hotend/nozzle clog on MK4 (Nextruder gears skip and grind filament)
+      body: Prusa's own MK4 hotend-clog article explains that a clogged nozzle/hotend makes the Nextruder
+        drive gears skip, producing a clicking sound and grinding the filament; it also notes filament
+        debris builds up in the feed gear grooves over time, causing under-extrusion.
+      advice: Extruder clogging is a documented MK4 failure mode that shows as clicking and ground filament,
+        and the fix involves cleaning the Nextruder gear grooves and clearing the nozzle — routine but
+        hands-on maintenance the buyer should expect.
+    tr:
+      title: MK4'te hotend/nozul tıkanması (Nextruder dişlileri atlıyor ve filamenti öğütüyor)
+      body: Prusa'nın kendi MK4 hotend tıkanması makalesi, tıkanmış bir nozul/hotend'in Nextruder tahrik
+        dişlilerinin atlamasına neden olduğunu, bunun bir tıklama sesi ürettiğini ve filamenti öğüttüğünü
+        açıklıyor; ayrıca filament kalıntılarının zamanla besleme dişli oluklarında birikerek eksik ekstrüzyona
+        neden olduğunu belirtiyor.
+      advice: Ekstrüder tıkanması, tıklama ve öğütülmüş filament olarak kendini gösteren belgelenmiş bir
+        MK4 arıza modudur ve çözümü Nextruder dişli oluklarını temizlemeyi ve nozulu açmayı içerir — alıcının
+        beklemesi gereken rutin ama el emeği gerektiren bir bakım.
+  evidence:
+  - url: https://help.prusa3d.com/es/article/hotend-atascado-mk4_411823
+    quote: El hotend o la boquilla están parcial o totalmente obstruidos y la resistencia interna al flujo
+      del filamento es mayor que la que pueden empujar los engranajes.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:18:16+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: prusa
+      series: mk4
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: Power Panic cable (PSU to xBuddy)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Power Panic error #13321 on MK4 (PP cable from PSU to xBuddy)'
+      body: Prusa documents a MK4-specific Power Panic error (#13321) that appears at initialization when
+        the Power Panic cable running from the power supply to the xBuddy board is damaged, and instructs
+        checking that cable connection.
+      advice: The Power Panic cable is a known electrical failure point that triggers an error at boot;
+        checking it means inspecting the wiring at the PSU and xBuddy board, a simple but real repair
+        a buyer may face.
+    tr:
+      title: 'MK4''te Power Panic hatası #13321 (PSU''dan xBuddy''ye PP kablosu)'
+      body: Prusa, güç kaynağından xBuddy kartına giden Power Panic kablosu hasarlı olduğunda başlatma
+        sırasında ortaya çıkan MK4'e özgü bir Power Panic hatasını (#13321) belgeliyor ve bu kablo bağlantısının
+        kontrol edilmesini talimat veriyor.
+      advice: Power Panic kablosu, açılışta bir hata tetikleyen bilinen bir elektriksel arıza noktasıdır;
+        kontrol etmek, PSU ve xBuddy kartındaki kablolamayı incelemek anlamına gelir, alıcının karşılaşabileceği
+        basit ama gerçek bir onarım.
+  evidence:
+  - url: https://help.prusa3d.com/de/article/power-panic-31321-core-one-35321-core-one-l-26321-mk4s-13321-mk4-27321-mk3-9s-21321-mk3-9-28321-mk3-5s-23321-mk3-5_512257
+    quote: Sollte das Kabel beschädigt sein, zeigt der Drucker "Power Panic wurde während der Druckerinitialisierung
+      erkannt. Überprüfen Sie die Verdrahtung des PP-Kabels."
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:18:16+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: creality
+      series: k1c
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: X-axis linear rod / graphite copper sleeve
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: K1C X-axis graphite sleeve wears into black sticky residue causing layer lines and lost steps
+      body: Creality official maintenance guide for the K1C, from seed 'Creality K1C common problems'.
+        Creality states the X-axis graphite copper sleeve builds a black sticky substance over time, increasing
+        drag and causing layer lines, misalignment, and lost steps.
+      advice: This is a wear item the manufacturer says needs cleaning every ~300 print hours. If you
+        buy a K1C, plan for regular X-axis rod cleaning and lubrication, or you may see layer lines and
+        skipped steps as the machine ages.
+    tr:
+      title: K1C X ekseni grafit burcu, katman çizgilerine ve kayıp adımlara neden olan siyah yapışkan
+        kalıntıya dönüşüyor
+      body: K1C için Creality resmi bakım kılavuzu, 'Creality K1C common problems' tohumundan. Creality,
+        X ekseni grafit bakır burcunun zamanla siyah yapışkan bir madde oluşturduğunu, sürtünmeyi artırdığını
+        ve katman çizgilerine, hizasızlığa ve kayıp adımlara neden olduğunu belirtiyor.
+      advice: Bu, üreticinin yaklaşık her ~300 baskı saatinde bir temizlenmesi gerektiğini söylediği bir
+        aşınma parçasıdır. Bir K1C alırsanız, düzenli X ekseni çubuk temizliği ve yağlaması planlayın,
+        aksi takdirde makine yaşlandıkça katman çizgileri ve atlanan adımlar görebilirsiniz.
+  evidence:
+  - url: https://wiki.creality.com/zh/k1-flagship-series/k1c/maintenance-tips
+    quote: X 轴上使用了石墨铜套，长时间使用会在表面产生黑色粘性物质，造成运行阻力大，从而引起层纹，错位，丢步等问题。
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:22:09+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: creality
+      series: k1
+  kind: known_issue
+  domain: firmware
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: mainboard firmware (Ingenic SoC, boot/reset buttons)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: K1 firmware can be bricked; official wire-flash recovery procedure
+      body: Creality's own wiki publishes a 'brick rescue / wire-flash' procedure for the K1 series, which
+        is official acknowledgement that the firmware can be bricked and must be recovered by flashing
+        the board over USB.
+      advice: Creality maintains a wire-flash recovery procedure for bricked K1 units, so a bad firmware
+        update is recoverable but requires opening the machine and flashing the mainboard. Treat firmware
+        updates as risky and follow the official recovery path if it fails.
+    tr:
+      title: K1 yazılımı tuğlaya dönebilir; resmi kablo-flaş kurtarma prosedürü
+      body: Creality'nin kendi wiki'si K1 serisi için bir 'brick rescue / wire-flash' prosedürü yayınlıyor;
+        bu, yazılımın tuğlaya dönebileceğinin ve kartın USB üzerinden flaşlanarak kurtarılması gerektiğinin
+        resmi kabulüdür.
+      advice: Creality, tuğlaya dönmüş K1 birimleri için bir kablo-flaş kurtarma prosedürü sürdürüyor,
+        bu nedenle kötü bir yazılım güncellemesi kurtarılabilir ancak makinenin açılmasını ve ana kartın
+        flaşlanmasını gerektirir. Yazılım güncellemelerini riskli olarak değerlendirin ve başarısız olursa
+        resmi kurtarma yolunu izleyin.
+  evidence:
+  - url: https://wiki.creality.com/zh/k1-flagship-series/k1-max/troubleshooting/brick-recovery-and-line-brushing-process
+    quote: 此教程适配于K1系列所有型号主板（除2025系列，刷新之前请确认自己的机器是官方原装固件！）
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:17:40+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: bambu lab
+      series: a1
+  kind: known_issue
+  domain: firmware
+  severity: high
+  consequence: ''
+  detection: ''
+  component: firmware / heatbed software fuse
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: A1 firmware 'software fuse' disables printer (bricked reports) during heatbed recall
+      body: Fabbaloo reports that during the A1 heatbed cable recall, a firmware update introduced a 'software
+        fuse' that stops the heatbed from heating if unexpected temperature changes are detected. Some
+        operators report their machines becoming 'bricked', including one disabled after pausing mid-print.
+        Bambu's response (quoted in the article) says it is not a printer lock but a temporary heatbed
+        stop that can be re-enabled with a file.
+      advice: A firmware update can disable the A1's heatbed (appearing as a bricked machine) if it detects
+        unexpected thermal readings, including from a routine pause. If buying, be aware that firmware
+        updates during the recall period carry this behavior; if owning, expect that a software-fuse trigger
+        requires re-enabling and may be tied to the recall.
+    tr:
+      title: A1 yazılımındaki 'software fuse', ısıtmalı tabla geri çağırma sürecinde yazıcıyı devre dışı
+        bırakıyor (tuğlaya döndü bildirimleri)
+      body: Fabbaloo, A1 ısıtmalı tabla kablo geri çağırma sürecinde bir yazılım güncellemesinin, beklenmeyen
+        sıcaklık değişiklikleri algılanırsa ısıtmalı tablanın ısınmasını durduran bir 'software fuse'
+        getirdiğini bildiriyor. Bazı operatörler makinelerinin 'bricked' hale geldiğini bildiriyor; bunlardan
+        biri baskı ortasında duraklatıldıktan sonra devre dışı kalmış. Bambu'nun yanıtı (makalede alıntılanan)
+        bunun bir yazıcı kilidi değil, bir dosyayla yeniden etkinleştirilebilen geçici bir ısıtmalı tabla
+        durdurması olduğunu söylüyor.
+      advice: Bir yazılım güncellemesi, beklenmeyen termal okumalar algılarsa (rutin bir duraklatma dahil),
+        A1'in ısıtmalı tablasını devre dışı bırakabilir (tuğlaya dönmüş makine olarak görünür). Satın
+        alıyorsanız, geri çağırma dönemindeki yazılım güncellemelerinin bu davranışı taşıdığını bilin;
+        sahipseniz, bir software-fuse tetiklenmesinin yeniden etkinleştirme gerektireceğini ve geri çağırmayla
+        bağlantılı olabileceğini bekleyin.
+  evidence:
+  - url: https://www.fabbaloo.com/news/bambu-lab-implements-firmware-safety-measures-amid-a1-3d-printer-recall
+    quote: Some operators are reporting their machines become “bricked”.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:18:37+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: creality
+      series: ender 3
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: hotend thermistor
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: MAXTEMP E1 error on Ender 3 hotend after hotend swap
+      body: An owner reports MAXTEMP E1 printer-halted at 200 °C on an Ender 3 with a new hotend; the
+        reply identifies a shorted/open temp sensor or thermal runaway as the cause.
+      advice: A MAXTEMP E1 halt on the Ender 3 usually means the thermistor circuit is faulty (short or
+        open) — verify the thermistor reading and wiring before assuming the board is dead.
+    tr:
+      title: Hotend değişiminden sonra Ender 3 hotend'inde MAXTEMP E1 hatası
+      body: Bir sahip, yeni bir hotend takılı Ender 3'te 200 °C'de MAXTEMP E1 printer-halted bildiriyor;
+        yanıt, neden olarak kısa devre yapmış/açık bir sıcaklık sensörünü veya termal kaçakmayı işaret
+        ediyor.
+      advice: Ender 3'te bir MAXTEMP E1 durması genellikle termistör devresinin arızalı olduğu (kısa devre
+        veya açık) anlamına gelir — kartın ölü olduğunu varsaymadan önce termistör okumasını ve kablolamayı
+        doğrulayın.
+  evidence:
+  - url: https://linustechtips.com/topic/1597204-ender-3/
+    quote: Im getting an error maxtemp e1 printer halted when im tring to load filliment as the print
+      head reaches 200.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:18:56+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: creality
+      series: k1c
+  kind: known_issue
+  domain: general
+  severity: high
+  consequence: ''
+  detection: ''
+  component: whole unit (extruder/filament lock)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: K1C 2025 repeatedly malfunctioned — three service visits, returned still faulty
+      body: Customer review on Alza.cz for the K1C 2025, from seed 'Creality K1C reliability forum'. A
+        verified buyer reports the printer repeatedly malfunctioned from purchase, needed three service
+        visits, and kept coming back faulty.
+      advice: A verified owner reports a K1C 2025 that never worked reliably despite three service visits.
+        Reliability can be a lottery; if you buy one, buy from a seller with a solid return/warranty path
+        and test it immediately.
+    tr:
+      title: K1C 2025 tekrar tekrar arızalandı — üç servis ziyareti, hâlâ arızalı olarak iade edildi
+      body: Alza.cz'de K1C 2025 için müşteri incelemesi, 'Creality K1C reliability forum' tohumundan.
+        Doğrulanmış bir alıcı, yazıcının satın alımdan itibaren tekrar tekrar arızalandığını, üç servis
+        ziyareti gerektiğini ve sürekli arızalı olarak geri geldiğini bildiriyor.
+      advice: Doğrulanmış bir sahip, üç servis ziyaretine rağmen hiç güvenilir çalışmayan bir K1C 2025
+        bildiriyor. Güvenilirlik bir şans oyunu olabilir; bir tane alırsanız, sağlam bir iade/garanti
+        yoluna sahip bir satıcıdan alın ve hemen test edin.
+  evidence:
+  - url: https://m.alza.cz/EN/reviews/creality-k1c-2025-new-version-13101220.htm
+    quote: 'The printer has repeatedly malfunctioned right from the moment of purchase: 1. Service: The
+      new printer managed to print only 3 products before it was taken in for service.'
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:22:09+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: prusa
+      series: mk4
+  kind: known_issue
+  domain: print_quality
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: first-layer calibration / Z-offset
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Recurring first-layer too low / auto-leveling calibration issue on MK4
+      body: A French owner reports a recurring MK4 problem where the automatic first-layer leveling consistently
+        prints the first layer too low, persisting across recalibrations, firmware updates, nozzle changes,
+        and belt adjustments; raising Z manually by 0.010mm visibly fixes it.
+      advice: This is an owner-reported first-layer calibration defect that resists Prusa's own support
+        and normal recalibration, so a buyer may have to live with manual Z-offset tweaks per print or
+        chase the issue with Prusa support.
+    tr:
+      title: MK4'te tekrarlayan ilk katman çok düşük / otomatik seviyeleme kalibrasyon sorunu
+      body: Fransız bir sahip, MK4'te otomatik ilk katman seviyelemesinin ilk katmanı sürekli olarak çok
+        düşük bastığı, yeniden kalibrasyonlar, yazılım güncellemeleri, nozul değişimleri ve kayış ayarlamaları
+        boyunca devam eden tekrarlayan bir sorun bildiriyor; Z'yi manuel olarak 0,010mm yükseltmek bunu
+        görünür şekilde düzeltiyor.
+      advice: Bu, Prusa'nın kendi desteğine ve normal yeniden kalibrasyona direnen, sahip tarafından bildirilen
+        bir ilk katman kalibrasyon kusurudur, bu nedenle bir alıcı her baskı için manuel Z-offset ayarlamalarıyla
+        yaşamak veya sorunu Prusa desteğiyle takip etmek zorunda kalabilir.
+  evidence:
+  - url: https://www.lesimprimantes3d.fr/forum/topic/61592-mk4-premi%C3%A8re-couche-trop-basse/
+    quote: j'ai un problème récurrent avec le nivellement automatique de la première couche sur ma Prusa
+      MK4, la première couche est systématiquement trop basse.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:18:16+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: elegoo
+      series: neptune 4
+  kind: known_issue
+  domain: firmware
+  severity: high
+  consequence: ''
+  detection: ''
+  component: motherboard firmware (custom Klipper)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Neptune 4 firmware updated via Fluidd bricks the printer (official Elegoo wiki)
+      body: 'Elegoo''s own wiki states that updating the Neptune 4 series firmware through Fluidd is incompatible
+        and bricks the printer. Recovery is not trivial: it needs an eMMC adapter, a USB drive, a TF card
+        and a fix pack flash. This is the highest-consequence firmware risk on the machine.'
+      advice: Never update Neptune 4 firmware through Fluidd; use only Elegoo's official fix-pack and
+        firmware update procedure. A bricked unit requires eMMC-level recovery, not a simple reflash.
+    tr:
+      title: Fluidd üzerinden güncellenen Neptune 4 yazılımı yazıcıyı tuğlaya çeviriyor (resmi Elegoo
+        wiki)
+      body: 'Elegoo''nun kendi wiki''si, Neptune 4 serisi yazılımını Fluidd üzerinden güncellemenin uyumsuz
+        olduğunu ve yazıcıyı tuğlaya çevirdiğini belirtiyor. Kurtarma kolay değil: bir eMMC adaptörü,
+        bir USB sürücü, bir TF kart ve bir fix pack flash gerektiriyor. Bu, makinedeki en yüksek sonuçlu
+        yazılım riskidir.'
+      advice: Neptune 4 yazılımını asla Fluidd üzerinden güncellemeyin; yalnızca Elegoo'nun resmi fix-pack
+        ve yazılım güncelleme prosedürünü kullanın. Tuğlaya dönmüş bir birim, basit bir yeniden flash
+        değil, eMMC düzeyinde kurtarma gerektirir.
+  evidence:
+  - url: http://wiki.elegoo.com/neptune/neptune-4-series-option-serial-insection-mcumustbespecified
+    quote: Firmware updated via Fluidd is not compatible, which results in the printer becoming bricked.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:17:53+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: creality
+      series: k1 max
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: extrusion kit / Teflon tube / nozzle throat
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Extruder clogging and filament feed failure are documented failure modes on the K1 Max
+      body: Creality's own troubleshooting wiki lists clogging of the extruder front shell, the Teflon
+        tube, the throat and the nozzle as the standard 'no filament out' failure modes, with a multi-step
+        teardown to clear them.
+      advice: A buyer should expect the extruder/hotend to clog and require disassembly (removing the
+        extrusion kit, cleaning the drive gear, clearing the Teflon tube/throat) to clear. This is a documented,
+        recurring maintenance task, not a one-off defect.
+    tr:
+      title: Ekstrüder tıkanması ve filament besleme hatası, K1 Max'te belgelenmiş arıza modlarıdır
+      body: Creality'nin kendi sorun giderme wiki'si, ekstrüder ön kabuğunun, Teflon borunun, boğazın
+        ve nozulun tıkanmasını standart 'filament çıkmıyor' arıza modları olarak listeliyor ve bunları
+        temizlemek için çok adımlı bir sökme işlemi sunuyor.
+      advice: Bir alıcı, ekstrüder/hotend'in tıkanacağını ve temizlemek için sökme (ekstrüzyon kitini
+        çıkarma, tahrik dişlisini temizleme, Teflon boruyu/boğazı açma) gerektireceğini beklemelidir.
+        Bu, tek seferlik bir kusur değil, belgelenmiş, tekrarlayan bir bakım görevidir.
+  evidence:
+  - url: https://wiki.creality.com/zh/k1-flagship-series/k1-max/troubleshooting/filament-feed-issue
+    quote: '- 堵挤出机前壳
+
+
+      - 堵挤出机中的铁氟龙管
+
+
+      - 堵喉管
+
+      - 堵喷嘴或者漏料'
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:21:49+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: creality
+      series: ender 3 v3 ke
+  kind: known_issue
+  domain: firmware
+  severity: low
+  consequence: ''
+  detection: ''
+  component: OTA firmware update
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: OTA firmware update fails on Ender 3 V3 KE ("Echec de l'installation")
+      body: An owner reports the over-the-air firmware update repeatedly failing with an installation
+        error on screen; the thread's resolution was to flash the same firmware from a USB stick instead,
+        which succeeded.
+      advice: OTA updates can fail and leave you on an older firmware version; the workaround is a USB-stick
+        flash, so this is an annoyance rather than a bricking risk.
+    tr:
+      title: OTA yazılım güncellemesi Ender 3 V3 KE'de başarısız oluyor ("Echec de l'installation")
+      body: Bir sahip, ekranda kurulum hatasıyla kablosuz yazılım güncellemesinin tekrar tekrar başarısız
+        olduğunu bildiriyor; konunun çözümü, aynı yazılımı bunun yerine bir USB bellekten flash etmek
+        oldu ve bu başarılı oldu.
+      advice: OTA güncellemeleri başarısız olabilir ve sizi daha eski bir yazılım sürümünde bırakabilir;
+        geçici çözüm bir USB bellek flash'ıdır, yani bu bir tuğlaya dönme riski değil, bir sıkıntıdır.
+  evidence:
+  - url: https://www.lesimprimantes3d.fr/forum/topic/63254-ender-3-v3-ke-mise-%C3%A0-jour-impossible/
+    quote: lorsque je tente de la faire directement en OTA sur l'imprimante "Echec de l'installation"
+      en rouge sur l'écran de l'imprimante.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:20:36+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: creality
+      series: ender 3
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: extruder lever (plastic)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Stock plastic extruder lever breaks on Ender 3
+      body: A verified buyer reports the stock plastic extruder lever broke after ~1700 hours of printing,
+        and that the metal replacement lever over-tightened the filament, so the replacement is not a
+        drop-in fix.
+      advice: The original Ender 3's plastic extruder lever is a known wear part that cracks over time;
+        if replacing it, the metal lever needs tension adjustment or it will grind the filament.
+    tr:
+      title: Ender 3'te stok plastik ekstrüder kolu kırılıyor
+      body: Doğrulanmış bir alıcı, stok plastik ekstrüder kolunun yaklaşık 1700 saatlik baskıdan sonra
+        kırıldığını ve metal yedek kolun filamenti fazla sıktığını, dolayısıyla yedeğin doğrudan yerine
+        takılan bir çözüm olmadığını bildiriyor.
+      advice: Orijinal Ender 3'ün plastik ekstrüder kolu, zamanla çatlayan bilinen bir aşınma parçasıdır;
+        değiştirirken metal kol, gerginlik ayarı gerektirir yoksa filamenti öğütür.
+  evidence:
+  - url: https://m.alza.at/bewertungen/creality-ender-3-5462906.htm
+    quote: Mein Extruderhebel ist gebrochen und der Nachrüsthebel aus Metall drückte das Filament zu sehr
+      als der originale Kunststoffhebel.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:18:56+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: prusa
+      series: mk4
+  kind: known_issue
+  domain: firmware
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: internal flash / firmware
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Firmware corruption error #13608 on MK4 (internal flash)'
+      body: Prusa documents a MK4-specific 'FW in internal flash corrupted' error (#13608) that appears
+        when a firmware flash fails, leaving the printer unable to boot normally; recovery requires reflashing
+        firmware/bootloader from a FAT32 USB drive.
+      advice: A firmware update that fails can leave the MK4 showing this error and needing a manual USB
+        reflash. It is recoverable but requires a PC, a FAT32 USB stick, and following Prusa's reflash
+        procedure, so a buyer should be comfortable with that.
+    tr:
+      title: 'MK4''te yazılım bozulma hatası #13608 (dahili flash)'
+      body: Prusa, bir yazılım flash'ı başarısız olduğunda ortaya çıkan ve yazıcıyı normal şekilde önyükleyemez
+        bırakan MK4'e özgü bir 'FW in internal flash corrupted' hatasını (#13608) belgeliyor; kurtarma,
+        yazılımı/önyükleyiciyi bir FAT32 USB sürücüden yeniden flash etmeyi gerektirir.
+      advice: Başarısız olan bir yazılım güncellemesi, MK4'ü bu hatayı gösterir halde bırakabilir ve manuel
+        bir USB yeniden flash'ı gerektirebilir. Kurtarılabilir, ancak bir PC, bir FAT32 USB bellek ve
+        Prusa'nın yeniden flash prosedürünü izlemeyi gerektirir, bu yüzden bir alıcı bununla rahat olmalıdır.
+  evidence:
+  - url: http://cdn.help.prusa3d.com/ja/article/%e5%86%85%e8%94%b5%e3%83%a1%e3%83%a2%e3%83%aa%e5%86%85%e3%81%aefw%e3%81%8c%e7%a0%b4%e6%90%8d%e3%81%97%e3%81%a6%e3%81%84%e3%81%be%e3%81%99-13608-mk4-21608-mk3-9-23608-mk3-5_401125
+    quote: Firmware in the internal flash corrupted! Please reflash the firmware.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:18:16+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: creality
+      series: k1c
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: extruder assembly
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: K1C extruder jams at filament entry on a new unit — replacement extruder needed
+      body: Owner forum thread (lesimprimantes3d.fr), from seed 'Creality K1C extruder clog'. A new K1C
+        could not feed the supplied PLA filament, which blocked at the extruder entry; the owner ended
+        up getting a replacement extruder from the seller.
+      advice: Filament can jam at the extruder entry even on a new machine, and the fix can mean a full
+        extruder swap. Budget for the possibility of an early extruder failure and check the PTFE tube
+        and lever before assuming it is a slicer issue.
+    tr:
+      title: K1C ekstrüderi yeni bir birimde filament girişinde sıkışıyor — yedek ekstrüder gerekli
+      body: Sahip forum konusu (lesimprimantes3d.fr), 'Creality K1C extruder clog' tohumundan. Yeni bir
+        K1C, verilen PLA filamenti besleyemedi ve filament ekstrüder girişinde tıkandı; sahip sonunda
+        satıcıdan yedek bir ekstrüder aldı.
+      advice: Filament, yeni bir makinede bile ekstrüder girişinde sıkışabilir ve çözüm tam bir ekstrüder
+        değişimi anlamına gelebilir. Erken bir ekstrüder arızası olasılığı için bütçe ayırın ve bunun
+        bir dilimleyici sorunu olduğunu varsaymadan önce PTFE boruyu ve kolu kontrol edin.
+  evidence:
+  - url: https://www.lesimprimantes3d.fr/forum/topic/60277-extrudeur-k1c/
+    quote: le filament (celui fourni avec ) reste bloqué disons à l'entrée de l'extrudeur, j'ai un peu
+      forcé, j'entends le mécanisme mais rien...
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:22:09+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: bambu lab
+      series: a1
+  kind: known_issue
+  domain: print_quality
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: hotend / nozzle clumping
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: A1 hotend clumping / nozzle blob denied warranty replacement by Bambu
+      body: An Italian consumer complaint (Altroconsumo) documents a hotend clumping issue on the A1 where
+        Bambu denied a replacement, attributing the nozzle clumping to poor filament-heatbed adhesion,
+        non-standard filament, and the Nozzle Clumping Detection feature being disabled. Bambu offered
+        inspection/repair under warranty instead of replacement.
+      advice: Hotend clumping (a blob wrapping the nozzle) is a reported A1 failure mode, but Bambu may
+        attribute it to user factors (adhesion, filament, disabled clumping detection) and deny replacement,
+        offering repair instead. Owners should keep the Nozzle Clumping Detection feature enabled to protect
+        warranty claims.
+    tr:
+      title: A1 hotend topaklanması / nozul yumağı için Bambu tarafından garanti değişimi reddedildi
+      body: Bir İtalyan tüketici şikayeti (Altroconsumo), A1'de bir hotend topaklanma sorununu belgeliyor;
+        Bambu, nozul topaklanmasını zayıf filament-sıcak yatak yapışmasına, standart dışı filamente ve
+        Nozzle Clumping Detection özelliğinin devre dışı bırakılmasına bağlayarak değişim talebini reddetti.
+        Bambu, değişim yerine garanti kapsamında inceleme/onarım teklif etti.
+      advice: Hotend topaklanması (nozulu saran bir yumak), bildirilen bir A1 arıza modudur, ancak Bambu
+        bunu kullanıcı faktörlerine (yapışma, filament, devre dışı bırakılmış topaklanma algılama) bağlayabilir
+        ve değişimi reddederek bunun yerine onarım teklif edebilir. Sahipler, garanti taleplerini korumak
+        için Nozzle Clumping Detection özelliğini etkin tutmalıdır.
+  evidence:
+  - url: https://www.altroconsumo.it/reclamare/bacheca-dei-reclami/problema-con-garanzia-bambu-la/a7ee6f8d9eeb778218
+    quote: we have determined that the nozzle clumping was primarily caused by poor adhesion between the
+      filament and the heatbed.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:18:37+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: bambu lab
+      series: a1 mini
+  kind: known_issue
+  domain: firmware
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: toolhead board (TH board) / accelerometer
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Accelerometer data error on A1 mini linked to toolhead board firmware upgrade failure
+      body: Bambu Lab's official error documentation states the A1 mini's HMS_0300-0F00-0001-0001 error
+        (abnormal accelerometer data) can be caused by a toolhead board firmware that was not successfully
+        upgraded, alongside high CPU load or a broken toolhead-to-MC-board connection.
+      advice: If the A1 mini shows the accelerometer data error, a failed TH board firmware upgrade may
+        be the cause. The official fix includes restarting, re-seating the USB-C cable between toolhead
+        and mainboard, and re-running the firmware update.
+    tr:
+      title: A1 mini'de ivmeölçer veri hatası, toolhead kartı ürün yazılımı yükseltme hatasıyla ilişkilendirildi
+      body: Bambu Lab'in resmi hata belgeleri, A1 mini'nin HMS_0300-0F00-0001-0001 hatasının (anormal
+        ivmeölçer verisi) yüksek CPU yükü veya toolhead ile MC kartı arasındaki kopuk bağlantının yanı
+        sıra başarıyla yükseltilmemiş bir toolhead kartı ürün yazılımından kaynaklanabileceğini belirtir.
+      advice: A1 mini ivmeölçer veri hatasını gösteriyorsa, başarısız bir TH kartı ürün yazılımı yükseltmesi
+        nedeni olabilir. Resmi düzeltme, yeniden başlatmayı, toolhead ile ana kart arasındaki USB-C kablosunu
+        yeniden takmayı ve ürün yazılımı güncellemesini yeniden çalıştırmayı içerir.
+  evidence:
+  - url: https://wiki.bambulab.com/en/a1mini/troubleshooting/hmscode/0300_0f00_0001_0001
+    quote: The toolhead board（TH board） firmware hasn't been successfully upgraded.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:19:36+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: anycubic
+      series: kobra 3
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: NTC thermistor / print head temperature sensor
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Kobra 3 error 10124: print head NTC thermistor signal failure stops heating'
+      body: Anycubic's official wiki documents error 10124, where the printer detects abnormal NTC thermistor
+        resistance/signal and stops heating. The wiki warns that forcing heating with a faulty NTC could
+        cause temperature runaway and damage the print head. This is a protective shutdown but leaves
+        the printer unusable until the sensor or cabling is fixed.
+      advice: If error 10124 appears, the printer will refuse to heat. Check the NTC ribbon cable and
+        print head connector first; if the sensor itself is faulty it must be replaced (NTC 100K). Do
+        not bypass the protection.
+    tr:
+      title: 'Kobra 3 hata 10124: baskı kafası NTC termistör sinyal arızası ısıtmayı durduruyor'
+      body: Anycubic'in resmi wiki'si, yazıcının anormal NTC termistör direnci/sinyali algıladığı ve ısıtmayı
+        durdurduğu hata 10124'ü belgeliyor. Wiki, arızalı bir NTC ile ısıtmayı zorlamanın sıcaklık kaçmasına
+        ve baskı kafasının hasar görmesine yol açabileceği konusunda uyarıyor. Bu koruyucu bir kapanmadır
+        ancak sensör veya kablolama düzeltilene kadar yazıcıyı kullanılamaz bırakır.
+      advice: Hata 10124 görünürse, yazıcı ısıtmayı reddedecektir. Önce NTC şerit kablosunu ve baskı kafası
+        konektörünü kontrol edin; sensörün kendisi arızalıysa değiştirilmelidir (NTC 100K). Korumayı atlamayın.
+  evidence:
+  - url: https://wiki.anycubic.com/zh/error-codes/10124-code/k3
+    quote: 打印机检测到打印头 NTC（温度传感器）的阻值/信号异常，无法读取有效的喷嘴温度，设备会停止加热并弹出报错提示。
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:17:06+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: creality
+      series: ender 3
+  kind: known_issue
+  domain: mechanical
+  severity: low
+  consequence: ''
+  detection: ''
+  component: bed leveling springs
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Weak bed springs force frequent re-leveling on Ender 3
+      body: A verified buyer notes the print bed periodically needs re-calibration because of poor spring
+        quality — a first-layer calibration failure mode the pack tracks.
+      advice: Budget for better bed springs or a leveling upgrade; the stock springs let the bed drift
+        out of level, causing first-layer failures that are mistaken for bigger problems.
+    tr:
+      title: Zayıf yatak yayları Ender 3'te sık sık yeniden seviyeleme gerektiriyor
+      body: Doğrulanmış bir alıcı, zayıf yay kalitesi nedeniyle baskı yatağının periyodik olarak yeniden
+        kalibre edilmesi gerektiğini belirtiyor — paketin izlediği bir ilk katman kalibrasyon arıza modu.
+      advice: Daha iyi yatak yayları veya bir seviyeleme yükseltmesi için bütçe ayırın; stok yaylar yatağın
+        seviyesinin kaymasına izin vererek, daha büyük sorunlarla karıştırılan ilk katman arızalarına
+        neden olur.
+  evidence:
+  - url: https://m.alza.at/bewertungen/creality-ender-3-5462906.htm
+    quote: Manchmal muss der Druckbereich neu kalibriert werden (schlechte Qualität der Federn)
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:18:56+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: creality
+      series: ender 3 v3 ke
+  kind: known_issue
+  domain: firmware
+  severity: high
+  consequence: ''
+  detection: ''
+  component: firmware / Klipper update
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Klipper update via Fluidd froze the Ender 3 V3 KE screen (brick-like state)
+      body: An owner updated Klipper through the Fluidd interface and the printer froze on the boot screen,
+        with Klipper inaccessible and a USB firmware update not taking; the thread ends with a factory-reset
+        method restoring the machine.
+      advice: A failed or interrupted firmware/Klipper update can leave the machine stuck on the boot
+        screen; recovery needs a factory reset or the official wire-flash (brick rescue) procedure, so
+        keep the recovery toolchain in mind before updating.
+    tr:
+      title: Fluidd üzerinden Klipper güncellemesi Ender 3 V3 KE ekranını dondurdu (tuğla benzeri durum)
+      body: Bir sahip Klipper'ı Fluidd arayüzü üzerinden güncelledi ve yazıcı açılış ekranında dondu;
+        Klipper'e erişilemedi ve bir USB ürün yazılımı güncellemesi alınmadı; konu, makineyi geri yükleyen
+        bir fabrika sıfırlama yöntemiyle sona eriyor.
+      advice: Başarısız veya kesintiye uğramış bir ürün yazılımı/Klipper güncellemesi makineyi açılış
+        ekranında takılı bırakabilir; kurtarma, fabrika sıfırlaması veya resmi kablo-flaş (tuğla kurtarma)
+        prosedürünü gerektirir, bu nedenle güncellemeden önce kurtarma araç zincirini aklınızda bulundurun.
+  evidence:
+  - url: https://www.lesimprimantes3d.fr/forum/topic/57003-boulette-suite-maj-ender-3-v3-ke-firmware-11012-root%C3%A9-plantage-suite-mise-a-jour-de-klipper-via-linterface-fluidd/
+    quote: Mais depuis mon ecran reste figé sur DEMARRAGE DE LA MACJINE EN COURS
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:20:36+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: elegoo
+      series: neptune 4 max
+  kind: known_issue
+  domain: print_quality
+  severity: low
+  consequence: ''
+  detection: ''
+  component: hotbed
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Printer crashed due to insufficient hotbed heating in 19°C room
+      body: An Alza.cz verified buyer reports the printer crashed once because the platen could not reach
+        its target temperature in a 19°C room — it struggled to get above 76°C. This appears to be an
+        environmental limitation rather than a hardware defect, but it caused a print failure. This came
+        from the 'Elegoo Neptune 4 Max common problems' search.
+      advice: In cooler environments, allow extra warm-up time for the hotbed and consider enclosing the
+        printer or raising room temperature. The hotbed may struggle to reach high temperatures in cold
+        rooms.
+    tr:
+      title: 19°C odada yetersiz sıcak yatak ısıtması nedeniyle yazıcı çöktü
+      body: Doğrulanmış bir Alza.cz alıcısı, 19°C'lik bir odada tabla hedef sıcaklığına ulaşamadığı için
+        yazıcının bir kez çöktüğünü bildiriyor — 76°C'nin üzerine çıkmakta zorlandı. Bu, bir donanım kusurundan
+        ziyade çevresel bir sınırlama gibi görünüyor, ancak bir baskı hatasına neden oldu. Bu, 'Elegoo
+        Neptune 4 Max common problems' aramasından geldi.
+      advice: Daha serin ortamlarda, sıcak yatak için ekstra ısınma süresi tanıyın ve yazıcıyı muhafaza
+        içine almayı veya oda sıcaklığını yükseltmeyi düşünün. Sıcak yatak, soğuk odalarda yüksek sıcaklıklara
+        ulaşmakta zorlanabilir.
+  evidence:
+  - url: https://m.alza.cz/EN/reviews/elegoo-neptune-4-max-fdm-printer-eu-plug-12389173.htm
+    quote: The printer crashed once due to insufficient heating of the platen.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:22:56+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: anycubic
+      series: kobra 3 max
+  kind: known_issue
+  domain: firmware
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: firmware / mainboard / printhead board
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Official error code 10000 'Unknown error' with firmware/connection troubleshooting
+      body: Anycubic's official wiki documents a generic '10000 Unknown error' state whose troubleshooting
+        spans firmware updates, the ACE Pro signal cable, mainboard connections, and printhead board connections.
+        This is the manufacturer's own admission of a catch-all error state tied to firmware and board
+        connections.
+      advice: A generic 'Unknown error' (10000) is a documented failure state that may require firmware
+        updates and re-plugging mainboard/printhead connections. Expect to do board-level troubleshooting
+        if it appears.
+    tr:
+      title: Resmi hata kodu 10000 'Bilinmeyen hata' ile ürün yazılımı/bağlantı sorun giderme
+      body: Anycubic'in resmi wiki'si, sorun giderme süreci ürün yazılımı güncellemelerini, ACE Pro sinyal
+        kablosunu, ana kart bağlantılarını ve baskı kafası kartı bağlantılarını kapsayan genel bir '10000
+        Bilinmeyen hata' durumunu belgeliyor. Bu, üreticinin ürün yazılımı ve kart bağlantılarıyla ilişkili
+        her şeyi kapsayan bir hata durumunu kendi ağzından kabul etmesidir.
+      advice: Genel bir 'Bilinmeyen hata' (10000), ürün yazılımı güncellemeleri ve ana kart/baskı kafası
+        bağlantılarının yeniden takılmasını gerektirebilecek belgelenmiş bir arıza durumudur. Ortaya çıkarsa
+        kart düzeyinde sorun giderme yapmayı bekleyin.
+  evidence:
+  - url: https://wiki.anycubic.com/en/error-codes/10000-code/k3-max
+    quote: 'Kobra 3 Max-CODE: 10000 Unknown error. Please restart the device manually.'
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:20:06+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: anycubic
+      series: kobra 3 max
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: extruder / filament hub
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Extruder blockages during multi-color prints and with TPU filament
+      body: Same owner thread reports recurring blockages during multi-color filament changes and persistent
+        jams in the extruder when printing TPU, requiring disassembly to clear.
+      advice: If you print multi-color or flexible TPU, expect periodic extruder/hub jams that need manual
+        clearing. The owner found the stock nozzle needed replacing (bimetallic) and still saw multi-color
+        blockages.
+    tr:
+      title: Çok renkli baskılar sırasında ve TPU filamanı ile ekstrüder tıkanmaları
+      body: Aynı sahip konusu, çok renkli filaman değişimleri sırasında tekrarlayan tıkanmalar ve TPU
+        basarken ekstrüderde temizlemek için sökme gerektiren kalıcı sıkışmalar bildiriyor.
+      advice: Çok renkli veya esnek TPU basarsanız, manuel temizleme gerektiren periyodik ekstrüder/göbek
+        sıkışmaları bekleyin. Sahip, stok nozulun değiştirilmesi gerektiğini (bimetalik) buldu ve yine
+        de çok renkli tıkanmalar gördü.
+  evidence:
+  - url: https://www.lesimprimantes3d.fr/forum/topic/62601-kobra-3-max-combo-ou-limpression-davoir-fait-une-erreur/
+    quote: Toutefois, j'ai encore des blocages lors des prints multicouleur, je sais pas pourquoi, il
+      y a un truc qu'elle n'aime pas lors des permutations.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:20:06+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: elegoo
+      series: neptune 4 max
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: Z endstop
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: '''Endstop Z still triggered after retract'' error halts homing after ~5 prints'
+      body: The same verified 3DJake buyer reports that after only four successful prints, the Neptune
+        4 Max began failing with 'Endstop Z still triggered after retract', causing homing to abort. The
+        owner spent countless hours emailing Elegoo support without resolution. This came from the 'Elegoo
+        Neptune 4 Max problems thread' search.
+      advice: If this error appears, check the Z endstop wiring and sensor alignment. Be aware that Elegoo
+        support may not resolve this quickly based on this owner's experience.
+    tr:
+      title: '''Endstop Z still triggered after retract'' hatası yaklaşık 5 baskıdan sonra hominglemeyi
+        durduruyor'
+      body: Aynı doğrulanmış 3DJake alıcısı, yalnızca dört başarılı baskıdan sonra Neptune 4 Max'in 'Endstop
+        Z still triggered after retract' hatasıyla başarısız olmaya başladığını ve hominglemenin iptal
+        edilmesine neden olduğunu bildiriyor. Sahip, Elegoo desteğine e-posta göndererek sayısız saat
+        harcadı ancak çözüm bulamadı. Bu, 'Elegoo Neptune 4 Max problems thread' aramasından geldi.
+      advice: Bu hata ortaya çıkarsa, Z endstop kablolamasını ve sensör hizalamasını kontrol edin. Bu
+        sahibin deneyimine göre Elegoo desteğinin bunu hızlı bir şekilde çözemeyebileceğini unutmayın.
+  evidence:
+  - url: https://www.3djake.ch/de-CH/bewertungen/elegoo/neptune-4-max
+    quote: '"Endstop Z still triggered after retract" führte dazu, dass der Drucker beim Homing abbricht.'
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:22:56+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: anycubic
+      series: kobra 3
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: extruder gears / buffer mechanism / filament path
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Kobra 3 error 11519: filament tangle/jam in extruder gears or buffer mechanism'
+      body: Anycubic's official wiki documents error 11519, a filament tangle/jam detection. The wiki
+        notes that filament that is too thin can cause the extruder gear to fail to advance it, and that
+        filament can get stuck in the gears or the buffer mechanism, requiring disassembly of the extruder
+        or buffer to extract. This is a known failure mode on the Kobra 3 Combo.
+      advice: Use quality filament of consistent diameter; undersized filament can trigger error 11519.
+        If filament jams in the gears or buffer, recovery requires disassembling the extruder cover or
+        buffer mechanism with hex wrenches.
+    tr:
+      title: 'Kobra 3 hata 11519: ekstrüder dişlilerinde veya tampon mekanizmasında filaman dolaşması/sıkışması'
+      body: Anycubic'in resmi wiki'si, filaman dolaşması/sıkışması algılaması olan hata 11519'u belgeliyor.
+        Wiki, çok ince filamanın ekstrüder dişlisinin onu ilerletememesine neden olabileceğini ve filamanın
+        dişlilerde veya tampon mekanizmasında sıkışabileceğini, çıkarmak için ekstrüderin veya tamponun
+        sökülmesi gerektiğini belirtiyor. Bu, Kobra 3 Combo'da bilinen bir arıza modudur.
+      advice: Tutarlı çapta kaliteli filaman kullanın; küçük çaplı filaman hata 11519'u tetikleyebilir.
+        Filaman dişlilerde veya tamponda sıkışırsa, kurtarma için ekstrüder kapağının veya tampon mekanizmasının
+        alyan anahtarlarla sökülmesi gerekir.
+  evidence:
+  - url: https://wiki.anycubic.com/zh/error-codes/11519-code/k3
+    quote: 如果灯丝直径太细，齿轮不能带动灯丝运转，也会导致机器报错。
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:17:06+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: elegoo
+      series: neptune 4 max
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: thermal sensor (hotend/hotbed)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: MCU shutdown 'ADC out of range' from damaged thermal sensor
+      body: 'Elegoo''s official wiki states the ''MCU mcu shutdown: ADC out of range'' error on the Neptune
+        4 Plus/Max is most likely caused by a damaged thermal sensor, with bent cable pins as a secondary
+        cause. This is a safety shutdown that halts printing. This came from the ''Elegoo Neptune 4 Max
+        error code'' search.'
+      advice: If this error appears, first re-seat the sensor cable and check for bent pins (2.0mm Allen
+        key needed). If the issue persists, the thermal sensor likely needs replacement. A damaged sensor
+        can cause unsafe temperature readings, so do not ignore it.
+    tr:
+      title: Hasarlı termal sensörden MCU kapanması 'ADC out of range'
+      body: 'Elegoo''nun resmi wiki''si, Neptune 4 Plus/Max''te ''MCU mcu shutdown: ADC out of range''
+        hatasının büyük olasılıkla hasarlı bir termal sensörden kaynaklandığını, ikincil nedenin bükülmüş
+        kablo pimleri olduğunu belirtiyor. Bu, baskıyı durduran bir güvenlik kapanmasıdır. Bu, ''Elegoo
+        Neptune 4 Max error code'' aramasından geldi.'
+      advice: Bu hata ortaya çıkarsa, önce sensör kablosunu yeniden takın ve bükülmüş pim olup olmadığını
+        kontrol edin (2.0mm alyan anahtar gerekir). Sorun devam ederse, termal sensörün büyük olasılıkla
+        değiştirilmesi gerekir. Hasarlı bir sensör güvenli olmayan sıcaklık okumalarına neden olabilir,
+        bu yüzden göz ardı etmeyin.
+  evidence:
+  - url: https://wiki.elegoo.com/neptune/npetune-4-plus-4-max-mcu-shutdown-adc-out-of-range
+    quote: The most likely cause is a damaged thermal sensor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:17:53+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: elegoo
+      series: neptune 4
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: hotend and extruder assembly
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Neptune 4 hotend and extruder not robustly built; cleaning nozzle breaks heater/temperature
+        sensor
+      body: An owner reports having to replace the hotend twice after only a few prints, calls the extruder/hotend
+        not robustly built, and says the heater or temperature sensor breaks when cleaning the nozzle.
+        The filament detector is also reported as wobbly and falling out.
+      advice: Budget for hotend replacement as a recurring cost; handle the nozzle and its wiring carefully
+        because cleaning can damage the heater or thermistor. The extruder/hotend is the weak point on
+        this machine.
+    tr:
+      title: Neptune 4 hotend ve ekstrüder sağlam yapılmamış; nozul temizlemek ısıtıcıyı/sıcaklık sensörünü
+        bozuyor
+      body: Bir sahip, yalnızca birkaç baskıdan sonra hotend'i iki kez değiştirmek zorunda kaldığını bildiriyor,
+        ekstrüder/hotend'in sağlam yapılmadığını söylüyor ve nozul temizlenirken ısıtıcının veya sıcaklık
+        sensörünün bozulduğunu belirtiyor. Filaman dedektörünün de sallantılı olduğu ve düştüğü bildiriliyor.
+      advice: Hotend değişimini tekrarlayan bir maliyet olarak bütçeleyin; nozula ve kablolamasına dikkatli
+        davranın çünkü temizlik ısıtıcıya veya termistöre zarar verebilir. Ekstrüder/hotend bu makinedeki
+        zayıf noktadır.
+  evidence:
+  - url: https://www.3djake.ch/de-CH/bewertungen/elegoo/neptune-4
+    quote: '- Der gesamte Extruder und vor allem das Hotend nicht sehr robust gebaut. Kabel und Stecker
+      sind sehr empfindlich und wenn man die Nozzle reinigen muss geht das Heizplatt oder der Wärmesensor
+      kaputt'
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:17:53+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: anycubic
+      series: kobra 3
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: hotend / nozzle
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Kobra 3 hotend clogging is a common problem requiring disassembly to clear
+      body: Anycubic's official wiki acknowledges hotend clogging as a common problem on the Kobra 3,
+        listing causes such as damaged nozzle, insufficient hotend temperature, and abrasive filaments
+        like carbon fiber or glow-in-the-dark. Clearing a clog requires disassembling the hotend and using
+        a needle or hex wrench, which is time-consuming.
+      advice: Expect hotend clogs, especially with abrasive filaments. The official cleaning procedure
+        requires disassembly and tools (S1.5 hex wrench, needle). Budget for maintenance time and possibly
+        replacement hotends.
+    tr:
+      title: Kobra 3 hotend tıkanması, açmak için sökme gerektiren yaygın bir sorundur
+      body: Anycubic'in resmi wiki'si, Kobra 3'te hotend tıkanmasının yaygın bir sorun olduğunu kabul
+        ediyor ve hasarlı nozul, yetersiz hotend sıcaklığı ve karbon fiber veya karanlıkta parlayan gibi
+        aşındırıcı filamentler gibi nedenleri listeliyor. Bir tıkanıklığı açmak, hotend'in sökülmesini
+        ve bir iğne veya altıgen anahtar kullanılmasını gerektirir, bu da zaman alıcıdır.
+      advice: Özellikle aşındırıcı filamentlerle hotend tıkanmalarını bekleyin. Resmi temizleme prosedürü
+        sökme ve aletler (S1.5 altıgen anahtar, iğne) gerektirir. Bakım süresi ve muhtemelen yedek hotend'ler
+        için bütçe ayırın.
+  evidence:
+  - url: https://wiki.anycubic.com/zh/fdm-3d-printer/kobra-3-combo/cleaning-hotend-clogging
+    quote: 热端堵塞是打印中的常见问题，其发生的原因有很多种，例如：喷嘴损坏导致无法正常挤出耗材；热端的温度不够高，不能确保在挤压时快速将耗材融化；使用碳纤维或夜光等带有颗粒的耗材。
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:17:06+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: bambu lab
+      series: a1
+  kind: known_issue
+  domain: mechanical
+  severity: low
+  consequence: ''
+  detection: ''
+  component: toolhead / frame vibration
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: A1 vibrates and is noisy when printing cylindrical parts
+      body: A French owner reports strong vibration and noise when printing vertical cylindrical parts,
+        present even without supports and when the toolhead moves counter-clockwise; silence mode reduces
+        but does not eliminate it. The thread suggests a resonance with the desk and an isolation mat.
+        This is a print-quality/comfort issue rather than a failure.
+      advice: The A1 can vibrate and be noisy on certain geometries (cylinders), which is a comfort and
+        print-quality annoyance, not a hardware failure. A desk isolation mat and silence mode are the
+        reported mitigations.
+    tr:
+      title: A1 silindirik parçalar basarken titriyor ve gürültülü çalışıyor
+      body: Fransız bir sahip, dikey silindirik parçalar basarken güçlü titreşim ve gürültü bildiriyor;
+        bu, destekler olmadan da ve toolhead saat yönünün tersine hareket ettiğinde de mevcut; sessiz
+        mod bunu azaltıyor ancak ortadan kaldırmıyor. Konu başlığı, masayla bir rezonans ve bir izolasyon
+        matı öneriyor. Bu, bir arıza değil, baskı kalitesi/konfor sorunudur.
+      advice: A1 belirli geometrilerde (silindirler) titreşebilir ve gürültülü olabilir; bu bir konfor
+        ve baskı kalitesi rahatsızlığıdır, donanım arızası değildir. Masa izolasyon matı ve sessiz mod,
+        bildirilen hafifletme yöntemleridir.
+  evidence:
+  - url: https://www.lesimprimantes3d.fr/forum/topic/61814-vibration-et-bruit-bambu-lab-a1/
+    quote: c'est quelle vibre bcp et nivo audio c'est pas top.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:18:37+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: bambu lab
+      series: a1
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: extruder / hotend clog, extruder gear
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: A1 extruder clog / air-printing error code HMS_1200-2000-0002-0006
+      body: Bambu's official HMS error documentation describes the A1 series pausing and reporting 'Failed
+        to extrude' errors when the extruder cannot push filament (clogged extruder/hotend, too-thin filament,
+        or slipping extruder gear). The wiki's solution steps include checking for filament wear, checking
+        for extruder/hotend clogs, and replacing filament; it notes that if multiple rolls fail, the extruder
+        gear may be abnormal.
+      advice: 'Extruder clog and air-printing detection is a documented A1 failure mode that pauses prints
+        with an HMS error. The official remedy is manual: clear the clog, check for filament wear, and
+        inspect the extruder gear. This is a recurring maintenance issue rather than a defect.'
+    tr:
+      title: A1 extruder tıkanması / hava baskısı hata kodu HMS_1200-2000-0002-0006
+      body: Bambu'nun resmi HMS hata belgeleri, A1 serisinin extruder filamenti itemediğinde (tıkanmış
+        extruder/hotend, çok ince filament veya kayan extruder dişlisi) duraklayıp 'Failed to extrude'
+        hataları bildirdiğini açıklıyor. Wiki'nin çözüm adımları arasında filament aşınmasının kontrol
+        edilmesi, extruder/hotend tıkanıklıklarının kontrol edilmesi ve filamenti değiştirilmesi yer alıyor;
+        birden fazla makara başarısız olursa extruder dişlisinin anormal olabileceğini belirtiyor.
+      advice: 'Extruder tıkanması ve hava baskısı algılama, A1''in belgelenmiş bir arıza modudur ve baskıları
+        bir HMS hatasıyla duraklatır. Resmi çözüm manueldir: tıkanıklığı açın, filament aşınmasını kontrol
+        edin ve extruder dişlisini inceleyin. Bu, bir kusur değil, tekrarlayan bir bakım sorunudur.'
+  evidence:
+  - url: https://wiki.bambulab.com/en/a1-mini/troubleshooting/hmscode/1200_2000_0002_0006
+    quote: Failed to extrude AMS1 Slot1 filament, the extruder may be clogged, or the filament may be
+      too thin, causing the extruder slipping
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:18:37+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: elegoo
+      series: neptune 4
+  kind: known_issue
+  domain: firmware
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: firmware
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Neptune 4 firmware crashes after a period of inactivity (owner review)
+      body: A verified owner review on Alza reports the printer would not switch on after two days of
+        inactivity, blaming firmware, and warns the unit must stay plugged into electricity or the firmware
+        may crash. This corroborates the firmware fragility theme from Elegoo's own wiki.
+      advice: Keep the Neptune 4 powered/plugged in rather than fully unplugged for long idle periods,
+        and be prepared for firmware boot failures after inactivity.
+    tr:
+      title: Neptune 4 yazılımı bir hareketsizlik döneminden sonra çöküyor (sahip incelemesi)
+      body: Alza'da doğrulanmış bir sahip incelemesi, yazıcının iki günlük hareketsizlikten sonra açılmadığını
+        bildiriyor, yazılımı suçluyor ve ünitenin elektriğe takılı kalması gerektiğini, aksi takdirde
+        yazılımın çökebileceğini uyarıyor. Bu, Elegoo'nun kendi wiki'sindeki yazılım kırılganlığı temasını
+        destekliyor.
+      advice: Neptune 4'ü uzun boşta kalma dönemleri için tamamen fişten çekmek yerine güç açık/takılı
+        tutun ve hareketsizlikten sonra yazılım önyükleme hatalarına hazırlıklı olun.
+  evidence:
+  - url: https://m.alza.cz/EN/reviews/elegoo-neptune-4-7791616.htm
+    quote: the printer printed beautifully but after 2 days of inactivity it could not be switched on
+      anymore problem with FW
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:17:53+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: elegoo
+      series: neptune 4 max
+  kind: known_issue
+  domain: firmware
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: MCU
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: MCU shutdown 'Rescheduled timer in the past' from third-party plugins or config conflicts
+      body: 'Elegoo''s official wiki identifies two causes for the ''MCU mcu shutdown Rescheduled timer
+        in the past'' error on the Neptune 4 series: third-party plugin installation overloading the MCU,
+        or incorrect firmware settings causing configuration conflicts. The fix requires loading a fix
+        pack and updating both motherboard and touch screen firmware. This came from the ''Elegoo Neptune
+        4 Max error code'' search.'
+      advice: Avoid installing third-party Klipper plugins on the Neptune 4 Max, and be cautious when
+        modifying firmware settings. If the error appears, follow Elegoo's official fix-pack procedure.
+    tr:
+      title: Üçüncü taraf eklentilerden veya yapılandırma çakışmalarından MCU kapanması 'Rescheduled timer
+        in the past'
+      body: 'Elegoo''nun resmi wiki''si, Neptune 4 serisinde ''MCU mcu shutdown Rescheduled timer in the
+        past'' hatasının iki nedenini belirliyor: MCU''yu aşırı yükleyen üçüncü taraf eklenti kurulumu
+        veya yapılandırma çakışmalarına neden olan yanlış yazılım ayarları. Düzeltme, bir düzeltme paketi
+        yüklemeyi ve hem anakart hem de dokunmatik ekran yazılımını güncellemeyi gerektirir. Bu, ''Elegoo
+        Neptune 4 Max error code'' aramasından geldi.'
+      advice: Neptune 4 Max'te üçüncü taraf Klipper eklentileri kurmaktan kaçının ve yazılım ayarlarını
+        değiştirirken dikkatli olun. Hata görünürse, Elegoo'nun resmi düzeltme paketi prosedürünü izleyin.
+  evidence:
+  - url: http://wiki.elegoo.com/neptune/neptune-4-series-mcu-mcu-shutdown-rescheduled-timer-in-the-past
+    quote: The installation of a third-party plug-in causes the MCU to overload.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:22:56+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: elegoo
+      series: neptune 4 plus
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: X/Y-axis timing pulleys (set screws)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Layer shifting from loose X/Y timing pulley set screws
+      body: From Elegoo's official wiki. Layer shifting on the Neptune 4 Plus can be caused by loose set
+        screws on the X/Y timing pulleys, damaged belt tensioners, or belts that are too tight. This is
+        a mechanical issue that produces visibly shifted layers.
+      advice: If you see layer shifting, check the pulley set screws and belt tension before assuming
+        a firmware or slicer issue. A 2.0mm Allen key is all you need to tighten them.
+    tr:
+      title: Gevşek X/Y zamanlama kasnağı ayar vidalarından katman kayması
+      body: Elegoo'nun resmi wiki'sinden. Neptune 4 Plus'ta katman kayması, X/Y zamanlama kasnaklarındaki
+        gevşek ayar vidaları, hasarlı kayış gerginleştiricileri veya çok sıkı kayışlardan kaynaklanabilir.
+        Bu, görünür şekilde kaymış katmanlar üreten mekanik bir sorundur.
+      advice: Katman kayması görürseniz, bir yazılım veya dilimleyici sorunu olduğunu varsaymadan önce
+        kasnak ayar vidalarını ve kayış gerginliğini kontrol edin. Bunları sıkmak için tek ihtiyacınız
+        olan 2.0mm bir Allen anahtarıdır.
+  evidence:
+  - url: http://wiki.elegoo.com/neptune/neptune-4-plus/layer-shifting
+    quote: The set screws on the X/Y-axis timing pulleys are loose.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:23:35+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: creality
+      series: k1 max
+  kind: known_issue
+  domain: firmware
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: firmware / Z-axis leveling
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Firmware update changed nozzle-to-bed clearance, causing the nozzle to rub the textured plate
+      body: An owner reports that after updating to the latest K1 Max firmware the nozzle began rubbing
+        the textured build plate despite leveling, and had to re-run full calibration. A second user hesitates
+        to update, worried about bugs.
+      advice: After a firmware update, the printer may lose correct nozzle-to-bed clearance and rub the
+        plate; a full re-calibration after the update is the expected fix. Users should budget time for
+        re-leveling after firmware changes.
+    tr:
+      title: Ürün yazılımı güncellemesi nozul ile tabla arasındaki açıklığı değiştirdi ve nozulun dokulu
+        plakayı sürtmesine neden oldu
+      body: Bir sahip, en son K1 Max ürün yazılımına güncelleme yaptıktan sonra nozulun seviyeleme yapılmasına
+        rağmen dokulu baskı plakasını sürtmeye başladığını ve tam kalibrasyonu yeniden çalıştırmak zorunda
+        kaldığını bildiriyor. İkinci bir kullanıcı ise hatalardan endişe ederek güncelleme yapmakta tereddüt
+        ediyor.
+      advice: Bir ürün yazılımı güncellemesinden sonra yazıcı doğru nozul-tabla açıklığını kaybedebilir
+        ve plakayı sürtebilir; güncellemeden sonra tam yeniden kalibrasyon beklenen çözümdür. Kullanıcılar
+        ürün yazılımı değişikliklerinden sonra yeniden seviyeleme için zaman ayırmalıdır.
+  evidence:
+  - url: https://www.lesimprimantes3d.fr/forum/topic/64082-misa-a-jour-de-la-k1-max/
+    quote: Depuis le mise a jour de la derniere version du firmware de la K1 max la buse frotte sur la
+      plaque d'impression texturé
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:21:49+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: anycubic
+      series: kobra 3
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: Z-axis / print head assembly
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Kobra 3 layer shift after ~1500 hours of printing (owner report)
+      body: A French owner reports a layer offset of 0.2mm appearing after ~1500 hours of printing on
+        their Kobra 3, constant around the part and starting at a certain height. The user tested multiple
+        slicer versions, replaced the hotend with a ceramic one, and reset the printer, but the issue
+        persisted until changing wall order in the slicer. This suggests mechanical wear or Z-axis issues
+        after extended use.
+      advice: After heavy use (~1500h), layer shifting can appear. The owner found partial mitigation
+        by changing wall print order in the slicer. If you buy used or plan long-term use, budget for
+        mechanical wear on the Z-axis or print head.
+    tr:
+      title: Kobra 3'te yaklaşık 1500 saatlik baskıdan sonra katman kayması (sahip raporu)
+      body: Fransız bir sahip, Kobra 3'ünde yaklaşık 1500 saatlik baskıdan sonra parçanın çevresinde sabit
+        ve belirli bir yükseklikten başlayan 0,2 mm'lik bir katman kayması ortaya çıktığını bildiriyor.
+        Kullanıcı birden fazla dilimleyici sürümünü test etmiş, hotend'i seramik olanla değiştirmiş ve
+        yazıcıyı sıfırlamış, ancak sorun dilimleyicide duvar sırasını değiştirene kadar devam etmiş. Bu,
+        uzun kullanımdan sonra mekanik aşınma veya Z ekseni sorunlarına işaret ediyor.
+      advice: Yoğun kullanımdan (~1500 saat) sonra katman kayması ortaya çıkabilir. Sahip, dilimleyicide
+        duvar baskı sırasını değiştirerek kısmi bir hafifletme bulmuş. İkinci el alırsanız veya uzun vadeli
+        kullanım planlıyorsanız, Z ekseninde veya baskı kafasında mekanik aşınma için bütçe ayırın.
+  evidence:
+  - url: https://www.lesimprimantes3d.fr/forum/topic/62217-probl%C3%A8me-dimpression-kobra-3/
+    quote: MAchine Kobra 3 +/- 1500H de print
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:17:06+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: bambu lab
+      series: a1 mini
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: nozzle (buse) / hotend
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: A1 Mini nozzle clogs repeatedly at the black cooling zone; filament cannot be removed even
+        when hot
+      body: An owner reports the A1 Mini's nozzles clog regularly at the black cooling section, making
+        it impossible to push filament through even with a hot nozzle, and the extruder starts clicking.
+        The owner tried different filament brands and raised temperature to 240°C without success; a new
+        Bambu nozzle works temporarily then clogs again.
+      advice: Expect recurring nozzle clogging on the A1 Mini that may require frequent nozzle replacement.
+        Budget for replacement nozzles and hotend cleaning; the clogging recurs even with fresh Bambu
+        nozzles after a period of use.
+    tr:
+      title: A1 Mini nozulu siyah soğutma bölgesinde tekrar tekrar tıkanıyor; filaman sıcakken bile çıkarılamıyor
+      body: Bir sahip, A1 Mini'nin nozullarının siyah soğutma bölümünde düzenli olarak tıkandığını, sıcak
+        nozulla bile filamanın içinden geçirilmesinin imkânsız hale geldiğini ve ekstrüderin tıklamaya
+        başladığını bildiriyor. Sahip farklı filaman markaları denemiş ve sıcaklığı 240°C'ye yükseltmiş
+        ancak başarılı olamamış; yeni bir Bambu nozulu geçici olarak çalışıp sonra tekrar tıkanıyor.
+      advice: A1 Mini'de sık nozul değişimi gerektirebilecek tekrarlayan nozul tıkanmaları bekleyin. Yedek
+        nozullar ve hotend temizliği için bütçe ayırın; tıkanma, bir süre kullanımdan sonra yeni Bambu
+        nozullarıyla bile tekrarlıyor.
+  evidence:
+  - url: https://www.lesimprimantes3d.fr/forum/topic/60725-buses-qui-se-bouchent-r%C3%A9guli%C3%A8rement/?sortby=date
+    quote: Sur ma A1 mini je change régulièrement de buse car celles ci se bouchent au niveau du refroidissement
+      noir et la impossible de sortir le filament meme avec la buse chaude
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:19:36+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: elegoo
+      series: neptune 4
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: thermal sensor / thermistor wiring
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Neptune 4 Plus/Max MCU shutdown 'ADC out of range' traced to damaged thermal sensor
+      body: 'Elegoo''s official wiki attributes the ''MCU mcu shutdown: ADC out of range'' error on the
+        Neptune 4 Plus/Max to a damaged thermal sensor or damaged thermal wiring between hotend and heated
+        bed. This is a shutdown-level fault that halts the printer.'
+      advice: On the Plus/Max models, a thermal-sensor or wiring fault triggers a full MCU shutdown; check
+        the hotend/bed thermistor wiring and cable pins first. This is specific to the Plus/Max variants,
+        not the base Neptune 4.
+    tr:
+      title: Neptune 4 Plus/Max MCU kapanması 'ADC out of range' hasarlı termal sensöre bağlandı
+      body: 'Elegoo''nun resmi wiki''si, Neptune 4 Plus/Max''teki ''MCU mcu shutdown: ADC out of range''
+        hatasını hasarlı bir termal sensöre veya hotend ile ısıtmalı tabla arasındaki hasarlı termal kablolamaya
+        bağlıyor. Bu, yazıcıyı durduran kapanma düzeyinde bir arıza.'
+      advice: Plus/Max modellerinde termal sensör veya kablolama arızası tam bir MCU kapanmasını tetikler;
+        önce hotend/tabla termistör kablolarını ve kablo pinlerini kontrol edin. Bu, temel Neptune 4'e
+        değil, Plus/Max varyantlarına özgüdür.
+  evidence:
+  - url: https://wiki.elegoo.com/neptune/npetune-4-plus-4-max-mcu-shutdown-adc-out-of-range
+    quote: The most likely cause is a damaged thermal sensor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:17:53+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: elegoo
+      series: neptune 4 plus
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: thermal sensor (thermistor) / hotend wiring
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Neptune 4 Plus/Max MCU shutdown from damaged thermal sensor
+      body: From Elegoo's official troubleshooting wiki for the Neptune 4 Plus/Max. The printer halts
+        with an MCU shutdown error when the thermal sensor reads out of range. Elegoo identifies a damaged
+        thermal sensor as the most likely cause, with wiring damage as a secondary possibility. This is
+        a safety shutdown that stops prints and requires diagnosis.
+      advice: 'If you see ''MCU mcu shutdown: ADC out of range'', first reseat the sensor cable and check
+        for bent pins before replacing the thermistor. The printer will halt prints until resolved.'
+    tr:
+      title: Neptune 4 Plus/Max MCU kapanması hasarlı termal sensörden kaynaklanıyor
+      body: Elegoo'nun Neptune 4 Plus/Max için resmi sorun giderme wiki'sinden. Termal sensör aralık dışında
+        bir değer okuduğunda yazıcı MCU kapanma hatasıyla durur. Elegoo en olası neden olarak hasarlı
+        bir termal sensörü, ikincil olasılık olarak kablolama hasarını belirliyor. Bu, baskıları durduran
+        ve teşhis gerektiren bir güvenlik kapanmasıdır.
+      advice: '''MCU mcu shutdown: ADC out of range'' görürseniz, termistörü değiştirmeden önce önce sensör
+        kablosunu yeniden oturtun ve eğilmiş pin olup olmadığını kontrol edin. Yazıcı sorun çözülene kadar
+        baskıları durdurur.'
+  evidence:
+  - url: https://wiki.elegoo.com/neptune/npetune-4-plus-4-max-mcu-shutdown-adc-out-of-range
+    quote: 'The error message "MCU mcu shutdown: ADC out of range" typically occurs when the temperature
+      of a heater exceeds its configured minimum or maximum temperature limits. In this case, there is
+      an abnormal reading between the hot - end and hot - bed thermal sensors of the Printer. The most
+      likely cause is a damaged thermal sensor.'
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:17:53+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: creality
+      series: ender 3 v3 ke
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: hotend thermistor / heater
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Nozzle refuses to heat after ~1200 hours on Ender 3 V3 KE, thermistor suspected
+      body: An owner reports the nozzle refusing to heat after about 1200 hours of printing, with the
+        temperature probe suspected; the thread links to a thermal-runaway / heating-not-as-expected report
+        and notes a full hotend kit costs roughly 30 EUR.
+      advice: After heavy use the hotend can stop heating (thermistor or heater failure), which halts
+        extrusion entirely; a replacement hotend kit is inexpensive but the printer is down until it arrives.
+    tr:
+      title: Ender 3 V3 KE'de yaklaşık 1200 saatten sonra nozul ısınmayı reddediyor, termistörden şüpheleniliyor
+      body: Bir sahip, yaklaşık 1200 saatlik baskıdan sonra nozulun ısınmayı reddettiğini ve sıcaklık
+        probundan şüphelenildiğini bildiriyor; konu başlığı bir termal kaçak / beklenildiği gibi ısınmama
+        raporuna bağlanıyor ve tam bir hotend kitinin yaklaşık 30 EUR tuttuğunu belirtiyor.
+      advice: Yoğun kullanımdan sonra hotend ısınmayı durdurabilir (termistör veya ısıtıcı arızası), bu
+        da ekstrüzyonu tamamen durdurur; yedek hotend kiti ucuzdur ancak gelene kadar yazıcı çalışmaz.
+  evidence:
+  - url: https://www.lesimprimantes3d.fr/forum/topic/62888-souci-sur-ender-3-v3-ke/
+    quote: le filament est dans l'extrudeur mais comme la buse refuse de chauffer, impossible d'extruder.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:20:36+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: creality
+      series: ender 3 v3 se
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: hotend/extruder
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Ender 3 V3 SE stops extruding after a few minutes despite repeated hotend changes
+      body: 'Owner report from the lesimprimantes3d.fr forum (query: ''Creality Ender 3 V3 SE extruder
+        clog''). The owner describes filament progressively stopping at the nozzle after a few minutes
+        of printing, persisting across multiple settings and after changing the heatblock several times.'
+      advice: If you buy this printer, expect that a sudden loss of extrusion mid-print may not be fixed
+        by slicer settings alone; the hotend path (nozzle/heatbreak) is the first thing to inspect and
+        clear.
+    tr:
+      title: Ender 3 V3 SE, tekrarlanan hotend değişikliklerine rağmen birkaç dakika sonra ekstrüzyonu
+        durduruyor
+      body: 'lesimprimantes3d.fr forumundan sahibinin raporu (sorgu: ''Creality Ender 3 V3 SE extruder
+        clog''). Sahibi, baskıdan birkaç dakika sonra filamanın nozulda giderek durduğunu, bunun birden
+        fazla ayarda ve heatblock''u birkaç kez değiştirdikten sonra da devam ettiğini anlatıyor.'
+      advice: Bu yazıcıyı satın alırsanız, baskı ortasında ani ekstrüzyon kaybının yalnızca dilimleyici
+        ayarlarıyla düzeltilemeyebileceğini bekleyin; hotend yolu (nozul/heatbreak) incelenecek ve temizlenecek
+        ilk şeydir.
+  evidence:
+  - url: https://www.lesimprimantes3d.fr/forum/topic/63974-plus-dextrusion-au-bout-de-quelques-minutes/
+    quote: J’ai essayé de multiples réglages mais j’ai toujours un souci de filament qui ne sort plus
+      de la buse au bout de quelques minutes.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:21:09+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: elegoo
+      series: neptune 4 plus
+  kind: known_issue
+  domain: print_quality
+  severity: high
+  consequence: ''
+  detection: ''
+  component: Z-offset / first layer calibration
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Z-offset not saved causes failed first layers and blob of death
+      body: Verified buyer review on 3DJake (German). The printer starts too high despite leveling, parts
+        don't adhere, and during unattended printing the print head gets covered in a large blob of PLA.
+        The user also reports a firmware error preventing nozzle heating for cleanup, forcing full disassembly
+        after only 3 prints.
+      advice: Z-offset reliability is a known weak point. Verify first-layer adhesion on every print and
+        don't leave long prints unattended until you've confirmed the offset holds. A blob of death can
+        destroy the hotend assembly.
+    tr:
+      title: Z-offset kaydedilmediği için başarısız ilk katmanlar ve blob of death
+      body: 3DJake'te (Almanca) doğrulanmış alıcı incelemesi. Yazıcı seviyelemesine rağmen çok yüksekten
+        başlıyor, parçalar yapışmıyor ve gözetimsiz baskı sırasında baskı kafası büyük bir PLA blob of
+        death ile kaplanıyor. Kullanıcı ayrıca temizlik için nozul ısıtmasını engelleyen bir firmware
+        hatası bildiriyor ve bu da yalnızca 3 baskıdan sonra tam sökme işlemini zorunlu kılıyor.
+      advice: Z-offset güvenilirliği bilinen bir zayıf noktadır. Her baskıda ilk katman yapışmasını doğrulayın
+        ve offsetin korunduğunu teyit edene kadar uzun baskıları gözetimsiz bırakmayın. Bir blob of death
+        hotend düzeneğini yok edebilir.
+  evidence:
+  - url: https://www.3djake.ch/de-CH/bewertungen/elegoo/neptune-4-plus
+    quote: dass der Druck, obwohl gelevelt, zu hoch beginnt das Teil nicht richtig auf der Druckplatte
+      hält, sich löst und bei unbeaufsichtigtem drucken der ganze Druckkopf mit PLA massivst zuschmiert
+      und die Mascheine stopt und es einen grossen Klumpen PLA an der Düse hängt
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:23:35+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: elegoo
+      series: neptune 4
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: extruder gear (toothed wheel)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Filament snaps and jams inside the Neptune 4 extruder gear, hard to clear
+      body: A French repair-forum thread describes filament snapping inside the extruder's toothed-wheel
+        mechanism, leaving a stuck piece that is hard to remove because the gear does not easily disassemble;
+        the user had to pry the gear off with a flat screwdriver.
+      advice: If filament jams inside the extruder, the toothed gear may need to be pried off to clear
+        it; the assembly is not designed for easy cleaning. This is a moderate, owner-reported maintenance
+        headache.
+    tr:
+      title: Filaman Neptune 4 ekstrüder dişlisinin içinde kırılıp sıkışıyor, temizlenmesi zor
+      body: Bir Fransız onarım forumu başlığı, filamanın ekstrüderin dişli çark mekanizmasının içinde
+        kırılarak sıkışmış bir parça bıraktığını ve dişli kolayca sökülmediği için bunun çıkarılmasının
+        zor olduğunu anlatıyor; kullanıcı dişliyi düz bir tornavidayla kanırtarak çıkarmak zorunda kalmış.
+      advice: Filaman ekstrüderin içinde sıkışırsa, temizlemek için dişli çarkın kanırtılarak çıkarılması
+        gerekebilir; düzenek kolay temizlik için tasarlanmamıştır. Bu, sahibi tarafından bildirilen orta
+        düzeyde bir bakım sıkıntısıdır.
+  evidence:
+  - url: https://www.lesimprimantes3d.fr/forum/topic/58449-neptune-4-filament-coinc%C3%A9-dans-la-t%C3%AAte-dimrpession/
+    quote: Je regarde et finalement, je m'aperçoit que le filament s'est cassé à l'intérieur du dispositif
+      avec la roue crantée.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:17:53+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: creality
+      series: k1
+  kind: known_issue
+  domain: firmware
+  severity: low
+  consequence: ''
+  detection: ''
+  component: firmware error code 2522
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: K1 owner reports persistent Error 2522 on a new unit
+      body: An owner on Creality's own cloud forum reports a new K1 repeatedly showing Error 2522 and
+        asking whether the printer is defective. This is a first-hand report of a specific error code
+        on a new unit.
+      advice: A new K1 showing Error 2522 is a reported failure mode; owners should check Creality's error-code
+        list and contact support rather than assume it is user error.
+    tr:
+      title: K1 sahibi yeni bir ünitede kalıcı Error 2522 bildiriyor
+      body: Creality'nin kendi bulut forumunda bir sahip, yeni bir K1'in tekrar tekrar Error 2522 gösterdiğini
+        ve yazıcının arızalı olup olmadığını sorduğunu bildiriyor. Bu, yeni bir ünitede belirli bir hata
+        koduna dair birinci elden bir rapordur.
+      advice: Error 2522 gösteren yeni bir K1, bildirilen bir arıza modudur; sahipler bunun kullanıcı
+        hatası olduğunu varsaymak yerine Creality'nin hata kodu listesini kontrol etmeli ve destekle iletişime
+        geçmelidir.
+  evidence:
+  - url: https://www.crealitycloud.com/zh/group-detail/65e022a831e3b3484b378775?platform=4
+    quote: 我的新K1不工作了。它不断显示错误：Error 2522。
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:17:40+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: elegoo
+      series: neptune 4 max
+  kind: known_issue
+  domain: firmware
+  severity: high
+  consequence: ''
+  detection: ''
+  component: motherboard firmware / Klipper
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Firmware updated via Fluidd bricks the Neptune 4 series printer
+      body: Elegoo's own wiki documents that updating firmware via Fluidd (rather than the official fix-pack
+        procedure) is incompatible with the customized Klipper build and bricks the printer. Recovery
+        requires an eMMC adapter, USB drive, and TF card — significant technical effort for a non-technical
+        owner. This came from the 'Elegoo Neptune 4 Max error code' search.
+      advice: Never update Neptune 4 series firmware via Fluidd. Use only Elegoo's official fix-pack +
+        motherboard/screen firmware procedure, in the correct order (fix pack first, then motherboard,
+        then screen).
+    tr:
+      title: Fluidd üzerinden güncellenen firmware, Neptune 4 serisi yazıcıyı tuğlaya çeviriyor
+      body: Elegoo'nun kendi wiki'si, firmware'i Fluidd üzerinden güncellemenin (resmi fix-pack prosedürü
+        yerine) özelleştirilmiş Klipper yapısıyla uyumsuz olduğunu ve yazıcıyı tuğlaya çevirdiğini belgeliyor.
+        Kurtarma için bir eMMC adaptörü, USB sürücü ve TF kart gerekir — teknik olmayan bir sahip için
+        önemli teknik çaba. Bu, 'Elegoo Neptune 4 Max error code' aramasından geldi.
+      advice: Neptune 4 serisi firmware'i asla Fluidd üzerinden güncellemeyin. Yalnızca Elegoo'nun resmi
+        fix-pack + anakart/ekran firmware prosedürünü doğru sırayla kullanın (önce fix pack, sonra anakart,
+        sonra ekran).
+  evidence:
+  - url: http://wiki.elegoo.com/neptune/neptune-4-series-option-serial-insection-mcumustbespecified
+    quote: The firmware is updated via Fluidd. The Neptune 4 series printers are equipped with the customised
+      version of Klipper. Firmware updated via Fluidd is not compatible, which results in the printer
+      becoming bricked.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:17:53+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: bambu lab
+      series: a1 mini
+  kind: known_issue
+  domain: print_quality
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: nozzle / filament feed
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'A1 Mini and P1S suddenly fail together: poor adhesion, clogged nozzle, spaghetti, filament
+        slipping'
+      body: 'A German owner reports both an A1 Mini and a P1S suddenly stopped producing good prints after
+        about half a year: filament barely adheres, the nozzle clogs, prints become spaghetti, and filament
+        slips through. Even after disassembly, cleaning, cold pulls, and new hotends, the A1 Mini scrapes
+        too close over the plate.'
+      advice: The A1 Mini can develop combined extrusion and first-layer failures that resist cleaning
+        and new hotends. The owner's fixes (disassembly, cold pull, new hotends) did not resolve the scraping-over-plate
+        problem.
+    tr:
+      title: 'A1 Mini ve P1S aniden birlikte başarısız oluyor: zayıf yapışma, tıkanmış nozul, spaghetti,
+        filaman kayması'
+      body: 'Bir Alman sahip, hem bir A1 Mini''nin hem de bir P1S''in yaklaşık yarım yıl sonra aniden
+        iyi baskı üretmeyi bıraktığını bildiriyor: filaman zar zor yapışıyor, nozul tıkanıyor, baskılar
+        spaghetti''ye dönüşüyor ve filaman kayıyor. Sökme, temizleme, cold pull ve yeni hotend''lerden
+        sonra bile A1 Mini plakanın üzerinde çok yakın sıyırıyor.'
+      advice: A1 Mini, temizliğe ve yeni hotend'lere direnen birleşik ekstrüzyon ve ilk katman arızaları
+        geliştirebilir. Sahibinin düzeltmeleri (sökme, cold pull, yeni hotend'ler) plakanın üzerinde sıyırma
+        sorununu çözmedi.
+  evidence:
+  - url: https://forum.drucktipps3d.de/forum/thread/46169-a1-mini-und-p1s-geben-kaum-noch-sinnvolle-drucke-von-sich/?postID=557112
+    quote: Filament haftet kaum, Düse verstopfst, Spaghetti, Filament rutscht durch.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:19:36+00:00'

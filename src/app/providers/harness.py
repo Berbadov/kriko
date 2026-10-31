@@ -125,6 +125,80 @@ TOOLLESS_NOTE = (
     "out any claim you cannot ground in text given here."
 )
 
+#: The same note for a brief that asks for the written `SEARCH:` request.
+#: A tool call and a line of text are not the same thing, and the plain note
+#: said "do not try one" to a model the brief had just invited to ask: a 0.3.8
+#: field run answered "this session has no web search" to a request for
+#: sourced research that way. Named only where the brief asks for it, so no
+#: other prompt gains an invitation to write a request nothing would read.
+TOOLLESS_SEARCH_NOTE = (
+    "\n\nThis session has no tools of any kind: no web search, no page opening, "
+    "no shell, no files. Every attempt to call one is refused and costs a turn. "
+    "Do not call or describe a tool. If this brief asks for a `SEARCH:` line, "
+    "that is not a tool call: write that one line and Kriko runs the search and "
+    "asks you again with the pages. Otherwise answer at once from this prompt "
+    "and what you already know, and leave out any claim you cannot ground in "
+    "text given here."
+)
+
+
+def toolless_note(prompt: str) -> str:
+    """The note for a tool-less session: the brief's own `SEARCH:` offer kept.
+
+    `chat.chat_brief` and `chat.web_answer_brief` end with "reply with exactly
+    one line, SEARCH: ...". The plain note forbids trying a tool, which a model
+    reasonably reads as forbidding that line too — and the reader gets "I have
+    no web search" instead of a search. The exception is named only where the
+    brief itself asked for the line; a research brief that never mentions it
+    keeps the plain note.
+    """
+    return TOOLLESS_SEARCH_NOTE if "SEARCH:" in prompt else TOOLLESS_NOTE
+
+#: Said instead of `TOOLLESS_NOTE` when the hosted tool-less session could not
+#: be reached and the run fell back to a fresh process. That process *does*
+#: have the CLI's web tools, so telling it it has none would be the same lie in
+#: the other direction — and an agent told it cannot search tries anyway.
+TOOLLESS_FALLBACK_NOTE = (
+    "\n\nKriko's hosted session for this run was unavailable, so this is a "
+    "fresh process with web tools. Answer from this prompt first; if pages "
+    "were given to you they are the only sources you may cite. If you must "
+    "search, cite only pages you actually opened, copy every quote verbatim, "
+    "and do not keep searching after one round."
+)
+
+#: How long a hosted session that failed is skipped before it is tried again.
+#: A failing `vibe-acp` costs a worker start and a session round trip *before*
+#: the fallback begins, and a 90-second chat turn cannot pay that twice. Ten
+#: minutes is long enough to keep a broken build out of the reader's turns and
+#: short enough that a fixed one comes back without a restart.
+RESIDENT_COOLDOWN_SECONDS = 600.0
+#: How long a resident worker may take to become ready before the run stops
+#: waiting for it. A healthy ACP session opens in a few seconds; a stuck one
+#: used to spend the whole answer budget (`session/new` waited on the turn's
+#: deadline), and the fresh-process fallback then had seconds left — the
+#: 102-second Mistral turn in the 0.3.8 field log. Bounded here, the fallback
+#: inherits the rest of the turn, and the same allowance bounds a warm-up
+#: started while the host reads its pages.
+RESIDENT_START_SECONDS = 10.0
+_RESIDENT_UNHEALTHY: dict[str, float] = {}
+_RESIDENT_HEALTH_LOCK = threading.Lock()
+
+
+def _resident_unhealthy(one: "Harness") -> bool:
+    with _RESIDENT_HEALTH_LOCK:
+        until = _RESIDENT_UNHEALTHY.get(one.id)
+    return until is not None and time.monotonic() < until
+
+
+def _mark_resident_unhealthy(one: "Harness") -> None:
+    with _RESIDENT_HEALTH_LOCK:
+        _RESIDENT_UNHEALTHY[one.id] = time.monotonic() + RESIDENT_COOLDOWN_SECONDS
+
+
+def _clear_resident_health(one: "Harness") -> None:
+    with _RESIDENT_HEALTH_LOCK:
+        _RESIDENT_UNHEALTHY.pop(one.id, None)
+
 _CODEX_SUPPORT: dict[tuple[str, float], bool] = {}
 _CODEX_SUPPORT_LOCK = threading.Lock()
 
@@ -1630,6 +1704,18 @@ def _read_models(one: Harness, executable: str, key: tuple[str, str, float],
             names = list(dict.fromkeys(str(row.get("alias") or row.get("name")) for row in config.get("models", []) if isinstance(row, dict) and (row.get("alias") or row.get("name"))))
         except (OSError, ValueError):
             names = []
+        # The reader's own aliases first, then the Mistral models this
+        # installation knows about. Vibe's config is the authority on aliases,
+        # but a reader who never edited it had only the aliases Vibe shipped
+        # and could not choose a model released after that — the same stale
+        # list the API plane had. A catalogue id is a valid `active_model`.
+        from app import modelcatalogue
+
+        known = [
+            name for name, row in modelcatalogue.load().items()
+            if str(row.get("provider") or "") == "mistral"
+        ]
+        names = list(dict.fromkeys([*names, *known]))
     elif one.model_source == "codex-cache":
         try:
             cached_models = json.loads((Path.home() / ".codex" / "models_cache.json").read_text(encoding="utf-8"))
@@ -1904,8 +1990,22 @@ def _vibe_config(model: str, effort: str, sessions: Path, *, log_sessions: bool 
     text = 'enable_update_checks = false\nenable_telemetry = false\nmcp_servers = []\ndisabled_skills = ["*"]\n'
     if chosen:
         text += "active_model = " + json.dumps(chosen) + "\n"
-    if effort and not any(isinstance(r, dict) and r.get("alias") == chosen for r in rows) and chosen:
-        rows = [*rows, {"alias": chosen}]
+    # A chosen model with no row of its own needs one, or Vibe resolves it
+    # against whatever its config happens to hold. A catalogue id it cannot
+    # know (a model released after the CLI shipped) is written with its
+    # provider and name, so `active_model` names a real model rather than an
+    # alias nobody defined.
+    if chosen and not any(
+            isinstance(r, dict) and chosen in (r.get("alias"), r.get("name")) for r in rows):
+        row: dict = {"alias": chosen}
+        try:
+            from app import modelcatalogue
+
+            if str(modelcatalogue.load().get(chosen, {}).get("provider") or "") == "mistral":
+                row = {"alias": chosen, "name": chosen, "provider": "mistral"}
+        except Exception:  # noqa: BLE001 — a catalogue row is a convenience, not a requirement
+            pass
+        rows = [*rows, row]
     for row in rows:
         if not isinstance(row, dict):
             continue
@@ -2899,6 +2999,9 @@ class HarnessResearcher(AgentResearcher):
         self._live_last_emit = 0.0
         self._live_published = ""
         self._streamed_blocks: dict[str, dict] = {}
+        #: Whether this turn has already asked a worker to start in the
+        #: background. One attempt per turn: a second saves nothing.
+        self._warm_started = False
         #: Why nothing came back, when nothing came back. `tasks.py` cannot
         #: read this yet; `_research`'s log gets it through the exception on
         #: the paths that are genuinely broken, and through an empty gather on
@@ -3101,31 +3204,71 @@ class HarnessResearcher(AgentResearcher):
                 pass
         return search_url, search_language
 
+    def _host_search(self, search_url: str, search_language: str):
+        """The search a host-read turn uses, and the name the run reports.
+
+        The reader's own order (`providers.websearch`) when a hosted provider
+        leads it — the same gate chat and the local plane use
+        (`localplane.hosted_search`), so one machine does not search through
+        two doors. Otherwise OpenSERP on this machine, exactly as before.
+
+        A hosted chain feeds Codex and Mistral Vibe their pages in one or two
+        seconds instead of waiting for a local service; when that service is
+        down it is the difference between a sourced answer and `NoHarness`.
+        """
+        from app import localplane
+        from app.providers import openserp
+
+        if self.app_state_path is not None:
+            try:
+                if localplane.hosted_search(self.app_state_path):
+                    from app import prefs
+                    from app.providers import websearch
+                    from app.web import state
+
+                    conn = state.connect(self.app_state_path)
+                    try:
+                        chosen = prefs.read(conn)
+                    finally:
+                        conn.close()
+                    chain = websearch.build(
+                        chosen, self.app_state_path, log=self._echo,
+                        check=self.check_cancelled,
+                        trial_reservation_id=str(
+                            getattr(self, "trial_reservation_id", "") or ""))
+                    return chain, ",".join(chain.providers)
+            except Exception as error:  # noqa: BLE001 — a chain that cannot be built is not a failed run
+                self._echo(
+                    f"the reader's web search is unavailable ({error}); "
+                    "using OpenSERP")
+        return (openserp.searcher(search_url, engine=openserp.LOCAL_ENGINES,
+                                  language=search_language),
+                "openserp")
+
     def _read_web_pages(self, queries: list[str], *, product: str = "",
                         page=None, prefer_issues: bool = False,
                         max_pages: int | None = None):
         """Search and read bounded pages without starting a local model.
 
-        `LocalAsker._read` already owns the host's OpenSERP/fetch path and its
+        `LocalAsker._read` already owns the host's search/fetch path and its
         relevance and publisher checks. Give it inert completion sockets: this
         quick path uses the selected CLI once, after the pages are in hand.
         """
         from app import pagefacts
-        from app.providers import fetch, local_agent, local_discovery, openserp
+        from app.providers import fetch, local_agent, local_discovery
         from app.providers.local_identity import extract_identity
         from kriko.research.politeness import LocalSearchError
 
         search_url, search_language = self._search_settings()
         search_url = local_discovery.base_of(search_url) or local_discovery.SEARCH_DEFAULT_URL
-        search = openserp.searcher(
-            search_url, engine=openserp.LOCAL_ENGINES, language=search_language)
+        search, provider = self._host_search(search_url, search_language)
 
         def no_completion(_prompt):
             raise RuntimeError("host page gathering must not call a local model")
 
         reader = local_agent.LocalAsker(
             no_completion, no_completion, search, fetch.reader(timeout=8.0),
-            model="", search_provider="openserp", given_queries=queries,
+            model="", search_provider=provider, given_queries=queries,
             search_language=search_language,
         )
         reader.max_pages = max(1, min(8, max_pages or self.max_documents or 3))
@@ -3144,7 +3287,7 @@ class HarnessResearcher(AgentResearcher):
             # `_read` ordinarily counts search errors and returns no pages. Keep
             # this boundary defensive for an alternate search adapter.
             pages = []
-        self.search_provider = "openserp"
+        self.search_provider = provider
         return reader, pages, identity
 
     @staticmethod
@@ -3289,6 +3432,38 @@ class HarnessResearcher(AgentResearcher):
             quicklook_answer=False, source_line=True,
         )
 
+    def _start_warm(self) -> None:
+        """Start this turn's agent while the host reads the pages.
+
+        A host-read turn spends one to twenty seconds searching and reading
+        before the agent is asked anything, and a resident CLI needs some of
+        those seconds to start and open a session. Warming it in the background
+        turns that cold start into time already being spent. Once per turn,
+        never blocking, and never fatal: a warm-up that fails is just the cold
+        start this turn would have paid without it.
+        """
+        if self._warm_started:
+            return
+        self._warm_started = True
+        if self.harness.protocol not in {"claude", "vibe"}:
+            return
+        if self.transport_mode not in {"auto", "persistent"}:
+            return
+        try:
+            threading.Thread(target=self._warm_worker, name="kriko-warm-agent",
+                             daemon=True).start()
+        except Exception:  # noqa: BLE001 — no thread is a cold start, not a failure
+            pass
+
+    def _warm_worker(self) -> None:
+        from app.providers import resident
+
+        try:
+            profile = self._resident_profile()
+            resident.transport().warm(profile, timeout=RESIDENT_START_SECONDS)
+        except Exception:  # noqa: BLE001 — a cold start later is the only cost
+            pass
+
     def _ask_with_pages(self, queries: list[str], prompt: str, *, product: str = "",
                         page=None, prefer_issues: bool = False,
                         quicklook_answer: bool = False,
@@ -3300,6 +3475,7 @@ class HarnessResearcher(AgentResearcher):
         reader = None
         answer_stage = {"stage": "answer", "ms": 0.0, "failed": False,
                         "tokens_in": None, "tokens_out": None, "tokens_used": None}
+        self._start_warm()
         try:
             reader, pages, identity = self._read_web_pages(
                 queries, product=product, page=page, prefer_issues=prefer_issues,
@@ -3477,6 +3653,8 @@ class HarnessResearcher(AgentResearcher):
         if self.transport_mode not in {"auto", "persistent", "exec"}:
             raise ValueError("the agent transport must be auto, persistent, or exec")
         if self.harness.protocol in TOOLLESS_PROTOCOLS:
+            from app.providers.codex_transport import TransportUnavailable, TurnRejected
+
             if allow_tools:
                 if self.transport_mode == "persistent":
                     raise NoHarness(
@@ -3503,7 +3681,54 @@ class HarnessResearcher(AgentResearcher):
             previous_mode = self.transport_mode
             self.transport_mode = "persistent"
             try:
-                return self._run(prompt + TOOLLESS_NOTE)
+                if previous_mode == "auto" and _resident_unhealthy(self.harness):
+                    # A recent hosted-session failure is remembered for a few
+                    # minutes: paying the failed start again on every call is
+                    # what made a 90-second turn end at the review phase.
+                    self._echo(
+                        f"{self.harness.label}'s hosted session failed recently; "
+                        "using a fresh process for this turn"
+                    )
+                    self.transport_mode = "exec"
+                    return self._run(prompt + TOOLLESS_FALLBACK_NOTE)
+                answer = self._run(prompt + toolless_note(prompt))
+                _clear_resident_health(self.harness)
+                return answer
+            except TurnRejected as error:
+                # A resident session rejected the request before it ran. Codex
+                # is never replayed, because its rejection can arrive after a
+                # delivered turn and a delivered turn must not be sent twice.
+                if previous_mode != "auto" or self.harness.protocol == "codex":
+                    raise
+                _mark_resident_unhealthy(self.harness)
+                self._echo(
+                    f"{self.harness.label}'s hosted session was unavailable "
+                    f"({error}); running a fresh process instead — this turn "
+                    "will use the tools the CLI has"
+                )
+                self.transport_mode = "exec"
+                return self._run(prompt + TOOLLESS_FALLBACK_NOTE)
+            except TransportUnavailable as error:
+                # **The hosted tool-less session is the fragile half of this
+                # plane.** On Windows `vibe-acp` has answered `session/new`
+                # with `[WinError 5] Access is denied`, and a slow start or a
+                # rejected session is not worth ending a reader's turn over.
+                # In `auto` mode a fresh process runs instead: it has the
+                # CLI's web tools, so it is told that plainly and held to the
+                # pages Kriko already read. An explicit `persistent` choice
+                # still reports the failure, because then the reader asked for
+                # exactly this and replaying it behind their back would be
+                # worse than the error.
+                if previous_mode != "auto":
+                    raise
+                _mark_resident_unhealthy(self.harness)
+                self._echo(
+                    f"{self.harness.label}'s hosted session was unavailable "
+                    f"({error}); running a fresh process instead — this turn "
+                    "will use the tools the CLI has"
+                )
+                self.transport_mode = "exec"
+                return self._run(prompt + TOOLLESS_FALLBACK_NOTE)
             finally:
                 self.transport_mode = previous_mode
 
@@ -3559,7 +3784,7 @@ class HarnessResearcher(AgentResearcher):
         if self.transport_mode not in {"auto", "persistent", "exec"}:
             raise ValueError("the agent transport must be auto, persistent, or exec")
         if self.transport_mode != "exec":
-            from app.providers.codex_transport import TransportUnavailable
+            from app.providers.codex_transport import TransportUnavailable, TurnRejected
             from app.providers.resident import ProtocolAbsent
 
             try:
@@ -3580,6 +3805,20 @@ class HarnessResearcher(AgentResearcher):
                     raise ProtocolAbsent(
                         f"{self.harness.label} has no persistent protocol; its print mode "
                         "starts one process per request")
+            except TurnRejected as error:
+                # A resident session rejected the request before it ran (for
+                # Vibe on Windows: `[WinError 5] Access is denied`). Nothing
+                # was delivered, so `auto` can answer it with a fresh process
+                # instead of failing the turn. An explicit `persistent` choice
+                # still reports it — and Codex is never replayed, because its
+                # rejection can come after a delivered turn.
+                if self.transport_mode == "persistent" or self.harness.protocol == "codex":
+                    raise
+                say = on_line if on_line is not None else self.on_action
+                if say is not None:
+                    say(f"hosted session rejected the request; using a fresh process ({error})")
+                with self._workspace():
+                    return self._invoke(prompt, on_line)
             except TransportUnavailable as error:
                 if self.transport_mode == "persistent":
                     raise
@@ -3776,14 +4015,33 @@ class HarnessResearcher(AgentResearcher):
 
         started = time.monotonic()
         codex_profile.release_idle()
+        # Deferred: the transport exception lives with the wire, and this
+        # module is imported before it on some startups.
+        from app.providers.codex_transport import DeliveryUncertain
         try:
             result = resident.transport().run(profile, resident.ResidentRequest(
                 prompt, timeout=self.timeout,
+                start_timeout=(RESIDENT_START_SECONDS if profile.wire == "acp" else 0.0),
                 on_line=line if profile.wire == "claude" else None,
                 on_action=action if profile.wire == "acp" else None,
                 on_text=self._append_live_text if profile.wire == "acp" else None,
                 on_delivery=attempt.delivery, check_cancelled=self.check_cancelled,
             ))
+        except DeliveryUncertain as error:
+            attempt.fail(error)
+            # The turn's clock ran out after the answer had started arriving.
+            # The words on the screen are real; the ticket is what failed.
+            # Keeping them is the rule the API plane already follows for a
+            # cut-off reply (`apiagent`), and it is the difference between a
+            # slow answer and a lost one for every resident CLI.
+            partial = "".join(self._live_parts).strip()
+            if not partial:
+                raise
+            self.telemetry["cut_off"] = True
+            self._echo(
+                f"{self.harness.label} did not finish within the turn; keeping "
+                f"what it wrote ({len(partial)} characters)")
+            return partial
         except BaseException as error:
             attempt.fail(error)
             raise

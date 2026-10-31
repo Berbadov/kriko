@@ -1,0 +1,36 @@
+# kriko.cc is meant to be read, quoted and linked: by people, by search
+# engines and by answer engines. Everything is open except /tools/, which holds
+# unfinished interactive pages, not content.
+#
+# A plain-text map of the site for language models: https://kriko.cc/llms.txt
+
+User-agent: *
+Allow: /
+Disallow: /tools/
+
+# Search crawlers.
+User-agent: Googlebot
+User-agent: Bingbot
+User-agent: DuckDuckBot
+User-agent: Applebot
+Allow: /
+Disallow: /tools/
+
+# Answer engines, which quote the page they read. Kriko's findings name the page
+# they came from, so a crawler that follows a finding reaches the source too.
+User-agent: GPTBot
+User-agent: OAI-SearchBot
+User-agent: ChatGPT-User
+User-agent: ClaudeBot
+User-agent: Claude-SearchBot
+User-agent: Claude-User
+User-agent: PerplexityBot
+User-agent: Perplexity-User
+User-agent: Google-Extended
+User-agent: Applebot-Extended
+User-agent: CCBot
+Allow: /
+Disallow: /tools/
+
+Sitemap: https://kriko.cc/sitemap.xml
+Sitemap: https://kriko.cc/sitemap-problems.xml

@@ -42,9 +42,10 @@ DEFAULT_BASE_URL = "https://api.mistral.ai/v1"
 #: for `mistral-large-latest`, which also opened five pages and so billed nine
 #: tool calls to small's four). The reader can pick another in the agent row.
 DEFAULT_MODEL = "mistral-small-latest"
-#: A quick look answers in under ten seconds; research asks for more reading.
-#: Two minutes is room for both and still ends a run whose connection hung.
-TIMEOUT_SECONDS = 120.0
+#: A quick look answers in under ten seconds; research asks for more reading,
+#: and a Large-class model with retrieval can take two minutes or more. Four
+#: minutes is room for all of them and still ends a run whose connection hung.
+TIMEOUT_SECONDS = 240.0
 #: Where each result's text stops. The search's own snippets are a few
 #: hundred characters; an opened page is the whole page, and grounding needs
 #: the sentence rather than the site navigation around it — but never more
@@ -109,6 +110,18 @@ def _add_source(sources: dict, url, title, text: str) -> None:
     text = _plain(text)
     if text and text not in row["text"]:
         row["text"] = (row["text"] + "\n\n" + text).strip()[:MAX_SOURCE_CHARS]
+
+
+def search_returned(reply: Reply) -> bool:
+    """Whether a search-enabled conversation shows any web tool ran.
+
+    The built-in `web_search` connector is billed per call and is only
+    supported on some models and accounts; when it is not, the model answers
+    from memory or errors with no `tool.execution` entries. Zero queries and
+    zero sources is exactly that shape, and the caller can fall back to a
+    search it holds itself.
+    """
+    return bool(reply.queries or reply.sources)
 
 
 def _results(raw) -> list[dict]:

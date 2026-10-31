@@ -1,0 +1,1785 @@
+# Claims — what is known to go wrong, each with the page it came from and the quote
+# that was read there. A claim without both is not in this file.
+- subject:
+    kind: product
+    identity:
+      brand: Instant Pot
+      series: Duo Nova
+  kind: known_issue
+  domain: burn
+  severity: high
+  consequence: ''
+  detection: ''
+  component: lid / pressure-locking mechanism
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Duo Nova 60 lid blew off while pressurized, scalding user (lawsuit report)
+      body: A legal-news report on an Alabama plaintiff's lawsuit (filed July 9 in the U.S. District Court
+        of Illinois) states the Duo Nova 60's lid suddenly blew off while the cooker was still pressurized,
+        causing severe burns. The article notes the Duo Nova is advertised with 11 built-in safety features.
+      advice: 'This adds a third, independently reported instance of the Duo Nova lid opening under pressure.
+        The failure mode is the same: the lid releases while pressure remains, ejecting scalding contents.'
+    tr:
+      title: Duo Nova 60 kapağı basınç altındayken uçtu, kullanıcıyı haşladı (dava raporu)
+      body: Alabama'lı bir davacının davasına (9 Temmuz'da ABD Illinois Bölge Mahkemesi'nde açıldı) ilişkin
+        bir hukuk haberi raporu, Duo Nova 60'ın kapağının pişirici hâlâ basınç altındayken aniden uçtuğunu
+        ve ciddi yanıklara neden olduğunu belirtiyor. Makale, Duo Nova'nın 11 yerleşik güvenlik özelliğiyle
+        tanıtıldığını not ediyor.
+      advice: 'Bu, Duo Nova kapağının basınç altında açılmasına dair bağımsız olarak bildirilen üçüncü
+        vakayı ekliyor. Arıza modu aynı: kapak basınç devam ederken açılıyor ve haşlayıcı içeriği dışarı
+        fırlatıyor.'
+  evidence:
+  - url: https://www.aboutlawsuits.com/instant-pot-safety-lawsuit-defective-pressure-cooker-burn-injuries/
+    quote: On August 3, 2023, Williams was using the Instant Pot when the lid suddenly and unexpectedly
+      blew off the pot.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:57:03+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: instant pot
+      series: smart-60
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: float valve, sealing ring
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Smart-60 owner wiki: float valve steam leak and sealing ring wear'
+      body: The iFixit Smart-60 troubleshooting wiki (this page is in Chinese) documents float-valve steam
+        leaks from dirt on the float valve/anti-block shield and sealing-ring compression over time. Owner
+        comments on the page also report C6L/C6H error codes.
+      advice: Owner-reported failures on this model center on the float valve and sealing ring; cleaning
+        the float valve and anti-block shield and periodically replacing the sealing ring are the recurring
+        fixes. The page is a student-contributed wiki, so treat it as owner evidence rather than an official
+        statement.
+    tr:
+      title: 'Smart-60 sahip wiki''si: şamandıra valfi buhar kaçağı ve sızdırmazlık halkası aşınması'
+      body: iFixit Smart-60 sorun giderme wiki'si (bu sayfa Çince) şamandıra valfi/engelleme önleyici
+        kalkan üzerindeki kirden kaynaklanan şamandıra valfi buhar kaçaklarını ve zamanla sızdırmazlık
+        halkası sıkışmasını belgeliyor. Sayfadaki sahip yorumları ayrıca C6L/C6H hata kodlarını bildiriyor.
+      advice: Bu modelde sahipler tarafından bildirilen arızalar şamandıra valfi ve sızdırmazlık halkası
+        etrafında yoğunlaşıyor; şamandıra valfinin ve engelleme önleyici kalkanın temizlenmesi ve sızdırmazlık
+        halkasının periyodik olarak değiştirilmesi tekrarlayan çözümler. Sayfa öğrenci katkısıyla oluşturulmuş
+        bir wiki olduğundan, resmi bir açıklama yerine sahip kanıtı olarak değerlendirin.
+  evidence:
+  - url: https://zh.ifixit.com/Wiki/Instant_Pot__Smart-60_Troubleshooting
+    quote: 如果浮子阀和防堵罩脏污，Instant Pot 就无法正确管理蒸汽和压力的积聚，最终可能导致浮子阀泄漏蒸汽。
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:02:13+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Instant Pot
+      series: Viva
+  kind: known_issue
+  domain: mechanical
+  severity: low
+  consequence: ''
+  detection: ''
+  component: pressure valve
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Owner reports C7 error on second Viva unit, suspects pressure valve
+      body: An owner in the Instant Pot Community group reports a C7 error on a second Viva unit despite
+        plenty of liquid, and says they are 'leaning towards a problem with the pressure valve.'
+      advice: A single owner report of a recurring C7 error on a Viva, attributed by the owner to the
+        pressure valve. C7 is documented in the manual as indicating not enough liquid or the quick-release
+        button left in Vent. This is anecdotal and low severity, but it is a real owner account of the
+        Viva failing to pressurize.
+    tr:
+      title: Sahip ikinci Viva ünitesinde C7 hatası bildiriyor, basınç valfinden şüpheleniyor
+      body: Instant Pot Community grubundaki bir sahip, bol miktarda sıvı olmasına rağmen ikinci bir Viva
+        ünitesinde C7 hatası bildiriyor ve 'basınç valfinde bir sorun olduğuna yöneliyorum' diyor.
+      advice: Bir Viva'da tekrarlayan C7 hatasına dair tek bir sahip raporu; sahip tarafından basınç valfine
+        atfediliyor. C7, kılavuzda yeterli sıvı olmadığını veya hızlı tahliye düğmesinin Vent konumunda
+        bırakıldığını gösterdiği şeklinde belgelenmiştir. Bu anekdot niteliğinde ve düşük ciddiyette,
+        ancak Viva'nın basınç oluşturamamasına dair gerçek bir sahip hesabı.
+  evidence:
+  - url: https://www.facebook.com/groups/InstantPotCommunity/posts/4700279423399342/
+    quote: 'This is viva #2 and I''m getting a c7 error. There''s plenty of liquid in the pot. I''m so
+      annoyed with this....I''m ready to toss them out and go back to the original brand I had.'
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:01:07+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: instant pot
+      series: duo
+  kind: known_issue
+  domain: burn
+  severity: high
+  consequence: ''
+  detection: ''
+  component: lid-locking assembly
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Class action alleges Instant Pot Duo lid-locking assemblies fail, allowing lids to open under
+        pressure
+      body: The class action names the IP Duo Series among the affected models. The defect is a lid that
+        can open while the cooker is still pressurized, ejecting super-heated contents.
+      advice: Never force the lid open; always confirm the float valve has dropped and pressure is fully
+        released before opening. If the lid opens while pressurized, stop using the unit immediately.
+    tr:
+      title: Toplu dava, Instant Pot Duo kapak kilitleme düzeneklerinin arızalandığını ve kapakların basınç
+        altında açılmasına izin verdiğini iddia ediyor
+      body: Toplu dava, etkilenen modeller arasında IP Duo Serisini adlandırıyor. Kusur, pişirici hâlâ
+        basınç altındayken açılabilen ve aşırı ısınmış içeriği dışarı fırlatan bir kapak.
+      advice: Kapağı asla zorla açmayın; açmadan önce şamandıra valfinin düştüğünü ve basıncın tamamen
+        tahliye edildiğini her zaman doğrulayın. Kapak basınç altındayken açılırsa üniteyi derhal kullanmayı
+        bırakın.
+  evidence:
+  - url: https://www.classactionlawsuithelp.com/instant-pot-duo-pressure-cooker-class-action-lawsuit/
+    quote: In June 2022, two plaintiffs filed a federal class action lawsuit against Instant Brands Inc.,
+      claiming that multiple Instant Pot models contain dangerously defective lid-locking assemblies that
+      allow the lids to open while contents remain under pressure, causing super-heated food and steam
+      to erupt and scald users with second and third-degree burns.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:56:17+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Instant Pot
+      series: Plus Wi-Fi
+  kind: known_issue
+  domain: general
+  severity: low
+  consequence: ''
+  detection: ''
+  component: lid / pressure retention system
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: No recall found for Instant Pot Plus WiFi; only Smart/Smart-60 (2015) recall identified
+      body: The only Instant Pot recall identified covers Smart/Smart-60 models (2015, electrical shock
+        hazard). No recall was found for the Plus WiFi (RPPC61-BK). Later burn lawsuits concern lid-safety/pressure-retention
+        failures but are not specific to the Plus WiFi model.
+      advice: The Plus WiFi is not under any identified recall, but buyers should be aware of the broader
+        pattern of lid-safety burn lawsuits against Instant Pot brand cookers.
+    tr:
+      title: Instant Pot Plus WiFi için geri çağırma bulunamadı; yalnızca Smart/Smart-60 (2015) geri çağırması
+        tespit edildi
+      body: Tespit edilen tek Instant Pot geri çağırması Smart/Smart-60 modellerini kapsıyor (2015, elektrik
+        çarpması tehlikesi). Plus WiFi (RPPC61-BK) için geri çağırma bulunamadı. Daha sonraki yanık davaları
+        kapak güvenliği/basınç tutma arızalarıyla ilgili ancak Plus WiFi modeline özgü değil.
+      advice: Plus WiFi tespit edilen herhangi bir geri çağırma kapsamında değil, ancak alıcılar Instant
+        Pot markalı pişiricilere karşı daha geniş kapak güvenliği yanık davaları örüntüsünün farkında
+        olmalı.
+  evidence:
+  - url: https://www.schmidtandclark.com/instant-pot-smart-60-recall-lawsuit
+    quote: The 2015 recall covers specific Smart and Smart-60 cookers with serial numbers from 1410 through
+      1503 and manufacture dates from December 1, 2014, through June 1, 2015.
+    locator: ''
+    stance: disputes
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:55:14+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Instant Pot
+      series: Duo Plus
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: lid locking assembly (cover lock / locking pin)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Duo Plus series lid locking assembly can open under pressure, causing second/third-degree
+        burns (US class action)
+      body: A Canadian consumer-law firm's investigation names the Duo Plus series among Instant Pot models
+        covered by an ongoing US class action alleging a dangerously defective lid locking device that
+        lets the lid open while contents are under pressure, ejecting superheated contents and burning
+        users to the second and third degree. The page also states Instant Brands designed a new locking
+        pin construction around 26 October 2017 to address the problem, so units built before that date
+        are the ones in question.
+      advice: 'If you are buying a Duo Plus in Turkey, this is the highest-risk finding: it alleges a
+        lid-lock defect that can cause scalding burns under normal use. Prefer a unit manufactured after
+        late 2017 (the page says the new locking-pin construction was designed around 26 October 2017),
+        and treat any lid that opens while pressure is still inside as a serious hazard.'
+    tr:
+      title: Duo Plus serisi kapak kilitleme düzeneği basınç altında açılarak ikinci/üçüncü derece yanıklara
+        neden olabilir (ABD toplu davası)
+      body: Kanadalı bir tüketici hukuku firmasının incelemesi, Duo Plus serisini, içerik basınç altındayken
+        kapağın açılmasına izin veren ve aşırı ısınmış içeriği dışarı fırlatarak kullanıcıları ikinci
+        ve üçüncü derecede yakan tehlikeli şekilde kusurlu bir kapak kilitleme cihazı iddiasıyla sürmekte
+        olan bir ABD toplu davası kapsamındaki Instant Pot modelleri arasında adlandırıyor. Sayfa ayrıca
+        Instant Brands'in sorunu ele almak için yaklaşık 26 Ekim 2017'de yeni bir kilitleme pimi yapısı
+        tasarladığını belirtiyor, dolayısıyla söz konusu olanlar bu tarihten önce üretilen üniteler.
+      advice: 'Türkiye''de bir Duo Plus alıyorsanız, bu en yüksek riskli bulgu: normal kullanımda haşlanma
+        yanıklarına neden olabilecek bir kapak kilidi kusuru iddia ediyor. Geç 2017''den sonra üretilmiş
+        bir üniteyi tercih edin (sayfa yeni kilitleme pimi yapısının yaklaşık 26 Ekim 2017''de tasarlandığını
+        söylüyor) ve basınç hâlâ içerideyken açılan herhangi bir kapağı ciddi bir tehlike olarak değerlendirin.'
+  evidence:
+  - url: https://clg.org/Recours-Collectif/Liste-des-recours-collectifs/Autocuiseur--Defaut--Action-collective-canadienne
+    quote: Un recours collectif est déjà en cours aux États-Unis, qui allègue que ces produits sont dotés
+      d'un dispositif de verrouillage du couvercle dangereusement défectueux, permettant au couvercle
+      de s'ouvrir alors que le contenu de l'appareil est sous pression dans le cadre d'une utilisation
+      normale et prévue, de sorte que son contenu surchauffé jaillit de l'appareil, brûlant les consommateurs
+      au deuxième et au troisième degré.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:57:35+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: instant pot
+      series: smart
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: lid locking mechanism
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Instant Pot Smart-60 lid removable under pressure, per court complaint
+      body: Federal complaint (Wilder v. Instant Brands, Docket 1:23-cv-1964) alleges the Smart-60 lid
+        can be removed while pressure, heat and steam remain inside, causing scalding burn injuries. This
+        is an allegation in litigation, not an adjudicated finding.
+      advice: This is a plaintiff's allegation, not a proven defect. If you own a Smart-60, never force
+        the lid open and always confirm the float valve has dropped before opening. Treat this as a reported
+        risk, not a confirmed failure.
+    tr:
+      title: Instant Pot Smart-60 kapağı basınç altında çıkarılabilir, mahkeme şikayetine göre
+      body: Federal şikayet (Wilder v. Instant Brands, Docket 1:23-cv-1964), Smart-60 kapağının basınç,
+        ısı ve buhar içeride kalırken çıkarılabildiğini ve haşlanma yanıklarına yol açtığını iddia ediyor.
+        Bu, dava sürecindeki bir iddiadır, hükme bağlanmış bir tespit değildir.
+      advice: Bu, davacının iddiasıdır, kanıtlanmış bir kusur değildir. Bir Smart-60'ınız varsa, kapağı
+        asla zorla açmayın ve açmadan önce şamandıra valfinin indiğini her zaman doğrulayın. Bunu bildirilen
+        bir risk olarak değerlendirin, doğrulanmış bir arıza olarak değil.
+  evidence:
+  - url: http://www.johnsonbecker.com/wp-content/uploads/Instant-Pot-Lawsuit-Wilder-Complaint.pdf
+    quote: Specifically, said defects manifest themselves when, despite Defendant's statements, the lid
+      of the pressure cooker is removable with built-up pressure, heat, and steam still inside the unit.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:02:13+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Instant Pot
+      series: Duo Nova
+  kind: known_issue
+  domain: burn
+  severity: high
+  consequence: ''
+  detection: ''
+  component: lid seal / sealing ring
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Duo Nova violent pressure release through lid seal scattered contents 15 feet (incident report)
+      body: An incident report (No. 20260105-64920-2147324847) dated January 5, 2026 describes a Duo Nova
+        violently expelling all internal pressure and contents through the lid seal, with debris scattered
+        up to 15 feet and a gunshot-like sound. The report states no one was injured only because bystanders
+        were about 30 feet away.
+      advice: This documents a violent, uncontrolled pressure release through the lid seal on the Duo
+        Nova. It is a recent (2026) incident and reinforces the burn/projectile hazard on this model.
+    tr:
+      title: Duo Nova kapak contasından şiddetli basınç tahliyesi içeriği 15 fit'e saçtı (olay raporu)
+      body: 5 Ocak 2026 tarihli bir olay raporu (No. 20260105-64920-2147324847), bir Duo Nova'nın tüm
+        iç basıncı ve içeriği kapak contasından şiddetle dışarı attığını, molozların 15 fit'e kadar saçıldığını
+        ve silah sesine benzer bir ses duyulduğunu açıklıyor. Rapor, yalnızca çevredekilerin yaklaşık
+        30 fit uzakta olması nedeniyle kimsenin yaralanmadığını belirtiyor.
+      advice: Bu, Duo Nova'da kapak contasından şiddetli, kontrolsüz bir basınç tahliyesini belgeliyor.
+        Bu yakın tarihli (2026) bir olaydır ve bu modeldeki yanık/mermi tehlikesini pekiştirmektedir.
+  evidence:
+  - url: https://farzanlaw.com/instant-pot-duo-nova-incident-violent-pressure-release-expels-contents-poses-severe-burn-risk/
+    quote: The unit suddenly and violently released all internal pressure and its contents at once through
+      the lid seal.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:57:03+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Instant Pot
+      series: Pro Crisp
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: pressure cooking lid / safety lid lock
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Pro Crisp AF 8 pressure cooking lid can be opened while pressurized, ejecting scalding contents
+        (lawsuit)
+      body: A product-liability lawsuit (Ulloa v. Instant Brands, Eastern District of Tennessee, filed
+        July 21) names the Pro Crisp AF 8 specifically and alleges the lid could be rotated and opened
+        while the unit remained pressurized, so the scalding contents were ejected onto the user, causing
+        severe burn injuries.
+      advice: Treat the lid lock as the critical safety part. If the lid can be turned or opened before
+        pressure has fully released, stop using the unit immediately and do not attempt to open it under
+        pressure; this is the failure mode the lawsuit says causes catastrophic burns.
+    tr:
+      title: Pro Crisp AF 8 basınçlı pişirme kapağı basınç altındayken açılabilir, haşlayıcı içeriği fırlatır
+        (dava)
+      body: Bir ürün sorumluluğu davası (Ulloa v. Instant Brands, Eastern District of Tennessee, 21 Temmuz'da
+        açıldı) özellikle Pro Crisp AF 8'i adlandırıyor ve kapağın cihaz basınç altındayken döndürülüp
+        açılabildiğini, böylece haşlayıcı içeriğin kullanıcıya fırlatıldığını ve ciddi yanık yaralanmalarına
+        yol açtığını iddia ediyor.
+      advice: Kapak kilidini kritik güvenlik parçası olarak değerlendirin. Basınç tamamen tahliye edilmeden
+        önce kapak çevrilebiliyor veya açılabiliyorsa, cihazı hemen kullanmayı bırakın ve basınç altında
+        açmaya çalışmayın; davanın felaket yanıklara yol açtığını söylediği arıza modu budur.
+  evidence:
+  - url: https://www.aboutlawsuits.com/instant-pot-pressure-cooker-exploded/
+    quote: a Tennessee man indicates in a recently filed lawsuit that he suffered severe burn injuries
+      when an Instant Pot Pro Crisp Multi-Use Pressure Cooker and Air Fryer forcefully ejected scalding
+      hot contents onto his body.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:55:42+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Instant Pot
+      series: Duo Plus
+  kind: known_issue
+  domain: mechanical
+  severity: low
+  consequence: ''
+  detection: ''
+  component: lid sealing O-ring / sealing ring
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Owner reports the lid cannot be made to seal due to the silicone O-ring design
+      body: A critical Amazon/Woot review of the Duo Plus (8-quart) reports being unable to get the lid
+        to seal at all, blaming the large red O-ring and a lid that is hard to push down and turn to lock.
+        This is a single owner's account of the same sealing failure the manual documents, but it is anecdotal
+        and the reviewer could not get past a test run.
+      advice: This is weaker evidence (one owner) but matches the official steam-leak troubleshooting.
+        If you buy a Duo Plus, expect the sealing ring to need correct seating; test the seal with a water
+        run before relying on it.
+    tr:
+      title: Kullanıcı, silikon O-ring tasarımı nedeniyle kapağın sızdırmaz hale getirilemediğini bildiriyor
+      body: Duo Plus (8 quart) hakkında kritik bir Amazon/Woot incelemesi, kapağın hiç sızdırmaz hale
+        getirilemediğini bildiriyor ve bunu büyük kırmızı O-ring'e ve aşağı bastırılıp kilitlemek için
+        çevrilmesi zor bir kapağa bağlıyor. Bu, kılavuzun belgelediği aynı sızdırmazlık arızasına dair
+        tek bir kullanıcının anlatımıdır, ancak anekdottur ve inceleyici bir test çalıştırmasını geçememiştir.
+      advice: Bu daha zayıf bir kanıttır (tek kullanıcı) ancak resmi buhar kaçağı sorun giderme ile örtüşmektedir.
+        Bir Duo Plus alırsanız, sızdırmazlık halkasının doğru oturması gerektiğini bekleyin; güvenmeden
+        önce contayı bir su çalıştırmasıyla test edin.
+  evidence:
+  - url: https://home.woot.com/review/B09MZTP44L?offerid=2cd453ea-8d52-4528-804d-915162f1a0a1&itemid=c2b70bc9-010b-4d26-9006-f56b3a0ce4c8&filter=1&isVerified=false&page=1&sort=0
+    quote: I can't get the lid to seal on the pot.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:57:35+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Instant Pot
+      series: Ultra
+  kind: known_issue
+  domain: burn
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: heating element / inner pot bottom
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Instant Pot Ultra manual documents 'Ovht' overheating warning and pressure failure mode
+      body: The official Ultra manual documents an 'Ovht' (overheating) warning where the cooker reduces
+        heating temperature and may fail to reach cooking pressure, potentially caused by starch deposits
+        blocking heat dissipation from the inner pot bottom.
+      advice: If the Ultra shows an Ovht warning, stop cooking and inspect the bottom of the inner pot
+        for residue buildup. The unit may fail to reach pressure, meaning food may not be safely cooked.
+    tr:
+      title: Instant Pot Ultra kılavuzu 'Ovht' aşırı ısınma uyarısını ve basınç arıza modunu belgeliyor
+      body: Resmi Ultra kılavuzu, pişiricinin ısıtma sıcaklığını düşürdüğü ve pişirme basıncına ulaşamayabileceği
+        bir 'Ovht' (aşırı ısınma) uyarısını belgeliyor; buna potansiyel olarak iç kabın tabanından ısı
+        dağılımını engelleyen nişasta birikintileri neden olabilir.
+      advice: Ultra bir Ovht uyarısı gösterirse, pişirmeyi durdurun ve iç kabın tabanında kalıntı birikimi
+        olup olmadığını inceleyin. Cihaz basınca ulaşamayabilir, bu da yemeğin güvenli şekilde pişmemiş
+        olabileceği anlamına gelir.
+  evidence:
+  - url: https://www.manualslib.de/guide/1475211/instant-pot-ultra-handbuch.html
+    quote: Sporadisches Piepen und Anzeige der Meldung "Ovht" (Überhitzung), nachdem der Kocher eine Weile
+      in Betrieb war | Anzeichen für Überhitzung. Der Kocher hat die Heiztemperatur reduziert und erreicht
+      möglicherweise nicht den Kochdruck.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:03:45+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: instant pot
+      series: smart-60
+  kind: known_issue
+  domain: burn
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: lid locking mechanism
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Burn lawsuit: Smart-60 lid opened while pressure remained, scalding contents'
+      body: A law-firm page tracking litigation reports a March 29, 2023 federal complaint alleging a
+        Smart-60 lid opened while pressure remained inside, projecting scalding contents and causing burn
+        injuries; a similar April 2025 Florida complaint alleges hot contents burned a child. These are
+        unproven allegations, not adjudicated findings, and they are separate from the electrical recall.
+        This came from the 'Instant Pot Smart-60 recall' search.
+      advice: These are allegations only, not established defects, so treat them as a warning signal rather
+        than a confirmed failure. The claimed failure mode is the lid opening under residual pressure,
+        which is the burn scenario a buyer should be aware of. I could not verify these cases against
+        a court docket within this run's budget.
+    tr:
+      title: 'Yanık davası: Smart-60 kapağı basınç kalırken açıldı, haşlayıcı içerik'
+      body: Dava sürecini takip eden bir hukuk bürosu sayfası, 29 Mart 2023 tarihli bir federal şikayetin,
+        içeride basınç kalırken bir Smart-60 kapağının açıldığını, haşlayıcı içeriği fırlattığını ve yanık
+        yaralanmalarına yol açtığını iddia ettiğini bildiriyor; benzer bir Nisan 2025 Florida şikayeti
+        ise sıcak içeriğin bir çocuğu yaktığını iddia ediyor. Bunlar kanıtlanmamış iddialardır, hükme
+        bağlanmış tespitler değildir ve elektrik geri çağırmasından ayrıdır. Bu, 'Instant Pot Smart-60
+        recall' aramasından geldi.
+      advice: Bunlar yalnızca iddialardır, yerleşik kusurlar değildir, bu yüzden bunları doğrulanmış bir
+        arıza yerine bir uyarı sinyali olarak değerlendirin. İddia edilen arıza modu, kalan basınç altında
+        kapağın açılmasıdır; bu, bir alıcının farkında olması gereken yanık senaryosudur. Bu çalıştırmanın
+        bütçesi dahilinde bu davaları bir mahkeme dosyasına karşı doğrulayamadım.
+  evidence:
+  - url: https://www.schmidtandclark.com/instant-pot-smart-60-recall-lawsuit
+    quote: A complaint filed in the U.S. District Court for the Northern District of Illinois alleged
+      that an Instant Pot Smart-60 lid opened while pressure remained inside the cooker, allowing scalding
+      contents to escape and cause burn injuries.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:55:14+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Instant Pot
+      series: Plus Wi-Fi
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: WiFi module
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'C10 error code: WiFi module failure on Instant Pot Plus'
+      body: Official Instant Pot troubleshooting table (Spanish market) lists C10 as a WiFi module failure
+        requiring customer service contact. This is model-specific to the Plus WiFi, which is the only
+        Instant Pot variant with built-in WiFi.
+      advice: If the unit displays C10, the WiFi module has failed and requires service; the unit may
+        still cook but remote/app features are lost.
+    tr:
+      title: 'C10 hata kodu: Instant Pot Plus''ta WiFi modülü arızası'
+      body: Resmi Instant Pot sorun giderme tablosu (İspanya pazarı), C10'u müşteri hizmetleriyle iletişim
+        gerektiren bir WiFi modülü arızası olarak listeliyor. Bu, yerleşik WiFi'ye sahip tek Instant Pot
+        varyantı olan Plus WiFi'ye özgüdür.
+      advice: Cihaz C10 gösteriyorsa, WiFi modülü arızalanmıştır ve servis gerektirir; cihaz yine de pişirebilir
+        ancak uzaktan/uygulama özellikleri kaybolur.
+  evidence:
+  - url: https://www.instantpot.es/index.php?dispatch=attachments.getfile&attachment_id=1013
+    quote: C10</td><td>Fallo del módulo WiFi.</td><td>Póngase en contacto con Atención al cliente.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:55:14+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: instant pot
+      series: smart
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: thermal probe (base)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Health Canada recall of Instant Pot Smart-60 for electrical hazard
+      body: 'Health Canada joint recall notice (RA-54204, July 15, 2015) confirming the same Smart-60
+        electrical recall: UPC 853084004132, UL certification file E214884, and date codes 1410 to 1503.
+        Independent confirmation of the CPSC recall details.'
+      advice: 'Confirms the affected model and date-code range from a second regulator. Same check applies:
+        verify the date code under the base before use.'
+    tr:
+      title: Health Canada, elektrik tehlikesi nedeniyle Instant Pot Smart-60'ı geri çağırdı
+      body: 'Health Canada ortak geri çağırma bildirimi (RA-54204, 15 Temmuz 2015), aynı Smart-60 elektrik
+        geri çağırmasını doğruluyor: UPC 853084004132, UL sertifikasyon dosyası E214884 ve tarih kodları
+        1410 ile 1503. CPSC geri çağırma ayrıntılarının bağımsız doğrulaması.'
+      advice: 'Etkilenen modeli ve tarih kodu aralığını ikinci bir düzenleyiciden doğrular. Aynı kontrol
+        geçerlidir: kullanmadan önce tabanın altındaki tarih kodunu doğrulayın.'
+  evidence:
+  - url: https://recalls-rappels.canada.ca/fr/avis-rappel/double-insight-inc-rappelle-autocuiseurs-instant-pot-smart
+    quote: Le présent rappel vise les autocuiseurs Instant Pot Smart-60 multifonctions recouverts d'un
+      fini en acier inoxydable.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:04:06+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: instant pot
+      series: smart-60
+  kind: known_issue
+  domain: burn
+  severity: high
+  consequence: ''
+  detection: ''
+  component: lid locking mechanism / pressure retention
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Smart-60 lid removable under pressure, scalding burns (Wilder v. Instant Brands, 2023 complaint)
+      body: This is the actual filed federal complaint (Docket 1:23-cv-1964, N.D. Illinois) naming the
+        Smart-60 model and alleging the lid could be opened while the cooker retained pressure, projecting
+        scalding contents.
+      advice: This is an allegation in a court filing, not an adjudicated finding, and it is a US case.
+        It describes a lid-safety failure mode (lid opening under retained pressure) distinct from the
+        electrical recall. Treat it as a documented claim to weigh, not a proven defect.
+    tr:
+      title: Smart-60 kapağı basınç altında çıkarılabilir, haşlanma yanıkları (Wilder v. Instant Brands,
+        2023 şikayeti)
+      body: Bu, Smart-60 modelini adlandıran ve kapağın pişirici basıncı korurken açılabileceğini ve haşlayıcı
+        içerikleri fırlatabileceğini iddia eden gerçekten dosyalanmış federal şikayettir (Dava No. 1:23-cv-1964,
+        N.D. Illinois).
+      advice: Bu, bir mahkeme dosyasındaki iddiadır, karara bağlanmış bir tespit değildir ve bir ABD davasıdır.
+        Elektrik geri çağırmasından farklı bir kapak güvenliği arıza modunu (korunan basınç altında kapak
+        açılması) tanımlar. Kanıtlanmış bir kusur değil, değerlendirilecek belgelenmiş bir iddia olarak
+        ele alın.
+  evidence:
+  - url: http://www.johnsonbecker.com/wp-content/uploads/Instant-Pot-Lawsuit-Wilder-Complaint.pdf
+    quote: In this case, the lid was able to be rotated, opened, and removed while the pressure cooker
+      retained pressure, causing Plaintiff serious and substantial bodily injuries and damages.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:02:13+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Instant Pot
+      series: Ultra
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: lid-locking assembly
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Instant Pot Ultra Series named in class action over defective lid-locking assembly
+      body: The Ultra Series is explicitly named in a federal class action alleging the lid-locking mechanism
+        can fail during normal use, allowing the lid to open while contents are under pressure, causing
+        scalding eruptions. This is a documented, litigated safety defect affecting the Ultra model.
+      advice: If you own an Instant Pot Ultra, never force the lid open and always verify the float valve
+        has dropped before opening. The lawsuit alleges the safety mechanism can fail even in normal use.
+    tr:
+      title: Instant Pot Ultra Serisi, hatalı kapak kilitleme düzeneği nedeniyle toplu davada adlandırıldı
+      body: Ultra Serisi, kapak kilitleme mekanizmasının normal kullanım sırasında arızalanabileceğini,
+        içerik basınç altındayken kapağın açılmasına izin vererek haşlayıcı püskürmelere neden olabileceğini
+        iddia eden bir federal toplu davada açıkça adlandırılmıştır. Bu, Ultra modelini etkileyen belgelenmiş,
+        dava konusu olmuş bir güvenlik kusurudur.
+      advice: Bir Instant Pot Ultra'nız varsa, kapağı asla zorla açmayın ve açmadan önce şamandıra valfinin
+        düştüğünü her zaman doğrulayın. Dava, güvenlik mekanizmasının normal kullanımda bile arızalanabileceğini
+        iddia ediyor.
+  evidence:
+  - url: https://www.classactionlawsuithelp.com/instant-pot-duo-pressure-cooker-class-action-lawsuit/
+    quote: 'The class action identifies numerous Instant Pot models as defective: IP Duo Series, Lux Series,
+      Viva Series, Duo Plus Series, Duo Evo Plus, Duo Crisp, Duo Nova, Nova Plus, Smart WiFi, DUO SV,
+      Ultra Series, and Max Series.'
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:56:17+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Instant Pot
+      series: Lux
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: lid-locking assembly
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'IP-LUX 60 burn lawsuit: lid twisted open while pressurized, projecting scalding contents'
+      body: A March 2023 lawsuit (4:23-cv-00286-BRW, E.D. Ark.) specifically names the IP-LUX 60, the
+        exact model in this research subject. The plaintiff alleges he could easily twist the lid open
+        while pressure remained inside, causing scalding contents to project onto him. This is the most
+        model-specific evidence of the lid failure on the Lux 60.
+      advice: For the LUX60 specifically, there is a documented lawsuit alleging the lid can be opened
+        while the cooker is still pressurized, leading to severe burn injuries. Exercise caution and never
+        force the lid open; verify the float valve has dropped before opening.
+    tr:
+      title: 'IP-LUX 60 yanık davası: basınç altındayken kapak bükülerek açıldı, haşlayıcı içerikler fırladı'
+      body: Mart 2023 tarihli bir dava (4:23-cv-00286-BRW, E.D. Ark.) özellikle IP-LUX 60'ı, bu araştırma
+        konusundaki tam modeli adlandırıyor. Davacı, içeride basınç kalırken kapağı kolayca bükerek açabildiğini
+        ve haşlayıcı içeriklerin üzerine fırladığını iddia ediyor. Bu, Lux 60'taki kapak arızasının en
+        modele özgü kanıtıdır.
+      advice: Özellikle LUX60 için, pişirici hâlâ basınç altındayken kapağın açılabileceğini ve ciddi
+        yanık yaralanmalarına yol açabileceğini iddia eden belgelenmiş bir dava vardır. Dikkatli olun
+        ve kapağı asla zorla açmayın; açmadan önce şamandıra valfinin düştüğünü doğrulayın.
+  evidence:
+  - url: https://www.theclarkfirmtexas.com/instant-pot-ip-lux-pressure-cooker-lawsuit-filed-by-burned-man/
+    quote: According to the lawsuit, the incident occurred in March 2020 and involved an Instant Pot IP-LUX
+      60, which is a 6-in-1 multi-cooker.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:58:53+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Instant Pot
+      series: Lux
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: temperature sensor
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Lux Series manual lists error codes C1/C2 (faulty temperature sensor) and C5 (overheating)
+      body: The official Instant Pot troubleshooting document covering the Lux (among other models) lists
+        C1 and C2 error codes as indicating a faulty temperature sensor requiring service, and C5 as overheating
+        from no water or a misplaced inner pot. These are electrical failures documented in manufacturer
+        materials.
+      advice: If the Lux displays C1 or C2, the temperature sensor has failed and the unit needs service
+        — the manual says to contact customer care. C5 indicates overheating, usually from insufficient
+        liquid; add cooking liquid before continuing. These are not user-serviceable.
+    tr:
+      title: Lux Serisi kılavuzu C1/C2 (hatalı sıcaklık sensörü) ve C5 (aşırı ısınma) hata kodlarını listeliyor
+      body: Lux'u (diğer modeller arasında) kapsayan resmi Instant Pot sorun giderme belgesi, C1 ve C2
+        hata kodlarını servis gerektiren hatalı bir sıcaklık sensörünü gösterdiğini ve C5'i su olmaması
+        veya yanlış yerleştirilmiş iç kap nedeniyle aşırı ısınma olarak listeliyor. Bunlar üretici materyallerinde
+        belgelenmiş elektrik arızalarıdır.
+      advice: Lux C1 veya C2 gösteriyorsa, sıcaklık sensörü arızalanmıştır ve cihaz servis gerektirir
+        — kılavuz müşteri hizmetleriyle iletişime geçilmesini söylüyor. C5 aşırı ısınmayı gösterir, genellikle
+        yetersiz sıvıdan kaynaklanır; devam etmeden önce pişirme sıvısı ekleyin. Bunlar kullanıcı tarafından
+        servis edilebilir değildir.
+  evidence:
+  - url: https://m.media-amazon.com/images/I/81gMgepISNL.pdf
+    quote: C1 - Faulty temperature sensor
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:57:35+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Instant Pot
+      series: Lux
+  kind: known_issue
+  domain: general
+  severity: low
+  consequence: ''
+  detection: ''
+  component: thermal probe
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: No CPSC recall covers the Lux; only Smart/Smart-60 models were recalled in 2015
+      body: 'The only CPSC recall for Instant Pot electric pressure cookers (July 2015) covers the Smart
+        and Smart-60 models with a thermal probe electric-shock hazard. The Lux series is not included
+        in any CPSC recall. This is important negative evidence: there is no official recall remedy for
+        the Lux''s lid issues.'
+      advice: The Lux has never been subject to a CPSC recall. The lid-locking concerns are litigated
+        in court but have not resulted in an official recall or replacement program, so a buyer cannot
+        rely on a recall remedy.
+    tr:
+      title: Hiçbir CPSC geri çağırması Lux'u kapsamıyor; 2015'te yalnızca Smart/Smart-60 modelleri geri
+        çağrıldı
+      body: 'Instant Pot elektrikli düdüklü tencereler için tek CPSC geri çağırması (Temmuz 2015), termal
+        problu elektrik çarpması tehlikesi bulunan Smart ve Smart-60 modellerini kapsar. Lux serisi hiçbir
+        CPSC geri çağırmasına dahil değildir. Bu önemli bir olumsuz kanıttır: Lux''un kapak sorunları
+        için resmi bir geri çağırma çözümü yoktur.'
+      advice: Lux hiçbir zaman bir CPSC geri çağırmasına tabi olmamıştır. Kapak kilitleme endişeleri mahkemede
+        dava konusu edilmiştir ancak resmi bir geri çağırma veya değiştirme programıyla sonuçlanmamıştır,
+        bu nedenle bir alıcı geri çağırma çözümüne güvenemez.
+  evidence:
+  - url: https://www.cpsc.gov/Recalls/2015/Instant-Pot-Pressure-Cookers-Recalled-by-Double-Insight
+    quote: This recall involves Instant Pot "Smart" and "Smart-60" electric pressure cookers.
+    locator: ''
+    stance: disputes
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:58:53+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: instant pot
+      series: smart
+  kind: known_issue
+  domain: burn
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: lid locking mechanism
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Instant Pot Smart-60 child burn lawsuit alleges lid opening ejected scalding contents
+      body: April 2025 Florida lawsuit (Case 6:25-cv-00618) alleges a 2-year-old was burned in May 2023
+        when the Smart-60 lid was opened and scalding contents ejected. Another allegation in litigation,
+        consistent with the Wilder complaint's lid-under-pressure theory.
+      advice: Second independent source alleging the same failure mode (lid opening under pressure) on
+        the Smart-60. Both are pending lawsuits, so treat as reported risk rather than confirmed defect.
+        Caution with lid opening is warranted.
+    tr:
+      title: Instant Pot Smart-60 çocuk yanığı davası, kapağın açılmasının kaynar içeriği dışarı fırlattığını
+        iddia ediyor
+      body: Nisan 2025 Florida davası (Dava 6:25-cv-00618), Mayıs 2023'te Smart-60 kapağı açıldığında
+        ve kaynar içerik dışarı fırladığında 2 yaşındaki bir çocuğun yandığını iddia ediyor. Dava sürecindeki
+        bir başka iddia, Wilder şikayetinin basınç altında kapak teorisiyle tutarlıdır.
+      advice: Smart-60'ta aynı arıza modunu (basınç altında kapağın açılması) iddia eden ikinci bağımsız
+        kaynak. Her ikisi de derdest davalardır, bu nedenle doğrulanmış bir kusur olarak değil, bildirilen
+        bir risk olarak değerlendirin. Kapağı açarken dikkatli olunması gerekir.
+  evidence:
+  - url: https://www.theclarkfirmtexas.com/mother-files-lawsuit-after-child-burned-by-instant-pot/
+    quote: According to her lawsuit, the girl was burned in May 2023 when someone opened the lid and the
+      scalding-hot contents of the pot were ejected out.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:04:06+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Instant Pot
+      series: Pro Crisp
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: pressure sensor / lid lock timing
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Owner reports defective pressure sensor — timer runs before pressure is generated and lid
+        can be opened
+      body: An owner on the Galaxus Q&A reports that on the Pro Crisp the timer starts before pressure
+        is generated and the lid can be opened, which they attribute to a defective sensor; they note
+        two other identical units did not behave this way.
+      advice: If the timer starts before the unit reaches pressure and the lid opens early, the pressure
+        sensor/lock may be faulty — a safety-relevant defect. This is an individual owner report, not
+        a recall; verify against the unit's behavior and contact support if it occurs.
+    tr:
+      title: Kullanıcı arızalı basınç sensörünü bildiriyor — zamanlayıcı basınç oluşmadan önce çalışıyor
+        ve kapak açılabiliyor
+      body: Galaxus Soru-Cevap bölümünde bir kullanıcı, Pro Crisp'te zamanlayıcının basınç oluşmadan önce
+        başladığını ve kapağın açılabildiğini, bunu arızalı bir sensöre bağladığını bildiriyor; diğer
+        iki aynı ünitenin bu şekilde davranmadığını belirtiyor.
+      advice: Zamanlayıcı ünite basınca ulaşmadan başlıyorsa ve kapak erken açılıyorsa, basınç sensörü/kilit
+        arızalı olabilir — güvenlikle ilgili bir kusur. Bu bireysel bir kullanıcı bildirimidir, geri çağırma
+        değildir; ünitenin davranışına göre doğrulayın ve bu durum meydana gelirse destekle iletişime
+        geçin.
+  evidence:
+  - url: https://www.galaxus.ch/en/s2/questionandanswer/ci-sono-problemi-con-il-produttore-al-momento-quando-voglio-cucinare-a-vapore-il-timer-inizia-a-scor-892547
+    quote: When I want to cook steam, the timer starts to run before the pressure has been generated and
+      the lid can be opened.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:55:42+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Instant Pot
+      series: Duo Nova
+  kind: known_issue
+  domain: burn
+  severity: high
+  consequence: ''
+  detection: ''
+  component: lid / pressure-locking mechanism
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Duo Nova 60 lid opened under retained pressure causing burn injuries (court complaint)
+      body: A Texas federal court complaint (Civil Action No. 1:26-cv-2058) names the Duo Nova 60 and
+        alleges the lid could be rotated and removed while the cooker retained pressure, causing burn
+        injuries to the plaintiff on July 18, 2021.
+      advice: This is an independent second court filing on the same Duo Nova lid defect, this time for
+        the 60 (6-quart) variant. It corroborates the claim that the lid can open under pressure on this
+        series.
+    tr:
+      title: Duo Nova 60 kapağı korunan basınç altında açılarak yanık yaralanmalarına neden oldu (mahkeme
+        şikayeti)
+      body: Bir Texas federal mahkemesi şikayeti (Hukuk Davası No. 1:26-cv-2058) Duo Nova 60'ı adlandırıyor
+        ve tencere basıncı korurken kapağın döndürülüp çıkarılabildiğini ve 18 Temmuz 2021'de davacıda
+        yanık yaralanmalarına neden olduğunu iddia ediyor.
+      advice: Bu, aynı Duo Nova kapak kusuru hakkında bağımsız ikinci bir mahkeme başvurusudur, bu kez
+        60 (6 quart) varyantı için. Bu seride kapağın basınç altında açılabildiği iddiasını desteklemektedir.
+  evidence:
+  - url: https://www.theclarkfirmtexas.com/wp-content/uploads/2026/07/instant-pot-duo-nova-lawsuit-texas.pdf
+    quote: the lid of the pressure cooker was able to be rotated, opened, or removed while the pressure
+      cooker retained pressure, causing her serious and substantial bodily injuries and damages.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:57:03+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Instant Pot
+      series: Duo Nova
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: sealing ring
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Manufacturer manual: turn off if steam escapes from sides of lid; check sealing ring'
+      body: The manufacturer's own Duo Nova manual instructs the user to turn the appliance off if steam
+        escapes from the sides of the lid and to ensure the sealing ring is properly installed, identifying
+        the sealing ring as the part that must hold the lid seal.
+      advice: The sealing ring is the wear part that maintains the lid seal; the manual says to replace
+        it every 12-18 months or when stretched/deformed. Steam leaking from the lid sides is the warning
+        sign the manual tells you to act on.
+    tr:
+      title: 'Üretici kılavuzu: kapak kenarlarından buhar çıkarsa kapatın; conta halkasını kontrol edin'
+      body: Üreticinin kendi Duo Nova kılavuzu, kapak kenarlarından buhar çıkarsa cihazı kapatmasını ve
+        conta halkasının doğru takıldığından emin olmasını kullanıcıya talimat verir; conta halkasını
+        kapak sızdırmazlığını sağlaması gereken parça olarak tanımlar.
+      advice: Conta halkası, kapak sızdırmazlığını koruyan aşınma parçasıdır; kılavuz her 12-18 ayda bir
+        veya gerildiğinde/şekli bozulduğunda değiştirilmesini söyler. Kapak kenarlarından buhar sızması,
+        kılavuzun harekete geçmenizi söylediği uyarı işaretidir.
+  evidence:
+  - url: https://files.bbystatic.com/MN1RWXRNGlIU4QnOFB3l4Q%3D%3D/736527af-13fa-462f-91f4-72fa6f973ded.pdf
+    quote: Turn the appliance off if steam escapes from the sides of the lid and ensure sealing ring is
+      properly installed.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:57:03+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Instant Pot
+      series: Duo Plus
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: temperature sensor, high/low pressure sensor, heating element
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Error codes C1/C2/C6/C6H/C6L signal faulty temperature or pressure sensors; NoPr signal means
+        the heating element has failed
+      body: The manufacturer's official troubleshooting sheet for the Duo Plus (and other series) lists
+        error codes C1, C2, C6, C6H and C6L as faulty temperature/pressure sensors, and the NoPr code
+        as a failed heating element — all requiring contacting Customer Care rather than a user fix. These
+        are documented electrical-component failures specific to this model line.
+      advice: If the display shows C1/C2/C6/C6H/C6L or NoPr, the unit has a failed sensor or heating element
+        and the manual directs you to service, not a DIY repair. This is a reliability risk to weigh for
+        a purchase, since these are internal parts not user-replaceable.
+    tr:
+      title: C1/C2/C6/C6H/C6L hata kodları arızalı sıcaklık veya basınç sensörlerini gösterir; NoPr sinyali
+        ısıtma elemanının arızalandığı anlamına gelir
+      body: Üreticinin Duo Plus (ve diğer seriler) için resmi sorun giderme sayfası, C1, C2, C6, C6H ve
+        C6L hata kodlarını arızalı sıcaklık/basınç sensörleri olarak ve NoPr kodunu arızalı ısıtma elemanı
+        olarak listeler — hepsi kullanıcı onarımı yerine Müşteri Hizmetleri ile iletişime geçilmesini
+        gerektirir. Bunlar bu model hattına özgü belgelenmiş elektrikli bileşen arızalarıdır.
+      advice: Ekranda C1/C2/C6/C6H/C6L veya NoPr görünüyorsa, ünitede arızalı bir sensör veya ısıtma elemanı
+        vardır ve kılavuz sizi kendin yap onarımına değil servise yönlendirir. Bunlar kullanıcı tarafından
+        değiştirilemeyen iç parçalar olduğundan, bir satın alma için tartılması gereken bir güvenilirlik
+        riskidir.
+  evidence:
+  - url: https://m.media-amazon.com/images/I/81gMgepISNL.pdf
+    quote: 'C1 - Faulty temperature sensor | Solution: Contact Care'
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:57:35+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Instant Pot
+      series: Viva
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: lid-locking assembly
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Viva Series included in Instant Pot lid-locking class action (Top Class Actions)
+      body: News coverage of the Havens v. Instant Brands class action names the Viva Series among the
+        affected models, alleging the defective lid-locking assemblies let lids open during normal use
+        under pressure, causing eruptions and second- and third-degree burns.
+      advice: A third independent source confirming the Viva series is implicated in the lid-locking defect.
+        This is the documented, recurring failure mode for the Viva, and it is the reason a buyer should
+        verify the lid lock and float valve behavior before trusting the unit.
+    tr:
+      title: Instant Pot kapak kilitleme toplu davasına dahil edilen Viva Serisi (Top Class Actions)
+      body: Havens v. Instant Brands toplu davasına ilişkin haberler, etkilenen modeller arasında Viva
+        Serisi'ni de sayarak, hatalı kapak kilitleme düzeneklerinin basınç altında normal kullanım sırasında
+        kapakların açılmasına izin vererek patlamalara ve ikinci ve üçüncü derece yanıklara yol açtığını
+        iddia ediyor.
+      advice: Viva serisinin kapak kilitleme kusuruna karıştığını doğrulayan üçüncü bağımsız kaynak. Bu,
+        Viva için belgelenmiş, tekrarlayan arıza modudur ve bir alıcının cihaza güvenmeden önce kapak
+        kilidini ve şamandıra valfi davranışını doğrulaması gerektirmesinin nedenidir.
+  evidence:
+  - url: https://topclassactions.com/lawsuit-settlements/consumer-products/household/instant-pot-class-action-claims-dangerously-defective-lid-poses-burn-risk/
+    quote: The Instant Pot electric pressure cookers with the alleged defect are its IP Duo Series, Lux
+      Series, Viva Series, Duo Plus Series, Duo Evo Plus, Duo Crisp, Duo Nova, Nova Plus, Smart WiFi,
+      DUO SV, Ultra Series and Max Series versions, according to the Instant Pot class action.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:01:07+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Instant Pot
+      series: Viva
+  kind: known_issue
+  domain: mechanical
+  severity: low
+  consequence: ''
+  detection: ''
+  component: float valve / lid-locking mechanism
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Viva manual: float valve can be obstructed by the lid-locking mechanism'
+      body: The manufacturer's own Viva user manual lists 'the float valve is obstructed by the lid-locking
+        mechanism' as a reason the cooker fails to come to pressure, and separately documents steam leaking
+        from the float valve when its silicone ring is worn or missing.
+      advice: This is the manufacturer's own documentation that the float valve and the lid-locking mechanism
+        interact, so a blocked float valve can stop the Viva from pressurizing. It is troubleshooting
+        guidance rather than a recorded failure, so it is lower severity, but it names the same parts
+        involved in the lid-lock issue.
+    tr:
+      title: 'Viva kılavuzu: şamandıra valfi kapak kilitleme mekanizması tarafından engellenebilir'
+      body: Üreticinin kendi Viva kullanım kılavuzu, pişiricinin basınç oluşturamamasının bir nedeni olarak
+        'şamandıra valfinin kapak kilitleme mekanizması tarafından engellenmesi'ni listeler ve ayrıca
+        silikon halkası aşınmış veya eksik olduğunda şamandıra valfinden buhar sızmasını belgeler.
+      advice: Bu, üreticinin kendi belgesidir ve şamandıra valfi ile kapak kilitleme mekanizmasının etkileştiğini,
+        dolayısıyla tıkanmış bir şamandıra valfinin Viva'nın basınç oluşturmasını durdurabileceğini gösterir.
+        Bu, kaydedilmiş bir arıza yerine sorun giderme rehberliğidir, bu nedenle ciddiyeti daha düşüktür,
+        ancak kapak kilidi sorununda yer alan aynı parçaları adlandırır.
+  evidence:
+  - url: https://www.manualslib.com/manual/1691466/Instant-Pot-Viva-Series.html?controller=view
+    quote: '- The float valve is obstructed by the lid-locking mechanism.'
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:01:07+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Instant Pot
+      series: Viva
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: lid-locking assembly (lid)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Viva 60 lid opened while pressurized, scalding contents projected (US lawsuit)
+      body: A US product-liability complaint against Kohl's and Instant Brands names the Instant Pot Viva
+        Pressure Cooker, specifically the Viva 60 model, and alleges the lid could be rotated, opened,
+        and removed while the cooker retained pressure, causing the scalding contents to be projected
+        onto the user.
+      advice: 'This is the single most model-specific documented hazard for the Viva: a lid that can open
+        under pressure. For a buyer, the practical check is never to force or rotate the lid until the
+        float valve has dropped, and to treat any lid that opens while pressure remains as a serious defect.
+        The defect is the subject of active litigation, so it is a known, documented risk rather than
+        speculation.'
+    tr:
+      title: Viva 60 basınç altındayken kapak açıldı, haşlayıcı içerik fırladı (ABD davası)
+      body: Kohl's ve Instant Brands aleyhine açılan bir ABD ürün sorumluluğu şikayeti, Instant Pot Viva
+        Pressure Cooker'ı, özellikle Viva 60 modelini adlandırır ve pişirici basıncı korurken kapağın
+        döndürülebileceğini, açılabileceğini ve çıkarılabileceğini, bunun da haşlayıcı içeriğin kullanıcının
+        üzerine fırlamasına yol açtığını iddia eder.
+      advice: 'Bu, Viva için tek en modele özgü belgelenmiş tehlikedir: basınç altında açılabilen bir
+        kapak. Bir alıcı için pratik kontrol, şamandıra valfi düşene kadar kapağı asla zorlamamak veya
+        döndürmemek ve basınç devam ederken açılan herhangi bir kapağı ciddi bir kusur olarak değerlendirmektir.
+        Kusur aktif davanın konusudur, dolayısıyla spekülasyon değil bilinen, belgelenmiş bir risktir.'
+  evidence:
+  - url: https://edge.prnewswire.com/c/link/?t=0&l=en&o=4668666-1&h=236452061&u=https%3A%2F%2Fwww.johnsonbecker.com%2Fwp-content%2Fuploads%2FA.-DeCoudres-Complaint.pdf&a=Complaint
+    quote: In this case, the lid was able to be rotated, opened, and removed while the pressure cooker
+      retained pressure, causing Plaintiff serious and substantial bodily injuries and damages.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:01:07+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: instant pot
+      series: duo
+  kind: known_issue
+  domain: general
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: whole unit
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Instant Pot Duo bought in Turkey failed after about one month; warranty support unreachable
+      body: A Dutch Amazon review (March 2026) states the reviewer's brother bought a Duo in Turkey and
+        it stopped working after about a month; Amazon Turkey directed them to Turkish warranty service,
+        but the phone numbers found did not work. This documents both a failure in the Turkish market
+        and difficulty accessing warranty support.
+      advice: Before buying in Turkey, confirm the warranty service path and keep the invoice; the complaint
+        indicates Turkish warranty phone numbers may be non-functional.
+    tr:
+      title: Türkiye'de satın alınan Instant Pot Duo yaklaşık bir ay sonra arızalandı; garanti desteğine
+        ulaşılamadı
+      body: Bir Hollandaca Amazon incelemesi (Mart 2026), inceleyicinin kardeşinin Türkiye'de bir Duo
+        satın aldığını ve yaklaşık bir ay sonra çalışmayı durdurduğunu belirtir; Amazon Türkiye onları
+        Türk garanti servisine yönlendirmiş, ancak bulunan telefon numaraları çalışmamıştır. Bu, hem Türkiye
+        pazarındaki bir arızayı hem de garanti desteğine erişim zorluğunu belgeler.
+      advice: Türkiye'de satın almadan önce garanti servis yolunu doğrulayın ve faturayı saklayın; şikayet,
+        Türk garanti telefon numaralarının çalışmıyor olabileceğini gösteriyor.
+  evidence:
+  - url: https://www.amazon.nl/Instant-Pot-programmeerbare-elektrische-snelkookpan/dp/B08Z4HCGDH/ref=NL-WK29?pf_rd_p=52eae9e3-a1b3-40d7-9385-3fe42d1d567a&pf_rd_r=V8AGYAERSD51ZFHQ8VS6&sr=1-10-a04d7cff-fbb8-41af-bd18-ddec6b610707&th=1
+    quote: Mijn broer heeft er één in Turkije gekocht, maar na ongeveer een maand gebruik werkte hij niet
+      meer en er is een defect ontstaan.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:56:17+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: instant pot
+      series: smart-60
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: thermal probe (base)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Smart-60 thermal probe electric-shock recall (CPSC, July 2015)
+      body: This is the official CPSC recall for the Smart and Smart-60, serials 1410-1503, manufacture
+        dates 12/1/2014-6/1/2015, about 1,000 US units plus 140 in Canada, remedy a free replacement base.
+      advice: If you own a Smart-60 within those serial/date ranges, stop using it and contact Instant
+        Pot for the free replacement base; the documented hazard is electric shock from the thermal probe.
+        This is a US/Canada-market recall, so a Turkish-market unit should be checked against its serial/date
+        code rather than assumed covered.
+    tr:
+      title: Smart-60 termal prob elektrik çarpması geri çağırması (CPSC, Temmuz 2015)
+      body: Bu, Smart ve Smart-60 için resmi CPSC geri çağırmasıdır; seri numaraları 1410-1503, üretim
+        tarihleri 12/1/2014-6/1/2015, yaklaşık 1.000 ABD birimi artı Kanada'da 140 birim, çözüm ücretsiz
+        yedek tabandır.
+      advice: Bu seri/tarih aralıklarında bir Smart-60'a sahipseniz, kullanmayı bırakın ve ücretsiz yedek
+        taban için Instant Pot ile iletişime geçin; belgelenen tehlike termal probdan elektrik çarpmasıdır.
+        Bu, ABD/Kanada pazarına yönelik bir geri çağırmadır, bu nedenle Türkiye pazarındaki bir birim
+        kapsandığı varsayılmak yerine seri/tarih koduna göre kontrol edilmelidir.
+  evidence:
+  - url: https://www.cpsc.gov/Recalls/2015/Instant-Pot-Pressure-Cookers-Recalled-by-Double-Insight
+    quote: The thermal probe in the base can conduct electricity throughout the cooker, posing a risk
+      of electric shock.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:58:53+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: instant pot
+      series: gem 65
+  kind: known_issue
+  domain: fire
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: internal wiring / bottom of base
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Owner report: Gem 65 bottom melted and burnt the wires'
+      body: Owner's own words describing the underside melting and burning the internal wiring.
+      advice: A first-hand owner account of the underside melting and burning the wires, matching the
+        official recall hazard. Reinforces the advice to check the batchcode and stop using affected units.
+    tr:
+      title: 'Sahip raporu: Gem 65''in alt kısmı eridi ve kabloları yaktı'
+      body: Sahibin kendi sözleriyle alt kısmın erimesi ve iç kabloları yakması anlatılıyor.
+      advice: Alt kısmın erimesi ve kabloları yakmasına ilişkin birinci elden sahip anlatımı, resmi geri
+        çağırma tehlikesiyle örtüşüyor. Parti kodunun kontrol edilmesi ve etkilenen birimlerin kullanımının
+        durdurulması tavsiyesini güçlendiriyor.
+  evidence:
+  - url: https://data.cimple.eu/describe/?url=http%3A%2F%2Fdata.cimple.eu%2Fclaim-review%2Fa28b50466d631b2787ec8bfa6f0e63148742f4a2978740efdece6d54
+    quote: I noticed the bottom seemed to be comming apart. so curiously I picked it up and seen the bottom
+      had melted and burnt the wires!
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:02:43+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: instant pot
+      series: gem 65
+  kind: known_issue
+  domain: fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: base/underside (heating element area)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Intertek public notice PN 18-5: Gem 65 multi cookers bearing ETL mark pose a public fire
+        hazard'
+      body: Independent certifier (Intertek) notice corroborating the CPSC recall.
+      advice: Independent confirmation of the same fire hazard from the certification body. Same batch-code
+        check applies. Confirms the maker is Foshan Linshine Technology (Double Insight), not Instant
+        Brands.
+    tr:
+      title: 'Intertek kamuoyu duyurusu PN 18-5: ETL işareti taşıyan Gem 65 çoklu pişiriciler kamu için
+        yangın tehlikesi oluşturuyor'
+      body: CPSC geri çağırmasını doğrulayan bağımsız sertifikacı (Intertek) bildirimi.
+      advice: Sertifikasyon kuruluşundan aynı yangın tehlikesinin bağımsız teyidi. Aynı parti kodu kontrolü
+        geçerlidir. Üreticinin Instant Brands değil, Foshan Linshine Technology (Double Insight) olduğunu
+        doğrular.
+  evidence:
+  - url: https://preview.intertek.com/siteassets/resources/pn/2018/pn-18-5.pdf
+    quote: A manufacturer defect can cause the multi cooker to overheat and melt on the underside, posing
+      a fire hazard.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:02:43+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: instant pot
+      series: duo
+  kind: known_issue
+  domain: general
+  severity: low
+  consequence: ''
+  detection: ''
+  component: bottom temperature sensor / inner pot base
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Instant Pot Duo Turkish manual documents Food Burn and PrSE error codes
+      body: The official Turkish-language manual for the Duo (Instantpot.co.uk, Duo-UK-TUR-Full_Manual-2021-03-03)
+        documents the Food Burn error (high temperature detected at the inner pot base, auto temperature
+        reduction) and PrSE error (pressure accumulated during a non-pressure program). This is the manufacturer's
+        own troubleshooting guidance for the Turkish market.
+      advice: If 'Food Burn' appears, turn off the unit, release pressure, and check the inner pot base
+        for starch deposits; clean the base before retrying. The manual says all other service must be
+        done by an authorized representative.
+    tr:
+      title: Instant Pot Duo Türkçe kılavuzu Food Burn ve PrSE hata kodlarını belgeliyor
+      body: Duo için resmi Türkçe kılavuz (Instantpot.co.uk, Duo-UK-TUR-Full_Manual-2021-03-03) Food Burn
+        hatasını (iç tencerenin tabanında yüksek sıcaklık algılandı, otomatik sıcaklık düşürme) ve PrSE
+        hatasını (basınçsız bir program sırasında basınç birikti) belgeliyor. Bu, üreticinin Türkiye pazarı
+        için kendi sorun giderme rehberliğidir.
+      advice: '''Food Burn'' görünürse cihazı kapatın, basıncı serbest bırakın ve iç tencerenin tabanında
+        nişasta birikintisi olup olmadığını kontrol edin; yeniden denemeden önce tabanı temizleyin. Kılavuz,
+        diğer tüm servis işlemlerinin yetkili bir temsilci tarafından yapılması gerektiğini söylüyor.'
+  evidence:
+  - url: https://m.media-amazon.com/images/I/91Hhl0roUxL.pdf
+    quote: İç tencerenin tabanında yüksek sıcaklık tespit edildi; Çoklu pişirici aşırı ısınmayı önlemek
+      için sıcaklığı otomatik olarak azaltır.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:56:17+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Instant Pot
+      series: Plus Wi-Fi
+  kind: known_issue
+  domain: electrical
+  severity: low
+  consequence: ''
+  detection: ''
+  component: WiFi module
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: WiFi function not working on Instant Pot Plus WiFi (customer report)
+      body: An Amazon.it customer review of the Instant Pot Plus WiFi reports the WiFi function does not
+        work, alongside missing accessories and used-looking packaging. This is a single-owner report,
+        not an official defect notice.
+      advice: Buyers should verify WiFi connectivity immediately upon receipt, as a non-functional WiFi
+        module may require return or service.
+    tr:
+      title: Instant Pot Plus WiFi'de WiFi işlevi çalışmıyor (müşteri bildirimi)
+      body: Instant Pot Plus WiFi hakkında bir Amazon.it müşteri incelemesi, eksik aksesuarlar ve kullanılmış
+        görünen ambalajla birlikte WiFi işlevinin çalışmadığını bildiriyor. Bu, resmi bir kusur bildirimi
+        değil, tek bir sahibin bildirimidir.
+      advice: Alıcılar, çalışmayan bir WiFi modülü iade veya servis gerektirebileceğinden, teslim alır
+        almaz WiFi bağlantısını doğrulamalıdır.
+  evidence:
+  - url: https://www.amazon.it/dp/B0DMWK3RDV/ref=sspa_dk_detail_0?psc=1&pd_rd_i=B0DMWK3RDV&pd_rd_w=W5v68&content-id=amzn1.sym.1eb9f79a-a1f0-4047-9d3a-2c918f58aed5&pf_rd_p=1eb9f79a-a1f0-4047-9d3a-2c918f58aed5&pf_rd_r=13DAYG02RVTGV7CK2PBY&pd_rd_wg=zW6Kh&pd_rd_r=817ce2a1-3ec9-4132-b777-e16f014b101e&aref=ELlwJ5ZEDy&sp_csd=d2lkZ2V0TmFtZT1zcF9kZXRhaWw
+    quote: 2.la funzione wifi non funziona
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:55:14+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: instant pot
+      series: smart
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: thermal probe in the base
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Instant Pot Smart/Smart-60 recalled for electric-shock hazard from thermal probe in base
+      body: This finding came from the recall search. The U.S. CPSC and Health Canada jointly recalled
+        the Instant Pot Smart and Smart-60 in July 2015 because the thermal probe in the base can conduct
+        electricity through the cooker, posing an electric-shock risk. The recall covers serial numbers
+        1410-1503 and manufacture dates 12/1/2014-6/1/2015; three consumers reported being shocked. A
+        buyer should check the serial number on the label under the base; an affected unit should be stopped
+        and the base replaced free.
+      advice: If you own or are buying a Smart/Smart-60, check the serial number and manufacture date
+        on the label under the base. Units in the 1410-1503 range are recalled for an electric-shock hazard
+        and should not be used; contact Instant Pot for a free replacement base. The current Turkish-market
+        'Akıllı Pişirici' (Smart Cooker) is a different, newer model and is not covered by this recall.
+    tr:
+      title: Instant Pot Smart/Smart-60, tabandaki termal prob kaynaklı elektrik çarpması tehlikesi nedeniyle
+        geri çağrıldı
+      body: Bu bulgu geri çağırma aramasından geldi. ABD CPSC ve Health Canada, tabandaki termal probun
+        pişirici üzerinden elektrik iletebilmesi ve elektrik çarpması riski oluşturması nedeniyle Instant
+        Pot Smart ve Smart-60'ı Temmuz 2015'te ortaklaşa geri çağırdı. Geri çağırma 1410-1503 seri numaralarını
+        ve 12/1/2014-6/1/2015 üretim tarihlerini kapsıyor; üç tüketici elektrik çarpması bildirdi. Bir
+        alıcı, tabanın altındaki etiketteki seri numarasını kontrol etmelidir; etkilenen bir ünite durdurulmalı
+        ve tabanı ücretsiz olarak değiştirilmelidir.
+      advice: Bir Smart/Smart-60'a sahipseniz veya satın alıyorsanız, tabanın altındaki etiketteki seri
+        numarasını ve üretim tarihini kontrol edin. 1410-1503 aralığındaki üniteler elektrik çarpması
+        tehlikesi nedeniyle geri çağrılmıştır ve kullanılmamalıdır; ücretsiz yedek taban için Instant
+        Pot ile iletişime geçin. Mevcut Türkiye pazarındaki 'Akıllı Pişirici' (Smart Cooker) farklı, daha
+        yeni bir modeldir ve bu geri çağırma kapsamına girmez.
+  evidence:
+  - url: https://www.cpsc.gov/Recalls/2015/Instant-Pot-Pressure-Cookers-Recalled-by-Double-Insight
+    quote: The thermal probe in the base can conduct electricity throughout the cooker, posing a risk
+      of electric shock.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:58:53+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Instant Pot
+      series: Duo Plus
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: sealing ring (silicone gasket) and sealing ring rack
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Steam leaks from side of lid when the sealing ring is damaged, not installed properly, or
+        the ring rack is warped
+      body: The manufacturer's own Duo Plus troubleshooting manual lists steam leaking from the side of
+        the lid as a documented fault, with causes including a damaged or mis-installed sealing ring,
+        food debris on the ring, and a warped or off-centre sealing ring rack (which the manual says requires
+        contacting Customer Care). This is the official failure mode behind the 'lid won't seal' complaint.
+      advice: Steam escaping around the lid is the most common sealing failure on this model. It is usually
+        the silicone sealing ring (a consumable that wears and absorbs odours) or a warped ring rack;
+        the manual says a deformed rack means contacting service rather than a DIY fix. Budget for replacing
+        the sealing ring over time.
+    tr:
+      title: Sızdırmazlık halkası hasarlıysa, düzgün takılmamışsa veya halka yatağı eğrilmişse kapaktan
+        yanlardan buhar sızıyor
+      body: Üreticinin kendi Duo Plus sorun giderme kılavuzu, kapağın yanından buhar sızmasını belgelenmiş
+        bir arıza olarak listeliyor; nedenleri arasında hasarlı veya yanlış takılmış sızdırmazlık halkası,
+        halka üzerindeki yemek artıkları ve eğrilmiş veya merkezden kaymış sızdırmazlık halkası yatağı
+        (kılavuzun Müşteri Hizmetleri ile iletişime geçilmesini gerektirdiğini söylediği) yer alıyor.
+        Bu, 'kapak sızdırmıyor' şikayetinin arkasındaki resmi arıza modudur.
+      advice: Kapağın çevresinden buhar kaçması bu modelde en yaygın sızdırmazlık arızasıdır. Genellikle
+        silikon sızdırmazlık halkası (aşınan ve kokuları emen bir sarf malzemesi) veya eğrilmiş bir halka
+        yatağıdır; kılavuz, deforme olmuş bir yatağın kendin yap çözümü yerine servisle iletişime geçilmesi
+        anlamına geldiğini söylüyor. Zamanla sızdırmazlık halkasını değiştirmek için bütçe ayırın.
+  evidence:
+  - url: https://help.instantpot.au/hc/en-nz/article_attachments/47723586628121
+    quote: Steam leaks from side of lid.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:57:35+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Instant Pot
+      series: Viva
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: lid-locking assembly
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Viva series lid-locking defect allows lid to open under pressure (Canadian class action)
+      body: The Canadian consumer-rights group lists the Viva series among the Instant Pot models covered
+        by the US class action, alleging a dangerously defective lid-locking device lets the lid open
+        under pressure so super-heated contents erupt and burn users with second- and third-degree burns.
+      advice: Independently corroborates the Viva lid-locking defect. The same group notes Instant Brands
+        designed a new locking-pin construction around 26 October 2017, so units built before that date
+        are the ones implicated. A buyer should treat a pre-2017 Viva as carrying the documented burn
+        risk.
+    tr:
+      title: Viva serisi kapak kilitleme kusuru, basınç altında kapağın açılmasına izin veriyor (Kanada
+        toplu davası)
+      body: Kanadalı tüketici hakları grubu, Viva serisini ABD toplu davası kapsamındaki Instant Pot modelleri
+        arasında listeliyor ve tehlikeli derecede kusurlu bir kapak kilitleme cihazının, kapak basınç
+        altındayken açılmasına izin vererek aşırı ısınmış içeriğin fışkırmasına ve kullanıcıları ikinci
+        ve üçüncü derece yanıklarla yakmasına neden olduğunu iddia ediyor.
+      advice: Viva kapak kilitleme kusurunu bağımsız olarak doğrular. Aynı grup, Instant Brands'in 26
+        Ekim 2017 civarında yeni bir kilitleme pimi yapısı tasarladığını, dolayısıyla bu tarihten önce
+        üretilen ünitelerin söz konusu olduğunu belirtiyor. Bir alıcı, 2017 öncesi bir Viva'yı belgelenmiş
+        yanık riski taşıyan bir ürün olarak değerlendirmelidir.
+  evidence:
+  - url: https://clg.org/Recours-Collectif/Liste-des-recours-collectifs/Autocuiseur--Defaut--Action-collective-canadienne
+    quote: permettant au couvercle de s'ouvrir alors que le contenu de l'appareil est sous pression dans
+      le cadre d'une utilisation normale et prévue, de sorte que son contenu surchauffé jaillit de l'appareil,
+      brûlant les consommateurs au deuxième et au troisième degré.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:57:35+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Instant Pot
+      series: Duo Nova
+  kind: known_issue
+  domain: burn
+  severity: high
+  consequence: ''
+  detection: ''
+  component: lid / pressure-locking mechanism
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Duo Nova 80 lid removable under pressure, ejecting scalding contents (court complaint)
+      body: A U.S. federal court complaint (Case 3:24-cv-05232-TMC) names the Duo Nova 80 specifically
+        and alleges the lid can be rotated and removed while the cooker still holds pressure, so scalding
+        contents are ejected onto the user. The plaintiff reports burn injuries on September 24, 2020.
+      advice: 'Treat the Duo Nova''s lid-locking claim with caution: the complaint alleges the lid can
+        open under residual pressure despite the advertised safety features. If you own this model, never
+        force the lid and only open it after the float valve has fully dropped.'
+    tr:
+      title: Duo Nova 80 kapağı basınç altında çıkarılabilir, kaynar içeriği dışarı fırlatır (mahkeme
+        şikayeti)
+      body: Bir ABD federal mahkeme şikayeti (Dava 3:24-cv-05232-TMC) özellikle Duo Nova 80'i adıyla belirtir
+        ve pişirici hâlâ basınç tutarken kapağın döndürülüp çıkarılabildiğini, böylece kaynar içeriğin
+        kullanıcının üzerine fırlatıldığını iddia eder. Davacı, 24 Eylül 2020'de yanık yaralanmaları bildirmiştir.
+      advice: 'Duo Nova''nın kapak kilitleme iddiasına temkinli yaklaşın: şikayet, reklamı yapılan güvenlik
+        özelliklerine rağmen kapağın kalan basınç altında açılabildiğini iddia eder. Bu modele sahipseniz
+        kapağı asla zorlamayın ve yalnızca şamandıra valfi tamamen indikten sonra açın.'
+  evidence:
+  - url: https://www.archive.org/download/gov.uscourts.wawd.332860/gov.uscourts.wawd.332860.1.0.pdf
+    quote: said defects manifest themselves when, despite Defendants' statements, the lid of the pressure
+      cooker is removable with built-up pressure, heat, and steam still inside the unit.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:57:03+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: instant pot
+      series: duo
+  kind: known_issue
+  domain: general
+  severity: low
+  consequence: ''
+  detection: ''
+  component: bottom temperature sensor
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Instant Pot Duo displays BURN error when liquid is too thick or insufficient
+      body: A UK Amazon review of the Duo 7-in-1 5.7L reports the BURN error appears when there is not
+        enough liquid or the liquid is too thick, cancelling the cooking cycle. This matches the Turkish
+        manual's Food Burn description and is a common owner-reported behaviour.
+      advice: Follow recipes that specify minimum liquid volumes; if BURN appears, release pressure, add
+        thin liquid, and restart. This is a usage-related error rather than a defect.
+    tr:
+      title: Instant Pot Duo, sıvı çok koyu veya yetersiz olduğunda BURN hatası gösterir
+      body: Duo 7-in-1 5.7L için bir Birleşik Krallık Amazon incelemesi, yeterli sıvı olmadığında veya
+        sıvı çok koyu olduğunda BURN hatasının göründüğünü ve pişirme döngüsünü iptal ettiğini bildirir.
+        Bu, Türkçe kılavuzun Food Burn açıklamasıyla örtüşür ve sahipler tarafından sık bildirilen bir
+        davranıştır.
+      advice: Minimum sıvı hacimlerini belirten tarifleri izleyin; BURN görünürse basıncı serbest bırakın,
+        ince sıvı ekleyin ve yeniden başlatın. Bu, bir kusur değil kullanımla ilgili bir hatadır.
+  evidence:
+  - url: https://www.amazon.co.uk/dp/B00OP26T4K/ref=pe_3187911_185740111_TE_item?th=1
+    quote: The problem I've had is getting the food to water balance right; if there's not enough water
+      or the consistency of the liquid in the pot is too thick, it will display 'BURN' once it has come
+      to pressure as the temperature sensors on the bottom of the pot detect that it's became too hot.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:56:17+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Instant Pot
+      series: Pro Crisp
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: sealing ring (Dichtungsring) / lid seal
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Steam escaping from the side of the lid — manufacturer instructs checking the sealing ring
+      body: The manufacturer's own EU safety manual (German) documents that steam escaping from the side
+        of the lid is a known condition and instructs the user to turn the appliance off and verify the
+        sealing ring is seated correctly.
+      advice: Steam leaking from the side of the lid means the seal has failed (ring missing, worn, or
+        mis-seated). Check and replace the silicone sealing ring before pressurizing; the manual treats
+        side steam as a condition to stop cooking for.
+    tr:
+      title: Kapağın yanından buhar kaçıyor — üretici sızdırmazlık halkasının kontrol edilmesini talimat
+        veriyor
+      body: Üreticinin kendi AB güvenlik kılavuzu (Almanca), kapağın yanından buhar kaçmasının bilinen
+        bir durum olduğunu belgeler ve kullanıcıya cihazı kapatıp sızdırmazlık halkasının doğru oturduğunu
+        doğrulamasını talimat verir.
+      advice: Kapağın yanından buhar sızması, contanın başarısız olduğu anlamına gelir (halka eksik, aşınmış
+        veya yanlış oturmuş). Basınç uygulamadan önce silikon sızdırmazlık halkasını kontrol edin ve değiştirin;
+        kılavuz, yan buharı pişirmeyi durdurma nedeni olarak ele alır.
+  evidence:
+  - url: https://instantpot.de/media/managed/ec/af/ecaf2177f0e29e57e70107a06850c03f/Combined-EU-GSG-Pro-1.pdf
+    quote: Schalten Sie das Gerät ab, falls seitlich am Deckel Dampf austritt, und vergewissern Sie sich,
+      dass der Dichtungsring richtig sitzt.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:55:42+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Instant Pot
+      series: Ultra
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: temperature sensor
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Instant Pot Ultra official troubleshooting documents temperature sensor error codes C1/C2/C5
+      body: The official Instant Pot troubleshooting document explicitly covers the Ultra model and lists
+        C1/C2/C5 error codes indicating faulty temperature sensors, requiring contacting customer care.
+        This indicates a known electrical failure mode.
+      advice: If the display shows C1, C2, or C5 codes, the unit requires service; the official guidance
+        is to contact Instant Pot customer care rather than attempt DIY repair.
+    tr:
+      title: Instant Pot Ultra resmi sorun giderme belgesi C1/C2/C5 sıcaklık sensörü hata kodlarını belgeler
+      body: Resmi Instant Pot sorun giderme belgesi açıkça Ultra modelini kapsar ve arızalı sıcaklık sensörlerini
+        gösteren, müşteri hizmetleriyle iletişime geçilmesini gerektiren C1/C2/C5 hata kodlarını listeler.
+        Bu, bilinen bir elektriksel arıza moduna işaret eder.
+      advice: Ekranda C1, C2 veya C5 kodları görünürse cihaz servis gerektirir; resmi yönlendirme, kendin
+        yap onarımı denemek yerine Instant Pot müşteri hizmetleriyle iletişime geçmektir.
+  evidence:
+  - url: https://m.media-amazon.com/images/I/81gMgepISNL.pdf
+    quote: '1. Possible Reason: C1 - Faulty temperature sensor | Solution: Contact Care'
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:57:35+00:00'

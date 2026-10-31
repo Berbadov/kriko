@@ -1,0 +1,645 @@
+# Claims — what is known to go wrong, each with the page it came from and the quote
+# that was read there. A claim without both is not in this file.
+- subject:
+    kind: product
+    identity:
+      brand: Xiaomi
+      series: Electric Scooter 4 Pro
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: brake system
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Braking is weak, especially when the battery is full (German buyer review)
+      body: The owner reports braking is poor at full battery and still not strong at half charge, compared
+        with an e-bike.
+      advice: If you rely on strong, predictable braking (hills, traffic), the 4 Pro's brake feel may
+        disappoint. Test braking before committing, and note the pack also flags a weak factory front
+        drum brake.
+    tr:
+      title: Frenleme zayıf, özellikle batarya doluyken (Alman alıcı incelemesi)
+      body: Sahibi, bir e-bisikletle karşılaştırıldığında batarya doluyken frenlemenin zayıf olduğunu
+        ve yarım şarjda da güçlü olmadığını bildiriyor.
+      advice: Güçlü ve öngörülebilir frenlemeye güveniyorsanız (yokuşlar, trafik), 4 Pro'nun fren hissi
+        sizi hayal kırıklığına uğratabilir. Taahhütte bulunmadan önce frenlemeyi test edin ve paketin
+        ayrıca zayıf bir fabrika ön kampana frenini işaretlediğini unutmayın.
+  evidence:
+  - url: https://www.ebay.de/urw/XIAOMI-Electric-Scooter-4-Pro-2nd-Gen-E-Scooter-10-Zoll-Black-/product-reviews/26067827110?_itm=336351086393
+    quote: Wenn die Batterie voll ist bremst der Scooter recht schlecht aber auch wenn der Akku dann nur
+      noch halbvoll ist sind starke Brems Maneuver nicht das was ich von meinem E-bike gewohnt bin.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:04:48+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Xiaomi
+      series: Electric Scooter 4 Ultra
+  kind: known_issue
+  domain: mechanical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: steering column
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Steering column develops play / wobble (owner forum, Russia)
+      body: An owner reports the steering column started to develop play/wobble and had to fabricate a
+        new clamp because no replacement existed yet. This corroborates the handlebar-play issue from
+        an independent owner source.
+      advice: Watch for steering-column play; owners report having to improvise a fix because official
+        replacement parts were unavailable early on.
+    tr:
+      title: Direksiyon kolonunda boşluk / sallanma gelişiyor (sahip forumu, Rusya)
+      body: Bir sahip, direksiyon kolonunda boşluk/sallanma gelişmeye başladığını ve henüz yedek parça
+        olmadığı için yeni bir kelepçe imal etmek zorunda kaldığını bildiriyor. Bu, bağımsız bir sahip
+        kaynağından gelen gidon boşluğu sorununu doğruluyor.
+      advice: Direksiyon kolonu boşluğuna dikkat edin; sahipler, resmi yedek parçalar başlangıçta mevcut
+        olmadığı için doğaçlama bir çözüm bulmak zorunda kaldıklarını bildiriyor.
+  evidence:
+  - url: https://4pda.to/forum/index.php?showtopic=1064685&st=40
+    quote: У меня начала слегла люфтить стойка руля
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:05:37+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      series: electric scooter elite
+  kind: known_issue
+  domain: battery
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: battery / range
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Real-world range is overstated versus the 45 km claim
+      body: Verified buyers report the advertised 45 km range is only achievable in lab conditions; realistic
+        range is ~25-35 km depending on rider weight, mode, and terrain.
+      advice: Budget for roughly 25-35 km of real range, not 45 km, especially in Sport mode or with heavier
+        riders.
+    tr:
+      title: Gerçek dünya menzili 45 km iddiasına göre abartılı
+      body: Doğrulanmış alıcılar, reklamı yapılan 45 km menzilin yalnızca laboratuvar koşullarında elde
+        edilebildiğini; gerçekçi menzilin sürücü ağırlığına, moda ve araziye bağlı olarak ~25-35 km olduğunu
+        bildiriyor.
+      advice: 45 km değil, yaklaşık 25-35 km gerçek menzil için bütçe ayırın; özellikle Sport modunda
+        veya daha ağır sürücülerle.
+  evidence:
+  - url: https://m.alza.cz/EN/reviews/xiaomi-electric-scooter-elite-12796543.htm
+    quote: The range of 45km is in laboratory conditions, realistically it is 30-35 depending on driving
+      style.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:03:28+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      series: electric scooter elite
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: throttle (gas lever)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Throttle failure triggers fault code 14 and requires part replacement
+      body: 'The manufacturer''s own FAQ confirms fault code 14 means the throttle must be replaced. An
+        owner on Comfy.ua confirmed it in practice: ''вчера вылезла ошибка код 14 ,отправмл по гарантии''
+        (yesterday error code 14 appeared, sent under warranty).'
+      advice: If the dashboard shows code 14 or one long + four short beeps, the throttle unit is the
+        failing part; plan for a service-center repair or a throttle replacement (~7-15 EUR part).
+    tr:
+      title: Gaz kolu arızası 14 numaralı hata kodunu tetikliyor ve parça değişimi gerektiriyor
+      body: 'Üreticinin kendi SSS''si, 14 numaralı hata kodunun gaz kolunun değiştirilmesi gerektiği anlamına
+        geldiğini doğruluyor. Comfy.ua''daki bir sahip bunu pratikte doğruladı: ''вчера вылезла ошибка
+        код 14 ,отправмл по гарантии'' (dün 14 numaralı hata kodu çıktı, garanti kapsamında gönderdim).'
+      advice: Gösterge panelinde 14 kodu veya bir uzun + dört kısa bip sesi görünüyorsa, arızalı parça
+        gaz kolu ünitesidir; servis merkezi onarımı veya gaz kolu değişimi (~7-15 EUR parça) için plan
+        yapın.
+  evidence:
+  - url: https://www.mi.com/ph/support/faq/details/KA-88201/
+    quote: If the dashboard displays fault code 14 or you hear one long beep and four short beeps, it
+      indicates that the throttle should be replaced.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:03:28+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Xiaomi
+      series: Electric Scooter 4 Pro
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: brake system
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Brakes failed after about 4 months of use (Alza verified buyer review)
+      body: A buyer reports the brakes stopped working after about 4 months, and the replacement handlebar
+        did not fit properly.
+      advice: Brake failure within months is a serious safety issue. If you buy, check the brakes early
+        and often, and confirm warranty/service coverage in Turkey before purchase.
+    tr:
+      title: Frenler yaklaşık 4 aylık kullanımdan sonra arızalandı (Alza doğrulanmış alıcı incelemesi)
+      body: Bir alıcı, frenlerin yaklaşık 4 ay sonra çalışmayı durdurduğunu ve yedek gidonun düzgün oturmadığını
+        bildiriyor.
+      advice: Aylar içinde fren arızası ciddi bir güvenlik sorunudur. Satın alırsanız frenleri erkenden
+        ve sık sık kontrol edin ve satın almadan önce Türkiye'de garanti/servis kapsamını doğrulayın.
+  evidence:
+  - url: https://m.alza.sk/EN/reviews/xiaomi-electric-scooter-4-pro-2nd-gen-9936801.htm
+    quote: After working for less than a year, the brakes went off and I don't know the reason, then when
+      I advertised it I got back the scooter in a scratched up condition with spinning wheels.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:04:48+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Xiaomi
+      series: Electric Scooter 4 Ultra
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: motor
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Scooter auto powers off on slopes / overload due to motor overheating (official FAQ)
+      body: The scooter has a self-protection cut-off that shuts it down when the motor overheats on slopes
+        or under overload. This is a documented behavior riders should know about.
+      advice: On long or steep climbs the scooter can shut down mid-ride; avoid sustained full-power climbs
+        and exceeding the payload.
+    tr:
+      title: Scooter yokuşlarda / aşırı yükte motor aşırı ısınması nedeniyle otomatik kapanıyor (resmi
+        SSS)
+      body: Scooter'da, motor yokuşlarda veya aşırı yük altında aşırı ısındığında onu kapatan bir kendini
+        koruma kesintisi vardır. Bu, sürücülerin bilmesi gereken belgelenmiş bir davranıştır.
+      advice: Uzun veya dik tırmanışlarda scooter sürüş ortasında kapanabilir; sürekli tam güç tırmanışlarından
+        ve taşıma kapasitesini aşmaktan kaçının.
+  evidence:
+  - url: https://www.mi.com/uk/support/faq/details/KA-125328/
+    quote: If you ride the scooter on a steep slope or ride the scooter on a slope for a long time, it
+      can cause overloading or overheating on the motor and lead to auto power-off
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:05:37+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Xiaomi
+      series: Electric Scooter 4 Pro
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: motor / battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Scooter can auto power-off from motor overheating/overload (Xiaomi's own FAQ)
+      body: The manufacturer documents a self-protection auto power-off when the motor overheats or is
+        overloaded (steep slopes, long climbs, or payload over the limit).
+      advice: On long hills or with a heavy rider, the scooter may shut down mid-ride as a protection
+        measure. If your route has sustained climbs or you are near the 120 kg limit, expect power cuts.
+    tr:
+      title: Scooter, motor aşırı ısınması/aşırı yüklenmesi durumunda otomatik olarak kapanabilir (Xiaomi'nin
+        kendi SSS'si)
+      body: Üretici, motor aşırı ısındığında veya aşırı yüklendiğinde (dik yamaçlar, uzun tırmanışlar
+        veya sınırı aşan yük) kendini koruma amaçlı otomatik kapanmayı belgeliyor.
+      advice: Uzun yokuşlarda veya ağır bir sürücüyle scooter, koruma önlemi olarak sürüş ortasında kapanabilir.
+        Rotanızda sürekli tırmanışlar varsa veya 120 kg sınırına yakınsanız, güç kesintileri bekleyin.
+  evidence:
+  - url: https://www.mi.com/uk/support/faq/details/KA-125326/
+    quote: If you ride the scooter on a steep slope or ride the scooter on a slope for a long time, it
+      can cause overloading or overheating on the motor and lead to auto power-off;
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:04:48+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: xiaomi
+      series: electric scooter elite
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: control electronics / water ingress
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Water ingress under rain triggers error code 10 and voids warranty
+      body: An owner reports error code 10 after one ride in rain; the service center rejected the warranty
+        claim citing moisture ingress. The model is rated IPX5 (jet-water resistant, not immersion), so
+        rain exposure is a real risk.
+      advice: Avoid riding in rain; error 10 after moisture is often treated as a non-warranty case, so
+        the fix is out-of-pocket.
+    tr:
+      title: Yağmur altında su girişi, hata kodu 10'u tetikler ve garantiyi geçersiz kılar
+      body: Bir sahip, yağmurda bir sürüşten sonra hata kodu 10 bildiriyor; servis merkezi, nem girişini
+        gerekçe göstererek garanti talebini reddetti. Model IPX5 (su jetine dayanıklı, daldırmaya değil)
+        olarak derecelendirilmiştir, bu nedenle yağmura maruz kalma gerçek bir risktir.
+      advice: Yağmurda sürüşten kaçının; nemden sonra hata 10 genellikle garanti kapsamı dışı bir durum
+        olarak değerlendirilir, bu nedenle onarım cepten yapılır.
+  evidence:
+  - url: https://comfy.ua/jelektrosamokat-xiaomi-electric-scooter-elite-eu-ucenka-1-1-otzyvy.html
+    quote: через 1,5 месяца на самокате выбило ошибку 10, отвезли в магазин Комфи, отправили в сервисный
+      цент, через 2 недели самокат отправили назад, написали не гарантийный случай, попадание влаги!
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:03:28+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Xiaomi
+      series: Electric Scooter 4 Pro
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: throttle (accelerator grip)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Throttle failure on the 4 Pro is a recognized fault (error code 14) per Xiaomi's own FAQ
+      body: The manufacturer's troubleshooting page confirms a throttle failure mode with a dedicated
+        fault code (14) and a long+4-short beep pattern, and directs owners to send the unit to a service
+        center for replacement.
+      advice: If the dashboard shows code 14 or the beep pattern, the throttle must be replaced and Xiaomi
+        recommends a service-center repair. This is a known failure on the 4 Pro, not a one-off, so budget
+        for the possibility of a throttle replacement during ownership.
+    tr:
+      title: 4 Pro'da gaz kolu arızası, Xiaomi'nin kendi SSS'sine göre tanınan bir arızadır (hata kodu
+        14)
+      body: Üreticinin sorun giderme sayfası, özel bir arıza kodu (14) ve bir uzun+4 kısa bip deseniyle
+        bir gaz kolu arızası modunu doğrular ve sahipleri değişim için cihazı bir servis merkezine göndermeye
+        yönlendirir.
+      advice: Gösterge paneli kod 14'ü gösteriyorsa veya bip deseni varsa, gaz kolu değiştirilmelidir
+        ve Xiaomi bir servis merkezi onarımı önerir. Bu, 4 Pro'da bilinen bir arızadır, tek seferlik değildir,
+        bu nedenle sahiplik sırasında bir gaz kolu değişimi olasılığı için bütçe ayırın.
+  evidence:
+  - url: https://www.mi.com/uk/support/faq/details/KA-88194/
+    quote: If the dashboard displays fault code 14 or you hear one long beep and four short beeps, it
+      indicates that the throttle should be replaced. In this situation, it is recommended to send the
+      scooter to our service center for repair;
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:04:48+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Xiaomi
+      series: Electric Scooter 4 Pro
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: brake light / controller board
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Stop/brake light failure reported as a chronic board problem on the 4 Pro (Turkish buyer)
+      body: A buyer reports the stop light does not work and describes it as a chronic board (kart) problem
+        for this model.
+      advice: A non-working brake light is a safety and legal concern in traffic. If it fails, it points
+        to the internal controller board rather than a bulb, so expect a board-level repair.
+    tr:
+      title: Stop/fren lambası arızası, 4 Pro'da kronik bir kart sorunu olarak bildirildi (Türk alıcı)
+      body: Bir alıcı, stop lambasının çalışmadığını bildiriyor ve bunu bu model için kronik bir kart
+        sorunu olarak tanımlıyor.
+      advice: Çalışmayan bir fren lambası, trafikte bir güvenlik ve yasal sorundur. Arızalanırsa, bu bir
+        ampulden ziyade dahili kontrol kartına işaret eder, bu nedenle kart düzeyinde bir onarım bekleyin.
+  evidence:
+  - url: https://www.hepsiburada.com/xiaomi-elektrikli-scooter-4-pro-120-kg-tasima-kapasitesi-50-km-surus-mesafesi-siyah-tasarim-p-HBCV00004WVRU5-yorumlari
+    quote: Ürünün stop lambası çalışmıyor. Meğer bu model için kronik bir kart sorunuymuş.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:04:48+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Xiaomi
+      series: Electric Scooter 4 Ultra
+  kind: known_issue
+  domain: battery
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: battery / range
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Real-world range far below the advertised 70 km, degrading after a month
+      body: A 80 kg rider got at most 35 km per charge (advertised 70 km) and only 25 km after about a
+        month. This matches the pack's known overstated-range issue.
+      advice: Expect roughly half the advertised range at typical adult weight, and budget for further
+        degradation within the first month.
+    tr:
+      title: Gerçek dünya menzili, reklamı yapılan 70 km'nin çok altında, bir ay sonra düşüyor
+      body: 80 kg'lık bir sürücü, şarj başına en fazla 35 km (reklamı yapılan 70 km) ve yaklaşık bir ay
+        sonra yalnızca 25 km elde etti. Bu, paketin bilinen abartılı menzil sorunuyla örtüşüyor.
+      advice: Tipik yetişkin ağırlığında reklamı yapılan menzilin yaklaşık yarısını bekleyin ve ilk ay
+        içinde daha fazla düşüş için bütçe ayırın.
+  evidence:
+  - url: https://m.alza.cz/EN/reviews/xiaomi-electric-scooter-4-ultra-eu-7745140.htm
+    quote: I weigh 80kg, never got over 35km on a single charge, after about a month only 25km
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:05:37+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Xiaomi
+      series: Electric Scooter 4
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: throttle (gaz kelebeği)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Throttle failure on Xiaomi Electric Scooter 4 shows fault code 14 and requires throttle replacement
+      body: Fault code 14 (one long + four short beeps) means the throttle must be replaced and the scooter
+        sent to a service center.
+      advice: If the dashboard shows code 14 or beeps one long + four short, the throttle is the failing
+        part; plan for a service-center repair rather than a DIY fix.
+    tr:
+      title: Xiaomi Electric Scooter 4'te gaz kolu arızası, arıza kodu 14'ü gösterir ve gaz kolu değişimi
+        gerektirir
+      body: Arıza kodu 14 (bir uzun + dört kısa bip), gaz kolunun değiştirilmesi ve scooter'ın bir servis
+        merkezine gönderilmesi gerektiği anlamına gelir.
+      advice: Gösterge paneli kod 14'ü gösteriyorsa veya bir uzun + dört kısa bip sesi veriyorsa, arızalanan
+        parça gaz koludur; kendin yap onarımı yerine bir servis merkezi onarımı planlayın.
+  evidence:
+  - url: https://www.mi.com/tr/support/faq/details/KA-485034/
+    quote: Gösterge paneli hata kodu 14'ü görüntülüyorsa veya bir uzun bip sesi ve dört kısa bip sesi
+      duyarsanız, gaz kelebeğinin değiştirilmesi gerektiğini gösterir.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:06:06+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Xiaomi
+      series: Electric Scooter 4 Pro
+  kind: known_issue
+  domain: general
+  severity: low
+  consequence: ''
+  detection: ''
+  component: display screen
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Display scratches easily (German buyer: scratched after two wipes with a soft cloth)'
+      body: The owner reports the display was already scratched after wiping it twice with a soft cloth.
+      advice: The display surface is soft and scratches easily. Use a screen protector or avoid wiping
+        it, since a scratched display hurts readability and resale value.
+    tr:
+      title: 'Ekran kolayca çiziliyor (Alman alıcı: yumuşak bir bezle iki silmeden sonra çizildi)'
+      body: Sahibi, ekranın yumuşak bir bezle iki kez silindikten sonra zaten çizildiğini bildiriyor.
+      advice: Ekran yüzeyi yumuşak ve kolayca çiziliyor. Bir ekran koruyucu kullanın veya silmekten kaçının,
+        çünkü çizilmiş bir ekran okunabilirliği ve yeniden satış değerini olumsuz etkiler.
+  evidence:
+  - url: https://www.ebay.de/urw/XIAOMI-Electric-Scooter-4-Pro-2nd-Gen-E-Scooter-10-Zoll-Black-/product-reviews/26067827110?_itm=336351086393
+    quote: Das Display ist leider nach 2-maligen abwischen mit einem weichen Tuch bereits zerkratzt.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:04:48+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Xiaomi
+      series: Electric Scooter 4 Ultra
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: throttle
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Throttle fault code 14 means the throttle must be replaced (Xiaomi official FAQ)
+      body: The maker itself documents that fault code 14 (or one long + four short beeps) means the throttle
+        has failed and must be replaced at a service center.
+      advice: If the dashboard shows code 14, the throttle is faulty and needs a service-center replacement;
+        do not keep riding on a failing throttle.
+    tr:
+      title: Gaz hatası kodu 14, gazın değiştirilmesi gerektiği anlamına gelir (Xiaomi resmi SSS)
+      body: Üreticinin kendisi, hata kodu 14'ün (veya bir uzun + dört kısa bip sesinin) gazın arızalandığını
+        ve bir servis merkezinde değiştirilmesi gerektiğini belgeliyor.
+      advice: Gösterge paneli kod 14 gösteriyorsa, gaz arızalıdır ve servis merkezinde değiştirilmesi
+        gerekir; arızalı bir gazla sürmeye devam etmeyin.
+  evidence:
+  - url: https://www.mi.com/global/support/faq/details/KA-120432/
+    quote: If the dashboard displays fault code 14 or you hear one long beep and four short beeps, it
+      indicates that the throttle should be replaced.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:05:37+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Xiaomi
+      series: Electric Scooter 4 Pro
+  kind: known_issue
+  domain: battery
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: battery / range
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Real-world range is well under the advertised figure (Turkish verified buyer: ~30-32 km
+        vs 47 km shown)'
+      body: A 4-month owner (70 kg) reports the app shows 47 km at full charge but real riding yields
+        only 30-32 km, with strong slowdown below 20% charge.
+      advice: Expect roughly two-thirds of the advertised range in real use, and less if you are heavier
+        or ride hills. If your commute depends on the full 50 km claim, this model will not deliver it.
+    tr:
+      title: 'Gerçek menzil, reklamı yapılan rakamın oldukça altında (Türk doğrulanmış alıcı: gösterilen
+        47 km''ye karşı ~30-32 km)'
+      body: 4 aylık bir sahip (70 kg), uygulamanın tam şarjda 47 km gösterdiğini ancak gerçek sürüşün
+        yalnızca 30-32 km verdiğini, %20 şarjın altında güçlü bir yavaşlama olduğunu bildiriyor.
+      advice: Gerçek kullanımda reklamı yapılan menzilin kabaca üçte ikisini bekleyin, daha ağırsanız
+        veya yokuşlarda sürüyorsanız daha azını. Günlük gidiş-gelişiniz tam 50 km iddiasına bağlıysa,
+        bu model bunu karşılamayacaktır.
+  evidence:
+  - url: https://www.hepsiburada.com/xiaomi-elektrikli-scooter-4-pro-120-kg-tasima-kapasitesi-50-km-surus-mesafesi-siyah-tasarim-p-HBCV00004WVRU5-yorumlari
+    quote: Tam şarj edince menzil uygulamada 47 km gösteriyor. En fazla 30-32 km gerçekte yol yapıyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:04:48+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: Xiaomi
+      series: Electric Scooter 4 Ultra
+  kind: known_issue
+  domain: mechanical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: folding joint / steering column
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Handlebar folding joint wears out after ~200 km and can fold while riding (owner report,
+        Hungary)
+      body: After only ~200 km the handlebar folding joint wore out so badly the scooter could fold while
+        riding, causing personal injury and ~80,000 HUF in parts damage. This matches the pack's known
+        handlebar-play issue.
+      advice: Check the folding joint for play early; a worn joint can fold mid-ride and cause a crash,
+        and the replacement part is costly.
+    tr:
+      title: Gidon katlama eklemi ~200 km sonra aşınıyor ve sürüş sırasında katlanabiliyor (sahip raporu,
+        Macaristan)
+      body: Yalnızca ~200 km sonra gidon katlama eklemi o kadar kötü aşındı ki scooter sürüş sırasında
+        katlanabiliyor, kişisel yaralanmaya ve ~80.000 HUF parça hasarına neden oluyor. Bu, paketin bilinen
+        gidon boşluğu sorunuyla örtüşüyor.
+      advice: Katlama ekleminde boşluğu erken kontrol edin; aşınmış bir eklem sürüş ortasında katlanıp
+        kazaya neden olabilir ve yedek parça maliyetlidir.
+  evidence:
+  - url: https://m.alza.hu/velemenyek/xiaomi-electric-scooter-4-ultra-eu-7854704.htm
+    quote: Alig van benne 200km, és már a kormánynak a csukló része olyan szinten van kikopva, hogy menet
+      közben képes össze csuklani és ebből màr történt személyi sérülés is
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:05:37+00:00'

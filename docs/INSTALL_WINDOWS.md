@@ -2,12 +2,23 @@
 
 Use the setup EXE or portable ZIP from the latest release. The app contains its
 own Python and engine. Published desktop artifacts target Windows x86_64.
+The [installation checklist](https://kriko.cc/install/) includes downloads,
+verification and a first offline lookup without an AI key.
 
 ## Install the desktop app
 
 Run `kriko-<version>-x86_64-setup.exe`. The NSIS installer installs for your user
-without administrator rights. The build is unsigned; Windows may require
-**More info → Run anyway**. Keep the installer and its internal files together.
+without administrator rights. The build is unsigned, so Windows can show a
+publisher warning. Download from the official GitHub release. Compare the file
+with its entry in that release's `SHA256SUMS.txt` before you decide to run it:
+
+```powershell
+Get-FileHash -Algorithm SHA256 .\kriko-<version>-x86_64-setup.exe
+```
+
+Replace `<version>` with the downloaded version. Do not run a file whose hash
+differs. A matching hash confirms that the file matches the published release.
+It does not add a publisher signature.
 
 For the portable version, extract the entire `kriko-<version>-win64-portable.zip`
 archive before opening `kriko.exe`. Running the executable inside the ZIP is not
