@@ -3200,31 +3200,71 @@ class HarnessResearcher(AgentResearcher):
                 pass
         return search_url, search_language
 
+    def _host_search(self, search_url: str, search_language: str):
+        """The search a host-read turn uses, and the name the run reports.
+
+        The reader's own order (`providers.websearch`) when a hosted provider
+        leads it — the same gate chat and the local plane use
+        (`localplane.hosted_search`), so one machine does not search through
+        two doors. Otherwise OpenSERP on this machine, exactly as before.
+
+        A hosted chain feeds Codex and Mistral Vibe their pages in one or two
+        seconds instead of waiting for a local service; when that service is
+        down it is the difference between a sourced answer and `NoHarness`.
+        """
+        from app import localplane
+        from app.providers import openserp
+
+        if self.app_state_path is not None:
+            try:
+                if localplane.hosted_search(self.app_state_path):
+                    from app import prefs
+                    from app.providers import websearch
+                    from app.web import state
+
+                    conn = state.connect(self.app_state_path)
+                    try:
+                        chosen = prefs.read(conn)
+                    finally:
+                        conn.close()
+                    chain = websearch.build(
+                        chosen, self.app_state_path, log=self._echo,
+                        check=self.check_cancelled,
+                        trial_reservation_id=str(
+                            getattr(self, "trial_reservation_id", "") or ""))
+                    return chain, ",".join(chain.providers)
+            except Exception as error:  # noqa: BLE001 — a chain that cannot be built is not a failed run
+                self._echo(
+                    f"the reader's web search is unavailable ({error}); "
+                    "using OpenSERP")
+        return (openserp.searcher(search_url, engine=openserp.LOCAL_ENGINES,
+                                  language=search_language),
+                "openserp")
+
     def _read_web_pages(self, queries: list[str], *, product: str = "",
                         page=None, prefer_issues: bool = False,
                         max_pages: int | None = None):
         """Search and read bounded pages without starting a local model.
 
-        `LocalAsker._read` already owns the host's OpenSERP/fetch path and its
+        `LocalAsker._read` already owns the host's search/fetch path and its
         relevance and publisher checks. Give it inert completion sockets: this
         quick path uses the selected CLI once, after the pages are in hand.
         """
         from app import pagefacts
-        from app.providers import fetch, local_agent, local_discovery, openserp
+        from app.providers import fetch, local_agent, local_discovery
         from app.providers.local_identity import extract_identity
         from kriko.research.politeness import LocalSearchError
 
         search_url, search_language = self._search_settings()
         search_url = local_discovery.base_of(search_url) or local_discovery.SEARCH_DEFAULT_URL
-        search = openserp.searcher(
-            search_url, engine=openserp.LOCAL_ENGINES, language=search_language)
+        search, provider = self._host_search(search_url, search_language)
 
         def no_completion(_prompt):
             raise RuntimeError("host page gathering must not call a local model")
 
         reader = local_agent.LocalAsker(
             no_completion, no_completion, search, fetch.reader(timeout=8.0),
-            model="", search_provider="openserp", given_queries=queries,
+            model="", search_provider=provider, given_queries=queries,
             search_language=search_language,
         )
         reader.max_pages = max(1, min(8, max_pages or self.max_documents or 3))
@@ -3243,7 +3283,7 @@ class HarnessResearcher(AgentResearcher):
             # `_read` ordinarily counts search errors and returns no pages. Keep
             # this boundary defensive for an alternate search adapter.
             pages = []
-        self.search_provider = "openserp"
+        self.search_provider = provider
         return reader, pages, identity
 
     @staticmethod
