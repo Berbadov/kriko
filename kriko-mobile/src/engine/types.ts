@@ -9,6 +9,7 @@
  */
 
 import { productReadingTitle } from './reading';
+import type { AnswerLanguage, SourceLanguage } from './researchLanguage';
 
 /** Provider keys live in the phone's secure storage. Mistral is optional. */
 export interface ProviderKeys {
@@ -86,8 +87,8 @@ export interface ResearchPreferences {
   sourceCount: number;
   includeIsolated: boolean;
   includeOneTimeIssues: boolean;
-  sourceLanguage: 'any' | 'en' | 'tr';
-  answerLanguage: 'auto' | 'en' | 'tr';
+  sourceLanguage: SourceLanguage;
+  answerLanguage: AnswerLanguage;
 }
 
 export type Role = 'user' | 'assistant';

@@ -25,6 +25,7 @@ import { OverlaySessionProvider } from '../components/OverlaySession';
 import { MotionProvider, useReducedMotion } from '../components/Motion';
 import { BottomNav } from '../components/Chrome';
 import { DockProvider } from '../components/dock';
+import { motion } from '../theme/motion';
 import { ThemeProvider, useTheme } from '../theme/theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -83,7 +84,12 @@ function AppStack() {
             screenOptions={{
               headerShown: false,
               contentStyle: { backgroundColor: color.ground },
-              animation: reduced === false ? 'fade_from_bottom' : 'none',
+              // One native transition per push: the stack fades the screen in on
+              // top of the page, so no screen draws a second arrival of its own.
+              // Reduced motion removes it entirely. `animationDuration` is iOS
+              // only; Android uses the platform's own short fade.
+              animation: reduced === false ? 'fade' : 'none',
+              animationDuration: motion.duration.screen,
             }}
           >
             <Stack.Screen name="index" />

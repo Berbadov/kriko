@@ -366,6 +366,7 @@ export function ChatScreen() {
           </View>
           <MotionPressable
             onPress={() => { void overlay.stop().catch((error) => setNotice(error instanceof Error ? error.message : tr('Could not stop screen sharing.'))); }}
+            hitSlop={4}
             style={styles.stopShare}
             accessibilityRole="button"
             accessibilityLabel={tr('Stop screen sharing')}
@@ -460,7 +461,7 @@ export function ChatScreen() {
           />
         </View>
 
-        <View style={[styles.footer, { paddingBottom: !keyboardVisible && access.kind === 'none' ? Math.max(insets.bottom, 10) : 6 }]}>
+        <View style={[styles.footer, { paddingBottom: !keyboardVisible && access.kind === 'none' ? Math.max(insets.bottom, gap[3]) : gap[2] }]}>
           {notice ? (
             <Txt variant="monoSm" tone="warn" style={styles.notice}>
               {notice}
@@ -516,9 +517,10 @@ const useStyles = makeStyles((color) => StyleSheet.create({
   flex: { flex: 1 },
   shareBanner: {
     marginHorizontal: PAGE_X,
-    marginBottom: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    marginBottom: gap[2],
+    paddingHorizontal: gap[3],
+    paddingVertical: gap[2],
+    minHeight: 48,
     borderRadius: radius.m,
     borderWidth: 1,
     borderColor: color.edgeStrong,
@@ -528,19 +530,26 @@ const useStyles = makeStyles((color) => StyleSheet.create({
     justifyContent: 'space-between',
     gap: gap[2],
   },
-  shareStatus: { flexDirection: 'row', alignItems: 'center', gap: 9, flex: 1 },
+  shareStatus: { flexDirection: 'row', alignItems: 'center', gap: gap[2], flex: 1 },
   liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: color.ok },
   shareCopy: { flex: 1, gap: 2 },
-  stopShare: { paddingHorizontal: 11, paddingVertical: 5, backgroundColor: color.riskWash, borderRadius: radius.s },
+  stopShare: {
+    minHeight: 36,
+    paddingHorizontal: gap[3],
+    backgroundColor: color.riskWash,
+    borderRadius: radius.s,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   landingBody: { paddingHorizontal: 0 },
   listBody: { paddingHorizontal: PAGE_X, paddingBottom: gap[4], flexGrow: 1 },
   footer: {
-    paddingHorizontal: PAGE_X - 8,
-    paddingTop: 4,
+    paddingHorizontal: gap[3],
+    paddingTop: gap[3],
     backgroundColor: 'transparent',
-    gap: 6,
+    gap: gap[2],
   },
-  notice: { paddingHorizontal: 4 },
+  notice: { paddingHorizontal: gap[1] },
   trialBanner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -551,8 +560,8 @@ const useStyles = makeStyles((color) => StyleSheet.create({
     borderWidth: 1,
     borderColor: color.edge,
     borderRadius: radius.m,
-    paddingHorizontal: 11,
-    paddingVertical: 8,
+    paddingHorizontal: gap[3],
+    paddingVertical: gap[2],
   },
   // The message gives way (it wraps) so the call to action is never pushed off the edge.
   trialText: { flex: 1 },

@@ -2,6 +2,10 @@
  * One slim row: scan and image on the left, the question in the middle, send
  * (or stop) on the right. The writing surface grows upward with the text; the
  * row itself is as tall as one line of it, so the answer keeps the screen.
+ *
+ * Every control is the same 40 point square, so the row reads as one line; the
+ * surface itself is the app's glass material, and focus draws a ring rather
+ * than animating layout.
  */
 
 import { useEffect, useState } from 'react';
@@ -10,9 +14,10 @@ import { AccessibilityInfo, Animated, AppState, Easing, Keyboard, Linking, Style
 import { tr, useLanguage } from '../i18n';
 import { impact, press } from '../theme/feedback';
 import { motion } from '../theme/motion';
-import { font, radius } from '../theme/tokens';
+import { radius } from '../theme/tokens';
 import { makeStyles, useColors, useType } from '../theme/theme';
 import { Txt } from '../theme/Txt';
+import { GlassBar } from './Glass';
 import { MotionPressable, useReducedMotion } from './Motion';
 import { ImageIcon2, MicIcon, RecordingStopIcon, ScanIcon, SendIcon, StopIcon } from './Icon';
 import { useVoiceTyping } from './useVoiceTyping';
@@ -80,7 +85,7 @@ export function Composer({
   useEffect(() => {
     focus.stopAnimation();
     if (reduced !== false) { focus.setValue(focused ? 1 : 0); return; }
-    const animation = Animated.timing(focus, { toValue: focused ? 1 : 0, duration: motion.duration.fast, useNativeDriver: false });
+    const animation = Animated.timing(focus, { toValue: focused ? 1 : 0, duration: motion.duration.fast, useNativeDriver: true });
     animation.start();
     return () => animation.stop();
   }, [focus, focused, reduced]);
@@ -94,14 +99,22 @@ export function Composer({
 
   return (
     <View style={styles.wrap}>
-      <Animated.View style={[styles.surface, { borderColor: focus.interpolate({ inputRange: [0, 1], outputRange: [color.edge, color.accentHi] }) }]}>
+      <GlassBar
+        radius={radius.l}
+        intensity={40}
+        tint={color.surface}
+        tintOpacity={0.85}
+        border={1}
+        borderColor={color.edge}
+        contentStyle={styles.surface}
+      >
         <MotionPressable
           onPress={() => {
             press();
             onScan();
           }}
           disabled={disabled || voice.active}
-          hitSlop={{ top: 4, bottom: 4 }}
+          hitSlop={2}
           accessibilityRole="button"
           accessibilityLabel={tr('Scan a product')}
           style={styles.tool}
@@ -114,7 +127,7 @@ export function Composer({
             onPick();
           }}
           disabled={disabled || streaming || voice.active}
-          hitSlop={{ top: 4, bottom: 4 }}
+          hitSlop={2}
           accessibilityRole="button"
           accessibilityLabel={tr('Choose a screenshot')}
           style={styles.tool}
@@ -144,22 +157,24 @@ export function Composer({
               else { Keyboard.dismiss(); void voice.start(); }
             }}
             disabled={disabled || streaming || voice.phase === 'starting' || voice.phase === 'processing'}
+            hitSlop={2}
             accessibilityRole="button"
             accessibilityLabel={tr(voice.active ? 'Finish voice typing' : 'Type with your voice')}
             accessibilityHint={tr('Your words appear in the message field. Review them before you send.')}
             accessibilityState={{ busy: voice.phase === 'starting' || voice.phase === 'processing', disabled: !!disabled || streaming || voice.phase === 'starting' || voice.phase === 'processing' }}
             style={[styles.microphone, voice.active && styles.microphoneOn]}
           >
-            {voice.active ? <View style={styles.voiceBars} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">{bars.map((bar, index) => <Animated.View key={index} style={[styles.voiceBar, { opacity: bar, transform: [{ scaleY: bar }] }]} />)}<RecordingStopIcon size={15} color={color.onAccent} /></View> : <MicIcon size={24} color={disabled || streaming ? color.ink4 : color.accentHi} />}
+            {voice.active ? <View style={styles.voiceBars} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">{bars.map((bar, index) => <Animated.View key={index} style={[styles.voiceBar, { opacity: bar, transform: [{ scaleY: bar }] }]} />)}<RecordingStopIcon size={15} color={color.onAccent} /></View> : <MicIcon size={22} color={disabled || streaming ? color.ink4 : color.accentHi} />}
           </MotionPressable>
         ) : null}
-        <Animated.View style={{ width: action.interpolate({ inputRange: [0, 1], outputRange: [SEND, 76] }), height: SEND }}>
+        <Animated.View style={{ width: action.interpolate({ inputRange: [0, 1], outputRange: [SEND, STOP_W] }), height: SEND }}>
           <MotionPressable
             onPress={() => {
               if (streaming) { impact(); onStop(); }
               else if (canSend) { press(); onSend(); }
             }}
             disabled={!streaming && !canSend}
+            hitSlop={2}
             accessibilityRole="button"
             accessibilityLabel={tr(streaming ? 'Stop the answer' : 'Send')}
             accessibilityState={{ disabled: !streaming && !canSend }}
@@ -167,15 +182,17 @@ export function Composer({
           >
             <Animated.View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
               style={[styles.actionLayer, { opacity: action.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }), transform: [{ scale: action.interpolate({ inputRange: [0, 1], outputRange: [1, 0.7] }) }] }]}>
-              <SendIcon size={17} color={canSend ? color.onAccent : color.ink3} />
+              <SendIcon size={18} color={canSend ? color.onAccent : color.ink4} />
             </Animated.View>
             <Animated.View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
               style={[styles.actionLayer, { opacity: action, transform: [{ scale: action.interpolate({ inputRange: [0, 1], outputRange: [0.7, 1] }) }] }]}>
-              <StopIcon size={15} color={color.risk} /><Txt variant="actionSmall" tone="risk">{tr('Stop')}</Txt>
+              <StopIcon size={15} color={color.risk} /><Txt variant="action" tone="risk">{tr('Stop')}</Txt>
             </Animated.View>
           </MotionPressable>
         </Animated.View>
-      </Animated.View>
+      </GlassBar>
+      {/* Focus is a ring drawn over the glass; opacity is the only animated value. */}
+      <Animated.View pointerEvents="none" style={[styles.focusRing, { opacity: focus }]} />
       {voice.active ? (
         <View style={styles.voiceStatus}>
           <Txt variant="bodyTight" tone="ink2" accessibilityLiveRegion="polite" style={styles.voiceText}>
@@ -197,33 +214,47 @@ export function Composer({
   );
 }
 
-/** The send button's side; the row is this tall plus the surface's own padding. */
+/** The send button's side; every control in the row is this square. */
 const SEND = 40;
+/** The stop button widens to hold its label while keeping the row height. */
+const STOP_W = 76;
+/** One line of the input token: 22 px tall, centred in the 40 px row. */
+const INPUT_LINE = 22;
 
 const useStyles = makeStyles((color) => StyleSheet.create({
   wrap: {},
   surface: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    gap: 2,
-    backgroundColor: color.surface,
-    borderWidth: 1,
-    borderColor: color.edge,
-    borderRadius: radius.l,
-    paddingHorizontal: 5,
+    gap: 4,
+    paddingHorizontal: 8,
     paddingVertical: 4,
-    shadowColor: color.shadow,
-    shadowOpacity: 0.06,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 2,
   },
-  tool: { width: 36, height: SEND, alignItems: 'center', justifyContent: 'center' },
-  microphone: { width: 48, height: 48, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: color.accentWash, borderWidth: 1, borderColor: color.accentSoft },
+  focusRing: {
+    position: 'absolute',
+    top: -2,
+    left: -2,
+    right: -2,
+    bottom: -2,
+    borderRadius: radius.l + 2,
+    borderWidth: 2,
+    borderColor: color.accentHi,
+  },
+  tool: { width: SEND, height: SEND, borderRadius: radius.s, alignItems: 'center', justifyContent: 'center' },
+  microphone: {
+    width: SEND,
+    height: SEND,
+    borderRadius: radius.m,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: color.accentWash,
+    borderWidth: 1,
+    borderColor: color.accentSoft,
+  },
   microphoneOn: { backgroundColor: color.accent, borderColor: color.accent },
-  voiceBars: { height: 28, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 3 },
-  voiceBar: { width: 3, height: 22, borderRadius: 2, backgroundColor: color.onAccent },
-  voiceStatus: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingLeft: 8 },
+  voiceBars: { height: 24, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 3 },
+  voiceBar: { width: 3, height: 18, borderRadius: 2, backgroundColor: color.onAccent },
+  voiceStatus: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingLeft: 8, paddingTop: 4 },
   voiceText: { flex: 1 },
   voiceCancel: { minHeight: 44, minWidth: 64, alignItems: 'center', justifyContent: 'center' },
   voiceError: { paddingHorizontal: 8, paddingTop: 8 },
@@ -231,24 +262,26 @@ const useStyles = makeStyles((color) => StyleSheet.create({
     flex: 1,
     minHeight: SEND,
     maxHeight: 132,
-    paddingTop: 8,
-    paddingBottom: 8,
+    paddingTop: (SEND - INPUT_LINE) / 2,
+    paddingBottom: (SEND - INPUT_LINE) / 2,
     paddingHorizontal: 4,
     color: color.ink,
-    fontFamily: font.regular,
-    fontSize: 16,
-    lineHeight: 23,
   },
-  sendButton: { width: '100%', height: SEND, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
-  actionLayer: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 5 },
-  sendOn: { backgroundColor: color.accent },
-  sendOff: { backgroundColor: color.inset },
+  sendButton: { width: '100%', height: SEND, alignItems: 'center', justifyContent: 'center' },
+  actionLayer: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 4 },
+  sendOn: { backgroundColor: color.accent, borderRadius: radius.m },
+  sendOff: {
+    backgroundColor: color.inset,
+    borderRadius: radius.m,
+    borderWidth: 1,
+    borderColor: color.edge,
+  },
   stopButton: {
-    paddingHorizontal: 9,
-    borderRadius: 12,
+    paddingHorizontal: 8,
+    borderRadius: radius.m,
     backgroundColor: color.riskWash,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: 4,
   },
 }));
