@@ -4,7 +4,7 @@
     "description": "Shows what is known to go wrong with the product on the page you are reading.",
     "version": "0.5.0",
     "minimum_chrome_version": "102",
-    "permissions": ["activeTab", "storage", "scripting", "alarms"],
+    "permissions": ["activeTab", "storage", "scripting", "alarms", "contextMenus"],
     "optional_permissions": ["notifications"],
     "optional_host_permissions": ["https://*/*"],
     "host_permissions": ["http://127.0.0.1/*", "http://localhost/*"],

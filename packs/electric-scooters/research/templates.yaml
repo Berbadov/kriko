@@ -1,0 +1,9 @@
+# Search templates for this pack. One query per line.
+#
+# Written by the agent that authored the pack, in the words
+# and the language its sources use.
+- '{label} sorun şikayet'
+- '{label} arıza'
+- '{label} common problems'
+- '{label} {brand} reliability forum'
+- '{label} inceleme'

@@ -1,0 +1,71 @@
+lineup:
+- Bambu Lab A1
+- Bambu Lab A1 Mini
+- Bambu Lab P1S
+- Bambu Lab X1C
+- Creality Ender 3
+- Creality Ender 3 V2
+- Creality Ender 3 V3 SE
+- Creality Ender 3 V3 KE
+- Creality K1
+- Creality K1 Max
+- Creality K1C
+- Prusa MK3S+
+- Prusa MK4
+- Prusa MK4S
+- Elegoo Neptune 3 Pro
+- Elegoo Neptune 4
+- Elegoo Neptune 4 Pro
+- Elegoo Neptune 4 Plus
+- Elegoo Neptune 4 Max
+- Anycubic Kobra 2
+- Anycubic Kobra 2 Pro
+- Anycubic Kobra 3
+- Anycubic Kobra 3 Max
+covered:
+- anycubic kobra 3
+- anycubic kobra 3 max
+- bambu lab a1
+- bambu lab a1 mini
+- creality ender 3
+- creality ender 3 v3 ke
+- creality ender 3 v3 se
+- creality k1
+- creality k1 max
+- creality k1c
+- elegoo neptune 4
+- elegoo neptune 4 max
+- elegoo neptune 4 plus
+- elegoo neptune 4 pro
+- product brand anycubic series kobra 3
+- product brand anycubic series kobra 3 max
+- product brand bambu lab series a1
+- product brand bambu lab series a1 mini
+- product brand creality series ender 3
+- product brand creality series ender 3 v3 ke
+- product brand creality series ender 3 v3 se
+- product brand creality series k1
+- product brand creality series k1 max
+- product brand creality series k1c
+- product brand elegoo series neptune 4
+- product brand elegoo series neptune 4 max
+- product brand elegoo series neptune 4 plus
+- product brand elegoo series neptune 4 pro
+- product brand prusa series mk4
+- prusa mk4
+uncovered:
+- Bambu Lab P1S
+- Bambu Lab X1C
+- Prusa MK3S+
+- Elegoo Neptune 3 Pro
+- Anycubic Kobra 2
+- Anycubic Kobra 2 Pro
+note: Evidence gathered for the most-reported models; P1S, X1C, MK3S+, MK4S, Neptune
+  3 Pro, Kobra 2 and Kobra 2 Pro are named in the lineup but no solid failure claims
+  were sourced in this run.
+out_of_scope:
+- AMS Lite multi-color unit
+- Bambu Lab filament spools
+- Creality CR Touch probe
+- Anycubic resin printers
+quarantined: []

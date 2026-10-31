@@ -1,0 +1,3 @@
+# What this pack surfaces
+
+This pack surfaces what owners, forums, and repair records report going wrong with current-generation consoles and handhelds: PlayStation 5, Xbox Series X/S, Nintendo Switch, Steam Deck, and ROG Ally. It covers hardware faults (stick drift, screen defects, thermal/liquid-metal issues) and software-level problems (crash error codes, Wi-Fi hangs, power-limit regressions on wake). It does not cover game-specific bugs, subscription services, or accessories sold separately. Specification figures were not sourced this run; the claims are drawn from owner forums and issue trackers.

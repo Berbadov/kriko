@@ -1,0 +1,161 @@
+lineup:
+- Samsung Q60B
+- Samsung Q60C
+- Samsung Q60D
+- Samsung Q70C
+- Samsung Q70D
+- Samsung Q80C
+- Samsung Q80D
+- Samsung QN85C
+- Samsung QN85D
+- Samsung QN90A
+- Samsung QN90C
+- Samsung QN90D
+- Samsung QN90F
+- Samsung S90C
+- Samsung S90D
+- Samsung S95C
+- Samsung S95D
+- LG B3
+- LG B4
+- LG C1
+- LG C3
+- LG C4
+- LG G3
+- LG G4
+- LG QNED80
+- LG QNED81
+- LG QNED85
+- LG QNED86
+- LG QNED87
+- LG QNED90
+- Sony Bravia XR A80C
+- Sony Bravia XR A80L
+- Sony Bravia XR A80K
+- Sony Bravia XR X90L
+- Sony Bravia XR X90K
+- Sony Bravia XR X95L
+- Sony Bravia 7
+- Sony Bravia 8
+- Sony Bravia 8m2
+- Sony Bravia 9
+- TCL C645
+- TCL C745
+- TCL C755
+- TCL C805
+- TCL C845
+- TCL C855
+- TCL C955
+- TCL X955
+- TCL P745
+- TCL P755
+- Philips OLED808
+- Philips OLED809
+- Philips OLED810
+- Philips The One PUS8807
+- Philips The One PUS8907
+- Vestel 58UT9850
+- Vestel 55UHD
+- Vestel 65UHD
+- Arçelik A55
+- Arçelik A65
+- Arçelik A75
+- Beko B55
+- Beko B65
+- Beko B75
+covered:
+- lg c1
+- lg qned81
+- lg qned87
+- product brand lg series c1
+- product brand lg series qned81
+- product brand lg series qned87
+- product brand samsung series q60b
+- product brand samsung series qn90a
+- product brand samsung series qn90f
+- product brand sony series 8m2
+- product brand sony series a80c
+- product brand tcl series c805
+- product brand tcl series c845
+- product brand vestel series 58ut9850
+- samsung q60b
+- samsung qn90a
+- samsung qn90f
+- sony bravia 8m2
+- sony bravia xr a80c
+- tcl c805
+- tcl c845
+- vestel 58ut9850
+uncovered:
+- Samsung Q60C
+- Samsung Q60D
+- Samsung Q70C
+- Samsung Q70D
+- Samsung Q80C
+- Samsung Q80D
+- Samsung QN85C
+- Samsung QN85D
+- Samsung QN90C
+- Samsung QN90D
+- Samsung S90C
+- Samsung S90D
+- Samsung S95C
+- Samsung S95D
+- LG B3
+- LG B4
+- LG C3
+- LG C4
+- LG G3
+- LG G4
+- LG QNED80
+- LG QNED85
+- LG QNED86
+- LG QNED90
+- Sony Bravia XR A80L
+- Sony Bravia XR A80K
+- Sony Bravia XR X90L
+- Sony Bravia XR X90K
+- Sony Bravia XR X95L
+- Sony Bravia 7
+- Sony Bravia 9
+- TCL C645
+- TCL C745
+- TCL C755
+- TCL C855
+- TCL C955
+- TCL X955
+- TCL P745
+- TCL P755
+- Philips OLED808
+- Philips OLED809
+- Philips OLED810
+- Philips The One PUS8807
+- Philips The One PUS8907
+- Vestel 55UHD
+- Vestel 65UHD
+- Arçelik A55
+- Arçelik A65
+- Arçelik A75
+- Beko B55
+- Beko B65
+- Beko B75
+note: 'Coverage is strongest for Samsung QLED/Neo QLED, LG OLED/QNED, Sony Bravia
+  and TCL, where owner forum and consumer-complaint evidence exists. Philips, Vestel,
+  Arçelik and Beko models are named in the lineup but have no claims yet: searches
+  for their owner-reported faults returned no usable evidence within the tool budget.
+  Turkish-market model-level sales data was not found; brand-level share is sourced
+  from an ITU thesis survey and BankaVitrini.'
+out_of_scope:
+- Hisense TVs (appears in market-share data but not in the pack brief)
+- Samsung soundbars and audio accessories
+- Amazon Fire TV Stick (appears in an OLED burn-in report as the cause, not the subject)
+- LG webOS media-server apps (Plex, Emby, Kodi) as products
+quarantined:
+- kind: product
+  label: LG C8
+  reason: not named anywhere in this pack's own line-up — likely a different category
+    (an accessory, or a different device from the same brand)
+- kind: product
+  label: LG B7
+  reason: not named anywhere in this pack's own line-up — likely a different category
+    (an accessory, or a different device from the same brand)

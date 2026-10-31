@@ -1,0 +1,1278 @@
+# Claims — what is known to go wrong, each with the page it came from and the quote
+# that was read there. A claim without both is not in this file.
+- subject:
+    kind: product
+    identity:
+      brand: maxi cosi
+      series: familyfix slide pro
+  kind: known_issue
+  domain: safety
+  severity: high
+  consequence: ''
+  detection: ''
+  component: visual connection indicator on the base
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'FamilyFix Slide Pro base (Ref. 8065057110) voluntary recall: green visual indicator can
+        show locked when car seat is not fully connected'
+      body: This finding came from the seed query 'Maxi-Cosi FamilyFix Slide Pro recall safety' (UK regulator
+        GOV.UK recall notice 2605-0109, published 28 May 2026).
+      advice: If you own a FamilyFix Slide Pro base manufactured between 20 August 2025 and 24 March 2026,
+        check the model reference and manufacturing date against Maxi-Cosi's online checker; affected
+        bases are replaced free of charge. Until the replacement arrives, do not rely on the green indicator
+        alone — manually verify the car seat is clicked in at front and back, or use the seat belt installation.
+    tr:
+      title: 'FamilyFix Slide Pro tabanının (Ref. 8065057110) gönüllü geri çağrılması: araç koltuğu tam
+        olarak bağlı değilken yeşil görsel gösterge kilitli gösterebilir'
+      body: Bu bulgu 'Maxi-Cosi FamilyFix Slide Pro recall safety' başlangıç sorgusundan elde edildi (Birleşik
+        Krallık düzenleyicisi GOV.UK geri çağırma bildirimi 2605-0109, yayın tarihi 28 Mayıs 2026).
+      advice: 20 Ağustos 2025 ile 24 Mart 2026 arasında üretilmiş bir FamilyFix Slide Pro tabanınız varsa,
+        model referansını ve üretim tarihini Maxi-Cosi'nin çevrimiçi kontrol aracıyla kontrol edin; etkilenen
+        tabanlar ücretsiz olarak değiştirilir. Yedek parça gelene kadar yalnızca yeşil göstergeye güvenmeyin
+        — araç koltuğunun ön ve arka taraftan yerine oturduğunu manuel olarak doğrulayın veya emniyet
+        kemeriyle montajı kullanın.
+  evidence:
+  - url: https://www.gov.uk/product-safety-alerts-reports-recalls/product-recall-maxi-cosi-family-fix-slide-pro-base-2605-0109
+    quote: A visual indicator on the base may be disrupted if the car seat is not detached in the intended
+      way. If this occurs, the indicator may not function as expected during the following installation.
+      This may mean that although the indicator is green, the car seat might not be properly connected
+      to the base.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:45:27+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: joie
+      series: serina swivel
+  kind: known_issue
+  domain: safety
+  severity: high
+  consequence: ''
+  detection: ''
+  component: steel bolt securing seat unit to frame
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Joie Serina Swivel (Elephant Duo) recalled — steel bolt securing seat unit to frame can fail
+      body: This is the Irish regulator CCPC's official product-safety notification (published 12 March
+        2026).
+      advice: If you own a Serina Swivel (Elephant Duo), check the batch number on the identification
+        sticker on the underside of the swing arm/seat. If it is 190225, 200225, 210225 or 220225, stop
+        using it immediately; CCPC says Joie/Smyths offer free collection, a full refund, or an upgrade
+        to the Joie Serina 2 in 1.
+    tr:
+      title: Joie Serina Swivel (Elephant Duo) geri çağrıldı — koltuk ünitesini şasiye sabitleyen çelik
+        cıvata arızalanabilir
+      body: Bu, İrlanda düzenleyicisi CCPC'nin resmi ürün güvenliği bildirimidir (yayın tarihi 12 Mart
+        2026).
+      advice: Bir Serina Swivel (Elephant Duo) sahibiyseniz, salıncak kolunun/koltuğun alt tarafındaki
+        tanımlama etiketinde bulunan parti numarasını kontrol edin. 190225, 200225, 210225 veya 220225
+        ise kullanmayı hemen durdurun; CCPC, Joie/Smyths'in ücretsiz teslim alma, tam iade veya Joie Serina
+        2 in 1'e yükseltme sunduğunu belirtiyor.
+  evidence:
+  - url: https://www.ccpc.ie/consumer-advice/product-safety/product-safety-notifications/details/allison-baby-uk-recalls-joie-serina-swivel-%28elephant-duo%29
+    quote: Failure of the steel bolt that secures the seat unit to the frame may result in unexpected
+      separation of the seat from the base.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:44:35+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: cybex
+      series: aton g
+  kind: known_issue
+  domain: safety
+  severity: high
+  consequence: ''
+  detection: ''
+  component: harness anchor hooks
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Transport Canada recall 2025-055 — Cybex Aton G Swivel harness can loosen and detach (Canada)
+      body: Transport Canada's official public notice (2025-P01 E) confirms the Canadian recall for Aton
+        G Swivel models with specific article numbers (522004175, 522004177, 522004179, 522004181, 522004801,
+        522004803), manufactured June 3, 2023 to May 10, 2024. 1,811 units sold in Canada.
+      advice: If you have an Aton G Swivel with one of the listed article numbers, check the manufacture
+        date. Cybex will mail registered owners a free repair kit. If you notice damaged hooks or a missing
+        anchor pin, stop using the seat immediately.
+    tr:
+      title: Transport Canada geri çağırma 2025-055 — Cybex Aton G Swivel koşum takımı gevşeyebilir ve
+        ayrılabilir (Kanada)
+      body: Transport Canada'nın resmi kamu bildirimi (2025-P01 E), belirli ürün numaralarına (522004175,
+        522004177, 522004179, 522004181, 522004801, 522004803) sahip ve 3 Haziran 2023 ile 10 Mayıs 2024
+        arasında üretilen Aton G Swivel modelleri için Kanada geri çağırmasını doğrulamaktadır. Kanada'da
+        1.811 adet satıldı.
+      advice: Listelenen ürün numaralarından birine sahip bir Aton G Swivel'iniz varsa, üretim tarihini
+        kontrol edin. Cybex, kayıtlı sahiplerine ücretsiz bir onarım kiti postayla gönderecektir. Hasarlı
+        kancalar veya eksik bir sabitleme pimi fark ederseniz, koltuğu hemen kullanmayı durdurun.
+  evidence:
+  - url: https://tc.canada.ca/en/road-transportation/defects-recalls-vehicles-tires-child-car-seats/cybex-aton-g-swivel-car-seats-loose-detached-harness
+    quote: On certain Cybex Aton G Swivel infant car seats, the harness anchor hooks can be damaged. If
+      this happens, the harness can loosen and detach from the seat.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:46:59+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: britax romer
+      series: baby-safe pro
+  kind: known_issue
+  domain: safety
+  severity: high
+  consequence: ''
+  detection: ''
+  component: harness buckle (Gurtschloss) on Vario Base 5Z
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: In a frontal crash the harness buckle can open by itself when the BABY-SAFE PRO is in the
+        recline position on the Vario Base 5Z, ejecting the child
+      body: Explains the concrete failure mode and the injury risk; the problem occurs only in the flattest
+        recline on the Vario Base 5Z, not upright or with the vehicle belt.
+      advice: Until checked, do not use the seat in the flattest recline position on the Vario Base 5Z;
+        use it upright on the base or without the base secured by the vehicle belt.
+    tr:
+      title: Önden çarpışmada, BABY-SAFE PRO Vario Base 5Z üzerinde yatık konumdayken koşum tokası kendiliğinden
+        açılabilir ve çocuğu fırlatabilir
+      body: Somut arıza modunu ve yaralanma riskini açıklar; sorun yalnızca Vario Base 5Z üzerindeki en
+        yatık konumda ortaya çıkar, dik konumda veya araç kemeriyle ortaya çıkmaz.
+      advice: Kontrol edilene kadar, koltuğu Vario Base 5Z üzerinde en yatık konumda kullanmayın; taban
+        üzerinde dik konumda veya taban olmadan araç kemeriyle sabitlenmiş olarak kullanın.
+  evidence:
+  - url: https://www.produktwarnung.eu/2026/10/08/rueckruf-sicherheitsmangel-babyone-ruft-baby-safe-pro-von-britax-roemer-zurueck/39041/amp
+    quote: Bei Verwendung betroffener Babyschalen Baby-Safe Pro in Kombination mit der ISOFIX-Basisstation
+      Vario Base 5Z in der Liegeposition kann sich im Falle eines Frontalaufpralls das Gurtschloss selbstständig
+      lösen.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:41:01+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: chicco
+      series: myfit zip air
+  kind: known_issue
+  domain: safety
+  severity: high
+  consequence: ''
+  detection: ''
+  component: forward-facing harness / chest restraint system
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'NHTSA Recall 25C005: Chicco MyFit Zip Air allows excessive chest movement in crash'
+      body: Official NHTSA recall notice 25C005 issued by Artsana USA (Chicco USA).
+      advice: Check the model number and date of manufacture on the label under the seat. If affected,
+        register for the free remedy kit before relying on the seat in the failing configuration.
+    tr:
+      title: 'NHTSA Geri Çağırma 25C005: Chicco MyFit Zip Air çarpışmada aşırı göğüs hareketine izin veriyor'
+      body: Artsana USA (Chicco USA) tarafından yayımlanan resmi NHTSA geri çağırma bildirimi 25C005.
+      advice: Koltuğun altındaki etiketteki model numarasını ve üretim tarihini kontrol edin. Etkilenmişse,
+        koltuğu arızalı konfigürasyonda kullanmaya güvenmeden önce ücretsiz çözüm kiti için kaydolun.
+  evidence:
+  - url: https://static.nhtsa.gov/odi/rcl/2025/RCONL-25C005-8942.pdf
+    quote: In certain configurations the child seat may allow excessive chest movement in a crash, increasing
+      the risk of injury in a crash.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:41:44+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: cybex
+      series: aton g
+  kind: known_issue
+  domain: safety
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: harness anchor pins / plastic retention hooks
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: North Carolina child passenger safety resource confirms Cybex Aton G recall model numbers
+        and dates
+      body: An independent state-level child passenger safety resource (Buckle Up NC) confirms the NHTSA
+        recall 25C002, lists the affected model number prefixes (522001*, 522003*, 522004*) and the manufacture
+        window (02/20/2023 – 05/10/2024).
+      advice: Use the model number prefix on your seat's label to check if it is affected. Model numbers
+        starting with 522001, 522003, or 522004 manufactured before May 10, 2024 are within the recall
+        population.
+    tr:
+      title: North Carolina çocuk yolcu güvenliği kaynağı Cybex Aton G geri çağırma model numaralarını
+        ve tarihlerini doğruluyor
+      body: Bağımsız bir eyalet düzeyinde çocuk yolcu güvenliği kaynağı (Buckle Up NC), NHTSA geri çağırma
+        25C002'yi doğruluyor, etkilenen model numarası öneklerini (522001*, 522003*, 522004*) ve üretim
+        aralığını (02/20/2023 – 05/10/2024) listeliyor.
+      advice: Etkilenip etkilenmediğini kontrol etmek için koltuğunuzun etiketindeki model numarası önekini
+        kullanın. 10 Mayıs 2024'ten önce üretilmiş 522001, 522003 veya 522004 ile başlayan model numaraları
+        geri çağırma kapsamındadır.
+  evidence:
+  - url: https://www.buckleupnc.org/resources/hsrc_carseat_recalls.pdf
+    quote: "Aton G (including those sold with travel system)  \n\n(NHTSA # 25C002)  \n\nModel Number:\
+      \ 522001\\*, 522003\\*, 522004\\* Manufactured: 02/20/2023 - 05/10/2024 Reason: The harness is attached\
+      \ to the underside of the car seat via metal harness anchor pins held in place by plastic hooks.\
+      \ The plastic hooks may bend causing the harness to detach and potentially fail to restrain the\
+      \ child. What to Do: Contact manufacturer for remedy kit and instructions."
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:46:59+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: maxi cosi
+      series: familyfix slide pro
+  kind: known_issue
+  domain: safety
+  severity: high
+  consequence: ''
+  detection: ''
+  component: visual connection indicator on the base
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'German forum thread (citing ADAC): indicator can stay green when the base has not clicked
+        in, seat could move in a crash'
+      body: This finding came from the seed query 'Maxi-Cosi FamilyFix Slide Pro Rückruf Sicherheit' (German
+        forum thread citing ADAC).
+      advice: 'A consumer forum thread citing ADAC describes the practical failure: if the seat is not
+        fully released and then re-placed, the base may not click in but the indicator stays green, so
+        the seat is not firmly locked and could move through the vehicle in a crash. The author urges
+        affected owners to act quickly.'
+    tr:
+      title: 'Alman forum başlığı (ADAC''a atıfta bulunarak): taban yerine oturmadığında gösterge yeşil
+        kalabilir, koltuk bir çarpışmada hareket edebilir'
+      body: Bu bulgu 'Maxi-Cosi FamilyFix Slide Pro Rückruf Sicherheit' (ADAC'a atıfta bulunan Alman forum
+        başlığı) arama sorgusundan elde edildi.
+      advice: 'ADAC''a atıfta bulunan bir tüketici forumu başlığı pratik arızayı tanımlıyor: koltuk tamamen
+        serbest bırakılmaz ve ardından yeniden yerleştirilmezse, taban yerine oturmayabilir ancak gösterge
+        yeşil kalır, bu nedenle koltuk sağlam şekilde kilitlenmemiştir ve bir çarpışmada araç içinde hareket
+        edebilir. Yazar, etkilenen sahipleri hızlı hareket etmeye çağırıyor.'
+  evidence:
+  - url: https://www.autoextrem.de/threads/rueckruf-aktion-fuer-maxi-cosi-kindersitz-diese-modelle-sind-betroffen-und-so-tauscht-man-sie-um.226896/
+    quote: Das Problem ist hier, laut dem ADAC, dass es eine Anzeige gibt, die mit Grün oder Rot anzeigt,
+      ob der Sitz richtig auf der Basis sitzt oder nicht. Wird er nicht voll gelöst und dann wieder auf
+      die Basis gesetzt, kann es passieren, dass diese nicht richtig einrastet, aber die Anzeige auf Grün
+      bleibt. Hier wäre dann also der Sitz gar nicht fest in der Basis und würde sich im Ernstfall durch
+      das Fahrzeug bewegen.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:47:42+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: maxi cosi
+      series: jay plus
+  kind: known_issue
+  domain: safety
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: removable toy tray with play arch
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Jay Plus Spielbogen (play arch) recall confirmed in Germany — reinforced replacement arch
+        offered
+      body: German consumer-warning site confirming the recall and noting Maxi-Cosi offers a reinforced
+        replacement play arch — useful for what the fix is.
+      advice: Confirms the recall covers all batches of the Jay Plus and that the manufacturer's remedy
+        is a reinforced replacement arch, obtained via the retailer or eu-consumercare@maxi-cosi.com.
+    tr:
+      title: Jay Plus Spielbogen (oyun kemeri) geri çağırma Almanya'da doğrulandı — güçlendirilmiş yedek
+        kemer sunuluyor
+      body: Geri çağırmayı doğrulayan ve Maxi-Cosi'nin güçlendirilmiş bir yedek oyun kemeri sunduğunu
+        belirten Alman tüketici uyarı sitesi — düzeltmenin ne olduğu konusunda faydalı.
+      advice: Geri çağırmanın Jay Plus'ın tüm partilerini kapsadığını ve üreticinin çözümünün, perakendeci
+        veya eu-consumercare@maxi-cosi.com aracılığıyla elde edilen güçlendirilmiş bir yedek kemer olduğunu
+        doğrular.
+  evidence:
+  - url: https://www.produktwarnung.eu/2025/11/05/rueckruf-baby-sitzerhoehung-maxi-cosi-jay-plus/35930/amp
+    quote: kann das Ende des Spielbogens auf dem abnehmbaren Tablett nach mehrmaligem herumspielen abbrechen
+      und Kleinteile freisetzen
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:46:24+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: joie
+      series: serina swivel
+  kind: known_issue
+  domain: safety
+  severity: high
+  consequence: ''
+  detection: ''
+  component: steel bolt securing seat unit to frame
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Joie official safety notice: Serina Swivel seat can separate from base on affected batch'
+      body: This is the manufacturer Joie's own product safety notice (published 2 March 2026), the primary
+        source for the defect.
+      advice: The manufacturer's notice restricts the defect to units manufactured 19, 21 or 22 February
+        2025 (model W1306DAELD000) and says units outside those dates are safe to continue using. Check
+        the date on the label under the base before using.
+    tr:
+      title: 'Joie resmi güvenlik bildirimi: Serina Swivel koltuğu etkilenen partide tabandan ayrılabilir'
+      body: Bu, üretici Joie'nin kendi ürün güvenlik bildirimidir (2 Mart 2026'da yayımlanmıştır), kusur
+        için birincil kaynaktır.
+      advice: Üreticinin bildirimi kusuru 19, 21 veya 22 Şubat 2025'te üretilen birimlerle (model W1306DAELD000)
+        sınırlandırıyor ve bu tarihlerin dışındaki birimlerin kullanılmaya devam edilmesinin güvenli olduğunu
+        söylüyor. Kullanmadan önce tabanın altındaki etiketteki tarihi kontrol edin.
+  evidence:
+  - url: https://joiebaby.com/uk/product-updates/serina-swivel
+    quote: Joie has identified that the steel bolt which secures the seat unit to the grame may fail on
+      a small batch of serina swivel units produced on the dates listed above. If this occurs, the seat
+      unit could unexpectedly separate fomr the base, which could result in injury to the infant.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:44:35+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: cybex
+      series: aton g
+  kind: known_issue
+  domain: safety
+  severity: high
+  consequence: ''
+  detection: ''
+  component: harness hip anchorage retention hooks
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: NHTSA acknowledges Cybex Aton G recall — harness strap may detach from seat (25C002)
+      body: NHTSA's official acknowledgment letter confirms the recall campaign 25C002, listing affected
+        models (Aton G, Aton G SensorSafe, Aton G Swivel, Aton G Swivel SensorSafe, Eos travel systems)
+        and 22,823 potentially affected units in the US.
+      advice: Check your seat's manufacture date (underneath the seat). If it falls between February 20,
+        2023 and May 10, 2024, the seat is affected. Contact Cybex at 877-242-5676 for the free remedy
+        kit.
+    tr:
+      title: NHTSA, Cybex Aton G geri çağırmasını kabul etti — koşum kayışı koltuktan ayrılabilir (25C002)
+      body: NHTSA'nın resmi kabul mektubu, 25C002 geri çağırma kampanyasını doğrulayarak etkilenen modelleri
+        (Aton G, Aton G SensorSafe, Aton G Swivel, Aton G Swivel SensorSafe, Eos seyahat sistemleri) ve
+        ABD'de potansiyel olarak etkilenen 22.823 birimi listeliyor.
+      advice: Koltuğunuzun üretim tarihini kontrol edin (koltuğun altında). 20 Şubat 2023 ile 10 Mayıs
+        2024 arasına düşüyorsa, koltuk etkilenmiştir. Ücretsiz çözüm kiti için Cybex'i 877-242-5676 numarasından
+        arayın.
+  evidence:
+  - url: https://static.nhtsa.gov/odi/rcl/2025/RCAK-25C002-2320.pdf
+    quote: Columbus Trading- Partners USA, Inc. (CTP) is recalling certain Cybex Aton G, Aton G SensorSafe,
+      Aton G Swivel, Aton G Swivel SensorSafe, Eos and Aton G Swivel Travel System, and Eos and Aton G
+      Travel System child seats. The harness hip anchorage retention hooks may bend, causing the anchor
+      pin to loosen, and the harness strap to detach.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:46:59+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: graco
+      series: snugride turn slide
+  kind: known_issue
+  domain: safety
+  severity: high
+  consequence: ''
+  detection: ''
+  component: carrier-to-base attachment
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Consumer Reports: all Turn & Slide seats sold Jan–Mar 2026 recalled; carrier may detach
+        in crash'
+      body: 'Consumer Reports independently confirms the NHTSA recall: the carrier may detach from the
+        base in a crash. All units sold Jan–Mar 2026 are recalled. No injuries reported as of the article.
+        Graco provides a replacement seat.'
+      advice: If you bought this seat between January and March 2026, it is recalled. Contact Graco (800-345-4109)
+        for a replacement. Until then, use the carrier without the base, installed with the vehicle seatbelt.
+    tr:
+      title: 'Consumer Reports: Ocak–Mart 2026 arasında satılan tüm Turn & Slide koltukları geri çağrıldı;
+        taşıyıcı bir çarpışmada ayrılabilir'
+      body: 'Consumer Reports, NHTSA geri çağırmasını bağımsız olarak doğruluyor: taşıyıcı bir çarpışmada
+        tabandan ayrılabilir. Ocak–Mart 2026 arasında satılan tüm birimler geri çağrıldı. Makale itibarıyla
+        bildirilen yaralanma yok. Graco yedek bir koltuk sağlıyor.'
+      advice: Bu koltuğu Ocak ile Mart 2026 arasında aldıysanız, geri çağrılmıştır. Yedek için Graco (800-345-4109)
+        ile iletişime geçin. O zamana kadar taşıyıcıyı taban olmadan, araç emniyet kemeriyle monte ederek
+        kullanın.
+  evidence:
+  - url: https://www.consumerreports.org/babies-kids/baby-product-recalls/graco-turn-and-slide-recall-a3226297235/
+    quote: The car seat may detach from the base during a crash, according to the recall report.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:43:05+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: maxi cosi
+      series: familyfix slide pro
+  kind: known_issue
+  domain: safety
+  severity: high
+  consequence: ''
+  detection: ''
+  component: visual connection indicator on the base (upper portion of the base assembly)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'FamilyFix Slide Pro base (Ref. 8065057110) recalled: green connection indicator can show
+        while seat is only partially attached'
+      body: The UK Trading Standards recall (PSD 2605-0109) confirms the FamilyFix Slide Pro base, item
+        ref 8065057110, made 6 Sep 2025–24 Mar 2026, is recalled because the green indicator can show
+        while the seat is only partially connected.
+      advice: If you own this base, check the serial number against Maxi-Cosi's recall page. Affected
+        bases are replaced free of charge; until the replacement arrives, do not rely on the green indicator
+        alone — verify the seat clicks in at both front and back on every installation.
+    tr:
+      title: 'FamilyFix Slide Pro tabanı (Ref. 8065057110) geri çağrıldı: koltuk yalnızca kısmen takılıyken
+        yeşil bağlantı göstergesi görünebilir'
+      body: Birleşik Krallık Ticaret Standartları geri çağırması (PSD 2605-0109), 6 Eylül 2025–24 Mart
+        2026 tarihleri arasında üretilen FamilyFix Slide Pro tabanının, ürün ref 8065057110, yeşil gösterge
+        koltuk yalnızca kısmen bağlıyken görünebildiği için geri çağrıldığını doğruluyor.
+      advice: Bu tabana sahipseniz, seri numarasını Maxi-Cosi'nin geri çağırma sayfasıyla karşılaştırın.
+        Etkilenen tabanlar ücretsiz olarak değiştirilir; yedek gelene kadar yalnızca yeşil göstergeye
+        güvenmeyin — her kurulumda koltuğun hem ön hem de arka tarafta yerine oturduğunu doğrulayın.
+  evidence:
+  - url: https://www.gov.uk/product-safety-alerts-reports-recalls/product-recall-maxi-cosi-family-fix-slide-pro-base-2605-0109
+    quote: A visual indicator on the base may be disrupted if the car seat is not detached in the intended
+      way. If this occurs, the indicator may not function as expected during the following installation.
+      This may mean that although the indicator is green, the car seat might not be properly connected
+      to the base.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:45:27+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: graco
+      series: snugride turn slide
+  kind: known_issue
+  domain: safety
+  severity: high
+  consequence: ''
+  detection: ''
+  component: structural issue (base/carrier)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'AAP News/CPSC: Graco recalls limited number of SnugRide Turn & Slide seats due to structural
+        issue'
+      body: The American Academy of Pediatrics reports the CPSC recall announcement. This provides the
+        specific retail model numbers (2231809, 2231887, 2231806, 2231885, 2231881, 2231884), base model
+        2231810, and travel system 2243083. Sold Jan–Mar 2026 at Amazon, Babylist, Target, Walmart, Graco
+        Baby.
+      advice: Check your seat's model number against this list. If it matches, stop using it and contact
+        Graco at 800-345-4109 for a replacement.
+    tr:
+      title: 'AAP News/CPSC: Graco, yapısal sorun nedeniyle sınırlı sayıda SnugRide Turn & Slide koltuğunu
+        geri çağırıyor'
+      body: Amerikan Pediatri Akademisi, CPSC geri çağırma duyurusunu bildiriyor. Bu, belirli perakende
+        model numaralarını (2231809, 2231887, 2231806, 2231885, 2231881, 2231884), temel model 2231810'u
+        ve seyahat sistemi 2243083'ü sağlar. Ocak–Mart 2026 tarihleri arasında Amazon, Babylist, Target,
+        Walmart, Graco Baby'de satıldı.
+      advice: Koltuğunuzun model numarasını bu listeyle karşılaştırın. Eşleşiyorsa kullanmayı bırakın
+        ve değişim için Graco'ya 800-345-4109 numarasından ulaşın.
+  evidence:
+  - url: https://publications.aap.org/aapnews/news/34990/?autologincheck=redirected
+    quote: Graco is recalling a limited number of SnugRide Turn & Slide child car seats due to a structural
+      issue.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:43:05+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: maxi cosi
+      series: jay plus
+  kind: known_issue
+  domain: safety
+  severity: low
+  consequence: ''
+  detection: ''
+  component: removable toy tray with play arch
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Maxi-Cosi's own safety-notice page lists the Jay Plus recall (01/07/2025 – 10/10/2025)
+      body: The manufacturer's own (Dorel Juvenile Europe) safety-notice page lists the Jay Plus recall
+        with the same sales window, confirming the official status of the recall.
+      advice: This is the manufacturer's own confirmation; owners should follow the official instructions
+        on this page or contact Maxi-Cosi consumer care.
+    tr:
+      title: Maxi-Cosi'nin kendi güvenlik bildirimi sayfası Jay Plus geri çağırmasını listeliyor (01/07/2025
+        – 10/10/2025)
+      body: Üreticinin kendi (Dorel Juvenile Europe) güvenlik bildirimi sayfası, Jay Plus geri çağırmasını
+        aynı satış aralığıyla listeliyor ve geri çağırmanın resmi durumunu doğruluyor.
+      advice: Bu, üreticinin kendi onayıdır; sahipler bu sayfadaki resmi talimatları izlemeli veya Maxi-Cosi
+        tüketici hizmetleriyle iletişime geçmelidir.
+  evidence:
+  - url: https://www.maxi-cosi.es/c/avisos-de-seguridad
+    quote: 'Jay Plus
+
+
+      (01/07/2025 - 10/10/2025)'
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:46:24+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: graco
+      series: snugride turn slide
+  kind: known_issue
+  domain: safety
+  severity: high
+  consequence: ''
+  detection: ''
+  component: carrier-to-base attachment / locking hooks
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'NHTSA Recall 26C003: SnugRide Turn & Slide carrier may detach from base in crash'
+      body: 'The official NHTSA Part 573 recall report for Recall 26C003 covers 5,126 SnugRide Turn &
+        Slide infant seats and Modes Nest travel systems, manufactured Dec 1, 2025 – Mar 27, 2026. The
+        defect is structural: the carrier can detach from the base in a crash. 100% of involved units
+        are estimated to have the defect.'
+      advice: If you own this seat, check the model number and manufacture date against the recall list.
+        If affected, stop using the base and install the carrier with the vehicle seatbelt only, or request
+        the free replacement from Graco.
+    tr:
+      title: 'NHTSA Geri Çağırma 26C003: SnugRide Turn & Slide taşıyıcı çarpışmada tabandan ayrılabilir'
+      body: 'Geri Çağırma 26C003 için resmi NHTSA Part 573 geri çağırma raporu, 1 Aralık 2025 – 27 Mart
+        2026 tarihleri arasında üretilen 5.126 SnugRide Turn & Slide bebek koltuğunu ve Modes Nest seyahat
+        sistemlerini kapsar. Kusur yapısaldır: taşıyıcı bir çarpışmada tabandan ayrılabilir. İlgili birimlerin
+        %100''ünde kusurun bulunduğu tahmin edilmektedir.'
+      advice: Bu koltuğa sahipseniz, model numarasını ve üretim tarihini geri çağırma listesiyle karşılaştırın.
+        Etkilenmişse, tabanı kullanmayı bırakın ve taşıyıcıyı yalnızca araç emniyet kemeriyle takın veya
+        Graco'dan ücretsiz değişim talep edin.
+  evidence:
+  - url: https://static.nhtsa.gov/odi/rcl/2026/RCLRPT-26C003-2105.pdf
+    quote: 'Total number of potentially involved: 5,126'
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:43:05+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: inglesina
+      series: quid
+  kind: known_issue
+  domain: safety
+  severity: high
+  consequence: ''
+  detection: ''
+  component: rear wheel unit (후륜 유닛)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Inglesina Quid rear wheel unit can detach — Japan recall 2021, 44 incidents
+      body: 'Korea Consumer Agency CISS database entry documenting the Japanese recall of Inglesina Quid.
+        Affected lots 31GL1900311~31GL1946937, EAN codes 8029448075199/5229/5205/5212/5175, 1,516 units
+        sold in Japan May 2019–Jan 2021. 44 detachment incidents reported, no injuries. Remedy: free replacement
+        of rear wheel units. Ice Grey color excluded.'
+      advice: If you own an Inglesina Quid, check the lot number sticker on the lower-left rear frame.
+        If it falls in 31GL1900311~31GL1946937 (and is not Ice Grey), stop using it and contact the seller/Inglesina
+        for the free rear-wheel-unit replacement. The defect is documented wheel detachment while in use,
+        which could cause the stroller to tip.
+    tr:
+      title: Inglesina Quid arka tekerlek ünitesi ayrılabilir — Japonya geri çağırma 2021, 44 olay
+      body: 'Kore Tüketici Ajansı CISS veritabanı girişi, Inglesina Quid''in Japonya''daki geri çağırmasını
+        belgeliyor. Etkilenen partiler 31GL1900311~31GL1946937, EAN kodları 8029448075199/5229/5205/5212/5175,
+        Japonya''da Mayıs 2019–Ocak 2021 arasında satılan 1.516 adet. 44 ayrılma olayı bildirildi, yaralanma
+        yok. Çözüm: arka tekerlek ünitelerinin ücretsiz değişimi. Ice Grey rengi hariç tutulmuştur.'
+      advice: Bir Inglesina Quid'e sahipseniz, alt sol arka çerçevedeki parti numarası etiketini kontrol
+        edin. 31GL1900311~31GL1946937 aralığına düşüyorsa (ve Ice Grey değilse), kullanmayı bırakın ve
+        ücretsiz arka tekerlek ünitesi değişimi için satıcıya/Inglesina'ya başvurun. Kusur, kullanım sırasında
+        belgelenmiş tekerlek ayrılmasıdır ve bu, bebek arabasının devrilmesine neden olabilir.
+  evidence:
+  - url: https://ciss.go.kr/www/selectBbsNttPrductView.do?key=580&pKnd=PRDUCT11&bKnd=recall&nttNo=36214&searchCnd=all&searchKrwd=&pageIndex=129&pageUnit=10
+    quote: 사용 환경에 따른 복합 요인으로 후방 타이어가 빠질 수 있음.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:43:57+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: maxi cosi
+      series: familyfix slide pro
+  kind: known_issue
+  domain: safety
+  severity: high
+  consequence: ''
+  detection: ''
+  component: visual connection indicator on the base
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Maxi-Cosi official recall notice: indicator can show green when car seat only partially
+        connected'
+      body: This finding came from the seed query 'Maxi-Cosi FamilyFix Slide Pro recall safety' (manufacturer's
+        official recall notice page).
+      advice: The manufacturer's recall notice instructs affected owners to check their base via the online
+        tool and request a free replacement base (expected within 3–5 business days). Until then, use
+        the manual front-and-back attachment check or seat-belt installation.
+    tr:
+      title: 'Maxi-Cosi resmi geri çağırma bildirimi: gösterge, oto koltuğu yalnızca kısmen bağlıyken
+        yeşil gösterebilir'
+      body: Bu bulgu 'Maxi-Cosi FamilyFix Slide Pro recall safety' başlangıç sorgusundan geldi (üreticinin
+        resmi geri çağırma bildirimi sayfası).
+      advice: Üreticinin geri çağırma bildirimi, etkilenen sahiplere tabanlarını çevrimiçi araçla kontrol
+        etmelerini ve ücretsiz değişim tabanı talep etmelerini (3–5 iş günü içinde beklenir) talimat veriyor.
+        O zamana kadar, manuel ön-arka bağlantı kontrolünü veya emniyet kemeri kurulumunu kullanın.
+  evidence:
+  - url: https://www.maxi-cosi.com/c/international/check-your-product
+    quote: This indicator on the base may be disrupted if the car seat is not removed in the intended
+      way. If this occurs, the indicator may not function as expected during the next installation. This
+      may mean that although the indicator is green, the car seat is only partially connected to the base.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:47:42+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: maxi cosi
+      series: familyfix slide pro
+  kind: known_issue
+  domain: safety
+  severity: high
+  consequence: ''
+  detection: ''
+  component: visual connection indicator on the base
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Maxi-Cosi official recall FAQ: visual indicator misuse scenario, no incidents reported,
+        green-sticker fix'
+      body: This finding came from the seed query 'Maxi-Cosi FamilyFix Slide Pro recall safety' (manufacturer's
+        own FAQ page).
+      advice: This is the manufacturer's own confirmation of the voluntary recall and the free replacement
+        program. Affected bases (Ref. 8065057110, made 20 Aug 2025–24 Mar 2026) are replaced at no cost;
+        updated bases carry a green sticker. No injuries or incidents were reported.
+    tr:
+      title: 'Maxi-Cosi resmi geri çağırma SSS: görsel gösterge yanlış kullanım senaryosu, bildirilen
+        olay yok, yeşil etiket düzeltmesi'
+      body: Bu bulgu 'Maxi-Cosi FamilyFix Slide Pro recall safety' başlangıç sorgusundan geldi (üreticinin
+        kendi SSS sayfası).
+      advice: Bu, üreticinin gönüllü geri çağırma ve ücretsiz değişim programına ilişkin kendi onayıdır.
+        Etkilenen tabanlar (Ref. 8065057110, 20 Ağu 2025–24 Mar 2026 tarihleri arasında üretilmiş) ücretsiz
+        olarak değiştirilir; güncellenmiş tabanlarda yeşil etiket bulunur. Hiçbir yaralanma veya olay
+        bildirilmedi.
+  evidence:
+  - url: https://www.maxi-cosi.com/c/international/faq-familyfix-slide-pro
+    quote: 'This voluntary recall pertains to our Maxi-Cosi FamilyFix Slide Pro base (Ref. #8065057110)
+      produced between August 20, 2025 and March 24, 2026. Other models are not affected.'
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:47:42+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: inglesina
+      series: quid
+  kind: known_issue
+  domain: safety
+  severity: high
+  consequence: ''
+  detection: ''
+  component: rear wheel unit
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Rear wheel unit can detach on Inglesina Quid stroller — official Japan recall (2021)
+      body: The Japanese Ministry of Economy, Trade and Industry (METI) recall notice of 2021-05-31 lists
+        the Inglesina Quid (EAN 8029448075199, 8029448075229, 8029448075205, 8029448075212, 8029448075175;
+        sold May 2019–Jan 2021, 1,516 units) and states the rear tyre may detach; the remedy is free replacement
+        of the rear wheel unit.
+      advice: If you own or are buying a Quid stroller, check the EAN and lot number against this recall;
+        a detaching rear wheel can make the stroller unstable and tip. The affected units get a free rear-wheel-unit
+        replacement from the importer.
+    tr:
+      title: Inglesina Quid bebek arabasında arka tekerlek ünitesi ayrılabilir — resmi Japonya geri çağırma
+        (2021)
+      body: Japonya Ekonomi, Ticaret ve Sanayi Bakanlığı'nın (METI) 2021-05-31 tarihli geri çağırma bildirimi
+        Inglesina Quid'i (EAN 8029448075199, 8029448075229, 8029448075205, 8029448075212, 8029448075175;
+        Mayıs 2019–Ocak 2021 arasında satılan, 1.516 adet) listeler ve arka lastiğin ayrılabileceğini
+        belirtir; çözüm, arka tekerlek ünitesinin ücretsiz değiştirilmesidir.
+      advice: Bir Quid bebek arabasına sahipseniz veya satın alıyorsanız, EAN ve parti numarasını bu geri
+        çağırmayla karşılaştırın; ayrılan bir arka tekerlek bebek arabasını dengesiz hale getirip devirebilir.
+        Etkilenen üniteler için ithalatçı tarafından ücretsiz arka tekerlek ünitesi değişimi yapılır.
+  evidence:
+  - url: https://www.meti.go.jp/product%5Fsafety/recall/file/210531-1.html
+    quote: 後タイヤが脱輪するおそれがあることが判明したため。
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:47:23+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: graco
+      series: snugride turn slide
+  kind: known_issue
+  domain: safety
+  severity: high
+  consequence: ''
+  detection: ''
+  component: base / structural attachment
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Graco official FAQ: voluntary recall of US-sold units, updated product from October 2026'
+      body: Graco's own page confirms the recall is limited to products sold in the United States from
+        January to March 2026. The defect was found in post-production laboratory testing. Updated products
+        have been available since October 2026.
+      advice: This recall is US-only. If you are in the EU, verify whether your seat was sold through
+        an EU channel — Graco's page explicitly limits the recall to US sales. If your unit was bought
+        in the US during the affected window, check the recall page at recalls.gracobaby.com.
+    tr:
+      title: 'Graco resmi SSS: ABD''de satılan ünitelerin gönüllü geri çağrılması, Ekim 2026''dan itibaren
+        güncellenmiş ürün'
+      body: Graco'nun kendi sayfası, geri çağırmanın Ocak–Mart 2026 arasında Amerika Birleşik Devletleri'nde
+        satılan ürünlerle sınırlı olduğunu doğrular. Kusur, üretim sonrası laboratuvar testlerinde bulundu.
+        Güncellenmiş ürünler Ekim 2026'dan beri mevcuttur.
+      advice: Bu geri çağırma yalnızca ABD'ye özeldir. AB'deyseniz, koltuğunuzun bir AB kanalı aracılığıyla
+        satılıp satılmadığını doğrulayın — Graco'nun sayfası geri çağırmayı açıkça ABD satışlarıyla sınırlar.
+        Üniteniz etkilenen dönemde ABD'de satın alındıysa, recalls.gracobaby.com adresindeki geri çağırma
+        sayfasını kontrol edin.
+  evidence:
+  - url: https://www.gracobaby.com/SnugRide-Turn-and-Slide-FAQs.html
+    quote: Graco voluntarily recalled select SnugRide® Turn & Slide™ products sold in the United States
+      from January 2026 through March 2026 after identifying an issue during post-production laboratory
+      testing.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:43:05+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: cybex
+      series: aton g
+  kind: known_issue
+  domain: safety
+  severity: high
+  consequence: ''
+  detection: ''
+  component: harness hip anchorage retention hooks
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Cybex Aton G harness anchor retention hooks can bend, causing harness strap to detach (NHTSA
+        25C002)
+      body: 'The official NHTSA Part 573 report documents the defect: the two retention hooks per harness
+        hip anchor pin can deform when the seat is slid/scraped over a sharp edge, allowing the anchor
+        pin to dislodge. The fix is a single retention bar introduced in production on May 10, 2024.'
+      advice: If you own an Aton G manufactured before May 10, 2024, contact Cybex for the free product
+        update kit. Do not slide or scrape the seat over sharp edges. The harness cannot detach while
+        a child is secured, but can detach when not in use.
+    tr:
+      title: Cybex Aton G koşum ankraj tutma kancaları bükülerek koşum kayışının ayrılmasına neden olabilir
+        (NHTSA 25C002)
+      body: 'Resmi NHTSA Part 573 raporu kusuru belgeler: her koşum kalça ankraj pimi başına iki tutma
+        kancası, koltuk keskin bir kenar üzerinde kaydırıldığı/sürtüldüğünde deforme olarak ankraj piminin
+        yerinden çıkmasına izin verebilir. Düzeltme, 10 Mayıs 2024''te üretime giren tek bir tutma çubuğudur.'
+      advice: 10 Mayıs 2024'ten önce üretilmiş bir Aton G'niz varsa, ücretsiz ürün güncelleme kiti için
+        Cybex ile iletişime geçin. Koltuğu keskin kenarlar üzerinde kaydırmayın veya sürtmeyin. Koşum,
+        bir çocuk bağlıyken ayrılamaz, ancak kullanımda değilken ayrılabilir.
+  evidence:
+  - url: https://static.nhtsa.gov/odi/rcl/2025/RCLRPT-25C002-2695.PDF
+    quote: The recalled seat population has hip anchor retention via two hooks per harness hip anchor
+      pin which can be deformed when the child restraint is misused by sliding or scraping the CRS at
+      an angle over a sharp edge or sliding at an angle into the Aton G Swivel base. If these harness
+      retention hooks are deformed so either hook is not in contact with the harness anchor pin, then
+      the harness pin anchor can dislodge.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:46:59+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: maxi cosi
+      series: jay plus
+  kind: known_issue
+  domain: safety
+  severity: high
+  consequence: ''
+  detection: ''
+  component: removable toy tray with play arch
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Jay Plus feeding booster play arch can break after repeated use and release small parts —
+        French official recall
+      body: This is the official French government consumer-recall database (RappelConso), reference 2025-10-0198,
+        voluntary recall by Dorel France — an independent second official confirmation of the same defect.
+      advice: 'Same corrective action as the UK notice: stop using the removable toy tray; the seat and
+        standard tray remain safe. This confirms the defect is EU-wide, not limited to one market.'
+    tr:
+      title: Jay Plus besleme yükselticisi oyun kemeri tekrarlanan kullanımdan sonra kırılıp küçük parçaları
+        serbest bırakabilir — resmi Fransa geri çağırma
+      body: Bu, resmi Fransız hükümeti tüketici geri çağırma veritabanıdır (RappelConso), referans 2025-10-0198,
+        Dorel France tarafından gönüllü geri çağırma — aynı kusurun bağımsız ikinci resmi teyidi.
+      advice: 'Birleşik Krallık bildirimiyle aynı düzeltici eylem: çıkarılabilir oyuncak tepsiyi kullanmayı
+        bırakın; koltuk ve standart tepsi güvenli kalır. Bu, kusurun tek bir pazarla sınırlı olmadığını,
+        AB çapında olduğunu doğrular.'
+  evidence:
+  - url: https://rappel.conso.gouv.fr/fiche-rappel/20127/interne
+    quote: Si l'enfant manipule d'avant en arrière l'arche de jeux sur la tablette amovible, l'extrémité
+      de l'arche de jeux peut se casser après plusieurs cycles et libérer des petits éléments
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:46:24+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: graco
+      series: snugride turn slide
+  kind: known_issue
+  domain: safety
+  severity: high
+  consequence: ''
+  detection: ''
+  component: base locking hooks
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'El Diario NY: base locking hooks can allow carrier to detach under crash conditions'
+      body: 'Spanish-language news report quoting the DOT recall report: the base''s locking hooks can
+        allow the carrier to detach under certain crash conditions. Provides the full model number breakdown
+        including the Modes Nest travel system (7DP08NRI).'
+      advice: 'This confirms the specific failure mechanism: the base''s locking hooks. If your seat is
+        one of the listed model numbers, it is affected.'
+    tr:
+      title: 'El Diario NY: taban kilitleme kancaları çarpışma koşullarında taşıyıcının ayrılmasına izin
+        verebilir'
+      body: 'DOT geri çağırma raporundan alıntı yapan İspanyolca haber raporu: tabanın kilitleme kancaları,
+        belirli çarpışma koşullarında taşıyıcının ayrılmasına izin verebilir. Modes Nest seyahat sistemi
+        (7DP08NRI) dahil olmak üzere tam model numarası dökümünü sağlar.'
+      advice: 'Bu, belirli arıza mekanizmasını doğrular: tabanın kilitleme kancaları. Koltuğunuz listelenen
+        model numaralarından biriyse, etkilenmiştir.'
+  evidence:
+  - url: https://eldiariony.com/2026/04/17/retiran-miles-de-asientos-de-bebe-vendidos-en-target-y-walmart-por-riesgo-de-lesiones/
+    quote: los ganchos de bloqueo de la base pueden permitir que el portabebés se desprenda en determinadas
+      condiciones de choque
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:43:05+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: cybex
+      series: aton g
+  kind: known_issue
+  domain: safety
+  severity: high
+  consequence: ''
+  detection: ''
+  component: harness anchorage hooks / harness anchor pin
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Cybex voluntary recall notice — Aton G and Aton G Swivel infant car seats manufactured Feb
+        20 2023 – May 10 2024
+      body: Cybex's own official recall notice confirms the voluntary recall, the affected production
+        window (Feb 20, 2023 – May 10, 2024), and that a free product improvement kit is available.
+      advice: 'If you have an affected seat, request the free product update kit from Cybex. Note the
+        key safety point: the anchor pin cannot come loose while a child is secured — the risk occurs
+        when the seat is not in use after the hooks have been bent by misuse.'
+    tr:
+      title: Cybex gönüllü geri çağırma bildirimi — 20 Şubat 2023 – 10 Mayıs 2024 arasında üretilen Aton
+        G ve Aton G Swivel bebek oto koltukları
+      body: Cybex'in kendi resmi geri çağırma bildirimi gönüllü geri çağırmayı, etkilenen üretim aralığını
+        (20 Şubat 2023 – 10 Mayıs 2024) ve ücretsiz bir ürün iyileştirme kitinin mevcut olduğunu doğrular.
+      advice: 'Etkilenen bir koltuğunuz varsa, Cybex''ten ücretsiz ürün güncelleme kitini talep edin.
+        Kilit güvenlik noktasına dikkat edin: ankraj pimi bir çocuk bağlıyken gevşeyemez — risk, kancalar
+        yanlış kullanım nedeniyle büküldükten sonra koltuk kullanımda değilken ortaya çıkar.'
+  evidence:
+  - url: https://static.nhtsa.gov/odi/rcl/2025/RMISC-25C002-9320.pdf
+    quote: CYBEX has identified that certain actions can allow the harness anchor pin to dislodge on Aton
+      G infant car seats made before May 10th, 2024, when the seat is not in use. If the seat is slid
+      or scraped over a sharp edge (like a table or countertop) or possibly the edge of the Aton G Swivel
+      Base, the harness anchorage hooks can bend. This bending can cause the harness anchor pin to dislodge
+      when the seat is not in use.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:46:59+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: inglesina
+      series: quid
+  kind: known_issue
+  domain: safety
+  severity: high
+  consequence: ''
+  detection: ''
+  component: rear tire (後タイヤ)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Inglesina Quid rear tire can come off — Japanese CAA recall record
+      body: Official Japanese Consumer Affairs Agency recall database record (management no. 00000027795)
+        for the Inglesina Quid stroller distributed by CASARICH. States the rear tire was found to have
+        a risk of coming off (脱輪), with remedy of part replacement. References METI and NITE as information
+        sources. This independently corroborates the Korean CISS record of the same recall.
+      advice: This is the primary Japanese regulator's confirmation of the same rear-wheel detachment
+        defect. It corroborates the Korean CISS record; the remedy is part exchange (部品交換). Owners of
+        affected units should stop use and arrange the free repair.
+    tr:
+      title: Inglesina Quid arka lastik çıkabilir — Japon CAA geri çağırma kaydı
+      body: CASARICH tarafından dağıtılan Inglesina Quid bebek arabası için resmi Japon Tüketici İşleri
+        Ajansı geri çağırma veritabanı kaydı (yönetim no. 00000027795). Arka lastiğin çıkma riski (脱輪)
+        taşıdığının tespit edildiğini ve çözümün parça değişimi olduğunu belirtir. Bilgi kaynakları olarak
+        METI ve NITE'a atıfta bulunur. Bu, aynı geri çağırmanın Kore CISS kaydını bağımsız olarak doğrular.
+      advice: Bu, aynı arka tekerlek ayrılma kusurunun birincil Japon düzenleyicisi tarafından onaylanmasıdır.
+        Kore CISS kaydını doğrular; çözüm parça değişimidir (部品交換). Etkilenen birimlerin sahipleri kullanımı
+        durdurmalı ve ücretsiz onarımı ayarlamalıdır.
+  evidence:
+  - url: https://www.recall.caa.go.jp/result/detail.php?rcl=00000027795&screenkbn=06
+    quote: 後タイヤが脱輪するおそれがあることが判明
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:43:57+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: joie
+      series: serina swivel
+  kind: known_issue
+  domain: safety
+  severity: high
+  consequence: ''
+  detection: ''
+  component: seat-to-frame construction
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'InfoCons consumer alert: Serina Swivel seat can separate, non-compliant with GPSR'
+      body: This is a consumer-protection alert (InfoCons) reflecting the EU Safety Gate notification
+        for the same product, confirming the defect and the GPSR non-compliance.
+      advice: Independent confirmation that the recall is EU-wide (notifying country Ireland, origin China).
+        The swing was sold via Smyths stores and online, so check any unit bought from Smyths.
+    tr:
+      title: 'InfoCons tüketici uyarısı: Serina Swivel oturağı ayrılabilir, GPSR ile uyumlu değil'
+      body: Bu, aynı ürün için AB Safety Gate bildirimini yansıtan bir tüketici koruma uyarısıdır (InfoCons)
+        ve kusuru ve GPSR uyumsuzluğunu doğrular.
+      advice: Geri çağırmanın AB çapında olduğunun bağımsız teyidi (bildirimde bulunan ülke İrlanda, menşe
+        Çin). Salıncak Smyths mağazaları ve çevrimiçi olarak satıldı, bu nedenle Smyths'ten satın alınan
+        herhangi bir birimi kontrol edin.
+  evidence:
+  - url: https://infocons.org/blog/2026/04/25/infocons-consumer-protection-alert-joie-baby-swing/
+    quote: The construction is not secure enough and the seat can separate from the frame. This can lead
+      to the child falling on the floor resulting in injuries. The product does not comply with the General
+      Product Safety Regulation.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:44:35+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: britax romer
+      series: baby-safe pro
+  kind: known_issue
+  domain: safety
+  severity: high
+  consequence: ''
+  detection: ''
+  component: harness buckle (klamra) on Vario Base 5Z
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Independent TCS/ADAC crash test rated the BABY-SAFE PRO ''not recommended'': harness buckle
+        opened and the dummy was thrown out'
+      body: 'Reports the autumn 2026 TCS (with ADAC) test that gave the Baby-Safe Pro a ''not recommended''
+        rating: plastic harness-fastening elements broke, the buckle opened, and the dummy was thrown
+        from the carrier in the most reclined position on the Vario Base 5Z.'
+      advice: Independent testing corroborates the recall and the specific failure configuration; treat
+        the recline-on-base configuration as unsafe until the seat is checked or replaced.
+    tr:
+      title: 'Bağımsız TCS/ADAC çarpışma testi BABY-SAFE PRO''yu ''önerilmez'' olarak derecelendirdi:
+        koşum tokası açıldı ve manken dışarı fırlatıldı'
+      body: 'Baby-Safe Pro''ya ''önerilmez'' derecelendirmesi veren sonbahar 2026 TCS (ADAC ile birlikte)
+        testini bildirir: plastik koşum bağlama elemanları kırıldı, toka açıldı ve manken Vario Base 5Z
+        üzerinde en yatık konumda taşıyıcıdan fırlatıldı.'
+      advice: Bağımsız test, geri çağırmayı ve belirli arıza konfigürasyonunu doğrular; koltuk kontrol
+        edilene veya değiştirilene kadar taban üzerinde yatırma konfigürasyonunu güvensiz olarak değerlendirin.
+  evidence:
+  - url: https://francuskie.pl/test-fotelikow-samochodowych-2026/
+    quote: Pękły plastikowe elementy zapięcia uprzęży, klamra się otworzyła, a manekin został wyrzucony
+      z nosidełka.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:41:01+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: britax romer
+      series: baby-safe pro
+  kind: known_issue
+  domain: safety
+  severity: high
+  consequence: ''
+  detection: ''
+  component: harness buckle (Gurtschloss)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Britax Römer voluntarily recalls BABY-SAFE PRO (26 Dec 2025–30 Sep 2026) over harness buckles
+        from one production batch
+      body: This is the manufacturer's own voluntary-recall safety notice (primary source).
+      advice: If the seat was made between 26 Dec 2025 and 30 Sep 2026, check the production date on the
+        label under the shell and verify at www.baby-safe-check.com; affected owners get a replacement
+        or a free product update.
+    tr:
+      title: Britax Römer, tek bir üretim partisinden gelen koşum tokaları nedeniyle BABY-SAFE PRO'yu
+        gönüllü olarak geri çağırıyor (26 Ara 2025–30 Eyl 2026)
+      body: Bu, üreticinin kendi gönüllü geri çağırma güvenlik bildirimidir (birincil kaynak).
+      advice: Koltuk 26 Ara 2025 ile 30 Eyl 2026 arasında üretildiyse, kabuğun altındaki etiketteki üretim
+        tarihini kontrol edin ve www.baby-safe-check.com adresinde doğrulayın; etkilenen sahipler bir
+        değişim veya ücretsiz ürün güncellemesi alır.
+  evidence:
+  - url: https://www.britax-roemer.de/sicherheitshinweise-1?article=SafetyNotice-BabySafePro
+    quote: Der freiwillige Rückruf von Britax Römer betrifft eine begrenzte Anzahl von BABY-SAFE PRO Produkten,
+      die zwischen dem 26. Dezember 2025 und dem 30. September 2026 hergestellt wurden und Gurtschlösser
+      aus einer einzigen Produktionscharge enthalten.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:41:01+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: graco
+      series: snugride turn slide
+  kind: known_issue
+  domain: safety
+  severity: high
+  consequence: ''
+  detection: ''
+  component: carrier-to-base attachment
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Vital Law: NHTSA recall — seats fail FMVSS 213 because carrier may detach in crash'
+      body: Legal news outlet confirms the NHTSA recall and states the seats fail FMVSS No. 213 because
+        the carrier may detach from the base in a crash. This is an independent confirmation of the regulatory
+        non-compliance.
+      advice: The recall is a regulatory non-compliance issue under FMVSS 213, not just a voluntary precaution.
+        Affected seats should not be used with the base.
+    tr:
+      title: 'Vital Law: NHTSA geri çağırması — koltuklar FMVSS 213''te başarısız çünkü taşıyıcı çarpışmada
+        ayrılabilir'
+      body: Hukuk haber kaynağı NHTSA geri çağırmasını doğrular ve koltukların FMVSS No. 213'te başarısız
+        olduğunu, çünkü taşıyıcının bir çarpışmada tabandan ayrılabileceğini belirtir. Bu, düzenleyici
+        uyumsuzluğun bağımsız bir teyididir.
+      advice: Geri çağırma, yalnızca gönüllü bir önlem değil, FMVSS 213 kapsamında bir düzenleyici uyumsuzluk
+        sorunudur. Etkilenen koltuklar tabanla birlikte kullanılmamalıdır.
+  evidence:
+  - url: https://www.vitallaw.com/news/nhtsa-news-motor-vehicle-equipment-graco-is-recalling-5-000-child-seats-due-to-detachment-issues/lld018e8b107f07394b219c0a8649c8c2605a
+    quote: the infant seat carrier may detach from the base in a crash
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T11:43:05+00:00'

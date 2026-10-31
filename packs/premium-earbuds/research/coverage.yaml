@@ -1,0 +1,52 @@
+lineup:
+- Apple AirPods Pro 3
+- Apple AirPods Pro 2
+- Samsung Galaxy Buds3 Pro
+- Samsung Galaxy Buds3
+- Samsung Galaxy Buds2 Pro
+- Sony WF-1000XM5
+- Sony WF-1000XM4
+- Jabra Elite 10 Gen 2
+- Jabra Elite 8 Active Gen 2
+- Jabra Elite 10
+- Jabra Elite 8 Active
+- Bose QuietComfort Ultra Earbuds
+- Bose QuietComfort Earbuds (2024)
+- Nothing Ear (2024)
+- Nothing Ear (a) (2024)
+- Nothing Ear (2)
+covered:
+- apple airpods pro 2
+- apple airpods pro 3
+- bose quietcomfort earbuds 2024
+- bose quietcomfort ultra earbuds
+- jabra elite 10
+- jabra elite 10 gen 2
+- jabra elite 8 active
+- jabra elite 8 active gen 2
+- samsung galaxy buds2 pro
+- samsung galaxy buds3
+- samsung galaxy buds3 pro
+- sony wf 1000xm4
+- sony wf 1000xm5
+uncovered:
+- Nothing Ear (2024)
+- Nothing Ear (a) (2024)
+- Nothing Ear (2)
+note: Could not research Nothing Ear models due to tool budget exhaustion. Jabra Elite
+  10 battery specs sourced from a Google Shopping product page rather than the manufacturer's
+  own documentation.
+out_of_scope:
+- Apple AirPods 4 (non-Pro)
+- Bose QuietComfort Earbuds (2024)
+- Bose QuietComfort Ultra Earbuds
+- Jabra Elite 10
+- Jabra Elite 10 Gen 2
+- Jabra Elite 8 Active
+- Jabra Elite 8 Active Gen 2
+- Nothing Ear (2)
+- Nothing Ear (2024)
+- Nothing Ear (a) (2024)
+- iPhone and other non-earbud Apple devices
+- replacement ear tips and third-party accessories
+quarantined: []

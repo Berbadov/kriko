@@ -1,0 +1,56 @@
+# Vocabulary — every kind, key, domain and attribute this pack uses.
+#
+# Written from the pack an agent proposed. Declared before use: the
+# builder refuses a row naming a term that is not here, which is also
+# why a domain used by a claim and never declared is added above.
+- term_id: product
+  role: subject_kind
+  label:
+    en: product
+- term_id: brand
+  role: attribute
+  datatype: text
+  label:
+    en: brand
+- term_id: series
+  role: attribute
+  datatype: text
+  label:
+    en: series
+- term_id: wheel_size_in
+  role: attribute
+  datatype: number
+  label:
+    en: Wheel Size
+- term_id: top_speed_mph
+  role: attribute
+  datatype: number
+  label:
+    en: Top Speed
+- term_id: battery_voltage_v
+  role: attribute
+  datatype: number
+  label:
+    en: Battery Voltage
+- term_id: range_miles
+  role: attribute
+  datatype: number
+  label:
+    en: Range
+- term_id: ul2272_certified
+  role: attribute
+  datatype: text
+  label:
+    en: UL 2272 Certified
+- term_id: battery_fire
+  role: domain
+  label:
+    en: Battery & Fire Safety
+- term_id: quality
+  role: domain
+  label:
+    en: Build Quality
+- term_id: general
+  role: domain
+  label:
+    en: General

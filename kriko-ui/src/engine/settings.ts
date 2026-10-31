@@ -77,7 +77,7 @@ const DEMO_SEARCHES = [
 ]
 
 const DEMO_PREFS: PrefsDoc = {
-  chosen: { preferred_harness: 'coding', run_concurrency: '2', research_sources: '0', research_source_kinds: 'forums,reviews', search_provider: '', chat_product_only: '0' },
+  chosen: { preferred_harness: 'coding', run_concurrency: '2', research_sources: '0', research_source_kinds: 'forums,reviews', search_provider: '', chat_product_only: '0', presence_enabled: '0' },
   effective: { ready: true, reason: '', harness: 'coding', harness_ready: true, harness_note: '' },
   harnesses: [
     { id: 'coding', label: 'Coding agent', path: 'demo', llm: 'sonnet', llms: ['haiku', 'sonnet', 'opus'], effort: 'low', efforts: ['low', 'medium', 'high'], search: 'own', search_choices: DEMO_SEARCHES },
@@ -408,6 +408,30 @@ export function useSpent() {
       .catch(() => setSpent(null))
   }, [mode])
   return spent
+}
+
+export interface Presence {
+  enabled: boolean
+  endpoint: string
+  last_day: string
+}
+
+/** The optional anonymous daily ping (`src/app/presence.py`). Off unless the
+ *  reader turned it on; in demo mode it is shown off. */
+export function usePresence() {
+  const { mode } = useEngine()
+  const [presence, setPresence] = useState<Presence | null>(null)
+  const load = useCallback(() => {
+    if (mode !== 'live') {
+      setPresence({ enabled: false, endpoint: '', last_day: '' })
+      return
+    }
+    get<Presence>('/api/presence')
+      .then(setPresence)
+      .catch(() => setPresence(null))
+  }, [mode])
+  useEffect(load, [load])
+  return { presence, reload: load }
 }
 
 export function useAbout() {

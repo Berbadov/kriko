@@ -1,0 +1,222 @@
+# Subjects — the things this pack knows about.
+#
+# `identity` carries exactly the keys `pack.toml` declares for the
+# kind: that dictionary is hashed to the subject id.
+- kind: product
+  label: Apple iPhone 14
+  identity:
+    brand: apple
+    model: iphone14
+  aliases:
+  - iPhone 14
+- kind: product
+  label: Apple iPhone 14 Plus
+  identity:
+    brand: apple
+    model: iphone14plus
+  aliases:
+  - iPhone 14 Plus
+- kind: product
+  label: Apple iPhone 14 Pro
+  identity:
+    brand: apple
+    model: iphone14pro
+  aliases:
+  - iPhone 14 Pro
+- kind: product
+  label: Apple iPhone 14 Pro Max
+  identity:
+    brand: apple
+    model: iphone14promax
+  aliases:
+  - iPhone 14 Pro Max
+- kind: product
+  label: Apple iPhone 15
+  identity:
+    brand: apple
+    model: iphone15
+  aliases:
+  - iPhone 15
+- kind: product
+  label: Apple iPhone 15 Plus
+  identity:
+    brand: apple
+    model: iphone15plus
+  aliases:
+  - iPhone 15 Plus
+- kind: product
+  label: Apple iPhone 15 Pro
+  identity:
+    brand: apple
+    model: iphone15pro
+  aliases:
+  - iPhone 15 Pro
+- kind: product
+  label: Apple iPhone 15 Pro Max
+  identity:
+    brand: apple
+    model: iphone15promax
+  aliases:
+  - iPhone 15 Pro Max
+- kind: product
+  label: Apple iPhone 16
+  identity:
+    brand: apple
+    model: iphone16
+  aliases:
+  - iPhone 16
+- kind: product
+  label: Apple iPhone 16 Plus
+  identity:
+    brand: apple
+    model: iphone16plus
+  aliases:
+  - iPhone 16 Plus
+- kind: product
+  label: Apple iPhone 16 Pro
+  identity:
+    brand: apple
+    model: iphone16pro
+  aliases:
+  - iPhone 16 Pro
+- kind: product
+  label: Apple iPhone 16 Pro Max
+  identity:
+    brand: apple
+    model: iphone16promax
+  aliases:
+  - iPhone 16 Pro Max
+- kind: product
+  label: Samsung Galaxy S23
+  identity:
+    brand: samsung
+    model: galaxys23
+  aliases:
+  - Galaxy S23
+- kind: product
+  label: Samsung Galaxy S24
+  identity:
+    brand: samsung
+    model: galaxys24
+  aliases:
+  - Galaxy S24
+- kind: product
+  label: Samsung Galaxy S25
+  identity:
+    brand: samsung
+    model: galaxys25
+  aliases:
+  - Galaxy S25
+- kind: product
+  label: Samsung Galaxy A05
+  identity:
+    brand: samsung
+    model: galaxya05
+  aliases:
+  - Galaxy A05
+- kind: product
+  label: Samsung Galaxy A15 4G
+  identity:
+    brand: samsung
+    model: galaxya154g
+  aliases:
+  - Galaxy A15 4G
+- kind: product
+  label: Samsung Galaxy A15 5G
+  identity:
+    brand: samsung
+    model: galaxya155g
+  aliases:
+  - Galaxy A15 5G
+- kind: product
+  label: Samsung Galaxy A35 5G
+  identity:
+    brand: samsung
+    model: galaxya355g
+  aliases:
+  - Galaxy A35 5G
+- kind: product
+  label: Samsung Galaxy A55 5G
+  identity:
+    brand: samsung
+    model: galaxya555g
+  aliases:
+  - Galaxy A55 5G
+- kind: product
+  label: Samsung Galaxy A56 5G
+  identity:
+    brand: samsung
+    model: galaxya565g
+  aliases:
+  - Galaxy A56 5G
+- kind: product
+  label: Xiaomi Redmi 13C 4G
+  identity:
+    brand: xiaomi
+    model: redmi13c4g
+  aliases:
+  - Redmi 13C 4G
+- kind: product
+  label: Xiaomi Redmi Note 13
+  identity:
+    brand: xiaomi
+    model: redminote13
+  aliases:
+  - Redmi Note 13
+- kind: product
+  label: Xiaomi Redmi Note 13 Pro 5G
+  identity:
+    brand: xiaomi
+    model: redminote13pro5g
+  attributes:
+    chipset:
+      value: Snapdragon 7s Gen 2
+      source: https://www.gsmhelpful.com/2024/01/redmi-note-13-pro-5g-garnet-global-flash-file.html
+  aliases:
+  - Redmi Note 13 Pro 5G
+- kind: product
+  label: Xiaomi POCO X6 5G
+  identity:
+    brand: xiaomi
+    model: pocox65g
+  attributes:
+    chipset:
+      value: Snapdragon 7s Gen 2
+      source: https://www.gsmhelpful.com/2024/01/redmi-note-13-pro-5g-garnet-global-flash-file.html
+  aliases:
+  - POCO X6 5G
+- kind: product
+  label: Xiaomi POCO X6 Pro 5G
+  identity:
+    brand: xiaomi
+    model: pocox6pro5g
+  aliases:
+  - POCO X6 Pro 5G
+- kind: product
+  label: Google Pixel 8
+  identity:
+    brand: google
+    model: pixel8
+  aliases:
+  - Pixel 8
+- kind: product
+  label: Google Pixel 8a
+  identity:
+    brand: google
+    model: pixel8a
+  aliases:
+  - Pixel 8a
+- kind: product
+  label: Google Pixel 9
+  identity:
+    brand: google
+    model: pixel9
+  aliases:
+  - Pixel 9
+- kind: product
+  label: Google Pixel 9a
+  identity:
+    brand: google
+    model: pixel9a
+  aliases:
+  - Pixel 9a

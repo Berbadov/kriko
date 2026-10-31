@@ -1,0 +1,135 @@
+# Subjects — the things this pack knows about.
+#
+# `identity` carries exactly the keys `pack.toml` declares for the
+# kind: that dictionary is hashed to the subject id.
+- kind: product
+  label: Redmi Buds 5
+  identity:
+    brand: xiaomi
+    series: redmi buds 5
+  attributes:
+    battery_playback_h:
+      value: '10'
+      source: https://www.mi.com/in/product/redmi-buds-5/specs/
+    anc_db:
+      value: '46'
+      source: https://www.mi.com/in/product/redmi-buds-5/specs/
+    bluetooth_version:
+      value: '5.3'
+      source: https://www.mi.com/in/product/redmi-buds-5/specs/
+    driver_mm:
+      value: '12.4'
+      source: https://www.mi.com/in/product/redmi-buds-5/specs/
+    ip_rating:
+      value: IP54
+      source: https://www.mi.com/in/product/redmi-buds-5/specs/
+  aliases:
+  - Redmi Buds 5 (M2316E1)
+  - Xiaomi Redmi Buds 5
+- kind: product
+  label: Redmi Buds 6
+  identity:
+    brand: xiaomi
+    series: redmi buds 6
+  attributes:
+    battery_playback_h:
+      value: '10'
+      source: https://www.amazon.ae/Xiaomi-Bluetooth-Headphones-Immersive-Cancellation/dp/B0DQ18CMLJ
+    anc_db:
+      value: '49'
+      source: https://www.amazon.ae/Xiaomi-Bluetooth-Headphones-Immersive-Cancellation/dp/B0DQ18CMLJ
+    ip_rating:
+      value: IP54
+      source: https://www.amazon.ae/Xiaomi-Bluetooth-Headphones-Immersive-Cancellation/dp/B0DQ18CMLJ
+  aliases:
+  - Redmi Buds 6 (BHR9251GL)
+  - Xiaomi Redmi Buds 6
+- kind: product
+  label: Redmi Buds 5 Pro
+  identity:
+    brand: xiaomi
+    series: redmi buds 5 pro
+  aliases:
+  - Xiaomi Redmi Buds 5 Pro
+- kind: product
+  label: Redmi Buds 6 Active
+  identity:
+    brand: xiaomi
+    series: redmi buds 6 active
+  aliases:
+  - Xiaomi Redmi Buds 6 Active
+- kind: product
+  label: Redmi Buds 6 Play
+  identity:
+    brand: xiaomi
+    series: redmi buds 6 play
+  aliases:
+  - Xiaomi Redmi Buds 6 Play
+- kind: product
+  label: Redmi Buds 6 Pro
+  identity:
+    brand: Xiaomi
+    series: Redmi Buds 6 Pro
+  attributes:
+    anc_db:
+      value: '55'
+      source: https://www.mi.com/fr/product/redmi-buds-6-pro/
+    driver_mm:
+      value: '11'
+      source: https://www.mi.com/fr/product/redmi-buds-6-pro/
+  aliases:
+  - Redmi Buds 6 Pro
+- kind: product
+  label: Redmi Buds 6 Lite
+  identity:
+    brand: Xiaomi
+    series: Redmi Buds 6 Lite
+  attributes:
+    anc_db:
+      value: '40'
+      source: https://www.mi.com/bg/product/redmi-buds-6-lite/
+    driver_mm:
+      value: '12.4'
+      source: https://www.mi.com/bg/product/redmi-buds-6-lite/
+    battery_playback_h:
+      value: '38'
+      source: https://www.mi.com/bg/product/redmi-buds-6-lite/
+  aliases:
+  - Redmi Buds 6 Lite
+- kind: product
+  label: Redmi Buds 6S
+  identity:
+    brand: Xiaomi
+    series: Redmi Buds 6S
+  attributes:
+    bluetooth_version:
+      value: '5.3'
+      source: https://xn--90acj2agblmh.xn--p1ai/catalog/audiotekhnika/besprovodnye_naushniki_i_garnitury/besprovodnye_naushniki_redmi_buds_6s_m2403e1_black/
+    driver_mm:
+      value: '14.2'
+      source: https://xn--90acj2agblmh.xn--p1ai/catalog/audiotekhnika/besprovodnye_naushniki_i_garnitury/besprovodnye_naushniki_redmi_buds_6s_m2403e1_black/
+    battery_playback_h:
+      value: '7'
+      source: https://xn--90acj2agblmh.xn--p1ai/catalog/audiotekhnika/besprovodnye_naushniki_i_garnitury/besprovodnye_naushniki_redmi_buds_6s_m2403e1_black/
+    ip_rating:
+      value: IP54
+      source: https://xn--90acj2agblmh.xn--p1ai/catalog/audiotekhnika/besprovodnye_naushniki_i_garnitury/besprovodnye_naushniki_redmi_buds_6s_m2403e1_black/
+  aliases:
+  - Redmi Buds 6S
+- kind: product
+  label: Redmi Buds 5 Lite
+  identity:
+    brand: Xiaomi
+    series: Redmi Buds 5 Lite
+  attributes:
+    bluetooth_version:
+      value: '5.3'
+      source: https://cladstoresa.com/en/%D8%B3%D9%85%D8%A7%D8%B9%D8%A9-redmi-buds-5-lite-%D8%A8%D9%8040-%D8%B3%D8%A7%D8%B9%D8%A9-%D8%AA%D8%B4%D8%BA%D9%8A%D9%84-%D8%A7%D8%A8%D9%8A%D8%B6-xiaomi/p1708618102
+    battery_playback_h:
+      value: '40'
+      source: https://cladstoresa.com/en/%D8%B3%D9%85%D8%A7%D8%B9%D8%A9-redmi-buds-5-lite-%D8%A8%D9%8040-%D8%B3%D8%A7%D8%B9%D8%A9-%D8%AA%D8%B4%D8%BA%D9%8A%D9%84-%D8%A7%D8%A8%D9%8A%D8%B6-xiaomi/p1708618102
+    anc_db:
+      value: '46'
+      source: https://cladstoresa.com/en/%D8%B3%D9%85%D8%A7%D8%B9%D8%A9-redmi-buds-5-lite-%D8%A8%D9%8040-%D8%B3%D8%A7%D8%B9%D8%A9-%D8%AA%D8%B4%D8%BA%D9%8A%D9%84-%D8%A7%D8%A8%D9%8A%D8%B6-xiaomi/p1708618102
+  aliases:
+  - Redmi Buds 5 Lite

@@ -1,0 +1,1153 @@
+# Claims — what is known to go wrong, each with the page it came from and the quote
+# that was read there. A claim without both is not in this file.
+- subject:
+    kind: product
+    identity:
+      brand: belkin
+      series: rotating-plug-surge-protector
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: 360-degree rotating plug molding
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'CPSC recall: Belkin SurgeMaster 360-degree rotating plug can crack or detach, shock hazard'
+      body: The CPSC recall (October 27, 2009) covers SurgeMaster models F9G930-10, F9G930v10, F9G930-10-W
+        and F9G930-10-SN manufactured in 2003, approximately 68,700 units. The rotating plug molding can
+        crack or detach, posing a shock hazard. Seven consumer complaints reported, no injuries.
+      advice: If you own a Belkin SurgeMaster with a rotating plug manufactured in 2003, stop using it
+        immediately and contact Belkin for a replacement. Check the model number and date of manufacture
+        on the underside of the unit.
+    tr:
+      title: 'CPSC geri çağırma: Belkin SurgeMaster 360 derece dönen fiş çatlayabilir veya ayrılabilir,
+        elektrik çarpması tehlikesi'
+      body: CPSC geri çağırma (27 Ekim 2009) 2003'te üretilen SurgeMaster F9G930-10, F9G930v10, F9G930-10-W
+        ve F9G930-10-SN modellerini kapsıyor, yaklaşık 68.700 adet. Dönen fiş kalıbı çatlayabilir veya
+        ayrılabilir ve elektrik çarpması tehlikesi oluşturur. Yedi tüketici şikayeti bildirildi, yaralanma
+        yok.
+      advice: 2003'te üretilen dönen fişli bir Belkin SurgeMaster'ınız varsa, kullanmayı hemen bırakın
+        ve değişim için Belkin ile iletişime geçin. Ünitenin alt tarafındaki model numarasını ve üretim
+        tarihini kontrol edin.
+  evidence:
+  - url: https://www.cpsc.gov/es/Noticias-y-retiros-del-mercado/2010/Belkin-International-Inc-Recalls-SurgeMaster-Surge-Protectors-Due-to-Shock-Hazard
+    quote: The molding of the plastic 360 degree rotating plug, which allows for easy cord movement, can
+      crack or detach from the plug assembly, posing a shock hazard to consumers.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:59:04+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: philips
+      series: spc3064wg37
+  kind: known_issue
+  domain: electrical
+  severity: low
+  consequence: ''
+  detection: ''
+  component: power strip wiring / connections
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'CPSC general warning: millions of faulty extension cords, power strips and surge protectors
+        pose fire/shock danger'
+      body: The CPSC has issued a general warning about faulty extension cords, power strips, and surge
+        protectors, citing 25 recalls involving 2 million units since 1994 due to undersized wires, loose
+        connections, and other defects. This warning is general and does not name Philips or the SPC3064WG/37
+        specifically. This finding came from the search query 'Philips surge protector power strip recall
+        CPSC'.
+      advice: This is a general category warning, not specific to this product. It underscores that power
+        strips as a category have documented fire and shock hazards, but no CPSC recall was found for
+        the SPC3064WG/37.
+    tr:
+      title: 'CPSC genel uyarısı: milyonlarca arızalı uzatma kablosu, priz çubuğu ve dalgalanma koruyucusu
+        yangın/elektrik çarpması tehlikesi oluşturuyor'
+      body: CPSC, arızalı uzatma kabloları, priz çubukları ve dalgalanma koruyucuları hakkında genel bir
+        uyarı yayınladı; 1994'ten bu yana yetersiz teller, gevşek bağlantılar ve diğer kusurlar nedeniyle
+        2 milyon adedi kapsayan 25 geri çağırmaya atıfta bulundu. Bu uyarı geneldir ve Philips'i veya
+        özellikle SPC3064WG/37'yi adlandırmaz. Bu bulgu 'Philips surge protector power strip recall CPSC'
+        arama sorgusundan geldi.
+      advice: Bu, bu ürüne özgü değil, genel bir kategori uyarısıdır. Priz çubuklarının bir kategori olarak
+        belgelenmiş yangın ve elektrik çarpması tehlikeleri olduğunu vurgular, ancak SPC3064WG/37 için
+        CPSC geri çağırması bulunamadı.
+  evidence:
+  - url: https://mghrinfo.com/files/moody-gardens-and-the-use-of-extension-cords.pdf
+    quote: The U.S. Consumer Product Safety Commission (CPSC) is warning consumers about millions of faulty
+      extension cords, power strips and surge protectors that pose a fire, shock and electrocution danger.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:00:52+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: belkin
+      series: rotating-plug-surge-protector
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: rotating plug metal ring contacts
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Owner reports: Belkin rotating plug design can arc and melt, units caught fire'
+      body: 'Amazon/Woot customer reviews document multiple failures: the rotating plug''s metal ring
+        contacts can arc and melt, one unit melted within 2 months, and another owner reported two Belkin
+        units catching fire and setting a bed on fire.'
+      advice: Multiple owner reports describe melting and fire incidents with Belkin surge protectors
+        featuring rotating plugs. The rotating plug's metal ring contact design is identified as a potential
+        arcing point. Consider a fixed-plug surge protector instead.
+    tr:
+      title: 'Sahip raporları: Belkin dönen fiş tasarımı ark yapabilir ve eriyebilir, üniteler alev aldı'
+      body: 'Amazon/Woot müşteri yorumları birden fazla arızayı belgeliyor: dönen fişin metal halka kontakları
+        ark yapabilir ve eriyebilir, bir ünite 2 ay içinde eridi ve başka bir sahip iki Belkin ünitesinin
+        alev alıp bir yatağı tutuşturduğunu bildirdi.'
+      advice: Birden fazla sahip raporu, dönen fişli Belkin dalgalanma koruyucularında erime ve yangın
+        olaylarını tanımlıyor. Dönen fişin metal halka kontak tasarımı potansiyel bir ark noktası olarak
+        tanımlanıyor. Bunun yerine sabit fişli bir dalgalanma koruyucusu düşünün.
+  evidence:
+  - url: https://sellout.woot.com/review/B0090YEVSE?offerid=a04e747e-4972-444f-aff8-134ccc70bb9b&itemid=8dc9fad5-4bb8-4acc-98be-33233f229b50&filter=1&isVerified=false&page=1&sort=0
+    quote: The rotating plug design basically has metal rings that contact each other, this has a chance
+      of inducing arcing and melting the plug.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:59:04+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: apc
+      series: surgearrest-7
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: APC SurgeArrest 7 series surge protector (models NET7, PER7, PRO7, PRF7 and variants)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'APC''s own recall notice: 7 and 8 series SurgeArrest made before 2003 are included'
+      body: Manufacturer's own recall FAQ page confirms the affected 7-series model list and the 1993-2002
+        date-code window.
+      advice: This is the manufacturer's own confirmation of the recall. Use the serial-number date code
+        to check whether a specific 7-series unit is affected before relying on it.
+    tr:
+      title: 'APC''nin kendi geri çağırma bildirimi: 2003''ten önce üretilen 7 ve 8 serisi SurgeArrest
+        dahildir'
+      body: Üreticinin kendi geri çağırma SSS sayfası, etkilenen 7 serisi model listesini ve 1993-2002
+        tarih kodu aralığını doğruluyor.
+      advice: Bu, üreticinin geri çağırmayı kendi doğrulamasıdır. Belirli bir 7 serisi ünitenin etkilenip
+        etkilenmediğini, ona güvenmeden önce seri numarası tarih kodunu kullanarak kontrol edin.
+  evidence:
+  - url: https://www.apc.com/sa/en/faqs/FA158846/
+    quote: This recall involves APC 7 and 8 series SurgeArrest surge protectors manufactured before 2003.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:57:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: ugreen
+      series: '15360'
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: power strip electrical wiring / AC cable
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Ugreen power strip smoked and its cable ran hot on first plug-in (Amazon.ae owner report)
+      body: An Amazon.ae verified owner reports the unit began smoking and the electric cable became hot
+        immediately on plug-in, calling it a fire hazard. This surfaced in the 15360 fire-hazard search
+        and is a Ugreen power strip, but the review page itself did not name the model, so I could not
+        confirm it is the 15360 specifically. It is a documented overheating/fire report on a Ugreen strip
+        of this type.
+      advice: 'Treat as a strong warning sign for Ugreen 6-in-1 strips of this class: plug in on a non-combustible
+        surface and check for heat/smell on first use, and keep a return path. The specific model could
+        not be verified from this page.'
+    tr:
+      title: Ugreen priz çubuğu duman çıkardı ve kablosu ilk takıldığında ısındı (Amazon.ae sahip raporu)
+      body: Amazon.ae doğrulanmış bir sahibi, ünitenin duman çıkarmaya başladığını ve elektrik kablosunun
+        prize takılır takılmaz ısındığını bildirerek bunu yangın tehlikesi olarak nitelendirdi. Bu, 15360
+        yangın tehlikesi aramasında ortaya çıktı ve bir Ugreen priz çubuğudur, ancak inceleme sayfasının
+        kendisi modeli adlandırmadı, bu yüzden özellikle 15360 olduğunu doğrulayamadım. Bu türden bir
+        Ugreen çubuğunda belgelenmiş bir aşırı ısınma/yangın raporudur.
+      advice: 'Bu sınıftaki Ugreen 6''sı 1 arada çubuklar için güçlü bir uyarı işareti olarak değerlendirin:
+        yanıcı olmayan bir yüzeyde prize takın ve ilk kullanımda ısı/koku olup olmadığını kontrol edin
+        ve bir iade yolu bulundurun. Belirli model bu sayfadan doğrulanamadı.'
+  evidence:
+  - url: https://www.amazon.ae/gp/customer-reviews/R19GID29G5LAMN?ASIN=B07FSVPVQK
+    quote: As soon as i plugged it in if started smoking ans even the electric cable became hot. A fire
+      hazard.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:05:20+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: philips
+      series: spc3064wg37
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: USB charging circuit insulation
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Hong Kong Consumer Council 2019: Philips USB power strips had insufficient insulation distance
+        — increased short-circuit risk'
+      body: In 2019, the Hong Kong Consumer Council tested 15 USB charging power strips; 13 failed some
+        safety tests. Seven had insufficient insulation distance between live USB transformer coils and
+        user-accessible USB output sockets, increasing short-circuit risk — Philips was among the brands
+        named. Philips' brand holder said the tested model was not imported by them into Hong Kong. This
+        is a different model and market from the SPC3064WG/37, but documents another Philips-brand power
+        strip safety deficiency. This finding came from the search query 'Philips power strip fire hazard
+        recall'.
+      advice: This applies to Philips USB charging power strips in the Hong Kong market, not the SPC3064WG/37.
+        It shows a pattern of Philips-brand power strip safety issues in testing, but the US model has
+        not been implicated.
+    tr:
+      title: 'Hong Kong Tüketici Konseyi 2019: Philips USB priz çubuklarında yetersiz yalıtım mesafesi
+        vardı — artan kısa devre riski'
+      body: 2019'da Hong Kong Tüketici Konseyi 15 USB şarjlı priz çubuğunu test etti; 13'ü bazı güvenlik
+        testlerinde başarısız oldu. Yedisinde canlı USB transformatör bobinleri ile kullanıcı tarafından
+        erişilebilen USB çıkış soketleri arasında yetersiz yalıtım mesafesi vardı ve bu kısa devre riskini
+        artırıyordu — Philips adı geçen markalar arasındaydı. Philips'in marka sahibi, test edilen modelin
+        kendileri tarafından Hong Kong'a ithal edilmediğini söyledi. Bu, SPC3064WG/37'den farklı bir model
+        ve pazardır, ancak başka bir Philips markalı priz çubuğu güvenlik eksikliğini belgeliyor. Bu bulgu
+        'Philips power strip fire hazard recall' arama sorgusundan geldi.
+      advice: Bu, Hong Kong pazarındaki Philips USB şarjlı priz çubukları için geçerlidir, SPC3064WG/37
+        için değil. Testte Philips markalı priz çubuğu güvenlik sorunlarının bir örüntüsünü gösterir,
+        ancak ABD modeli suçlanmamıştır.
+  evidence:
+  - url: https://news.hket.com/article/2350294/
+    quote: 有7款樣本的絕緣距離不足，防觸電保護未如理想，主要是USB火牛帶電線圈與用戶可接觸的USB輸出插座的距離不足，增加跳掣及短路的風險，當中包括飛利浦和施耐德電氣的拖板。
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:00:52+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: anker
+      series: power-strip-2100j
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: overall unit / thermal behavior
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Anker officially states power strip overheating is abnormal and may indicate a problem
+      body: Anker's official support documentation acknowledges that power strips can get hot and that
+        excessive heat is abnormal. Anker instructs users to verify loads don't exceed maximum output
+        and to contact support if overheating persists. This is the manufacturer's own admission that
+        overheating is a recognized failure mode requiring attention, though it does not document specific
+        incidents on the 2100J model.
+      advice: If the strip runs hot to the touch under normal loads, unplug it and contact Anker. Do not
+        ignore excessive heat, as the manufacturer itself flags it as abnormal. The 8-Point Safety System
+        claims temperature control, but the support page confirms abnormal heat is possible.
+    tr:
+      title: Anker, güç şeridinin aşırı ısınmasının anormal olduğunu ve bir soruna işaret edebileceğini
+        resmen belirtiyor
+      body: Anker'ın resmi destek belgeleri, güç şeritlerinin ısınabileceğini ve aşırı ısının anormal
+        olduğunu kabul ediyor. Anker, kullanıcılara yüklerin maksimum çıkışı aşmadığını doğrulamalarını
+        ve aşırı ısınma devam ederse destekle iletişime geçmelerini talimat veriyor. Bu, üreticinin aşırı
+        ısınmanın dikkat gerektiren tanınmış bir arıza modu olduğunu kendi kabulüdür, ancak 2100J modelinde
+        belirli olayları belgelemiyor.
+      advice: Şerit normal yükler altında dokunulacak kadar sıcaksa, fişini çekin ve Anker ile iletişime
+        geçin. Aşırı ısıyı görmezden gelmeyin, çünkü üreticinin kendisi bunu anormal olarak işaretliyor.
+        8 Noktalı Güvenlik Sistemi sıcaklık kontrolü iddia ediyor, ancak destek sayfası anormal ısının
+        mümkün olduğunu doğruluyor.
+  evidence:
+  - url: https://service.anker.com/article-description/What-to-do-if-my-AC-Power-gets-hot?ref=Home_Page&urlName=What-to-do-if-my-AC-Power-gets-hot
+    quote: When charging other devices, it is normal for the Power Strip to get a little warm, but it
+      is abnormal if it gets too hot.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:58:09+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: philips
+      series: spc3064wg37
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: power strip switch / internal wiring
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Hong Kong Consumer Council: Philips power strips among worst in 2017 test — temperature
+        rise, short circuit, switch melting; voluntary recall'
+      body: The Hong Kong Consumer Council tested 12 power strips in 2017; all failed some safety tests.
+        Three performed worst, including Philips, with temperature rise, short circuit, and switch housing
+        melting from heat. The agent or manufacturer voluntarily recalled the affected models. This is
+        a Hong Kong market test and does not name the SPC3064WG/37 specifically, but it documents that
+        Philips-brand power strips have had serious thermal and electrical failure modes. This finding
+        came from the search query 'Philips power strip fire hazard recall'.
+      advice: This is a documented Philips-brand power strip failure with voluntary recall, but in the
+        Hong Kong market and not for this specific US model. It indicates the brand has had thermal safety
+        issues in power strips, though the SPC3064WG/37 has not been implicated in any US/CA recall.
+    tr:
+      title: 'Hong Kong Tüketici Konseyi: Philips güç şeritleri 2017 testinde en kötüler arasında — sıcaklık
+        artışı, kısa devre, anahtar erimesi; gönüllü geri çağırma'
+      body: Hong Kong Tüketici Konseyi 2017'de 12 güç şeridini test etti; hepsi bazı güvenlik testlerinde
+        başarısız oldu. Üçü en kötü performansı gösterdi, bunlar arasında Philips de vardı; sıcaklık artışı,
+        kısa devre ve anahtar muhafazasının ısıdan erimesi görüldü. Acenta veya üretici etkilenen modelleri
+        gönüllü olarak geri çağırdı. Bu bir Hong Kong pazarı testidir ve özellikle SPC3064WG/37'yi adlandırmıyor,
+        ancak Philips markalı güç şeritlerinin ciddi termal ve elektriksel arıza modları yaşadığını belgeliyor.
+        Bu bulgu 'Philips power strip fire hazard recall' arama sorgusundan geldi.
+      advice: Bu, gönüllü geri çağırmayla belgelenmiş bir Philips markalı güç şeridi arızasıdır, ancak
+        Hong Kong pazarındadır ve bu belirli ABD modeli için değildir. Markanın güç şeritlerinde termal
+        güvenlik sorunları yaşadığını gösterir, ancak SPC3064WG/37 herhangi bir ABD/CA geri çağırmasına
+        dahil edilmemiştir.
+  evidence:
+  - url: https://paper.hket.com/article/1624401/12%E6%8B%96%E6%9D%BF%E6%B8%AC%E8%A9%A6%E4%B8%8D%E5%90%88%E6%A0%BC%203%E6%AC%BE%E8%87%AA%E9%A1%98%E5%9B%9E%E6%94%B6
+    quote: 消委會測試12款拖板均不能通過所有安全測試，其中3款包括實惠及飛利浦在內的拖板表現最差，分別出現溫升、短路及開關掣被熱熔等問題，有關代理商或生產商已自願回收。
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:00:52+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: belkin
+      series: bv106000-04
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: N/A (recall does not apply to this model)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: No CPSC recall covers BV106000-04; Belkin recall is for SurgeMaster F9G930 models
+      body: 'The only Belkin surge-protector recall found is CPSC Release #10-024 (Oct 27, 2009) for SurgeMaster
+        models F9G930-10, F9G930v10, F9G930-10-W and F9G930-10-SN.'
+      advice: There is no official CPSC recall for the BV106000-04 itself. The only Belkin surge-protector
+        recall covers a different SurgeMaster line, so a buyer cannot rely on a recall notice for this
+        model; the fire/smoke reports above are the only documented warnings for it.
+    tr:
+      title: Hiçbir CPSC geri çağırması BV106000-04'ü kapsamıyor; Belkin geri çağırması SurgeMaster F9G930
+        modelleri içindir
+      body: 'Bulunan tek Belkin dalgalanma koruyucu geri çağırması, SurgeMaster F9G930-10, F9G930v10,
+        F9G930-10-W ve F9G930-10-SN modelleri için CPSC Duyuru #10-024 (27 Ekim 2009)''tür.'
+      advice: BV106000-04'ün kendisi için resmi bir CPSC geri çağırması yoktur. Tek Belkin dalgalanma
+        koruyucu geri çağırması farklı bir SurgeMaster serisini kapsar, bu nedenle bir alıcı bu model
+        için bir geri çağırma bildirimine güvenemez; yukarıdaki yangın/duman raporları bunun için belgelenmiş
+        tek uyarılardır.
+  evidence:
+  - url: https://elcosh.org/document/1693/d000997/CPSC%252C+Recall+of+Belkin+Internatioal+Inc+SurgeMasterTM++Surget+Protectors+Due+to+Shock+Hazard.html
+    quote: This recall involves the SurgeMaster™ Surge Protector, models F9G930-10, F9G930v10, F9G930-10-W
+      and F9G930-10-SN, all manufactured in 2003.
+    locator: ''
+    stance: disputes
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:59:17+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: anker
+      series: 351-power-strip
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: Anker power banks (A1257, A1647, A1652, A1681, A1689) — not the 351 power strip
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: CPSC Anker recall covers power banks, not the 351 Power Strip
+      body: This finding came from the seed query 'Anker power strip recall CPSC'. The CPSC recall involving
+        Anker is limited to portable power banks, not the 351 Power Strip. I found no recall and no documented
+        overheating/fire/shock claim specific to the Anker 351 Power Strip (A9192).
+      advice: If you are checking whether the 351 Power Strip itself was recalled, the answer is no —
+        the Anker recall covers power banks only. Absence of a recall is not proof the product is safe,
+        and the MOV-based surge protector still degrades with use and can fail hot.
+    tr:
+      title: CPSC Anker geri çağırması güç banklarını kapsıyor, 351 Power Strip'i değil
+      body: Bu bulgu 'Anker power strip recall CPSC' başlangıç sorgusundan geldi. Anker'ı içeren CPSC
+        geri çağırması taşınabilir güç banklarıyla sınırlıdır, 351 Power Strip ile değil. Anker 351 Power
+        Strip (A9192)'e özgü hiçbir geri çağırma ve belgelenmiş aşırı ısınma/yangın/şok iddiası bulamadım.
+      advice: 351 Power Strip'in kendisinin geri çağrılıp çağrılmadığını kontrol ediyorsanız, cevap hayır
+        — Anker geri çağırması yalnızca güç banklarını kapsıyor. Geri çağırma olmaması ürünün güvenli
+        olduğunun kanıtı değildir ve MOV tabanlı dalgalanma koruyucu hâlâ kullanımla bozulur ve sıcak
+        arızalanabilir.
+  evidence:
+  - url: https://www.butler.legal/author/jwarkentien/
+    quote: The U.S. Consumer Product Safety Commission (CPSC) is warning consumers to immediately stop
+      using Anker Power Banks
+    locator: ''
+    stance: disputes
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:57:24+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: belkin
+      series: bv106000-04
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: surge protector housing/internal MOV circuit
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Belkin BV106000-04 emitted smoke on plug-in (owner report)
+      body: A 1/5-star owner review on the Belkin.com reviews aggregated by Walmart Business.
+      advice: An owner reports the unit poured smoke immediately on plug-in, and Belkin's own reply told
+        the customer to discontinue using the strip. This is a single owner report, not a recall, but
+        it is a documented smoke/fire incident on this exact model.
+    tr:
+      title: Belkin BV106000-04 prize takıldığında duman çıkardı (sahip raporu)
+      body: Walmart Business tarafından derlenen Belkin.com incelemelerinde 1/5 yıldızlı bir sahip incelemesi.
+      advice: Bir sahip, cihazın prize takıldığında hemen duman çıkardığını bildiriyor ve Belkin'in kendi
+        yanıtı müşteriye şeridi kullanmayı bırakmasını söyledi. Bu bir geri çağırma değil, tek bir sahip
+        raporudur, ancak bu tam modelde belgelenmiş bir duman/yangın olayıdır.
+  evidence:
+  - url: https://business.walmart.com/reviews/product/29278218
+    quote: Plugged it in, smoke started pouring out of the power strip
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:59:17+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: belkin
+      series: bv106000-04
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: receptacle/outlet contacts
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Belkin BV106000-04 device plug melted into the strip after ~3 years
+      body: A 3/5-star owner review on Belkin.com reviews aggregated by Walmart Business.
+      advice: An owner reports a device plug melting into the strip after roughly three years of use,
+        consistent with the pack's note that MOV-based surge protectors degrade with age and can fail
+        hot. This supports replacing the unit periodically rather than assuming lifetime safety.
+    tr:
+      title: Belkin BV106000-04 cihaz fişi yaklaşık 3 yıl sonra şeride eridi
+      body: Walmart Business tarafından derlenen Belkin.com incelemelerinde 3/5 yıldızlı bir sahip incelemesi.
+      advice: Bir sahip, yaklaşık üç yıllık kullanımdan sonra bir cihaz fişinin şeride eridiğini bildiriyor;
+        bu, paketin MOV tabanlı dalgalanma koruyucularının yaşla bozulduğu ve sıcak arızalanabileceği
+        notuyla tutarlıdır. Bu, ömür boyu güvenlik varsaymak yerine cihazın periyodik olarak değiştirilmesini
+        destekler.
+  evidence:
+  - url: https://business.walmart.com/reviews/product/29278218
+    quote: We had a device plugged into it and running for a few hours when the plug of the device started
+      melting to the power strip!!
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:59:17+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: anker
+      series: power-strip-2100j
+  kind: known_issue
+  domain: electrical
+  severity: low
+  consequence: ''
+  detection: ''
+  component: MOV surge protection circuit
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Anker A9192 user manual: surge protection light off means protection is no longer functioning'
+      body: The official Anker A9192 user manual states that the surge protection light turning off indicates
+        surge protection is no longer functioning. This is the manufacturer's own acknowledgment that
+        the MOV-based surge protection degrades and can fail, consistent with the pack's principle that
+        MOV-based surge protectors degrade with use and can fail hot. The light is the only indicator
+        of protection status.
+      advice: Check the blue surge protection light periodically. If it is off, the surge protection has
+        failed and the unit is functioning as a plain power strip — replace it. The manual confirms this
+        is the intended diagnostic indicator.
+    tr:
+      title: 'Anker A9192 kullanım kılavuzu: dalgalanma koruma ışığının sönmesi, korumanın artık çalışmadığı
+        anlamına gelir'
+      body: Resmi Anker A9192 kullanım kılavuzu, dalgalanma koruma ışığının sönmesinin dalgalanma korumasının
+        artık çalışmadığını gösterdiğini belirtir. Bu, üreticinin MOV tabanlı dalgalanma korumasının zamanla
+        bozulduğunu ve arızalanabileceğini kendi kabulüdür ve paketin MOV tabanlı dalgalanma koruyucularının
+        kullanımla bozulduğu ve sıcak arızalanabileceği ilkesiyle tutarlıdır. Işık, koruma durumunun tek
+        göstergesidir.
+      advice: Mavi dalgalanma koruma ışığını periyodik olarak kontrol edin. Sönmüşse, dalgalanma koruması
+        arızalanmıştır ve cihaz sade bir uzatma prizi olarak çalışmaktadır — değiştirin. Kılavuz, bunun
+        amaçlanan teşhis göstergesi olduğunu doğrular.
+  evidence:
+  - url: https://hometechsupply.com/wp-content/uploads/2023/09/User-Manual-anker-a9192-surge-protector-power-strip.pdf
+    quote: If the Surge Protection Light is off, it indicates the Surge Protection is not functioning
+      normally.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:58:09+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: apc
+      series: surgearrest-8
+  kind: known_issue
+  domain: general
+  severity: low
+  consequence: ''
+  detection: ''
+  component: replacement unit (PRO8T2)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Owners confirm APC shipped replacement units (PRO8T2) for recalled 8-series models
+      body: An owner on the AnandTech forum reports submitting serial-number photos for recalled units
+        (including 8-series PRO8TV and NET8N) and receiving PRO8T2 replacements, with roughly a 12-week
+        turnaround. This documents the practical replacement experience at the time of the recall.
+      advice: Confirms the recalled 8-series models were real, widely owned units that APC replaced. Note
+        the CPSC page now says the replacement remedy is no longer available, so current owners should
+        dispose of units rather than expect a free swap.
+    tr:
+      title: Sahipler, APC'nin geri çağrılan 8 serisi modeller için yedek üniteler (PRO8T2) gönderdiğini
+        doğruluyor
+      body: AnandTech forumunda bir sahip, geri çağrılan üniteler (8 serisi PRO8TV ve NET8N dahil) için
+        seri numarası fotoğrafları gönderdiğini ve yaklaşık 12 haftalık bir süreyle PRO8T2 yedekleri aldığını
+        bildiriyor. Bu, geri çağırma sırasındaki pratik yedek değişim deneyimini belgeler.
+      advice: Geri çağrılan 8 serisi modellerin gerçek, yaygın olarak sahip olunan ve APC'nin değiştirdiği
+        üniteler olduğunu doğrular. CPSC sayfasının artık yedek çözümün mevcut olmadığını söylediğini
+        unutmayın; bu nedenle mevcut sahipler ücretsiz değişim beklemek yerine üniteleri bertaraf etmelidir.
+  evidence:
+  - url: https://forums.anandtech.com/threads/apc-7-and-8-series-power-strips-from-93-to-02-recalled.2346520/
+    quote: A common replacement that they'll send out is the PRO8T2, at least based on the ones that I
+      submitted (PRO8TV, NET8N, PER7).
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:57:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: apc
+      series: surgearrest-8
+  kind: known_issue
+  domain: general
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: serial-number label (year code check)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Manufacturer's recall FAQ lists 8-series models and how to check the serial year code
+      body: 'APC''s own recall FAQ confirms the 7 and 8 series SurgeArrest units manufactured before 2003
+        are affected and gives the method to check: the two digits after the first letter(s) of the serial
+        number indicate the year, with codes 93-02 included. It also notes the recall.apc.com site is
+        closed and directs to Schneider Electric''s toll-free line.'
+      advice: 'This is how a buyer or owner can identify an affected unit: read the serial number on the
+        bottom label and check the two digits after the first letter(s). It also confirms the old replacement
+        channel is gone, matching the CPSC''s ''dispose of this product'' instruction.'
+    tr:
+      title: Üreticinin geri çağırma SSS'si 8 serisi modelleri ve seri yıl kodunun nasıl kontrol edileceğini
+        listeler
+      body: 'APC''nin kendi geri çağırma SSS''si, 2003''ten önce üretilen 7 ve 8 serisi SurgeArrest ünitelerinin
+        etkilendiğini doğrular ve kontrol yöntemini verir: seri numarasının ilk harf(ler)inden sonraki
+        iki rakam yılı gösterir ve 93-02 kodları dahildir. Ayrıca recall.apc.com sitesinin kapalı olduğunu
+        belirtir ve Schneider Electric''in ücretsiz hattına yönlendirir.'
+      advice: 'Bir alıcı veya sahip, etkilenen bir üniteyi şu şekilde tanımlayabilir: alt etiketteki seri
+        numarasını okuyun ve ilk harf(ler)den sonraki iki rakamı kontrol edin. Bu ayrıca eski yedek değişim
+        kanalının kaldırıldığını doğrular ve CPSC''nin ''bu ürünü bertaraf edin'' talimatıyla örtüşür.'
+  evidence:
+  - url: https://www.apc.com/sa/en/faqs/FA158846/
+    quote: This recall involves APC 7 and 8 series SurgeArrest surge protectors manufactured before 2003.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:57:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: philips
+      series: spc3064wg37
+  kind: known_issue
+  domain: electrical
+  severity: low
+  consequence: ''
+  detection: ''
+  component: surge protection circuit / MOV
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Philips SPC3064WG/37 surge protector shuts off when protection fails — no LED status indicators
+      body: Professional review (TechHive) of the SPC3064WG/37 confirms the unit shuts off when surge
+        protection is exhausted, which is a safety feature — the strip stops passing power rather than
+        continuing unprotected. However, the review notes there are no LEDs to indicate grounded or protected
+        status, so a user cannot visually confirm the protection state. The review also notes warranty
+        claims must be made within 15 days, a short window. This finding came from the search query 'Philips
+        SPC3064WG/37 recall' (the review was returned by multiple queries).
+      advice: The auto-shutoff is a positive safety feature, but the lack of status LEDs means owners
+        cannot tell when protection has been exhausted without testing. The 15-day warranty claim window
+        is unusually short.
+    tr:
+      title: Philips SPC3064WG/37 dalgalanma koruyucu, koruma arızalandığında kapanır — LED durum göstergesi
+        yok
+      body: SPC3064WG/37'nin profesyonel incelemesi (TechHive), ünitenin dalgalanma koruması tükendiğinde
+        kapandığını doğrular; bu bir güvenlik özelliğidir — priz korumasız çalışmaya devam etmek yerine
+        güç geçişini durdurur. Ancak inceleme, topraklanmış veya korumalı durumu gösterecek LED olmadığını,
+        bu nedenle kullanıcının koruma durumunu görsel olarak doğrulayamadığını belirtir. İnceleme ayrıca
+        garanti taleplerinin 15 gün içinde yapılması gerektiğini, bunun kısa bir pencere olduğunu not
+        eder. Bu bulgu 'Philips SPC3064WG/37 recall' arama sorgusundan geldi (inceleme birden fazla sorgu
+        tarafından döndürüldü).
+      advice: Otomatik kapanma olumlu bir güvenlik özelliğidir, ancak durum LED'lerinin olmaması, sahiplerin
+        test etmeden korumanın ne zaman tükendiğini anlayamaması anlamına gelir. 15 günlük garanti talebi
+        penceresi alışılmadık derecede kısadır.
+  evidence:
+  - url: https://www.techhive.com/article/579834/philips-spc3064wg37-surge-protector-review.html
+    quote: Shuts off when power protection fails
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:00:52+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: apc
+      series: surgearrest-7
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: APC SurgeArrest 7 series surge protector (models NET7, PER7, PRO7, PRF7 and variants)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: APC SurgeArrest 7 series (pre-2003) recalled by Health Canada for fire hazard — can overheat,
+        smoke and melt
+      body: Health Canada recall RA-36531, posted Oct 31 2013, fire hazard issue.
+      advice: 'Check the serial-number date code on the bottom label: if the two digits following the
+        first letter(s) are 93 through 02, the unit is recalled — stop using it, unplug it, and contact
+        Schneider Electric (1-888-437-4007) for a free replacement. Units made 2003 or later are not part
+        of this recall.'
+    tr:
+      title: APC SurgeArrest 7 serisi (2003 öncesi) Health Canada tarafından yangın tehlikesi nedeniyle
+        geri çağrıldı — aşırı ısınabilir, duman çıkarabilir ve eriyebilir
+      body: Health Canada geri çağırma RA-36531, 31 Ekim 2013'te yayınlandı, yangın tehlikesi sorunu.
+      advice: 'Alt etiketteki seri numarası tarih kodunu kontrol edin: ilk harf(ler)den sonraki iki rakam
+        93 ile 02 arasındaysa, ünite geri çağrılmıştır — kullanmayı bırakın, fişini çekin ve ücretsiz
+        yedek için Schneider Electric (1-888-437-4007) ile iletişime geçin. 2003 veya sonrasında üretilen
+        üniteler bu geri çağırmanın kapsamında değildir.'
+  evidence:
+  - url: https://recalls-rappels.canada.ca/en/alert-recall/schneider-electric-it-corporation-recalls-apc-surgearrest-surge-protectors
+    quote: The surge protectors can overheat, smoke and melt, posing a fire hazard.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:02:52+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: belkin
+      series: rotating-plug-surge-protector
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: 360-degree rotating plug molding
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: ESA Canada confirms Belkin SurgeMaster recall, notes products not sold in Canada
+      body: The Electrical Safety Authority of Canada confirmed the Belkin SurgeMaster recall, noting
+        the rotating plug molding can crack or detach. Importantly, the ESA states none of these recalled
+        products were sold in Canada, which is relevant for the Canadian market.
+      advice: For Canadian consumers, the 2003 SurgeMaster recall did not affect units sold in Canada.
+        However, the broader fire and melting reports from US owners may still be relevant to Canadian
+        units of similar design.
+    tr:
+      title: ESA Canada, Belkin SurgeMaster geri çağırmasını doğruluyor, ürünlerin Kanada'da satılmadığını
+        belirtiyor
+      body: Kanada Elektrik Güvenliği Otoritesi, Belkin SurgeMaster geri çağırmasını doğrulayarak döner
+        fiş kalıbının çatlayabileceğini veya ayrılabileceğini belirtti. Önemlisi, ESA bu geri çağrılan
+        ürünlerin hiçbirinin Kanada'da satılmadığını belirtiyor; bu Kanada pazarı için önemlidir.
+      advice: Kanadalı tüketiciler için 2003 SurgeMaster geri çağırması Kanada'da satılan üniteleri etkilemedi.
+        Ancak ABD'li sahiplerden gelen daha geniş yangın ve erime raporları, benzer tasarımdaki Kanada
+        üniteleri için hâlâ geçerli olabilir.
+  evidence:
+  - url: http://www.esasafe.com/pdf/Recall_Notices/RCL09-78.pdf
+    quote: The molding of the plastic 360 degree rotating plug, which allows for easy cord movement, can
+      crack or detach from the plug assembly, posing a shock hazard to consumers.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:59:04+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: apc
+      series: surgearrest-8
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: outlets and housing (melted through bottom)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Owner-reported fire: SurgeArrest unit caught fire and melted through its bottom (Dec 2011
+        incident)'
+      body: This NBC/Today news report quotes a CPSC public-database incident filed Dec 24, 2011, in which
+        a recalled APC SurgeArrest caught fire, melted through its bottom and filled a room with smoke.
+        It corroborates the recall hazard with a first-person account of an actual fire.
+      advice: 'This shows the failure is not merely theoretical: a unit burned and melted through its
+        housing in a home. It reinforces that a pre-2003 unit should be unplugged and disposed of immediately,
+        not left in service.'
+    tr:
+      title: 'Sahibinin bildirdiği yangın: SurgeArrest ünitesi alev aldı ve alt kısmından eridi (Aralık
+        2011 olayı)'
+      body: Bu NBC/Today haber raporu, 24 Aralık 2011'de dosyalanan ve geri çağrılan bir APC SurgeArrest'in
+        alev aldığı, alt kısmından eridiği ve bir odayı dumanla doldurduğu bir CPSC kamu veritabanı olayına
+        atıfta bulunuyor. Gerçek bir yangının birinci elden anlatımıyla geri çağırma tehlikesini doğruluyor.
+      advice: 'Bu, arızanın yalnızca teorik olmadığını gösteriyor: bir ünite bir evde yandı ve muhafazasından
+        eridi. 2003 öncesi bir ünitenin derhal fişten çekilip bertaraf edilmesi gerektiğini, hizmette
+        bırakılmaması gerektiğini pekiştiriyor.'
+  evidence:
+  - url: https://www.today.com/money/recall-millions-surge-protectors-could-cause-fire-8c11339817
+    quote: Fire was coming from the open outlets and had actually melted through the bottom.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:57:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: anker
+      series: power-strip-2100j
+  kind: known_issue
+  domain: electrical
+  severity: low
+  consequence: ''
+  detection: ''
+  component: brand-level recall history (power banks)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Anker's recall history involves power banks with fire/explosion reports, not this power strip
+      body: A Hacker News thread references a CPSC recall of Anker power banks (not power strips) involving
+        19 reports of fires and explosions, two minor burn injuries, and over $60,700 in property damage.
+        This establishes Anker's brand-level recall history for fire risk in power products, but the recall
+        specifically covers power banks, not the 2100J power strip. No recall was found for the A9192
+        power strip itself.
+      advice: The 2100J power strip has no recall on record. However, Anker's brand history includes a
+        CPSC recall of power banks for fire/explosion risk, which is worth knowing when assessing the
+        brand's overall safety record. This does not directly implicate the power strip.
+    tr:
+      title: Anker'in geri çağırma geçmişi, bu priz uzatması değil, yangın/patlama bildirimleri olan power
+        bank'leri içeriyor
+      body: Bir Hacker News başlığı, 19 yangın ve patlama bildirimi, iki hafif yanık yaralanması ve 60.700
+        doların üzerinde maddi hasarı içeren Anker power bank'lerinin (priz uzatmaları değil) bir CPSC
+        geri çağırmasına atıfta bulunuyor. Bu, Anker'in güç ürünlerinde yangın riskine ilişkin marka düzeyindeki
+        geri çağırma geçmişini ortaya koyuyor, ancak geri çağırma özellikle power bank'leri kapsıyor,
+        2100J priz uzatmasını değil. A9192 priz uzatmasının kendisi için herhangi bir geri çağırma bulunamadı.
+      advice: 2100J priz uzatmasının kayıtlı bir geri çağırması yok. Ancak Anker'in marka geçmişi, yangın/patlama
+        riski nedeniyle power bank'ler için bir CPSC geri çağırması içeriyor; bu, markanın genel güvenlik
+        sicilini değerlendirirken bilinmeye değer. Bu, priz uzatmasını doğrudan ilgilendirmiyor.
+  evidence:
+  - url: https://althacker.news/item?id=44640148
+    quote: Anker has received 19 reports of fires and explosions. This includes two reports of minor burn
+      injuries not requiring medical attention and 11 reports of property damage totaling over $60,700.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:58:09+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: philips
+      series: spc3064wg37
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: socket dimensions / heat resistance / grounding
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Guangdong Consumer Council 2013: Philips mobile sockets on non-compliant list — socket dimension
+        and heat resistance failures'
+      body: The Guangdong Provincial Consumer Council tested 20 mobile socket (power strip) batches in
+        2013; 45% failed. Philips was named on the non-compliant list. Non-compliant items included socket
+        dimensions, touch protection, grounding, flexible cable connections, and heat resistance. The
+        council noted that non-compliant socket dimensions could cause overload, fire, and electric shock
+        hazards. This is a Chinese market test and does not name the SPC3064WG/37. This finding came from
+        the search query 'Philips power strip fire hazard recall'.
+      advice: This documents Philips-brand power strip non-compliance in the Chinese market, including
+        heat resistance and socket dimension failures that could lead to fire or shock. It is not specific
+        to the SPC3064WG/37 or the US/CA market.
+    tr:
+      title: 'Guangdong Tüketici Konseyi 2013: Philips mobil prizler uygunsuzlar listesinde — priz boyutu
+        ve ısıya dayanıklılık arızaları'
+      body: Guangdong İl Tüketici Konseyi 2013'te 20 mobil priz (priz uzatması) partisini test etti; %45'i
+        başarısız oldu. Philips uygunsuzlar listesinde adlandırıldı. Uygunsuz kalemler arasında priz boyutları,
+        dokunma koruması, topraklama, esnek kablo bağlantıları ve ısıya dayanıklılık vardı. Konsey, uygunsuz
+        priz boyutlarının aşırı yüklenmeye, yangına ve elektrik çarpması tehlikelerine yol açabileceğini
+        belirtti. Bu bir Çin pazarı testidir ve SPC3064WG/37'yi adlandırmıyor. Bu bulgu 'Philips power
+        strip fire hazard recall' arama sorgusundan geldi.
+      advice: Bu, Çin pazarında Philips markalı priz uzatması uygunsuzluğunu, yangın veya çarpmaya yol
+        açabilecek ısıya dayanıklılık ve priz boyutu arızaları dahil olmak üzere belgeliyor. SPC3064WG/37'ye
+        veya ABD/CA pazarına özgü değil.
+  evidence:
+  - url: http://jd.big5.enorth.com.cn/system/2013/03/12/010730613.shtml
+    quote: 而在不合格產品中，“科林”、“飛利浦”等部分品牌的移動插座上“黑榜”。
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:00:52+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: apc
+      series: surgearrest-8
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: surge protector internal MOV/surge-suppression circuitry (whole unit overheats)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'CPSC recall 14-001: APC SurgeArrest 7 and 8 series can overheat, smoke and melt (fire hazard)'
+      body: The U.S. CPSC's official recall 14-001 covers the APC SurgeArrest 7 and 8 series manufactured
+        before 2003 (serial year codes 93-02). 8-series models named include NET8, NET8N, PER8T, PER8TR,
+        PER8TR-CN, PER8TVR, PER8XTV, PRF8T2, PRF8TT, PRO8, PRO8T2, PRO8T2C, PRO8T2MP12, PRO8T2MP12B and
+        PRO8TV.
+      advice: 'The recall remedy is no longer available; the CPSC page instructs consumers to dispose
+        of the product and not donate or resell it. Anyone holding a pre-2003 8-series SurgeArrest should
+        stop using it and discard it rather than rely on a free replacement. This is the strongest source:
+        the regulator''s own notice.'
+    tr:
+      title: 'CPSC geri çağırma 14-001: APC SurgeArrest 7 ve 8 serisi aşırı ısınabilir, duman çıkarabilir
+        ve eriyebilir (yangın tehlikesi)'
+      body: ABD CPSC'nin resmi geri çağırması 14-001, 2003 öncesi üretilen APC SurgeArrest 7 ve 8 serisini
+        kapsıyor (seri yıl kodları 93-02). Adlandırılan 8 serisi modeller arasında NET8, NET8N, PER8T,
+        PER8TR, PER8TR-CN, PER8TVR, PER8XTV, PRF8T2, PRF8TT, PRO8, PRO8T2, PRO8T2C, PRO8T2MP12, PRO8T2MP12B
+        ve PRO8TV bulunuyor.
+      advice: 'Geri çağırma çözümü artık mevcut değil; CPSC sayfası tüketicilere ürünü bertaraf etmelerini
+        ve bağışlamamalarını veya yeniden satmamalarını talimat veriyor. 2003 öncesi 8 serisi bir SurgeArrest''e
+        sahip olan herkes, ücretsiz bir değişime güvenmek yerine kullanmayı bırakmalı ve atmalıdır. Bu
+        en güçlü kaynaktır: düzenleyicinin kendi bildirimi.'
+  evidence:
+  - url: https://www.cpsc.gov/Recalls/2013/schneider-electric-recalls-apc-surge-protectors
+    quote: The surge protectors can overheat, smoke and melt, posing a fire hazard.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:57:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: ugreen
+      series: '15360'
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: power strip adapter / charging circuit
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Ugreen power strip adapter overheats with only two items plugged in (Amazon.com.au owner
+        report)
+      body: An Amazon.com.au owner reports the adapter runs very hot even with only two items plugged
+        in, calling it dangerous if left unattended. This surfaced in the 15360 overheating search and
+        is a Ugreen power strip, but the review page did not name the model, so I could not confirm it
+        is the 15360 specifically.
+      advice: Do not leave a Ugreen strip of this class running unattended under load until you have confirmed
+        it runs cool; the owner returned theirs for a refund. Model identity for this specific listing
+        could not be verified.
+    tr:
+      title: Ugreen priz uzatması adaptörü yalnızca iki öğe takılıyken aşırı ısınıyor (Amazon.com.au sahip
+        bildirimi)
+      body: Bir Amazon.com.au sahibi, yalnızca iki öğe takılıyken bile adaptörün çok sıcak çalıştığını
+        ve gözetimsiz bırakılırsa tehlikeli olduğunu bildiriyor. Bu, 15360 aşırı ısınma aramasında ortaya
+        çıktı ve bir Ugreen priz uzatması, ancak inceleme sayfası modeli adlandırmadı, bu yüzden özellikle
+        15360 olup olmadığını doğrulayamadım.
+      advice: Bu sınıftaki bir Ugreen uzatmasının soğuk çalıştığını doğrulayana kadar yük altında gözetimsiz
+        çalıştırmayın; sahibi kendisininkini para iadesi için iade etti. Bu belirli liste için model kimliği
+        doğrulanamadı.
+  evidence:
+  - url: https://www.amazon.com.au:443/gp/customer-reviews/R324H46CFRXYXX/ref=cm_cr_dp_d_rvw_ttl?ie=UTF8&ASIN=B07S8MKJ6Q
+    quote: however, the adapter overheats, which is very concerning if by chance it is left alone. I'm
+      talking - it gets very hot.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T18:05:20+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: belkin
+      series: rotating-plug-surge-protector
+  kind: known_issue
+  domain: electrical
+  severity: high
+  consequence: ''
+  detection: ''
+  component: 6-outlet surge protector with rotating plug
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Belkin 6-outlet surge protector with rotating plug reported to start fires, Amazon stopped
+        selling
+      body: News 6 (KPRC/ClickOrlando) reported in September 2015 on Belkin surge protectors with rotating
+        plugs starting fires. A family reported flames shooting from a Belkin surge protector, and Amazon
+        reviews from 2012-2014 warned of melting and fire hazards. Amazon stopped selling the six-outlet
+        commercial surge protector with a rotating plug.
+      advice: This is a documented pattern of fire incidents with Belkin 6-outlet surge protectors with
+        rotating plugs. Exercise caution, monitor the unit for heat or discoloration, and consider replacing
+        it.
+    tr:
+      title: Döner fişli Belkin 6 çıkışlı dalgalanma koruyucusunun yangın başlattığı bildirildi, Amazon
+        satışı durdurdu
+      body: News 6 (KPRC/ClickOrlando) Eylül 2015'te döner fişli Belkin dalgalanma koruyucularının yangın
+        başlatması hakkında haber yaptı. Bir aile, bir Belkin dalgalanma koruyucusundan alevler fışkırdığını
+        bildirdi ve 2012-2014 Amazon incelemeleri erime ve yangın tehlikeleri konusunda uyardı. Amazon,
+        döner fişli altı çıkışlı ticari dalgalanma koruyucusunu satmayı durdurdu.
+      advice: Bu, döner fişli Belkin 6 çıkışlı dalgalanma koruyucularıyla belgelenmiş bir yangın olayları
+        örüntüsüdür. Dikkatli olun, üniteyi ısı veya renk değişimi açısından izleyin ve değiştirmeyi düşünün.
+  evidence:
+  - url: https://www.clickorlando.com/news/2015/09/30/surge-protector-sparks-fires-instead-of-preventing-them-homeowners-say/
+    quote: Earlier this year, Amazon stopped selling the six-outlet commercial surge protector with a
+      rotating plug.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:59:04+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: anker
+      series: power-strip-2100j
+  kind: known_issue
+  domain: electrical
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: safety certification / UL listing
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Forum expert raises concern that Anker AC power strips may lack proper UL standards listings
+      body: A forum member with apparent electrical standards expertise (posting on Linus Tech Tips in
+        response to a CPSC advisory discussion) raises concerns that Anker AC power strip products — including
+        the 12-outlet power strip (the 351/A9192) — may not be listed under the appropriate Underwriters
+        Laboratory standards (UL 817 for power strips, UL 1363 for relocatable power taps) or may lack
+        proper labeling. This is a forum opinion, not an official regulatory finding, but it questions
+        the adequacy of the product's safety certification. The product is marketed as 'TUV listed' rather
+        than UL listed, which is a different certification body.
+      advice: Verify the specific certification markings on the unit you receive. The product is marketed
+        as TUV listed, not UL listed. If UL listing matters to you for insurance or safety confidence,
+        consider a UL-listed alternative from Belkin or APC. This is a forum-level concern, not an official
+        finding, but it raises a legitimate question about certification adequacy.
+    tr:
+      title: Forum uzmanı, Anker AC güç şeritlerinin uygun UL standartları listelerine sahip olmayabileceği
+        endişesini dile getiriyor
+      body: Görünüşe göre elektrik standartları uzmanlığına sahip bir forum üyesi (CPSC danışma tartışmasına
+        yanıt olarak Linus Tech Tips'te paylaşım yapıyor), Anker AC güç şeridi ürünlerinin — 12 çıkışlı
+        güç şeridi (351/A9192) dahil — uygun Underwriters Laboratory standartları (güç şeritleri için
+        UL 817, taşınabilir güç prizleri için UL 1363) kapsamında listelenmemiş olabileceği veya uygun
+        etiketlemeye sahip olmayabileceği endişesini dile getiriyor. Bu bir forum görüşüdür, resmi bir
+        düzenleyici tespit değildir, ancak ürünün güvenlik sertifikasyonunun yeterliliğini sorgulamaktadır.
+        Ürün, UL listeli yerine 'TUV listeli' olarak pazarlanmaktadır; bu farklı bir sertifikasyon kuruluşudur.
+      advice: Aldığınız ünitedeki belirli sertifikasyon işaretlerini doğrulayın. Ürün, UL listeli değil,
+        TUV listeli olarak pazarlanmaktadır. Sigorta veya güvenlik güvencesi açısından UL listelemesi
+        sizin için önemliyse, Belkin veya APC'den UL listeli bir alternatif düşünün. Bu forum düzeyinde
+        bir endişedir, resmi bir tespit değildir, ancak sertifikasyon yeterliliği hakkında meşru bir soru
+        ortaya koymaktadır.
+  evidence:
+  - url: https://linustechtips.com/profile/968788-the_love_spud/reputation
+    quote: Anker consistently pushes AC power strip products which either are listed under no Underwriters
+      Laboratory standards, are listed under inappropriate/incomplete standards, and lack the appropriate
+      labeling required for such standards.
+    locator: ''
+    stance: disputes
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:58:09+00:00'

@@ -4,19 +4,27 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
-  <title>How to use Kriko</title>
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
+  <title>How to use Kriko, step by step</title>
   <meta name="description" content="How to use Kriko, step by step, with a short film of each step: check a listing, research something new, find a saved check, compare products and choose how much doubt to see.">
   <meta property="og:title" content="How to use Kriko, step by step">
   <meta property="og:description" content="A short film of each step: check a listing, research something new, compare products and choose how much doubt to see.">
   <meta property="og:type" content="website">
-  <meta property="og:image" content="https://kriko.cc/assets/icon-128.png">
+  <meta property="og:site_name" content="Kriko">
+  <meta property="og:url" content="https://kriko.cc/guide/">
+  <meta property="og:image" content="https://kriko.cc/assets/share-card.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="The Kriko panel open beside an invented e-bike listing, with the headline: Know what can go wrong before you buy.">
+  <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" href="../assets/icon-32.png">
-  <link rel="stylesheet" href="../styles.css?v=21e6481025a5">
-  <script src="../script.js?v=8b8abf59128c" defer></script>
+  <link rel="stylesheet" href="../styles.css?v=132f457b26c9">
+  <script src="../script.js?v=35fcbb31fac3" defer></script>
   <link rel="canonical" href="https://kriko.cc/guide/">
   <link rel="alternate" href="https://kriko.cc/guide/" hreflang="en">
   <link rel="alternate" href="https://kriko.cc/tr/guide/" hreflang="tr">
   <link rel="alternate" href="https://kriko.cc/guide/" hreflang="x-default">
+  <script id="discovery-data" type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"Organization","@id":"https://kriko.cc/#organization","name":"Kriko","url":"https://kriko.cc/","sameAs":["https://github.com/Berbadov/kriko"],"logo":{"@type":"ImageObject","url":"https://kriko.cc/assets/icon-128.png"}},{"@type":"WebSite","@id":"https://kriko.cc/#website","url":"https://kriko.cc/","name":"Kriko","inLanguage":["en","tr"],"publisher":{"@id":"https://kriko.cc/#organization"}},{"@type":"SoftwareApplication","@id":"https://kriko.cc/#app","name":"Kriko","url":"https://kriko.cc/","applicationCategory":"UtilitiesApplication","operatingSystem":"Windows","license":"https://opensource.org/license/mit","sameAs":["https://github.com/Berbadov/kriko"],"publisher":{"@id":"https://kriko.cc/#organization"}},{"@type":"WebPage","@id":"https://kriko.cc/guide/#page","url":"https://kriko.cc/guide/","name":"How to use Kriko, step by step","description":"How to use Kriko, step by step, with a short film of each step: check a listing, research something new, find a saved check, compare products and choose how much doubt to see.","inLanguage":"en","isPartOf":{"@id":"https://kriko.cc/#website"},"about":{"@id":"https://kriko.cc/#app"},"breadcrumb":{"@id":"https://kriko.cc/guide/#breadcrumbs"}},{"@type":"BreadcrumbList","@id":"https://kriko.cc/guide/#breadcrumbs","itemListElement":[{"@type":"ListItem","position":1,"name":"Kriko","item":"https://kriko.cc/"},{"@type":"ListItem","position":2,"name":"Kriko, step by step.","item":"https://kriko.cc/guide/"}]}]}</script>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
@@ -31,24 +39,24 @@
       <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="main-nav">Menu</button>
       <nav class="main-nav" id="main-nav" aria-label="Main navigation">
         <a href="/#how">How it works</a>
-        <a href="/#app">The app</a>
-        <a href="/#examples">Examples</a>
+        <a href="/#mobile">Phone</a>
         <a href="/guide/" aria-current="page">Guide</a>
+        <a href="/problems/">Known problems</a>
         <a href="/#get">Install</a>
-        <a href="/#data">Questions</a>
-        <span class="language-switch" role="group" aria-label="Language"><a href="/guide/" lang="en" hreflang="en" aria-current="page">EN</a><a href="/tr/guide/" lang="tr" hreflang="tr">TR</a></span>
-        <a class="button small" href="/#get">Get Kriko</a>
       </nav>
+      <span class="language-switch" role="group" aria-label="Language"><a href="/guide/" lang="en" hreflang="en" aria-current="page">EN</a><a href="/tr/guide/" lang="tr" hreflang="tr">TR</a></span>
+      <a class="button small bar-cta" href="/#get">Get Kriko</a>
     </div>
   </header>
 
   <main id="main">
     <section class="hero guide-hero" id="top">
+      <canvas class="hero-shader" aria-hidden="true"></canvas>
       <div class="wrap">
         <p class="label">Guide</p>
         <h1>Kriko, <span>step by step.</span></h1>
-        <p class="lead">Each part is filmed in the real app with an invented product, so what you see is what you get. Nothing here needs an account.</p>
-        <p class="fine">Not installed yet? <a href="/#get">Four steps on the home page</a> get you started.</p>
+        <p class="lead">Each part is filmed in the real app with an invented product. Catalog lookups need no account or AI key. Online research needs a connected agent; a paid provider bills your own account.</p>
+        <p class="fine">Not installed yet? <a href="/install/">Start with the installation checklist</a>.</p>
         <nav class="toc" aria-label="On this page">
           <ol>
             <li><a href="#check">Check a listing</a></li>
@@ -185,6 +193,7 @@
         <a href="https://github.com/Berbadov/kriko"><span>GitHub</span><svg class="icon" aria-hidden="true"><use href="#i-external"/></svg></a>
         <a href="https://github.com/Berbadov/kriko/releases"><span>Releases</span><svg class="icon" aria-hidden="true"><use href="#i-external"/></svg></a>
         <a href="https://github.com/Berbadov/kriko/issues"><span>Help and feedback</span><svg class="icon" aria-hidden="true"><use href="#i-external"/></svg></a>
+        <a href="/problems/">Known problems</a>
         <a href="/privacy/">Privacy</a>
         <a href="https://github.com/Berbadov/kriko/blob/main/LICENSE">MIT license</a>
       </nav>
