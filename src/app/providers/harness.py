@@ -125,6 +125,35 @@ TOOLLESS_NOTE = (
     "out any claim you cannot ground in text given here."
 )
 
+#: The same note for a brief that asks for the written `SEARCH:` request.
+#: A tool call and a line of text are not the same thing, and the plain note
+#: said "do not try one" to a model the brief had just invited to ask: a 0.3.8
+#: field run answered "this session has no web search" to a request for
+#: sourced research that way. Named only where the brief asks for it, so no
+#: other prompt gains an invitation to write a request nothing would read.
+TOOLLESS_SEARCH_NOTE = (
+    "\n\nThis session has no tools of any kind: no web search, no page opening, "
+    "no shell, no files. Every attempt to call one is refused and costs a turn. "
+    "Do not call or describe a tool. If this brief asks for a `SEARCH:` line, "
+    "that is not a tool call: write that one line and Kriko runs the search and "
+    "asks you again with the pages. Otherwise answer at once from this prompt "
+    "and what you already know, and leave out any claim you cannot ground in "
+    "text given here."
+)
+
+
+def toolless_note(prompt: str) -> str:
+    """The note for a tool-less session: the brief's own `SEARCH:` offer kept.
+
+    `chat.chat_brief` and `chat.web_answer_brief` end with "reply with exactly
+    one line, SEARCH: ...". The plain note forbids trying a tool, which a model
+    reasonably reads as forbidding that line too — and the reader gets "I have
+    no web search" instead of a search. The exception is named only where the
+    brief itself asked for the line; a research brief that never mentions it
+    keeps the plain note.
+    """
+    return TOOLLESS_SEARCH_NOTE if "SEARCH:" in prompt else TOOLLESS_NOTE
+
 #: Said instead of `TOOLLESS_NOTE` when the hosted tool-less session could not
 #: be reached and the run fell back to a fresh process. That process *does*
 #: have the CLI's web tools, so telling it it has none would be the same lie in
@@ -3578,7 +3607,7 @@ class HarnessResearcher(AgentResearcher):
                     )
                     self.transport_mode = "exec"
                     return self._run(prompt + TOOLLESS_FALLBACK_NOTE)
-                answer = self._run(prompt + TOOLLESS_NOTE)
+                answer = self._run(prompt + toolless_note(prompt))
                 _clear_resident_health(self.harness)
                 return answer
             except TurnRejected as error:
