@@ -11,9 +11,11 @@ import { Icon } from './Icon'
  *  trademarks, shown only to say which agent answered (see `assets/agents/NOTICE.md`).
  *  The local model and any agent without a logo keep Kriko's own drawing.
  *
- *  `state` moves the tile the way the agent is doing: a ring runs round it while it
- *  works, it breathes while it waits, it greys with an amber ring when paused, it
- *  flashes mint once when done and shakes in red when it failed. */
+ *  The tile is the agent's whole presence in the app — no second ornament beside it.
+ *  Its state is drawn on the tile's own edge: a hairline ring at rest, a thin arc
+ *  travelling that edge while it works, a slow pulse of the ring while it waits for
+ *  the reader, an amber underbar with the logo greyed when paused, a mint seal when
+ *  the answer lands, and a red underbar with one shake when it failed. */
 
 export type AgentState = 'idle' | 'working' | 'waiting' | 'paused' | 'done' | 'failed'
 
@@ -51,6 +53,14 @@ export function AgentMark({ id, size = 28, state = 'idle' }: { id: string; size?
           <Icon name={look.glyph === 'chip' ? 'cpu' : 'spark'} size={inner} />
         </span>
       )}
+      {/* The edge is one 40-unit square whatever the tile size, so the hairline
+          and the arc keep their proportions from the answer head down to the pill. */}
+      <svg className="agent-edge" viewBox="0 0 40 40" focusable="false">
+        <circle className="agent-track" cx="20" cy="20" r="18.6" />
+        <circle className="agent-arc" cx="20" cy="20" r="18.6" pathLength={100} />
+        <line className="agent-rest" x1="14" y1="34.2" x2="26" y2="34.2" />
+        <path className="agent-seal" d="M13.4 20.5l4 4 8.4-8.7" pathLength={1} />
+      </svg>
     </span>
   )
 }
