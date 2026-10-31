@@ -76,6 +76,9 @@ export function upper(text: string, lang: Language = current): string {
  * renders through `Txt`; names, URLs, prices and key shapes are left alone.
  */
 export const translations: Record<string, string> = {
+  /* -------------------------------------------------- 0.14 settings + memory -- */
+  'Data': 'Veriler',
+  'Products Kriko remembers': 'Kriko’nun hatırladığı ürünler',
   "Sources language": "Kaynak dili",
   "Any searches all languages by default.": "Tümü seçeneği tüm dillerde arar.",
   "Answers language": "Yanıt dili",
@@ -919,6 +922,10 @@ const patterns: readonly (readonly [RegExp, string])[] = [
   /* Counts. Turkish takes the bare noun after a number. */
   [/^(\d+) questions?$/, '$1 soru'],
   [/^(\d+) conversations?$/, '$1 konuşma'],
+  [
+    /^(\d+) conversation\(s\), scan results, and their sources are removed from this phone\.$/,
+    '$1 sohbet, tarama sonucu ve bunların kaynakları bu telefondan kaldırılır.',
+  ],
   [/^(\d+) chats?$/, '$1 sohbet'],
   [/^(\d+) messages$/, '$1 mesaj'],
   [/^(\d+) steps?$/, '$1 adım'],

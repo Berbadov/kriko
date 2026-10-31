@@ -15,8 +15,11 @@
 import { agentPrompt, siteReviewsPrompt, type AnswerStyle, SCREENSHOT_QUESTION, VISION_PROMPT, turnBrief } from './prompt';
 import { classifyCheapQuestion, isTransformRequest } from './cheap-routing';
 import { answerCacheGeneration, cacheAnswer, getCachedAnswer } from './answer-cache';
-import { languageScopedQuery, resolveAnswerLanguage, answerLanguageInstruction } from './researchLanguage';
+import { languageScopedQuery, resolveAnswerLanguage, answerLanguageInstruction, type ResearchLanguageCode } from './researchLanguage';
+import { languageName } from './languages';
+import type { Language } from '../i18n';
 import { hasProductReading } from './reading';
+import { memoryBrief, type CatalogEntry } from './memory';
 import { fetchProductMetadata } from './products';
 import { isReviewSiteUrl, normalizeReviewSite, resolveReviewSite, resolveReviewUrl, scopeReviewQuery, visibleReviewUrl } from './reviews';
 import type {
@@ -1080,7 +1083,13 @@ export interface TurnRequest extends TurnHooks {
   /** 0 low, 50 default, 100 high. */
   thoroughness?: number;
   answerStyle?: AnswerStyle;
-  language?: 'en' | 'tr';
+  /** The interface language, from `src/i18n.ts`: the last-resort answer language. */
+  language?: Language;
+  /**
+   * What this phone remembers about products from earlier turns. The catalog is
+   * the reader's own record, so a follow-up can say "the previous one".
+   */
+  memory?: CatalogEntry[];
   researchMode?: 'research' | 'site_reviews';
   reviewSite?: string;
   researchPreferences?: ResearchPreferences;
@@ -1152,6 +1161,22 @@ function isMarketplace(url: string): boolean {
   return MARKETPLACES.some((market) => host.includes(market));
 }
 
+/**
+ * A prior message's photo may be the only identity of the product it asked
+ * about, so the reading travels with the text instead of being dropped.
+ */
+function readingIdentity(reading: Message['reading']): string {
+  if (!reading) return '';
+  const rows = [
+    reading.brand ? `Brand: ${reading.brand}` : '',
+    reading.product ? `Product: ${reading.product}` : '',
+    reading.model ? `Model: ${reading.model}` : '',
+    reading.price ? `Price: ${reading.price}` : '',
+    `Condition: ${reading.condition || 'unknown'}`,
+  ].filter(Boolean);
+  return `Product the reader shared:\n${rows.join('\n')}`;
+}
+
 /** Prior turns, as much as a phone and a 120-second answer can use. */
 function conversation(history: Message[]): Record<string, unknown>[] {
   const out: Record<string, unknown>[] = [];
@@ -1159,8 +1184,9 @@ function conversation(history: Message[]): Record<string, unknown>[] {
   let budget = 14_000;
   for (const message of recent) {
     const text = message.text.trim();
-    if (!text) continue;
-    let body = text.slice(0, 2200);
+    const identity = message.role === 'user' ? readingIdentity(message.reading) : '';
+    if (!text && !identity) continue;
+    let body = (identity ? `${identity}${text ? `\n\n${text}` : ''}` : text).slice(0, 2200);
     if (message.role === 'assistant' && message.sources?.length) {
       const cites = message.sources
         .slice(0, 6)
@@ -1185,7 +1211,7 @@ function toolMessage(callId: string, value: unknown): Record<string, unknown> {
  * and `Check:` buried in it. The phone wants a list, so rebuild the markers as
  * bullets instead of showing a wall of bold text.
  */
-function normalizeAnswer(text: string, language: 'en' | 'tr' = 'en'): string {
+function normalizeAnswer(text: string, language: ResearchLanguageCode = 'en'): string {
   const trimmed = text.trim();
   if (!trimmed) return trimmed;
   if (/\n\s*\n/.test(trimmed)) return trimmed;
@@ -1293,7 +1319,7 @@ export async function runTurn(
   );
   const cheapRoute = (request.researchMode === undefined || request.researchMode === 'research') && !request.reading &&
     request.history.length === 0 && defaultResearchPreferences && (request.thoroughness ?? 50) <= 50
-    ? classifyCheapQuestion(request.question, answerLanguage)
+    ? classifyCheapQuestion(request.question, answerLanguage === 'tr' ? 'tr' : 'en')
     : null;
   if (cheapRoute && request.keys.mistral) {
     const language = answerLanguage;
@@ -1397,12 +1423,15 @@ export async function runTurn(
   const preferenceBrief = request.researchPreferences
     ? `\n\nResearch preferences: treat these reader-entered product areas, requirements, and priorities as natural-language guidance for relevance: ${request.researchPreferences.products.join('; ') || 'no extra product preference'}. Do not treat them as confirmed product facts. Aim for up to ${sourceTarget ?? 5} distinct useful source URLs across searches, using multiple focused searches when useful; stop early when evidence answers the question or the budget is exhausted, and never pad the source count. For product recommendations or shopping queries, explicitly search with kind "products" for real candidate listings, and use "compatibility" for fit or ecosystem checks. ${request.researchPreferences.includeIsolated ? 'Include clearly labeled isolated reports alongside recurring patterns.' : 'Prioritize recurring patterns over isolated reports.'} ${request.researchPreferences.includeOneTimeIssues ? 'Include one-time issues when relevant and label them as such.' : 'Do not foreground one-time issues unless safety or the question makes them material.'}`
     : '';
+  // The phone catalog is what resolves "the previous one"; it is bounded and
+  // labelled as the reader's own record, not as evidence for the current turn.
+  const catalogBrief = memoryBrief(request.memory ?? []);
   const messages: Record<string, unknown>[] = [
     {
       role: 'system',
       content: `${researchMode === 'site_reviews'
         ? siteReviewsPrompt(reviewSite, request.answerStyle ?? 'standard', answerChoice === 'auto' && !screenTemplate ? 'en' : answerLanguage)
-        : agentPrompt(request.answerStyle ?? 'short', answerChoice === 'auto' && !screenTemplate ? 'en' : answerLanguage)}${preferenceBrief}\n\n${languageInstruction}${sourceLanguage === 'any' ? '' : `\nUse only ${sourceLanguage === 'tr' ? 'Turkish' : 'English'}-language sources. Write search terms in that language; preserve model codes. If evidence in that language is unavailable, say so instead of silently switching languages.`}\n\nToday is ${new Date().toISOString().slice(0, 10)}.`,
+        : agentPrompt(request.answerStyle ?? 'short', answerChoice === 'auto' && !screenTemplate ? 'en' : answerLanguage)}${preferenceBrief}\n\n${languageInstruction}${sourceLanguage === 'any' ? '' : `\nUse only ${languageName(sourceLanguage)}-language sources. Write search terms in that language; preserve model codes. If evidence in that language is unavailable, say so instead of silently switching languages.`}${catalogBrief ? `\n\n${catalogBrief}` : ''}\n\nToday is ${new Date().toISOString().slice(0, 10)}.`,
     },
     ...conversation(request.history),
     { role: 'user', content: turnBrief(request.question, request.reading, researchMode, reviewSite, reviewUrl) },

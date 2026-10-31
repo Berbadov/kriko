@@ -1,4 +1,5 @@
 import { router } from 'expo-router';
+import { useMemo } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
 
 import { Divider, HeaderAction, Hero, Page } from '../components/Chrome';
@@ -6,6 +7,7 @@ import { ActivityDots, MotionPressable, MotionView } from '../components/Motion'
 import { BackIcon, ClockIcon, PlusIcon, TrashIcon } from '../components/Icon';
 import { Button, Chip, SectionLabel } from '../components/Primitives';
 import { plainPreview } from '../engine/preview';
+import { buildCatalog } from '../engine/memory';
 import { useStore } from '../engine/store';
 import type { QueueJob } from '../engine/types';
 import { tr } from '../i18n';
@@ -35,6 +37,7 @@ export default function History() {
   const styles = useStyles();
   const scanThreadIds = new Set(queueJobs.flatMap((job) => job.threadId ? [job.threadId] : []));
   const conversations = threads.filter((thread) => !scanThreadIds.has(thread.id));
+  const catalog = useMemo(() => buildCatalog(threads, queueJobs), [threads, queueJobs]);
 
   const start = () => { newChat(); router.replace('/'); };
   const open = (id: string) => { openThread(id); router.replace('/'); };
@@ -54,6 +57,42 @@ export default function History() {
         <MotionView delay={0} style={styles.start}>
           <Button label="New conversation" icon={<PlusIcon size={17} color={color.onAccent} />} onPress={start} />
         </MotionView>
+
+        {catalog.length ? (
+          <MotionView delay={40} style={styles.section}>
+            <View style={styles.sectionHead}>
+              <SectionLabel>Products Kriko remembers</SectionLabel>
+              <Txt variant="monoSm" tone="ink3" caps>{catalog.length}</Txt>
+            </View>
+            {catalog.map((entry, index) => {
+              const active = Boolean(entry.threadId) && entry.threadId === activeThread?.id;
+              return (
+                <MotionView key={entry.key} delay={60 + Math.min(index, 4) * 35} style={styles.rowWrap}>
+                  <MotionPressable
+                    onPress={() => entry.threadId && open(entry.threadId)}
+                    disabled={!entry.threadId}
+                    accessibilityRole={entry.threadId ? 'button' : undefined}
+                    accessibilityLabel={entry.threadId ? `Open the chat about ${entry.title}` : undefined}
+                    style={styles.row}
+                  >
+                    <View style={styles.rowText}>
+                      <View style={styles.titleLine}>
+                        <Txt variant="rowTitle" tone="ink" numberOfLines={1} style={styles.title}>{entry.title}</Txt>
+                        {active ? <Chip label="Open" tone="accent" size="sm" /> : null}
+                      </View>
+                      {entry.question ? <Txt variant="bodyTight" tone="ink3" numberOfLines={2}>{plainPreview(entry.question)}</Txt> : null}
+                      <View style={styles.meta}>
+                        <ClockIcon size={13} color={color.ink3} />
+                        <Txt variant="monoSm" tone="ink3">{ago(entry.updatedAt)}</Txt>
+                      </View>
+                    </View>
+                  </MotionPressable>
+                  {index < catalog.length - 1 ? <Divider inset={0} /> : null}
+                </MotionView>
+              );
+            })}
+          </MotionView>
+        ) : null}
 
         {!conversations.length && !queueJobs.length ? (
           <MotionView delay={60} style={styles.empty}>
