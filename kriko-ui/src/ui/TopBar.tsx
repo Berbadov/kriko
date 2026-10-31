@@ -6,6 +6,7 @@ import { usePrefs } from '../prefs'
 import { useQueue } from '../queue'
 import { showDrawer } from './drawerEvents'
 import { Icon, type IconName } from './Icon'
+import { Orb } from './Orb'
 import { PixelGlyph } from './PixelGlyph'
 import { RailChats } from './RailChats'
 import { UsagePill } from './UsagePill'
@@ -84,6 +85,7 @@ export function TopBar({
           /
         </span>
         <button className="topbar-agent" onClick={() => showDrawer('agents')} title="The agent that does the research. Open to change it." data-tour="agent-pill">
+          <Orb busy={busy} />
           <span className="topbar-agent-name">{agent}</span>
           <Icon name="chevron" size={14} />
         </button>

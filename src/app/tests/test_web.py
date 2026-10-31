@@ -171,6 +171,89 @@ def test_health_reports_which_store_it_is_looking_at(client):
     assert body["store"].endswith("store.sqlite")
 
 
+def test_health_serves_the_work_answers_from_the_probe_snapshot(client):
+    """`store_readable` and `jobs` come from the background probe, not inline.
+
+    The shell's watchdog polls this endpoint while the app is busy, and a
+    health check that waits on the store lock or the runner's lock reads as
+    "stopped answering" to a process that is fine. The endpoint must answer
+    from the last finished probe round, so these keys are always present and
+    shaped the way the probe computes them.
+    """
+    body = client.get("/api/health").json()
+    assert body["store_readable"] is True
+    assert set(body["jobs"]) == {"running", "queued", "concurrency", "agent_slots"}
+
+
+def test_health_answers_while_the_store_is_locked(tmp_path):
+    """A locked store must not hold the health answer.
+
+    Reproduces the wedged-watchdog report: another process holds the engine
+    store (an orphaned sidecar, the MCP server) and the sync probe's SQLite
+    read blocks on the 5 s busy timeout. With the answer served from the
+    probe snapshot the endpoint still returns immediately, carrying the last
+    finished round.
+    """
+    import time
+
+    store_path = tmp_path / "locked.sqlite"
+    conn = connect(store_path)
+    conn.execute("BEGIN EXCLUSIVE")
+    conn.execute("CREATE TABLE IF NOT EXISTS hold (x)")
+    # An exclusive transaction held open blocks every other connection's
+    # read past its busy timeout; commit nothing until the end.
+    app = create_app(
+        Settings(
+            store_path=store_path,
+            analysis_log_path=tmp_path / "analyses.jsonl",
+            app_state_path=tmp_path / "app.sqlite",
+        )
+    )
+    probe = app.state.health_probe
+    try:
+        with TestClient(app) as tc:
+            started = time.monotonic()
+            body = tc.get("/api/health").json()
+            elapsed = time.monotonic() - started
+        assert body["ok"] is True
+        # The inline probe would block for the store's 5 s busy timeout; the
+        # snapshot answer is immediate (the generous bound leaves room for a
+        # slow CI machine, not for a SQLite wait).
+        assert elapsed < 2.0, f"/api/health took {elapsed:.2f}s with the store locked"
+        assert "store_readable" in body and "jobs" in body
+    finally:
+        conn.rollback()
+        conn.close()
+        probe.stop()
+
+
+def test_the_probe_keeps_the_previous_answer_when_a_round_times_out(tmp_path):
+    """A probe round that outlives its budget reports staleness, not a default."""
+    import threading
+
+    from app.web import app as web_app
+
+    store_path = tmp_path / "store.sqlite"
+    connect(store_path).close()
+
+    class WedgedRunner:
+        def concurrency(self):
+            threading.Event().wait(30)  # never answers inside the budget
+            return {"running": 0, "queued": 0, "concurrency": 0, "agent_slots": 0}
+
+    probe = web_app.HealthProbe(store_path, WedgedRunner())
+    try:
+        first = probe.snapshot()
+        assert first["store_readable"] is True
+        # Force a refresh whose jobs probe wedges; the store half still
+        # finishes, the jobs half keeps the previous value.
+        store_readable, jobs = probe._refresh()
+        assert store_readable is True
+        assert jobs == first["jobs"], "a wedged probe must keep the last answer"
+    finally:
+        probe.stop()
+
+
 # ── packs ────────────────────────────────────────────────────────────────
 
 
@@ -261,15 +344,19 @@ def test_a_limit_outside_its_bound_is_refused_or_clamped(client):
     clamp in the handler."""
     assert client.post("/api/lookup", json={"limit": -1}).status_code == 422
     assert client.post("/api/lookup", json={"limit": 5000}).status_code == 422
-    assert client.post(
-        "/api/analyze", json={"url": "https://a.test/x", "limit": -1}
-    ).status_code == 422
-    assert client.get(
-        "/api/packs/tools/gaps", params={"limit": -1}
-    ).json() == client.get("/api/packs/tools/gaps", params={"limit": 1}).json()
-    assert client.get(
-        "/api/health/weakest", params={"limit": -1}
-    ).json()["claims"] == []
+    assert (
+        client.post(
+            "/api/analyze", json={"url": "https://a.test/x", "limit": -1}
+        ).status_code
+        == 422
+    )
+    assert (
+        client.get("/api/packs/tools/gaps", params={"limit": -1}).json()
+        == client.get("/api/packs/tools/gaps", params={"limit": 1}).json()
+    )
+    assert (
+        client.get("/api/health/weakest", params={"limit": -1}).json()["claims"] == []
+    )
 
 
 # ── browsing ─────────────────────────────────────────────────────────────
@@ -436,7 +523,9 @@ def test_a_label_no_rule_covers_is_reported_rather_than_silently_dropped(client)
     assert r.json()["unmapped_labels"] == ["Torque"]
 
 
-def test_a_failure_to_record_a_label_never_costs_the_reader_the_answer(client, monkeypatch):
+def test_a_failure_to_record_a_label_never_costs_the_reader_the_answer(
+    client, monkeypatch
+):
     """The instrument must not break the experiment.
 
     Every caller of `record_unmapped` is on the path of a reader waiting for
@@ -569,8 +658,14 @@ def test_the_weakest_endpoint_lists_claims_worst_first(client):
 
 def test_the_weakest_endpoint_reports_each_signal_separately(client):
     claim = client.get("/api/health/weakest").json()["claims"][0]
-    for field in ("refuted_by", "independent_sources", "best_tier",
-                  "best_trust", "oldest_retrieved_at", "newest_published_at"):
+    for field in (
+        "refuted_by",
+        "independent_sources",
+        "best_tier",
+        "best_trust",
+        "oldest_retrieved_at",
+        "newest_published_at",
+    ):
         assert field in claim
 
 
@@ -625,7 +720,7 @@ def test_the_mcp_tool_and_the_dashboard_agree_on_one_store(client, monkeypatch):
 
 
 def test_health_names_every_version_a_reader_might_be_asked_for(client):
-    """"What am I running" has three answers, and they move on different clocks.
+    """ "What am I running" has three answers, and they move on different clocks.
 
     The app binary, the store's schema, and each pack's own semver are
     deliberately independent — packs update weekly through the engine, the
@@ -720,7 +815,9 @@ def test_the_skill_says_what_this_installation_considers_worth_keeping(client):
     # B178: the bar is the pack's and reaches the agent per subject, through
     # `research_brief`; the skill stays the same size whatever a pack says.
     assert "Only the expensive." not in body
-    brief = _brief(client, ids.subject_id("product", {"brand": "makita", "model": "DHP484"}))
+    brief = _brief(
+        client, ids.subject_id("product", {"brand": "makita", "model": "DHP484"})
+    )
     assert "Only the expensive." in brief
 
 
@@ -752,12 +849,16 @@ def test_the_frontmatter_description_is_one_line(client):
     """A harness matches a skill by reading this line. A wrapped description
     is not a description — it is a parse error the reader never sees."""
     body = client.get("/api/agent-skill").json()["body"]
-    description = re.search(r"^description: (.+)$", body, re.M).group(1)
+    found = re.search(r"^description: (.+)$", body, re.M)
+    assert found is not None, "the skill body has no description line"
+    description = found.group(1)
     assert "\n" not in description
     assert len(description) > 40
 
 
-def test_the_brief_states_the_pack_keys_and_words_rather_than_letting_an_agent_guess(client):
+def test_the_brief_states_the_pack_keys_and_words_rather_than_letting_an_agent_guess(
+    client,
+):
     """An agent that has to guess an identity key invents a plausible one.
 
     B178 moved these from the skill, where they made its length depend on the
@@ -765,7 +866,9 @@ def test_the_brief_states_the_pack_keys_and_words_rather_than_letting_an_agent_g
     rows and the domain words off the pack's vocabulary, so a second category
     gets its own set with no edit here.
     """
-    brief = _brief(client, ids.subject_id("product", {"brand": "makita", "model": "DHP484"}))
+    brief = _brief(
+        client, ids.subject_id("product", {"brand": "makita", "model": "DHP484"})
+    )
     assert "brand=makita" in brief and "model=DHP484" in brief
     # The domain vocabulary is the other invented-value risk: a claim filed
     # under a domain the pack never declared is unfindable.
@@ -841,18 +944,23 @@ def test_a_store_with_no_packs_gets_the_authoring_skill(tmp_path):
     assert "## The five steps" not in body
 
 
-def test_connecting_installs_the_skill_next_to_the_config(client, tmp_path, monkeypatch):
+def test_connecting_installs_the_skill_next_to_the_config(
+    client, tmp_path, monkeypatch
+):
     from app import agentconfig
 
     monkeypatch.setattr(agentconfig, "_home", lambda: tmp_path / "home")
     written = client.post("/api/agent-targets/claude-code/connect").json()["skill"]
 
     assert written.endswith("SKILL.md")
-    assert "## The five steps" in (tmp_path / "home" / ".claude/skills"
-                                     / "kriko-research" / "SKILL.md").read_text(encoding="utf-8")
+    assert "## The five steps" in (
+        tmp_path / "home" / ".claude/skills" / "kriko-research" / "SKILL.md"
+    ).read_text(encoding="utf-8")
 
 
-def test_a_harness_with_nowhere_to_put_a_skill_still_connects(client, tmp_path, monkeypatch):
+def test_a_harness_with_nowhere_to_put_a_skill_still_connects(
+    client, tmp_path, monkeypatch
+):
     from app import agentconfig
 
     monkeypatch.setattr(agentconfig, "_home", lambda: tmp_path / "home")
@@ -860,4 +968,3 @@ def test_a_harness_with_nowhere_to_put_a_skill_still_connects(client, tmp_path, 
 
     assert row["state"] == "connected"
     assert row["skill"] is None
-
