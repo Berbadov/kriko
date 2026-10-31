@@ -301,6 +301,15 @@ jobs:
                       --base-url "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}" \
                       --out release/packs.json release/*.kpack
                   cat release/packs.json
+            # One attachment a person can download, and one folder to hand to
+            # somebody offline. The per-pack files stay, because they are what
+            # `packs.json` names and what the app's weekly pass fetches one at a
+            # time; the archive is a sibling of them, never a replacement.
+            - name: Bundle the catalogs as one folder
+              run: |
+                  VERSION=$(python -c "import tomllib;print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
+                  python packaging/make_packs_bundle.py \
+                      --out "release/packs-$VERSION.zip" release/packs.json release/*.kpack
             - uses: actions/upload-artifact@v4
               with:
                   name: kriko-packs
@@ -351,6 +360,7 @@ jobs:
                   cp artifacts/kriko-windows/engine.json release/
                   cp artifacts/kriko-windows/SHA256SUMS.txt release/
                   cp artifacts/kriko-packs/packs.json release/
+                  cp "artifacts/kriko-packs/packs-$VERSION.zip" release/
                   find artifacts/kriko-packs -maxdepth 1 -type f -name '*.kpack' -exec cp {} release/ \;
 
                   test -s "release/kriko-$VERSION-x86_64-setup.exe"
@@ -358,6 +368,7 @@ jobs:
                   test -s "release/kriko-engine-$VERSION-win64.zip"
                   test -s release/engine.json
                   test -s release/packs.json
+                  test -s "release/packs-$VERSION.zip"
                   test -n "$(find release -maxdepth 1 -type f -name '*.kpack' -print -quit)"
                   (
                       cd release
@@ -367,6 +378,7 @@ jobs:
                   import json
                   import pathlib
                   import sys
+                  import zipfile
 
                   version, repository, tag = sys.argv[1:]
                   release = pathlib.Path("release")
@@ -380,7 +392,18 @@ jobs:
                   for row in rows:
                       if not row.get("url", "").startswith(base):
                           raise SystemExit(f"pack URL is not pinned to {tag}: {row.get('url')}")
-                  print(f"Verified {len(packs)} packs for Kriko {version} ({tag})")
+                  bundle = release / f"packs-{version}.zip"
+                  with zipfile.ZipFile(bundle) as archive:
+                      inside = sorted(
+                          name.rsplit("/", 1)[-1]
+                          for name in archive.namelist()
+                          if name.startswith("packs/")
+                      )
+                      if inside != packs or "packs.json" not in archive.namelist():
+                          raise SystemExit(
+                              "packs-<version>.zip does not hold exactly the collected catalogs"
+                          )
+                  print(f"Verified {len(packs)} packs and their bundle for Kriko {version} ({tag})")
                   PY
                   # This aggregate supplements (and must not replace) the
                   # root SHA256SUMS.txt used by the Windows installer updater.
