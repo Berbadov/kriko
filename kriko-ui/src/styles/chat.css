@@ -47,6 +47,12 @@
   justify-content: center;
 }
 
+.hello .orb {
+  display: block;
+  margin: 0 auto 26px;
+  filter: drop-shadow(0 0 22px color-mix(in srgb, var(--accent-hi) 55%, transparent));
+}
+
 .hello h1 {
   margin: 0 0 26px;
   color: #fff;
