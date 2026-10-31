@@ -47,10 +47,8 @@
   justify-content: center;
 }
 
-.hello .orb {
+.hello .dither-mark {
   display: block;
-  margin: 0 auto 26px;
-  filter: drop-shadow(0 0 22px color-mix(in srgb, var(--accent-hi) 55%, transparent));
 }
 
 .hello h1 {
@@ -590,13 +588,15 @@
   place-items: center;
   border-radius: var(--r-m);
   color: var(--tone);
-  background: radial-gradient(90% 90% at 50% 0%, color-mix(in srgb, var(--tone) 16%, transparent), transparent 80%), var(--inset);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tone) 24%, var(--edge));
+  background: radial-gradient(90% 90% at 50% 0%, color-mix(in srgb, var(--tone) 10%, transparent), transparent 80%), var(--inset);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tone) 22%, var(--edge));
+  transition: box-shadow calc(180ms * var(--tm)) var(--ease-out);
 }
 
 .agent-logo {
   display: grid;
   place-items: center;
+  transition: opacity calc(180ms * var(--tm)), filter calc(180ms * var(--tm));
 }
 
 .agent-logo svg {
@@ -604,93 +604,136 @@
   height: 100%;
 }
 
-/* A ring that runs round the tile while the agent works. */
-.agent-mark::before {
-  content: '';
+/* The tile's edge carries the state: a hairline at rest, one thin arc while the
+   agent works, an underbar while it waits, a seal when the answer lands. */
+.agent-edge {
   position: absolute;
-  inset: -1px;
-  border-radius: inherit;
-  background: conic-gradient(from var(--agent-a), transparent 0 62%, var(--accent-hi) 94%, transparent 100%);
-  -webkit-mask: linear-gradient(black 0 0) content-box, linear-gradient(black 0 0);
-  -webkit-mask-composite: xor;
-  mask: linear-gradient(black 0 0) content-box exclude, linear-gradient(black 0 0);
-  padding: 1.5px;
-  opacity: 0;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
   pointer-events: none;
 }
 
-.agent-mark[data-state='working']::before {
+.agent-track,
+.agent-arc,
+.agent-rest,
+.agent-seal {
+  fill: none;
+  stroke-linecap: round;
+}
+
+.agent-track {
+  stroke: color-mix(in srgb, var(--tone) 16%, transparent);
+  stroke-width: 1.6;
+}
+
+.agent-arc {
+  stroke: var(--accent-hi);
+  stroke-width: 2.2;
+  stroke-dasharray: 17 83;
+  opacity: 0;
+}
+
+.agent-rest {
+  stroke: color-mix(in srgb, var(--tone) 50%, transparent);
+  stroke-width: 2.4;
+  opacity: 0.55;
+}
+
+.agent-seal {
+  stroke: var(--mint);
+  stroke-width: 2.6;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  opacity: 0;
+}
+
+/* Working: the arc travels the edge once a second. One thing moves at a time,
+   and it is the state — the logo no longer breathes with it. */
+.agent-mark[data-state='working'] .agent-track { opacity: 0.5; }
+.agent-mark[data-state='working'] .agent-rest { opacity: 0; }
+.agent-mark[data-state='working'] .agent-arc {
   opacity: 1;
-  animation: agent-orbit calc(1.6s * var(--tm)) linear infinite;
+  animation: agent-sweep calc(1.15s * var(--tm)) linear infinite;
 }
 
-.agent-mark[data-state='working'] .agent-logo {
-  animation: agent-breathe calc(1.8s * var(--tm)) ease-in-out infinite;
-}
-
-.agent-mark[data-state='waiting'] .agent-logo {
-  animation: agent-breathe calc(2.6s * var(--tm)) ease-in-out infinite;
-  opacity: 0.6;
-}
+/* Waiting for the reader: the ring rises and falls, the logo stays legible. */
+.agent-mark[data-state='waiting'] .agent-track { opacity: 0.8; }
+.agent-mark[data-state='waiting'] .agent-rest { animation: agent-wait calc(2.4s * var(--tm)) var(--ease-io) infinite; }
+.agent-mark[data-state='waiting'] .agent-logo { opacity: 0.75; }
 
 .agent-mark[data-state='paused'] {
-  box-shadow: inset 0 0 0 1.5px var(--warn);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--warn) 45%, var(--edge));
 }
+.agent-mark[data-state='paused'] .agent-track { stroke: color-mix(in srgb, var(--warn) 25%, transparent); }
+.agent-mark[data-state='paused'] .agent-rest { stroke: var(--warn); opacity: 0.9; }
+.agent-mark[data-state='paused'] .agent-logo { filter: grayscale(1); opacity: 0.6; }
 
-.agent-mark[data-state='paused'] .agent-logo {
-  filter: grayscale(1);
-  opacity: 0.7;
-}
-
-.agent-mark[data-state='done'] {
-  animation: agent-done calc(0.9s * var(--tm)) var(--ease-out) 1;
+/* Done: the edge flashes mint once and the seal draws through the middle, then
+   both hold, so a finished answer keeps its seal while the thread scrolls. */
+.agent-mark[data-state='done'] { animation: agent-seal-flash calc(0.8s * var(--tm)) var(--ease-out) 1; }
+.agent-mark[data-state='done'] .agent-track { stroke: color-mix(in srgb, var(--mint) 35%, transparent); }
+.agent-mark[data-state='done'] .agent-rest { opacity: 0; }
+.agent-mark[data-state='done'] .agent-logo { opacity: 0.45; }
+.agent-mark[data-state='done'] .agent-seal {
+  opacity: 1;
+  animation: agent-seal calc(0.5s * var(--tm)) var(--ease-out) 0.08s forwards;
 }
 
 .agent-mark[data-state='failed'] {
-  box-shadow: inset 0 0 0 1.5px var(--risk);
-  animation: agent-shake calc(0.5s * var(--tm)) var(--ease-out) 1;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--risk) 45%, var(--edge));
+  animation: agent-shake calc(0.45s * var(--tm)) var(--ease-out) 1;
+}
+.agent-mark[data-state='failed'] .agent-track { stroke: color-mix(in srgb, var(--risk) 22%, transparent); }
+.agent-mark[data-state='failed'] .agent-rest { stroke: var(--risk); opacity: 0.85; }
+.agent-mark[data-state='failed'] .agent-logo { opacity: 0.72; }
+
+@keyframes agent-sweep {
+  to { stroke-dashoffset: -100; }
 }
 
-/* The angle is animated, not the tile, so the ring turns round a tile that stays put. */
-@property --agent-a {
-  syntax: '<angle>';
-  inherits: false;
-  initial-value: 0deg;
+@keyframes agent-wait {
+  0%, 100% { opacity: 0.2; }
+  50% { opacity: 0.85; }
 }
 
-@keyframes agent-orbit {
-  to {
-    --agent-a: 360deg;
-  }
+@keyframes agent-seal {
+  to { stroke-dashoffset: 0; }
 }
 
-@keyframes agent-breathe {
-  50% {
-    transform: scale(1.07);
-    opacity: 0.82;
-  }
-}
-
-@keyframes agent-done {
-  0% {
-    box-shadow: inset 0 0 0 1.5px var(--mint), 0 0 0 0 color-mix(in srgb, var(--mint) 60%, transparent);
-  }
-  100% {
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tone) 24%, var(--edge)), 0 0 0 9px transparent;
-  }
+@keyframes agent-seal-flash {
+  0% { box-shadow: inset 0 0 0 1.5px var(--mint), 0 0 0 0 color-mix(in srgb, var(--mint) 55%, transparent); }
+  100% { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--mint) 35%, var(--edge)), 0 0 0 7px transparent; }
 }
 
 @keyframes agent-shake {
-  20%,
-  60% {
-    transform: translateX(calc(-2px * var(--dm)));
-  }
-  40%,
-  80% {
-    transform: translateX(calc(2px * var(--dm)));
-  }
+  20%, 60% { transform: translateX(calc(-2px * var(--dm))); }
+  40%, 80% { transform: translateX(calc(2px * var(--dm))); }
 }
 
+/* The empty chat's one ornament: Kriko's mark printed as a dot field, in the
+   same print texture as the sky. It prints once and holds still. */
+.dither-mark {
+  display: block;
+  margin: 0 auto 28px;
+  color: rgba(255, 255, 255, 0.96);
+  background-image: radial-gradient(circle at 1px 1px, currentColor 0.85px, transparent 1.1px);
+  background-size: 2px 2px;
+  -webkit-mask-image: var(--mark);
+  mask-image: var(--mark);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  filter: drop-shadow(0 2px 16px rgba(10, 16, 44, 0.3));
+  animation: mark-print calc(0.7s * var(--tm)) steps(8, end) both;
+}
+
+@keyframes mark-print {
+  from { clip-path: inset(0 0 100% 0); }
+  to { clip-path: inset(0 0 0 0); }
+}
 .answer-head {
   display: flex;
   align-items: center;
