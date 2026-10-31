@@ -185,12 +185,20 @@ internal class SwipeSheet(context: Context) : LinearLayout(context) {
   private var downY = 0f
   private var armed = false
   private var dragging = false
+  private var multiTouchRejected = false
   private var tracker: android.view.VelocityTracker? = null
   private val at = IntArray(2)
 
   override fun onInterceptTouchEvent(event: MotionEvent): Boolean {
     when (event.actionMasked) {
       MotionEvent.ACTION_DOWN -> {
+        if (event.pointerCount != 1) {
+          armed = false
+          multiTouchRejected = true
+          release()
+          return false
+        }
+        multiTouchRejected = false
         downX = event.rawX
         downY = event.rawY
         dragging = false
@@ -199,10 +207,42 @@ internal class SwipeSheet(context: Context) : LinearLayout(context) {
         tracker = android.view.VelocityTracker.obtain().also { it.addMovement(event) }
       }
       MotionEvent.ACTION_MOVE -> {
+        if (event.pointerCount != 1) {
+          dragging = false
+          armed = false
+          multiTouchRejected = true
+          translationY = 0f
+          alpha = 1f
+          release()
+          return false
+        }
         tracker?.addMovement(event)
+        // If this gesture began inside the scroll body, let the body scroll until
+        // it reaches its end. A continuing upward finger can then take the sheet
+        // with it instead of requiring the reader to lift and swipe a second time.
+        if (!armed && !multiTouchRejected && isAtScrollEndUnder(event)) {
+          armed = true
+          // The body may have scrolled hundreds of dp during this same gesture.
+          // Start the sheet drag at the boundary, not at the finger's original
+          // down point, so the sheet begins smoothly on the next move.
+          downX = event.rawX
+          downY = event.rawY
+          translationY = 0f
+          alpha = 1f
+          tracker?.recycle()
+          tracker = android.view.VelocityTracker.obtain().also { it.addMovement(event) }
+        }
         if (beginSwipe(event)) return true
       }
       MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> release()
+      MotionEvent.ACTION_POINTER_DOWN -> {
+        dragging = false
+        armed = false
+        multiTouchRejected = true
+        translationY = 0f
+        alpha = 1f
+        release()
+      }
     }
     return false
   }
@@ -223,7 +263,16 @@ internal class SwipeSheet(context: Context) : LinearLayout(context) {
     // A touch that starts on a bare part of the sheet (the grabber, the header, the
     // padding) has no child to take it, so the intercept hook never sees its later
     // events: claim it here, or the swipe is lost after the first contact.
-    if (event.actionMasked == MotionEvent.ACTION_DOWN) return true
+    if (event.actionMasked == MotionEvent.ACTION_DOWN) return event.pointerCount == 1
+    if (event.actionMasked == MotionEvent.ACTION_POINTER_DOWN || event.pointerCount != 1) {
+      dragging = false
+      armed = false
+      multiTouchRejected = true
+      translationY = 0f
+      alpha = 1f
+      release()
+      return false
+    }
     tracker?.addMovement(event)
     if (!dragging) {
       if (event.actionMasked == MotionEvent.ACTION_MOVE) beginSwipe(event)
@@ -241,7 +290,8 @@ internal class SwipeSheet(context: Context) : LinearLayout(context) {
       MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
         tracker?.computeCurrentVelocity(1000)
         val velocity = tracker?.yVelocity ?: 0f
-        val fold = event.actionMasked == MotionEvent.ACTION_UP && (translationY < -dp(44) || velocity < -900f)
+        val fold = event.actionMasked == MotionEvent.ACTION_UP &&
+          (translationY < -dp(44) || velocity < -dp(900))
         dragging = false
         release()
         if (fold) {
@@ -266,6 +316,16 @@ internal class SwipeSheet(context: Context) : LinearLayout(context) {
     val y = event.rawY.toInt()
     if (x < at[0] || x > at[0] + scroller.width || y < at[1] || y > at[1] + scroller.height) return true
     return !scroller.canScrollVertically(1)
+  }
+
+  private fun isAtScrollEndUnder(event: MotionEvent): Boolean {
+    val scroller = body ?: return true
+    if (!scroller.isShown || scroller.canScrollVertically(1)) return false
+    scroller.getLocationOnScreen(at)
+    val x = event.rawX.toInt()
+    val y = event.rawY.toInt()
+    return x >= at[0] && x <= at[0] + scroller.width &&
+      y >= at[1] && y <= at[1] + scroller.height
   }
 
   private fun release() {
@@ -451,6 +511,43 @@ internal class SweepView(context: Context, private val bandColor: Int) : View(co
   }
 }
 
+/** Compact activity rhythm. It indicates work, never a fabricated percentage. */
+internal class ResearchPulseView(context: Context, color: Int) : View(context) {
+  private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = color }
+  private var phase = 0f
+  private var animator: ValueAnimator? = null
+
+  private fun syncMotion() {
+    animator?.cancel()
+    animator = null
+    if (!isAttachedToWindow || windowVisibility != View.VISIBLE || !isShown || !animationsEnabled()) return
+    animator = ValueAnimator.ofFloat(0f, 1f).apply {
+      duration = 1300L
+      repeatCount = ValueAnimator.INFINITE
+      interpolator = LinearInterpolator()
+      addUpdateListener { phase = it.animatedValue as Float; invalidate() }
+      start()
+    }
+  }
+  override fun onMeasure(w: Int, h: Int) { setMeasuredDimension(MeasureSpec.getSize(w), dp(32)) }
+  override fun onAttachedToWindow() { super.onAttachedToWindow(); syncMotion() }
+  override fun onWindowVisibilityChanged(visibility: Int) { super.onWindowVisibilityChanged(visibility); syncMotion() }
+  override fun onVisibilityChanged(changedView: View, visibility: Int) { super.onVisibilityChanged(changedView, visibility); syncMotion() }
+  override fun onDetachedFromWindow() { animator?.cancel(); animator = null; super.onDetachedFromWindow() }
+  override fun onDraw(canvas: Canvas) {
+    val top = (height - dpf(19f)) / 2f
+    paint.strokeWidth = dpf(1f)
+    for (i in 0..2) {
+      val x = dpf(((phase * 30f + i * 13f) % 54f) - 8f)
+      paint.alpha = (190f - i * 35f).roundToInt()
+      paint.style = Paint.Style.STROKE
+      canvas.drawRoundRect(x, top, x + dpf(13f), top + dpf(19f), dpf(3f), dpf(3f), paint)
+      canvas.drawLine(x + dpf(3f), top + dpf(6f), x + dpf(10f), top + dpf(6f), paint)
+      canvas.drawLine(x + dpf(3f), top + dpf(10f), x + dpf(8f), top + dpf(10f), paint)
+    }
+  }
+}
+
 /** Placeholder lines for an answer that has not started to arrive. */
 internal class SkeletonView(context: Context, private val track: Int, private val glint: Int) : View(context) {
   private val barPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = track }
@@ -522,10 +619,10 @@ internal class SkeletonView(context: Context, private val track: Int, private va
  */
 internal class ScanThumb(context: Context, private val ui: KrikoUi, private val fonts: KrikoFonts) : FrameLayout(context) {
   private val picture = ImageView(context).apply { scaleType = ImageView.ScaleType.CENTER_CROP }
-  private val sweep = SweepView(context, KrikoColor.tint(KrikoTheme.ON_ACCENT, 0.55f))
+  private val sweep = SweepView(context, KrikoColor.tint(ui.palette.onAccent, 0.55f))
   private val letter = TextView(context).apply {
     text = "K"
-    setTextColor(KrikoTheme.ON_ACCENT)
+    setTextColor(ui.palette.onAccent)
     textSize = 19f
     typeface = fonts.semiBold
     includeFontPadding = false
@@ -534,7 +631,7 @@ internal class ScanThumb(context: Context, private val ui: KrikoUi, private val 
 
   init {
     val p = ui.palette
-    background = KrikoDraw.shape(context, p.accent, 11, KrikoColor.tint(KrikoTheme.ON_ACCENT, 0.22f))
+    background = KrikoDraw.shape(context, p.accent, 11, KrikoColor.tint(p.onAccent, 0.22f))
     clipToOutline = true
     outlineProvider = KrikoDraw.roundOutline(context, 11)
     addView(letter, LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))

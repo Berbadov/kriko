@@ -1,5 +1,5 @@
 /**
- * The three palettes a phone can carry, chosen at runtime.
+ * The four palettes a phone can carry, chosen at runtime.
  *
  * Dark is the app's identity. Paper is the desktop's warm light theme. White is
  * a pure, cool light for readers who want maximum contrast and no cream cast.
@@ -92,6 +92,36 @@ export const paperColors = {
   shadow: '#3A3428',
 } as const satisfies Record<keyof typeof darkColors, string>;
 
+/** Neutral charcoal, with lifted gray panels and readable near-white text. */
+export const grayColors = {
+  ground: '#202226',
+  surface: '#2B2E33',
+  inset: '#25282D',
+  raise: '#34383E',
+  edge: 'rgba(255, 255, 255, 0.12)',
+  edgeSoft: 'rgba(255, 255, 255, 0.08)',
+  edgeStrong: 'rgba(255, 255, 255, 0.22)',
+  accent: '#7C9BFF',
+  accentDeep: '#5678E8',
+  accentDim: '#303B5B',
+  accentSoft: 'rgba(124, 155, 255, 0.18)',
+  accentWash: 'rgba(124, 155, 255, 0.10)',
+  accentHi: '#B3C4FF',
+  onAccent: '#101522',
+  ink: '#F4F5F7',
+  ink2: '#D0D3D8',
+  ink3: '#B2B7C0',
+  ink4: '#9BA1AB',
+  fill: '#B3C4FF',
+  ok: '#5BE0A4',
+  warn: '#FFD078',
+  risk: '#FF8995',
+  riskWash: 'rgba(255, 137, 149, 0.16)',
+  glass: 'rgba(43, 46, 51, 0.96)',
+  scrim: 'rgba(0, 0, 0, 0.68)',
+  shadow: '#111214',
+} as const satisfies Record<keyof typeof darkColors, string>;
+
 /** Pure white, for a brighter light theme with no warm cast. */
 export const whiteColors = {
   ground: '#F7F8FA',
@@ -130,11 +160,12 @@ export const whiteColors = {
 
 export type Colors = { [K in keyof typeof darkColors]: string };
 
-export const PALETTE_NAMES = ['dark', 'paper', 'white'] as const;
+export const PALETTE_NAMES = ['dark', 'gray', 'paper', 'white'] as const;
 export type PaletteName = (typeof PALETTE_NAMES)[number];
 
 export const palettes: Record<PaletteName, Colors> = {
   dark: darkColors,
+  gray: grayColors,
   paper: paperColors,
   white: whiteColors,
 };

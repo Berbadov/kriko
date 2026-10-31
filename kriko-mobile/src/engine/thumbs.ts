@@ -68,6 +68,13 @@ export async function keepThumbnail(uri: string): Promise<string | undefined> {
   }
 }
 
+/** Remove a thumbnail owned by this app without accepting arbitrary file paths. */
+export async function deleteThumbnail(uri: string | undefined): Promise<void> {
+  const folder = root();
+  if (!uri || !folder || !uri.startsWith(folder)) return;
+  await FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => {});
+}
+
 /**
  * Delete stored pictures that no chat or scan refers to. Run once per launch,
  * when nothing is in flight, so a picture being attached is never in the way.

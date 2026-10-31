@@ -9,7 +9,14 @@ const output = fs.mkdtempSync(path.join(os.tmpdir(), 'kriko-mobile-tests-'));
 try {
   const program = ts.createProgram({
     rootNames: [
+      path.join(__dirname, 'test-assistflow.ts'),
+      path.join(__dirname, 'test-voice.ts'),
+      path.join(__dirname, 'test-screen-audit.ts'),
       path.join(__dirname, 'test-adaptive-turn.ts'),
+      path.join(__dirname, 'test-provider-stream.ts'),
+      path.join(__dirname, 'test-overlay-runtime.ts'),
+      path.join(__dirname, 'test-research-language.ts'),
+      path.join(__dirname, 'test-cheap-routing.ts'),
       path.join(__dirname, 'test-screen.ts'),
       path.join(__dirname, 'test-queue.ts'),
       path.join(__dirname, 'test-history.ts'),
@@ -20,10 +27,12 @@ try {
       path.join(__dirname, 'test-preview.ts'),
       path.join(__dirname, 'test-thumbs.ts'),
       path.join(__dirname, 'test-vision.ts'),
+      path.join(__dirname, 'test-product-metadata.ts'),
       path.join(__dirname, 'test-i18n.ts'),
       path.join(__dirname, 'test-theme.ts'),
       path.join(__dirname, 'test-appupdate.ts'),
       path.join(__dirname, 'test-updatecore.ts'),
+      path.join(__dirname, 'test-price-tracking.ts'),
     ],
     options: {
       target: ts.ScriptTarget.ES2022,
@@ -40,7 +49,14 @@ try {
   if (emitted.emitSkipped) throw new Error('TypeScript could not emit the offline test files.');
 
   for (const file of [
+    'tools/test-assistflow.js',
+    'tools/test-voice.js',
+    'tools/test-screen-audit.js',
     'tools/test-adaptive-turn.js',
+    'tools/test-provider-stream.js',
+    'tools/test-overlay-runtime.js',
+    'tools/test-research-language.js',
+    'tools/test-cheap-routing.js',
     'tools/test-screen.js',
     'tools/test-queue.js',
     'tools/test-history.js',
@@ -51,10 +67,12 @@ try {
     'tools/test-preview.js',
     'tools/test-thumbs.js',
     'tools/test-vision.js',
+    'tools/test-product-metadata.js',
     'tools/test-i18n.js',
     'tools/test-theme.js',
     'tools/test-appupdate.js',
     'tools/test-updatecore.js',
+    'tools/test-price-tracking.js',
   ]) {
     const result = spawnSync(process.execPath, [path.join(output, file)], {
       cwd: root,

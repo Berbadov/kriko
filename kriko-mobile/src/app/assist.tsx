@@ -17,7 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ProductCard } from '../components/ProductCard';
 import { Button } from '../components/Primitives';
-import { SCREENSHOT_QUESTION } from '../engine/prompt';
+import { queueAssistantScan } from '../engine/assistflow';
 import { AccessError, useStore } from '../engine/store';
 import { discardFrame, keepThumbnail } from '../engine/thumbs';
 import { tr } from '../i18n';
@@ -29,7 +29,7 @@ type Params = { shot?: string; error?: string; mode?: string; site?: string };
 
 export default function Assist() {
   const params = useLocalSearchParams<Params>();
-  const { hydrated, access, newChat, readShot, send, enqueueScan } = useStore();
+  const { hydrated, access, readShot, enqueueScan } = useStore();
   const color = useColors();
   const styles = useStyles();
   const insets = useSafeAreaInsets();
@@ -37,11 +37,12 @@ export default function Assist() {
   // A failure belongs to the picture it happened to, so a second summoning with
   // a new picture starts without the last one's message.
   const [failed, setFailed] = useState<{ shot: string; message: string } | null>(null);
+  const [attempt, setAttempt] = useState(0);
   const handled = useRef('');
-  const store = useRef({ newChat, readShot, send, enqueueScan });
+  const store = useRef({ readShot, enqueueScan });
   useEffect(() => {
-    store.current = { newChat, readShot, send, enqueueScan };
-  }, [newChat, readShot, send, enqueueScan]);
+    store.current = { readShot, enqueueScan };
+  }, [readShot, enqueueScan]);
   const missing = hydrated && access.kind !== 'none' && !shot;
   const failure = missing
     ? tr('Kriko did not receive a screenshot. In your phone’s assistant settings, turn on “Use screenshot”.')
@@ -57,40 +58,44 @@ export default function Assist() {
     if (!shot || handled.current === shot) return undefined;
     handled.current = shot;
     const controller = new AbortController();
+    let queued = false;
     void (async () => {
       let base64 = '';
       try {
         base64 = await FileSystem.readAsStringAsync(shot, { encoding: 'base64' });
       } catch {
+        if (controller.signal.aborted) return;
         setFailed({ shot, message: tr('Kriko could not read the screenshot your phone sent. Try again.') });
         return;
       }
       try {
-        const reading = await store.current.readShot(base64, 'image/jpeg', controller.signal, shot);
-        const kept = await keepThumbnail(shot);
-        if (params.mode === 'site_reviews') {
-          store.current.enqueueScan(reading, kept, undefined, {
-            researchMode: 'site_reviews', reviewSite: typeof params.site === 'string' ? params.site : undefined,
-          });
-          router.replace('/queue' as Href);
-          return;
-        }
-        // Every open of the assistant starts clean: this scan is its own chat.
-        store.current.newChat();
-        router.replace('/' as Href);
-        await store.current.send(SCREENSHOT_QUESTION, { reading, imageUri: kept });
+        queued = await queueAssistantScan({
+          signal: controller.signal,
+          read: () => store.current.readShot(base64, 'image/jpeg', controller.signal, shot),
+          keep: () => keepThumbnail(shot),
+          enqueue: (reading, kept) => store.current.enqueueScan(reading, kept, undefined, {
+            researchMode: params.mode === 'site_reviews' ? 'site_reviews' : 'research',
+            reviewSite: typeof params.site === 'string' ? params.site : undefined,
+          }),
+        });
+        if (!queued) return;
+        router.replace('/queue' as Href);
       } catch (error) {
+        if (controller.signal.aborted) return;
         if (error instanceof AccessError) {
           router.replace('/' as Href);
           return;
         }
         setFailed({ shot, message: error instanceof Error ? error.message : 'The page could not be read.' });
       } finally {
-        await discardFrame(shot);
+        if (queued) await discardFrame(shot);
       }
     })();
-    return () => controller.abort();
-  }, [hydrated, access.kind, shot, params.mode, params.site]);
+    return () => {
+      controller.abort();
+      if (!queued && handled.current === shot) handled.current = '';
+    };
+  }, [hydrated, access.kind, shot, params.mode, params.site, attempt]);
 
   return (
     <View style={[styles.page, { paddingTop: insets.top + gap[6] }]}>
@@ -98,11 +103,18 @@ export default function Assist() {
       <View style={styles.text}>
         <Txt variant="rowTitle" tone="ink">{failure ? 'Kriko could not finish' : 'Reading your screen'}</Txt>
         <Txt variant="bodyTight" tone="ink3">
-          {failure || 'Kriko is checking the page you were on. The answer opens in a new chat.'}
+          {failure || 'Research continues in the scan queue and is saved in History.'}
         </Txt>
       </View>
       {failure ? (
-        <Button label="Back to chat" variant="ghost" onPress={() => router.replace('/' as Href)} />
+        <View style={styles.text}>
+          {shot ? <Button label="Try again" onPress={() => {
+            handled.current = '';
+            setFailed(null);
+            setAttempt((value) => value + 1);
+          }} /> : null}
+          <Button label="Back to chat" variant="ghost" onPress={() => router.replace('/' as Href)} />
+        </View>
       ) : (
         <ActivityIndicator color={color.ink3} />
       )}

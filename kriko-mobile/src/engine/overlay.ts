@@ -24,7 +24,7 @@ export type OverlaySession = { active: boolean; paused?: boolean };
 export type OverlayAction = { action: "select" | "cancel"; id: string };
 
 /** The resolved palette the native bubble and panel should draw in. */
-export type OverlayTheme = "dark" | "paper" | "white";
+export type OverlayTheme = "dark" | "gray" | "paper" | "white";
 
 /**
  * Every word the native bubble and panel draw, already translated.
@@ -84,6 +84,13 @@ export type OverlayLabels = {
   assistTitle: string;
   /** Toast when a phone-assistant scan is folded away while it is still being read. */
   assistKeeps: string;
+  showAllSources: string;
+  showFewerSources: string;
+  stalledResearch: string;
+  openToRetry: string;
+  writingAnswer: string;
+  reviewingSources: string;
+
 };
 
 /**
@@ -133,7 +140,7 @@ const native = NativeModules.KrikoOverlay as KrikoOverlayNative | undefined;
 const events = native ? new NativeEventEmitter(native as never) : null;
 
 if (events && !sessionRuntime.listener) {
-  sessionRuntime.listener = events.addListener("onSession", (payload) => {
+  sessionRuntime.listener = events.addListener("onRuntime", (payload) => {
     sessionRuntime.active = Boolean((payload as OverlaySession)?.active);
     if (!sessionRuntime.active) {
       const resolve = sessionRuntime.resolveTask;
@@ -144,7 +151,8 @@ if (events && !sessionRuntime.listener) {
 }
 
 if (Platform.OS === 'android' && !sessionRuntime.registered) {
-  AppRegistry.registerHeadlessTask("KrikoOverlaySession", () => async () => {
+  AppRegistry.registerHeadlessTask("KrikoOverlaySession", () => async (data?: { active?: boolean }) => {
+    if (data?.active) sessionRuntime.active = true;
     if (!sessionRuntime.active) return;
     await new Promise<void>((resolve) => {
       sessionRuntime.resolveTask = resolve;
@@ -165,8 +173,9 @@ export function overlayAvailable(): boolean {
 export function isOverlayActive(): Promise<boolean> {
   if (!overlayAvailable()) return Promise.resolve(false);
   return native!.isActive().then((active) => {
-    sessionRuntime.active = active;
-    if (active) native!.ensureHeadlessSession();
+    // A power-button task can be running with screen sharing off. This query
+    // describes only sharing; onRuntime owns the background-task lifecycle.
+    if (active) { sessionRuntime.active = true; native!.ensureHeadlessSession(); }
     return active;
   });
 }

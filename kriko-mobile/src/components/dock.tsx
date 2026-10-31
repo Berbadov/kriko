@@ -23,6 +23,9 @@ import { useReducedMotion } from './Motion';
 interface Dock {
   /** 1 while the bar is shown, 0 once it has left. Drives layout, so not native. */
   progress: Animated.Value;
+  composing: boolean;
+  beginCompose: () => void;
+  endCompose: () => void;
   /** One scroll event. `user` is false when the app itself moved the list. */
   report: (metrics: DockMetrics, user?: boolean) => void;
   /** Bring the bar back and forget where the last page was scrolled to. */
@@ -30,12 +33,15 @@ interface Dock {
 }
 
 const idle = new Animated.Value(1);
-const standalone: Dock = { progress: idle, report: () => undefined, show: () => undefined };
+const standalone: Dock = { progress: idle, composing: false, beginCompose: () => undefined, endCompose: () => undefined, report: () => undefined, show: () => undefined };
 const DockContext = createContext<Dock>(standalone);
 
 export function DockProvider({ children }: { children: ReactNode }) {
   const reduced = useReducedMotion();
   const [progress] = useState(() => new Animated.Value(1));
+  const [composing, setComposing] = useState(false);
+  const beginCompose = useCallback(() => setComposing(true), []);
+  const endCompose = useCallback(() => setComposing(false), []);
   const state = useRef(initialDock);
   const shown = useRef(true);
 
@@ -66,7 +72,7 @@ export function DockProvider({ children }: { children: ReactNode }) {
     apply(false);
   }, [apply]);
 
-  const value = useMemo(() => ({ progress, report, show }), [progress, report, show]);
+  const value = useMemo(() => ({ progress, report, show, composing, beginCompose, endCompose }), [progress, report, show, composing, beginCompose, endCompose]);
   return <DockContext.Provider value={value}>{children}</DockContext.Provider>;
 }
 
