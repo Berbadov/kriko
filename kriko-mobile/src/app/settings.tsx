@@ -1,17 +1,29 @@
 import Constants from 'expo-constants';
 import { router, type Href } from 'expo-router';
-import { useState } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Alert, AppState, StyleSheet, View } from 'react-native';
 
 import { AccessSheet } from '../components/AccessSheet';
 import { Divider, HeaderAction, Hero, Page } from '../components/Chrome';
 import { BackIcon, ChevronRightIcon, GlobeIcon, KeyIcon, ShieldIcon, SparkIcon, TrashIcon } from '../components/Icon';
 import { MotionPressable, MotionView } from '../components/Motion';
+import { PuckPreview } from '../components/PuckPreview';
+import { UpdateCard } from '../components/UpdateCard';
 import { Button, Chip, SectionLabel, Segmented, Toggle } from '../components/Primitives';
+import {
+  canDrawOverApps, isDefaultAssistant, openAssistantSettings, openDrawOverAppsSettings, overlayAvailable,
+} from '../engine/overlay';
 import { useStore } from '../engine/store';
+import { updateNeedsAttention } from '../engine/updatecore';
+import { updatesSupported, useAppUpdate } from '../engine/updater';
 import { tr } from '../i18n';
 import { tap } from '../theme/feedback';
-import type { Appearance, MotionPreference, TextSize } from '../theme/preferences';
+import {
+  nearestPuckOpacityStep,
+  type Appearance,
+  type MotionPreference,
+  type TextSize,
+} from '../theme/preferences';
 import { gap, PAGE_X } from '../theme/tokens';
 import { makeStyles, useColors } from '../theme/theme';
 import { Txt } from '../theme/Txt';
@@ -30,6 +42,8 @@ export default function Settings() {
     textSize,
     motion,
     haptics,
+    puckOpacity,
+    setPuckOpacity,
     setThoroughness,
     setAnswerStyle,
     setAppLanguage,
@@ -42,6 +56,10 @@ export default function Settings() {
   const color = useColors();
   const styles = useStyles();
   const [sheet, setSheet] = useState(false);
+  const attention = updateNeedsAttention(useAppUpdate());
+  const scanner = overlayAvailable();
+  const assistant = usePhoneSetting(scanner, isDefaultAssistant);
+  const overPage = usePhoneSetting(scanner, canDrawOverApps);
 
   const accessTitle =
     access.kind === 'trial' ? 'Free trial' : access.kind === 'shared' ? 'Shared access' :
@@ -101,6 +119,9 @@ export default function Settings() {
       />
 
       <View style={styles.body}>
+        {/* A new version, or a step it needs, comes first; otherwise it waits lower down. */}
+        {attention ? <UpdateSection /> : null}
+
         <MotionView key={`${access.kind}-${trialLeft}`} delay={0} style={styles.section}>
           <SectionLabel>Access</SectionLabel>
           <View style={styles.accessRow}>
@@ -158,6 +179,80 @@ export default function Settings() {
         </MotionView>
 
         <Divider />
+
+        {scanner ? (
+          <>
+            <MotionView delay={80} style={styles.section}>
+              <SectionLabel>Floating scanner</SectionLabel>
+              <View style={styles.puckRow}>
+                <PuckPreview opacity={puckOpacity} />
+                <View style={styles.puckText}>
+                  <Txt variant="rowTitle" tone="ink">Transparency</Txt>
+                  <Txt variant="bodyTight" tone="ink3">
+                    How see-through the floating K and its glass panels are. Faint shows the most of your page; Solid shows none.
+                  </Txt>
+                </View>
+              </View>
+              <Segmented<string>
+                value={String(nearestPuckOpacityStep(puckOpacity))}
+                onChange={(value) => setPuckOpacity(Number(value))}
+                options={[
+                  { value: '35', label: 'Faint' },
+                  { value: '55', label: 'Soft' },
+                  { value: '75', label: 'Strong' },
+                  { value: '100', label: 'Solid' },
+                ]}
+              />
+            </MotionView>
+
+            <Divider />
+
+            <MotionView delay={100} style={styles.section}>
+              <SectionLabel>Phone assistant</SectionLabel>
+              <View style={styles.accessRow}>
+                <View style={styles.keyMark}><SparkIcon size={19} color={color.accent} /></View>
+                <View style={styles.accessText}>
+                  <Txt variant="rowTitle" tone="ink">Scan with a long press</Txt>
+                  <Txt variant="bodyTight" tone="ink3">
+                    {assistant
+                      ? 'Kriko is your phone’s assistant. Hold the power or home button to scan the screen at once.'
+                      : 'Make Kriko your phone’s assistant, then hold the power or home button to scan the screen at once.'}
+                  </Txt>
+                </View>
+                <Chip label={assistant ? 'Active' : 'Not set'} tone={assistant ? 'ok' : 'neutral'} size="sm" />
+              </View>
+              <Button
+                label={assistant ? 'Assistant settings' : 'Set as assistant'}
+                variant={assistant ? 'ghost' : 'primary'}
+                onPress={() => { void openAssistantSettings(); }}
+              />
+              {assistant ? null : (
+                <Txt variant="bodyTight" tone="ink3">
+                  In the list, choose Kriko under Digital assistant app, and keep “Use screenshot” on.
+                </Txt>
+              )}
+              <View style={styles.accessRow}>
+                <View style={styles.keyMark}><GlobeIcon size={19} color={color.accent} /></View>
+                <View style={styles.accessText}>
+                  <Txt variant="rowTitle" tone="ink">Answer over your page</Txt>
+                  <Txt variant="bodyTight" tone="ink3">
+                    {overPage
+                      ? 'The answer opens over the page you scanned, so you never leave it.'
+                      : 'Allow Kriko over other apps and the answer opens over the page you scanned, instead of taking you into Kriko.'}
+                  </Txt>
+                </View>
+                <Chip label={overPage ? 'Allowed' : 'Off'} tone={overPage ? 'ok' : 'neutral'} size="sm" />
+              </View>
+              <Button
+                label={overPage ? 'Over-other-apps settings' : 'Allow over other apps'}
+                variant={overPage ? 'ghost' : 'primary'}
+                onPress={() => { void openDrawOverAppsSettings(); }}
+              />
+            </MotionView>
+
+            <Divider />
+          </>
+        ) : null}
 
         <MotionView delay={110} style={styles.section}>
           <SectionLabel>Language</SectionLabel>
@@ -224,6 +319,8 @@ export default function Settings() {
 
         <Divider />
 
+        {attention ? null : <UpdateSection />}
+
         <MotionView delay={300} style={styles.section}>
           <SectionLabel>More</SectionLabel>
           <NavRow title="History" subtitle="Chats, scans, and the pages behind them." onPress={() => router.push('/history' as Href)} />
@@ -241,6 +338,39 @@ export default function Settings() {
       {sheet ? <AccessSheet visible onClose={() => setSheet(false)} /> : null}
     </Page>
   );
+}
+
+/** The in-app update, set apart by a rule; nothing at all in a build that cannot install one. */
+function UpdateSection() {
+  const styles = useStyles();
+  if (!updatesSupported()) return null;
+  return (
+    <>
+      <MotionView delay={0} style={styles.section}>
+        <SectionLabel>Updates</SectionLabel>
+        <UpdateCard />
+      </MotionView>
+      <Divider />
+    </>
+  );
+}
+
+/**
+ * Whether Kriko is the phone's chosen assistant. It is chosen on a system
+ * screen, so it is read again every time the reader comes back to the app.
+ */
+/** A phone setting the reader changes elsewhere; asked again whenever Kriko returns to the front. */
+function usePhoneSetting(enabled: boolean, read: () => Promise<boolean>): boolean {
+  const [value, setValue] = useState(false);
+  useEffect(() => {
+    if (!enabled) return undefined;
+    let alive = true;
+    const refresh = () => { void read().then((next) => { if (alive) setValue(next); }); };
+    refresh();
+    const subscription = AppState.addEventListener('change', (state) => { if (state === 'active') refresh(); });
+    return () => { alive = false; subscription.remove(); };
+  }, [enabled, read]);
+  return value;
 }
 
 function Setting({ label, description, children }: { label: string; description: string; children: React.ReactNode }) {
@@ -344,6 +474,8 @@ const useStyles = makeStyles((color) => StyleSheet.create({
   settingText: { gap: 2 },
   toggleRow: { flexDirection: 'row', alignItems: 'center', gap: gap[3], paddingVertical: gap[1] },
   toggleText: { flex: 1 },
+  puckRow: { flexDirection: 'row', alignItems: 'center', gap: gap[3] },
+  puckText: { flex: 1, gap: 3 },
   themeRow: { flexDirection: 'row', gap: 8 },
   themeOption: {
     flex: 1,
