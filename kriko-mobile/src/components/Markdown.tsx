@@ -7,8 +7,10 @@
  * the numbered source list sits under the answer.
  */
 
+import { useMemo } from 'react';
 import { Linking, StyleSheet, Text, View } from 'react-native';
 
+import { motion } from '../theme/motion';
 import { font, gap, radius } from '../theme/tokens';
 import { makeStyles } from '../theme/theme';
 import { Txt } from '../theme/Txt';
@@ -174,15 +176,22 @@ function Inline({ text }: { text: string }) {
   );
 }
 
-export function Markdown({ text }: { text: string }) {
+/**
+ * `streaming` is an answer still being drawn: each new block eases in at once
+ * and shallowly, instead of waiting its turn by position like a finished one.
+ */
+export function Markdown({ text, streaming = false }: { text: string; streaming?: boolean }) {
   const styles = useStyles();
-  const blocks = blocksOf(text);
+  const blocks = useMemo(() => blocksOf(text), [text]);
+  const reveal = (index: number) => streaming
+    ? { delay: 0, duration: motion.duration.standard, rise: 6 }
+    : { delay: Math.min(index * 55, 220) };
   return (
     <View style={styles.stack}>
       {blocks.map((block, index) => {
         if (block.kind === 'h') {
           return (
-            <MotionView key={index} delay={Math.min(index * 55, 220)} style={styles.block}>
+            <MotionView key={index} {...reveal(index)} style={styles.block}>
               <Txt variant="cardTitle" tone="ink" style={styles.heading}>
                 {block.text}
               </Txt>
@@ -191,7 +200,7 @@ export function Markdown({ text }: { text: string }) {
         }
         if (block.kind === 'quote') {
           return (
-            <MotionView key={index} delay={Math.min(index * 55, 220)} style={styles.block}>
+            <MotionView key={index} {...reveal(index)} style={styles.block}>
               <View style={styles.quote}>
                 <Txt variant="body" tone="ink2">
                   <Inline text={block.text} />
@@ -202,7 +211,7 @@ export function Markdown({ text }: { text: string }) {
         }
         if (block.kind === 'li') {
           return (
-            <MotionView key={index} delay={Math.min(index * 55, 220)} style={styles.block}>
+            <MotionView key={index} {...reveal(index)} style={styles.block}>
               <View style={styles.bullet}>
                 <Txt variant="body" tone="accent" style={styles.marker}>
                   {block.marker}
@@ -215,7 +224,7 @@ export function Markdown({ text }: { text: string }) {
           );
         }
         return (
-          <MotionView key={index} delay={Math.min(index * 55, 220)} style={styles.block}>
+          <MotionView key={index} {...reveal(index)} style={styles.block}>
             <Txt variant="body" tone="ink2" style={styles.paragraph}>
               <Inline text={block.text} />
             </Txt>

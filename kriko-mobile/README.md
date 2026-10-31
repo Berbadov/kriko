@@ -17,7 +17,9 @@ code.
 | **Watch it work** | Every search and every page read is shown while it happens. |
 | **Check the sources** | The numbered pages sit under the answer and have their own page. |
 | **Open a screen** | Ask to see your history or settings and the answer offers an Open button. Nothing navigates without your press. |
-| **Scan over the page** | Drag the blue K to place the floating scanner. Scan, open the queue, or stop sharing from its controls. |
+| **Scan over the page** | Tap the floating K, a small glass chip with the Kriko mark, to scan: a wave of pixels crosses your page while it reads, and the answer hangs over the page from the top. Press and hold it for Scan this page, Results and Stop sharing. Drag it onto the × that appears to stop sharing. Its transparency is a setting. |
+| **Scan with a long press** | Make Kriko your phone's digital assistant, then hold the power or home button: the same wave crosses your screen and the answer opens over the page you were on, without taking you into Kriko. |
+| **Read comfortably** | The bottom bar is a slim row that slides away while you read and returns when you scroll up. A rail at the bottom right scrolls a long answer without reaching for the top, and streaming text eases in word by word. |
 | **Queue products** | Follow live scan steps, formatted answers and clickable sources in the floating panel or app. |
 | **Recover scans** | Scan results appear in History; waiting jobs resume after reopening and interrupted jobs are marked for another scan. |
 | **Turkish or English** | The whole interface switches in Settings, in place. A coverage test keeps every screen string translated. |
@@ -74,6 +76,12 @@ can actually honour:
 - **Motion**: System, Reduced or Full. System follows Android's remove-animations
   setting.
 - **Haptics**: one switch for every tap, press and completion.
+- **Floating scanner**: how see-through the floating K and its glass panels are
+  (Faint, Soft, Strong, Solid). The setting holds in every state; a touch or a
+  scan lifts the K only a little, and Solid stays solid.
+- **Phone assistant**: whether Kriko is the phone's digital assistant, with a
+  button to the system screen where it is chosen, and whether Kriko may draw
+  over other apps, which is what lets the answer open over your page.
 - **Access**: trial count, access code, forget the shared keys.
 - **Conversations**: every chat, scan results, clear all, History and About pages.
 - **Privacy**: the exact list of what leaves the phone.
@@ -82,13 +90,50 @@ can actually honour:
 
 ## Floating scanner and product queue
 
-The Android build keeps a draggable Kriko bubble over a shopping page. Drag its
-blue **K** handle to move it. The bubble has **Scan**, **Queue** (with an active
-job count), and **Stop** controls. The app also shows a visible “Screen sharing
-is on” banner with its own **Stop** button. Start the scanner once and approve
-Android's screen-capture and display-over-other-apps prompts. Each tap on
-**Scan** captures one frame; the overlay briefly hides itself so it does not
-capture its own controls.
+The floating **K** is a small rounded chip of liquid glass carrying the Kriko
+mark, and it is translucent: the reader sets how much in Settings. One **tap**
+scans the page. While it reads, a wave of small squares leaves the K and crosses
+the page, ring after ring until the answer starts to arrive (the page underneath
+stays usable), and the K's rim turns with light.
+**Press and hold** the K and a ring fills; let go on the full ring and a glass
+menu opens with **Scan this page**, **Results** and **Stop sharing**. **Drag**
+the K to move it: an **×** appears at the bottom of the screen, and letting go
+of the K on it stops sharing.
+
+The scan result hangs from the top of the screen, under the status bar, as a
+glass sheet over a softened copy of the scanned page, with a picture of that
+page beside its title. The answer is set as a lead sentence, headings, bullets
+and numbered sources, with a Copy button. **One swipe up** from the header, the
+buttons or the sheet's edge folds it away to the K (or the **×** does); a swipe
+on the answer text scrolls the text first, and folds the sheet once the text is
+at its end. The answer stays under Results. The scanner
+ends only when the reader chooses Stop sharing: closing Kriko's screen does not
+end it, and when Android ends screen capture (it does when the phone locks) the
+K stays, turns grey, and the next scan asks for capture again over the reader's
+own page.
+
+### The phone assistant
+
+Kriko declares itself as a digital assistant, so it appears under Settings →
+Apps → Default apps → Digital assistant app (the path differs by phone).
+**Settings → Phone assistant → Set as assistant** opens that screen. Once chosen,
+holding the power or home button saves the screenshot Android hands over and, if
+**Allow over other apps** is on in the same Settings section, runs the whole
+scan over the page you were on: the pixel wave, then the answer sheet, with no
+trip into Kriko. A scan read this way is filed in History when it finishes. If
+the permission is off, or Kriko itself is in front, the screenshot opens Kriko
+on a **new chat** that reads it instead. Android sends the screenshot only when
+the assistant's **Use screenshot** switch is on; if it is off the card says so.
+Android keeps one assistant at a time: choosing another one hands the long press
+back to it.
+
+Screenshots of these screens are in `docs/screens/0.12/`.
+
+The Android build keeps a draggable Kriko chip over a shopping page. The app
+also shows a visible “Screen sharing is on” banner with its own **Stop** button.
+Start the scanner once and approve Android's screen-capture and
+display-over-other-apps prompts. Each scan captures one frame; the overlay
+briefly hides itself so it does not capture its own controls.
 
 The floating panel has **Now** and **Queue** tabs. Answers use readable
 headings, paragraphs, and bullets instead of raw Markdown, and citations and
@@ -128,6 +173,9 @@ Expo Go. Android's screen-capture indicator remains visible during capture.
   the question is optional.
 - There is no Kriko account, no Kriko server, no analytics. Chats live in the
   app's storage on this phone.
+- A look for updates asks GitHub's public list of this repository's releases
+  (`api.github.com`, no account, nothing about you or your chats), at most
+  twice a day. A download starts only when you press Update.
 
 The access code carries the owner's keys sealed with AES-256-GCM under a key
 derived by scrypt from the password **and a pepper baked into this build**. A
@@ -135,6 +183,41 @@ code and its password open nothing outside a Kriko build. Anybody who can run
 this app and inspect it can still recover the keys — that is what sharing them
 means, and the owner's real protection is rotation at the providers. The ten
 free questions are a courtesy kept on the phone, not a wall.
+
+## Updates from GitHub
+
+Settings, Updates (and a dot on the Settings tab, and a slim line on the home
+screen) tells you when a newer build is on GitHub, what changed, and how big it
+is. **Update now** downloads it, checks it, and hands it to Android's installer;
+Android asks once more, then Kriko restarts on the new version with everything
+still on the phone.
+
+- The first time, Android sends you to a page to allow Kriko to install apps.
+  Turn it on and come back; the update carries on by itself.
+- Three checks come before the installer sees the file: its size and SHA-256 as
+  GitHub states them, that it is `app.kriko.mobile`, and that it is signed with
+  the key already on the phone (`plugins/overlay/KrikoUpdater.kt`).
+  A build signed with another key could never replace this app, so that is said
+  in words instead of left to a failed install.
+- Phone builds have a tag family of their own, `mobile-v<version>`, each with
+  one `kriko-agent-<version>.apk`. The repository's *Latest* release is the
+  desktop installer and the site's download links read it, so a phone release
+  must never be Latest.
+  `tools/publish-apk.ps1 -Apk ..\release\kriko-agent-0.12.1.apk` checks the file,
+  writes its `.sha256`, and (with `-Publish`) creates the release with
+  `--latest=false` and verifies Latest is still the desktop one.
+- The very first build with this feature has to be installed by hand once; every
+  one after it can come from the app.
+- The signing key is the debug keystore (see Limits). Changing it later means
+  one uninstall, which erases the keys and chats on the phone, so that is a
+  decision to take before many people have the app, not after.
+
+The pure parts (which release counts as an update, the whole check-download-
+permission-install flow with every failure) are `src/engine/appupdate.ts` and
+`src/engine/updatecore.ts`, tested without a phone by `tools/test-appupdate.ts`
+and `tools/test-updatecore.ts`. Two build-time variables, `EXPO_PUBLIC_KRIKO_UPDATE_FEED`
+and `EXPO_PUBLIC_KRIKO_UPDATE_ASSETS`, point a test build at a local server;
+neither is set in a release build.
 
 ## Where the pieces are
 
@@ -172,7 +255,7 @@ as bullets before it is shown.
 ## Build it
 
 Requires Node 24, JDK 17, the Android SDK (platform 36+), and an Android signing
-configuration. The current app version is **0.10.0** (Android version code **10**).
+configuration. The current app version is **0.12.1** (Android version code **13**).
 This build uses the debug keystore, so the APK installs and
 updates locally but is not a Play Store artifact.
 
