@@ -113,6 +113,10 @@ for line in sys.stdin:
             send({"jsonrpc": "2.0", "id": msg["id"], "result": {"protocolVersion": 1,
                   "agentCapabilities": {"sessionCapabilities": {"close": {}}}}})
     elif method == "session/new":
+        if mode == "hang_session":
+            # Accept the initialize, then never answer: what a stuck ACP build
+            # does, and what used to spend the whole turn's budget.
+            continue
         count += 1
         sid = f"s-{os.getpid()}-{count}"
         memory[sid] = None
@@ -369,6 +373,21 @@ def test_release_idle_frees_workers_but_not_busy_ones(claude) -> None:
 
 
 # ── ACP ──────────────────────────────────────────────────────────────────────
+
+
+def test_a_session_that_never_opens_does_not_spend_the_turn(acp) -> None:
+    """A stuck `session/new` is a start failure, bounded by `start_timeout`.
+
+    Unbounded it waited on the turn's own deadline, so the fresh-process
+    fallback that answers for a stuck hosted session had seconds left — the
+    reader's 102-second Mistral turn.
+    """
+    pool, _factory, tmp_path = acp
+    started = time.monotonic()
+    with pytest.raises(TransportUnavailable):
+        pool.run(_profile("acp", tmp_path, "hang_session"),
+                 ResidentRequest("hello", timeout=30, start_timeout=0.5))
+    assert time.monotonic() - started < 5
 
 
 def test_acp_opens_a_fresh_session_per_request_on_one_process(acp) -> None:
