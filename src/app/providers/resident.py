@@ -395,6 +395,31 @@ class ResidentTransport:
             _release(worker)
         return len(idle)
 
+    def warm(self, profile: ResidentProfile, *, timeout: float = 15.0) -> bool:
+        """Start a worker for `profile` and keep it idle for the next request.
+
+        A host-read turn spends seconds searching and reading before the agent
+        is asked anything; starting the agent then is free time already being
+        spent. Never raises: a warm-up that fails is the cold start it would
+        have paid anyway, not a failed run.
+
+        Returns whether a worker is now idle for this profile.
+        """
+        wire = self._wires.get(profile.wire)
+        if wire is None:
+            return False
+        deadline = time.monotonic() + timeout
+        try:
+            acquisition = self._acquire(profile, wire, None, deadline)
+        except Exception:  # noqa: BLE001 — a failed warm-up is a cold start later
+            return False
+        worker = acquisition.worker
+        with self._available:
+            worker.busy = False
+            worker.last_used = time.monotonic()
+            self._available.notify_all()
+        return True
+
     def worker_count(self) -> int:
         with self._lock:
             return len(self._workers)
