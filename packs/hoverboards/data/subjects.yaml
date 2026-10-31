@@ -1,0 +1,107 @@
+# Subjects — the things this pack knows about.
+#
+# `identity` carries exactly the keys `pack.toml` declares for the
+# kind: that dictionary is hashed to the subject id.
+- kind: product
+  label: Hover-1 Helix
+  identity:
+    brand: hover-1
+    series: helix
+  aliases:
+  - Helix
+- kind: product
+  label: Hover-1 AllStar
+  identity:
+    brand: hover-1
+    series: allstar
+  aliases:
+  - AllStar
+- kind: product
+  label: Razor Hovertrax
+  identity:
+    brand: razor
+    series: hovertrax
+  aliases:
+  - Hovertrax
+- kind: product
+  label: Razor Hovertrax 2.0
+  identity:
+    brand: razor
+    series: hovertrax-2-0
+  aliases:
+  - Hovertrax 2.0
+- kind: product
+  label: Gotrax Edge
+  identity:
+    brand: gotrax
+    series: edge
+  attributes:
+    wheel_size_in:
+      value: '6.5'
+      source: https://efunrides.com/printthread.php?tid=82
+    top_speed_mph:
+      value: '6.2'
+      source: https://efunrides.com/printthread.php?tid=82
+    battery_voltage_v:
+      value: '25.2'
+      source: https://efunrides.com/printthread.php?tid=82
+    range_miles:
+      value: '3.1'
+      source: https://efunrides.com/printthread.php?tid=82
+  aliases:
+  - GOTRAX Edge
+- kind: product
+  label: Gotrax Hoverfly Plus
+  identity:
+    brand: gotrax
+    series: hoverfly-plus
+  attributes:
+    top_speed_mph:
+      value: '6.2'
+      source: https://hoverboardsguide.com/gotrax-hoverboard-vs-hover-1-in-depth-feature-comparison/
+    range_miles:
+      value: '12'
+      source: https://hoverboardsguide.com/gotrax-hoverboard-vs-hover-1-in-depth-feature-comparison/
+    wheel_size_in:
+      value: '6.5'
+      source: https://hoverboardsguide.com/gotrax-hoverboard-vs-hover-1-in-depth-feature-comparison/
+  aliases:
+  - Hoverfly Plus
+- kind: product
+  label: Gotrax Cosmos
+  identity:
+    brand: gotrax
+    series: cosmos
+  attributes:
+    wheel_size_in:
+      value: '8.5'
+      source: https://gotraxpro.com/product/go-trax-hoover-board-for-kids-B0CQY9VKWV2
+    top_speed_mph:
+      value: '7.5'
+      source: https://gotraxpro.com/product/go-trax-hoover-board-for-kids-B0CQY9VKWV2
+    range_miles:
+      value: '7.5'
+      source: https://gotraxpro.com/product/go-trax-hoover-board-for-kids-B0CQY9VKWV2
+  aliases:
+  - Cosmos
+- kind: product
+  label: Segway Ninebot N3M320
+  identity:
+    brand: segway-ninebot
+    series: n3m320
+  aliases:
+  - Ninebot N3M320
+- kind: product
+  label: Swagway X1
+  identity:
+    brand: swagway
+    series: x1
+  aliases:
+  - Swagway X1
+- kind: product
+  label: Swagway X2
+  identity:
+    brand: swagway
+    series: x2
+  aliases:
+  - Swagway X2

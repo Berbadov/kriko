@@ -434,7 +434,7 @@ def require(provider_id: str, *, shared_home: Path | None = None,
                 # reader's own paste: they may not have opened Shared access yet.
                 raise MissingKey(
                     f"{provider.label} needs a key — add your own in Settings → "
-                    "Research, or paste an access code in Settings → Shared access"
+                    "Keys, or paste an access code in Settings → Shared access"
                 )
     if not value:
         raise MissingKey(

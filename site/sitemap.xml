@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://kriko.cc/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://kriko.cc/"/>
+    <xhtml:link rel="alternate" hreflang="tr" href="https://kriko.cc/tr/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://kriko.cc/"/>
+  </url>
+  <url>
+    <loc>https://kriko.cc/tr/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://kriko.cc/"/>
+    <xhtml:link rel="alternate" hreflang="tr" href="https://kriko.cc/tr/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://kriko.cc/"/>
+  </url>
+  <url>
+    <loc>https://kriko.cc/guide/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://kriko.cc/guide/"/>
+    <xhtml:link rel="alternate" hreflang="tr" href="https://kriko.cc/tr/guide/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://kriko.cc/guide/"/>
+  </url>
+  <url>
+    <loc>https://kriko.cc/tr/guide/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://kriko.cc/guide/"/>
+    <xhtml:link rel="alternate" hreflang="tr" href="https://kriko.cc/tr/guide/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://kriko.cc/guide/"/>
+  </url>
+  <url>
+    <loc>https://kriko.cc/privacy/</loc>
+  </url>
+  <url>
+    <loc>https://kriko.cc/install/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://kriko.cc/install/"/>
+    <xhtml:link rel="alternate" hreflang="tr" href="https://kriko.cc/tr/install/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://kriko.cc/install/"/>
+  </url>
+  <url>
+    <loc>https://kriko.cc/tr/install/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://kriko.cc/install/"/>
+    <xhtml:link rel="alternate" hreflang="tr" href="https://kriko.cc/tr/install/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://kriko.cc/install/"/>
+  </url>
+</urlset>

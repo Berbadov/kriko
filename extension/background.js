@@ -369,6 +369,35 @@ if (extensionApi.commands && extensionApi.commands.onCommand) {
   });
 }
 
+// Right-click a product link or selected product name/URL. This reads only
+// installed catalogs and saved checks, never fetching an untrusted page.
+if (extensionApi.contextMenus) {
+  extensionApi.runtime.onInstalled.addListener(async () => {
+    await extensionApi.contextMenus.removeAll();
+    extensionApi.contextMenus.create({ id: "kriko-quick-scan", title: "Check with Kriko", contexts: ["link", "selection"] });
+  });
+  extensionApi.contextMenus.onClicked.addListener(async (info, tab) => {
+    if (info.menuItemId !== "kriko-quick-scan" || !tab?.id) return;
+    const selected = String(info.selectionText || "").trim();
+    const url = info.linkUrl || (/^https?:\/\//i.test(selected) ? selected : "");
+    try {
+      const reply = await _postApp("/api/products/scan", { items: [{
+        url: String(url).slice(0, 2000), name: url ? "" : selected.slice(0, 400),
+      }] });
+      const result = reply.items?.[0];
+      const summary = result ? `${result.name || "Product"}: ${result.level} risk. `
+        + (result.claims || []).slice(0, 3).map((one) => one.title).join("; ")
+        + `\n${result.basis}. Last verified: ${result.freshness?.last_verified?.slice(0, 10) || "Unknown"}`
+        + (result.freshness?.stale ? " (stale or incomplete dates)" : "")
+        + (!(result.claims || []).length ? "\nNo sourced findings; this does not establish safety." : "")
+        : "No answer from Kriko.";
+      await notify(tab, summary);
+    } catch (error) {
+      await notify(tab, `Could not scan: ${error.message}`);
+    }
+  });
+}
+
 // ── where the app is ────────────────────────────────────────────────────
 
 function _normalizeBaseUrl(value) {
@@ -2042,7 +2071,7 @@ async function _runAnalysisForTab(tabId, url, storageKey, { fresh = false, auto 
     }
     // The page is a product: remember its price and judge the listing, beside
     // the analysis and not behind it.
-    void _noteBuyer(url, scrape);
+    void _noteBuyer(url, scrape, tabId);
     if (auto) void nudgeDue(tabId);
 
     const signature = _scrapeSignature(scrape, adapters);
@@ -2158,7 +2187,7 @@ async function _runAnalysisForTab(tabId, url, storageKey, { fresh = false, auto 
 // analysis and stored under its own key: the analysis is cached for hours and a
 // price verdict, a profile or a watch must not be.
 
-async function _noteBuyer(url, scrape) {
+async function _noteBuyer(url, scrape, tabId) {
   const key = BUYER_KEY_PREFIX + url;
   try {
     const buyer = await _postApp("/api/buyer/page", {
@@ -2169,6 +2198,7 @@ async function _noteBuyer(url, scrape) {
       product_name: String((scrape.product && scrape.product.name) || "").slice(0, 300),
     });
     await extensionApi.storage.session.set({ [key]: { ok: true, buyer, fetchedAt: Date.now() } });
+    if (tabId != null) await extensionApi.tabs.sendMessage(tabId, { type: "KRIKO_INLINE_AUDIT", url, audit: buyer.audit }).catch(() => null);
   } catch (error) {
     // The app is not running or is older than this extension: no card, no noise.
     await extensionApi.storage.session.set({ [key]: { ok: false, error: error.message, fetchedAt: Date.now() } });
@@ -2848,6 +2878,7 @@ extensionApi.runtime.onMessage.addListener((request, sender, sendResponse) => {
   // The reader as a buyer: each is the reader's own button, forwarded to the
   // app's own API, and nothing here interprets a verdict.
   const BUYER_CALLS = {
+    PRODUCT_SCAN: (p) => _postApp("/api/products/scan", { items: Array.isArray(p.items) ? p.items.slice(0, 60) : [] }),
     BUYER_FIT: (p) => _postApp("/api/buyer/fit", { items: Array.isArray(p.items) ? p.items.slice(0, 60) : [] }),
     BUYER_WATCH: (p) => _postApp("/api/prices/watches", {
       url: String(p.url || "").slice(0, 2000), name: String(p.name || "").slice(0, 300),

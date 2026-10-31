@@ -1,0 +1,1333 @@
+# Claims — what is known to go wrong, each with the page it came from and the quote
+# that was read there. A claim without both is not in this file.
+- subject:
+    kind: product
+    identity:
+      brand: gotrax
+      series: hoverfly-plus
+  kind: known_issue
+  domain: quality
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Gotrax hoverboard battery discharges unevenly on one side, unusable
+      body: A verified buyer reports the battery on one side of a Gotrax hoverboard discharges very quickly,
+        leaving the board unusable, with a stated loss of $110. The review does not name the specific
+        model, so it applies to Gotrax hoverboards generally rather than the Hoverfly Plus specifically.
+      advice: If buying a Gotrax hoverboard, budget for the possibility of an early battery failure; the
+        owner reports a $110 loss and that the board cannot be used when one side's battery drains fast.
+    tr:
+      title: Gotrax hoverboard pili bir tarafta dengesiz boşalıyor, kullanılamaz
+      body: Doğrulanmış bir alıcı, bir Gotrax hoverboard'un bir tarafındaki pilin çok hızlı boşaldığını
+        ve tahtayı kullanılamaz hale getirdiğini, belirtilen 110 $ kayıp olduğunu bildiriyor. İnceleme
+        belirli modeli adlandırmıyor, bu nedenle özellikle Hoverfly Plus yerine genel olarak Gotrax hoverboard'lar
+        için geçerlidir.
+      advice: Bir Gotrax hoverboard satın alıyorsanız, erken pil arızası olasılığı için bütçe ayırın;
+        sahibi 110 $ kayıp bildiriyor ve bir tarafın pili hızla tükendiğinde tahtanın kullanılamadığını
+        söylüyor.
+  evidence:
+  - url: https://gotrax.pissedconsumer.com/reviews/RT-P.html
+    quote: I am still having problems with the battery of my Gotrax. Only one side of the hoverboard discharges
+      very quickly and I cannot use the equipment.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:49:25+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: razor
+      series: hovertrax
+  kind: known_issue
+  domain: quality
+  severity: low
+  consequence: ''
+  detection: ''
+  component: battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Owner reports Hovertrax battery dies in ~15-20 min despite 45 min stated life
+      body: A verified Amazon owner review of the Razor Sonic Glow Hovertrax (a Hovertrax-series variant)
+        reports the battery died in roughly 15-20 minutes against a stated 45-minute life, and the charger
+        indicator light failed to show full charge.
+      advice: Expect real-world battery life well below the stated figure on this series; verify battery
+        behavior early in the return window.
+    tr:
+      title: Sahibi, belirtilen 45 dk ömre rağmen Hovertrax pilinin ~15-20 dk içinde bittiğini bildiriyor
+      body: Razor Sonic Glow Hovertrax (bir Hovertrax serisi varyantı) hakkında doğrulanmış bir Amazon
+        sahibi incelemesi, belirtilen 45 dakikalık ömre karşı pilin yaklaşık 15-20 dakika içinde bittiğini
+        ve şarj cihazı gösterge ışığının tam şarjı göstermediğini bildiriyor.
+      advice: Bu seride gerçek dünya pil ömrünün belirtilen rakamın çok altında olmasını bekleyin; pil
+        davranışını iade penceresinin başlarında doğrulayın.
+  evidence:
+  - url: https://sport.woot.com/review/B09459MDLT?offerid=d9b95554-fe57-42f7-a962-5921c2b6eadf&itemid=6e3d2a6f-fd12-40c5-a60f-27553b7a818a&filter=3&isVerified=false&page=1&sort=0
+    quote: however after having to return one because the battery died in roughly 15min(stated battery
+      life is supposed to be 45min) after charging for 8 hours, the replacement lasted for about 20min.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:46:41+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: swagway
+      series: x2
+  kind: known_issue
+  domain: battery_fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: lithium-ion battery pack
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'CPSC recall 16-211: Swagway self-balancing scooters/hoverboards battery pack can overheat,
+        smoke, catch fire or explode'
+      body: 'This is the official CPSC recall (16-211) of Swagway self-balancing scooters/hoverboards,
+        267,000 units, with 42 reported incidents of battery packs smoking/catching fire/exploding and
+        16 injuries. Caveat: the companion 10-firm recall table identifies the recalled Swagway model
+        as ''Swagway X1'', so this official recall covers the X1, not the X2.'
+      advice: If considering a Swagway X1, this is a documented, officially recalled fire hazard — do
+        not buy one that was not remedied. For the X2, this recall does not directly name it, so treat
+        it as context, not proof about the X2.
+    tr:
+      title: 'CPSC geri çağırma 16-211: Swagway kendi kendini dengeleyen scooter''lar/hoverboard''lar
+        pil paketi aşırı ısınabilir, duman çıkarabilir, alev alabilir veya patlayabilir'
+      body: 'Bu, Swagway kendi kendini dengeleyen scooter''lar/hoverboard''ların resmi CPSC geri çağırmasıdır
+        (16-211), 267.000 adet, pil paketlerinin duman çıkardığı/alev aldığı/patladığına dair 42 bildirilen
+        olay ve 16 yaralanma. Uyarı: eşlik eden 10 firma geri çağırma tablosu, geri çağrılan Swagway modelini
+        ''Swagway X1'' olarak tanımlıyor, bu nedenle bu resmi geri çağırma X1''i kapsar, X2''yi değil.'
+      advice: Bir Swagway X1 düşünüyorsanız, bu belgelenmiş, resmi olarak geri çağrılmış bir yangın tehlikesidir
+        — giderilmemiş bir tane satın almayın. X2 için, bu geri çağırma doğrudan onu adlandırmıyor, bu
+        nedenle bunu bağlam olarak ele alın, X2 hakkında kanıt olarak değil.
+  evidence:
+  - url: https://www.cpsc.gov/Recalls/2016/Swagway-Recalls-Self-Balancing-Scooters-Hoverboards
+    quote: The lithium-ion battery packs in the self-balancing scooters/hoverboards can overheat, posing
+      a risk of the products smoking, catching fire and/or exploding.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:48:24+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: hover-1
+      series: helix
+  kind: known_issue
+  domain: battery_fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: lithium-ion battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Hover-1 Helix lithium-ion battery can overheat and ignite (CPSC recall 24-065)
+      body: Official CPSC recall (24-065) of December 21, 2023, covering about 25,000 Hover-1 Helix hoverboards
+        in Camouflage and Galaxy colors with serial numbers containing 15914, 19203, or 19988 as the fifth
+        code.
+      advice: If you own a Helix in these colors, check the serial number on the bottom label; if it matches,
+        stop using it immediately and contact Hover-1 (888-556-8426) for a free replacement. DGL reports
+        three fires, five smoke-inhalation injuries (headaches, nausea, coughs), and about $25,000 in
+        property damage.
+    tr:
+      title: Hover-1 Helix lityum iyon pili aşırı ısınabilir ve tutuşabilir (CPSC geri çağırma 24-065)
+      body: 21 Aralık 2023 tarihli resmi CPSC geri çağırması (24-065), Kamuflaj ve Galaksi renklerinde,
+        seri numaralarının beşinci kodu olarak 15914, 19203 veya 19988 içeren yaklaşık 25.000 Hover-1
+        Helix hoverboard'u kapsıyor.
+      advice: Bu renklerde bir Helix'iniz varsa, alt etiketteki seri numarasını kontrol edin; eşleşiyorsa
+        hemen kullanmayı bırakın ve ücretsiz değişim için Hover-1 (888-556-8426) ile iletişime geçin.
+        DGL üç yangın, beş duman soluma yaralanması (baş ağrısı, mide bulantısı, öksürük) ve yaklaşık
+        25.000 $ maddi hasar bildiriyor.
+  evidence:
+  - url: https://www.cpsc.gov/Recalls/2024/DGL-Group-Recalls-Hover-1-Helix-Hoverboards-Due-to-Fire-Hazard
+    quote: The recalled hoverboard’s lithium-ion battery can overheat, posing a fire hazard.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:46:25+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: gotrax
+      series: edge
+  kind: known_issue
+  domain: quality
+  severity: low
+  consequence: ''
+  detection: ''
+  component: housing / screw boss
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Gotrax Edge units arriving damaged from the factory (quality control)
+      body: A verified Amazon.ca review reporting the same factory defect on two units.
+      advice: A verified buyer reports two Edge units arriving with the same factory defect (a bottom
+        screw that will not tighten), suggesting inconsistent quality control. Inspect the unit on arrival
+        and test the screw bosses before the return window closes.
+    tr:
+      title: Gotrax Edge birimleri fabrikadan hasarlı geliyor (kalite kontrol)
+      body: İki birimde aynı fabrika kusurunu bildiren doğrulanmış bir Amazon.ca incelemesi.
+      advice: Doğrulanmış bir alıcı, iki Edge biriminin aynı fabrika kusuruyla (sıkılmayan bir alt vida)
+        geldiğini bildiriyor, bu da tutarsız kalite kontrolüne işaret ediyor. Birimi geldiğinde inceleyin
+        ve iade penceresi kapanmadan önce vida yuvalarını test edin.
+  evidence:
+  - url: https://www.amazon.ca/dp/B07M8YKPQ8?_encoding=UTF8&pd_rd_i=B0C8JC1SND&qid=1717271091&pd_rd_w=keEY0&content-id=amzn1.sym.a57fddee-2b3d-4869-9208-102de9dbacaa:amzn1.sym.a57fddee-2b3d-4869-9208-102de9dbacaa&pf_rd_p=a57fddee-2b3d-4869-9208-102de9dbacaa&pf_rd_r=A68DWS9NRBF1HAG4HHJ8&pd_rd_wg=2fWYg&pd_rd_r=c4ba9d32-e1c5-4c1f-9963-faa0df1d68a9&pd_rd_plhdr=t&th=1&linkCode=sl1&tag=norsoublo03-20&linkId=47ec3fd939ab6aa394bb20c7a22d51e7&language=en_CA&ref_=as_li_ss_tl
+    quote: We ordered one is arrived Damaged - This was not due to shipping - this is clearly a Quality
+      Control Issue within the factory, as when I returned it and ordered another one it also came damage
+      in the same location.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:49:45+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: hover-1
+      series: allstar
+  kind: known_issue
+  domain: battery_fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: battery / charger
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Hover-1 AllStar battery fire while charging destroyed a home (CPSC incident report)
+      body: This finding came from the search 'Hover-1 AllStar fire' and 'Hover-1 AllStar CPSC'.
+      advice: A documented CPSC incident report records a Hover-1 AllStar hoverboard catching fire while
+        charging and destroying a home in Worcester, MA on 2/28/2024. Note the report flags that the chargers
+        found were not the same brand as the board and that the tamper seal was broken, so the fire's
+        cause is not conclusively the board itself; still, it is an official record of an AllStar fire.
+        Buyers should charge only with the supplied charger and never leave the board charging unattended.
+    tr:
+      title: Hover-1 AllStar pili şarj olurken yangın bir evi yok etti (CPSC olay raporu)
+      body: Bu bulgu 'Hover-1 AllStar fire' ve 'Hover-1 AllStar CPSC' aramalarından geldi.
+      advice: Belgelenmiş bir CPSC olay raporu, 2/28/2024 tarihinde Worcester, MA'da şarj olurken alev
+        alan ve bir evi yok eden bir Hover-1 AllStar hoverboard'u kaydediyor. Raporun, bulunan şarj cihazlarının
+        tahtayla aynı marka olmadığını ve kurcalama mührünün kırıldığını işaret ettiğini unutmayın, bu
+        nedenle yangının nedeni kesin olarak tahtanın kendisi değildir; yine de bu, bir AllStar yangınının
+        resmi kaydıdır. Alıcılar yalnızca birlikte verilen şarj cihazıyla şarj etmeli ve tahtayı asla
+        gözetimsiz şarjda bırakmamalıdır.
+  evidence:
+  - url: https://www.saferproducts.gov/PublicSearch/Detail?ReportId=4645021
+    quote: FD responded to a house fire that originated in a hoverboard. A hoverboard was charging at
+      the time of the fire. Two hoverboard chargers were found in the area of origin - neither was the
+      same brand as the hoverboard.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:45:56+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: swagway
+      series: x2
+  kind: known_issue
+  domain: quality
+  severity: low
+  consequence: ''
+  detection: ''
+  component: battery protection board MOSFET solder joints
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'iFixit teardown: Swagway battery protection board has skimpy solder joints on charge/discharge
+        MOSFETs'
+      body: Independent teardown found the only notable defect was thin solder joints on the battery protection
+        board's charge/discharge MOSFETs, which carry high power. This is a general Swagway teardown,
+        not X2-specific.
+      advice: A manufacturing-quality concern tied to the battery circuit that could relate to overheating;
+        it is a single teardown observation, not a documented failure.
+    tr:
+      title: 'iFixit sökümü: Swagway batarya koruma kartında şarj/deşarj MOSFET''lerinde yetersiz lehim
+        bağlantıları var'
+      body: Bağımsız söküm, tek dikkate değer kusurun, yüksek güç taşıyan batarya koruma kartının şarj/deşarj
+        MOSFET'lerindeki ince lehim bağlantıları olduğunu buldu. Bu genel bir Swagway sökümüdür, X2'ye
+        özgü değildir.
+      advice: Aşırı ısınmayla ilişkili olabilecek batarya devresine bağlı bir üretim kalitesi endişesi;
+        bu tek bir söküm gözlemidir, belgelenmiş bir arıza değildir.
+  evidence:
+  - url: https://www.cnet.com/tech/computing/heres-a-hoverboard-swagway-that-probably-wont-explode/
+    quote: These particular solder joints are going to see a lot of power as the battery is charging and
+      discharging.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:48:24+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: razor
+      series: hovertrax
+  kind: known_issue
+  domain: quality
+  severity: low
+  consequence: ''
+  detection: ''
+  component: battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Hovertrax 2.0 faulty battery shows as yellow battery-level light and fails to power on
+      body: iFixit's troubleshooting wiki for the Hovertrax 2.0 describes how to diagnose a faulty battery
+        (yellow level light) and notes a faulty battery can also cause delayed wheel response.
+      advice: If the battery-level light stays yellow after a full charge, the battery is likely faulty
+        and should be replaced rather than ridden.
+    tr:
+      title: Hovertrax 2.0 arızalı batarya sarı batarya seviyesi ışığı olarak görünüyor ve açılmıyor
+      body: iFixit'in Hovertrax 2.0 için sorun giderme wiki'si, arızalı bir bataryanın (sarı seviye ışığı)
+        nasıl teşhis edileceğini açıklıyor ve arızalı bir bataryanın gecikmeli tekerlek tepkisine de neden
+        olabileceğini belirtiyor.
+      advice: Tam şarjdan sonra batarya seviyesi ışığı sarı kalırsa, batarya büyük olasılıkla arızalıdır
+        ve üzerinde sürülmek yerine değiştirilmelidir.
+  evidence:
+  - url: https://zh.ifixit.com/Wiki/Razor_Hovertrax_2.0_Troubleshooting
+    quote: To test for a faulty battery, charge the hoverboard for the recommended time, try to power
+      the unit on. If the unit power's, but the battery level light is yellow, then the battery is faulty.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:46:41+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: razor
+      series: hovertrax-2-0
+  kind: known_issue
+  domain: battery_fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: lithium-ion battery pack (serial numbers 55X120-01, 55X120-02, 55X110-01, 55X110-02, 55X230-01)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Non-UL certified Hovertrax hoverboards recalled by CPSC for fire hazard (July 2016)
+      body: This recall covers the earlier non-UL Hovertrax model sold Dec 2015-May 2016, before the 2.0
+        (sold from Sept 2016).
+      advice: This is the earlier Hovertrax generation, not the 2.0, but it shows the brand's hoverboard
+        battery fire history. If you have a Hovertrax with these serial prefixes, stop using it and contact
+        Razor for a free UL 2272-certified replacement.
+    tr:
+      title: UL sertifikası olmayan Hovertrax hoverboard'ları CPSC tarafından yangın tehlikesi nedeniyle
+        geri çağrıldı (Temmuz 2016)
+      body: Bu geri çağırma, 2.0'dan önce (Eylül 2016'dan itibaren satılan) Aralık 2015-Mayıs 2016 arasında
+        satılan daha eski UL'siz Hovertrax modelini kapsar.
+      advice: Bu, 2.0 değil, daha eski Hovertrax neslidir, ancak markanın hoverboard batarya yangını geçmişini
+        gösterir. Bu seri öneklerine sahip bir Hovertrax'iniz varsa, kullanmayı bırakın ve ücretsiz UL
+        2272 sertifikalı değişim için Razor ile iletişime geçin.
+  evidence:
+  - url: https://www.cpsc.gov/Recalls/2016/Razor-Recalls-Self-Balancing-Scooters-Hoverboards?language=en
+    quote: This recall involves non-UL certified Hovertrax brand self-balancing scooters, commonly referred
+      to as hoverboards.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:46:41+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: gotrax
+      series: hoverfly-plus
+  kind: known_issue
+  domain: general
+  severity: low
+  consequence: ''
+  detection: ''
+  component: hoverboard (whole unit)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: No CPSC recall found for Gotrax Hoverfly Plus
+      body: 'Searches for a Gotrax Hoverfly Plus recall returned no CPSC recall notice for this model.
+        The only hoverboard recalls found in CPSC-derived databases were for other brands (Razor Hovertrax
+        and Swagway, both July 2016). This is a coverage finding: no documented recall exists for the
+        Gotrax Hoverfly Plus in the sources I could reach.'
+      advice: As of this run, no CPSC recall is documented for the Gotrax Hoverfly Plus; the hoverboard
+        recalls that do exist in the databases I found are for other brands from 2016.
+    tr:
+      title: Gotrax Hoverfly Plus için CPSC geri çağırması bulunamadı
+      body: 'Gotrax Hoverfly Plus geri çağırması aramaları bu model için CPSC geri çağırma bildirimi döndürmedi.
+        CPSC kaynaklı veritabanlarında bulunan tek hoverboard geri çağırmaları diğer markalar içindi (Razor
+        Hovertrax ve Swagway, her ikisi de Temmuz 2016). Bu bir kapsam bulgusudur: ulaşabildiğim kaynaklarda
+        Gotrax Hoverfly Plus için belgelenmiş bir geri çağırma yok.'
+      advice: Bu çalışma itibarıyla, Gotrax Hoverfly Plus için belgelenmiş bir CPSC geri çağırması yok;
+        bulduğum veritabanlarında var olan hoverboard geri çağırmaları 2016'dan diğer markalara ait.
+  evidence:
+  - url: https://forbes.ad/sites/forbes-personal-shopper/article/best-hoverboard-for-kids/
+    quote: since 2016, the Consumer Product Safety Commission (CPSC) has been diligent about issuing recalls
+      for problematic hoverboards, and now the most popular ones adhere to the UL 2272 safety standard
+      for compliance
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:50:48+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: segway-ninebot
+      series: n3m320
+  kind: known_issue
+  domain: quality
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: battery (NC1502-B)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Ninebot Mini Pro N3M320 original battery (NC1502-B) discontinued and costly to replace
+      body: An owner of the N3M320 reports the original battery model NC1502-B is no longer sold and costs
+        about $350 when found, more than the whole unit's market value.
+      advice: If you own an N3M320 whose battery dies, budget for a hard-to-find, expensive replacement;
+        a non-genuine battery may not communicate with the motherboard.
+    tr:
+      title: Ninebot Mini Pro N3M320 orijinal batarya (NC1502-B) üretimden kaldırıldı ve değiştirmek maliyetli
+      body: N3M320 sahibi, orijinal batarya modeli NC1502-B'nin artık satılmadığını ve bulunduğunda yaklaşık
+        350 $ tuttuğunu, bunun tüm ünitenin piyasa değerinden daha fazla olduğunu bildiriyor.
+      advice: Bataryası ölen bir N3M320'niz varsa, bulunması zor ve pahalı bir değişim için bütçe ayırın;
+        orijinal olmayan bir batarya anakart ile iletişim kurmayabilir.
+  evidence:
+  - url: https://forum.electricunicycle.org/topic/9833-replacement-battery-for-ninebot-minipro/
+    quote: Apparently this battery model is no longer on sale, nowhere. Or eventually it costs 350$ about
+      (more than the actual market value of the whole product).
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:47:27+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: swagway
+      series: x2
+  kind: known_issue
+  domain: battery_fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: lithium-ion battery pack
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Swagway hoverboards reported catching fire; Amazon and Target stopped selling Swagway; class
+        action alleges fire
+      body: Local news (WSBT 22, South Bend) reporting multiple Swagway hoverboard fire claims, retailers
+        dropping the brand, and a class action alleging a Swagway Hoverboard caught fire. This is brand-level,
+        not X2-specific.
+      advice: Establishes that Swagway hoverboards as a brand have documented fire incidents and were
+        pulled by major retailers; it does not single out the X2 model.
+    tr:
+      title: Swagway hoverboard'larının alev aldığı bildirildi; Amazon ve Target Swagway satışını durdurdu;
+        toplu dava yangın iddia ediyor
+      body: Yerel haber (WSBT 22, South Bend) birden fazla Swagway hoverboard yangın iddiasını, perakendecilerin
+        markayı bırakmasını ve bir Swagway Hoverboard'ın alev aldığını iddia eden bir toplu davayı bildiriyor.
+        Bu marka düzeyindedir, X2'ye özgü değildir.
+      advice: Swagway hoverboard'larının bir marka olarak belgelenmiş yangın olayları olduğunu ve büyük
+        perakendeciler tarafından satıştan çekildiğini ortaya koyar; X2 modelini tek başına işaret etmez.
+  evidence:
+  - url: https://wsbt.com/news/local/gallery/local-hoverboard-company-under-fire-for-safety-concerns?photo=1
+    quote: There have been at least 10 cases of hoverboards catching fire. Amazon and Target have both
+      stopped selling Swagway and other hoverboards because of safety concerns.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:48:24+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: swagway
+      series: x1
+  kind: known_issue
+  domain: battery_fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: lithium-ion battery pack
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Owner report: Swagway X1 melted in half while charging, smoke and sparks'
+      body: A consumer incident report filed with CPSC's SaferProducts.gov (Report 20160901-ACA23-1591785)
+        describes a Swagway X1 that melted in half and emitted smoke and sparks while charging at home
+        in January 2016. This is a first-hand owner account of the battery fire defect, matching the recall
+        hazard.
+      advice: The X1's fire risk is documented in a real home incident during charging, not just a theoretical
+        warning. Do not charge an X1 unattended and treat any smoke/heat as an emergency.
+    tr:
+      title: 'Sahip raporu: Swagway X1 şarj olurken ikiye bölünerek eridi, duman ve kıvılcımlar çıktı'
+      body: CPSC'nin SaferProducts.gov sitesine sunulan bir tüketici olay raporu (Rapor 20160901-ACA23-1591785),
+        Ocak 2016'da evde şarj olurken ikiye bölünerek eriyen ve duman ile kıvılcım yayan bir Swagway
+        X1'i tanımlıyor. Bu, geri çağırma tehlikesiyle örtüşen batarya yangını kusuruna dair birinci elden
+        bir sahip anlatımıdır.
+      advice: X1'in yangın riski, yalnızca teorik bir uyarı değil, şarj sırasında gerçek bir ev olayında
+        belgelenmiştir. Bir X1'i gözetimsiz şarj etmeyin ve herhangi bir duman/ısıyı acil durum olarak
+        değerlendirin.
+  evidence:
+  - url: https://www.saferproducts.gov/PublicSearch/Detail?ReportId=1591785
+    quote: 14 YOM placed hoverboard on charge, but after about 1 & 1/2 hours, his mother smelled burning
+      plastic & saw smoke coming from unit. She threw towel over unit & kicked plug out of outlet, which
+      caused sparks. Unit had melted in half with cracks.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:50:23+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: swagway
+      series: x2
+  kind: known_issue
+  domain: battery_fire
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: lithium-ion battery pack
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Swagway hoverboard ignited while charging in Chappaqua, NY home
+      body: A campus fire-safety alert documenting a Swagway-brand hoverboard that ignited while charging
+        in a home. Brand-level, not X2-specific.
+      advice: Reinforces the charging-related fire risk for Swagway hoverboards; the alert's own advice
+        is to never charge unattended and to verify a UL listing label.
+    tr:
+      title: Swagway hoverboard, Chappaqua, NY'deki evde şarj olurken tutuştu
+      body: Bir evde şarj olurken tutuşan Swagway markalı bir hoverboard'u belgeleyen bir kampüs yangın
+        güvenliği uyarısı. Marka düzeyinde, X2'ye özgü değil.
+      advice: Swagway hoverboard'ları için şarjla ilgili yangın riskini pekiştirir; uyarının kendi tavsiyesi,
+        asla gözetimsiz şarj etmemek ve bir UL listeleme etiketini doğrulamaktır.
+  evidence:
+  - url: http://campusfiresafety.org/Portals/0/Documents/Other/hoverboards-ny.pdf?ver=2016-01-25-093721-427
+    quote: A recent incident occurred in Chappaqua, New York when a family was charging their new Swagway®
+      brand hoverboard and it ignited causing substantial damage to the unit as well as damaging the floor
+      and objects around the unit.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:48:24+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: razor
+      series: hovertrax
+  kind: known_issue
+  domain: battery_fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: lithium-ion battery pack
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Hovertrax lithium-ion battery pack can overheat, smoke, catch fire or explode (2016 CPSC
+        recall)
+      body: Official CPSC recall 16-215, about 28,000 units sold Dec 2015-May 2016 for $600-$700.
+      advice: If you own a Hovertrax with serial number starting 55X120-01, 55X120-02, 55X110-01, 55X110-02
+        or 55X230-01, stop using it and contact Razor for a free UL 2272-certified replacement.
+    tr:
+      title: Hovertrax lityum iyon batarya paketi aşırı ısınabilir, duman çıkarabilir, alev alabilir veya
+        patlayabilir (2016 CPSC geri çağırması)
+      body: Resmi CPSC geri çağırması 16-215, Aralık 2015-Mayıs 2016 arasında 600$-700$ arasında satılan
+        yaklaşık 28.000 adet.
+      advice: Seri numarası 55X120-01, 55X120-02, 55X110-01, 55X110-02 veya 55X230-01 ile başlayan bir
+        Hovertrax'ınız varsa, kullanmayı bırakın ve ücretsiz UL 2272 sertifikalı bir yedek için Razor
+        ile iletişime geçin.
+  evidence:
+  - url: https://www.cpsc.gov/Recalls/2016/Razor-Recalls-Self-Balancing-Scooters-Hoverboards?language=en
+    quote: The lithium-ion battery packs in the self-balancing scooters/hoverboards can overheat, posing
+      a risk of the products smoking, catching fire and/or exploding.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:46:41+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: swagway
+      series: x2
+  kind: known_issue
+  domain: quality
+  severity: low
+  consequence: ''
+  detection: ''
+  component: general (drive/electronics)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'Swagway X2 owner reports: unit quit working out of nowhere; unit spun and threw rider; one
+        unit vibrates'
+      body: X2-specific owner reports of the board quitting, coming apart, one unit spinning and throwing
+        a rider, and another vibrating. These are quality/function complaints, not documented fires.
+      advice: This is the only X2-specific evidence found; it points to reliability/quality issues and
+        poor customer-service response, not a documented battery fire specific to the X2.
+    tr:
+      title: 'Swagway X2 sahip raporları: cihaz birdenbire çalışmayı bıraktı; cihaz dönerek sürücüyü fırlattı;
+        bir cihaz titriyor'
+      body: 'X2''ye özgü sahip raporları: tahtanın çalışmayı bırakması, dağılması, bir cihazın dönerek
+        bir sürücüyü fırlatması ve bir diğerinin titremesi. Bunlar kalite/işlev şikayetleridir, belgelenmiş
+        yangınlar değildir.'
+      advice: Bulunan tek X2'ye özgü kanıt budur; X2'ye özgü belgelenmiş bir batarya yangınına değil,
+        güvenilirlik/kalite sorunlarına ve zayıf müşteri hizmeti yanıtına işaret eder.
+  evidence:
+  - url: https://www.pissedconsumer.com/people/377332.html
+    quote: This morning he went to ride it and it just quit working out of nowhere.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:48:24+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: hover-1
+      series: helix
+  kind: known_issue
+  domain: quality
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: battery and charging circuit
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Hover-1 Helix boards arrive dead on arrival or fail to hold a charge
+      body: Verified Amazon-purchase reviews on the Hover-1 Helix listing report units that arrive dead
+        on arrival, will not charge, or will not hold a charge, including a buyer whose replacement unit
+        also failed.
+      advice: Several verified buyers report receiving Helix units that never charge or hold a charge,
+        and replacements that also fail. If buying, expect a real risk of a dead-on-arrival unit and a
+        refund-only remedy rather than a working replacement.
+    tr:
+      title: Hover-1 Helix tahtaları bozuk olarak geliyor veya şarjı tutamıyor
+      body: Hover-1 Helix listesindeki doğrulanmış Amazon satın alma yorumları, bozuk olarak gelen, şarj
+        olmayan veya şarjı tutmayan cihazları bildiriyor; buna yedek cihazı da arızalanan bir alıcı dahil.
+      advice: Birkaç doğrulanmış alıcı, hiç şarj olmayan veya şarjı tutmayan Helix cihazları ve aynı şekilde
+        arızalanan yedekleri aldıklarını bildiriyor. Satın alıyorsanız, çalışan bir yedek yerine yalnızca
+        para iadesi çözümüyle birlikte bozuk gelen cihaz riskini gerçekçi kabul edin.
+  evidence:
+  - url: https://sport.woot.com/review/B08W58MYJ8?offerid=949bd47c-418e-4717-8fcb-07bad9d75584&itemid=28f170f1-1338-46b6-9247-2d6de9388415&filter=0&isVerified=false&page=1&sort=0
+    quote: The original unit sent to us did not work. We found this out after our son opened his gift
+      Christmas Day. The board would not hold a charge.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:50:10+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: gotrax
+      series: edge
+  kind: known_issue
+  domain: battery_fire
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: battery / charger (overheating)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Law firm investigating 'endemic overheating' in GoTrax hoverboards, naming the Edge
+      body: The law firm's investigation questionnaire explicitly lists the Edge Self Balancing Hoverboard
+        6.5" as a model of interest.
+      advice: A consumer-law firm is actively collecting reports of GoTrax hoverboards overheating, and
+        its questionnaire names the Edge specifically. This signals a documented, recurring overheating
+        pattern rather than an isolated case, worth weighing before purchase.
+    tr:
+      title: Hukuk firması GoTrax hoverboard'larındaki 'yaygın aşırı ısınma'yı araştırıyor, Edge'i adıyla
+        anıyor
+      body: Hukuk firmasının araştırma anketi, Edge Self Balancing Hoverboard 6.5" modelini ilgi duyulan
+        modeller arasında açıkça listeliyor.
+      advice: Bir tüketici hukuku firması, GoTrax hoverboard'larının aşırı ısınmasına ilişkin raporları
+        aktif olarak topluyor ve anketi Edge'i özellikle adıyla anıyor. Bu, izole bir vaka değil, belgelenmiş
+        ve tekrarlayan bir aşırı ısınma örüntüsüne işaret eder; satın almadan önce dikkate değer.
+  evidence:
+  - url: https://forms.office.com/Pages/ResponsePage.aspx?id=M1Awu4pX0ky56HfvNeJmB2eE_TkEyrJIjTBCKPN74zBUMDdRUFBMRDNGQlNOWTZEWVRWMlFKME5aUCQlQCNjPTEu&embed=true
+    quote: This is a confidential questionnaire created by the law firm Migliaccio & Rathod LLP to investigate
+      potential claims against GoTrax, related to reports of endemic overheating in their hoverboards
+      and scooters.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:49:45+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: gotrax
+      series: cosmos
+  kind: known_issue
+  domain: general
+  severity: low
+  consequence: ''
+  detection: ''
+  component: battery (144Wh)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Gotrax Cosmos manufacturer page confirms UL2272 certification and 144Wh battery
+      body: Identifies the product as the Gotrax Cosmos with a 144Wh battery and manufacturer-claimed
+        UL2272 certification. This establishes product identity but is a marketing claim, not independent
+        verification.
+      advice: UL2272 certification is a meaningful safety standard, but verify it independently rather
+        than relying solely on the manufacturer's page.
+    tr:
+      title: Gotrax Cosmos üretici sayfası UL2272 sertifikasını ve 144Wh bataryayı doğruluyor
+      body: Ürünü 144Wh bataryalı ve üreticinin iddia ettiği UL2272 sertifikalı Gotrax Cosmos olarak tanımlar.
+        Bu, ürün kimliğini ortaya koyar ancak bağımsız bir doğrulama değil, bir pazarlama iddiasıdır.
+      advice: UL2272 sertifikası anlamlı bir güvenlik standardıdır, ancak yalnızca üreticinin sayfasına
+        güvenmek yerine bunu bağımsız olarak doğrulayın.
+  evidence:
+  - url: https://gotraxpro.com/product/go-trax-hoover-board-for-kids-B0CQY9VKWV2
+    quote: The Gotrax hoverboard has passed rigorous UL2272 certification for electrical and fire safety.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:48:45+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: gotrax
+      series: cosmos
+  kind: known_issue
+  domain: quality
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: battery/BMS
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: General Gotrax battery issues documented but not Cosmos-specific
+      body: Troubleshooting guides document common Gotrax battery failures including BMS cutoffs and charging
+        issues. These are brand-wide patterns, not specific to the Cosmos hoverboard.
+      advice: If buying a Gotrax Cosmos, be aware that Gotrax batteries have documented BMS/charging failure
+        patterns across the brand, though no Cosmos-specific incidents were found.
+    tr:
+      title: Genel Gotrax batarya sorunları belgelenmiş ancak Cosmos'a özgü değil
+      body: Sorun giderme kılavuzları, BMS kesintileri ve şarj sorunları dahil olmak üzere yaygın Gotrax
+        batarya arızalarını belgeler. Bunlar marka genelindeki kalıplardır, Cosmos hoverboard'a özgü değildir.
+      advice: Bir Gotrax Cosmos satın alıyorsanız, Gotrax bataryalarının marka genelinde belgelenmiş BMS/şarj
+        arıza kalıpları olduğunu bilin, ancak Cosmos'a özgü hiçbir olay bulunamadı.
+  evidence:
+  - url: https://www.facebook.com/fb-answers/gotrax-battery-not-charging/
+    quote: Gotrax battery not charging is usually a BMS cutoff, dead cell string, or faulty charger/port.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:48:45+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: segway-ninebot
+      series: n3m320
+  kind: known_issue
+  domain: quality
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Ninebot Mini Pro N3M320 battery-related problem cut range to under 50% of stated
+      body: An owner reports a battery-related problem on the N3M320 that meant the unit never reached
+        even 50% of its stated range; Ninebot replaced the unit with a lower-end N3M240 rather than repairing
+        it.
+      advice: Range complaints on this model may trace to the battery; expect the maker to offer a replacement
+        unit rather than a battery repair.
+    tr:
+      title: Ninebot Mini Pro N3M320 batarya ile ilgili sorun menzili belirtilenin %50'sinin altına düşürdü
+      body: Bir sahip, N3M320'de batarya ile ilgili bir sorun bildiriyor; bu sorun cihazın belirtilen
+        menzilinin %50'sine bile asla ulaşamaması anlamına geliyordu; Ninebot, cihazı tamir etmek yerine
+        daha alt seviye bir N3M240 ile değiştirdi.
+      advice: Bu modeldeki menzil şikayetleri bataryadan kaynaklanabilir; üreticinin batarya onarımı yerine
+        yedek bir cihaz sunmasını bekleyin.
+  evidence:
+  - url: https://forum.electricunicycle.org/topic/16052-n3m320-vs-n3m240
+    quote: My Mini Pro 320 had some sort of battery related problem and was never able to get 50% of the
+      stated range
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:47:27+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: razor
+      series: hovertrax
+  kind: known_issue
+  domain: battery_fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: GLW battery pack
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: GLW battery packs in Hovertrax 2.0 overheat; 20+ reports of smoke or fire (2021 CPSC recall)
+      body: Official CPSC recall 21-189, about 237,300 units sold Sep 2016-2018 for about $460.
+      advice: If your Hovertrax 2.0 was built between September 2016 and August 2017 and its battery pack
+        has 'GLW' printed on it (serial starting GLW), stop using it and request the free replacement
+        battery pack from Razor.
+    tr:
+      title: Hovertrax 2.0'daki GLW batarya paketleri aşırı ısınıyor; 20+ duman veya yangın bildirimi
+        (2021 CPSC geri çağırma)
+      body: Resmi CPSC geri çağırma 21-189, Eylül 2016-2018 arasında yaklaşık 460 $ fiyatla satılan yaklaşık
+        237.300 adet.
+      advice: Hovertrax 2.0'ınız Eylül 2016 ile Ağustos 2017 arasında üretildiyse ve batarya paketinde
+        'GLW' yazıyorsa (seri numarası GLW ile başlıyorsa), kullanmayı bırakın ve Razor'dan ücretsiz yedek
+        batarya paketini talep edin.
+  evidence:
+  - url: https://www.cpsc.gov/Recalls/2021/Razor-USA-Recalls-GLW-Battery-Packs-Sold-with-Hovertrax-2-0-Self-Balancing-Hoverboards-Due-to-Fire-Hazard
+    quote: There have been more than 20 reports of Hovertrax 2.0 Self-Balancing Hoverboards containing
+      GLW battery packs overheating, including some reports of smoke or fire. No injuries have been reported.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:46:41+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: segway-ninebot
+      series: n3m320
+  kind: known_issue
+  domain: general
+  severity: low
+  consequence: ''
+  detection: ''
+  component: whole unit (recall status)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: No Segway product, including the N3M320, was included in the 2016 CPSC hoverboard recall
+      body: Segway's own material states no Segway product was part of the 2016 CPSC recall of 500,000+
+        hoverboards, and markets the miniPRO as the UL 2272-certified safe alternative.
+      advice: The N3M320 has no CPSC recall on record; the documented risks for this model are owner-reported
+        battery/range problems, not fire recalls.
+    tr:
+      title: N3M320 dahil hiçbir Segway ürünü 2016 CPSC hoverboard geri çağırmasına dahil edilmedi
+      body: Segway'in kendi materyali, 500.000'den fazla hoverboard'u kapsayan 2016 CPSC geri çağırmasının
+        hiçbir Segway ürününü içermediğini belirtir ve miniPRO'yu UL 2272 sertifikalı güvenli alternatif
+        olarak pazarlar.
+      advice: N3M320'nin kayıtlı hiçbir CPSC geri çağırması yoktur; bu model için belgelenen riskler yangın
+        geri çağırmaları değil, sahipler tarafından bildirilen batarya/menzil sorunlarıdır.
+  evidence:
+  - url: https://www.segway.co.nz/blogs/blog/500000-hoverboards-recalled-in-usa-as-segway-launch-safety-certified-minipro
+    quote: No product manufactured by Segway, Inc. is being recalled.
+    locator: ''
+    stance: disputes
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:47:27+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: segway-ninebot
+      series: n3m320
+  kind: known_issue
+  domain: general
+  severity: low
+  consequence: ''
+  detection: ''
+  component: battery system / UL 2272 certification
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: N3M320 was the first UL 2272-certified hoverboard, not part of the 2016 fire recall
+      body: The N3M320 was the first hoverboard certified to UL 2272, the standard created after the 2015-16
+        hoverboard fire crisis, so it was marketed as the fire-safe model rather than a recalled one.
+      advice: Do not assume the N3M320 was part of the 2016 hoverboard fire recall; it predates and was
+        certified against that hazard.
+    tr:
+      title: N3M320, 2016 yangın geri çağırmasının parçası değil, ilk UL 2272 sertifikalı hoverboard'dı
+      body: N3M320, 2015-16 hoverboard yangın krizi sonrasında oluşturulan standart olan UL 2272'ye sertifikalı
+        ilk hoverboard'dı, bu nedenle geri çağrılan bir model yerine yangına karşı güvenli model olarak
+        pazarlanıyordu.
+      advice: N3M320'nin 2016 hoverboard yangın geri çağırmasının parçası olduğunu varsaymayın; bu model
+        o tehlikeden önce gelir ve o tehlikeye karşı sertifikalıdır.
+  evidence:
+  - url: https://incompliancemag.com/ul-certifies-the-first-hoverboard/
+    quote: Hoverboard model N3M320, manufactured by Ninebot (Segway’s parent company) was given the official
+      certificate of compliance after completing a construction evaluation, safety testing, and complying
+      with UL 2272’s marking, labeling, and user instruction requirements.
+    locator: ''
+    stance: disputes
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:47:27+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: hover-1
+      series: helix
+  kind: known_issue
+  domain: battery_fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: lithium-ion battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'CPSC recall 24-065: Helix lithium-ion battery can overheat, fire hazard'
+      body: This is the official U.S. Consumer Product Safety Commission recall notice.
+      advice: 'Before buying a used Hover-1 Helix, check the serial number on the bottom of the board:
+        units whose six-code serial number has 15914, 19203, or 19988 as the fifth code, in Camouflage
+        or Galaxy colors, are recalled for a battery fire hazard. A seller offering one of these should
+        be treated as offering a recalled product; DGL offers a free replacement board, not a repair.'
+    tr:
+      title: 'CPSC geri çağırma 24-065: Helix lityum iyon pil aşırı ısınabilir, yangın tehlikesi'
+      body: Bu, resmi ABD Tüketici Ürün Güvenliği Komisyonu geri çağırma bildirimidir.
+      advice: 'Kullanılmış bir Hover-1 Helix satın almadan önce, tahtanın altındaki seri numarasını kontrol
+        edin: altı kodlu seri numarasının beşinci kodu 15914, 19203 veya 19988 olan, Camouflage veya Galaxy
+        renklerindeki birimler pil yangın tehlikesi nedeniyle geri çağrılmıştır. Bunlardan birini sunan
+        bir satıcı, geri çağrılmış bir ürün sunuyor olarak değerlendirilmelidir; DGL onarım değil, ücretsiz
+        yedek tahta sunar.'
+  evidence:
+  - url: https://www.cpsc.gov/Recalls/2024/DGL-Group-Recalls-Hover-1-Helix-Hoverboards-Due-to-Fire-Hazard
+    quote: The recalled hoverboard’s lithium-ion battery can overheat, posing a fire hazard.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:46:25+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: gotrax
+      series: hoverfly-plus
+  kind: known_issue
+  domain: general
+  severity: low
+  consequence: ''
+  detection: ''
+  component: battery/electrical system
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Gotrax Hoverfly Plus is UL 2272 certified for fire and electrical safety
+      body: The Gotrax Hoverfly Plus carries UL 2272 certification, the U.S. safety standard for hoverboard
+        electrical drive trains and battery systems introduced after the 2016 hoverboard fire recalls.
+        No CPSC recall or documented battery fire was found for this specific model in any of the 7 searches
+        run. This certification provides baseline fire safety assurance, though the owner-reported battery
+        defect above shows individual units can still develop problems.
+      advice: UL 2272 certification is a meaningful safety baseline, but it does not guarantee every unit's
+        battery will perform reliably; budget for potential battery issues.
+    tr:
+      title: Gotrax Hoverfly Plus, yangın ve elektrik güvenliği için UL 2272 sertifikalıdır
+      body: Gotrax Hoverfly Plus, 2016 hoverboard yangın geri çağırmalarından sonra getirilen hoverboard
+        elektrik tahrik sistemleri ve pil sistemleri için ABD güvenlik standardı olan UL 2272 sertifikasına
+        sahiptir. Yapılan 7 aramanın hiçbirinde bu spesifik model için CPSC geri çağırması veya belgelenmiş
+        pil yangını bulunamadı. Bu sertifika temel yangın güvenliği güvencesi sağlar, ancak yukarıda sahibi
+        tarafından bildirilen pil arızası, tek tek birimlerin yine de sorun geliştirebileceğini gösterir.
+      advice: UL 2272 sertifikası anlamlı bir güvenlik temelidir, ancak her birimin pilinin güvenilir
+        şekilde çalışacağını garanti etmez; olası pil sorunları için bütçe ayırın.
+  evidence:
+  - url: https://hoverboardsguide.com/gotrax-hoverboard-vs-hover-1-in-depth-feature-comparison/
+    quote: ✓UL-2272 certified — independently verified for fire and electrical safety
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:49:25+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: gotrax
+      series: hoverfly-plus
+  kind: known_issue
+  domain: quality
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Gotrax Hoverfly hoverboard battery discharges unevenly — one side dies quickly
+      body: 'Verified buyer complaint on PissedConsumer reporting a Gotrax hoverboard battery defect:
+        one side discharges very quickly, making the board unusable. The owner reports a $110 loss and
+        requests a full refund. The complaint does not specify the exact model, but it is a Gotrax hoverboard.'
+      advice: If buying a Gotrax hoverboard, test battery balance early in the return window; a battery
+        replacement can cost $110 or more.
+    tr:
+      title: Gotrax Hoverfly hoverboard pili dengesiz boşalıyor — bir taraf hızla bitiyor
+      body: 'PissedConsumer''da doğrulanmış alıcı şikayeti, bir Gotrax hoverboard pil arızasını bildiriyor:
+        bir taraf çok hızlı boşalıyor ve tahtayı kullanılamaz hale getiriyor. Sahibi 110 $ zarar bildiriyor
+        ve tam iade talep ediyor. Şikayet tam modeli belirtmiyor, ancak bu bir Gotrax hoverboard.'
+      advice: Bir Gotrax hoverboard satın alıyorsanız, iade süresi içinde pil dengesini erken test edin;
+        pil değişimi 110 $ veya daha fazlaya mal olabilir.
+  evidence:
+  - url: https://gotrax.pissedconsumer.com/reviews/RT-P.html
+    quote: I am still having problems with the battery of my Gotrax. Only one side of the hoverboard discharges
+      very quickly and I cannot use the equipment.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:49:25+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: gotrax
+      series: cosmos
+  kind: known_issue
+  domain: quality
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Owner reports Gotrax battery problem and poor customer service on replacement unit
+      body: An owner reports a replacement Gotrax unit with battery failure and unhelpful customer service.
+        This is a scooter review, not the Cosmos hoverboard specifically, but reflects brand-wide reliability
+        and support concerns.
+      advice: Gotrax customer service and battery reliability have documented complaints across products;
+        factor this into purchase decisions even though no Cosmos-specific failure was found.
+    tr:
+      title: Sahip, yedek birimde Gotrax pil sorunu ve kötü müşteri hizmeti bildiriyor
+      body: Bir sahip, pil arızası olan ve yardımcı olmayan müşteri hizmeti sunan yedek bir Gotrax birimi
+        bildiriyor. Bu bir scooter incelemesidir, özellikle Cosmos hoverboard değildir, ancak marka genelinde
+        güvenilirlik ve destek endişelerini yansıtır.
+      advice: Gotrax müşteri hizmetleri ve pil güvenilirliği konusunda ürünler genelinde belgelenmiş şikayetler
+        vardır; Cosmos'a özgü bir arıza bulunmasa da bunu satın alma kararlarınızda dikkate alın.
+  evidence:
+  - url: https://sport.woot.com/review/B07ZJV8L7H?offerid=bb61a3fd-d9d2-46af-a9d9-be062604978c&itemid=c9d47878-9fc9-4edd-9206-7d1878bb7fec&filter=2&isVerified=false&page=1&sort=0
+    quote: Replacement scooter doesn't even work. Something is wrong with the battery.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:48:45+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: razor
+      series: hovertrax-2-0
+  kind: known_issue
+  domain: battery_fire
+  severity: high
+  consequence: ''
+  detection: ''
+  component: GLW lithium-ion battery pack (serial numbers beginning with GLW, printed on white sticker
+    below bar code)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: GLW battery pack in Hovertrax 2.0 recalled by CPSC for fire hazard (Aug 2021)
+      body: This is the primary documented recall for the Hovertrax 2.0.
+      advice: If you own a Hovertrax 2.0 built between September 2016 and August 2017, check the battery
+        pack for a GLW label/serial. If present, stop using it immediately and contact Razor (866-467-2967)
+        for a prepaid return box and free replacement battery. The recall covers ~237,300 units with 20+
+        overheating reports including smoke/fire.
+    tr:
+      title: Hovertrax 2.0 içindeki GLW pil paketi, yangın tehlikesi nedeniyle CPSC tarafından geri çağrıldı
+        (Ağu 2021)
+      body: Bu, Hovertrax 2.0 için birincil belgelenmiş geri çağırmadır.
+      advice: Eylül 2016 ile Ağustos 2017 arasında üretilmiş bir Hovertrax 2.0'a sahipseniz, pil paketinde
+        GLW etiketi/seri numarası olup olmadığını kontrol edin. Varsa, kullanmayı hemen durdurun ve ön
+        ödemeli iade kutusu ve ücretsiz yedek pil için Razor (866-467-2967) ile iletişime geçin. Geri
+        çağırma, duman/yangın dahil 20'den fazla aşırı ısınma raporuyla yaklaşık 237.300 birimi kapsar.
+  evidence:
+  - url: https://www.cpsc.gov/Recalls/2021/Razor-USA-Recalls-GLW-Battery-Packs-Sold-with-Hovertrax-2-0-Self-Balancing-Hoverboards-Due-to-Fire-Hazard
+    quote: The lithium-ion GLW battery packs in the self-balancing scooters/hoverboards can overheat,
+      posing a risk of the products smoking, catching fire and/or exploding.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:46:41+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: razor
+      series: hovertrax-2-0
+  kind: known_issue
+  domain: battery_fire
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: charger/charging circuit (model HK-AD-360A100-EU, 36V output)
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 'EU recall: Hovertrax 2.0 charging circuit lacks cutoff switch, overcharge/overheat fire
+        and burn risk (2019)'
+      body: 'This is a Korean consumer-safety database (CISS) record of a 2019 European Union recall of
+        the Hovertrax 2.0. Translation: the charging circuit has no cutoff switch, so the battery can
+        overcharge and overheat, causing fire or burns.'
+      advice: This is a European-market recall (not US), but it flags a separate charging-circuit defect
+        on the same Hovertrax 2.0 model. If you use the original charger, watch for overcharging/overheating
+        during charging.
+    tr:
+      title: 'AB geri çağırması: Hovertrax 2.0 şarj devresinde kesme anahtarı yok, aşırı şarj/aşırı ısınma
+        yangın ve yanık riski (2019)'
+      body: 'Bu, Hovertrax 2.0''ın 2019 Avrupa Birliği geri çağırmasına ilişkin bir Kore tüketici güvenliği
+        veritabanı (CISS) kaydıdır. Çeviri: şarj devresinde kesme anahtarı yoktur, bu nedenle pil aşırı
+        şarj olabilir ve aşırı ısınarak yangına veya yanıklara neden olabilir.'
+      advice: Bu bir Avrupa pazarı geri çağırmasıdır (ABD değil), ancak aynı Hovertrax 2.0 modelinde ayrı
+        bir şarj devresi arızasına işaret eder. Orijinal şarj cihazını kullanıyorsanız, şarj sırasında
+        aşırı şarj/aşırı ısınmaya dikkat edin.
+  evidence:
+  - url: https://safe.cpb.or.kr/www/selectBbsNttPrductView.do?key=743&pKnd=&bKnd=recall&nttNo=33434&searchCnd=all&searchKrwd=&pageIndex=575&pageUnit=10
+    quote: 제품의 충전 회로에 차단 스위치가 없음. 따라서 배터리가 과충전되고 과열돼 화재나 화상이 발생할 수 있음.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:47:03+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: razor
+      series: hovertrax
+  kind: known_issue
+  domain: general
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: GLW battery pack
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Razor's own recall list confirms both Hovertrax battery recalls
+      body: The manufacturer's own safety page lists both the July 2016 Hovertrax recall and the August
+        2021 GLW battery pack recall.
+      advice: Use this page to check your serial number against the affected ranges before riding.
+    tr:
+      title: Razor'ın kendi geri çağırma listesi her iki Hovertrax pil geri çağırmasını da doğruluyor
+      body: Üreticinin kendi güvenlik sayfası hem Temmuz 2016 Hovertrax geri çağırmasını hem de Ağustos
+        2021 GLW pil paketi geri çağırmasını listeliyor.
+      advice: Sürüşten önce seri numaranızı etkilenen aralıklarla karşılaştırmak için bu sayfayı kullanın.
+  evidence:
+  - url: https://razor.com/razor-safety/
+    quote: GLW Battery Packs installed in certain Hovertrax 2.0 manufactured between September 2016 and
+      August 2017
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:46:41+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: gotrax
+      series: cosmos
+  kind: known_issue
+  domain: general
+  severity: low
+  consequence: ''
+  detection: ''
+  component: battery
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: No CPSC recall found for Gotrax Cosmos; 2016 recalls cover other hoverboard brands
+      body: CPSC recall records for hoverboards date from 2016 and cover other brands (Hovertrax, Swagway).
+        No Gotrax Cosmos recall appears in CPSC-related results.
+      advice: The absence of a recall is not proof of safety, but it means no official recall action has
+        been taken for this product.
+    tr:
+      title: Gotrax Cosmos için CPSC geri çağırması bulunamadı; 2016 geri çağırmaları diğer hoverboard
+        markalarını kapsıyor
+      body: Hoverboard'lara ilişkin CPSC geri çağırma kayıtları 2016 tarihlidir ve diğer markaları (Hovertrax,
+        Swagway) kapsar. CPSC ile ilgili sonuçlarda hiçbir Gotrax Cosmos geri çağırması görünmüyor.
+      advice: Geri çağırmanın olmaması güvenliğin kanıtı değildir, ancak bu ürün için resmi bir geri çağırma
+        işleminin yapılmadığı anlamına gelir.
+  evidence:
+  - url: https://safe.cpb.or.kr/www/selectBbsNttPrductList.do?key=164&pKnd=PRDUCT07&bKnd=recall&pageUnit=10&searchCnd=all&searchKrwd=&pageIndex=48
+    quote: '[미국] Hovertrax 전동휠(호버보드), 배터리 과열로 인한 화재 위험성으로 리콜'
+    locator: ''
+    stance: disputes
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-10-27T17:48:45+00:00'

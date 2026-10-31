@@ -1,0 +1,57 @@
+# Subjects — the things this pack knows about.
+#
+# `identity` carries exactly the keys `pack.toml` declares for the
+# kind: that dictionary is hashed to the subject id.
+- kind: product
+  label: Tesla Model Y
+  identity:
+    brand: tesla
+    series: model-y
+  aliases:
+  - Model Y
+- kind: product
+  label: Hyundai Kona Electric
+  identity:
+    brand: hyundai
+    series: kona-electric
+  aliases:
+  - Kona EV
+- kind: product
+  label: Chevrolet Bolt EV
+  identity:
+    brand: chevrolet
+    series: bolt-ev
+  aliases:
+  - Bolt EUV
+- kind: product
+  label: Kia EV6
+  identity:
+    brand: kia
+    series: ev6
+- kind: product
+  label: Ford Mustang Mach-E
+  identity:
+    brand: ford
+    series: mustang-mach-e
+  aliases:
+  - Mach-E
+- kind: product
+  label: Audi e-tron
+  identity:
+    brand: audi
+    series: e-tron
+  aliases:
+  - e-tron Quattro
+  - e-tron Sportback
+- kind: product
+  label: Renault Zoe
+  identity:
+    brand: renault
+    series: zoe
+- kind: product
+  label: Mercedes EQB
+  identity:
+    brand: mercedes-benz
+    series: eqb
+  aliases:
+  - EQB 250+

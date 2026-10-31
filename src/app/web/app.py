@@ -64,6 +64,7 @@ from app.web.routers import (
     mcp_clients,
     operations,
     packs,
+    presence,
     prices,
     products,
     proxies,
@@ -372,6 +373,20 @@ async def lifespan(app: FastAPI):
         except Exception:
             log.warning("could not start the watched-page check", exc_info=True)
 
+    # The optional anonymous daily ping (`app/presence.py`): off unless the
+    # reader turned it on, and off under test for the same reason as the pack
+    # update — a test that enters a lifespan must not reach the network. On a
+    # daemon thread, so startup never waits on it.
+    if not os.environ.get("KRIKO_NO_PRESENCE"):
+        try:
+            from app import presence as presence_ping
+
+            presence_ping.ping_in_background(
+                app.state.settings, app.state.settings.app_state_path, app_version()
+            )
+        except Exception:
+            log.warning("could not start the presence ping", exc_info=True)
+
     try:
         yield
     finally:
@@ -447,6 +462,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         agent.router,
         agent_runtime.router,
         packs.router,
+        presence.router,
         prefs_router.router,
         query.router,
         research.router,

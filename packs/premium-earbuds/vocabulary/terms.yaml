@@ -1,0 +1,37 @@
+# Vocabulary — every kind, key, domain and attribute this pack uses.
+#
+# Written from the pack an agent proposed. Declared before use: the
+# builder refuses a row naming a term that is not here, which is also
+# why a domain used by a claim and never declared is added above.
+- term_id: product
+  role: subject_kind
+  label:
+    en: product
+- term_id: brand
+  role: attribute
+  datatype: text
+  label:
+    en: brand
+- term_id: series
+  role: attribute
+  datatype: text
+  label:
+    en: series
+- term_id: battery_life_h
+  role: attribute
+  datatype: number
+  label:
+    en: Battery life (hours)
+- term_id: active_noise_cancellation
+  role: attribute
+  datatype: text
+  label:
+    en: Active noise cancellation
+- term_id: audio
+  role: domain
+  label:
+    en: Audio
+- term_id: general
+  role: domain
+  label:
+    en: General

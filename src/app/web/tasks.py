@@ -29,7 +29,7 @@ from app import evidence, packautoupdate, packsource
 
 from app.findings import accept_findings, log_submission, retract_claim
 from app.web import pipeline, state
-from app.web.jobs import Cancelled, Progress
+from app.web.jobs import Cancelled, Progress, Refused
 from kriko.pack import updates
 from kriko.research import BudgetExceeded, get_researcher, plan_task
 from kriko.store import packstore
@@ -83,11 +83,12 @@ DEFAULT_PRICE_PER_CALL = 0.01
 DEFAULT_BUDGET_USD = 0.20
 
 
-#: The first half of every "no agent" refusal. The API agent is named because
-#: it is the door a reader without a CLI has, and it runs only once picked.
-NO_AGENT = ("No agent to run: no coding-agent CLI on PATH, and the Mistral API "
-            "agent is not picked (Settings → Agents; it needs a Mistral key in "
-            "Settings → Keys), so")
+#: The first half of every "no agent" refusal, said to someone who asked a
+#: question and has not set an agent up. The API agent is the door a reader
+#: without a CLI has, and it runs only once picked. The screens are named as the
+#: app draws them: Agents is a panel under More, and keys are a page of Settings.
+NO_AGENT = ("Kriko needs an AI agent for this, and none is ready. Install or pick "
+            "one in More → Agents, or add a Mistral key in Settings → Keys.")
 
 
 def default_backend(app_state_path=None) -> str:
@@ -1636,9 +1637,11 @@ def _friendly_index_error(exc: Exception) -> str:
     import urllib.error
 
     if isinstance(exc, urllib.error.HTTPError) and exc.code == 404:
-        return "The pack index has nothing published yet."
+        return ("No catalogs are published for this version of Kriko yet. "
+                "Import a .kpack file, or research a product with an agent.")
     if isinstance(exc, (urllib.error.URLError, OSError)):
-        return "The pack download site could not be reached."
+        return ("Kriko could not reach the catalog site. Check your internet "
+                "connection and try again, or import a .kpack file.")
     return "Could not check for pack updates."
 
 
@@ -1966,12 +1969,11 @@ def pack_author(settings, params: dict, progress: Progress) -> dict:
             # installed deserves to know why it is not being driven, and a reader
             # with neither deserves the other door rather than a dead end.
             blocked = "; ".join(one.unusable for one in harness.found_but_unusable())
-            raise ValueError(
-                f"{NO_AGENT} Kriko cannot author a pack by itself. Install a coding "
-                "agent, pick the Mistral API agent, run a local model server "
-                "(Ollama or LM Studio, with a model downloaded), or hand the brief "
-                "to your own agent through the MCP server (Agents → Connect) and "
-                "let it use `draft_pack`."
+            raise Refused(
+                f"{NO_AGENT} Writing a catalog also works with a local model server "
+                "(Ollama or LM Studio, with a model downloaded), or you can hand the "
+                "brief to your own agent through the MCP server (More → Agents → "
+                "Connect) and let it use `draft_pack`."
                 + (f" Found but not usable: {blocked}." if blocked else ""))
 
         researcher = harness_researcher(
@@ -3176,10 +3178,10 @@ def pack_amend(settings, params: dict, progress: Progress) -> dict:
         researcher = _local_asker(settings, params, progress)
     else:
         if not agent_ready(settings.app_state_path, str(params.get("harness") or "")):
-            raise ValueError(
-                f"{NO_AGENT} Kriko cannot extend this draft by itself. Hand the "
-                "brief to your own agent through the MCP server (Agents → Connect) "
-                "— `amend_draft` gives you the same brief."
+            raise Refused(
+                f"{NO_AGENT} You can also hand the brief to your own agent through "
+                "the MCP server (More → Agents → Connect): `amend_draft` gives you "
+                "the same brief."
             )
 
         researcher = harness_researcher(
@@ -4917,10 +4919,9 @@ def _ask_about_checks(settings, params: dict, progress: Progress, brief: str, *,
                              if trial_reservation_id else {})
         if not agent_ready(settings.app_state_path, str(params.get("harness") or ""),
                            **readiness_options):
-            raise ValueError(
-                f"{NO_AGENT} Kriko cannot answer this by itself. Hand the "
-                "question and the table to your own agent (Agents → "
-                "Connect), or run one of the planes in Settings → Research."
+            raise Refused(
+                f"{NO_AGENT} You can also hand the question and the table to "
+                "your own agent: More → Agents → Connect."
             )
         researcher = harness_researcher(
             preferred=str(params.get("harness") or ""),

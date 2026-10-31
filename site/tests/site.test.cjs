@@ -13,6 +13,8 @@ const PAGES = [
   { file: 'privacy/index.html', url: 'https://kriko.cc/privacy/', lang: 'en' },
   { file: 'guide/index.html', url: 'https://kriko.cc/guide/', lang: 'en' },
   { file: 'tr/guide/index.html', url: 'https://kriko.cc/tr/guide/', lang: 'tr' },
+  { file: 'install/index.html', url: 'https://kriko.cc/install/', lang: 'en' },
+  { file: 'tr/install/index.html', url: 'https://kriko.cc/tr/install/', lang: 'tr' },
 ];
 const HOME = PAGES.slice(0, 2);
 const GUIDE = PAGES.slice(3, 5);
@@ -125,6 +127,65 @@ test('the stylesheet and script carry the hash of their own content, on every pa
   }
 });
 
+// A link pasted into X, Bluesky, Slack or a chat unfurls into this picture; a 128px icon there
+// reads as a broken link. It is also what the page promises, so the page must name one that exists.
+test('a shared link to a page unfurls into a large picture that exists, with a description and the page\'s own address', () => {
+  for (const page of [...HOME, ...GUIDE]) {
+    const d = load(page);
+    const meta = (key) => d.querySelector(`meta[property="${key}"], meta[name="${key}"]`);
+    assert.equal(meta('twitter:card').content, 'summary_large_image', page.file);
+    assert.equal(meta('og:url').content, page.url, `${page.file}: the shared address is not the page's own`);
+    const image = meta('og:image').content;
+    assert.match(image, /^https:\/\/kriko\.cc\/assets\/[\w-]+\.jpg$/, `${page.file}: ${image}`);
+    const file = path.join(root, image.replace('https://kriko.cc/', ''));
+    assert.ok(fs.existsSync(file), `${page.file}: ${image} is not a file`);
+    const bytes = fs.readFileSync(file);
+    // A JPEG's size sits in its start-of-frame marker.
+    const frame = bytes.indexOf(Buffer.from([0xff, 0xc0]));
+    assert.equal(bytes.readUInt16BE(frame + 5), Number(meta('og:image:height').content), `${page.file}: the stated height is not the picture's`);
+    assert.equal(bytes.readUInt16BE(frame + 7), Number(meta('og:image:width').content), `${page.file}: the stated width is not the picture's`);
+    assert.ok(bytes.length < 400 * 1024, `${page.file}: ${image} is over 400 KB, which some apps refuse`);
+    assert.ok(meta('og:image:alt').content.length > 40, `${page.file}: the share picture is not described`);
+  }
+});
+
+test('the film on the home page waits for a press, has a still and a way to save it, and is small enough to host', () => {
+  for (const page of HOME) {
+    const d = load(page);
+    const dir = path.dirname(path.join(root, page.file));
+    const video = d.querySelector('#film video');
+    assert.ok(video, `${page.file} has no film`);
+    assert.ok(video.hasAttribute('controls'), `${page.file}: the film has no controls`);
+    assert.ok(!video.hasAttribute('autoplay'), `${page.file}: the film starts with sound by itself`);
+    assert.equal(video.getAttribute('preload'), 'none', `${page.file}: the film would download before it is wanted`);
+    assert.ok(video.getAttribute('aria-label').length > 40, `${page.file}: the film is not described`);
+    const still = path.resolve(dir, video.getAttribute('poster'));
+    assert.ok(fs.existsSync(still), `${page.file}: the film's still is missing`);
+    const file = path.resolve(dir, video.querySelector('source').getAttribute('src'));
+    // Cloudflare Pages refuses a file over 25 MiB; keep well under it.
+    assert.ok(fs.statSync(file).size < 12 * 1024 * 1024, `${page.file}: the film is over 12 MB`);
+    assert.ok(video.querySelector('a[href$=".mp4"]'), `${page.file}: a browser that cannot play it has no link to the file`);
+    assert.ok(d.querySelector('#film figcaption').textContent.length > 20, `${page.file}: the film has no caption`);
+  }
+});
+
+test('robots.txt names the sitemap, the sitemap lists exactly the pages that exist, and an unknown address gets a real 404 page', () => {
+  assert.match(read('robots.txt'), /^Sitemap: https:\/\/kriko\.cc\/sitemap\.xml$/m);
+  const listed = [...read('sitemap.xml').matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[1]).sort();
+  assert.deepEqual(listed, PAGES.map((page) => page.url).sort());
+  const d = new JSDOM(read('404.html'), { url: 'https://kriko.cc/404.html' }).window.document;
+  assert.match(d.querySelector('meta[name="robots"]').content, /noindex/);
+  // It answers at any address, so a relative path would break one folder down.
+  for (const el of d.querySelectorAll('link[href], img[src], source[srcset], a[href]')) {
+    const value = el.getAttribute('href') || el.getAttribute('src') || el.getAttribute('srcset');
+    assert.ok(value.startsWith('/'), `404.html names ${value} relatively`);
+    if (!/\.(css|svg|png)(\?|$)/.test(value)) continue;
+    const [asset, query] = value.split('?');
+    const bytes = fs.readFileSync(path.join(root, asset));
+    if (asset === '/styles.css') assert.equal(new URLSearchParams(query).get('v'), crypto.createHash('sha256').update(bytes).digest('hex').slice(0, 12), 'the stylesheet hash is stale');
+  }
+});
+
 test('the Turkish page is what the English page and the translations make', () => {
   const before = Object.fromEntries(PAGES.map((p) => [p.file, read(p.file)]));
   try {
@@ -187,6 +248,26 @@ test('every file the stylesheet names exists, and no font comes from another sit
   assert.ok(!/@import/.test(css), 'the stylesheet imports nothing');
 });
 
+// A custom property that is read without a fallback and defined nowhere is the
+// quietest bug a stylesheet can have: the declaration using it is dropped at
+// computed-value time and the browser says nothing. `var(--r)` and the three
+// severity colours were read 53 times between them and defined zero times, so
+// every known-problems card lost its rounded corners and every severity lost its
+// colour, on every one of the 300-odd generated pages, until somebody noticed. A
+// var() with a fallback is deliberate and allowed.
+test('every custom property the stylesheet reads without a fallback is defined somewhere', () => {
+  const defined = new Set([...css.matchAll(/(--[a-z0-9-]+)\s*:/g)].map((m) => m[1]));
+  for (const page of PAGES) for (const m of read(page.file).matchAll(/(--[a-z0-9-]+)\s*:/g)) defined.add(m[1]);
+  // A property a script sets on an element at runtime is defined, just later.
+  for (const m of read('script.js').matchAll(/setProperty\(\s*['"](--[a-z0-9-]+)/g)) defined.add(m[1]);
+  const undefinedReads = new Map();
+  for (const m of css.matchAll(/var\(\s*(--[a-z0-9-]+)\s*([,)])/g)) {
+    if (m[2] === ')') undefinedReads.set(m[1], (undefinedReads.get(m[1]) || 0) + 1);
+  }
+  const missing = [...undefinedReads.keys()].filter((name) => !defined.has(name)).sort();
+  assert.deepEqual(missing, [], `read with no fallback and defined nowhere: ${missing.join(', ')}`);
+});
+
 test('the menu opens and closes on a narrow screen, and the pages work without it', () => {
   const page = PAGES[0];
   const dom = new JSDOM(read(page.file), { url: page.url, runScripts: 'outside-only' });
@@ -194,13 +275,18 @@ test('the menu opens and closes on a narrow screen, and the pages work without i
   const { document } = dom.window;
   const toggle = document.querySelector('.menu-toggle');
   const nav = document.getElementById('main-nav');
+  assert.ok(document.documentElement.classList.contains('menu-ready'));
   assert.equal(toggle.getAttribute('aria-expanded'), 'false');
   toggle.click();
   assert.equal(toggle.getAttribute('aria-expanded'), 'true');
   assert.ok(nav.classList.contains('is-open'));
   document.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Escape' }));
   assert.equal(toggle.getAttribute('aria-expanded'), 'false');
-  assert.ok(!/<script(?![^>]*\bsrc=)/.test(read(page.file)), 'the page carries no inline script');
+  assert.equal(document.activeElement, toggle);
+  toggle.click();
+  document.querySelector('main').dispatchEvent(new dom.window.Event('pointerdown', { bubbles: true }));
+  assert.equal(toggle.getAttribute('aria-expanded'), 'false');
+  assert.equal(document.querySelectorAll('script:not([src]):not([type="application/ld+json"])').length, 0, 'the page carries no executable inline script');
   assert.ok(document.querySelector('.faq details'), 'the questions are details elements, so they work without script');
 });
 
@@ -243,7 +329,7 @@ test('every film in the guide has a still, a size small enough to load, and a ca
     for (const a of d.querySelectorAll('.toc a')) {
       assert.ok(d.getElementById(a.getAttribute('href').slice(1)), `${page.file}: the contents name ${a.getAttribute('href')}, which is not there`);
     }
-    assert.ok(!/<script(?![^>]*\bsrc=)/.test(read(page.file)), `${page.file} carries an inline script`);
+    assert.equal(d.querySelectorAll('script:not([src]):not([type="application/ld+json"])').length, 0, `${page.file} carries an executable inline script`);
   }
 });
 
@@ -285,4 +371,188 @@ test('the Turkish guide has its buttons in Turkish', () => {
   const button = dom.window.document.querySelector('.demo-toggle');
   assert.equal(button.textContent, 'Duraklat');
   assert.match(button.getAttribute('aria-label'), /^Animasyonu duraklat: /);
+});
+
+// The pages under problems/ are written by tools/render_problems.py from the catalogs.
+const generated = () => ['problems', 'tr/problems'].flatMap(function walk(dir) {
+  return fs.readdirSync(path.join(root, dir), { withFileTypes: true }).flatMap((entry) => {
+    const next = `${dir}/${entry.name}`;
+    return entry.isDirectory() ? walk(next) : [next];
+  });
+}).filter((file) => file.endsWith('index.html'));
+
+test('every generated problem page is complete, points at its twin, runs no script and names a source for each claim', () => {
+  const files = generated();
+  assert.ok(files.length >= 4, 'there are no generated problem pages');
+  const stylesheet = crypto.createHash('sha256').update(fs.readFileSync(path.join(root, 'styles.css'))).digest('hex').slice(0, 12);
+  for (const file of files) {
+    const url = `https://kriko.cc/${file.replace(/index\.html$/, '')}`;
+    const d = new JSDOM(read(file), { url }).window.document;
+    assert.equal(d.documentElement.lang, file.startsWith('tr/') ? 'tr' : 'en', file);
+    assert.equal(d.querySelectorAll('h1').length, 1, `${file} needs exactly one h1`);
+    assert.ok(d.querySelector('meta[name="description"]').content.length > 40, file);
+    assert.equal(d.querySelector('link[rel="canonical"]').href, url);
+    // The only script is structured data for a search engine: JSON that parses, never code.
+    for (const script of d.querySelectorAll('script')) {
+      assert.equal(script.type, 'application/ld+json', `${file} runs a script`);
+      assert.ok(JSON.parse(script.textContent)['@context'], `${file}: its structured data names no context`);
+    }
+    assert.ok(d.querySelector('script[type="application/ld+json"]'), `${file} has no structured data`);
+    assert.ok(d.querySelector('meta[name="twitter:title"]') && d.querySelector('meta[property="og:locale"]'), `${file} is missing its social tags`);
+    assert.ok(d.querySelector('link[rel="stylesheet"]').href.endsWith(`/styles.css?v=${stylesheet}`), `${file}: the stylesheet hash is stale`);
+    for (const alternate of d.querySelectorAll('link[rel="alternate"][hreflang]')) {
+      const twin = new URL(alternate.href).pathname.replace(/^\//, '');
+      if (alternate.hreflang !== 'x-default') assert.ok(fs.existsSync(path.join(root, twin, 'index.html')), `${file} points at ${twin}, which does not exist`);
+    }
+    for (const claim of d.querySelectorAll('.claim')) {
+      assert.ok(claim.querySelector('.src a[href^="http"]'), `${file}: a claim names no source`);
+    }
+  }
+});
+
+test('every problem page is reached from the hub in the same language, and no link inside them is dead', () => {
+  for (const [prefix, hub] of [['', 'problems/index.html'], ['tr/', 'tr/problems/index.html']]) {
+    const seen = new Set([hub]);
+    const queue = [hub];
+    while (queue.length) {
+      const file = queue.shift();
+      const d = new JSDOM(read(file), { url: `https://kriko.cc/${file.replace(/index\.html$/, '')}` }).window.document;
+      for (const a of d.querySelectorAll('main a[href^="/"]')) {
+        const target = a.getAttribute('href').split('#')[0];
+        if (!target.startsWith(`/${prefix}problems/`)) continue;
+        const next = `${target.replace(/^\//, '')}index.html`;
+        assert.ok(fs.existsSync(path.join(root, next)), `${file} links to ${target}, which does not exist`);
+        if (!seen.has(next)) { seen.add(next); queue.push(next); }
+      }
+    }
+    const own = generated().filter((file) => file.startsWith(`${prefix}problems/`));
+    assert.deepEqual([...seen].sort(), own.sort(), `${prefix || 'en'}: a problem page is not reachable from the hub, or the hub points off the set`);
+  }
+});
+
+test('the problem sitemap lists exactly the generated pages, and robots.txt names it', () => {
+  assert.match(read('robots.txt'), /^Sitemap: https:\/\/kriko\.cc\/sitemap-problems\.xml$/m);
+  const listed = [...read('sitemap-problems.xml').matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[1]).sort();
+  assert.deepEqual(listed, generated().map((file) => `https://kriko.cc/${file.replace(/index\.html$/, '')}`).sort());
+});
+
+test('a product page says where it sits, with breadcrumbs that match what a reader sees', () => {
+  const product = new JSDOM(read('problems/mercedes-eqb/index.html')).window.document;
+  const blocks = [...product.querySelectorAll('script')].map((s) => JSON.parse(s.textContent));
+  const crumbs = blocks.find((block) => block['@type'] === 'BreadcrumbList');
+  assert.deepEqual(crumbs.itemListElement.map((item) => item.name), [...product.querySelectorAll('.crumb a')].map((a) => a.textContent).concat(['Mercedes EQB']));
+  assert.match(blocks.find((block) => block['@type'] === 'Article').dateModified, /^\d{4}-\d{2}-\d{2}$/);
+  assert.match(product.title, /safety risks/, 'a page that reports a fire names the risk in its title');
+});
+
+test('the sitemap says when each page was last checked, and the page of every safety report is listed', () => {
+  const sitemap = read('sitemap-problems.xml');
+  const days = [...sitemap.matchAll(/<lastmod>([^<]+)<\/lastmod>/g)].map((match) => match[1]);
+  assert.ok(days.length > 100, 'the problem pages carry no lastmod');
+  assert.ok(days.every((day) => /^\d{4}-\d{2}-\d{2}$/.test(day)), 'a lastmod is not a date');
+  for (const url of ['https://kriko.cc/problems/safety/', 'https://kriko.cc/tr/problems/safety/']) assert.ok(sitemap.includes(`<loc>${url}</loc>`), url);
+});
+
+test('no sponsored box is on a home page, the guide or the privacy policy', () => {
+  for (const file of ['index.html', 'tr/index.html', 'guide/index.html', 'tr/guide/index.html', 'privacy/index.html']) {
+    assert.ok(!read(file).includes('class="sponsored"'), `${file} carries a sponsored box`);
+  }
+});
+
+test('the privacy policy describes the sponsored boxes whenever any is listed, and says they load nothing', () => {
+  const listed = JSON.parse(read('sponsors.json'));
+  assert.ok(Array.isArray(listed));
+  const policy = load(PAGES[2]);
+  const section = policy.querySelector('#sponsored');
+  if (listed.length) assert.ok(section, 'a sponsor is listed but the privacy policy does not name sponsored boxes');
+  if (section) assert.match(section.nextElementSibling.textContent, /runs no script and sets no cookie/);
+  assert.ok(!/no advertising\./.test(policy.querySelector('.short').textContent) || !listed.length, 'the policy still promises no advertising');
+});
+
+test('both home pages link to the problem pages in their own language', () => {
+  for (const [page, href] of [[PAGES[0], '/problems/'], [PAGES[1], '/tr/problems/']]) {
+    assert.ok(load(page).querySelector(`footer a[href="${href}"]`), `${page.file} has no footer link to ${href}`);
+  }
+});
+
+// A phone cannot run Kriko, and most visitors who arrive from a search are on one. Every page that
+// asks for an install also offers a touch screen a way to carry the install page to a computer.
+test('a touch screen is offered a mailto: that sends the install page in the page\'s own language, and a mouse is not', () => {
+  assert.match(css, /\.handoff\s*\{\s*display:\s*none;\s*\}/, 'the hand-off must start hidden');
+  assert.match(css, /@media\s*\(pointer:\s*coarse\)\s*\{\s*\.handoff\s*\{\s*display:\s*block;[^}]*\}\s*\}/, 'a touch screen must show it');
+  const all = generated();
+  // JSDOM holds a whole parsed page; 676 of them at once exhausts the heap. Every
+  // 25th page is enough to catch a missing hand-off or a wrong language target.
+  const asking = [...HOME.map((page) => page.file), ...all.filter((_, i) => i % 25 === 0)];
+  assert.ok(asking.length > 20, 'too few pages were checked');
+  for (const file of asking) {
+    const lang = file.startsWith('tr/') ? 'tr' : 'en';
+    const d = new JSDOM(read(file), { url: `https://kriko.cc/${file.replace(/index\.html$/, '')}` }).window.document;
+    const links = [...d.querySelectorAll('.handoff a[href^="mailto:"]')];
+    assert.ok(links.length >= 1, `${file} offers a phone no way to carry the link to a computer`);
+    for (const link of links) {
+      const mail = new URL(link.href);
+      const body = new URLSearchParams(mail.search).get('body');
+      // The generated pages carry the reader's own install page; the hand-written
+      // home pages carry their install section, and are not rebuilt per language.
+      if (!HOME.some((page) => page.file === file)) {
+        assert.equal(body, lang === 'tr' ? 'https://kriko.cc/tr/install/' : 'https://kriko.cc/install/', `${file}: the mail carries the wrong page`);
+      }
+      assert.ok(new URLSearchParams(mail.search).get('subject'), `${file}: the mail has no subject`);
+    }
+  }
+});
+
+test('llms.txt says what Kriko is, links every catalog, and is what the tooling writes', () => {
+  const before = read('llms.txt');
+  try {
+    execFileSync(process.execPath, [path.join(root, 'tools/render_llms.cjs')], { stdio: 'pipe' });
+  } catch (error) {
+    assert.fail(`render_llms failed:\n${error.stderr}`);
+  }
+  const now = read('llms.txt');
+  if (now !== before) fs.writeFileSync(path.join(root, 'llms.txt'), before);
+  assert.equal(now, before, 'llms.txt is stale: run node site/tools/render_llms.cjs and commit the result');
+  assert.match(before, /^# Kriko\n\n> Kriko is a free, open-source/, 'llms.txt does not open with what Kriko is');
+  for (const link of ['https://kriko.cc/', 'https://kriko.cc/guide/', 'https://kriko.cc/privacy/', 'https://kriko.cc/tr/', 'https://kriko.cc/problems/safety/']) {
+    assert.ok(before.includes(`](${link})`), `llms.txt does not link ${link}`);
+  }
+  const hub = load({ file: 'problems/index.html', url: 'https://kriko.cc/problems/' });
+  for (const card of hub.querySelectorAll('.cards .card')) {
+    const url = new URL(card.getAttribute('href'), 'https://kriko.cc').href;
+    assert.ok(before.includes(`](${url})`), `llms.txt does not link ${url}`);
+  }
+});
+
+test('robots.txt lets the answer engines in and names the file written for them', () => {
+  const robots = read('robots.txt');
+  for (const bot of ['Googlebot', 'Bingbot', 'GPTBot', 'OAI-SearchBot', 'ChatGPT-User', 'ClaudeBot', 'Claude-SearchBot', 'PerplexityBot', 'Google-Extended']) {
+    assert.match(robots, new RegExp(`^User-agent: ${bot}$`, 'm'), `robots.txt does not name ${bot}`);
+  }
+  assert.match(robots, /^Allow: \/$/m, 'a named crawler is not allowed in');
+  assert.match(robots, /^Disallow: \/tools\/$/m);
+  assert.match(robots, /https:\/\/kriko\.cc\/llms\.txt/, 'robots.txt does not point at llms.txt');
+});
+
+test('a product page answers the two questions a buyer asks, and names the pages behind its findings', () => {
+  for (const [file, label, ask] of [['problems/mercedes-eqb/index.html', 'Mercedes EQB', /^What is known to go wrong with Mercedes EQB\?$/],
+    ['tr/problems/mercedes-eqb/index.html', 'Mercedes EQB', /^Mercedes EQB ile ilgili bilinen sorunlar neler\?$/]]) {
+    const product = new JSDOM(read(file)).window.document;
+    const blocks = [...product.querySelectorAll('script')].map((s) => JSON.parse(s.textContent));
+    const faq = blocks.find((block) => block['@type'] === 'FAQPage');
+    assert.ok(faq, `${file} answers no question`);
+    assert.equal(faq.mainEntity.length, 2, file);
+    assert.match(faq.mainEntity[0].name, ask, `${file}: the first question is not the one a buyer types`);
+    for (const question of faq.mainEntity) {
+      assert.match(question.name, /\?$/, question.name);
+      assert.ok(question.acceptedAnswer.text.length > 40, `${file}: ${question.name} has no answer`);
+    }
+    const article = blocks.find((block) => block['@type'] === 'Article');
+    assert.equal(article.about.name, label, `${file}: the article is not about the product`);
+    assert.ok(article.isPartOf, `${file}: the article belongs to no site`);
+    // A declared citation that the page does not print would be a source only a machine sees.
+    const printed = new Set([...product.querySelectorAll('.src a')].map((a) => a.getAttribute('href')));
+    assert.ok(article.citation.length >= 3, `${file} cites ${article.citation.length} sources`);
+    for (const url of article.citation) assert.ok(printed.has(url), `${file}: ${url} is cited but not on the page`);
+  }
 });
