@@ -19,8 +19,13 @@ The page is white by default and follows the visitor's system for dark. Every
 colour is a token at the top of `styles.css`; the dark theme is one block. The
 look is Kriko's own and is kept on purpose, not left to defaults:
 
-- **Headings** are Barlow Condensed, which is the wordmark's own proportion.
-- **Body text** is Atkinson Hyperlegible Next, a face drawn for reading.
+- **Headings** are Space Grotesk; **body text** is Inter. Both are variable
+  fonts, bundled in `assets/fonts/` with their OFL licences.
+- **The hero aurora** is a WebGL shader on a `<canvas class="hero-shader">`,
+  drawn by `script.js` in the product's own blues. It draws one static frame
+  for a reader who asked for less motion, and pauses when hidden or off screen.
+- **The agent's orb** is the `.orb` class — a small breathing blue sphere — used
+  in the hero's label chip and free to use anywhere an agent works.
 - **The sky** is the app's dithered pixel sky, drawn by `tools/dither_sky.py` with
   the app's own method and palette, in a light and a dark version.
 - **The paper** is a warm white, with the product's blue used only for actions,
