@@ -5,6 +5,9 @@
  * An answer that is still running says what it is doing; one that stopped keeps
  * its partial text and says so; one that had no page text says that too rather
  * than borrowing the confidence of a citation-shaped number.
+ *
+ * Everything here sits on one 4/8/12/16 spacing scale and one type rhythm; every
+ * control is at least 44 points tall so a thumb can hit it while reading.
  */
 
 import * as Clipboard from 'expo-clipboard';
@@ -33,6 +36,13 @@ import { MotionPressable, MotionView, useReducedMotion } from './Motion';
 import { ProductCard, ProductSearchCards } from './ProductCard';
 import { useSmoothText } from './useSmoothText';
 
+/** The smallest tappable box; a row or button shorter than this is too small. */
+const TARGET = 44;
+/** The numbered tile beside a source row. */
+const SOURCE_TILE = 22;
+/** A source row's resting height; a two-line title may grow past it. */
+const SOURCE_ROW = 52;
+
 function clock(at: number): string {
   const date = new Date(at);
   return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
@@ -41,10 +51,10 @@ function clock(at: number): string {
 /* ---------------------------------------------------------------- steps -- */
 
 function stepIcon(step: Step, color: Colors) {
-  if (step.kind === 'error') return <InfoIcon size={12} color={color.risk} />;
-  if (step.kind === 'fetch') return <GlobeIcon size={12} color={color.ink3} />;
-  if (step.kind === 'note') return <SparkIcon size={12} color={color.ink3} />;
-  return <SearchIcon size={12} color={color.ink3} />;
+  if (step.kind === 'error') return <InfoIcon size={14} color={color.risk} />;
+  if (step.kind === 'fetch') return <GlobeIcon size={14} color={color.ink3} />;
+  if (step.kind === 'note') return <SparkIcon size={14} color={color.ink3} />;
+  return <SearchIcon size={14} color={color.ink3} />;
 }
 
 export function StepLine({ step }: { step: Step }) {
@@ -139,11 +149,11 @@ function Research({ steps, showDiagnostics = false }: { steps: Step[]; showDiagn
         style={styles.researchHead}
       >
         <Txt variant="sectionLabel" tone="ink3">Research</Txt>
-        <Txt variant="monoSm" tone="ink3" numberOfLines={1} style={styles.researchSummary}>
+        <Txt variant="metaMono" tone="ink4" numberOfLines={1} style={styles.researchSummary}>
           {summary || `${steps.length} steps`}
         </Txt>
         <DisclosureChevron open={open}>
-          <ChevronRightIcon size={14} color={color.ink4} />
+          <ChevronRightIcon size={16} color={color.ink4} />
         </DisclosureChevron>
       </MotionPressable>
       <AnimatedDisclosure open={open} style={styles.researchBody}>
@@ -155,7 +165,7 @@ function Research({ steps, showDiagnostics = false }: { steps: Step[]; showDiagn
             const prompt = fields[2] ?? '0';
             const completion = fields[3] ?? '0';
             const total = fields[4] ?? '0';
-            return <Txt key={step.id} variant="monoSm" tone="ink4">{`Tokens · ${prompt} input · ${completion} output · ${total} total`}</Txt>;
+            return <Txt key={step.id} variant="metaMono" tone="ink4">{`Tokens · ${prompt} input · ${completion} output · ${total} total`}</Txt>;
           })}
       </AnimatedDisclosure>
     </View>
@@ -165,6 +175,7 @@ function Research({ steps, showDiagnostics = false }: { steps: Step[]; showDiagn
 /* -------------------------------------------------------------- sources -- */
 
 function SourceRow({ source }: { source: Source }) {
+  const color = useColors();
   const styles = useStyles();
   return (
     <MotionPressable
@@ -175,15 +186,18 @@ function SourceRow({ source }: { source: Source }) {
       accessibilityLabel={tr(`Source ${source.n}: ${source.title}`)}
       style={styles.sourceRow}
     >
-      <Txt variant="monoSm" tone="ink4" style={styles.sourceNumber}>{source.n}</Txt>
+      <View style={styles.sourceTile}>
+        <Txt variant="actionSmall" tone="fill">{source.n}</Txt>
+      </View>
       <View style={styles.sourceText}>
-      <Txt variant="bodyTight" tone="ink2" numberOfLines={1}>
+        <Txt variant="rowTitle" tone="ink" numberOfLines={2} translate={false}>
           {source.title}
         </Txt>
-        <Txt variant="monoSm" tone="ink4" numberOfLines={1}>
+        <Txt variant="metaMono" tone="ink3" numberOfLines={1} translate={false}>
           {source.host}
         </Txt>
       </View>
+      <ChevronRightIcon size={16} color={color.ink4} />
     </MotionPressable>
   );
 }
@@ -197,23 +211,49 @@ function Sources({
   unverified?: boolean;
   onOpen?: () => void;
 }) {
+  const color = useColors();
   const styles = useStyles();
   const [all, setAll] = useState(false);
   if (!sources.length) return null;
+  // One expand affordance only: the count in the header opens the rest of the
+  // list in place. "All" is a different press — it opens the Sources page.
+  const expandable = sources.length > 2;
   const shown = all ? sources : sources.slice(0, 2);
+  const head = (
+    <>
+      <Txt variant="sectionLabel" tone="ink3">
+        {tr(`Sources · ${sources.length}`)}
+      </Txt>
+      {expandable ? (
+        <DisclosureChevron open={all}>
+          <ChevronRightIcon size={14} color={color.ink4} />
+        </DisclosureChevron>
+      ) : null}
+    </>
+  );
   return (
     <View style={styles.sources}>
       <View style={styles.sourcesHead}>
-          <Txt variant="sectionLabel" tone="ink3">
-          {tr(`Sources · ${sources.length}`)}
-        </Txt>
+        {expandable ? (
+          <MotionPressable
+            onPress={() => setAll((value) => !value)}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: all }}
+            accessibilityLabel={tr(all ? 'Show fewer sources' : `Show all ${sources.length} sources`)}
+            style={styles.sourceToggle}
+          >
+            {head}
+          </MotionPressable>
+        ) : (
+          <View style={styles.sourceToggle}>{head}</View>
+        )}
         <View style={styles.sourceActions}>
           {unverified ? (
-            <Txt variant="monoSm" tone="warn" caps>
+            <Txt variant="actionSmall" tone="warn" caps>
               Titles only
             </Txt>
           ) : null}
-          {onOpen ? <MotionPressable onPress={onOpen} hitSlop={6} accessibilityRole="button" accessibilityLabel={tr('Open all sources')} style={styles.sourceAll}><Txt variant="monoSm" tone="fill">All</Txt></MotionPressable> : null}
+          {onOpen ? <MotionPressable onPress={onOpen} accessibilityRole="button" accessibilityLabel={tr('Open all sources')} style={styles.sourceAll}><Txt variant="action" tone="fill">All</Txt></MotionPressable> : null}
         </View>
       </View>
       {shown.map((source, index) => (
@@ -221,13 +261,6 @@ function Sources({
           <SourceRow source={source} />
         </MotionView>
       ))}
-      {sources.length > 2 ? (
-        <MotionPressable onPress={() => setAll((value) => !value)} accessibilityRole="button" accessibilityState={{ expanded: all }} accessibilityLabel={tr(all ? 'Show fewer sources' : `Show all ${sources.length} sources`)} style={styles.sourceExpand}>
-          <Txt variant="monoSm" tone="fill">
-          {all ? 'Show fewer' : `Show all ${sources.length}`}
-          </Txt>
-        </MotionPressable>
-      ) : null}
     </View>
   );
 }
@@ -245,13 +278,12 @@ function CopyAnswer({ text }: { text: string }) {
         setCopied(true);
         setTimeout(() => setCopied(false), 1600);
       }}
-      hitSlop={8}
       accessibilityRole="button"
       accessibilityLabel={tr(copied ? 'Copied' : 'Copy the answer')}
       style={styles.copy}
     >
-      <CopyIcon size={14} color={copied ? color.ok : color.ink4} />
-      <Txt variant="monoSm" tone={copied ? 'ok' : 'ink4'}>
+      <CopyIcon size={16} color={copied ? color.ok : color.ink3} />
+      <Txt variant="actionSmall" tone={copied ? 'ok' : 'ink3'}>
         {copied ? 'Copied' : 'Copy'}
       </Txt>
     </MotionPressable>
@@ -271,12 +303,12 @@ function UserMessage({ message, scanning }: { message: Message; scanning?: boole
       ) : null}
       {message.text && !stock ? (
         <View style={styles.userBubble}>
-          <Txt variant="rowText" tone="ink" style={styles.userText}>
+          <Txt variant="body" tone="ink">
             {message.text}
           </Txt>
         </View>
       ) : null}
-      <Txt variant="monoSm" tone="ink4" style={styles.time}>
+      <Txt variant="metaMono" tone="ink4" style={styles.time}>
         {clock(message.createdAt)}
       </Txt>
     </View>
@@ -297,7 +329,7 @@ function Actions({ actions, onAction }: {
               {action.title}
             </Txt>
             {action.detail ? (
-              <Txt variant="monoSm" tone="ink3" numberOfLines={2}>
+              <Txt variant="metaMono" tone="ink3" numberOfLines={2}>
                 {action.detail}
               </Txt>
             ) : null}
@@ -305,17 +337,16 @@ function Actions({ actions, onAction }: {
           {action.kind === 'open' && action.status !== 'failed' ? (
             <MotionPressable
               onPress={() => onAction?.(action)}
-              hitSlop={8}
               accessibilityRole="button"
               accessibilityLabel={tr(action.title)}
               style={styles.actionButton}
             >
-              <Txt variant="monoSm" tone="fill">
+              <Txt variant="action" tone="fill">
                 Open
               </Txt>
             </MotionPressable>
           ) : (
-            <Txt variant="monoSm" tone="ink4" caps>
+            <Txt variant="actionSmall" tone="ink4" caps>
               {action.status === 'done' ? 'Saved' : action.status === 'proposed' ? 'Needs a press' : 'Not done'}
             </Txt>
           )}
@@ -366,7 +397,7 @@ export function MessageRow({
         <Txt variant="sectionLabel" tone="accent" style={styles.agentLabel}>
           Kriko
         </Txt>
-        <Txt variant="monoSm" tone="ink4">
+        <Txt variant="metaMono" tone="ink4">
           {running ? 'In progress' : clock(message.createdAt)}
         </Txt>
       </View>
@@ -379,14 +410,14 @@ export function MessageRow({
           {done ? (
             <View style={styles.answerFoot}>
               {message.stopped ? (
-                <Txt variant="monoSm" tone="ink4" caps>
+                <Txt variant="actionSmall" tone="ink4" caps>
                   Stopped
                 </Txt>
               ) : (
                 <CopyAnswer text={message.text} />
               )}
               {message.unverified ? (
-                <Txt variant="monoSm" tone="warn" caps>
+                <Txt variant="actionSmall" tone="warn" caps>
                   No page text
                 </Txt>
               ) : null}
@@ -403,7 +434,7 @@ export function MessageRow({
 
       {message.error ? (
         <MotionView delay={100} style={styles.errorCard}>
-          <InfoIcon size={16} color={color.risk} />
+          <InfoIcon size={18} color={color.risk} />
           <Txt variant="body" tone="risk" style={styles.errorText}>
             {message.error}
           </Txt>
@@ -431,67 +462,88 @@ export function MessageRow({
 }
 
 const useStyles = makeStyles((color) => StyleSheet.create({
+  /* A turn: the reader's on the right, the answer on the left, one gap apart. */
   userStage: { alignItems: 'flex-end', marginTop: gap[3] },
-  userRow: { alignItems: 'flex-end', gap: 3, maxWidth: 360, alignSelf: 'flex-end' },
-  userRowWide: { alignSelf: 'stretch', maxWidth: 440, gap: gap[2] },
+  userRow: { alignItems: 'flex-end', gap: gap[2], maxWidth: '92%', alignSelf: 'flex-end' },
+  userRowWide: { alignSelf: 'stretch', maxWidth: '100%' },
   userBubble: {
-    maxWidth: '94%',
     backgroundColor: color.surface,
     borderWidth: 1,
     borderColor: color.edgeSoft,
-    borderRadius: 16,
-    borderBottomRightRadius: 5,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    gap: gap[2],
+    borderRadius: radius.m,
+    borderBottomRightRadius: radius.s,
+    paddingHorizontal: gap[4],
+    paddingVertical: gap[3],
   },
-  userText: {},
-  time: { paddingRight: 4 },
-  agentStage: { marginTop: gap[5] },
-  agentRow: { gap: gap[3] },
+  time: { paddingRight: gap[1] },
+
+  agentStage: { marginTop: gap[4] },
+  agentRow: { gap: gap[2] },
   agentHead: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingTop: 9,
+    gap: gap[2],
+    paddingTop: gap[3],
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: color.edge,
   },
   agentLabel: { flex: 1 },
-  sourceActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  sourceAll: { minHeight: 44, minWidth: 44, alignItems: 'center', justifyContent: 'center' },
-  sourceExpand: { minHeight: 44, justifyContent: 'center' },
-  answer: { gap: gap[2] },
-  answerFoot: { flexDirection: 'row', alignItems: 'center', gap: gap[3], paddingTop: 2 },
-  copy: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  liveCard: { borderLeftWidth: 2, borderLeftColor: color.edgeStrong, paddingLeft: 11, gap: 6 },
-  liveHead: { flexDirection: 'row', alignItems: 'center', gap: 9, minHeight: 20 },
+
+  /* The running answer. */
+  liveCard: { borderLeftWidth: 2, borderLeftColor: color.edgeStrong, paddingLeft: gap[3], gap: gap[2] },
+  liveHead: { flexDirection: 'row', alignItems: 'center', gap: gap[2], minHeight: 24 },
   liveCount: { marginLeft: 'auto' },
-  stepRow: { flexDirection: 'row', gap: 8, alignItems: 'flex-start' },
-  stepIcon: { width: 15, paddingTop: 3, alignItems: 'center' },
-  stepText: { flex: 1, lineHeight: 20 },
-  research: { gap: 5, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: color.edge, paddingTop: 10 },
-  researchHead: { flexDirection: 'row', alignItems: 'center', gap: gap[2], minHeight: 34 },
-  researchSummary: { flex: 1 },
-  chevronOpen: { transform: [{ rotate: '90deg' }] },
-  researchBody: {
-    gap: 7,
-    paddingLeft: 3,
-    paddingTop: 5,
-    paddingBottom: 7,
+
+  /* Research: one fold, closed by default, separated from the answer above it. */
+  research: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: color.edge,
+    paddingTop: gap[4],
+    gap: gap[2],
   },
+  researchHead: { flexDirection: 'row', alignItems: 'center', gap: gap[2], minHeight: TARGET },
+  researchSummary: { flex: 1 },
+  researchBody: { gap: gap[2], paddingTop: gap[2], paddingBottom: gap[1] },
+  stepRow: { flexDirection: 'row', gap: gap[2], alignItems: 'flex-start' },
+  stepIcon: { width: 16, paddingTop: 2, alignItems: 'center' },
+  stepText: { flex: 1 },
+
+  /* Sources: one row per page, a numbered tile, the title then the host. */
   sources: {
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: color.edge,
-    paddingTop: gap[3],
-    gap: 2,
+    paddingTop: gap[4],
+    gap: gap[1],
   },
-  sourcesHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 30 },
+  sourcesHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: TARGET, gap: gap[2] },
+  sourceToggle: { flex: 1, minHeight: TARGET, flexDirection: 'row', alignItems: 'center', gap: gap[1], paddingRight: gap[2] },
+  sourceActions: { flexDirection: 'row', alignItems: 'center', gap: gap[1] },
+  sourceAll: { minHeight: TARGET, minWidth: TARGET, alignItems: 'center', justifyContent: 'center', paddingHorizontal: gap[2] },
   sourceReveal: { width: '100%' },
-  sourceRow: { minHeight: 46, flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 5,
-    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: color.edgeSoft },
-  sourceNumber: { width: 19, textAlign: 'left', letterSpacing: 0.2 },
-  sourceText: { flex: 1, gap: 1 },
+  sourceRow: {
+    minHeight: SOURCE_ROW,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: gap[3],
+    paddingVertical: gap[1],
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: color.edgeSoft,
+  },
+  sourceTile: {
+    width: SOURCE_TILE,
+    height: SOURCE_TILE,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: color.accentWash,
+  },
+  sourceText: { flex: 1, gap: 2 },
+
+  /* The answer's own foot: copy, and why the answer is thin when it is. */
+  answer: { gap: gap[3] },
+  answerFoot: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: gap[3] },
+  copy: { minHeight: TARGET, flexDirection: 'row', alignItems: 'center', gap: gap[2], paddingRight: gap[2] },
+
   errorCard: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -500,28 +552,25 @@ const useStyles = makeStyles((color) => StyleSheet.create({
     borderRadius: radius.m,
     borderWidth: 1,
     borderColor: color.riskWash,
-    padding: 12,
+    padding: gap[4],
   },
-  errorText: { flex: 1, lineHeight: 19 },
-  actions: { gap: gap[2], paddingTop: 2 },
+  errorText: { flex: 1 },
+
+  actions: { gap: gap[2], paddingTop: gap[1] },
   actionCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: gap[2],
-    borderWidth: 0,
-    borderColor: color.edge,
-    backgroundColor: 'transparent',
-    borderRadius: 0,
     borderTopWidth: StyleSheet.hairlineWidth,
-    paddingHorizontal: 0,
-    paddingVertical: 11,
+    borderTopColor: color.edge,
+    paddingVertical: gap[3],
   },
-  actionText: { flex: 1, gap: 2 },
+  actionText: { flex: 1, gap: gap[1] },
   actionButton: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    minHeight: TARGET,
+    paddingHorizontal: gap[3],
     borderRadius: radius.s,
     backgroundColor: color.accentSoft,
+    justifyContent: 'center',
   },
-  pressed: { opacity: 0.7 },
 }));

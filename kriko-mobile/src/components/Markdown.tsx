@@ -5,14 +5,17 @@
  * full Markdown engine would be a dependency for headings and tables nobody is
  * allowed to send. Links open in the browser; citations are styled in place and
  * the numbered source list sits under the answer.
+ *
+ * Every block shares one vertical step (4/8/12/16) and one body token, so a long
+ * answer reads as one column rather than a stack of differently spaced runs.
  */
 
 import { useMemo } from 'react';
 import { Linking, StyleSheet, Text, View } from 'react-native';
 
 import { motion } from '../theme/motion';
-import { font, gap, radius } from '../theme/tokens';
-import { makeStyles } from '../theme/theme';
+import { font, gap } from '../theme/tokens';
+import { makeStyles, useType } from '../theme/theme';
 import { Txt } from '../theme/Txt';
 import { MotionView } from './Motion';
 
@@ -20,7 +23,11 @@ type Block =
   | { kind: 'p'; text: string }
   | { kind: 'h'; text: string }
   | { kind: 'li'; text: string; marker: string }
-  | { kind: 'quote'; text: string };
+  | { kind: 'quote'; text: string }
+  | { kind: 'hr' };
+
+/** A thematic break: `---`, `***`, `___` or spaced variants of them. */
+const RULE = /^([-*_])(?:\s*\1){2,}$/;
 
 function blocksOf(source: string): Block[] {
   const lines = source.replace(/\r/g, '').split('\n');
@@ -37,6 +44,13 @@ function blocksOf(source: string): Block[] {
     const line = raw.trim();
     if (!line) {
       flush();
+      continue;
+    }
+    // A horizontal rule is a line, not the word "---": the model uses it to
+    // close a section, so it becomes a quiet divider instead of three dashes.
+    if (RULE.test(line)) {
+      flush();
+      out.push({ kind: 'hr' });
       continue;
     }
     const heading = line.match(/^#{1,4}\s+(.*)$/);
@@ -133,6 +147,7 @@ function piecesOf(text: string): Piece[] {
 
 function Inline({ text }: { text: string }) {
   const styles = useStyles();
+  const type = useType();
   return (
     <>
       {piecesOf(text).map((piece, index) => {
@@ -150,8 +165,10 @@ function Inline({ text }: { text: string }) {
           );
         }
         if (piece.cite) {
+          // A reference tag, not a stray number: the same blue as a link, on a
+          // wash, so "[2]" reads as "this came from source 2".
           return (
-            <Text key={index} style={styles.cite}>
+            <Text key={index} style={[styles.cite, { fontSize: type.sectionLabel.fontSize }]}>
               {piece.text}
             </Text>
           );
@@ -165,7 +182,7 @@ function Inline({ text }: { text: string }) {
         }
         if (piece.code) {
           return (
-            <Text key={index} style={styles.code}>
+            <Text key={index} style={[styles.code, { fontSize: type.bodyTight.fontSize }]}>
               {piece.text}
             </Text>
           );
@@ -189,10 +206,17 @@ export function Markdown({ text, streaming = false }: { text: string; streaming?
   return (
     <View style={styles.stack}>
       {blocks.map((block, index) => {
+        if (block.kind === 'hr') {
+          return (
+            <MotionView key={index} {...reveal(index)} style={styles.block}>
+              <View style={styles.rule} />
+            </MotionView>
+          );
+        }
         if (block.kind === 'h') {
           return (
             <MotionView key={index} {...reveal(index)} style={styles.block}>
-              <Txt variant="cardTitle" tone="ink" style={styles.heading}>
+              <Txt variant="heading" tone="ink" style={styles.heading}>
                 {block.text}
               </Txt>
             </MotionView>
@@ -216,7 +240,7 @@ export function Markdown({ text, streaming = false }: { text: string; streaming?
                 <Txt variant="body" tone="accent" style={styles.marker}>
                   {block.marker}
                 </Txt>
-                <Txt variant="body" tone="ink2" style={styles.bulletText}>
+                <Txt variant="body" tone="ink" style={styles.bulletText}>
                   <Inline text={block.text} />
                 </Txt>
               </View>
@@ -225,7 +249,7 @@ export function Markdown({ text, streaming = false }: { text: string; streaming?
         }
         return (
           <MotionView key={index} {...reveal(index)} style={styles.block}>
-            <Txt variant="body" tone="ink2" style={styles.paragraph}>
+            <Txt variant="body" tone="ink" style={styles.paragraph}>
               <Inline text={block.text} />
             </Txt>
           </MotionView>
@@ -236,22 +260,34 @@ export function Markdown({ text, streaming = false }: { text: string; streaming?
 }
 
 const useStyles = makeStyles((color) => StyleSheet.create({
-  stack: { gap: 11 },
+  stack: { gap: gap[3] },
   block: { width: '100%' },
   paragraph: {},
-  heading: { fontFamily: font.editorial, fontSize: 19, lineHeight: 25, marginTop: 5, letterSpacing: -0.15 },
-  bullet: { flexDirection: 'row', gap: 10, paddingRight: 4 },
-  marker: { width: 13, textAlign: 'left' },
+  heading: { marginTop: gap[1] },
+  marker: { width: gap[4] + gap[1], textAlign: 'left' },
+  bullet: { flexDirection: 'row', gap: gap[2], paddingRight: gap[1] },
   bulletText: { flex: 1 },
   bold: { fontFamily: font.semibold, color: color.ink },
-  code: { fontFamily: font.mono, fontSize: 13.5, color: color.fill },
-  cite: { color: color.fill, fontFamily: font.semibold, fontSize: 12 },
+  code: {
+    fontFamily: font.mono,
+    color: color.fill,
+    backgroundColor: color.inset,
+    borderRadius: 4,
+    paddingHorizontal: gap[1],
+  },
+  cite: {
+    color: color.fill,
+    fontFamily: font.semibold,
+    backgroundColor: color.accentWash,
+    borderRadius: 4,
+    paddingHorizontal: 3,
+  },
   link: { color: color.fill, textDecorationLine: 'underline' },
   quote: {
     borderLeftWidth: 2,
     borderLeftColor: color.edgeStrong,
     paddingLeft: gap[3],
-    paddingVertical: 5,
-    borderRadius: radius.s,
+    paddingVertical: gap[1],
   },
+  rule: { height: StyleSheet.hairlineWidth, backgroundColor: color.edgeStrong, marginVertical: gap[1] },
 }));

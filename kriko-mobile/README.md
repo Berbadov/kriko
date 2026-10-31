@@ -16,6 +16,8 @@ code.
 | **Answer length** | Choose a concise answer, a fuller explanation (usually 150–300 words when useful), or a product-focused answer. The question still determines the format. |
 | **Watch it work** | Every search and every page read is shown while it happens. |
 | **Check the sources** | The numbered pages sit under the answer and have their own page. |
+| **Remember what you researched** | The phone keeps a small catalog of the products you have already asked about, from chats and scans. A follow-up like "the previous one" or "this one" names the product it means and never mixes two products; History lists what Kriko remembers. |
+| **Research and answer in more languages** | Search sources in any of 14 languages and answer in any of them, chosen independently in Settings, with an Any/Auto default. The interface itself stays English/Türkçe. |
 | **Open a screen** | Ask to see your history or settings and the answer offers an Open button. Nothing navigates without your press. |
 | **Scan over the page** | Tap the floating K, a small glass chip with the Kriko mark, to scan: a wave of pixels crosses your page while it reads, and the answer hangs over the page from the top. Press and hold it for Scan this page, Results and Stop sharing. Drag it onto the × that appears to stop sharing. Its transparency is a setting. |
 | **Scan with a long press** | Make Kriko your phone's digital assistant, then hold the power or home button: the same wave crosses your screen and the answer opens over the page you were on, without taking you into Kriko. |
@@ -29,9 +31,13 @@ code.
 |---|---|
 | ![Ask](docs/screens/1-ask.png) | ![Answer](docs/screens/3-answer.png) |
 
-| Settings (Turkish) | Paper theme |
+| Settings (Turkish) | White theme |
 |---|---|
-| ![Settings](docs/screens/6-settings.png) | ![Paper](docs/screens/8-light.png) |
+| ![Settings](docs/screens/0.14/1-settings.png) | ![White](docs/screens/0.14/6-white.png) |
+
+| What Kriko remembers | Language picker |
+|---|---|
+| ![Memory](docs/screens/0.14/4-memory.png) | ![Languages](docs/screens/0.14/2-languages.png) |
 
 | Listing confirmation | |
 |---|---|
@@ -54,27 +60,39 @@ Nothing needs an account, a server, or a connection to the owner's computer.
 
 ## Settings on the phone
 
-The screen follows the desktop's vocabulary, cut to what a fixed phone stack
-can actually honour:
+Settings is a compact grouped list: a quiet section caption over a rounded card,
+and rows that show the current choice — an accent icon tile, the label, the
+muted value, a chevron. A row opens a checkbox sheet with the same sentence the
+old screen put under the label, so the list stays short enough to scan. Every
+choice applies at once. The screen follows the desktop's vocabulary, cut to what
+a fixed phone stack can actually honour:
 
-- **Answer**: Short keeps the response concise, Standard asks for a useful,
-  supported explanation (usually 150–300 words when research merits it), and
-  Product only focuses on the identified item and question. The prompt guides
-  length and focus; the question determines whether prose, bullets, or another
-  structure fits.
-- **Thoroughness**: Low / Default / High set maximum search budgets of 3 / 5 / 8
-  lookups and 2 / 4 / 5 results per lookup. The agent can stop earlier when
+- **Answer length**: Short keeps the response concise, Standard asks for a
+  useful, supported explanation (usually 150–300 words when research merits it),
+  and Product only focuses on the identified item and question. The prompt
+  guides length and focus; the question determines whether prose, bullets, or
+  another structure fits.
+- **Research depth**: Light / Default / Deep set maximum search budgets of 3 / 5
+  / 8 lookups and 2 / 4 / 5 results per lookup. The agent can stop earlier when
   evidence is sufficient, searches add little new information, or it needs to
   reserve time to answer.
-- **Language**: English / Türkçe, applied instantly across the interface and
-  the floating scanner. The answer is written in the same language as the
-  interface.
-- **Theme**: System, Dark, Paper or White. System follows the phone; White is a
-  pure cool white, Paper is the desktop's warm canvas. Switching is immediate
-  and needs no rebuild.
+- **Interface language**: English / Türkçe, applied instantly across the
+  interface and the floating scanner. The interface is the only place these two
+  languages are limited: the answer and its sources are separate choices.
+- **Sources language**: Any (the default, all languages) or one of the desktop's
+  14 research languages. A chosen language scopes every search to it and writes
+  the queries in it; if the evidence is not there, the answer says so instead of
+  silently switching.
+- **Answers language**: Auto (the default, follows the language you ask in) or
+  one of the same 14 languages. It is independent of the sources language, so a
+  reader can want German pages and a Turkish answer.
+- **Theme**: System, Dark, Gray, Paper or White. System follows the phone; White
+  is a pure cool white, Paper is the desktop's warm canvas. Switching is
+  immediate and needs no rebuild.
 - **Text size**: Small, Default or Large, applied to every text token and input.
-- **Motion**: System, Reduced or Full. System follows Android's remove-animations
-  setting.
+- **Motion**: System, Reduced or Full. System follows Android's
+  remove-animations setting; every animation in the app is one shared spring and
+  duration vocabulary, and Reduced removes them rather than speeding them up.
 - **Haptics**: one switch for every tap, press and completion.
 - **Floating scanner**: how see-through the floating K and its glass panels are
   (Faint, Soft, Strong, Solid). The setting holds in every state; a touch or a
@@ -83,10 +101,28 @@ can actually honour:
   button to the system screen where it is chosen, and whether Kriko may draw
   over other apps, which is what lets the answer open over your page.
 - **Access**: trial count, access code, forget the shared keys.
-- **Conversations**: every chat, scan results, clear all, History and About pages.
-- **Privacy**: the exact list of what leaves the phone.
-- **Reset preferences**: puts every choice on the screen back to its default,
-  leaving keys, chats and scans alone.
+- **Price tracking**: due checks run when this screen opens; there is no
+  background scheduler.
+- **Data**: the privacy page, clear every chat and scan, and reset preferences.
+- **About**: History, the build and what it sends, and the in-app update.
+
+## What the phone remembers
+
+`src/engine/memory.ts` derives a small catalog from the conversation threads and
+the scan queue: one row per product, its identity (brand / product / model), the
+last question asked, a short gist of the answer and the pages it rested on. It is
+derived, never saved separately, so deleting a chat also forgets its product.
+The catalog is capped at eight rows and 1,600 characters of prompt text, and the
+turn's system prompt carries it as the reader's own record, not as new evidence.
+
+Two products stay two rows. A follow-up such as "the previous one", "this one" or
+"the second one" is resolved against the conversation (each prior user message
+now travels with the product it shared) and the catalog; the prompt requires the
+answer to name the product it is about and forbids merging evidence between two
+products. `tools/test-memory.ts` proves both halves of that with fixtures: a
+drill and a laptop produce distinct rows, the brief names both, a rescan of one
+product replaces its row instead of adding a third, and pending turns are not
+remembered yet. History shows the same rows as **Products Kriko remembers**.
 
 ## Floating scanner and product queue
 
@@ -127,7 +163,7 @@ the assistant's **Use screenshot** switch is on; if it is off the card says so.
 Android keeps one assistant at a time: choosing another one hands the long press
 back to it.
 
-Screenshots of these screens are in `docs/screens/0.12/`.
+Screenshots of these screens are in `docs/screens/0.14/`.
 
 The Android build keeps a draggable Kriko chip over a shopping page. The app
 also shows a visible “Screen sharing is on” banner with its own **Stop** button.
@@ -226,14 +262,19 @@ src/
   app/                 expo-router: chat, history, sources/[id], settings, about
   screens/             ChatScreen, Landing, WelcomeScreen
   components/          chrome, composer, message/markdown, queue and scan sheets
+    Glass.tsx          the frosted material: GlassCard, GlassBar (expo-blur)
+    settings/          the compact grouped Settings list and its checkbox sheets
   theme/
-    palettes.ts        dark, paper and white, with the same keys
+    palettes.ts        dark, gray, paper and white, with the same keys
     theme.tsx          runtime ThemeProvider, useColors, makeStyles
     preferences.ts     appearance, text size, motion; defaults and guards
+    motion.ts          one spring/duration vocabulary for the whole app
     feedback.ts        one switch for every haptic
   engine/
     providers.ts       Mercury streaming + DeepSeek tools + the turn loop
     prompt.ts          the agent's contract, answer styles, screenshot brief
+    languages.ts       the 14 research/answer languages, one data list
+    memory.ts          the phone catalog: what earlier turns researched
     visionimage.ts     label-band crop for tall screenshots
     screen.ts          MediaProjection capture, frame selection, cleanup
     sharekeys.ts       the desktop's shared-access protocol, on the phone
@@ -255,7 +296,7 @@ as bullets before it is shown.
 ## Build it
 
 Requires Node 24, JDK 17, the Android SDK (platform 36+), and an Android signing
-configuration. The current app version is **0.12.1** (Android version code **13**).
+configuration. The current app version is **0.14.0** (Android version code **18**).
 This build uses the debug keystore, so the APK installs and
 updates locally but is not a Play Store artifact.
 

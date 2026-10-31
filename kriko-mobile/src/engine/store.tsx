@@ -29,6 +29,7 @@ import { clearAnswerCache } from './answer-cache';
 import { checkWatchWithKey } from './priceTracking';
 import { DEFAULT_RESEARCH_PREFERENCES, normalizeResearchPreferences, type ResearchPreferences } from './researchPreferences';
 import { runTurn, readListing } from './providers';
+import { buildCatalog } from './memory';
 import { readingTitle, SCREENSHOT_QUESTION, type AnswerStyle } from './prompt';
 import { normalizeReading } from './reading';
 import { deleteThumbnail, keepThumbnail, pruneThumbnails, writeFrame, discardFrame } from './thumbs';
@@ -957,6 +958,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           researchPreferences: stateRef.current.researchPreferences,
           answerStyle: stateRef.current.answerStyle,
           language: stateRef.current.language,
+          // What earlier turns researched, so this follow-up can name it.
+          memory: buildCatalog(stateRef.current.threads, stateRef.current.queueJobs),
           onText: (delta) => {
             dispatch({
               type: 'message/appendText',
@@ -1184,6 +1187,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           researchPreferences: stateRef.current.researchPreferences,
           answerStyle: stateRef.current.answerStyle,
           language: stateRef.current.language,
+          // What earlier turns researched, so this follow-up can name it.
+          memory: buildCatalog(stateRef.current.threads, stateRef.current.queueJobs),
           onText: (delta) => {
             dispatch({ type: 'queue/appendText', id: job.id, delta });
             dispatch({ type: 'message/appendText', threadId, messageId: answer.id, delta });

@@ -1,10 +1,11 @@
-import type { ReactNode } from 'react';
-import { useEffect, useState } from 'react';
+import type { ComponentRef, ReactNode } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Animated, Keyboard, ScrollView, StyleSheet, View,
    type NativeScrollEvent, type NativeSyntheticEvent, type ViewStyle,
 } from 'react-native';
 import { router, usePathname, type Href } from 'expo-router';
+import { BlurTargetView } from 'expo-blur';
 import { House } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -16,6 +17,7 @@ import { HEADER_H, PAGE_X, radius, TITLE_BAR_H } from '../theme/tokens';
 import { makeStyles, useColors } from '../theme/theme';
 import { Txt } from '../theme/Txt';
 import { useDock } from './dock';
+import { GlassBar, type GlassTarget } from './Glass';
 import { HistoryIcon, SlidersIcon } from './Icon';
 import { Wordmark } from './Logo';
 import { MotionPressable, MotionView } from './Motion';
@@ -29,25 +31,77 @@ export function HeaderAction({ onPress, children, label }: {
 }
 
 /**
- * The top bar. With a `title` (an open conversation) it is one slim row that
- * names the thread; without, the brand. It leaves with the bottom bar while the
- * reader moves down through text and returns with it; the status bar's own
- * height stays, so nothing slides under the clock.
+ * The top bar: a glass strip over the page. With a `title` (an open
+ * conversation) it is one slim row that names the thread; without, the brand.
+ * It leaves with the bottom bar while the reader moves down through text and
+ * returns with it; the status bar's own height stays, so nothing slides under
+ * the clock.
+ *
+ * `overlay` puts the bar absolutely on top of the page (used by `Page`), so the
+ * page content scrolls underneath it and the glass has something to blur. Pass
+ * `blurTarget` (a `BlurTargetView` ref wrapping that content) for Android to
+ * render a real blur; without it Android shows the palette glass fill.
  */
-export function AppHeader({ actions, title }: { actions?: ReactNode; title?: string; transparent?: boolean }) {
+export function AppHeader({
+  actions,
+  title,
+  overlay = false,
+  blurTarget,
+}: {
+  actions?: ReactNode;
+  title?: string;
+  /** Kept for older callers; the glass bar is translucent by default now. */
+  transparent?: boolean;
+  overlay?: boolean;
+  blurTarget?: GlassTarget;
+}) {
   const insets = useSafeAreaInsets();
   const dock = useDock();
   const color = useColors();
   const styles = useStyles();
   const full = title !== undefined ? TITLE_BAR_H : HEADER_H;
-  return <Animated.View style={[styles.bar, {
-    height: dock.progress.interpolate({ inputRange: [0, 1], outputRange: [insets.top, insets.top + full] }),
-    opacity: dock.progress,
-  }]}>
-    <View style={{ paddingTop: insets.top }}>
-      <View style={[styles.barInner, { height: full }]}>
+  // The glass is expensive while it is not being looked at: a faded-out bar
+  // still blurs every scrolling frame. Track the dock's own animation and drop
+  // the blur layer once the bar has fully left.
+  const [revealed, setRevealed] = useState(true);
+  useEffect(() => {
+    const id = dock.progress.addListener(({ value }) => {
+      const next = value > 0.01;
+      setRevealed((current) => (current === next ? current : next));
+    });
+    return () => dock.progress.removeListener(id);
+  }, [dock.progress]);
+  // Overlay bars leave by sliding up (transform only); an in-flow bar has to
+  // give its height back to the page, so it collapses instead.
+  const presence = overlay
+    ? {
+        height: insets.top + full,
+        opacity: dock.progress,
+        transform: [
+          { translateY: dock.progress.interpolate({ inputRange: [0, 1], outputRange: [-full, 0] }) },
+        ],
+      }
+    : {
+        height: dock.progress.interpolate({ inputRange: [0, 1], outputRange: [insets.top, insets.top + full] }),
+        opacity: dock.progress,
+      };
+  return <Animated.View pointerEvents="box-none" style={[styles.bar, overlay && styles.barOverlay, presence]}>
+    <GlassBar
+      blurTarget={revealed ? blurTarget : undefined}
+      solid={!revealed}
+      pointerEvents="box-none"
+      radius={0}
+      intensity={55}
+      // Readable over long answers in every palette: the blur tint plus this
+      // fill land around 0.86–0.91 opacity, at least the composer deck's 0.85.
+      tintOpacity={0.8}
+      style={StyleSheet.absoluteFill}
+    />
+    <View pointerEvents="none" style={styles.hairline} />
+    <View pointerEvents="box-none" style={{ paddingTop: insets.top }}>
+      <View pointerEvents="box-none" style={[styles.barInner, { height: full }]}>
         {title !== undefined
-          ? <Txt variant="rowTitle" tone="ink" numberOfLines={1} style={styles.barTitle}>{title}</Txt>
+          ? <Txt variant="cardTitle" tone="ink" numberOfLines={1} style={styles.barTitle}>{title}</Txt>
           : <View style={styles.brand}><Wordmark height={18} tint={color.ink} /></View>}
         {actions ? <View style={styles.actions}>{actions}</View> : null}
       </View>
@@ -107,23 +161,40 @@ export function BottomNav() {
   </View>;
 }
 
+/**
+ * A scrolling page under the glass bar. The bar is drawn over the content (so
+ * the content scrolls underneath it, which is what the glass blurs); the scroll
+ * body is padded by the bar's own height so nothing starts hidden under it.
+ * On Android the body is wrapped in a `BlurTargetView` and its ref handed to
+ * the bar; on iOS the bar blurs the page directly.
+ */
 export function Page({ actions, footer, children, scroll = true, contentStyle, note }: {
   actions?: ReactNode; footer?: ReactNode; children: ReactNode; scroll?: boolean;
   artHeight?: number; contentStyle?: ViewStyle; note?: string;
 }) {
   const styles = useStyles();
+  const insets = useSafeAreaInsets();
   const dock = useDock();
+  const blurTarget = useRef<ComponentRef<typeof View>>(null);
   const onScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const { contentOffset, layoutMeasurement, contentSize } = event.nativeEvent;
     dock.report({ offset: contentOffset.y, viewport: layoutMeasurement.height, content: contentSize.height });
   };
+  const topPad = { paddingTop: insets.top + HEADER_H };
   return <View style={styles.page}>
-    <AppHeader actions={actions} />
-    {note ? <View style={styles.note}><Txt variant="mono" tone="ink2">{note}</Txt></View> : null}
-    {scroll ? <ScrollView style={styles.scroll} contentContainerStyle={[styles.content, contentStyle]}
-      keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}
-      scrollEventThrottle={16} onScroll={onScroll}>{children}</ScrollView>
-      : <View style={[styles.content, styles.flex, contentStyle]}>{children}</View>}
+    <BlurTargetView ref={blurTarget} style={styles.flex}>
+      {scroll ? <ScrollView style={styles.scroll} contentContainerStyle={[styles.content, topPad, contentStyle]}
+        keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}
+        scrollEventThrottle={16} onScroll={onScroll}>
+        {note ? <View style={styles.note}><Txt variant="mono" tone="ink2">{note}</Txt></View> : null}
+        {children}
+      </ScrollView>
+        : <View style={[styles.content, styles.flex, topPad, contentStyle]}>
+          {note ? <View style={styles.note}><Txt variant="mono" tone="ink2">{note}</Txt></View> : null}
+          {children}
+        </View>}
+    </BlurTargetView>
+    <AppHeader actions={actions} overlay blurTarget={blurTarget} />
     {footer ? <View style={styles.footer}>{footer}</View> : null}
   </View>;
 }
@@ -139,7 +210,12 @@ export function FooterSurface({ children, style }: { children: ReactNode; style?
 
 const useStyles = makeStyles((color) => StyleSheet.create({
   page: { flex: 1, backgroundColor: color.ground }, flex: { flex: 1 },
-  bar: { backgroundColor: color.ground, zIndex: 2, overflow: 'hidden' },
+  // The glass bar paints itself; the host only owns the animated height, the
+  // clipping and the stacking. Transparent so the blur can sample the page.
+  bar: { backgroundColor: 'transparent', zIndex: 2, overflow: 'hidden' },
+  barOverlay: { position: 'absolute', top: 0, left: 0, right: 0 },
+  hairline: { position: 'absolute', left: 0, right: 0, bottom: 0,
+    height: StyleSheet.hairlineWidth, backgroundColor: color.edge },
   barInner: { paddingHorizontal: PAGE_X, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   barTitle: { flex: 1 },
   brand: { flexDirection: 'row', alignItems: 'center', gap: 9 },
