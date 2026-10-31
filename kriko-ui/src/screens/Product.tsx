@@ -15,6 +15,7 @@ import { Icon } from '../ui/Icon'
 import { Markdown } from '../ui/Markdown'
 import { PixelGlyph } from '../ui/PixelGlyph'
 import { CheckContext, RiskEvidence } from '../ui/CheckContext'
+import { ProductInsights } from '../ui/ProductInsights'
 
 const LEVEL_WORD: Record<Level, string> = { critical: 'Critical', high: 'High', medium: 'Medium', low: 'Low', unrated: 'Unrated' }
 const DEMO_ANSWER = 'The maker states a limit of **40 minutes** of full load.\n\n- Short jobs are fine.\n- For long jobs, add a fan or pick another unit.'
@@ -192,6 +193,7 @@ export function ProductScreen({ lookupId, onBack, onCompare }: { lookupId: strin
           </span>
         )}
         {check && <CheckContext check={check} />}
+        {check && <ProductInsights key={lookupId} lookupId={lookupId} live={mode === 'live' && !lookupId.startsWith('demo:')} onResearch={(question) => void ask(question)} onReload={() => setLoadAttempt((value) => value + 1)} />}
         {check && check.specs.length > 0 && <details><summary>Specifications</summary><dl>{check.specs.map((spec) => <div key={spec.label}><dt>{spec.label}</dt><dd>{spec.value} {spec.source && <ExternalLink href={spec.source}>Source</ExternalLink>}{spec.quote && <blockquote>{spec.quote}</blockquote>}</dd></div>)}</dl></details>}
         {check && (
           <ul className="risk-list rise" style={{ '--i': 1 } as CSSProperties}>

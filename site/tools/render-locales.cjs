@@ -13,6 +13,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { createHash } = require('node:crypto');
 const { JSDOM } = require('jsdom');
+const { discovery } = require('./discovery.cjs');
 
 const root = path.resolve(__dirname, '..');
 const translations = JSON.parse(fs.readFileSync(path.join(root, 'locales/tr.json'), 'utf8'));
@@ -21,11 +22,12 @@ const translations = JSON.parse(fs.readFileSync(path.join(root, 'locales/tr.json
 const PAGES = [
   { source: 'index.html', output: 'tr/index.html', canonical: 'https://kriko.cc/tr/', meta: '@meta' },
   { source: 'guide/index.html', output: 'tr/guide/index.html', canonical: 'https://kriko.cc/tr/guide/', meta: '@meta:guide' },
+  { source: 'install/index.html', output: 'tr/install/index.html', canonical: 'https://kriko.cc/tr/install/', meta: '@meta:install' },
 ];
 // Pages with no Turkish version still carry the hashes.
-const STAMPED = [...PAGES.map((page) => page.source), 'privacy/index.html'];
+const STAMPED = [...PAGES.map((page) => page.source), 'privacy/index.html', '404.html'];
 // A link to one of these goes to the Turkish version of it; /privacy/ is English only.
-const LOCALISED = /^\/(?:guide\/)?(?:#.*)?$/;
+const LOCALISED = /^\/(?:guide\/|problems\/|install\/)?(?:#.*)?$/;
 
 const hash = (file) => createHash('sha256').update(fs.readFileSync(path.join(root, file))).digest('hex').slice(0, 12);
 
@@ -36,13 +38,23 @@ function stamp(file) {
   let html = fs.readFileSync(target, 'utf8');
   const depth = file.split('/').length - 1;
   for (const asset of ASSETS) {
-    const prefix = '../'.repeat(depth);
+    // The 404 page answers at any address, so it names its files from the root.
+    const prefix = file === '404.html' ? '/' : '../'.repeat(depth);
     const pattern = new RegExp(`((?:href|src)=")${prefix}${asset.replace('.', '\\.')}(?:\\?v=[0-9a-f]+)?(")`, 'g');
     html = html.replace(pattern, `$1${prefix}${asset}?v=${hash(asset)}$2`);
   }
   fs.writeFileSync(target, html);
 }
 for (const file of STAMPED) if (fs.existsSync(path.join(root, file))) stamp(file);
+
+// Keep English source formatting; replace only the generated JSON-LD block.
+for (const { source } of PAGES) {
+  const target = path.join(root, source);
+  const html = fs.readFileSync(target, 'utf8').replace(/  <script id="discovery-data" type="application\/ld\+json">[\s\S]*?<\/script>\n/g, '');
+  const document = new JSDOM(html).window.document;
+  const block = `  <script id="discovery-data" type="application/ld+json">${discovery(document)}</script>\n`;
+  fs.writeFileSync(target, html.replace('</head>', `${block}</head>`));
+}
 
 // 2. Turkish.
 const missing = new Set();
@@ -88,6 +100,8 @@ function render({ source, output, canonical, meta: metaKey }) {
   document.querySelector('meta[name="description"]').content = meta.description;
   document.querySelector('meta[property="og:title"]').content = meta['og:title'];
   document.querySelector('meta[property="og:description"]').content = meta['og:description'];
+  document.querySelector('meta[property="og:url"]').content = canonical;
+  document.querySelector('meta[property="og:image:alt"]').content = meta['og:image:alt'];
   document.querySelector('link[rel="canonical"]').href = canonical;
   for (const a of document.querySelectorAll('.language-switch a')) {
     if (a.lang === 'tr') a.setAttribute('aria-current', 'page');
@@ -102,13 +116,14 @@ function render({ source, output, canonical, meta: metaKey }) {
   }
 
   // The Turkish page is one folder deeper than its source, so its relative paths go up one more.
-  for (const el of document.querySelectorAll('[src], [href], [srcset]')) {
-    for (const attribute of ['src', 'href', 'srcset']) {
+  for (const el of document.querySelectorAll('[src], [href], [srcset], [poster]')) {
+    for (const attribute of ['src', 'href', 'srcset', 'poster']) {
       const value = el.getAttribute(attribute);
       if (value && /^(\.\.\/|assets\/|styles\.css|script\.js)/.test(value)) el.setAttribute(attribute, `../${value}`);
     }
   }
 
+  document.querySelector('#discovery-data').textContent = discovery(document);
   fs.mkdirSync(path.dirname(path.join(root, output)), { recursive: true });
   fs.writeFileSync(path.join(root, output), dom.serialize());
 }

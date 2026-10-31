@@ -1,0 +1,25 @@
+[pack]
+id = "org.kriko.over.ear.headphones"
+name = "Over-ear noise-cancelling headphones"
+version = "0.1.1"
+license = "CC-BY-SA-4.0"
+publisher = "kriko"
+origin = "https://github.com/kriko/kriko"
+icon = "headphones"
+
+# Declared by the agent that authored this pack, from the sources it read. The
+# languages are the ones this pack's own text and queries are written in,
+# primary first; the markets are the ones its claims are about.
+languages = ["en", "tr"]
+markets = ["TR", "EU"]
+
+# What makes a subject distinct, per kind — the most consequential declaration
+# in this file. Too few keys and unrelated things collide into one subject; too
+# many and one real thing splits across subjects that never see each other's
+# claims. Neither failure raises.
+[identity]
+product = ["brand", "series"]
+
+# The catalog's name in each other language its pages are written in.
+[names]
+tr = "Kulak üstü gürültü önleyici kulaklık"

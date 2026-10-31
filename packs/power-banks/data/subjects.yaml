@@ -1,0 +1,110 @@
+# Subjects — the things this pack knows about.
+#
+# `identity` carries exactly the keys `pack.toml` declares for the
+# kind: that dictionary is hashed to the subject id.
+- kind: product
+  label: Anker PowerCore 10000 (A1263)
+  identity:
+    brand: anker
+    model: a1263
+  attributes:
+    capacity_mah:
+      value: '10000'
+      source: https://www.cpsc.gov/Recalls/2025/More-than-One-Million-Anker-Power-Banks-Recalled-Due-to-Fire-and-Burn-Hazards-Manufactured-by-Anker-Innovations
+  aliases:
+  - PowerCore 10000
+- kind: product
+  label: Anker MagGo Power Bank 10K (A1652)
+  identity:
+    brand: anker
+    model: a1652
+  attributes:
+    capacity_mah:
+      value: '10000'
+      source: https://www.cpsc.gov/Recalls/2025/Anker-Power-Banks-Recalled-Due-to-Fire-and-Burn-Hazards-Manufactured-by-Anker-Innovations-1
+    max_output_w:
+      value: '7.5'
+      source: https://www.cpsc.gov/Recalls/2025/Anker-Power-Banks-Recalled-Due-to-Fire-and-Burn-Hazards-Manufactured-by-Anker-Innovations-1
+  aliases:
+  - MagGo Power Bank 10K
+- kind: product
+  label: Anker Power Bank 10K 22.5W (A1257)
+  identity:
+    brand: anker
+    model: a1257
+  attributes:
+    capacity_mah:
+      value: '10000'
+      source: https://www.cpsc.gov/Recalls/2025/Anker-Power-Banks-Recalled-Due-to-Fire-and-Burn-Hazards-Manufactured-by-Anker-Innovations-1
+    max_output_w:
+      value: '22.5'
+      source: https://www.cpsc.gov/Recalls/2025/Anker-Power-Banks-Recalled-Due-to-Fire-and-Burn-Hazards-Manufactured-by-Anker-Innovations-1
+  aliases:
+  - Anker Power Bank 10K
+- kind: product
+  label: Anker Zolo Magnetic Power Bank 10K (A1685)
+  identity:
+    brand: anker
+    model: a1685
+  attributes:
+    capacity_mah:
+      value: '10000'
+      source: https://interaksyon.philstar.com/trends-spotlights/2026/10/26/321002/pinay-raises-power-bank-safety-awareness-device-catches-fire-unused/
+  aliases:
+  - Zolo Magnetic Power Bank 10K
+- kind: product
+  label: Anker PowerCore 10000 PD+ (A1236)
+  identity:
+    brand: Anker
+    model: PowerCore 10000 PD+ (A1236)
+  aliases:
+  - A1236
+  - PowerCore 10000 PD+
+- kind: product
+  label: Anker PowerCore 10000 PD Redux (A1246)
+  identity:
+    brand: Anker
+    model: PowerCore 10000 PD Redux (A1246)
+  aliases:
+  - A1246
+  - PowerCore 10000 PD Redux
+- kind: product
+  label: Anker PowerCore III 10000 (A1247)
+  identity:
+    brand: Anker
+    model: PowerCore III 10000 (A1247)
+  aliases:
+  - A1247
+  - PowerCore III 10000
+- kind: product
+  label: Anker 523 Power Bank (PowerCore 10000) (A1245)
+  identity:
+    brand: Anker
+    model: 523 Power Bank (PowerCore 10000) (A1245)
+  attributes:
+    capacity_mah:
+      value: '10000'
+      source: https://service.anker.com/product-description/a085g000004xAsfAAE/anker-523-power-bank-powercore-10k?ref=Home_Page
+    max_output_w:
+      value: '25'
+      source: https://matinertebatt.com/product/%D9%BE%D8%A7%D9%88%D8%B1-%D8%A8%D8%A7%D9%86%DA%A9-%D9%85%D8%AF%D9%84-anker-a1245/
+  aliases:
+  - A1245
+  - Anker 523 Power Bank
+  - PowerCore 10000
+- kind: product
+  label: Anker PowerCore Slim 10000 (A1229)
+  identity:
+    brand: Anker
+    model: PowerCore Slim 10000 (A1229)
+  aliases:
+  - A1229
+  - PowerCore Slim 10000
+- kind: product
+  label: Anker PowerCore Solar 10000 (A1640)
+  identity:
+    brand: Anker
+    model: PowerCore Solar 10000 (A1640)
+  aliases:
+  - A1640
+  - PowerCore Solar 10000

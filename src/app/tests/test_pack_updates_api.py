@@ -326,7 +326,7 @@ def test_an_unreachable_index_is_asked_again_at_the_next_launch(client):
     job = _wait(client, packautoupdate.submit_if_due(settings, runner))
     # nobody pressed anything, so nothing turns red; the reason stays in the job
     assert job["state"] == "succeeded"
-    assert job["result"]["index"] == "The pack download site could not be reached."
+    assert job["result"]["index"].startswith("Kriko could not reach the catalog site.")
     assert packautoupdate.submit_if_due(settings, runner), "an unreachable index is not a check"
 
 
@@ -338,7 +338,7 @@ def test_an_index_with_nothing_published_is_a_quiet_week(client, serve):
 
     job = _wait(client, packautoupdate.submit_if_due(settings, runner))
     assert job["state"] == "succeeded"
-    assert job["result"]["index"] == "The pack index has nothing published yet."
+    assert job["result"]["index"].startswith("No catalogs are published for this version of Kriko yet.")
     assert packautoupdate.submit_if_due(settings, runner) is None, "nothing newer counts as a check"
 
 
@@ -349,4 +349,4 @@ def test_a_pressed_update_still_says_the_index_is_missing(client, serve):
     with client:
         job = run(client)
     assert job["state"] == "failed"
-    assert job["message"].endswith("The pack index has nothing published yet.")
+    assert "No catalogs are published for this version of Kriko yet." in job["message"]

@@ -1,0 +1,48 @@
+lineup:
+- PlayStation 5 (Disc)
+- PlayStation 5 Digital Edition
+- PlayStation 5 Pro
+- Xbox Series X
+- Xbox Series S
+- Nintendo Switch
+- Nintendo Switch OLED
+- Nintendo Switch Lite
+- Steam Deck LCD
+- Steam Deck OLED
+- ROG Ally (Z1)
+- ROG Ally Z1 Extreme
+- ROG Ally X
+covered:
+- nintendo switch lite
+- nintendo switch oled
+- playstation 5 disc
+- rog ally x
+- rog ally z1 extreme
+- steam deck lcd
+- steam deck oled
+- xbox series s
+- xbox series x
+uncovered:
+- PlayStation 5 Digital Edition
+- PlayStation 5 Pro
+- Nintendo Switch
+- ROG Ally (Z1)
+note: The tool budget was exhausted before any page open succeeded, so every quote
+  comes from the inline page text the search tool returned for the cited URLs; I could
+  not open pages directly. I could not source specifications for the Switch Lite or
+  ROG Ally X (no manufacturer spec page text was returned), and I omitted PS5 Digital
+  Edition weight because the only figure returned (8.6 lbs from a shopping aggregator)
+  conflicts with the lighter official figure. I found only two solid, model-specific
+  problems each for the PS5 Digital Edition and the Switch Lite; a third distinct
+  problem was not evidenced.
+out_of_scope:
+- Accessories sold separately
+- Controllers sold separately (DualSense, Xbox Wireless)
+- Game titles and their bugs
+- Game-specific bugs (e.g. Starfield/GT7 crash titles are reported as system-level
+  errors, not game bugs)
+- Nintendo Switch 2 (next generation, not in this pack)
+- Nintendo Switch docks and cables
+- Subscription services
+- Subscription services (Game Pass, PS Plus)
+quarantined: []

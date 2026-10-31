@@ -69,12 +69,18 @@ class UpdateRequest(BaseModel):
 class CatalogDraftRequest(BaseModel):
     category: str = Field(min_length=1, max_length=500)
     harness: str = Field(default="", max_length=200)
+    #: What this draft may cost on a per-token agent; 0 leaves the plane's own default.
+    #: A button that spends someone's money needs a ceiling a caller can name.
+    budget_usd: float = Field(default=0.0, ge=0.0, le=50.0)
 
 
 @router.post("/packs/author")
 def author_catalog(body: CatalogDraftRequest, runner=Depends(get_jobs)):
     """Research a data-only draft. Installing it is a separate reader action."""
-    return _submit(runner, "pack_author", {"category": body.category.strip(), "harness": body.harness})
+    params: dict[str, str | float] = {"category": body.category.strip(), "harness": body.harness}
+    if body.budget_usd:
+        params["budget_usd"] = body.budget_usd
+    return _submit(runner, "pack_author", params)
 
 
 @router.post("/agents/check")

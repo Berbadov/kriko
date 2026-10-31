@@ -1,0 +1,70 @@
+# Kriko
+
+> Kriko is a free, open-source Windows app and browser extension that shows what is known to go wrong with the exact product you are looking at, with the source beside every finding.
+
+Kriko answers one question: what is known to go wrong with this specific product? It reads
+a listing in the browser, matches that product against installed catalogs of sourced reports,
+and shows the findings beside the page. Every finding links to the page it came from: owner
+forums, repair guides, workshop notices and official recalls. Catalog lookups run on the
+reader's computer and work offline. Online research uses an agent the reader chooses, and a
+paid provider bills that reader's own account. There is no account.
+
+- Platform: a 64-bit Windows desktop app, and a browser extension for Chrome, Edge and Brave.
+- Price: free and open source, MIT license.
+- Data: catalogs, history and the shortlist stay on the reader's computer.
+- Coverage: a product with no finding is a gap in coverage, not a clean record.
+- Languages: English at the addresses below; Turkish under /tr/.
+
+## Main pages
+- [Kriko](https://kriko.cc/): what Kriko is, how it works, and the Windows installer.
+- [How to use Kriko](https://kriko.cc/guide/): each step as a short film of the real app.
+- [Known problems](https://kriko.cc/problems/): 31 catalogs, 0 products and 0 sourced reports.
+- [Product safety reports](https://kriko.cc/problems/safety/): 51 products with a report of fire, explosion or shock.
+- [Privacy](https://kriko.cc/privacy/): what stays on the computer and what online research sends.
+- [Source code](https://github.com/Berbadov/kriko): the MIT-licensed repository.
+- [Releases](https://github.com/Berbadov/kriko/releases): the installer and portable archive.
+
+## Known problems by catalog
+Each catalog page lists its products; each product page lists what is reported to go wrong with it, and links the page behind every finding.
+
+- [Cars](https://kriko.cc/problems/cars/): . Renault K9K Engine, Volkswagen EA888 Engine, Volkswagen DQ200 7-speed dry DSG and more.
+- [Smartphones](https://kriko.cc/problems/smartphones/): . Samsung Galaxy A55 5G, Apple iPhone 15 Pro Max, Samsung Galaxy A05 and more.
+- [Dishwashers](https://kriko.cc/problems/dishwashers/): . Arçelik 6667 WF I, Siemens SN65ZX07CE, Arçelik A 600 B Star and more.
+- [3D printers](https://kriko.cc/problems/3d-printers/): . Bambu Lab A1 Mini, Creality Ender 3, Creality Ender 3 V3 KE and more.
+- [Air conditioners](https://kriko.cc/problems/air-conditioners/): . KOENIC KAC 3352, LG portable LP series, Midea Xtreme Save and more.
+- [Air fryers](https://kriko.cc/problems/air-fryers/): . Philips Airfryer Essential XL Connected (HD9280/70), Arzum Airtasty Smart 7.5L (AR2076-S), Xiaomi Smart Air Fryer 6.5L and more.
+- [Cookers, ovens and hobs](https://kriko.cc/problems/cookers-ovens-and-hobs/): . Arcelik built-in cooker set (ankastre set), Samsung slide-in electric range (US recall), Bosch/Siemens/Neff/Constructa 60 cm glass ceramic hob (2006) and more.
+- [Espresso & coffee machines](https://kriko.cc/problems/espresso-coffee-machines/): . Gaggia Classic EVO, Sage/Breville Barista Express, De'Longhi Magnifica S ECAM 22.110.B and more.
+- [Tablets](https://kriko.cc/problems/tablets/): . Lenovo Tab M10, Samsung Galaxy Tab A7 Lite, Xiaomi Pad 6 and more.
+- [Anker power banks](https://kriko.cc/problems/anker-power-banks/): . Anker PowerCore Solar 10000 (A1640), Anker MagGo Power Bank 10K (A1652), Anker PowerCore 10000 PD+ (A1236) and more.
+- [Electric space heaters](https://kriko.cc/problems/electric-space-heaters/): . De'Longhi oil-filled radiators (1980–1988), Xiaomi Mi Smart Space Heater, Philips HD3478 and more.
+- [Instant Pot electric pressure cookers](https://kriko.cc/problems/instant-pot-electric-pressure-cookers/): . Instant Pot Duo Nova, Instant Pot Viva, Instant Pot Duo and more.
+- [Refrigerators](https://kriko.cc/problems/refrigerators/): . Beko 674532 EB, Beko 974508 MB, Beko 674533 MB and more.
+- [Televisions](https://kriko.cc/problems/televisions/): . LG C1, TCL C845, LG QNED87 and more.
+- [Tumble dryers](https://kriko.cc/problems/tumble-dryers/): . Whirlpool-brand dryers, Bosch other heat pump dryers, Arcelik condenser dryers and more.
+- [Gaming consoles](https://kriko.cc/problems/gaming-consoles/): . ROG Ally Z1 Extreme, Nintendo Switch Lite, PlayStation 5 (Disc) and more.
+- [Over-ear noise-cancelling headphones](https://kriko.cc/problems/over-ear-noise-cancelling-headphones/): . JBL Live 770NC, Sennheiser Momentum 4 Wireless, Sony WH-1000XM5 and more.
+- [Premium earbuds](https://kriko.cc/problems/premium-earbuds/): . Apple AirPods Pro 3, Jabra Elite 10, Jabra Elite 8 Active and more.
+- [Wireless earbuds](https://kriko.cc/problems/wireless-earbuds/): . Redmi Buds 6 Lite, Redmi Buds 5, Redmi Buds 5 Pro and more.
+- [Electric cars](https://kriko.cc/problems/electric-cars/): . Chevrolet Bolt EV, Audi e-tron, Kia EV6 and more.
+- [Graphics cards](https://kriko.cc/problems/graphics-cards/): . GeForce RTX 3060, GeForce RTX 4090, GeForce RTX 5080 and more.
+- [Laptops](https://kriko.cc/problems/laptops/): . XPS 13, HP Envy x360, Monster Abra A7 and more.
+- [Child car seats & strollers](https://kriko.cc/problems/child-car-seats-strollers/): . Graco SnugRide Turn & Slide, Cybex Aton G, Maxi-Cosi FamilyFix Slide Pro and more.
+- [Hoverboards & Self-Balancing Scooters](https://kriko.cc/problems/hoverboards-self-balancing-scooters/): . Razor Hovertrax, Swagway X2, Gotrax Cosmos and more.
+- [Robot vacuums](https://kriko.cc/problems/robot-vacuums/): . Dreame L10s Ultra, iRobot Roomba j7+, Ecovacs Deebot X2 Omni and more.
+- [Smartwatches and Fitness Bands](https://kriko.cc/problems/smartwatches-and-fitness-bands/): . Huawei Watch GT 5, Xiaomi Smart Band 11 Active, Amazfit Bip 5 and more.
+- [Drones](https://kriko.cc/problems/drones/): . DJI Mavic 3, DJI Air 3, DJI Mini 4 Pro and more.
+- [Electric bikes](https://kriko.cc/problems/electric-bikes/): . Xiaomi Qicycle EF1, Xiaomi Himo T1, Xiaomi Hifree 5th Wheel and more.
+- [Power strips and surge protectors](https://kriko.cc/problems/power-strips-and-surge-protectors/): . Philips SPC3064WG/37, APC SurgeArrest 8 series, Anker Power Strip Surge Protector 2100J and more.
+- [Washing machines](https://kriko.cc/problems/washing-machines/): . Samsung WW11DG5B25AEAH, LG F4Y7ER, Arçelik 9120 DMX and more.
+- [Electric scooters](https://kriko.cc/problems/electric-scooters/): . Xiaomi Electric Scooter 4 Pro, Xiaomi Electric Scooter 4 Ultra, Xiaomi Electric Scooter Elite and more.
+
+## Turkish
+- [Kriko (Türkçe)](https://kriko.cc/tr/): the home page in Turkish.
+- [Bilinen sorunlar](https://kriko.cc/tr/problems/): 31 kategori, ürün bazında kaynaklı sorunlar.
+- [Kullanım kılavuzu](https://kriko.cc/tr/guide/): her adımın kısa bir filmi.
+
+## How to cite
+- Cite the product page and the source page named under the finding; every finding links to both.
+- A finding is a sourced report, not a diagnosis of one unit. When the wording matters, quote the source, not the catalog.
+- A product page with no findings is a coverage gap, not a clean record.

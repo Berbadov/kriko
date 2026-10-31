@@ -1,0 +1,56 @@
+lineup:
+- Dyson AM04
+- Dyson AM05
+- De'Longhi Dragon4 TRD40820E
+- De'Longhi Dragon4 TRD41025
+- De'Longhi Dragon4 TRD42400ET
+- De'Longhi oil-filled radiators (1980–1988)
+- Xiaomi Mi Smart Space Heater
+- Xiaomi Fan Heater
+- Arçelik Air 11D 2300
+- Arçelik ARK200BM
+- Arçelik AR MT PC 2000
+- Vestel K700
+- Vestel K5000
+- Philips HD3477
+- Philips HD3478
+- Philips HD3479
+- Kobe 2kW Oil-Filled 9 Fin Radiator
+covered:
+- de longhi dragon4 trd40820e
+- de longhi dragon4 trd41025
+- de longhi oil filled radiators 1980 1988
+- dyson am04
+- dyson am05
+- kobe 2kw oil filled 9 fin radiator
+- philips hd3477
+- philips hd3478
+- philips hd3479
+- product brand delonghi model oil radiators 1980 1988
+- product brand delonghi model trd40820e
+- product brand delonghi model trd41025
+- product brand dyson model am04
+- product brand dyson model am05
+- product brand kobe model kbe8280200k
+- product brand philips model hd3477
+- product brand philips model hd3478
+- product brand philips model hd3479
+- product brand xiaomi model fan heater
+- product brand xiaomi model mi smart space heater
+- xiaomi fan heater
+- xiaomi mi smart space heater
+uncovered:
+- De'Longhi Dragon4 TRD42400ET
+- Arçelik Air 11D 2300
+- Arçelik ARK200BM
+- Arçelik AR MT PC 2000
+- Vestel K700
+- Vestel K5000
+note: Arçelik, Vestel and the De'Longhi Dragon4 TRD42400ET are named in the lineup
+  but no documented fire, overheating or shock recall or report was found for them
+  in the sources searched; only performance complaints (not heating) surfaced for
+  Arçelik and Vestel.
+out_of_scope:
+- Arçelik SI 2200 M ceramic heater (different heater type; no safety recall found)
+- Arçelik Tiryaki socket fire traced to building electrical wiring, not the appliance
+quarantined: []
