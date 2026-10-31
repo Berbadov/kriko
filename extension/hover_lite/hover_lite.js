@@ -1201,13 +1201,13 @@
     if (picked?.kind === "cli") return "Free · your coding agent";
     if (picked?.kind === "api") {
       const cap = Number(plane.budget_usd || 0);
-      return cap > 0 ? `Max $${cap.toFixed(2)} of your API keys` : "Billed to your API keys";
+      return cap > 0 ? `Capped at $${cap.toFixed(2)} of your API keys.` : "Billed to your API keys.";
     }
     if (plane.backend === "api" || plane.cost_basis === "per_token") {
       const cap = Number(plane.budget_usd || 0);
       return cap > 0
-        ? `Max $${cap.toFixed(2)} of your API keys`
-        : "Billed to your API keys";
+        ? `Capped at $${cap.toFixed(2)} of your API keys.`
+        : "Billed to your API keys.";
     }
     if (plane.backend === "local") {
       return "Free · on this computer";
@@ -1335,14 +1335,14 @@
     const coverage = result.coverage || result.telemetry?.coverage || {};
     const pagesRead = Number(coverage.pages_read) || 0;
     const said = found
-      ? `${found} finding${found === 1 ? "" : "s"}`
+      ? `${found} thing${found === 1 ? "" : "s"} to know.`
       : diagnostic || (state.researchQuick.dropped
-        ? `${state.researchQuick.dropped} candidate${state.researchQuick.dropped === 1 ? "" : "s"} failed source checks`
+        ? `Candidate findings did not pass source checks (${state.researchQuick.dropped} dropped).`
         : state.researchQuick.specs.length
-          ? `${state.researchQuick.specs.length} sourced specs, no sourced risks`
+          ? `${state.researchQuick.specs.length} sourced product specification(s) found; no sourced risks.`
           : pagesRead
-            ? `Read ${pagesRead} pages; no sourced risks`
-            : "No pages read; nothing could be checked");
+            ? `Read ${pagesRead} page(s); no supported risks were kept.`
+            : "No source pages were read; findings could not be checked.");
     if (!deepen) {
       // A quick look is not a pack: it is saved as it is, and joins a pack
       // only when the reader presses "Add to a pack".
@@ -1468,7 +1468,7 @@
       </div>
       ${statChips}
       ${empty.hasProductDetails ? `<details class="lite-quick-details">
-        <summary>Details (${Number(empty.detailCount) || 0})</summary>
+        <summary>Product details (${Number(empty.detailCount) || 0})</summary>
         <div class="lite-quick-specs"></div>
       </details>` : ""}
       <details class="lite-quick-sources" ${state.quickSourcesOpen ? "open" : ""}>
@@ -1514,12 +1514,6 @@
         .map(([reason, count]) => `${reason.replaceAll("_", " ")} (${count})`)
         .join(", ")
       : "";
-    // One status line, not two stacked sentences: what the run said, then what
-    // it read, joined with a dot — "2 findings · 12 pages read".
-    const coverageLine = quickCoverage && !quickIsEmpty
-      ? coverageWords(quickCoverage) + (rejectionSummary ? ` · reasons: ${rejectionSummary}` : "")
-      : "";
-    const statusLine = [state.researchMessage, coverageLine].filter(Boolean).join(" \u00b7 ");
     // A quick look that kept nothing and a deep run that kept nothing show the
     // same card.
     const emptyCard = quickIsEmpty
@@ -1552,10 +1546,13 @@
         ${target ? `<p class="lite-research-target">${escapeHtml(target.label || target.subject_id)}</p>` : `
           <input class="lite-research-name" maxlength="350" placeholder="Product name" aria-label="Product name" ${busy ? "disabled" : ""} />
           <div class="lite-fold"><div class="lite-fold-in">
-            <textarea class="lite-research-context" maxlength="140" placeholder="Context" aria-label="Context" ${busy ? "disabled" : ""}></textarea>
+            <textarea class="lite-research-context" maxlength="140" placeholder="Context (optional)" aria-label="Context" ${busy ? "disabled" : ""}></textarea>
           </div></div>
           <button type="button" class="lite-more lite-context-toggle" aria-expanded="false">Add context</button>`}
         <p class="lite-research-status" role="status"></p>
+        ${quickCoverage && !quickIsEmpty ? `<p class="lite-quick-coverage" role="status">${escapeHtml(
+          coverageWords(quickCoverage)
+          + (rejectionSummary ? ` · reasons: ${rejectionSummary}` : ""))}</p>` : ""}
         <div class="lite-run" hidden>
           <div class="lite-run-bar" role="progressbar" aria-label="Research progress" aria-valuemin="1" aria-valuemax="4">
             <span class="lite-run-seg" data-n="1"><i></i></span><span class="lite-run-seg" data-n="2"><i></i></span><span class="lite-run-seg" data-n="3"><i></i></span><span class="lite-run-seg" data-n="4"><i></i></span>
@@ -1565,7 +1562,7 @@
         ${emptyCard ? noIssueCardMarkup(emptyCard) : ""}
         ${state.researchQuick && !quickIsEmpty ? `<div class="lite-quick">
           <div class="lite-quick-cards"></div>
-          ${detailCount ? `<details class="lite-quick-details"><summary>Details (${detailCount})</summary><div class="lite-quick-specs"></div></details>` : ""}
+          ${detailCount ? `<details class="lite-quick-details"><summary>Product details (${detailCount})</summary><div class="lite-quick-specs"></div></details>` : ""}
           <details class="lite-quick-sources" ${state.quickSourcesOpen ? "open" : ""}>
             <summary>Sources</summary><div class="lite-quick-source-list"></div>
           </details>
@@ -1589,11 +1586,11 @@
         </div>` : ""}
         ${learnMarkup()}
         <div class="lite-research-actions">
-          ${!busy ? `<button type="button" class="lite-research-start" ${!state.researchPlane || !quickLookReady() ? "disabled" : ""}>${state.researchJob ? "Run again" : "Research"}</button>` : ""}
-          ${!busy && state.researchQuickJob ? `<button type="button" class="lite-research-pack">Save to pack</button>` : ""}
+          ${!busy ? `<button type="button" class="lite-research-start" ${!state.researchPlane || !quickLookReady() ? "disabled" : ""}>${state.researchJob ? "Run again" : "Research this product"}</button>` : ""}
+          ${!busy && state.researchQuickJob ? `<button type="button" class="lite-research-pack">Add to a pack</button>` : ""}
           ${busy && state.researchJob ? `<button type="button" class="lite-research-cancel" ${state.cancelling ? "disabled" : ""}>${state.cancelling ? "Cancelling…" : "Cancel"}</button>` : ""}
           ${state.researchJob ? `<button type="button" class="lite-research-output">Open in Kriko</button>` : ""}
-          ${state.researchPlaneError ? `<button type="button" class="lite-research-cost-retry">Retry cost</button>` : ""}
+          ${state.researchPlaneError ? `<button type="button" class="lite-research-cost-retry">Retry cost check</button>` : ""}
         </div>
         <div class="lite-task-log-slot"></div>
       </section>`;
@@ -1605,7 +1602,7 @@
       paintLearn(slot);
       renderTaskLog(slot.querySelector(".lite-task-log-slot"), state.researchJob);
       slot.querySelector(".lite-research").dataset.state = state.researchState;
-      slot.querySelector(".lite-research-status").textContent = emptyCard && !busy ? "" : statusLine;
+      slot.querySelector(".lite-research-status").textContent = emptyCard && !busy ? "" : state.researchMessage;
       paintRun(slot);
       const name = slot.querySelector(".lite-research-name");
       if (name && name.value !== state.researchName) name.value = state.researchName;
@@ -1642,7 +1639,7 @@
     wireQuickAgent(slot);
     renderTaskLog(slot.querySelector(".lite-task-log-slot"), state.researchJob);
     slot.querySelector(".lite-research").dataset.state = state.researchState;
-    slot.querySelector(".lite-research-status").textContent = emptyCard && !busy ? "" : statusLine;
+    slot.querySelector(".lite-research-status").textContent = emptyCard && !busy ? "" : state.researchMessage;
     paintRun(slot);
     const name = slot.querySelector(".lite-research-name");
     if (name) {
@@ -2719,17 +2716,9 @@
     lastCountNumbers = now;
   }
 
-  /* The engine's identity line is only worth printing when it says a word the
-   * page title does not. A shop title that already carries the whole identity
-   * used to print it twice — once as the title, once in green beneath it. */
-  function wordSet(s) {
-    return new Set(String(s || "").toLowerCase().split(/[^a-z0-9\u00c0-\u017f]+/).filter(Boolean));
-  }
-  function identityAddsNothing(identity, title) {
-    const extra = wordSet(identity), known = wordSet(title);
-    if (!extra.size || !known.size) return false;
-    for (const word of extra) if (!known.has(word)) return false;
-    return true;
+  function sameWords(a, b) {
+    const norm = (x) => String(x || "").toLowerCase().split(/\s+/).filter(Boolean).sort().join(" ");
+    return norm(a) === norm(b);
   }
 
   function renderListingHeader() {
@@ -2749,7 +2738,7 @@
         ${lm.identity_line
             // The title already says it when the engine read the page the way
             // the page reads; a second line repeating it is noise (B152.5).
-            ? (identityAddsNothing(lm.identity_line, lm.title) ? "" : `<div class="lite-listing-engine">${escapeHtml(lm.identity_line)}</div>`)
+            ? (sameWords(lm.identity_line, lm.title) ? "" : `<div class="lite-listing-engine">${escapeHtml(lm.identity_line)}</div>`)
             : `<div class="lite-listing-engine" data-unresolved="1">Not recognised by any installed pack</div>`}
       </div>
     `;
@@ -3073,7 +3062,7 @@
         background:#111522;color:#eef1f9;border:1px solid rgba(255,255,255,.18);box-shadow:0 12px 32px rgba(0,0,0,.45)}
       .kriko-guard-card[data-verdict="stop"]{border-color:#ff6b7a}
       .kriko-guard-card[data-verdict="check"]{border-color:#f5b84b}
-      .kriko-due-card{border-color:#3563f5}
+      .kriko-due-card{border-color:#3d6bff}
       .kriko-guard-card ul{margin:6px 0 8px;padding-left:18px}
       .kriko-guard-card li{margin:2px 0}
       .kriko-due-card p{margin:0 0 6px}
@@ -3081,7 +3070,7 @@
       .kriko-guard-actions,.lite-buy-actions,.lite-buy-form{display:flex;flex-wrap:wrap;gap:6px 8px}
       .kriko-guard-actions button,.lite-buy-btn{font:600 12px system-ui,sans-serif;padding:4px 10px;border-radius:6px;cursor:pointer;
         border:1px solid rgba(255,255,255,.25);background:transparent;color:inherit}
-      .lite-buy-btn[data-primary="1"]{background:#3563f5;border-color:#3563f5;color:#fff}
+      .lite-buy-btn[data-primary="1"]{background:#3d6bff;border-color:#3d6bff;color:#fff}
       .lite-buy-form input{flex:1;min-width:140px;padding:4px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.25);
         background:#0b0e17;color:inherit;font:13px system-ui,sans-serif}
       </style>`;

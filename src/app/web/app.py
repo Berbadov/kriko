@@ -201,7 +201,14 @@ def _store_is_readable(path) -> bool:
     extension, and a health check that reports detail costs every poll for it.
     "The file exists" is not the question — a locked or corrupt store exists and
     cannot answer, which is the state a reader sees as "Kriko knows nothing".
+
+    A store that does not exist yet is not unreadable either, and it must stay
+    uncreated: the probe runs while the app starts, and `connect()` creates the
+    file it opens, so probing a fresh install would leave an empty engine store
+    behind before any pack, claim or note was ever written.
     """
+    if not Path(path).exists():
+        return True
     try:
         conn = connect(path)
         try:

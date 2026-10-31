@@ -185,6 +185,30 @@ def test_health_serves_the_work_answers_from_the_probe_snapshot(client):
     assert set(body["jobs"]) == {"running", "queued", "concurrency", "agent_slots"}
 
 
+def test_the_health_probe_does_not_create_the_store(tmp_path):
+    """A health probe observes; it must not create the engine store.
+
+    `sqlite3.connect()` creates the file it opens, and the probe is built while
+    the app starts, so a reader who has only opened the window would get an
+    empty engine store before any pack, claim or note was ever written. A store
+    that does not exist yet is not unreadable, and the probe says so without
+    touching the disk.
+    """
+    from app.web import app as web_app
+
+    class Idle:
+        def concurrency(self):
+            return {"running": 0, "queued": 0, "concurrency": 0, "agent_slots": 0}
+
+    store_path = tmp_path / "not-yet.sqlite"
+    probe = web_app.HealthProbe(store_path, Idle())
+    try:
+        assert probe.snapshot()["store_readable"] is True
+        assert not store_path.exists(), "the health probe wrote the store"
+    finally:
+        probe.stop()
+
+
 def test_health_answers_while_the_store_is_locked(tmp_path):
     """A locked store must not hold the health answer.
 
