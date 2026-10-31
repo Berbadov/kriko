@@ -1,24 +1,24 @@
 import type { ReactNode } from 'react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
-  Animated, Easing, Keyboard, ScrollView, StyleSheet, View,
-  type LayoutChangeEvent, type NativeScrollEvent, type NativeSyntheticEvent, type ViewStyle,
+  Animated, Keyboard, ScrollView, StyleSheet, View,
+   type NativeScrollEvent, type NativeSyntheticEvent, type ViewStyle,
 } from 'react-native';
 import { router, usePathname, type Href } from 'expo-router';
+import { House } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useStore } from '../engine/store';
 import { updateNeedsAttention } from '../engine/updatecore';
 import { useAppUpdate } from '../engine/updater';
 import { tr } from '../i18n';
-import { motion } from '../theme/motion';
 import { HEADER_H, PAGE_X, radius, TITLE_BAR_H } from '../theme/tokens';
 import { makeStyles, useColors } from '../theme/theme';
 import { Txt } from '../theme/Txt';
 import { useDock } from './dock';
-import { FileIcon, HistoryIcon, ScanIcon, SlidersIcon } from './Icon';
+import { HistoryIcon, SlidersIcon } from './Icon';
 import { Wordmark } from './Logo';
-import { MotionPressable, MotionView, useReducedMotion } from './Motion';
+import { MotionPressable, MotionView } from './Motion';
 
 export function HeaderAction({ onPress, children, label }: {
   onPress?: () => void; children: ReactNode; label: string;
@@ -48,11 +48,7 @@ export function AppHeader({ actions, title }: { actions?: ReactNode; title?: str
       <View style={[styles.barInner, { height: full }]}>
         {title !== undefined
           ? <Txt variant="rowTitle" tone="ink" numberOfLines={1} style={styles.barTitle}>{title}</Txt>
-          : <View style={styles.brand}>
-            <Wordmark height={18} tint={color.ink} />
-            <View style={styles.brandRule} />
-            <Txt variant="monoSm" tone="ink3">a closer look</Txt>
-          </View>}
+          : <View style={styles.brand}><Wordmark height={18} tint={color.ink} /></View>}
         {actions ? <View style={styles.actions}>{actions}</View> : null}
       </View>
     </View>
@@ -71,123 +67,44 @@ export function Hero({ crumb, title, subtitle }: { crumb: string; title: string;
   </MotionView>;
 }
 
-/** The bar's own height; the safe-area inset sits under it. */
-const DOCK_H = 46;
-const PILL_H = 34;
-/** Space left either side of the active pill inside its slot. */
-const PILL_INSET = 6;
-
-/** The active destination's name, easing in beside its icon. */
-function DockLabel({ text }: { text: string }) {
-  const reduced = useReducedMotion();
-  const [progress] = useState(() => new Animated.Value(0));
-  useEffect(() => {
-    progress.stopAnimation();
-    if (reduced !== false) {
-      progress.setValue(1);
-      return undefined;
-    }
-    const animation = Animated.timing(progress, {
-      toValue: 1,
-      duration: motion.duration.standard,
-      delay: 50,
-      easing: Easing.bezier(...motion.easing.enter),
-      useNativeDriver: true,
-    });
-    animation.start();
-    return () => animation.stop();
-  }, [progress, reduced]);
-  return <Animated.View style={{
-    opacity: progress,
-    transform: [{ translateX: progress.interpolate({ inputRange: [0, 1], outputRange: [-5, 0] }) }],
-  }}>
-    <Txt variant="actionSmall" tone="accent" numberOfLines={1}>{text}</Txt>
-  </Animated.View>;
-}
-
-/**
- * A slim bar: icons only, with the open one named inside its pill. It gives its
- * space back while the reader moves down through text (`dock.tsx`) and returns
- * on the first move up.
- */
+/** Normal-flow navigation: no absolute positioning or animated clipping bounds. */
 export function BottomNav() {
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
-  const { queueJobs } = useStore();
-  const reduced = useReducedMotion();
+  const { newChat } = useStore();
   const dock = useDock();
   const color = useColors();
   const styles = useStyles();
   const update = updateNeedsAttention(useAppUpdate());
   const [keyboard, setKeyboard] = useState(false);
-  const [trackWidth, setTrackWidth] = useState(0);
-  const [indicatorX] = useState(() => new Animated.Value(0));
-  const positioned = useRef(false);
   useEffect(() => {
-    const show = Keyboard.addListener('keyboardDidShow', () => setKeyboard(true));
-    const hide = Keyboard.addListener('keyboardDidHide', () => setKeyboard(false));
-    return () => { show.remove(); hide.remove(); };
+    const shown = Keyboard.addListener('keyboardDidShow', () => setKeyboard(true));
+    const hidden = Keyboard.addListener('keyboardDidHide', () => setKeyboard(false));
+    return () => { shown.remove(); hidden.remove(); };
   }, []);
-  // A new screen starts with the bar in view, whatever the last one did.
   useEffect(() => { dock.show(); }, [pathname, dock]);
-  const pending = queueJobs.filter((job) => job.status === 'queued' || job.status === 'running').length;
   const items = [
-    { path: '/', label: 'Home', Icon: ScanIcon },
+    { path: '/', label: 'Home', Icon: House },
     { path: '/history', label: 'History', Icon: HistoryIcon },
-    { path: '/queue', label: 'Queue', Icon: FileIcon },
     { path: '/settings', label: 'Settings', Icon: SlidersIcon },
   ];
-  const activeIndex = Math.max(0, items.findIndex((item) => pathname === item.path));
-  const slotWidth = trackWidth / items.length;
-  const pillWidth = Math.max(0, slotWidth - PILL_INSET * 2);
-  useEffect(() => {
-    if (!slotWidth) return;
-    const target = activeIndex * slotWidth + PILL_INSET;
-    indicatorX.stopAnimation();
-    if (!positioned.current) {
-      indicatorX.setValue(target);
-      positioned.current = true;
-      return;
-    }
-    if (reduced !== false) {
-      indicatorX.setValue(target);
-      return;
-    }
-    Animated.spring(indicatorX, { toValue: target, ...motion.spring.morph }).start();
-  }, [activeIndex, indicatorX, reduced, slotWidth]);
-  const measureTrack = (event: LayoutChangeEvent) => setTrackWidth(event.nativeEvent.layout.width);
-  if (keyboard) return null;
-  const bottomPad = Math.max(insets.bottom, 6);
-  const full = DOCK_H + bottomPad;
-  // Gone, the bar still leaves the gesture bar's own height below the page, so
-  // the composer never sits under the system's home indicator.
-  return <Animated.View style={{
-    height: dock.progress.interpolate({ inputRange: [0, 1], outputRange: [insets.bottom, full] }),
-    opacity: dock.progress,
-    overflow: 'hidden',
-  }}>
-    <View style={[styles.dock, { height: full, paddingBottom: bottomPad }]}>
-      <View style={styles.navTrack} onLayout={measureTrack}>
-        <Animated.View pointerEvents="none"
-          style={[styles.navIndicator, { width: pillWidth, transform: [{ translateX: indicatorX }] }]} />
-        {items.map(({ path, label, Icon }, index) => {
-          const active = activeIndex === index;
-          return <MotionPressable key={path} accessibilityRole="tab" accessibilityLabel={tr(label)}
-            accessibilityState={{ selected: active }} onPress={() => { if (!active) router.replace(path as Href); }}
-            style={styles.destination}>
-            <View style={styles.navIcon}>
-              <Icon size={21} color={active ? color.accent : color.ink3} strokeWidth={active ? 1.9 : 1.5} />
-              {path === '/queue' && pending > 0 ? <View style={styles.count}>
-                <Txt variant="monoSm" tone={color.onAccent} translate={false}>{pending}</Txt>
-              </View> : null}
-              {path === '/settings' && update ? <View style={styles.updateDot} /> : null}
-            </View>
-            {active ? <DockLabel text={label} /> : null}
-          </MotionPressable>;
-        })}
-      </View>
+  if (keyboard || pathname === '/assist') return null;
+  return <View style={[styles.navigation, { paddingBottom: Math.max(insets.bottom, 8) }]}>
+    <View style={styles.navTrack} accessibilityRole="tablist">
+      {items.map(({ path, label, Icon }) => {
+        const selected = path === '/' ? pathname === '/' : pathname.startsWith(path);
+        return <MotionPressable key={path} accessibilityRole="tab" accessibilityLabel={tr(label)}
+          accessibilityState={{ selected }} style={styles.destination}
+          onPress={() => { dock.endCompose(); if (path === '/') newChat(); router.replace(path as Href); }}>
+          <View style={styles.navIcon}>
+            <Icon size={21} color={selected ? color.ink : color.ink3} strokeWidth={selected ? 1.9 : 1.5} />
+            {path === '/settings' && update ? <View style={styles.updateDot} /> : null}
+          </View>
+          <Txt variant="monoSm" tone={selected ? 'ink' : 'ink3'} numberOfLines={1}>{label}</Txt>
+        </MotionPressable>;
+      })}
     </View>
-  </Animated.View>;
+  </View>;
 }
 
 export function Page({ actions, footer, children, scroll = true, contentStyle, note }: {
@@ -226,7 +143,6 @@ const useStyles = makeStyles((color) => StyleSheet.create({
   barInner: { paddingHorizontal: PAGE_X, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   barTitle: { flex: 1 },
   brand: { flexDirection: 'row', alignItems: 'center', gap: 9 },
-  brandRule: { width: 1, height: 15, backgroundColor: color.edgeStrong },
   actions: { flexDirection: 'row', alignItems: 'center', gap: 1 },
   action: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: radius.m },
   scroll: { flex: 1 }, content: { paddingBottom: 28 },
@@ -237,13 +153,9 @@ const useStyles = makeStyles((color) => StyleSheet.create({
   note: { paddingHorizontal: PAGE_X, paddingVertical: 8 },
   divider: { height: StyleSheet.hairlineWidth, backgroundColor: color.edge, marginVertical: 8 },
   footerSurface: { backgroundColor: color.surface, borderRadius: radius.l, borderWidth: 1, borderColor: color.edge, overflow: 'hidden' },
-  dock: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 12, backgroundColor: color.ground,
-    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: color.edge },
-  navTrack: { position: 'relative', flexDirection: 'row', height: DOCK_H },
-  navIndicator: { position: 'absolute', top: (DOCK_H - PILL_H) / 2, left: 0, height: PILL_H,
-    borderRadius: PILL_H / 2, backgroundColor: color.accentSoft },
-  destination: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    height: DOCK_H, zIndex: 1 },
+  navigation: { flexShrink: 0, paddingTop: 4, paddingHorizontal: PAGE_X, backgroundColor: color.ground },
+  navTrack: { flexDirection: 'row', minHeight: 52, alignItems: 'center' },
+  destination: { flex: 1, minHeight: 52, minWidth: 44, alignItems: 'center', justifyContent: 'center', gap: 3 },
   navIcon: { width: 24, height: 24, alignItems: 'center', justifyContent: 'center' },
   updateDot: { position: 'absolute', top: -2, right: -3, width: 9, height: 9, borderRadius: 5,
     backgroundColor: color.accent, borderWidth: 1.5, borderColor: color.ground },

@@ -1,6 +1,7 @@
 package __PACKAGE__.overlay
 
 import android.app.Activity
+import android.Manifest
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -14,6 +15,7 @@ import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
+import com.facebook.react.bridge.LifecycleEventListener
 import com.facebook.react.bridge.ReactMethod
 import com.facebook.react.bridge.UiThreadUtil
 import com.facebook.react.modules.core.DeviceEventManagerModule
@@ -22,11 +24,14 @@ import com.facebook.react.jstasks.HeadlessJsTaskContext
 import java.lang.ref.WeakReference
 
 class KrikoOverlayModule(private val appContext: ReactApplicationContext) :
-  ReactContextBaseJavaModule(appContext), ActivityEventListener {
+  ReactContextBaseJavaModule(appContext), ActivityEventListener, LifecycleEventListener {
+
+  private val voice = KrikoVoice(appContext)
 
   companion object {
     const val REQUEST_OVERLAY = 8410
     const val REQUEST_CAPTURE = 8411
+    private const val JOB_PREFS = "kriko_overlay_jobs"
     @Volatile private var reactContextRef: WeakReference<ReactApplicationContext>? = null
     @Volatile private var startPromise: Promise? = null
     @Volatile private var headlessTaskId: Int? = null
@@ -53,6 +58,13 @@ class KrikoOverlayModule(private val appContext: ReactApplicationContext) :
     /** Scans that arrived while nobody was listening; the app takes them when it mounts. */
     private val pendingScans = java.util.concurrent.ConcurrentLinkedQueue<PendingScan>()
 
+    /** Queue IDs known before an assistant starts a screenshot handoff. */
+    fun knownJobIds(context: Context): Set<String> = try {
+      context.getSharedPreferences(JOB_PREFS, Context.MODE_PRIVATE).getStringSet("ids", emptySet())?.toSet() ?: emptySet()
+    } catch (_: Exception) {
+      emptySet()
+    }
+
     fun emit(name: String, body: com.facebook.react.bridge.WritableMap) {
       val context = reactContextRef?.get() ?: return
       if (!context.hasActiveReactInstance()) return
@@ -62,6 +74,7 @@ class KrikoOverlayModule(private val appContext: ReactApplicationContext) :
 
     /** One picture of the reader's screen, as the research queue expects it. */
     fun emitScan(jpeg: ByteArray, uri: String?, mode: String, site: String) {
+      startHeadlessSession()
       val body = Arguments.createMap().apply {
         putString("base64", android.util.Base64.encodeToString(jpeg, android.util.Base64.NO_WRAP))
         putString("mime", "image/jpeg")
@@ -106,19 +119,25 @@ class KrikoOverlayModule(private val appContext: ReactApplicationContext) :
     fun startHeadlessSession() {
       val context = reactContextRef?.get() ?: return
       UiThreadUtil.runOnUiThread {
-        if (!KrikoOverlayService.isActive || !context.hasActiveReactInstance() || headlessTaskId != null) return@runOnUiThread
-        headlessTaskId = HeadlessJsTaskContext.getInstance(context).startTask(
-          HeadlessJsTaskConfig("KrikoOverlaySession", Arguments.createMap(), 0L, true),
+        val needed = KrikoOverlayService.isActive || KrikoOverlayService.assistResearchActive
+        if (!needed || !context.hasActiveReactInstance()) return@runOnUiThread
+        emit("onRuntime", Arguments.createMap().apply { putBoolean("active", true) })
+        val taskContext = HeadlessJsTaskContext.getInstance(context)
+        if (headlessTaskId?.let { taskContext.isTaskRunning(it) } == true) return@runOnUiThread
+        headlessTaskId = taskContext.startTask(
+          HeadlessJsTaskConfig("KrikoOverlaySession", Arguments.createMap().apply { putBoolean("active", true) }, 0L, true),
         )
       }
     }
 
     fun finishHeadlessSession() {
+      emit("onRuntime", Arguments.createMap().apply { putBoolean("active", false) })
       val context = reactContextRef?.get() ?: return
       val id = headlessTaskId ?: return
       headlessTaskId = null
       UiThreadUtil.runOnUiThread {
-        HeadlessJsTaskContext.getInstance(context).finishTask(id)
+        val taskContext = HeadlessJsTaskContext.getInstance(context)
+        if (taskContext.isTaskRunning(id)) taskContext.finishTask(id)
       }
     }
   }
@@ -126,6 +145,7 @@ class KrikoOverlayModule(private val appContext: ReactApplicationContext) :
   init {
     reactContextRef = WeakReference(appContext)
     appContext.addActivityEventListener(this)
+    appContext.addLifecycleEventListener(this)
   }
 
   override fun getName() = "KrikoOverlay"
@@ -197,10 +217,16 @@ class KrikoOverlayModule(private val appContext: ReactApplicationContext) :
 
   override fun onNewIntent(intent: Intent) = Unit
 
+  override fun onHostResume() = Unit
+  override fun onHostPause() { voice.destroy() }
+  override fun onHostDestroy() { voice.destroy() }
+
   override fun invalidate() {
     startPromise?.reject("MODULE_RELOADED", "The screen scan permission flow was interrupted. Start the session again.")
     startPromise = null
     jsReady = false
+    voice.destroy()
+    appContext.removeLifecycleEventListener(this)
     finishHeadlessSession()
     super.invalidate()
   }
@@ -209,8 +235,31 @@ class KrikoOverlayModule(private val appContext: ReactApplicationContext) :
   @ReactMethod
   fun setUiReady(ready: Boolean) {
     jsReady = ready
-    if (ready) flushPendingScans()
+    if (ready) {
+      startHeadlessSession()
+      flushPendingScans()
+    }
   }
+
+  @ReactMethod
+  fun voiceTypingAvailable(promise: Promise) {
+    promise.resolve(voice.available())
+  }
+
+  @ReactMethod
+  fun startVoiceTyping(locale: String, sessionId: String, promise: Promise) {
+    if (appContext.checkSelfPermission(Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+      promise.reject("permission", "Microphone permission is required for voice typing.")
+      return
+    }
+    voice.start(locale, sessionId) { started -> promise.resolve(started) }
+  }
+
+  @ReactMethod
+  fun stopVoiceTyping(sessionId: String) { voice.stop(sessionId) }
+
+  @ReactMethod
+  fun cancelVoiceTyping(sessionId: String) { voice.cancel(sessionId) }
 
   /**
    * The assistant read the screen while Kriko's screen was not mounted, and the
@@ -351,6 +400,13 @@ class KrikoOverlayModule(private val appContext: ReactApplicationContext) :
 
   @ReactMethod
   fun updateJobs(json: String) {
+    try {
+      val rows = org.json.JSONArray(json)
+      val ids = (0 until rows.length()).mapNotNull { index ->
+        rows.optJSONObject(index)?.optString("id")?.takeIf { it.isNotBlank() }
+      }.takeLast(500).toSet()
+      appContext.getSharedPreferences(JOB_PREFS, Context.MODE_PRIVATE).edit().putStringSet("ids", ids).apply()
+    } catch (_: Exception) { }
     if (!serviceLive()) return
     appContext.startService(Intent(appContext, KrikoOverlayService::class.java).apply {
       action = KrikoOverlayService.ACTION_UPDATE

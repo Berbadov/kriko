@@ -4,79 +4,85 @@ import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.LinearGradient
+import android.graphics.Matrix
 import android.graphics.Paint
-import android.os.SystemClock
+import android.graphics.Path
+import android.graphics.Shader
 import android.view.View
 import android.view.animation.LinearInterpolator
-import kotlin.math.PI
-import kotlin.math.abs
-import kotlin.math.ceil
-import kotlin.math.hypot
-import kotlin.math.max
 import kotlin.math.sin
 
-/**
- * The wave of pixels that crosses the reader's page while Kriko reads it.
- *
- * It lives in a window of its own that never takes a touch, so the page under it
- * stays usable. Rings of small squares leave the point the scan came from (the
- * floating button, or the bottom edge for the phone assistant), brightening the
- * squares they pass and leaving a faint grid behind, until the answer starts to
- * arrive and the wave fades.
- *
- * Nothing is allocated while it draws, and it is not drawn at all when the phone
- * has animations turned off.
- */
+/** A full-page scan ribbon that carries the capture into the working state. */
 internal class PixelWaveView(context: Context, private val ui: KrikoUi) : View(context) {
-  private val paint = Paint()
-  private val cell = dpf(10f)
-  private val gap = dpf(2.2f)
-  private val step = cell + gap
+  private val bandPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+  private val crestPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    style = Paint.Style.STROKE
+    strokeCap = Paint.Cap.ROUND
+    strokeJoin = Paint.Join.ROUND
+  }
+  private val trailPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    style = Paint.Style.STROKE
+    strokeCap = Paint.Cap.ROUND
+    strokeJoin = Paint.Join.ROUND
+  }
+  private val bracketPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    style = Paint.Style.STROKE
+    strokeCap = Paint.Cap.ROUND
+    strokeJoin = Paint.Join.ROUND
+  }
+  private val ribbon = Path()
+  private val crest = Path()
+  private val upperContour = Path()
+  private val lowerContour = Path()
+  private val brackets = Path()
+  private val shaderMatrix = Matrix()
+  private var bandShader: LinearGradient? = null
   private var originX = 0f
-  private var originY = 0f
-  private var hole = 0f
-  private var startedAt = 0L
   private var envelope = 0f
+  private var progress = 0f
   private var fade: ValueAnimator? = null
   private var clock: ValueAnimator? = null
   private var onGone: (() -> Unit)? = null
+  private val bandHalfHeight = dpf(96f)
 
-  private companion object {
-    /** A new ring leaves the origin this often. */
-    const val RING_EVERY_MS = 780f
-    /** The faint grid's breathing cycle. */
-    const val BREATH_MS = 1150f
-    /** After this long the rings soften, down to under half strength over the span. */
-    const val LULL_FROM_MS = 9000f
-    const val LULL_SPAN_MS = 7000f
-  }
-
-  /**
-   * Begin leaving `(x, y)` (screen pixels; the window is full-screen). Squares
-   * closer than `hole` stay dark, so the floating button is not buried in them.
-   */
   fun begin(x: Float, y: Float, hole: Float = 0f) {
+    // y and hole remain accepted for the existing overlay caller; this full-width
+    // vertical sweep deliberately uses a consistent bottom-to-top path.
     originX = x
-    originY = y
-    this.hole = hole
-    startedAt = SystemClock.uptimeMillis()
     fade?.cancel()
+    if (!animationsEnabled()) {
+      envelope = 1f
+      progress = 0.52f
+      invalidate()
+      return
+    }
     envelope = 0f
-    ramp(1f, 220L)
+    progress = 0f
+    ramp(1f, 240L)
     if (clock == null) {
       clock = ValueAnimator.ofFloat(0f, 1f).apply {
-        duration = 1000L
+        duration = 2600L
         repeatCount = ValueAnimator.INFINITE
         interpolator = LinearInterpolator()
-        addUpdateListener { invalidate() }
+        addUpdateListener {
+          progress = it.animatedValue as Float
+          invalidate()
+        }
         start()
       }
     }
   }
 
-  /** Let the wave die away, then call back so the window can be removed. */
   fun finish(onGone: () -> Unit) {
     this.onGone = onGone
+    if (!animationsEnabled()) {
+      envelope = 0f
+      invalidate()
+      onGone()
+      this.onGone = null
+      return
+    }
     ramp(0f, 520L) {
       clock?.cancel()
       clock = null
@@ -89,8 +95,8 @@ internal class PixelWaveView(context: Context, private val ui: KrikoUi) : View(c
     fade?.cancel()
     fade = ValueAnimator.ofFloat(envelope, target).apply {
       this.duration = duration
-      addUpdateListener { animation ->
-        envelope = animation.animatedValue as Float
+      addUpdateListener {
+        envelope = it.animatedValue as Float
         invalidate()
       }
       addListener(object : android.animation.AnimatorListenerAdapter() {
@@ -102,6 +108,18 @@ internal class PixelWaveView(context: Context, private val ui: KrikoUi) : View(c
       })
       start()
     }
+  }
+
+  override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+    super.onSizeChanged(w, h, oldw, oldh)
+    if (w <= 0 || h <= 0) return
+    val accent = ui.palette.accent
+    val clear = Color.argb(0, Color.red(accent), Color.green(accent), Color.blue(accent))
+    bandShader = LinearGradient(0f, -bandHalfHeight, 0f, bandHalfHeight,
+      intArrayOf(clear, KrikoColor.tint(accent, 0.10f), KrikoColor.tint(accent, 0.17f),
+        KrikoColor.tint(accent, 0.10f), clear),
+      floatArrayOf(0f, 0.28f, 0.5f, 0.72f, 1f), Shader.TileMode.CLAMP)
+    bandPaint.shader = bandShader
   }
 
   override fun onDetachedFromWindow() {
@@ -116,75 +134,88 @@ internal class PixelWaveView(context: Context, private val ui: KrikoUi) : View(c
     val w = width.toFloat()
     val h = height.toFloat()
     if (w <= 0f || h <= 0f || envelope <= 0.002f) return
-    // The wave is drawn over the reader's own page, light or dark, so it never fades
-    // to white: a vivid blue that crests to a lighter blue reads on both.
-    val body = ui.palette.accent
-    val glow = KrikoColor.mix(body, Color.WHITE, 0.38f)
-    val now = (SystemClock.uptimeMillis() - startedAt).toFloat()
-    val speed = dpf(860f) / 1000f
-    val thick = step * 3.6f
-    val reach = hypot(max(originX, w - originX), max(originY, h - originY)) + thick
-    val cols = ceil(w / step).toInt()
-    val rows = ceil(h / step).toInt()
-    val sparkTick = (now / 120f).toInt()
-    // A new ring leaves the origin on every beat, for as long as the wave lives, so the
-    // page keeps being swept while it is read. Up to three are on screen; the newest is
-    // the brightest, and they soften once the read has gone on a while.
-    val beat = RING_EVERY_MS
-    val newest = (now / beat).toInt()
-    val lull = 1f - 0.55f * ((now - LULL_FROM_MS) / LULL_SPAN_MS).coerceIn(0f, 1f)
-    val loop = ((now % BREATH_MS) / BREATH_MS)
+    val accent = ui.palette.accent
+    val bright = KrikoColor.mix(accent, Color.WHITE, 0.62f)
+    val crestY = h + bandHalfHeight - progress * (h + 2f * bandHalfHeight)
+    val amp = dpf(18f)
+    val phase = progress * (Math.PI * 2.0).toFloat()
+    val segments = 32
+    val dx = w / segments
 
-    for (row in 0 until rows) {
-      val cy = (row + 0.5f) * step
-      for (col in 0 until cols) {
-        val cx = (col + 0.5f) * step
-        val d = hypot(cx - originX, cy - originY)
-        if (d < hole) continue
-        var v = 0f
-        for (age in 0..2) {
-          val born = (newest - age) * beat
-          if (born < 0f) break
-          v = max(v, ringValue(d, (now - born) * speed, thick, reach, (1f - 0.2f * age) * lull))
-        }
-        // A faint grid under the wave, breathing outward from the origin.
-        val breathe = 0.055f + 0.045f * (sin((d / dpf(120f) - loop * 2f) * PI).toFloat() * 0.5f + 0.5f)
-        val level = max(v, breathe)
-        if (level < 0.035f) continue
-        val spark = 0.72f + 0.28f * hash(col, row, sparkTick)
-        val size = cell * (0.46f + 0.54f * minOf(1f, v * 1.35f))
-        val crest = v * v
-        paint.color = Color.rgb(
-          mix(Color.red(body), Color.red(glow), crest),
-          mix(Color.green(body), Color.green(glow), crest),
-          mix(Color.blue(body), Color.blue(glow), crest),
-        )
-        paint.alpha = (255f * minOf(1f, level * 0.95f) * spark * envelope).toInt()
-        val half = size / 2f
-        canvas.drawRect(cx - half, cy - half, cx + half, cy + half, paint)
+    // Filled ribbon, with its shader following the moving crest. It tints only a
+    // narrow strip so page text remains easy to read under the scan.
+    shaderMatrix.setTranslate(0f, crestY)
+    bandShader?.setLocalMatrix(shaderMatrix)
+    bandPaint.alpha = (255f * envelope).toInt()
+    ribbon.reset()
+    for (i in 0..segments) {
+      val x = i * dx
+      val y = crestY + waveOffset(x, w, amp, phase)
+      if (i == 0) ribbon.moveTo(x, y - bandHalfHeight) else ribbon.lineTo(x, y - bandHalfHeight)
+    }
+    for (i in segments downTo 0) {
+      val x = i * dx
+      val y = crestY + waveOffset(x, w, amp, phase)
+      ribbon.lineTo(x, y + bandHalfHeight)
+    }
+    ribbon.close()
+    canvas.drawPath(ribbon, bandPaint)
+
+    crest.reset()
+    upperContour.reset()
+    lowerContour.reset()
+    for (i in 0..segments) {
+      val x = i * dx
+      val y = crestY + waveOffset(x, w, amp, phase)
+      if (i == 0) {
+        crest.moveTo(x, y)
+        upperContour.moveTo(x, y - dpf(14f))
+        lowerContour.moveTo(x, y + dpf(22f))
+      } else {
+        crest.lineTo(x, y)
+        upperContour.lineTo(x, y - dpf(14f))
+        lowerContour.lineTo(x, y + dpf(22f))
       }
     }
+    crestPaint.color = bright
+    crestPaint.strokeWidth = dpf(2.2f)
+    crestPaint.alpha = (242f * envelope).toInt()
+    trailPaint.color = accent
+    trailPaint.strokeWidth = dpf(1.1f)
+    trailPaint.alpha = (125f * envelope).toInt()
+    canvas.drawPath(upperContour, trailPaint)
+    canvas.drawPath(lowerContour, trailPaint)
+    canvas.drawPath(crest, crestPaint)
+
+    // Four corner brackets ride just outside the central part of the crest,
+    // giving the sweep a deliberate scan/capture identity rather than loader dots.
+    val bracketY = crestY + waveOffset(w * 0.5f, w, amp, phase)
+    val bracketW = minOf(w * 0.24f, dpf(92f))
+    val left = (originX - bracketW).coerceIn(dpf(24f), w - dpf(24f) - bracketW)
+    val right = left + bracketW
+    val bracketH = dpf(26f)
+    val yTop = bracketY - dpf(42f)
+    val yBottom = bracketY + dpf(42f)
+    val corner = dpf(12f)
+    brackets.reset()
+    brackets.moveTo(left + corner, yTop); brackets.lineTo(left, yTop); brackets.lineTo(left, yTop + bracketH)
+    brackets.moveTo(right - corner, yTop); brackets.lineTo(right, yTop); brackets.lineTo(right, yTop + bracketH)
+    brackets.moveTo(left, yBottom - bracketH); brackets.lineTo(left, yBottom); brackets.lineTo(left + corner, yBottom)
+    brackets.moveTo(right, yBottom - bracketH); brackets.lineTo(right, yBottom); brackets.lineTo(right - corner, yBottom)
+    bracketPaint.color = bright
+    bracketPaint.strokeWidth = dpf(1.7f)
+    bracketPaint.alpha = (175f * envelope * edgeVisibility(bracketY, h)).toInt()
+    canvas.drawPath(brackets, bracketPaint)
   }
 
-  private fun ringValue(distance: Float, radius: Float, thick: Float, reach: Float, amp: Float): Float {
-    if (radius < 0f || radius > reach) return 0f
-    val x = abs(distance - radius) / thick
-    if (x >= 1f) return 0f
-    val k = 1f - x
-    // Fade the ring as it leaves the screen so it does not end on a hard edge.
-    val tail = 1f - (radius / reach) * 0.55f
-    return k * k * amp * tail
+  private fun waveOffset(x: Float, width: Float, amplitude: Float, phase: Float): Float {
+    val across = if (width <= 0f) 0f else x / width
+    return amplitude * (0.68f * sin(across * Math.PI * 2.0 + phase).toFloat() +
+      0.32f * sin(across * Math.PI * 5.0 - phase * 0.72f).toFloat())
   }
 
-  private fun mix(a: Int, b: Int, t: Float): Int = (a + (b - a) * t.coerceIn(0f, 1f)).toInt()
-
-  /** A cheap stable noise in `0..1` for the sparkle on each square. */
-  private fun hash(x: Int, y: Int, t: Int): Float {
-    var n = x * 73856093 xor y * 19349663 xor t * 83492791
-    n = n xor (n ushr 13)
-    n *= 1274126177
-    return ((n ushr 8) and 0xFFFF) / 65535f
-  }
+  private fun edgeVisibility(y: Float, height: Float): Float =
+    ((y + dpf(30f)) / dpf(30f)).coerceIn(0f, 1f) * ((height + dpf(30f) - y) / dpf(30f)).coerceIn(0f, 1f)
 }
 
 /**

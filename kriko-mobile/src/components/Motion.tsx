@@ -219,7 +219,7 @@ export function ActivityDots({ color }: { color?: string }) {
             width: 5,
             height: 5,
             borderRadius: 3,
-            backgroundColor: color,
+            backgroundColor: tint,
             opacity: value,
             transform: [{ scale: value.interpolate({ inputRange: [0.4, 1], outputRange: [0.8, 1.15] }) }],
           }}

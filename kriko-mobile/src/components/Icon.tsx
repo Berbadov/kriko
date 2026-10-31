@@ -24,6 +24,7 @@ import {
   Info,
   KeyRound,
   LoaderCircle,
+  Mic,
   Plus,
   RotateCcw,
   Search,
@@ -32,6 +33,7 @@ import {
   SlidersVertical,
   Sparkles,
   SquareDashed,
+  Square,
   Trash2,
   Wifi,
   X,
@@ -82,3 +84,5 @@ export const PlusIcon = make(Plus);
 export const KeyIcon = make(KeyRound);
 export const ScanIcon = make(Focus);
 export const DownloadIcon = make(Download);
+export const MicIcon = make(Mic);
+export const RecordingStopIcon = make(Square);

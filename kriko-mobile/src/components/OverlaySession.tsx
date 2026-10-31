@@ -25,7 +25,7 @@ const Context = createContext<Session | null>(null);
 
 export function OverlaySessionProvider({ children }: { children: React.ReactNode }) {
   const store = useStore();
-  const { queueJobs, readShot, enqueueScan, cancelQueue, language, appearance, puckOpacity } = store;
+  const { queueJobs, readShot, enqueueScan, cancelQueue, language, appearance, puckOpacity, showDiagnostics } = store;
   const scheme = useColorScheme();
   const [active, setActive] = useState(false);
   const [readings, setReadings] = useState<OverlayJob[]>([]);
@@ -87,6 +87,13 @@ export function OverlaySessionProvider({ children }: { children: React.ReactNode
     assistNoShot: tr('Kriko could not see your screen. In your phone’s assistant settings, turn on “Use screenshot”.', language),
     // The brand reads the same in every language.
     assistTitle: 'Kriko',
+    showAllSources: tr('Show all sources', language),
+    showFewerSources: tr('Show fewer sources', language),
+    stalledResearch: tr('Research is taking longer than expected. It may still finish in the background.', language),
+    openToRetry: tr('Open Kriko to check or retry', language),
+    writingAnswer: tr('Writing the answer…', language),
+    reviewingSources: tr('Reviewing sources…', language),
+
     assistKeeps: tr('Kriko keeps reading. The answer will be in History.', language),
   }), [language]);
 
@@ -212,11 +219,12 @@ export function OverlaySessionProvider({ children }: { children: React.ReactNode
         Number(a.status === 'running' || a.status === 'queued')).map((job) => ({
         id: job.id,
         title: `${readingTitle(job.reading) || tr('Product scan', language)}${job.researchMode === 'site_reviews' ? ` · ${tr('site comments', language)}` : ''}`,
-        status: job.status, text: job.text, error: job.error, sources: job.sources, steps: job.steps,
+        status: job.status, text: job.text, error: job.error, sources: job.sources,
+        steps: job.steps.filter((step) => showDiagnostics || !step.text.startsWith('diagnostic:')).map((step) => ({ ...step, text: tr(step.text, language) })),
         image: job.imageUri,
       })),
     ]);
-  }, [queueJobs, readings, active, language]);
+  }, [queueJobs, readings, active, language, showDiagnostics]);
 
   const start = useCallback(async () => {
     await startOverlaySession();
