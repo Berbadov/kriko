@@ -3931,6 +3931,9 @@ class HarnessResearcher(AgentResearcher):
 
         started = time.monotonic()
         codex_profile.release_idle()
+        # Deferred: the transport exception lives with the wire, and this
+        # module is imported before it on some startups.
+        from app.providers.codex_transport import DeliveryUncertain
         try:
             result = resident.transport().run(profile, resident.ResidentRequest(
                 prompt, timeout=self.timeout,
@@ -3939,6 +3942,21 @@ class HarnessResearcher(AgentResearcher):
                 on_text=self._append_live_text if profile.wire == "acp" else None,
                 on_delivery=attempt.delivery, check_cancelled=self.check_cancelled,
             ))
+        except DeliveryUncertain as error:
+            attempt.fail(error)
+            # The turn's clock ran out after the answer had started arriving.
+            # The words on the screen are real; the ticket is what failed.
+            # Keeping them is the rule the API plane already follows for a
+            # cut-off reply (`apiagent`), and it is the difference between a
+            # slow answer and a lost one for every resident CLI.
+            partial = "".join(self._live_parts).strip()
+            if not partial:
+                raise
+            self.telemetry["cut_off"] = True
+            self._echo(
+                f"{self.harness.label} did not finish within the turn; keeping "
+                f"what it wrote ({len(partial)} characters)")
+            return partial
         except BaseException as error:
             attempt.fail(error)
             raise
