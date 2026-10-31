@@ -30,7 +30,9 @@ export const gap = {
 export const PAGE_X = 22;
 
 /** The app bar is 56 px tall above the safe-area inset. */
-export const HEADER_H = 64;
+export const HEADER_H = 52;
+/** The top bar of an open conversation: the thread's name and one action. */
+export const TITLE_BAR_H = 44;
 
 export const font = {
   display: 'Geist-SemiBold',

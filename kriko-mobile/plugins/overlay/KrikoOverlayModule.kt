@@ -1,6 +1,7 @@
 package __PACKAGE__.overlay
 
 import android.app.Activity
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -31,6 +32,26 @@ class KrikoOverlayModule(private val appContext: ReactApplicationContext) :
     @Volatile private var headlessTaskId: Int? = null
     /** The last palette and labels JS sent, kept so a session starts already themed. */
     @Volatile private var uiJson: String? = null
+    /**
+     * Whether Kriko's screen is mounted and listening for scans. The scanner
+     * outlives the screen; when nobody is listening it opens the app with the
+     * picture instead of emitting an event no one would hear.
+     */
+    @Volatile var jsReady: Boolean = false
+
+    /** Whether Kriko's own screen is in front, as the app last reported it. */
+    @Volatile var appInForeground: Boolean = false
+
+    private class PendingScan(
+      val jpeg: ByteArray,
+      val uri: String?,
+      val mode: String,
+      val site: String,
+      val quiet: Boolean,
+    )
+
+    /** Scans that arrived while nobody was listening; the app takes them when it mounts. */
+    private val pendingScans = java.util.concurrent.ConcurrentLinkedQueue<PendingScan>()
 
     fun emit(name: String, body: com.facebook.react.bridge.WritableMap) {
       val context = reactContextRef?.get() ?: return
@@ -39,11 +60,38 @@ class KrikoOverlayModule(private val appContext: ReactApplicationContext) :
         .emit(name, body)
     }
 
+    /** One picture of the reader's screen, as the research queue expects it. */
+    fun emitScan(jpeg: ByteArray, uri: String?, mode: String, site: String) {
+      val body = Arguments.createMap().apply {
+        putString("base64", android.util.Base64.encodeToString(jpeg, android.util.Base64.NO_WRAP))
+        putString("mime", "image/jpeg")
+        putString("uri", uri ?: "")
+        putString("mode", mode)
+        if (mode == "site_reviews") putString("reviewSite", site)
+      }
+      emit("onScan", body)
+    }
+
+    /** Keep a scan until Kriko's screen is listening. `quiet` sends the app back to the page after. */
+    fun queueScan(jpeg: ByteArray, uri: String?, mode: String, site: String, quiet: Boolean) {
+      pendingScans.add(PendingScan(jpeg, uri, mode, site, quiet))
+    }
+
+    fun dropQueuedScans() {
+      pendingScans.clear()
+    }
+
     fun serviceReady() {
       val body = Arguments.createMap().apply { putBoolean("active", true) }
       emit("onSession", body)
       startHeadlessSession()
       startPromise?.resolve(true)
+      startPromise = null
+    }
+
+    /** A re-grant for a session that already exists failed; the session itself carries on. */
+    fun startRejected(message: String) {
+      startPromise?.reject("PROJECTION_START_FAILED", message)
       startPromise = null
     }
 
@@ -84,7 +132,9 @@ class KrikoOverlayModule(private val appContext: ReactApplicationContext) :
 
   @ReactMethod
   fun startSession(promise: Promise) {
-    if (KrikoOverlayService.isActive) {
+    // A session whose capture was ended by the system is still "active"; asking
+    // to start it again is how the reader grants capture again from Settings.
+    if (KrikoOverlayService.isActive && KrikoOverlayService.captureLive) {
       promise.resolve(true)
       return
     }
@@ -150,8 +200,97 @@ class KrikoOverlayModule(private val appContext: ReactApplicationContext) :
   override fun invalidate() {
     startPromise?.reject("MODULE_RELOADED", "The screen scan permission flow was interrupted. Start the session again.")
     startPromise = null
+    jsReady = false
     finishHeadlessSession()
     super.invalidate()
+  }
+
+  /** Called by the session provider as it mounts (true) and unmounts (false). */
+  @ReactMethod
+  fun setUiReady(ready: Boolean) {
+    jsReady = ready
+    if (ready) flushPendingScans()
+  }
+
+  /**
+   * The assistant read the screen while Kriko's screen was not mounted, and the
+   * app was opened to take it. Hand the scan over once JavaScript has had a
+   * moment to subscribe, then put Kriko behind the page the reader was on.
+   */
+  private fun flushPendingScans() {
+    if (pendingScans.isEmpty()) return
+    val handler = android.os.Handler(android.os.Looper.getMainLooper())
+    handler.postDelayed({
+      var quiet = false
+      while (true) {
+        val scan = pendingScans.poll() ?: break
+        emitScan(scan.jpeg, scan.uri, scan.mode, scan.site)
+        quiet = quiet || scan.quiet
+      }
+      if (quiet) {
+        handler.postDelayed({
+          try { getCurrentActivity()?.moveTaskToBack(true) } catch (_: Exception) { }
+        }, 380L)
+      }
+    }, 140L)
+  }
+
+  /** Whether Kriko may draw over other apps: the assistant's answer needs it. */
+  @ReactMethod
+  fun canDrawOverlays(promise: Promise) {
+    promise.resolve(try { Settings.canDrawOverlays(appContext) } catch (_: Exception) { false })
+  }
+
+  /** Open the phone's own page for allowing Kriko over other apps. */
+  @ReactMethod
+  fun openOverlaySettings(promise: Promise) {
+    promise.resolve(try {
+      appContext.startActivity(
+        Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${appContext.packageName}"))
+          .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+      )
+      true
+    } catch (_: Exception) {
+      false
+    })
+  }
+
+  /** Whether Kriko is the phone's chosen digital assistant right now. */
+  @ReactMethod
+  fun isDefaultAssistant(promise: Promise) {
+    promise.resolve(try {
+      val resolver = appContext.contentResolver
+      val chosen = Settings.Secure.getString(resolver, "assistant")
+        ?: Settings.Secure.getString(resolver, "voice_interaction_service")
+      val component = chosen?.let { ComponentName.unflattenFromString(it) }
+      component?.packageName == appContext.packageName
+    } catch (_: Exception) {
+      false
+    })
+  }
+
+  /**
+   * Open the phone's own page for choosing the digital assistant. Android does
+   * not let an app pick itself, so the reader makes the choice there.
+   */
+  @ReactMethod
+  fun openAssistantSettings(promise: Promise) {
+    val candidates = listOf(
+      Intent(Settings.ACTION_VOICE_INPUT_SETTINGS),
+      Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS),
+      Intent(Settings.ACTION_SETTINGS),
+    )
+    for (candidate in candidates) {
+      try {
+        candidate.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        appContext.startActivity(candidate)
+        promise.resolve(true)
+        return
+      } catch (_: Exception) {
+        // Try the next, broader screen.
+      }
+    }
+    promise.resolve(false)
   }
 
   @ReactMethod
@@ -199,16 +338,20 @@ class KrikoOverlayModule(private val appContext: ReactApplicationContext) :
    */
   @ReactMethod
   fun setAppForeground(foreground: Boolean) {
-    if (!KrikoOverlayService.isActive) return
+    appInForeground = foreground
+    if (!serviceLive()) return
     appContext.startService(Intent(appContext, KrikoOverlayService::class.java).apply {
       action = KrikoOverlayService.ACTION_APP
       putExtra(KrikoOverlayService.EXTRA_FOREGROUND, foreground)
     })
   }
 
+  /** The service has windows to keep current: a scanner session, or the assistant's answer. */
+  private fun serviceLive(): Boolean = KrikoOverlayService.isActive || KrikoOverlayService.assistRunning
+
   @ReactMethod
   fun updateJobs(json: String) {
-    if (!KrikoOverlayService.isActive) return
+    if (!serviceLive()) return
     appContext.startService(Intent(appContext, KrikoOverlayService::class.java).apply {
       action = KrikoOverlayService.ACTION_UPDATE
       putExtra(KrikoOverlayService.EXTRA_JOBS, json)
@@ -223,11 +366,105 @@ class KrikoOverlayModule(private val appContext: ReactApplicationContext) :
   @ReactMethod
   fun updateUi(json: String) {
     uiJson = json
-    if (!KrikoOverlayService.isActive) return
+    // Also kept on disk: the assistant starts without this module being awake.
+    KrikoUi(appContext).save(json)
+    if (!serviceLive()) return
     appContext.startService(Intent(appContext, KrikoOverlayService::class.java).apply {
       action = KrikoOverlayService.ACTION_UI
       putExtra(KrikoOverlayService.EXTRA_UI, json)
     })
+  }
+
+  /** What is installed now, straight from the package, so a check never trusts a stale config. */
+  @ReactMethod
+  fun appVersion(promise: Promise) {
+    try {
+      val info = appContext.packageManager.getPackageInfo(appContext.packageName, 0)
+      @Suppress("DEPRECATION")
+      val code = if (Build.VERSION.SDK_INT >= 28) info.longVersionCode else info.versionCode.toLong()
+      promise.resolve(Arguments.createMap().apply {
+        putString("versionName", info.versionName ?: "")
+        putDouble("versionCode", code.toDouble())
+      })
+    } catch (error: Exception) {
+      promise.reject("VERSION_UNAVAILABLE", error.message ?: "The installed version could not be read.")
+    }
+  }
+
+  /** Whether the phone lets Kriko install an app (an update of itself) at all. */
+  @ReactMethod
+  fun canInstallPackages(promise: Promise) {
+    promise.resolve(try {
+      Build.VERSION.SDK_INT < 26 || appContext.packageManager.canRequestPackageInstalls()
+    } catch (_: Exception) {
+      false
+    })
+  }
+
+  /** Open the phone's own page for allowing Kriko to install apps. */
+  @ReactMethod
+  fun openInstallSettings(promise: Promise) {
+    promise.resolve(try {
+      if (Build.VERSION.SDK_INT < 26) {
+        false
+      } else {
+        appContext.startActivity(
+          Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${appContext.packageName}"))
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+        )
+        true
+      }
+    } catch (_: Exception) {
+      false
+    })
+  }
+
+  /** Download one version of Kriko; progress arrives as `onUpdateProgress` events. */
+  @ReactMethod
+  fun downloadUpdate(version: String, url: String, sha256: String, bytes: Double, promise: Promise) {
+    Thread {
+      try {
+        val fetched = KrikoUpdater.download(appContext, version, url, sha256.lowercase(), bytes.toLong()) { received, total ->
+          emit("onUpdateProgress", Arguments.createMap().apply {
+            putDouble("received", received.toDouble())
+            putDouble("total", total.toDouble())
+          })
+        }
+        promise.resolve(Arguments.createMap().apply {
+          putString("sha256", fetched.sha256)
+          putDouble("bytes", fetched.bytes.toDouble())
+        })
+      } catch (failure: KrikoUpdater.Failure) {
+        promise.reject(failure.kind, failure.message ?: "The download failed.")
+      } catch (error: Exception) {
+        promise.reject("network", error.message ?: "The download failed.")
+      }
+    }.start()
+  }
+
+  @ReactMethod
+  fun cancelUpdate() {
+    KrikoUpdater.cancel()
+  }
+
+  /** Give the downloaded version to Android's installer; what it says next arrives as `onUpdateInstall`. */
+  @ReactMethod
+  fun installUpdate(version: String, promise: Promise) {
+    Thread {
+      try {
+        KrikoUpdater.install(appContext, version) { state, message ->
+          emit("onUpdateInstall", Arguments.createMap().apply {
+            putString("state", state)
+            putString("message", message)
+          })
+        }
+        promise.resolve(true)
+      } catch (failure: KrikoUpdater.Failure) {
+        promise.reject(failure.kind, failure.message ?: "The update could not be installed.")
+      } catch (error: Exception) {
+        promise.reject("failed", error.message ?: "The update could not be installed.")
+      }
+    }.start()
   }
 
   @ReactMethod

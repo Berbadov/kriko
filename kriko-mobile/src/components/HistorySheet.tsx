@@ -1,5 +1,6 @@
 import { Alert, ScrollView, StyleSheet, View } from 'react-native';
 
+import { plainPreview } from '../engine/preview';
 import { useStore } from '../engine/store';
 import type { QueueJob } from '../engine/types';
 import { tr } from '../i18n';
@@ -75,7 +76,7 @@ export function HistorySheet({ visible, onClose }: { visible: boolean; onClose: 
                               <Txt variant="rowTitle" tone="ink" numberOfLines={1} style={styles.title}>{thread.title}</Txt>
                               {active ? <Chip label="Open" tone="accent" size="sm" /> : null}
                             </View>
-                            {last ? <Txt variant="bodyTight" tone="ink3" numberOfLines={1}>{last.text}</Txt> : null}
+                            {last ? <Txt variant="bodyTight" tone="ink3" numberOfLines={1}>{plainPreview(last.text)}</Txt> : null}
                             <Txt variant="monoSm" tone="ink3">{count} {count === 1 ? 'question' : 'questions'} · {ago(thread.updatedAt)}</Txt>
                           </View>
                         </MotionPressable>
@@ -96,7 +97,7 @@ export function HistorySheet({ visible, onClose }: { visible: boolean; onClose: 
                 {[...queueJobs].reverse().map((job, index, all) => {
                   const linked = Boolean(job.threadId);
                   const busy = job.status === 'queued' || job.status === 'running';
-                  const summary = job.text || job.error || job.reading.note || job.question;
+                  const summary = plainPreview(job.text) || job.error || job.reading.note || job.question;
                   return (
                     <MotionView key={`${job.id}-${job.status}`} delay={Math.min(index, 4) * 35} style={styles.rowWrap}>
                       <MotionPressable onPress={() => { if (linked) { openScanResult(job.id); dismiss(); } }} disabled={!linked} style={styles.row} accessibilityRole={linked ? 'button' : undefined} accessibilityLabel={linked ? `Open scan result for ${scanTitle(job)}` : undefined}>
@@ -105,7 +106,7 @@ export function HistorySheet({ visible, onClose }: { visible: boolean; onClose: 
                             <Txt variant="rowTitle" tone="ink" numberOfLines={1} style={styles.title}>{scanTitle(job)}</Txt>
                             {busy ? <ActivityDots color={color.accent} /> : <Chip label={job.status} tone={job.status === 'error' ? 'risk' : job.status === 'done' ? 'ok' : 'neutral'} size="sm" />}
                           </View>
-                          <Txt variant="bodyTight" tone={job.status === 'error' ? 'risk' : 'muted'} numberOfLines={2}>{summary}</Txt>
+                          <Txt variant="bodyTight" tone={job.status === 'error' ? 'risk' : 'ink2'} numberOfLines={2}>{summary}</Txt>
                           <Txt variant="monoSm" tone="ink3">{ago(job.updatedAt)}{linked ? ' · open result' : ''}</Txt>
                         </View>
                       </MotionPressable>

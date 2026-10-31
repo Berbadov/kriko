@@ -76,6 +76,10 @@ export function upper(text: string, lang: Language = current): string {
  * renders through `Txt`; names, URLs, prices and key shapes are left alone.
  */
 export const translations: Record<string, string> = {
+  /* -------------------------------------------------- chat scroll rail -- */
+  'Scroll the conversation': 'Sohbeti kaydır',
+  'Scroll down': 'Aşağı kaydır',
+  'Scroll up': 'Yukarı kaydır',
 
 
   /* ------------------------------------------------ agent settings -- */
@@ -154,8 +158,6 @@ export const translations: Record<string, string> = {
 
   /* --------------------------------------------------------- welcome -- */
   'What do you want to check?': 'Neyi kontrol etmek istiyorsun?',
-  'What do owners report about the Bosch GSB 600?':
-    'Sahipler Bosch GSB 600 hakkında ne bildiriyor?',
   'A careful researcher for the product in front of you. It searches the web, reads the pages, and answers with what it found — or says what it could not.':
     'Önündeki ürün için dikkatli bir araştırmacı. Webde arar, sayfaları okur ve bulduklarıyla yanıtlar — bulamadığını da söyler.',
   'No keys on this phone yet': 'Bu telefonda henüz anahtar yok',
@@ -257,8 +259,6 @@ export const translations: Record<string, string> = {
     'Bir ürün hakkında sor ya da önündeki ekranı oku.',
   'Searched, read and cited. It says what it could not find instead of filling the gap.':
     'Arandı, okundu, kaynak gösterildi. Boşluğu doldurmak yerine bulamadığını söyler.',
-  'What goes wrong with a Bosch GSB 600 drill?': 'Bosch GSB 600 matkapta ne ters gidebilir?',
-  'Are used Galaxy Buds2 Pro worth $90?': 'Kullanılmış Galaxy Buds2 Pro 90 dolara değer mi?',
   'Trial used': 'Deneme bitti',
   Shared: 'Paylaşılan',
   'Own keys': 'Kendi anahtarlarım',
@@ -567,11 +567,14 @@ export const translations: Record<string, string> = {
   Error: 'Hata',
   Cancelled: 'İptal edildi',
   'Queue is full': 'Sıra dolu',
-  'Drag Kriko, or tap it to open the scan panel':
-    'Kriko’yu sürükle veya tarama panelini açmak için dokun',
+  'Tap Kriko to scan this page. Press and hold for more.':
+    'Bu sayfayı taramak için Kriko’ya dokun. Daha fazlası için basılı tut.',
+  'Drop here to stop sharing': 'Paylaşımı durdurmak için buraya bırak',
+  'Kriko keeps reading. The answer will be in History.':
+    'Kriko okumaya devam ediyor. Yanıt Geçmiş’te olacak.',
   'Kriko screen scan is active': 'Kriko ekran taraması açık',
-  'Tap the floating bubble to scan one screen when you choose.':
-    'İstediğinde tek bir ekranı taramak için yüzen balona dokun.',
+  'Tap the floating K to scan one screen when you choose.':
+    'İstediğinde tek bir ekranı taramak için yüzen K’ye dokun.',
   'Scan a product page. Each scan joins the queue here.':
     'Bir ürün sayfası tara. Her tarama burada sıraya girer.',
   'Scan a product page to see its answer and sources here.':
@@ -591,10 +594,10 @@ export const translations: Record<string, string> = {
   'Scan products while you browse.': 'Gezinirken ürünleri tara.',
   'Allow Kriko over other apps.': 'Kriko’nun diğer uygulamaların üzerinde görünmesine izin ver.',
   'Approve Android’s screen sharing prompt.': 'Android’in ekran paylaşımı isteğini onayla.',
-  'Open the page you want, then tap the K and Scan this page.':
-    'İstediğin sayfayı aç, sonra K’ye dokun ve Bu sayfayı tara’ya bas.',
-  'Only screens you scan are sent for reading. Stop from the K’s tray or the Android notification.':
-    'Yalnızca taradığın ekranlar okunmak üzere gönderilir. K’nin menüsünden ya da Android bildiriminden durdur.',
+  'Open the page you want, then tap the K to scan it. Press and hold for more.':
+    'İstediğin sayfayı aç, sonra taramak için K’ye dokun. Daha fazlası için basılı tut.',
+  'Only screens you scan are sent for reading. Stop by dropping the K on the ×, from its menu, or from the Android notification.':
+    'Yalnızca taradığın ekranlar okunmak üzere gönderilir. K’yi ×’in üzerine bırakarak, menüsünden ya da Android bildiriminden durdur.',
   'Scan this page': 'Bu sayfayı tara',
   'Scan again': 'Yeniden tara',
   'Results': 'Sonuçlar',
@@ -642,7 +645,6 @@ export const translations: Record<string, string> = {
     'Bir ilanı tara ya da soru sor. Kriko ayrıntıları bağımsız kaynaklarla karşılaştırır.',
   'Read the page open on your phone': 'Telefonunda açık olan sayfayı oku',
   'Choose a screenshot instead': 'Bunun yerine ekran görüntüsü seç',
-  'Or start with a question': 'Ya da bir soruyla başla',
   'Recently scanned': 'Son tarananlar',
   'Open the saved scan': 'Kaydedilen taramayı aç',
   'Your recent product scans': 'Son ürün taramaların',
@@ -671,6 +673,100 @@ export const translations: Record<string, string> = {
     'görüntü okuyucu kullanılabilir ürün ayrıntıları vermeden kesildi',
   'The image reader replied in prose, so these details are observations, not a confirmed identity.':
     'Görüntü okuyucu düz metin yanıt verdi; bu ayrıntılar gözlemdir, doğrulanmış bir kimlik değildir.',
+
+  /* ------------------------------------------------- the scanned picture -- */
+  'Scanned page': 'Taranan sayfa',
+  'Open the scanned picture': 'Taranan resmi aç',
+  'Close the picture': 'Resmi kapat',
+  'Checking this page': 'Bu sayfa kontrol ediliyor',
+
+  /* ------------------------------------- the floating K and the assistant -- */
+  'Screen capture paused': 'Ekran yakalama duraklatıldı',
+  'Screen capture stopped. Tap Scan on the floating K to start it again.':
+    'Ekran yakalama durdu. Yeniden başlatmak için yüzen K’deki Tara’ya dokun.',
+  'Open Kriko and start the scanner again.': 'Kriko’yu açıp tarayıcıyı yeniden başlat.',
+  'Opening Kriko…': 'Kriko açılıyor…',
+  'Scanning this screen': 'Bu ekran taranıyor',
+  'Kriko could not see your screen. In your phone’s assistant settings, turn on “Use screenshot”.':
+    'Kriko ekranını göremedi. Telefonunun asistan ayarlarında “Ekran görüntüsünü kullan” seçeneğini aç.',
+  'Floating scanner': 'Yüzen tarayıcı',
+  Transparency: 'Saydamlık',
+  'How see-through the floating K and its glass panels are. Faint shows the most of your page; Solid shows none.':
+    'Yüzen K ve cam panellerin ne kadar şeffaf olacağı. Silik sayfanı en çok gösterir; Tam hiç göstermez.',
+  'Answer over your page': 'Yanıt sayfanın üstünde',
+  'The answer opens over the page you scanned, so you never leave it.':
+    'Yanıt taradığın sayfanın üstünde açılır, o sayfadan hiç çıkmazsın.',
+  'Allow Kriko over other apps and the answer opens over the page you scanned, instead of taking you into Kriko.':
+    'Kriko’nun diğer uygulamaların üzerinde görünmesine izin ver; yanıt seni Kriko’ya götürmek yerine taradığın sayfanın üstünde açılır.',
+  Allowed: 'İzinli',
+  Off: 'Kapalı',
+  'Over-other-apps settings': 'Üstte gösterme ayarları',
+  'Allow over other apps': 'Diğer uygulamaların üzerinde göster',
+  Faint: 'Silik',
+  Soft: 'Yumuşak',
+  Strong: 'Güçlü',
+  Solid: 'Tam',
+  'Phone assistant': 'Telefon asistanı',
+  'Kriko is your phone’s assistant. Hold the power or home button to scan the screen at once.':
+    'Kriko telefonunun asistanı. Ekranı hemen taramak için güç veya ana ekran düğmesini basılı tut.',
+  'Make Kriko your phone’s assistant, then hold the power or home button to scan the screen at once.':
+    'Kriko’yu telefonunun asistanı yap, sonra ekranı hemen taramak için güç veya ana ekran düğmesini basılı tut.',
+  'Reading your screen': 'Ekranın okunuyor',
+  'Kriko could not finish': 'Kriko bitiremedi',
+  'Kriko is checking the page you were on. The answer opens in a new chat.':
+    'Kriko bulunduğun sayfayı kontrol ediyor. Yanıt yeni bir sohbette açılır.',
+  'Back to chat': 'Sohbete dön',
+  'Scan with a long press': 'Uzun basarak tara',
+  'Set as assistant': 'Asistan olarak ayarla',
+  'Assistant settings': 'Asistan ayarları',
+  'Active': 'Açık',
+  'Not set': 'Ayarlı değil',
+  'In the list, choose Kriko under Digital assistant app, and keep “Use screenshot” on.':
+    'Listede Dijital asistan uygulaması altında Kriko’yu seç ve “Ekran görüntüsünü kullan” seçeneğini açık tut.',
+  'Kriko could not read the screenshot your phone sent. Try again.':
+    'Kriko telefonunun gönderdiği ekran görüntüsünü okuyamadı. Tekrar dene.',
+  'Kriko did not receive a screenshot. In your phone’s assistant settings, turn on “Use screenshot”.':
+    'Kriko bir ekran görüntüsü almadı. Telefonunun asistan ayarlarında “Ekran görüntüsünü kullan” seçeneğini aç.',
+
+  /* The in-app update. */
+  'Updates': 'Güncellemeler',
+  'Kriko Agent': 'Kriko Agent',
+  'Looking for a newer version…': 'Daha yeni bir sürüm aranıyor…',
+  'Downloading. Keep Kriko open.': 'İndiriliyor. Kriko’yu açık tut.',
+  'Android asks once. Turn on “Allow from this source”, then come back here.':
+    'Android bunu bir kez sorar. “Bu kaynaktan izin ver”i aç, sonra buraya dön.',
+  'Confirm on the screen Android shows. Kriko restarts when it is done.':
+    'Android’in gösterdiği ekranda onayla. Bitince Kriko yeniden açılır.',
+  'Handing it to Android…': 'Android’e veriliyor…',
+  'You have the newest version.': 'En yeni sürümdesin.',
+  'Updates come from Kriko’s releases on GitHub. Nothing installs without your press.':
+    'Güncellemeler Kriko’nun GitHub sürümlerinden gelir. Sen basmadan hiçbir şey kurulmaz.',
+  'Update now': 'Şimdi güncelle',
+  'Open the setting': 'Ayarı aç',
+  'Check again': 'Tekrar kontrol et',
+  'Check for updates': 'Güncellemeleri denetle',
+  'Not now': 'Şimdi değil',
+  'Update': 'Güncelle',
+  'Could not reach GitHub. Check your connection and try again.':
+    'GitHub’a ulaşılamadı. Bağlantını kontrol edip tekrar dene.',
+  'GitHub is limiting requests for now. Try again in a few minutes.':
+    'GitHub şimdilik istekleri sınırlıyor. Birkaç dakika sonra tekrar dene.',
+  'GitHub answered with something Kriko could not read.':
+    'GitHub, Kriko’nun okuyamadığı bir yanıt verdi.',
+  'The download did not match its checksum, so Kriko threw it away. Try again.':
+    'İndirilen dosya sağlama toplamıyla eşleşmedi, bu yüzden Kriko onu sildi. Tekrar dene.',
+  'The download stopped early. Try again.': 'İndirme erken durdu. Tekrar dene.',
+  'There is not enough room on this phone for the update.':
+    'Güncelleme için bu telefonda yeterli yer yok.',
+  'This build was signed with a different key, so Android will not let it replace this app.':
+    'Bu sürüm farklı bir anahtarla imzalanmış, bu yüzden Android bunun bu uygulamanın yerine geçmesine izin vermiyor.',
+  'Android blocked the install. Allow Kriko to install apps, then try again.':
+    'Android kurulumu engelledi. Kriko’nun uygulama kurmasına izin ver, sonra tekrar dene.',
+  'That download is older than the version on this phone.':
+    'İndirilen dosya bu telefondaki sürümden eski.',
+  'That download is not a Kriko update.': 'İndirilen dosya bir Kriko güncellemesi değil.',
+  'The download is gone. Try again.': 'İndirilen dosya kayboldu. Tekrar dene.',
+  'The update did not install. Try again.': 'Güncelleme kurulamadı. Tekrar dene.',
 };
 
 /**
@@ -685,6 +781,10 @@ const patterns: readonly (readonly [RegExp, string])[] = [
     'Mobil için Kriko Agent · $1 · Mercury ve DeepSeek üçüncü taraf hizmetlerdir.',
   ],
   [/^Open scan result for (.+)$/, '$1 için tarama sonucunu aç'],
+  [/^Kriko (\d+\.\d+\.\d+) is ready$/, 'Kriko $1 hazır'],
+  [/^Kriko Agent (\d+\.\d+\.\d+)$/, 'Kriko Agent $1'],
+  [/^Open the update to (\d+\.\d+\.\d+)$/, '$1 güncellemesini aç'],
+  [/^(\d+(?:\.\d)?) MB · from GitHub, checked on this phone$/, '$1 MB · GitHub’dan, bu telefonda doğrulanır'],
   [/^(.+) · site comments$/, '$1 · site yorumları'],
   [/^(\d+) products? in progress$/, '$1 ürün işleniyor'],
   [/^(\d+) products? (?:is|are) moving$/, '$1 ürün ilerliyor'],

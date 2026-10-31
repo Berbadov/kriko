@@ -8,16 +8,16 @@
  */
 
 import * as Clipboard from 'expo-clipboard';
-import { Image } from 'expo-image';
 import { useState } from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
 
+import { motion } from '../theme/motion';
 import type { Colors } from '../theme/palettes';
 import { gap, radius } from '../theme/tokens';
 import { makeStyles, useColors } from '../theme/theme';
 import { Txt } from '../theme/Txt';
 import { tr } from '../i18n';
-import { readingTitle } from '../engine/prompt';
+import { SCREENSHOT_QUESTION } from '../engine/prompt';
 import type { AppAction, Message, Source, Step } from '../engine/types';
 import {
   ChevronRightIcon,
@@ -30,6 +30,8 @@ import {
 import { Markdown } from './Markdown';
 import { AnimatedDisclosure, DisclosureChevron } from './AnimatedDisclosure';
 import { ActivityDots, MotionPressable, MotionView } from './Motion';
+import { ProductCard } from './ProductCard';
+import { useSmoothText } from './useSmoothText';
 
 function clock(at: number): string {
   const date = new Date(at);
@@ -49,7 +51,7 @@ export function StepLine({ step }: { step: Step }) {
   const color = useColors();
   const styles = useStyles();
   return (
-    <MotionView style={styles.stepRow}>
+    <MotionView duration={motion.duration.standard} rise={6} style={styles.stepRow}>
       <View style={styles.stepIcon}>{stepIcon(step, color)}</View>
       <Txt
         variant="bodyTight"
@@ -230,28 +232,24 @@ function CopyAnswer({ text }: { text: string }) {
   );
 }
 
-function UserMessage({ message }: { message: Message }) {
+function UserMessage({ message, scanning }: { message: Message; scanning?: boolean }) {
   const styles = useStyles();
-  const reading = message.reading;
-  const label = reading ? readingTitle(reading) : '';
+  const hasPicture = Boolean(message.imageUri || message.reading);
+  // A scan with no words of the reader's own carries the app's stock question;
+  // the card already says what was asked about, so the bubble would only repeat it.
+  const stock = hasPicture && message.text.trim() === SCREENSHOT_QUESTION;
   return (
-    <View style={styles.userRow}>
-      <View style={styles.userBubble}>
-        {message.imageUri ? (
-          <Image source={{ uri: message.imageUri }} style={styles.thumb} contentFit="cover" />
-        ) : null}
-        {message.text ? (
+    <View style={[styles.userRow, hasPicture ? styles.userRowWide : null]}>
+      {hasPicture ? (
+        <ProductCard reading={message.reading} imageUri={message.imageUri} scanning={scanning} />
+      ) : null}
+      {message.text && !stock ? (
+        <View style={styles.userBubble}>
           <Txt variant="rowText" tone="ink" style={styles.userText}>
             {message.text}
           </Txt>
-        ) : null}
-        {label ? (
-          <Txt variant="monoSm" tone="ink2" numberOfLines={2}>
-            {label}
-            {reading?.price ? ` · ${reading.price}` : ''}
-          </Txt>
-        ) : null}
-      </View>
+        </View>
+      ) : null}
       <Txt variant="monoSm" tone="ink4" style={styles.time}>
         {clock(message.createdAt)}
       </Txt>
@@ -303,25 +301,32 @@ function Actions({ actions, onAction }: {
 
 export function MessageRow({
   message,
+  scanning,
   onOpenSources,
   onAction,
 }: {
   message: Message;
+  /** This is the scan whose answer is still being written. */
+  scanning?: boolean;
   onOpenSources?: () => void;
   onAction?: (action: AppAction) => void;
 }) {
   const color = useColors();
   const styles = useStyles();
+  const running = Boolean(message.pending);
+  // The answer is drawn at a steady pace, not in the chunks the network sent.
+  const drawn = useSmoothText(message.role === 'assistant' ? message.text : '', running);
   if (message.role === 'user') {
     return (
       <MotionView style={styles.userStage}>
-        <UserMessage message={message} />
+        <UserMessage message={message} scanning={scanning} />
       </MotionView>
     );
   }
 
-  const running = Boolean(message.pending);
   const hasText = message.text.trim().length > 0;
+  // What belongs under the answer waits until the answer has finished drawing.
+  const done = drawn.settled;
 
   return (
     <MotionView delay={40} style={styles.agentStage}>
@@ -339,8 +344,8 @@ export function MessageRow({
 
       {hasText ? (
         <MotionView delay={70} style={styles.answer}>
-          <Markdown text={message.text} />
-          {!running ? (
+          <Markdown text={drawn.text} streaming={!done} />
+          {done ? (
             <View style={styles.answerFoot}>
               {message.stopped ? (
                 <Txt variant="monoSm" tone="ink4" caps>
@@ -363,7 +368,7 @@ export function MessageRow({
         </Txt>
       ) : null}
 
-      {!running && message.steps?.length ? <Research steps={message.steps} /> : null}
+      {done && message.steps?.length ? <Research steps={message.steps} /> : null}
 
       {message.error ? (
         <MotionView delay={100} style={styles.errorCard}>
@@ -374,7 +379,7 @@ export function MessageRow({
         </MotionView>
       ) : null}
 
-      {!running ? (
+      {done ? (
         <Sources
           sources={message.sources ?? []}
           unverified={message.unverified}
@@ -382,7 +387,7 @@ export function MessageRow({
         />
       ) : null}
 
-      {!running && message.actions?.length ? (
+      {done && message.actions?.length ? (
         <Actions actions={message.actions} onAction={onAction} />
       ) : null}
       </View>
@@ -393,6 +398,7 @@ export function MessageRow({
 const useStyles = makeStyles((color) => StyleSheet.create({
   userStage: { alignItems: 'flex-end', marginTop: gap[3] },
   userRow: { alignItems: 'flex-end', gap: 3, maxWidth: 360, alignSelf: 'flex-end' },
+  userRowWide: { alignSelf: 'stretch', maxWidth: 440, gap: gap[2] },
   userBubble: {
     maxWidth: '94%',
     backgroundColor: color.surface,
@@ -405,12 +411,6 @@ const useStyles = makeStyles((color) => StyleSheet.create({
     gap: gap[2],
   },
   userText: {},
-  thumb: {
-    width: 168,
-    height: 118,
-    borderRadius: radius.m,
-    backgroundColor: color.inset,
-  },
   time: { paddingRight: 4 },
   agentStage: { marginTop: gap[5] },
   agentRow: { gap: gap[3] },

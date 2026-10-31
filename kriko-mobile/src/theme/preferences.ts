@@ -26,6 +26,30 @@ export const TEXT_SCALE: Record<TextSize, number> = {
   large: 1.14,
 };
 
+/**
+ * How opaque the floating K is while it waits, in percent. It is drawn by the
+ * native scanner, so the choice travels there as a number. A touch, a running
+ * scan or a waiting answer always wakes it to full strength.
+ */
+export const PUCK_OPACITY_STEPS: readonly number[] = [35, 55, 75, 100];
+export const PUCK_OPACITY_DEFAULT = 55;
+const PUCK_OPACITY_MIN = 20;
+
+/** Clamp a stored value to a usable opacity; anything unreadable is the default. */
+export function normalizePuckOpacity(value: unknown): number {
+  const number = Number(value);
+  if (typeof value === 'boolean' || value === null || value === '' || !Number.isFinite(number)) {
+    return PUCK_OPACITY_DEFAULT;
+  }
+  return Math.round(Math.max(PUCK_OPACITY_MIN, Math.min(100, number)));
+}
+
+/** The offered step closest to a stored opacity, so a control always shows a choice. */
+export function nearestPuckOpacityStep(value: number): number {
+  return PUCK_OPACITY_STEPS.reduce((best, step) =>
+    Math.abs(step - value) < Math.abs(best - value) ? step : best, PUCK_OPACITY_STEPS[0]);
+}
+
 export function isAppearance(value: unknown): value is Appearance {
   return typeof value === 'string' && (APPEARANCES as readonly string[]).includes(value);
 }

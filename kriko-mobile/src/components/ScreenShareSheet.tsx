@@ -70,12 +70,12 @@ export function ScreenShareSheet({ onClose, onFallback }: { onClose: () => void;
             <Divider inset={38} />
             <Step n="2" title="Approve Android’s screen sharing prompt." />
             <Divider inset={38} />
-            <Step n="3" title="Open the page you want, then tap the K and Scan this page." />
+            <Step n="3" title="Open the page you want, then tap the K to scan it. Press and hold for more." />
           </MotionView>
 
           <MotionView key={`${busy}-${active}-${error}`} delay={0} style={styles.note}>
             <Txt variant="bodyTight" tone="ink3">
-              Only screens you scan are sent for reading. Stop from the K’s tray or the Android notification.
+              Only screens you scan are sent for reading. Stop by dropping the K on the ×, from its menu, or from the Android notification.
             </Txt>
             {!available ? (
               <Txt variant="bodyTight" tone="risk">
