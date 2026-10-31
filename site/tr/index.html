@@ -16,8 +16,8 @@
   <meta property="og:image:alt" content="Kriko paneli, uydurma bir e-bisiklet ilanının yanında açık; başlık: Ters gidebilecek her şeyi satın almadan önce öğren.">
   <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" href="../assets/icon-32.png">
-  <link rel="stylesheet" href="../styles.css?v=143396c510ad">
-  <script src="../script.js?v=98d54f556fdf" defer=""></script>
+  <link rel="stylesheet" href="../styles.css?v=132f457b26c9">
+  <script src="../script.js?v=35fcbb31fac3" defer=""></script>
   <link rel="canonical" href="https://kriko.cc/tr/">
   <link rel="alternate" href="https://kriko.cc/" hreflang="en">
   <link rel="alternate" href="https://kriko.cc/tr/" hreflang="tr">
@@ -44,6 +44,11 @@
     <symbol id="i-phone" viewBox="0 0 24 24"><path d="M8 3.5h8A1.5 1.5 0 0 1 17.5 5v14a1.5 1.5 0 0 1-1.5 1.5H8A1.5 1.5 0 0 1 6.5 19V5A1.5 1.5 0 0 1 8 3.5Z"></path><path d="M11 17.5h2"></path></symbol>
     <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"></path></symbol>
     <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h16m-6-6 6 6-6 6"></path></symbol>
+    <!-- The three below are referenced by the GitHub, Chrome Web Store and Android
+         buttons and were defined nowhere, so those buttons carried a blank gap. -->
+    <symbol id="i-git" viewBox="0 0 24 24"><circle cx="7" cy="6" r="2.4"></circle><circle cx="7" cy="18" r="2.4"></circle><circle cx="17" cy="12" r="2.4"></circle><path d="M7 8.4v7.2M9.4 6H13a4 4 0 0 1 4 4v0"></path></symbol>
+    <symbol id="i-browser" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"></rect><path d="M3.5 9.2h17"></path><path d="M6.4 6.9h.01M9 6.9h.01"></path></symbol>
+    <symbol id="i-android" viewBox="0 0 24 24"><path d="M5 12.5a7 7 0 0 1 14 0V18H5Z"></path><path d="m7.2 6.4-1.6-2M16.8 6.4l1.6-2"></path><path d="M9.5 11.6h.01M14.5 11.6h.01"></path></symbol>
   </svg>
 
   <header class="topbar">
@@ -64,16 +69,17 @@
 
   <main id="main">
     <section class="hero home" id="top">
+      <canvas class="hero-shader" aria-hidden="true"></canvas>
       <div class="hero-grid">
         <div class="hero-copy">
           <p class="label">Bilinen sorunlar, kaynaklarıyla</p>
           <h1>Ters gidebilecek her şeyi <span>satın almadan önce öğren.</span></h1>
-          <p class="lead">Kriko, baktığın modelin bilinen sorunlarını ilanın yanında gösterir. Her bulgu, açabileceğin bir kaynak ve satıcıya sorabileceğin bir soruyla gelir.</p>
           <div class="actions">
             <a class="button" href="https://github.com/Berbadov/kriko/releases/latest/download/kriko-0.3.8-x86_64-setup.exe"><svg class="icon" aria-hidden="true"><use href="#i-download"></use></svg><span>Kriko'yu Windows için indir</span></a>
             <a class="button ghost" href="https://chromewebstore.google.com/detail/kriko/bdifnaggafjokndlpjgmlfappcoehdjb"><svg class="icon" aria-hidden="true"><use href="#i-browser"></use></svg><span>Tarayıcı uzantısını yükle</span></a>
             <a class="button quiet" href="https://github.com/Berbadov/kriko"><svg class="icon" aria-hidden="true"><use href="#i-git"></use></svg><span>GitHub</span></a>
           </div>
+          <p class="lead">Kriko, baktığın modelin bilinen sorunlarını ilanın yanında gösterir. Her bulgu, açabileceğin bir kaynak ve satıcıya sorabileceğin bir soruyla gelir.</p>
           <ul class="hero-points">
             <li><svg class="icon" aria-hidden="true"><use href="#i-check"></use></svg><span>Ücretsiz ve açık kaynak, hesap yok</span></li>
             <li><svg class="icon" aria-hidden="true"><use href="#i-check"></use></svg><span>Kataloglar çevrimdışı çalışır, yapay zekâ anahtarı gerekmez</span></li>
@@ -84,7 +90,7 @@
           <div class="stage-sky">
             <picture>
               <source srcset="../assets/examples/ebike-dark.webp" media="(prefers-color-scheme: dark)">
-              <img src="../assets/examples/ebike-light.webp" width="400" height="768" alt="Kurgusal bir elektrikli bisiklet için Kriko paneli. Kontrol edilecek dört şeyi listeliyor: zayıflayan bir bataryadan küçük bir ekran notuna kadar.">
+              <img src="../assets/examples/ebike-light.webp" width="400" height="948" alt="Kurgusal bir elektrikli bisiklet için Kriko paneli. Kontrol edilecek dört şeyi listeliyor: zayıflayan bir bataryadan küçük bir ekran notuna kadar.">
             </picture>
           </div>
           <figcaption>Kurgusal bir elektrikli bisiklet, gerçek panelde.</figcaption>
@@ -154,7 +160,7 @@
             </div>
             <picture class="shot crop">
               <source srcset="../assets/examples/claim-open-dark.webp" media="(prefers-color-scheme: dark)">
-              <img src="../assets/examples/claim-open-light.webp" width="400" height="768" loading="lazy" alt="Açılmış bir bulgu. Bataryanın iki kıştan sonra menzil kaybettiğini açıklıyor, kaynağı belirtiyor ve satıcıya ne sorulacağını öneriyor.">
+              <img src="../assets/examples/claim-open-light.webp" width="400" height="948" loading="lazy" alt="Açılmış bir bulgu. Bataryanın iki kıştan sonra menzil kaybettiğini açıklıyor, kaynağı belirtiyor ve satıcıya ne sorulacağını öneriyor.">
             </picture>
           </li>
           <li class="step">
@@ -165,7 +171,7 @@
             </div>
             <picture class="shot crop">
               <source srcset="../assets/examples/compare-dark.webp" media="(prefers-color-scheme: dark)">
-              <img src="../assets/examples/compare-light.webp" width="400" height="768" loading="lazy" alt="Üç kurgusal elektrikli bisikletten oluşan bir kısa liste gösteren Kriko paneli. Her satır; ciddi, kontrol edilecek ve küçük bulgularının sayısını veriyor.">
+              <img src="../assets/examples/compare-light.webp" width="400" height="948" loading="lazy" alt="Üç kurgusal elektrikli bisikletten oluşan bir kısa liste gösteren Kriko paneli. Her satır; ciddi, kontrol edilecek ve küçük bulgularının sayısını veriyor.">
             </picture>
           </li>
         </ol>
@@ -224,7 +230,7 @@
             <p class="tag">Sıfır · Robot süpürge</p>
             <picture class="shot crop">
               <source srcset="../assets/examples/vacuum-dark.webp" media="(prefers-color-scheme: dark)">
-              <img src="../assets/examples/vacuum-light.webp" width="400" height="768" loading="lazy" alt="Kurgusal bir robot süpürge için Kriko paneli. Bulgular arasında arızalanan bir yan fırça motoru ve bulut hesabı gerektiren zamanlamalar var.">
+              <img src="../assets/examples/vacuum-light.webp" width="400" height="948" loading="lazy" alt="Kurgusal bir robot süpürge için Kriko paneli. Bulgular arasında arızalanan bir yan fırça motoru ve bulut hesabı gerektiren zamanlamalar var.">
             </picture>
             <h3>Robot süpürge R</h3>
             <p>Pes eden bir fırça motoru ve hesap isteyen bir uygulama.</p>
@@ -233,7 +239,7 @@
             <p class="tag">İkinci el · Telefon</p>
             <picture class="shot crop">
               <source srcset="../assets/examples/phone-dark.webp" media="(prefers-color-scheme: dark)">
-              <img src="../assets/examples/phone-light.webp" width="400" height="768" loading="lazy" alt="Kurgusal bir ikinci el telefon için Kriko paneli. Bulgular arasında ekran onarımından sonra çalışmayı bırakan bir parmak izi sensörü ve yüzde 80'in altına düşen pil sağlığı var.">
+              <img src="../assets/examples/phone-light.webp" width="400" height="948" loading="lazy" alt="Kurgusal bir ikinci el telefon için Kriko paneli. Bulgular arasında ekran onarımından sonra çalışmayı bırakan bir parmak izi sensörü ve yüzde 80'in altına düşen pil sağlığı var.">
             </picture>
             <h3>Telefon P, 128 GB</h3>
             <p>Parmak izi sensörünü bitirebilen bir ekran onarımı.</p>
@@ -242,7 +248,7 @@
             <p class="tag">İkinci el · Çamaşır makinesi</p>
             <picture class="shot crop">
               <source srcset="../assets/examples/washer-dark.webp" media="(prefers-color-scheme: dark)">
-              <img src="../assets/examples/washer-light.webp" width="400" height="768" loading="lazy" alt="Kurgusal bir ikinci el çamaşır makinesi için Kriko paneli. Bulgular arasında gürültülü hâle gelen bir tambur rulmanı ve küf tutan bir kapak contası var.">
+              <img src="../assets/examples/washer-light.webp" width="400" height="948" loading="lazy" alt="Kurgusal bir ikinci el çamaşır makinesi için Kriko paneli. Bulgular arasında gürültülü hâle gelen bir tambur rulmanı ve küf tutan bir kapak contası var.">
             </picture>
             <h3>Çamaşır makinesi W</h3>
             <p>Gürültülü hâle gelen bir rulman ve küflenen bir conta.</p>
@@ -251,7 +257,7 @@
             <p class="tag">Sıfır · Akülü matkap</p>
             <picture class="shot crop">
               <source srcset="../assets/examples/drill-dark.webp" media="(prefers-color-scheme: dark)">
-              <img src="../assets/examples/drill-light.webp" width="400" height="768" loading="lazy" alt="Kurgusal bir akülü matkap için Kriko paneli. Bulgular arasında aşırı ısınan batarya kontakları ve yük altında kayan bir mandren var.">
+              <img src="../assets/examples/drill-light.webp" width="400" height="948" loading="lazy" alt="Kurgusal bir akülü matkap için Kriko paneli. Bulgular arasında aşırı ısınan batarya kontakları ve yük altında kayan bir mandren var.">
             </picture>
             <h3>Akülü matkap D</h3>
             <p>Aşırı ısınan kontaklar ve tutmayı bırakan bir mandren.</p>
@@ -285,12 +291,13 @@
             <h2>Katalog yok mu? Ajanına sor.</h2>
             <p><strong>Hızlı bakış</strong>, seçtiğin ajanı hiçbir katalogda olmayan bir ürünü araştırmaya gönderir ve kaynakları saklar. İnternet bağlantısı gerekir. Hiçbir şey bulamazsa Kriko bunu söyler. Bir ürünün sorunsuz olduğunu asla söylemez.</p>
           </div>
-          <picture class="shot crop">
+        </div>
+        <picture class="shot crop">
             <source srcset="../assets/examples/research-dark.webp" media="(prefers-color-scheme: dark)">
-            <img src="../assets/examples/research-light.webp" width="400" height="768" loading="lazy" alt="Kurgusal bir air fryer için araştırma kartı. Hızlı bakış, okunan sayfa sayısıyla birlikte bilinmesi gereken üç şey buldu.">
+            <img src="../assets/examples/research-light.webp" width="400" height="948" loading="lazy" alt="Kurgusal bir air fryer için araştırma kartı. Hızlı bakış, okunan sayfa sayısıyla birlikte bilinmesi gereken üç şey buldu.">
           </picture>
       </div>
-    </div></section>
+    </section>
 
     <section class="section soft" id="mobile">
       <div class="wrap">
