@@ -1,0 +1,87 @@
+{
+  "version": "0.3.9",
+  "platform": "windows-x86_64",
+  "source_fingerprint": "40ea87f8582ed58dfac071fabfb14d8027e7329ce5c26b4a922081b53f220168",
+  "recorded_at": "2026-10-31",
+  "note": "The maintainer asked for this release after merging the app-chrome and health-probe work (#307), the agent reliability series (#309, #310, #311, #312, #313), the site design rebuild (#314), the one-folder catalogs bundle (#315), the integration fix (#316), the agent-mark motion (#317) and the site cache stamps (#318). The installer, portable copy, upgrade, live-provider and packaged-window journeys were not walked on this build; release_readiness.py is expected to refuse complete stable-readiness certification. The release-tree gate, the packaged build, the frozen sidecar health check, the built app's start and the catalogs were observed.",
+  "journeys": {
+    "fresh_install": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Installer built and hashed; it was not run on this machine."
+    },
+    "portable_start": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Portable archive built and hashed; the extracted portable window was not walked. The built app stayed up and spawned its engine."
+    },
+    "setup": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "More -> Set up Kriko was not walked on the packaged window."
+    },
+    "sourced_answer": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "No live research was run against the packed 0.3.9 engine. The routing, host-search, keep-answer and fallback changes are covered by tests and the frozen sidecar's health check."
+    },
+    "follow_up": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Not walked on the packed engine."
+    },
+    "compare": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Not walked: the extension and Compare did not change in this release."
+    },
+    "stop": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Tray Quit was not walked."
+    },
+    "reconnect": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Not walked on the packaged window."
+    },
+    "upgrade_retains_data": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "No installed-version upgrade was performed."
+    }
+  },
+  "providers": {
+    "mistral-vibe": {
+      "status": "not_observed",
+      "model": "configured by the reader",
+      "version": "0.3.9",
+      "report": "src/app/tests/test_the_mistral_agent_recovers.py and src/app/tests/test_a_host_read_turn_warms_its_agent.py: hosted-session rejection, start allowance and warm start"
+    },
+    "mistral-api": {
+      "status": "not_observed",
+      "model": "mistral-small-latest by default",
+      "version": "0.3.9",
+      "report": "src/app/tests/test_a_research_request_asks_the_web.py and src/app/tests/test_host_read_uses_the_readers_search.py: explicit research routing and the hosted search chain"
+    },
+    "codex": {
+      "status": "not_observed",
+      "model": "configured by the reader",
+      "version": "0.3.9",
+      "report": "src/app/tests/test_a_research_request_asks_the_web.py: a tool-less turn asks for the search its brief included"
+    },
+    "claude-code": {
+      "status": "not_observed",
+      "model": "configured by the reader",
+      "version": "0.3.9",
+      "report": "src/app/tests/test_a_cut_off_resident_turn_keeps_its_answer.py: a cut-off resident turn keeps its streamed answer"
+    }
+  },
+  "observed_instead": [
+    "The full gate on the release tree (version bumped to 0.3.9): py 5,127 passed and 26 skipped, ruff and all four mypy stages clean. The one failure is the documented contention flake src/app/tests/test_resident_transport.py::test_four_reader_runs_each_get_their_own_agent_process_at_once, which passes alone (re-run: 1 passed, exit 0); it failed the same way in earlier batch runs on the merged agent branches and passed alone each time, so it is environmental contention under parallel workers.",
+    "The site suite on the release tree: 41 of 41 passed, run twice end to end. A later repeat hit jsdom's HTMLCanvasElement.getContext race in the Turkish guide test; that test passes alone (2 passed) and no site file differs between the runs, so it is a jsdom/WebGL harness race, not a site failure.",
+    "One earlier release-tree run also failed test_dependencies_are_locked.py because the authoring-only [pipeline] extra installed into that venv had moved opentelemetry-api off its requirements.lock pin; restoring the pinned 1.45.1 makes the test pass, and the build venv installs requirements.lock itself.",
+    "Version agreement: pyproject.toml, kriko-ui/src-tauri/Cargo.toml, kriko-ui/src-tauri/Cargo.lock and kriko-ui/package.json all say 0.3.9, and the website's installer links name the 0.3.9 asset.",
+    "The extension keeps its 0.5.0 manifest and behaves the same; its panel and options CSS follow the app's neutral palette. The phone app (0.10.0) is unchanged and not part of this release."
+  ]
+}
