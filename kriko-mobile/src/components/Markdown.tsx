@@ -1,115 +1,27 @@
 /**
  * The small amount of Markdown a Kriko Agent answer uses, rendered natively.
  *
- * The agent is told to write short paragraphs, bullets and one bold phrase; a
- * full Markdown engine would be a dependency for headings and tables nobody is
- * allowed to send. Links open in the browser; citations are styled in place and
- * the numbered source list sits under the answer.
+ * The block grammar lives in `src/engine/markdownTable.ts` (pure, so the offline
+ * suite can prove it); this file only draws what it returns. The agent is told
+ * to write short paragraphs, bullets and one bold phrase, and — when comparing
+ * models or specifications — a compact GFM pipe table. A table gets a native
+ * card: a raised header row, hairline row separators and a horizontal scroll
+ * only when the columns are wider than the answer column.
  *
  * Every block shares one vertical step (4/8/12/16) and one body token, so a long
  * answer reads as one column rather than a stack of differently spaced runs.
  */
 
-import { useMemo } from 'react';
-import { Linking, StyleSheet, Text, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { Linking, ScrollView, StyleSheet, Text, View, type TextStyle } from 'react-native';
 
+import { parseMarkdownBlocks, type MarkdownTable } from '../engine/markdownTable';
 import { motion } from '../theme/motion';
-import { font, gap } from '../theme/tokens';
-import { makeStyles, useType } from '../theme/theme';
+import { font, gap, radius } from '../theme/tokens';
+import { makeStyles, useColors, useType } from '../theme/theme';
 import { Txt } from '../theme/Txt';
+import { ChevronRightIcon } from './Icon';
 import { MotionView } from './Motion';
-
-type Block =
-  | { kind: 'p'; text: string }
-  | { kind: 'h'; text: string }
-  | { kind: 'li'; text: string; marker: string }
-  | { kind: 'quote'; text: string }
-  | { kind: 'hr' };
-
-/** A thematic break: `---`, `***`, `___` or spaced variants of them. */
-const RULE = /^([-*_])(?:\s*\1){2,}$/;
-
-function blocksOf(source: string): Block[] {
-  const lines = source.replace(/\r/g, '').split('\n');
-  const out: Block[] = [];
-  let paragraph: string[] = [];
-
-  const flush = () => {
-    if (!paragraph.length) return;
-    out.push({ kind: 'p', text: paragraph.join(' ') });
-    paragraph = [];
-  };
-
-  for (const raw of lines) {
-    const line = raw.trim();
-    if (!line) {
-      flush();
-      continue;
-    }
-    // A horizontal rule is a line, not the word "---": the model uses it to
-    // close a section, so it becomes a quiet divider instead of three dashes.
-    if (RULE.test(line)) {
-      flush();
-      out.push({ kind: 'hr' });
-      continue;
-    }
-    const heading = line.match(/^#{1,4}\s+(.*)$/);
-    if (heading) {
-      flush();
-      out.push({ kind: 'h', text: heading[1] });
-      continue;
-    }
-    // Mercury often writes a section label as a lone **Bold line** rather than
-    // a Markdown heading; without this, the label and the sentence after it
-    // became one run-on paragraph ("The call Check for...").
-    const boldLine = line.match(/^\*\*([^*]+)\*\*$/);
-    if (boldLine) {
-      flush();
-      out.push({ kind: 'h', text: boldLine[1] });
-      continue;
-    }
-    // The agent sometimes writes "**The call** Do this" on one line. These are
-    // section labels in its own brief, not the start of a sentence; split the
-    // label from the sentence so it does not read as "The call Prioritize...".
-    const label = line.match(
-      /^\*{0,2}(the call|what to check|bottom line|verdict|the short version|what i would do)\*{0,2}\b[:\s]*(.*)$/i,
-    );
-    if (label) {
-      flush();
-      out.push({ kind: 'h', text: label[1] });
-      if (label[2].trim()) paragraph.push(label[2].trim());
-      continue;
-    }
-    const bullet = line.match(/^[-*•]\s+(.*)$/);
-    if (bullet) {
-      flush();
-      out.push({ kind: 'li', text: bullet[1], marker: '•' });
-      continue;
-    }
-    const numbered = line.match(/^(\d{1,2})[.)]\s+(.*)$/);
-    if (numbered) {
-      flush();
-      out.push({ kind: 'li', text: numbered[2], marker: `${numbered[1]}.` });
-      continue;
-    }
-    // A short answer written as "**Hüküm:** ..." on its own line is a bullet
-    // in this app, even when the model forgot the hyphen.
-    const labelled = line.match(/^\*{0,2}(Hüküm|Kontrol|Eksik|Verdict|Check|Gap)\*{0,2}\s*:\s*(.*)$/i);
-    if (labelled) {
-      flush();
-      out.push({ kind: 'li', text: line, marker: '•' });
-      continue;
-    }
-    if (line.startsWith('>')) {
-      flush();
-      out.push({ kind: 'quote', text: line.replace(/^>\s?/, '') });
-      continue;
-    }
-    paragraph.push(line);
-  }
-  flush();
-  return out;
-}
 
 type Piece = {
   text: string;
@@ -193,13 +105,108 @@ function Inline({ text }: { text: string }) {
   );
 }
 
+/* ------------------------------------------------------------------ table -- */
+
+/** Narrowest and widest a column may be before the table learns to scroll. */
+const COL_MIN = 88;
+const COL_MAX = 220;
+/** Rough width of one body character; only used to size a column. */
+const CHAR_W = 7.2;
+/** Horizontal and vertical cell padding; wide enough to keep a row readable. */
+const CELL_X = 10;
+const CELL_Y = 9;
+
+/**
+ * A cell's visible length with its inline Markdown stripped, so `**bold**` does
+ * not buy a column two extra characters of width.
+ */
+function visibleLength(cell: string): number {
+  return cell
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/\[\d{1,2}\]/g, '12')
+    .length;
+}
+
+/** Widths derived from the longest cell in each column, clamped to a readable band. */
+function columnWidths(table: MarkdownTable): number[] {
+  return table.header.map((_, column) => {
+    let longest = visibleLength(table.header[column] ?? '');
+    for (const row of table.rows) longest = Math.max(longest, visibleLength(row[column] ?? ''));
+    const width = Math.round(longest * CHAR_W) + CELL_X * 2;
+    return Math.min(COL_MAX, Math.max(COL_MIN, width));
+  });
+}
+
+function MarkdownTableView({ table }: { table: MarkdownTable }) {
+  const styles = useStyles();
+  const color = useColors();
+  const type = useType();
+  const widths = useMemo(() => columnWidths(table), [table]);
+  const total = useMemo(() => widths.reduce((sum, width) => sum + width, 0), [widths]);
+  const [available, setAvailable] = useState(0);
+  const scrolls = available > 0 && total > available + 1;
+  // The header reads a touch lighter than the body: semibold, same size.
+  const text: TextStyle = { fontSize: Math.max(11, (type.bodyTight.fontSize ?? 14.5) - 0.5) };
+
+  const card = (
+    <View style={styles.tableCard}>
+      <View style={styles.tableHeader}>
+        {table.header.map((cell, column) => (
+          <View key={column} style={[styles.tableCell, { width: widths[column] }]}>
+            <Txt
+              variant="bodyTight"
+              tone="ink"
+              style={[styles.tableHeadText, text, { textAlign: table.align[column] }]}
+            >
+              <Inline text={cell} />
+            </Txt>
+          </View>
+        ))}
+      </View>
+      {table.rows.map((row, rowIndex) => (
+        <View key={rowIndex} style={styles.tableRow}>
+          {row.map((cell, column) => (
+            <View key={column} style={[styles.tableCell, { width: widths[column] }]}>
+              <Txt
+                variant="bodyTight"
+                tone="ink"
+                style={[styles.tableBodyText, text, { textAlign: table.align[column] }]}
+              >
+                <Inline text={cell} />
+              </Txt>
+            </View>
+          ))}
+        </View>
+      ))}
+    </View>
+  );
+
+  return (
+    <View style={styles.tableWrap} onLayout={(event) => setAvailable(event.nativeEvent.layout.width)}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} bounces={false} scrollEnabled={scrolls}>
+        {card}
+      </ScrollView>
+      {scrolls ? (
+        <View style={styles.tableCue} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+          <Txt variant="monoSm" tone="ink3">Swipe sideways for the rest</Txt>
+          <ChevronRightIcon size={11} color={color.ink3} />
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+/* --------------------------------------------------------------- markdown -- */
+
 /**
  * `streaming` is an answer still being drawn: each new block eases in at once
  * and shallowly, instead of waiting its turn by position like a finished one.
  */
 export function Markdown({ text, streaming = false }: { text: string; streaming?: boolean }) {
   const styles = useStyles();
-  const blocks = useMemo(() => blocksOf(text), [text]);
+  const blocks = useMemo(() => parseMarkdownBlocks(text), [text]);
   const reveal = (index: number) => streaming
     ? { delay: 0, duration: motion.duration.standard, rise: 6 }
     : { delay: Math.min(index * 55, 220) };
@@ -230,6 +237,13 @@ export function Markdown({ text, streaming = false }: { text: string; streaming?
                   <Inline text={block.text} />
                 </Txt>
               </View>
+            </MotionView>
+          );
+        }
+        if (block.kind === 'table') {
+          return (
+            <MotionView key={index} {...reveal(index)} style={styles.block}>
+              <MarkdownTableView table={block.table} />
             </MotionView>
           );
         }
@@ -290,4 +304,34 @@ const useStyles = makeStyles((color) => StyleSheet.create({
     paddingVertical: gap[1],
   },
   rule: { height: StyleSheet.hairlineWidth, backgroundColor: color.edgeStrong, marginVertical: gap[1] },
+  tableWrap: { width: '100%' },
+  tableCard: {
+    borderRadius: radius.m,
+    borderWidth: 1,
+    borderColor: color.edge,
+    backgroundColor: color.surface,
+    overflow: 'hidden',
+  },
+  tableHeader: {
+    flexDirection: 'row',
+    backgroundColor: color.raise,
+  },
+  tableRow: {
+    flexDirection: 'row',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: color.edge,
+  },
+  tableCell: {
+    paddingHorizontal: CELL_X,
+    paddingVertical: CELL_Y,
+  },
+  tableHeadText: { fontFamily: font.semibold },
+  tableBodyText: {},
+  tableCue: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingTop: gap[1],
+    paddingLeft: 2,
+  },
 }));

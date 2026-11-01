@@ -16,12 +16,15 @@ code.
 | **Answer length** | Choose a concise answer, a fuller explanation (usually 150–300 words when useful), or a product-focused answer. The question still determines the format. |
 | **Watch it work** | Every search and every page read is shown while it happens. |
 | **Check the sources** | The numbered pages sit under the answer and have their own page. |
+| **Pull a past search back in** | A slim row above the composer shows the last searches this phone remembers; a chip fills the composer without sending, and a sheet lists them all with their product, question, time and source count. |
+| **Read tables, not dashes** | When the agent compares models or specifications it can write a Markdown table; the phone renders it as a real table with a header, aligned columns, inline citations and sideways scrolling when it is wide. |
+| **Living surfaces** | Matrix-LED dot motion marks the work in progress (live research, the screen-read flow, the floating sheet and the K), a faint LED drift field animates behind the chat, and a liquid particle crest carries the screen-reading scan across the page. |
 | **Remember what you researched** | The phone keeps a small catalog of the products you have already asked about, from chats and scans. A follow-up like "the previous one" or "this one" names the product it means and never mixes two products; History lists what Kriko remembers. |
 | **Research and answer in more languages** | Search sources in any of 14 languages and answer in any of them, chosen independently in Settings, with an Any/Auto default. The interface itself stays English/Türkçe. |
 | **Open a screen** | Ask to see your history or settings and the answer offers an Open button. Nothing navigates without your press. |
-| **Scan over the page** | Tap the floating K, a small glass chip with the Kriko mark, to scan: a wave of pixels crosses your page while it reads, and the answer hangs over the page from the top. Press and hold it for Scan this page, Results and Stop sharing. Drag it onto the × that appears to stop sharing. Its transparency is a setting. |
+| **Scan over the page** | Tap the floating K, a small glass chip with the Kriko mark, to scan: a liquid crest of droplets and a fine LED-dot trail crosses your page while it reads, and the answer hangs over the page from the top. Press and hold it for Scan this page, Results and Stop sharing. Drag it onto the × that appears to stop sharing. Its transparency is a setting. |
 | **Scan with a long press** | Make Kriko your phone's digital assistant, then hold the power or home button: the same wave crosses your screen and the answer opens over the page you were on, without taking you into Kriko. |
-| **Read comfortably** | The bottom bar is a slim row that slides away while you read and returns when you scroll up. A rail at the bottom right scrolls a long answer without reaching for the top, and streaming text eases in word by word. |
+| **Read comfortably** | The bottom bar is a slim row that slides away while you read and returns when you scroll up. A rail at the bottom right scrolls a long answer without reaching for the top, streaming text eases in word by word, and a faint matrix-LED drift field keeps the chat alive without touching the text. |
 | **Queue products** | Follow live scan steps, formatted answers and clickable sources in the floating panel or app. |
 | **Recover scans** | Scan results appear in History; waiting jobs resume after reopening and interrupted jobs are marked for another scan. |
 | **Turkish or English** | The whole interface switches in Settings, in place. A coverage test keeps every screen string translated. |
@@ -38,6 +41,14 @@ code.
 | What Kriko remembers | Language picker |
 |---|---|
 | ![Memory](docs/screens/0.14/4-memory.png) | ![Languages](docs/screens/0.14/2-languages.png) |
+
+| Past searches in chat | A rendered table |
+|---|---|
+| ![Past searches](docs/screens/0.15/1-chat-past-searches.png) | ![Table](docs/screens/0.15/3-table.png) |
+
+| The floating reader | Liquid screen-reading scan |
+|---|---|
+| ![Reader](docs/screens/0.15/6-native-reader.png) | ![Liquid scan](docs/screens/0.15/7-liquid-scan.png) |
 
 | Listing confirmation | |
 |---|---|
@@ -124,13 +135,31 @@ drill and a laptop produce distinct rows, the brief names both, a rescan of one
 product replaces its row instead of adding a third, and pending turns are not
 remembered yet. History shows the same rows as **Products Kriko remembers**.
 
+## The chat, its past searches and its tables
+
+The conversation is the reader's working surface, so it carries three things
+beyond the answer. Above the composer, a slim row of **past-search chips** shows
+the newest remembered products (a coloured tile per kind, the product and its
+age); tapping one fills the composer with that search and never sends it, and a
+**See all** chip opens the full list as a sheet. A table the agent writes with
+pipe characters and a `---` separator row is parsed by
+`src/engine/markdownTable.ts` and drawn as a real table: raised header row,
+aligned columns, inline bold/code/citations inside cells, hairline rows, and a
+horizontal scroll with a "swipe sideways" cue only when the table is wider than
+the phone. Behind it all, `ChatBackground` runs a faint matrix-LED drift field
+and four slow liquid patches (never above 0.10 opacity) that pause when the
+route or app is not in front and become a still field under reduced motion.
+`src/components/MatrixLed.tsx` is the one dot-matrix vocabulary: live research
+shows a scan LED, the "Kriko" label carries a small K glyph, and the
+screen-reading sheets use the same LED and liquid rows.
+
 ## Floating scanner and product queue
 
 The floating **K** is a small rounded chip of liquid glass carrying the Kriko
 mark, and it is translucent: the reader sets how much in Settings. One **tap**
-scans the page. While it reads, a wave of small squares leaves the K and crosses
-the page, ring after ring until the answer starts to arrive (the page underneath
-stays usable), and the K's rim turns with light.
+scans the page. While it reads, a liquid crest of droplets and a fine LED-dot
+trail rises across the page until the answer starts to arrive (the page
+underneath stays usable), and the K's rim carries a chasing LED ring.
 **Press and hold** the K and a ring fills; let go on the full ring and a glass
 menu opens with **Scan this page**, **Results** and **Stop sharing**. **Drag**
 the K to move it: an **×** appears at the bottom of the screen, and letting go
@@ -139,10 +168,14 @@ of the K on it stops sharing.
 The scan result hangs from the top of the screen, under the status bar, as a
 glass sheet over a softened copy of the scanned page, with a picture of that
 page beside its title. The answer is set as a lead sentence, headings, bullets
-and numbered sources, with a Copy button. **One swipe up** from the header, the
-buttons or the sheet's edge folds it away to the K (or the **×** does); a swipe
-on the answer text scrolls the text first, and folds the sheet once the text is
-at its end. The answer stays under Results. The scanner
+and numbered sources, with a Copy button. The sheet is a window the reader
+owns: **drag the header** to move it, **drag the corner grip** to resize it
+(260×240 dp minimum), and **swipe down on the top indicator** — grabber,
+chevron and a progress line that fills as you pull — to close it. **One swipe
+up** from the header, the buttons or the sheet's edge folds it away to the K
+(or the **×** does); a swipe on the answer text scrolls the text first, and
+folds the sheet once the text is at its end. The sheet's loading bar is an LED
+dot matrix, and the answer stays under Results. The scanner
 ends only when the reader chooses Stop sharing: closing Kriko's screen does not
 end it, and when Android ends screen capture (it does when the phone locks) the
 K stays, turns grey, and the next scan asks for capture again over the reader's
@@ -163,7 +196,7 @@ the assistant's **Use screenshot** switch is on; if it is off the card says so.
 Android keeps one assistant at a time: choosing another one hands the long press
 back to it.
 
-Screenshots of these screens are in `docs/screens/0.14/`.
+Screenshots of these screens are in `docs/screens/0.15/`.
 
 The Android build keeps a draggable Kriko chip over a shopping page. The app
 also shows a visible “Screen sharing is on” banner with its own **Stop** button.
@@ -263,6 +296,9 @@ src/
   screens/             ChatScreen, Landing, WelcomeScreen
   components/          chrome, composer, message/markdown, queue and scan sheets
     Glass.tsx          the frosted material: GlassCard, GlassBar (expo-blur)
+    MatrixLed.tsx      the dot-matrix vocabulary (LED fields, liquid rows, clock)
+    ChatBackground.tsx the chat's faint LED drift field and liquid patches
+    PastSearchesSheet.tsx  the chips row and the full remembered-search sheet
     settings/          the compact grouped Settings list and its checkbox sheets
   theme/
     palettes.ts        dark, gray, paper and white, with the same keys
@@ -273,6 +309,7 @@ src/
   engine/
     providers.ts       Mercury streaming + DeepSeek tools + the turn loop
     prompt.ts          the agent's contract, answer styles, screenshot brief
+    markdownTable.ts   pure GFM table/block parser the answer renderer uses
     languages.ts       the 14 research/answer languages, one data list
     memory.ts          the phone catalog: what earlier turns researched
     visionimage.ts     label-band crop for tall screenshots
@@ -296,7 +333,7 @@ as bullets before it is shown.
 ## Build it
 
 Requires Node 24, JDK 17, the Android SDK (platform 36+), and an Android signing
-configuration. The current app version is **0.14.0** (Android version code **18**).
+configuration. The current app version is **0.15.0** (Android version code **19**).
 This build uses the debug keystore, so the APK installs and
 updates locally but is not a Play Store artifact.
 

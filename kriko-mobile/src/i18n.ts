@@ -76,6 +76,17 @@ export function upper(text: string, lang: Language = current): string {
  * renders through `Txt`; names, URLs, prices and key shapes are left alone.
  */
 export const translations: Record<string, string> = {
+  /* -------------------------------------------------- 0.15 chat + motion -- */
+  'Swipe down to close': 'Kapatmak için aşağı kaydır',
+  'Swipe sideways for the rest': 'Kalanı için yana kaydır',
+  'Past searches': 'Geçmiş aramalar',
+  'Use past search': 'Geçmiş aramayı kullan',
+  'Fills the composer without sending.': 'Mesaj alanını doldurur, göndermez.',
+  'See all past searches': 'Tüm geçmiş aramaları gör',
+  'See all': 'Tümünü gör',
+  'Tap one to put it back in the composer.': 'Birine dokun, mesaj alanına geri gelsin.',
+  'No past searches yet.': 'Henüz geçmiş arama yok.',
+  'Products you scan or ask about in a chat show up here.': 'Taradığın veya sohbette sorduğun ürünler burada görünür.',
   /* -------------------------------------------------- 0.14 settings + memory -- */
   'Data': 'Veriler',
   'Products Kriko remembers': 'Kriko’nun hatırladığı ürünler',

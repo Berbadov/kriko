@@ -7,6 +7,7 @@ import android.graphics.Color
 import android.graphics.LinearGradient
 import android.graphics.Paint
 import android.graphics.Path
+import android.graphics.PathMeasure
 import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.SweepGradient
@@ -31,8 +32,8 @@ import kotlin.math.sin
  *
  * Motion, all of it off when the phone has animations turned off:
  *  - a glint crosses the glass every few seconds while idle;
- *  - while research runs a point of light travels around the rim and the mark
- *    breathes;
+ *  - while research runs a point of light travels around the rim, a ring of LED
+ *    dots chases it, and the mark breathes;
  *  - when an answer arrives the button turns over once;
  *  - a press squeezes it, and holding fills a ring that ends in the menu.
  */
@@ -72,6 +73,11 @@ internal class KrikoPuckView(
   private var glint = -1f
   private var glintAnimator: ValueAnimator? = null
   private var attached = false
+  /** Points around the rim, one per LED dot; measured once per size. */
+  private val rimDots = FloatArray(RIM_DOTS * 2)
+  private val rimProbe = FloatArray(2)
+  private var rimReady = false
+  private val rimDotPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
 
   private val glintLoop = object : Runnable {
     override fun run() {
@@ -83,6 +89,30 @@ internal class KrikoPuckView(
 
   override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
     setMeasuredDimension(dp(SIZE_DP), dp(SIZE_DP))
+  }
+
+  /** Measure the rounded rim once so the LED dots need no path work per frame. */
+  override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+    super.onSizeChanged(w, h, oldw, oldh)
+    if (w <= 0 || h <= 0) {
+      rimReady = false
+      return
+    }
+    val pad = dpf(1f)
+    val outline = Path()
+    outline.addRoundRect(RectF(pad, pad, w - pad, h - pad), dpf(16f), dpf(16f), Path.Direction.CW)
+    val measure = PathMeasure(outline, false)
+    val length = measure.length
+    if (length <= 0f) {
+      rimReady = false
+      return
+    }
+    for (i in 0 until RIM_DOTS) {
+      measure.getPosTan(length * i / RIM_DOTS, rimProbe, null)
+      rimDots[i * 2] = rimProbe[0]
+      rimDots[i * 2 + 1] = rimProbe[1]
+    }
+    rimReady = true
   }
 
   /** Back to the reader's chosen opacity. */
@@ -299,7 +329,8 @@ internal class KrikoPuckView(
     }
     canvas.restore()
 
-    // Scanning: a point of light runs around the rim.
+    // Scanning: a point of light runs around the rim, and a ring of LED dots
+    // chases it with a short bright tail. Both are still when motion is off.
     if (mode == Mode.SCANNING) {
       rimLight.strokeWidth = dpf(2.2f)
       val cx = w / 2
@@ -311,6 +342,20 @@ internal class KrikoPuckView(
       canvas.rotate(sweep * 360f, cx, cy)
       canvas.drawRoundRect(box, radius, radius, rimLight)
       canvas.restore()
+
+      if (rimReady) {
+        val head = if (animationsEnabled()) sweep else 0f
+        rimDotPaint.color = KrikoColor.mix(palette.accent, Color.WHITE, 0.42f)
+        for (i in 0 until RIM_DOTS) {
+          val t = i / RIM_DOTS.toFloat()
+          val behind = ((head - t) % 1f + 1f) % 1f
+          val lit = (1f - behind) * (1f - behind)
+          val breathe = 0.62f + 0.38f * sin((head * 2f * PI + t * 2f * PI).toFloat())
+          val amount = (0.10f + 0.80f * lit * breathe).coerceIn(0f, 1f)
+          rimDotPaint.alpha = (255f * amount * o).toInt().coerceIn(0, 255)
+          canvas.drawCircle(rimDots[i * 2], rimDots[i * 2 + 1], dpf(1.15f + 0.75f * lit), rimDotPaint)
+        }
+      }
     }
 
     // Holding: a ring fills around the button, and the menu opens when it closes.
@@ -327,5 +372,6 @@ internal class KrikoPuckView(
   companion object {
     const val SIZE_DP = 46
     private const val GLINT_EVERY_MS = 6500L
+    private const val RIM_DOTS = 16
   }
 }

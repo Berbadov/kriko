@@ -56,6 +56,7 @@ export function OverlaySessionProvider({ children }: { children: React.ReactNode
     siteUrlHint: tr('Review site (optional)', language),
     cancel: tr('Cancel', language),
     close: tr('Close', language),
+    sheetSwipeClose: tr('Swipe down to close', language),
     queued: tr('Queued', language),
     running: tr('Running', language),
     reading: tr('Reading', language),

@@ -114,6 +114,7 @@ internal object KrikoTheme {
     "siteUrlHint" to "Review site (optional)",
     "cancel" to "Cancel",
     "close" to "Close",
+    "sheetSwipeClose" to "Swipe down to close",
     "queued" to "Queued",
     "running" to "Running",
     "reading" to "Reading",

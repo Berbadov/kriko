@@ -11,8 +11,8 @@
  */
 
 import * as Clipboard from 'expo-clipboard';
-import { useEffect, useState } from 'react';
-import { Animated, AppState, Easing, Linking, StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import { Linking, StyleSheet, View } from 'react-native';
 
 import { motion } from '../theme/motion';
 import type { Colors } from '../theme/palettes';
@@ -32,7 +32,8 @@ import {
 } from './Icon';
 import { Markdown } from './Markdown';
 import { AnimatedDisclosure, DisclosureChevron } from './AnimatedDisclosure';
-import { MotionPressable, MotionView, useReducedMotion } from './Motion';
+import { MatrixLed } from './MatrixLed';
+import { MotionPressable, MotionView } from './Motion';
 import { ProductCard, ProductSearchCards } from './ProductCard';
 import { useSmoothText } from './useSmoothText';
 
@@ -74,36 +75,13 @@ export function StepLine({ step }: { step: Step }) {
   );
 }
 
-function ResearchIndicator() {
-  const color = useColors();
-  const reduced = useReducedMotion();
-  const [travel] = useState(() => new Animated.Value(0));
-  useEffect(() => {
-    travel.stopAnimation(); travel.setValue(0.5);
-    if (reduced !== false) return;
-    const motion = Animated.loop(Animated.timing(travel, {
-      toValue: 1, duration: 1750, easing: Easing.linear, useNativeDriver: true, isInteraction: false,
-    }));
-    travel.setValue(0);
-    if (AppState.currentState === 'active') motion.start();
-    const subscription = AppState.addEventListener('change', (state) => {
-      if (state === 'active') motion.start(); else motion.stop();
-    });
-    return () => { subscription.remove(); motion.stop(); };
-  }, [reduced, travel]);
-  return <View importantForAccessibility="no-hide-descendants" style={{ width: 42, height: 24, overflow: 'hidden' }}>
-    {[0, 1, 2].map((index) => <Animated.View key={index} style={{ position: 'absolute', top: 3, width: 13, height: 18,
-      borderRadius: 3, borderWidth: 1, borderColor: color.accentHi, backgroundColor: color.surface,
-      opacity: travel.interpolate({ inputRange: [0, 0.3, 0.75, 1], outputRange: [0.1, 0.9 - index * 0.16, 0.7, 0.1] }),
-      transform: [{ translateX: travel.interpolate({ inputRange: [0, 1], outputRange: [-14 + index * 10, 14 + index * 10] }) },
-        { translateY: travel.interpolate({ inputRange: [0, 0.5, 1], outputRange: [index, -index, index] }) }] }}>
-      <View style={{ height: 1, marginHorizontal: 2, marginTop: 5, backgroundColor: color.accentSoft }} />
-      <View style={{ height: 1, marginHorizontal: 2, marginTop: 3, backgroundColor: color.accentSoft }} />
-    </Animated.View>)}
-  </View>;
-}
-
+/**
+ * The answer is being worked on: a dot-matrix sweep beside the phase it is in.
+ * The LED is the app's live signal now — the old three-card ribbon was a second
+ * animation for the same fact.
+ */
 function LiveSteps({ steps, answering }: { steps: Step[]; answering: boolean }) {
+  const color = useColors();
   const styles = useStyles();
   const visible = steps.filter((step) => !step.text.startsWith('diagnostic:'));
   const latest = visible[visible.length - 1];
@@ -113,7 +91,16 @@ function LiveSteps({ steps, answering }: { steps: Step[]; answering: boolean }) 
       : latest?.kind === 'search' ? 'Finding sources…' : 'Reviewing sources…';
   return <MotionView style={styles.liveCard}>
     <View style={styles.liveHead}>
-      <ResearchIndicator />
+      <MatrixLed
+        rows={3}
+        cols={7}
+        mode="scan"
+        dot={3}
+        gap={3}
+        color={color.accentHi}
+        intensity={0.95}
+        speed={1500}
+      />
       <Txt variant="bodyTight" tone="ink" numberOfLines={1} style={styles.liveCount}>{tr(phase)}</Txt>
     </View>
   </MotionView>;
@@ -394,6 +381,18 @@ export function MessageRow({
     <MotionView delay={40} style={styles.agentStage}>
       <View style={styles.agentRow}>
       <View style={styles.agentHead}>
+        {running ? (
+          <MatrixLed
+            rows={5}
+            cols={5}
+            mode="glyph"
+            dot={2}
+            gap={2}
+            color={color.accentHi}
+            intensity={0.85}
+            speed={2200}
+          />
+        ) : null}
         <Txt variant="sectionLabel" tone="accent" style={styles.agentLabel}>
           Kriko
         </Txt>

@@ -9,6 +9,7 @@ import { ActivityDots, MotionPressable, MotionView } from './Motion';
 import { Divider } from './Chrome';
 import { Button } from './Primitives';
 import { ScanIcon, XIcon } from './Icon';
+import { LiquidDots, MatrixLed } from './MatrixLed';
 import { moveAppToBack } from '../engine/overlay';
 import { useOverlaySession } from './OverlaySession';
 import { AnimatedSheet } from './AnimatedSheet';
@@ -83,10 +84,41 @@ export function ScreenShareSheet({ onClose, onFallback }: { onClose: () => void;
               </Txt>
             ) : null}
             {error ? <Txt variant="bodyTight" tone="risk">{error}</Txt> : null}
-            {busy ? <MotionView key="busy" style={styles.progress}><ActivityDots color={color.accent} /><Txt variant="bodyTight" tone="ink3">{active ? 'Stopping…' : 'Opening Android sharing…'}</Txt></MotionView> : null}
+            {busy ? (
+              <MotionView key="busy" style={styles.progress}>
+                {active ? (
+                  <ActivityDots color={color.accent} />
+                ) : (
+                  /* Waiting on Android's prompt: droplets instead of a spinner. */
+                  <LiquidDots
+                    count={7}
+                    size={4}
+                    width={46}
+                    height={18}
+                    colors={[color.accentHi, color.accent, color.ok]}
+                  />
+                )}
+                <Txt variant="bodyTight" tone="ink3">{active ? 'Stopping…' : 'Waiting for Android…'}</Txt>
+              </MotionView>
+            ) : null}
           </MotionView>
 
           <View style={styles.actions}>
+            {busy && !active ? (
+              /* A dot-matrix sweep above the button: the scanner is starting. */
+              <View pointerEvents="none" style={styles.waitLed}>
+                <MatrixLed
+                  rows={2}
+                  cols={14}
+                  mode="scan"
+                  dot={3}
+                  gap={4}
+                  color={color.accentHi}
+                  intensity={0.6}
+                  speed={1400}
+                />
+              </View>
+            ) : null}
             <Button label={active ? 'Stop screen sharing' : 'Start floating scanner'} onPress={() => { void begin(dismiss); }} disabled={busy || !available} />
             <Button label="Choose a screenshot" variant="ghost" onPress={() => { fallbackAfterClose.current = true; dismiss(); }} disabled={busy} />
           </View>
@@ -119,5 +151,7 @@ const useStyles = makeStyles((color) => StyleSheet.create({
   stepText: { flex: 1 },
   note: { gap: gap[2] },
   progress: { minHeight: 36, flexDirection: 'row', alignItems: 'center', gap: gap[2] },
+  /* The LED sweep sits just above the primary button while the scanner starts. */
+  waitLed: { alignItems: 'center', paddingVertical: 2 },
   actions: { gap: gap[2] },
 }));
