@@ -67,6 +67,7 @@ from collections import deque
 from app.loginpath import child_env, login_path
 from app.winprocess import hidden_startup
 from app import processcontrol
+from app.providers import hostbin
 import sys
 import tempfile
 import tomllib
@@ -966,23 +967,39 @@ def forget_located() -> None:
     _LOCATED.clear()
 
 
+def _located_key(one: Harness) -> tuple:
+    # `expanduser` rather than `Path.home()`: a test that flips `os.name` to
+    # probe Windows would make `Path.home()` build a `WindowsPath` on POSIX.
+    return (one.executable, one.homes, login_path(),
+            os.environ.get(DIRS_ENV, ""), os.path.expanduser("~"))
+
+
+def _fresh(key: tuple) -> bool:
+    hit = _LOCATED.get(key)
+    return hit is not None and time.monotonic() - hit[0] < LOCATE_TTL_S
+
+
 def locate(one: Harness) -> str:
     """`_locate`, remembered for `LOCATE_TTL_S` (see `_LOCATED`)."""
-    # `expanduser` rather than `Path.home()`: the key only has to *name* the
-    # home directory, and `Path()` picks its flavour from `os.name` at call
-    # time — so a test that flips `os.name` to probe Windows behaviour makes
-    # `Path.home()` build a `WindowsPath`, which cannot be instantiated on a
-    # POSIX runner at all (NotImplementedError, before `_locate` runs).
-    # `expanduser` reads the same env vars and works on both.
-    key = (one.executable, one.homes, login_path(),
-           os.environ.get(DIRS_ENV, ""), os.path.expanduser("~"))
-    now = time.monotonic()
-    hit = _LOCATED.get(key)
-    if hit and now - hit[0] < LOCATE_TTL_S:
-        return hit[1]
+    key = _located_key(one)
+    if _fresh(key):
+        return _LOCATED[key][1]
     found = _locate(one)
-    _LOCATED[key] = (now, found)
+    _LOCATED[key] = (time.monotonic(), found)
     return found
+
+
+def _locate_cold(harnesses: tuple[Harness, ...]) -> None:
+    """Fill the cache for every stale CLI with one helper call."""
+    cold = [one for one in harnesses if not _fresh(_located_key(one))]
+    if len(cold) < 2 or not hostbin.binary():
+        return
+    found = hostbin.locate(
+        [{"id": one.id, "name": one.executable, "roots": _roots(one)} for one in cold],
+        path=login_path(), suffixes=list(_SUFFIXES),
+    )
+    for one in cold if found else ():
+        _LOCATED[_located_key(one)] = (time.monotonic(), (found or {})[one.id])
 
 
 def _locate(one: Harness) -> str:
@@ -1005,31 +1022,20 @@ def _locate(one: Harness) -> str:
     with pack coverage — and it is a *fallback*, so a wrong guess in it costs
     nothing.
     """
-    # The process's PATH first, then what a fresh login would add: a CLI the
-    # reader installed after this app started is on the registry's PATH only.
+    located = hostbin.binary() and hostbin.locate(
+        [{"id": one.id, "name": one.executable, "roots": _roots(one)}],
+        path=login_path(), suffixes=list(_SUFFIXES),
+    )
+    if located:
+        return located[one.id]
     found = shutil.which(one.executable) or shutil.which(one.executable, path=login_path())
     if found:
-        # PATHEXT is conventionally spelled in upper case
-        # (".COM;.EXE;.BAT;.CMD") and `shutil.which` returns whatever case
-        # it matched in, so an npm-installed CLI resolves to "...\claude.CMD"
-        # next to every other path's lower-case suffix. Windows paths are
-        # case-insensitive either way, so this only matters where the path
-        # is shown to the reader (Settings → Your agents, settings-23).
         if os.name == "nt":
             stem, dot, suffix = found.rpartition(".")
             if dot and suffix.lower() in ("com", "exe", "bat", "cmd"):
                 found = f"{stem}.{suffix.lower()}"
         return found
-    home = Path.home()
-    if one.id == "codex" and os.name == "nt":
-        packaged = home / "AppData" / "Local" / "OpenAI" / "Codex" / "bin"
-        candidates = sorted(packaged.glob("*/codex.exe"))
-        if candidates:
-            return str(max(candidates, key=lambda p: p.stat().st_mtime))
-    roots = [Path(d) for d in os.environ.get(DIRS_ENV, "").split(os.pathsep) if d]
-    roots += [home / part for part in (*one.homes, *_EXTRA_HOMES)]
-    roots += sorted(home.glob("AppData/Roaming/Python/Python*/Scripts"), reverse=True)
-    for root in roots:
+    for root in map(Path, _roots(one)):
         for suffix in _SUFFIXES:
             candidate = root / f"{one.executable}{suffix}"
             try:
@@ -1038,6 +1044,19 @@ def _locate(one: Harness) -> str:
             except OSError:
                 continue
     return ""
+
+
+def _roots(one: Harness) -> list[str]:
+    """Where to look after `PATH`, best guess first."""
+    home = Path.home()
+    roots: list[Path] = []
+    if one.id == "codex" and os.name == "nt":
+        packaged = home / "AppData" / "Local" / "OpenAI" / "Codex" / "bin"
+        roots += sorted(packaged.glob("*/"), key=lambda p: p.stat().st_mtime, reverse=True)
+    roots += [Path(d) for d in os.environ.get(DIRS_ENV, "").split(os.pathsep) if d]
+    roots += [home / part for part in (*one.homes, *_EXTRA_HOMES)]
+    roots += sorted(home.glob("AppData/Roaming/Python/Python*/Scripts"), reverse=True)
+    return [str(root) for root in roots]
 
 
 # The desktop roster requested by the reader. Each invocation starts a new chat.
@@ -1058,11 +1077,13 @@ KNOWN = tuple(h for h in KNOWN if h.id in {"claude-code", "antigravity-cli", "mi
 
 def available() -> list[Harness]:
     """Which harness CLIs this machine can actually start *and* sandbox."""
+    _locate_cold(KNOWN)
     return [h for h in KNOWN if not h.unusable and locate(h)]
 
 
 def found_but_unusable() -> list[Harness]:
     """Installed, and deliberately not driven. For the screen to explain."""
+    _locate_cold(KNOWN)
     return [h for h in KNOWN if h.unusable and locate(h)]
 
 
@@ -1088,6 +1109,12 @@ _OPTION = re.compile(r"--[A-Za-z][A-Za-z0-9-]*")
 def _ask(executable: str, *argv: str, keep_lines: int = 400) -> str:
     from app.agentresources import slot
 
+    asked = hostbin.probe(
+        [{"key": "q", "argv": [executable, *argv], "keep": keep_lines}],
+        env={"PATH": login_path(), **CHILD_ENCODING_ENV}, seconds=HELP_TIMEOUT_SECONDS,
+    )
+    if asked is not None:
+        return asked["q"].get("text", "")
     try:
         with slot("probe", key=executable, timeout=HELP_TIMEOUT_SECONDS):
             return _ask_owned(executable, *argv, keep_lines=keep_lines)
