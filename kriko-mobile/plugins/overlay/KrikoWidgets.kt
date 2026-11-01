@@ -167,177 +167,374 @@ internal class KrikoMotion {
 }
 
 /**
- * The answer sheet's frame. One swipe up from anywhere that is not scrolling
- * content folds it away, with the sheet following the finger. The body gives way
- * first: while it can still scroll, a swipe on it scrolls it, so reading is never
- * fought; once it has reached its end, the same swipe folds the sheet.
+ * The answer sheet's frame. It is a window the reader can move, resize and
+ * swipe away:
+ *
+ *  - dragging the header row moves the whole window (the owner applies x/y);
+ *  - dragging the top handle down makes the sheet follow the finger and fills
+ *    the close indicator; past [CLOSE_DP] or a fast downward flick it closes,
+ *    otherwise it springs back. Dragging it up still folds it into the puck;
+ *  - horizontal drags on the handle move the window instead of dismissing it;
+ *  - the body keeps its scroll: a swipe there scrolls it first, and only once it
+ *    reaches an end does the same finger take the sheet.
  */
-internal class SwipeSheet(context: Context) : LinearLayout(context) {
-  /** The sheet was swiped away; the owner removes it. */
+internal class SwipeSheet(context: Context) : FrameLayout(context) {
+  /** The sheet was swiped up; the owner folds it into the puck. */
   var onMinimize: (() -> Unit)? = null
+  /** The sheet was swiped down; the owner closes it. */
+  var onClose: (() -> Unit)? = null
   /** A finger took hold: stop any entrance animation so the two do not fight. */
   var onGrab: (() -> Unit)? = null
+  /** The header is dragging: the owner moves the window by these raw deltas. */
+  var onMoveDrag: ((dx: Float, dy: Float) -> Unit)? = null
+  /** The header drag ended: the owner re-checks what the moved window covers. */
+  var onMoveEnd: (() -> Unit)? = null
+  /** How far a drag-down has come, 0..1, and whether a finger is holding it. */
+  var onSwipeProgress: ((fraction: Float, active: Boolean) -> Unit)? = null
+  /** The sheet is pulled down by its window (not translated), by this many px. */
+  var onDismissDrag: ((offset: Float) -> Unit)? = null
+  /** The drag-down ended below its threshold: put the window back where it was. */
+  var onDismissSettle: (() -> Unit)? = null
+  /** The bottom-right corner is dragged: the owner resizes the window. */
+  var onResizeStart: (() -> Unit)? = null
+  var onResizeDrag: ((dx: Float, dy: Float) -> Unit)? = null
+  var onResizeEnd: (() -> Unit)? = null
   /** The scrolling part, so a swipe that starts on it can be left to it. */
   var body: ScrollView? = null
+  /** The header row: the window's move handle. */
+  var header: View? = null
+  /** The top handle with chevron and hint: the swipe-close/fold target. */
+  var handle: View? = null
+  /** The resize grip; its own touch listener owns it, so gestures leave it alone. */
+  var grip: View? = null
+
+  /** Everything the sheet shows; the owner adds its rows here. */
+  val content = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
+
+  private enum class Mode { NONE, MOVE, FOLD, CLOSE, RESIZE }
+  private enum class Zone { BODY, HEADER, HANDLE, GRIP, RESIZE }
 
   private val slop = android.view.ViewConfiguration.get(context).scaledTouchSlop
   private var downX = 0f
   private var downY = 0f
-  private var armed = false
-  private var dragging = false
+  private var mode = Mode.NONE
+  private var zone = Zone.BODY
+  private var dismissOffset = 0f
   private var multiTouchRejected = false
   private var tracker: android.view.VelocityTracker? = null
-  private val at = IntArray(2)
+
+  init {
+    addView(content, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+  }
 
   override fun onInterceptTouchEvent(event: MotionEvent): Boolean {
     when (event.actionMasked) {
       MotionEvent.ACTION_DOWN -> {
         if (event.pointerCount != 1) {
-          armed = false
+          resetGesture()
           multiTouchRejected = true
-          release()
           return false
         }
-        multiTouchRejected = false
-        downX = event.rawX
-        downY = event.rawY
-        dragging = false
-        armed = startsOutsideLiveScroll(event)
-        tracker?.recycle()
-        tracker = android.view.VelocityTracker.obtain().also { it.addMovement(event) }
+        startGesture(event)
       }
       MotionEvent.ACTION_MOVE -> {
         if (event.pointerCount != 1) {
-          dragging = false
-          armed = false
+          resetGesture()
           multiTouchRejected = true
-          translationY = 0f
-          alpha = 1f
-          release()
           return false
         }
+        if (multiTouchRejected) return false
         tracker?.addMovement(event)
-        // If this gesture began inside the scroll body, let the body scroll until
-        // it reaches its end. A continuing upward finger can then take the sheet
-        // with it instead of requiring the reader to lift and swipe a second time.
-        if (!armed && !multiTouchRejected && isAtScrollEndUnder(event)) {
-          armed = true
-          // The body may have scrolled hundreds of dp during this same gesture.
-          // Start the sheet drag at the boundary, not at the finger's original
-          // down point, so the sheet begins smoothly on the next move.
-          downX = event.rawX
-          downY = event.rawY
-          translationY = 0f
-          alpha = 1f
-          tracker?.recycle()
-          tracker = android.view.VelocityTracker.obtain().also { it.addMovement(event) }
+        if (mode == Mode.NONE) beginGesture(event)
+        if (mode != Mode.NONE) {
+          parent?.requestDisallowInterceptTouchEvent(true)
+          return true
         }
-        if (beginSwipe(event)) return true
       }
-      MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> release()
-      MotionEvent.ACTION_POINTER_DOWN -> {
-        dragging = false
-        armed = false
-        multiTouchRejected = true
-        translationY = 0f
-        alpha = 1f
+      MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+        if (mode != Mode.NONE) {
+          finishGesture(event, event.actionMasked == MotionEvent.ACTION_UP)
+          return true
+        }
         release()
+      }
+      MotionEvent.ACTION_POINTER_DOWN -> {
+        resetGesture()
+        multiTouchRejected = true
       }
     }
     return false
   }
 
-  /** A swipe up has started once the finger has travelled past the slop, mostly upward. */
-  private fun beginSwipe(event: MotionEvent): Boolean {
-    if (!armed || dragging) return false
-    val dy = event.rawY - downY
-    val dx = event.rawX - downX
-    if (dy >= -slop || kotlin.math.abs(dy) <= kotlin.math.abs(dx) * 1.3f) return false
-    dragging = true
-    onGrab?.invoke()
-    parent?.requestDisallowInterceptTouchEvent(true)
-    return true
-  }
-
   override fun onTouchEvent(event: MotionEvent): Boolean {
-    // A touch that starts on a bare part of the sheet (the grabber, the header, the
+    // A touch that starts on a bare part of the sheet (the handle, the header, the
     // padding) has no child to take it, so the intercept hook never sees its later
-    // events: claim it here, or the swipe is lost after the first contact.
-    if (event.actionMasked == MotionEvent.ACTION_DOWN) return event.pointerCount == 1
+    // events: claim it here, or the gesture is lost after the first contact.
+    if (event.actionMasked == MotionEvent.ACTION_DOWN) {
+      if (event.pointerCount != 1) {
+        resetGesture()
+        return false
+      }
+      if (tracker == null) startGesture(event)
+      return true
+    }
     if (event.actionMasked == MotionEvent.ACTION_POINTER_DOWN || event.pointerCount != 1) {
-      dragging = false
-      armed = false
+      resetGesture()
       multiTouchRejected = true
-      translationY = 0f
-      alpha = 1f
-      release()
       return false
     }
     tracker?.addMovement(event)
-    if (!dragging) {
-      if (event.actionMasked == MotionEvent.ACTION_MOVE) beginSwipe(event)
-      if (!dragging) {
+    if (mode == Mode.NONE) {
+      if (event.actionMasked == MotionEvent.ACTION_MOVE) beginGesture(event)
+      if (mode == Mode.NONE) {
         if (event.actionMasked == MotionEvent.ACTION_UP || event.actionMasked == MotionEvent.ACTION_CANCEL) release()
         return super.onTouchEvent(event)
       }
     }
     when (event.actionMasked) {
-      MotionEvent.ACTION_MOVE -> {
-        val dy = (event.rawY - downY).coerceAtMost(0f)
-        translationY = dy
-        alpha = (1f + dy / (height * 0.85f).coerceAtLeast(1f)).coerceIn(0.3f, 1f)
-      }
-      MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-        tracker?.computeCurrentVelocity(1000)
-        val velocity = tracker?.yVelocity ?: 0f
-        val fold = event.actionMasked == MotionEvent.ACTION_UP &&
-          (translationY < -dp(44) || velocity < -dp(900))
-        dragging = false
-        release()
-        if (fold) {
-          onMinimize?.invoke()
-        } else {
-          animate().translationY(0f).alpha(1f).setDuration(240L)
-            .setInterpolator(android.view.animation.OvershootInterpolator(1.1f)).start()
-        }
-      }
+      MotionEvent.ACTION_MOVE -> applyGesture(event)
+      MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL ->
+        finishGesture(event, event.actionMasked == MotionEvent.ACTION_UP)
     }
     return true
   }
 
-  private fun startsOutsideLiveScroll(event: MotionEvent): Boolean {
-    val scroller = body ?: return true
-    if (!scroller.isShown) return true
-    // The raw coordinates are the screen's. A view's global visible rect is relative to
-    // its own window, which sits well down the screen, so it would call the header
-    // "inside the body" and a swipe that starts there would never fold the sheet.
-    scroller.getLocationOnScreen(at)
-    val x = event.rawX.toInt()
-    val y = event.rawY.toInt()
-    if (x < at[0] || x > at[0] + scroller.width || y < at[1] || y > at[1] + scroller.height) return true
-    return !scroller.canScrollVertically(1)
+  private fun startGesture(event: MotionEvent) {
+    downX = event.rawX
+    downY = event.rawY
+    mode = Mode.NONE
+    zone = zoneAt(event)
+    tracker?.recycle()
+    tracker = android.view.VelocityTracker.obtain().also { it.addMovement(event) }
+  }
+
+  /** Once the finger has crossed the slop, decide what this gesture is for. */
+  private fun beginGesture(event: MotionEvent) {
+    val dy = event.rawY - downY
+    val dx = event.rawX - downX
+    val mostlyVertical = kotlin.math.abs(dy) > kotlin.math.abs(dx) * 1.3f
+    when (zone) {
+      Zone.HEADER -> {
+        mode = Mode.MOVE
+        onGrab?.invoke()
+      }
+      Zone.HANDLE -> {
+        if (!mostlyVertical) {
+          mode = Mode.MOVE
+          onGrab?.invoke()
+        } else if (dy < 0f) {
+          mode = Mode.FOLD
+          onGrab?.invoke()
+        } else {
+          mode = Mode.CLOSE
+          onGrab?.invoke()
+        }
+      }
+      Zone.BODY -> {
+        if (mostlyVertical && dy < 0f && (!isInsideBody(event) || isAtScrollEndUnder(event))) {
+          mode = Mode.FOLD
+          onGrab?.invoke()
+        } else if (mostlyVertical && dy > 0f && (!isInsideBody(event) || isAtScrollTopUnder(event))) {
+          mode = Mode.CLOSE
+          onGrab?.invoke()
+        }
+      }
+      Zone.GRIP -> Unit
+      Zone.RESIZE -> {
+        mode = Mode.RESIZE
+        onGrab?.invoke()
+        onResizeStart?.invoke()
+      }
+    }
+    if (mode == Mode.NONE) return
+    // The body may have scrolled under this same finger. Start from the boundary,
+    // not from the original down point, so the sheet begins smoothly.
+    downX = event.rawX
+    downY = event.rawY
+    translationY = 0f
+    alpha = 1f
+    tracker?.recycle()
+    tracker = android.view.VelocityTracker.obtain().also { it.addMovement(event) }
+    dismissOffset = 0f
+    if (mode == Mode.CLOSE) onSwipeProgress?.invoke(0f, true)
+  }
+
+  private fun applyGesture(event: MotionEvent) {
+    val dy = event.rawY - downY
+    when (mode) {
+      Mode.MOVE -> onMoveDrag?.invoke(event.rawX - downX, dy)
+      Mode.FOLD -> {
+        val offset = dy.coerceAtMost(0f)
+        translationY = offset
+        alpha = (1f + offset / (height * 0.85f).coerceAtLeast(1f)).coerceIn(0.3f, 1f)
+      }
+      Mode.CLOSE -> {
+        // The window itself follows the finger, so the handle and its progress
+        // line stay visible instead of being clipped by the sheet's own frame.
+        dismissOffset = dy.coerceAtLeast(0f)
+        onDismissDrag?.invoke(dismissOffset)
+        onSwipeProgress?.invoke((dismissOffset / dp(CLOSE_DP)).coerceIn(0f, 1f), true)
+      }
+      Mode.RESIZE -> onResizeDrag?.invoke(event.rawX - downX, dy)
+      Mode.NONE -> Unit
+    }
+  }
+
+  private fun finishGesture(event: MotionEvent, released: Boolean) {
+    tracker?.computeCurrentVelocity(1000)
+    val velocity = tracker?.yVelocity ?: 0f
+    val finished = mode
+    mode = Mode.NONE
+    release()
+    when (finished) {
+      Mode.MOVE -> {
+        translationY = 0f
+        alpha = 1f
+        onMoveEnd?.invoke()
+      }
+      Mode.FOLD -> {
+        val fold = released && (translationY < -dp(FOLD_DP) || velocity < -dp(FOLD_VELOCITY_DP))
+        if (fold) onMinimize?.invoke() else springBack()
+      }
+      Mode.CLOSE -> {
+        val close = released && (dismissOffset > dp(CLOSE_DP) || velocity > dp(CLOSE_VELOCITY_DP))
+        if (close) (onClose ?: onMinimize)?.invoke() else onDismissSettle?.invoke()
+      }
+      Mode.RESIZE -> onResizeEnd?.invoke()
+      Mode.NONE -> Unit
+    }
+    dismissOffset = 0f
+    onSwipeProgress?.invoke(0f, false)
+  }
+
+  /** Back to rest, instantly when the reader asked the phone to remove animations. */
+  private fun springBack() {
+    if (!animationsEnabled()) {
+      translationY = 0f
+      alpha = 1f
+      return
+    }
+    animate().translationY(0f).alpha(1f).setDuration(220L)
+      .setInterpolator(android.view.animation.OvershootInterpolator(1.1f)).start()
+  }
+
+  private fun resetGesture() {
+    val finished = mode
+    mode = Mode.NONE
+    translationY = 0f
+    alpha = 1f
+    dismissOffset = 0f
+    onSwipeProgress?.invoke(0f, false)
+    release()
+    when (finished) {
+      Mode.MOVE -> onMoveEnd?.invoke()
+      Mode.CLOSE -> onDismissSettle?.invoke()
+      Mode.RESIZE -> onResizeEnd?.invoke()
+      else -> Unit
+    }
+  }
+
+  private fun zoneAt(event: MotionEvent): Zone {
+    // A hit on the grip itself is owned by the grip's own touch listener; the
+    // corner zone below is the safety net for the same corner of the window, so
+    // resizing still works if a touch ever slips past the grip's frame.
+    if (isInside(grip, event)) return Zone.GRIP
+    if (isInsideResizeCorner(event)) return Zone.RESIZE
+    if (isInside(handle, event)) return Zone.HANDLE
+    if (isInside(header, event)) return Zone.HEADER
+    return Zone.BODY
+  }
+
+  /** The bottom-right square of the window: the resize affordance's area. */
+  private fun isInsideResizeCorner(event: MotionEvent): Boolean {
+    if (width <= 0 || height <= 0) return false
+    val corner = dp(RESIZE_CORNER_DP).toFloat()
+    return event.x >= width - corner && event.y >= height - corner &&
+      event.x <= width && event.y <= height
+  }
+
+  private fun isInside(view: View?, event: MotionEvent): Boolean {
+    val target = view ?: return false
+    if (!target.isShown || target.width <= 0 || target.height <= 0) return false
+    // Tested in this sheet's own coordinates (event.x/y), not with raw screen
+    // coordinates: an overlay window's screen origin is exactly what used to
+    // make the corner grip's hit area disagree with where its glyph is drawn.
+    return pointInSheet(target, event.x, event.y)
+  }
+
+  /** Whether a point in this sheet's coordinates falls inside `target`'s frame. */
+  private fun pointInSheet(target: View, xInSheet: Float, yInSheet: Float): Boolean {
+    var x = 0f
+    var y = 0f
+    var node: View = target
+    while (node !== this) {
+      x += node.left + node.translationX
+      y += node.top + node.translationY
+      node = node.parent as? View ?: return false
+    }
+    return xInSheet >= x && xInSheet < x + target.width &&
+      yInSheet >= y && yInSheet < y + target.height
+  }
+
+  /** Whether the finger is over the scroll body's own area (not the frame around it). */
+  private fun isInsideBody(event: MotionEvent): Boolean {
+    val scroller = body ?: return false
+    if (!scroller.isShown) return false
+    return isInside(scroller, event)
   }
 
   private fun isAtScrollEndUnder(event: MotionEvent): Boolean {
     val scroller = body ?: return true
     if (!scroller.isShown || scroller.canScrollVertically(1)) return false
-    scroller.getLocationOnScreen(at)
-    val x = event.rawX.toInt()
-    val y = event.rawY.toInt()
-    return x >= at[0] && x <= at[0] + scroller.width &&
-      y >= at[1] && y <= at[1] + scroller.height
+    return isInside(scroller, event)
+  }
+
+  private fun isAtScrollTopUnder(event: MotionEvent): Boolean {
+    val scroller = body ?: return true
+    if (!scroller.isShown || scroller.canScrollVertically(-1)) return false
+    return isInside(scroller, event)
   }
 
   private fun release() {
     tracker?.recycle()
     tracker = null
   }
+
+  private companion object {
+    /** Drag-down distance that closes instead of springing back. */
+    const val CLOSE_DP = 88
+    /** Drag-down speed (dp/s) that closes on its own. */
+    const val CLOSE_VELOCITY_DP = 1000
+    /** Drag-up distance that folds the sheet into the puck. */
+    const val FOLD_DP = 44
+    /** Drag-up speed (dp/s) that folds on its own. */
+    const val FOLD_VELOCITY_DP = 900
+    /** The bottom-right square of the sheet that starts a resize. */
+    const val RESIZE_CORNER_DP = 72
+  }
 }
 
-/** A scroll view that stops growing at a cap, so the buttons below it stay on screen. */
-internal class CappedScroll(context: Context, private val capPx: Int) : ScrollView(context) {
+/**
+ * A scroll view that stops growing at a cap, so the buttons below it stay on
+ * screen. Once the reader resizes the sheet it fills the space left instead,
+ * which is the same view under a different measure spec.
+ */
+internal class CappedScroll(context: Context, private var capPx: Int) : ScrollView(context) {
+  /** True once the sheet has an explicit height: the body takes the remainder. */
+  var fill: Boolean = false
+
+  fun setCap(value: Int) {
+    if (capPx == value) return
+    capPx = value
+    requestLayout()
+  }
+
   override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-    super.onMeasure(widthMeasureSpec, View.MeasureSpec.makeMeasureSpec(capPx, View.MeasureSpec.AT_MOST))
+    if (fill) {
+      super.onMeasure(widthMeasureSpec, heightMeasureSpec)
+    } else {
+      super.onMeasure(widthMeasureSpec, View.MeasureSpec.makeMeasureSpec(capPx, View.MeasureSpec.AT_MOST))
+    }
   }
 }
 
@@ -391,49 +588,188 @@ internal class GlyphView(context: Context, private val kind: String, private val
   }
 }
 
-/** A thin sliding highlight: "working" without a percentage nobody can know. */
-internal class IndeterminateBar(
-  context: Context,
-  track: Int,
-  private val fill: Int,
-) : FrameLayout(context) {
-  private val runner = View(context)
-  private var animator: ValueAnimator? = null
+/**
+ * The sheet's top handle: a short grabber, a chevron pointing down, and a
+ * progress line that fills as the reader drags the sheet down to close it. The
+ * chevron deepens and the fill brightens with the drag, so the gesture explains
+ * itself before the reader has let go.
+ */
+internal class SheetDragIndicator(context: Context, private val accent: Int, private val ink: Int) : View(context) {
+  private val grabberPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+  private val chevronPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    style = Paint.Style.STROKE
+    strokeCap = Paint.Cap.ROUND
+    strokeJoin = Paint.Join.ROUND
+  }
+  private val trackPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    style = Paint.Style.STROKE
+    strokeCap = Paint.Cap.ROUND
+  }
+  private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    style = Paint.Style.STROKE
+    strokeCap = Paint.Cap.ROUND
+  }
+  private val chevron = Path()
+  private var progress = 0f
+  private var active = false
+
+  /** `0..1` how far the drag-down has come; `dragging` while a finger holds it. */
+  fun setProgress(value: Float, dragging: Boolean) {
+    val next = value.coerceIn(0f, 1f)
+    if (next == progress && dragging == active) return
+    progress = next
+    active = dragging
+    invalidate()
+  }
+
+  override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+    setMeasuredDimension(MeasureSpec.getSize(widthMeasureSpec), dp(24))
+  }
+
+  override fun onDraw(canvas: Canvas) {
+    val w = width.toFloat()
+    val h = height.toFloat()
+    if (w <= 0f) return
+    val cx = w / 2f
+
+    grabberPaint.color = ink
+    grabberPaint.alpha = (56f + 64f * progress).toInt().coerceIn(0, 255)
+    val barWidth = dpf(36f)
+    val barHeight = dpf(3.5f)
+    canvas.drawRoundRect(cx - barWidth / 2f, dpf(2f), cx + barWidth / 2f, dpf(2f) + barHeight,
+      barHeight / 2f, barHeight / 2f, grabberPaint)
+
+    chevronPaint.color = accent
+    chevronPaint.alpha = (110f + 130f * progress).toInt().coerceIn(0, 255)
+    chevronPaint.strokeWidth = dpf(1.7f)
+    val top = dpf(9f) + dpf(2f) * progress
+    chevron.reset()
+    chevron.moveTo(cx - dpf(4.6f), top)
+    chevron.lineTo(cx, top + dpf(3.6f))
+    chevron.lineTo(cx + dpf(4.6f), top)
+    canvas.drawPath(chevron, chevronPaint)
+
+    val lineY = h - dpf(1.6f)
+    val pad = dpf(20f)
+    trackPaint.color = ink
+    trackPaint.alpha = 34
+    trackPaint.strokeWidth = dpf(1.6f)
+    canvas.drawLine(pad, lineY, w - pad, lineY, trackPaint)
+    if (progress > 0.002f) {
+      fillPaint.color = accent
+      fillPaint.alpha = (170f + 85f * progress).toInt().coerceIn(0, 255)
+      fillPaint.strokeWidth = dpf(2.2f)
+      val half = (w / 2f - pad) * progress
+      canvas.drawLine(cx - half, lineY, cx + half, lineY, fillPaint)
+    }
+  }
+}
+
+/**
+ * The sheet's bottom-right resize grip: two rails and an accent dot, enough to
+ * say "this corner grows the window" without a label the reader must read.
+ *
+ * The view is deliberately larger than the glyph (the caller gives it 44x44dp)
+ * so the corner is comfortable to grab; it is clickable and focusable and sits
+ * above the content, so a drag on it is a resize and never a scroll.
+ */
+internal class SheetResizeGrip(context: Context, private val ink: Int, private val accent: Int) : View(context) {
+  private val railPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    style = Paint.Style.STROKE
+    strokeCap = Paint.Cap.ROUND
+  }
+  private val dotPaint = Paint(Paint.ANTI_ALIAS_FLAG)
 
   init {
-    background = KrikoDraw.shape(context, track, 2)
-    clipChildren = true
-    clipToOutline = true
-    outlineProvider = KrikoDraw.roundOutline(context, 2)
-    runner.background = KrikoDraw.shape(context, fill, 2)
-    addView(runner, LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT))
+    isClickable = true
+    isFocusable = true
+    elevation = dpf(1f)
+  }
+
+  override fun onDraw(canvas: Canvas) {
+    val w = width.toFloat()
+    val h = height.toFloat()
+    if (w <= 0f || h <= 0f) return
+    // The glyph stays small and anchored to the corner, even though the touch
+    // target is the whole view.
+    val inset = dpf(8f)
+    val long = dpf(18f)
+    railPaint.color = ink
+    railPaint.strokeWidth = dpf(1.4f)
+    canvas.drawLine(w - inset, h - inset, w - inset - long, h - inset, railPaint)
+    canvas.drawLine(w - inset, h - inset, w - inset, h - inset - long, railPaint)
+    val short = long * 0.5f
+    canvas.drawLine(w - inset - dpf(5f), h - inset, w - inset - dpf(5f), h - inset - short, railPaint)
+    dotPaint.color = accent
+    dotPaint.alpha = 190
+    canvas.drawCircle(w - inset - dpf(2f), h - inset - dpf(2f), dpf(1.7f), dotPaint)
+  }
+}
+
+/**
+ * A LED-dot matrix sweep: "working" without a percentage nobody can know. Two
+ * thin rows of dots carry a short bright head and tail; with animations turned
+ * off the dots rest in place.
+ */
+internal class IndeterminateBar(context: Context, track: Int, private val fill: Int) : View(context) {
+  private val trackPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    color = track
+    style = Paint.Style.STROKE
+    strokeCap = Paint.Cap.ROUND
+  }
+  private val dotPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = fill }
+  private var phase = 0f
+  private var animator: ValueAnimator? = null
+
+  override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+    val height = if (MeasureSpec.getMode(heightMeasureSpec) == MeasureSpec.EXACTLY) {
+      MeasureSpec.getSize(heightMeasureSpec)
+    } else {
+      dp(6)
+    }
+    setMeasuredDimension(MeasureSpec.getSize(widthMeasureSpec), height)
   }
 
   override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
     super.onSizeChanged(w, h, oldw, oldh)
-    runner.layoutParams = (runner.layoutParams as LayoutParams).apply { width = (w * 0.38f).roundToInt() }
-    restart()
+    syncMotion()
   }
 
   override fun onVisibilityChanged(changedView: View, visibility: Int) {
     super.onVisibilityChanged(changedView, visibility)
-    if (changedView === this) restart()
+    if (changedView === this) syncMotion()
   }
 
-  private fun restart() {
+  override fun onWindowVisibilityChanged(visibility: Int) {
+    super.onWindowVisibilityChanged(visibility)
+    syncMotion()
+  }
+
+  override fun onAttachedToWindow() {
+    super.onAttachedToWindow()
+    syncMotion()
+  }
+
+  private fun syncMotion() {
     animator?.cancel()
     animator = null
-    if (visibility != View.VISIBLE || width <= 0) return
-    if (!animationsEnabled()) {
-      runner.translationX = 0f
+    if (!isAttachedToWindow || visibility != View.VISIBLE || !isShown || width <= 0) {
+      invalidate()
       return
     }
-    val travel = width.toFloat()
-    animator = ValueAnimator.ofFloat(-travel * 0.4f, travel).apply {
-      duration = 1250
+    if (!animationsEnabled()) {
+      phase = 0f
+      invalidate()
+      return
+    }
+    animator = ValueAnimator.ofFloat(0f, 1f).apply {
+      duration = 1150L
       repeatCount = ValueAnimator.INFINITE
-      interpolator = android.view.animation.AccelerateDecelerateInterpolator()
-      addUpdateListener { animation -> runner.translationX = animation.animatedValue as Float }
+      interpolator = LinearInterpolator()
+      addUpdateListener { animation ->
+        phase = animation.animatedValue as Float
+        invalidate()
+      }
       start()
     }
   }
@@ -442,6 +778,40 @@ internal class IndeterminateBar(
     animator?.cancel()
     animator = null
     super.onDetachedFromWindow()
+  }
+
+  override fun onDraw(canvas: Canvas) {
+    val w = width.toFloat()
+    val h = height.toFloat()
+    if (w <= 0f || h <= 0f) return
+    val margin = dpf(2f)
+    val usable = (w - margin * 2f).coerceAtLeast(1f)
+    val centerY = h / 2f
+    trackPaint.strokeWidth = dpf(1f)
+    trackPaint.alpha = 120
+    canvas.drawLine(margin, centerY, w - margin, centerY, trackPaint)
+
+    val spacing = dpf(7f)
+    val count = ((usable / spacing).toInt()).coerceIn(1, 64)
+    val travel = if (count > 1) (usable - spacing) / (count - 1) else 0f
+    val rows = if (h >= dpf(6f)) 2 else 1
+    val radius = minOf(dpf(1.3f), h / 4.5f)
+    dotPaint.color = fill
+    for (i in 0 until count) {
+      val x = margin + i * travel
+      val p = (x - margin) / usable
+      val behind = ((phase - p) % 1f + 1f) % 1f
+      // Only the head and a short tail are lit; the rest of the matrix rests.
+      val strength = if (behind > 0.45f) 0f else {
+        val lit = 1f - behind / 0.45f
+        lit * lit
+      }
+      for (row in 0 until rows) {
+        val y = if (rows == 1) centerY else centerY + (if (row == 0) -dpf(1.4f) else dpf(1.4f))
+        dotPaint.alpha = (28f + 214f * strength).toInt().coerceIn(0, 255)
+        canvas.drawCircle(x, y, radius, dotPaint)
+      }
+    }
   }
 }
 

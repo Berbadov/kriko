@@ -48,6 +48,8 @@ export type OverlayLabels = {
   siteUrlHint: string;
   cancel: string;
   close: string;
+  /** The answer sheet's swipe-down handle: says the gesture closes it. */
+  sheetSwipeClose: string;
   queued: string;
   running: string;
   reading: string;
