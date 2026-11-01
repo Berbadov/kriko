@@ -15,6 +15,7 @@ Dependencies point down. They never point up or across.
 | Package | Function |
 |---|---|
 | `kriko-ui/` | The desktop app (Tauri: a Rust shell and a React interface). The shell supervises the sidecar, and the interface draws every screen from the local API. It holds no engine logic. |
+| `kriko-harness/` | A small Rust program the app starts to find coding-agent CLIs and ask them short questions (`--help`, `models`) all at once. It knows no catalog and holds no state. Without it `src/app/providers/hostbin.py` falls back to Python. |
 | `src/app/` | The interfaces: the command line, the local HTTP API, the MCP server, and the operator console. |
 | `src/app/pipeline/` | The drivers that run the evidence ledger of a category and repair its gaps. |
 | `src/kriko/` | The engine: the store, the lookup, the ranking, and the gates. It imports none of the others. |
@@ -49,6 +50,7 @@ Start with these files:
 | Package | Read first |
 |---|---|
 | `kriko-ui/` | `kriko-ui/README.md`, then `kriko-ui/src-tauri/src/engine.rs` |
+| `kriko-harness/` | `kriko-harness/src/main.rs`, then `src/app/providers/hostbin.py` |
 | `src/app/` | `src/app/cli.py`, then `src/app/sidecar.py` |
 | `src/app/pipeline/` | `src/app/pipeline/ledger_run.py` |
 | `src/kriko/` | `src/kriko/store/packstore.py` |
