@@ -10,7 +10,7 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useFocusEffect, type Href } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   BackHandler,
@@ -26,17 +26,20 @@ import {
 
 import { AccessSheet } from '../components/AccessSheet';
 import { AppHeader, HeaderAction } from '../components/Chrome';
+import { ChatBackground } from '../components/ChatBackground';
 import { UpdateNotice } from '../components/UpdateCard';
 import { Composer } from '../components/Composer';
 import { useDock } from '../components/dock';
 import { BackIcon, ChevronRightIcon, KeyIcon, PlusIcon } from '../components/Icon';
 import { MessageRow } from '../components/Message';
 import { MotionPressable, MotionView, useReducedMotion } from '../components/Motion';
+import { PastSearchRow, PastSearchesSheet, pastSearchText } from '../components/PastSearchesSheet';
 import { Landing } from './Landing';
 import { ScreenShareSheet } from '../components/ScreenShareSheet';
 import { useOverlaySession } from '../components/OverlaySession';
 import { ScreenshotSheet, type Shot } from '../components/ScreenshotSheet';
 import { ScrollScrubber, type ScrubberHandle } from '../components/ScrollScrubber';
+import { buildCatalog, type CatalogEntry } from '../engine/memory';
 import { moveAppToBack } from '../engine/overlay';
 import { AccessError, useStore } from '../engine/store';
 import { keepThumbnail } from '../engine/thumbs';
@@ -78,6 +81,7 @@ export function ChatScreen() {
     send,
     stop,
     streaming,
+    threads,
     trialLeft,
     showDiagnostics,
   } = useStore();
@@ -106,11 +110,15 @@ export function ChatScreen() {
   const [draft, setDraft] = useState('');
   const [accessOpen, setAccessOpen] = useState(false);
   const [screenOpen, setScreenOpen] = useState(false);
+  const [pastOpen, setPastOpen] = useState(false);
   const [shot, setShot] = useState<Shot | null>(null);
   const [picking, setPicking] = useState(false);
   const [notice, setNotice] = useState('');
   const color = useColors();
   const styles = useStyles();
+
+  /** What the phone already remembers: one row per product, newest first. */
+  const catalog = useMemo(() => buildCatalog(threads, queueJobs), [threads, queueJobs]);
 
   const messages = activeThread?.messages ?? [];
   const last = messages[messages.length - 1];
@@ -236,6 +244,11 @@ export function ChatScreen() {
     void ask(text);
   };
 
+  /** A remembered search fills the composer; it never sends itself. */
+  const fillFromPast = (entry: CatalogEntry) => {
+    setDraft(pastSearchText(entry));
+  };
+
   const pick = async () => {
     if (picking || streaming) return;
     if (!canAsk) {
@@ -342,6 +355,7 @@ export function ChatScreen() {
 
   return (
     <View style={styles.page}>
+      <ChatBackground />
       <AppHeader
         title={!empty ? activeThread?.title || 'Conversation' : dock.composing ? tr('New chat') : undefined}
         actions={
@@ -475,6 +489,13 @@ export function ChatScreen() {
               <ChevronRightIcon size={15} color={color.ink3} />
             </MotionPressable>
           ) : null}
+          {!empty && !streaming && catalog.length ? (
+            <PastSearchRow
+              entries={catalog.slice(0, 3)}
+              onPick={fillFromPast}
+              onSeeAll={() => setPastOpen(true)}
+            />
+          ) : null}
           <Composer
             autoFocus={empty && dock.composing}
             key={activeThread?.id ?? 'new-chat'}
@@ -491,6 +512,14 @@ export function ChatScreen() {
       </KeyboardAvoidingView>
 
       {accessOpen ? <AccessSheet visible onClose={() => setAccessOpen(false)} /> : null}
+      {pastOpen ? (
+        <PastSearchesSheet
+          visible
+          entries={catalog}
+          onClose={() => setPastOpen(false)}
+          onPick={fillFromPast}
+        />
+      ) : null}
       {screenOpen ? (
         <ScreenShareSheet
           onClose={() => setScreenOpen(false)}

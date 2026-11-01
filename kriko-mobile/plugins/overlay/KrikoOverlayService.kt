@@ -67,12 +67,14 @@ import kotlin.math.roundToInt
  *    screen edge and rests as see-through as the reader chose;
  *  - the **menu**: held, not tapped. One big action (Scan this page), the
  *    results, and, deliberately apart, Stop sharing;
- *  - the **wave**: while a scan is read, squares ripple across the page from the
- *    button, in a window that never takes a touch;
+ *  - the **wave**: while a scan is read, a liquid sheen with rising droplets and
+ *    a LED-dot trail crosses the page from the button, in a window that never
+ *    takes a touch;
  *  - the **sheet**: the answer, hung from the top of the screen under the
  *    status bar over a frosted copy of the page it is about, with the picture of
- *    that page beside its title and the answer set as short blocks. One swipe
- *    up folds it away.
+ *    that page beside its title and the answer set as short blocks. Its header
+ *    moves the window, its corner resizes it, and one swipe up folds it into
+ *    the puck while a swipe down closes it.
  *
  * The same sheet and wave also serve the phone's assistant, with no scanner
  * session at all: a long press of the power or home button reads the screen and
@@ -105,6 +107,9 @@ class KrikoOverlayService : Service() {
     private const val PUCK_PAD_DP = 7
     private const val EDGE_DP = 4
     private const val TRAY_DP = 232
+    /** The smallest window the reader can resize the answer sheet to. */
+    private const val MIN_SHEET_WIDTH_DP = 260
+    private const val MIN_SHEET_HEIGHT_DP = 240
     private const val SETTLE_AFTER_MS = 4200L
     private const val HOLD_MS = 380L
     private const val CAPTURE_WATCHDOG_MS = 6500L
@@ -149,8 +154,8 @@ class KrikoOverlayService : Service() {
   private var thumbPath = ""
   private var thumbBitmap: Bitmap? = null
 
-  // The wave of pixels over the page, and the drop target shown while dragging.
-  private var wave: PixelWaveView? = null
+  // The liquid scan over the page, and the drop target shown while dragging.
+  private var wave: LiquidScanView? = null
   private var waveWanted = false
   /** Rows that were already on the sheet when the wave began: older scans do not end it. */
   private var waveSkip: Set<String> = emptySet()
@@ -209,6 +214,22 @@ class KrikoOverlayService : Service() {
   private var sheetChips: LinearLayout? = null
   private var sheetChipsScroll: View? = null
   private var sheetActions: LinearLayout? = null
+  /** The swipe-close handle's progress line and its one-line hint. */
+  private var sheetIndicator: SheetDragIndicator? = null
+  private var sheetSwipeHint: TextView? = null
+  /** Where the sheet's window sat when the header drag began. */
+  private var sheetDragStartX = 0
+  private var sheetDragStartY = 0
+  /** Where the sheet rests when not being pulled down to close. */
+  private var sheetHomeY = 0
+  /** True once the reader has resized the sheet: its rows now share a fixed window. */
+  private var sheetResized = false
+  /** Puts the window back after a drag-down that did not reach the threshold. */
+  private var sheetDismissAnimator: android.animation.ValueAnimator? = null
+  /** Start size of the corner resize in progress, and whether one is running. */
+  private var resizeActive = false
+  private var resizeStartWidth = 0
+  private var resizeStartHeight = 0
   private var siteUrlInput: EditText? = null
   private var siteSection: View? = null
   private var siteOpen = false
@@ -1123,8 +1144,11 @@ class KrikoOverlayService : Service() {
   // -------------------------------------------------------------------- sheet --
 
   /**
-   * The answer sheet. It hangs from the top of the screen, under the status bar,
-   * where a glance finds it and the reader's own page stays visible below.
+   * The answer sheet. It opens under the status bar, where a glance finds it and
+   * the reader's own page stays visible below. It can be moved by its header,
+   * resized from its bottom-right corner, and swiped away from its top handle.
+   * Nothing about where it was is kept: the next sheet opens centred and full
+   * size again.
    */
   private fun openSheet() {
     if (sheet != null) {
@@ -1142,25 +1166,72 @@ class KrikoOverlayService : Service() {
     val bodyCapDp = (screenHeightDp * 0.62 - 205).toInt().coerceIn(110, 470)
 
     val root = SwipeSheet(this).apply {
-      orientation = LinearLayout.VERTICAL
       outlineProvider = ViewOutlineProvider.BACKGROUND
       clipToOutline = true
-      setPadding(dp(16), dp(8), dp(16), dp(12))
     }
     root.background = glass(root, 28, frosted = true) { KrikoGlassLevel.sheet(ui) }
     root.onMinimize = { minimizeSheet() }
-    root.onGrab = { motion.cancel(root) }
-    // A short bar at the top says the sheet can be swiped away.
-    root.addView(View(this).apply { background = KrikoDraw.shape(this@KrikoOverlayService, tint(p.ink, 0.26f), 2) },
-      LinearLayout.LayoutParams(dp(36), dp(4)).apply {
-        gravity = Gravity.CENTER_HORIZONTAL
-        bottomMargin = dp(9)
-      })
+    root.onClose = { minimizeSheet() }
+    root.onGrab = {
+      motion.cancel(root)
+      sheetDismissAnimator?.cancel()
+      sheetDismissAnimator = null
+      val params = sheetParams
+      if (params != null && params.y != sheetHomeY) {
+        params.y = sheetHomeY
+        try { windowManager.updateViewLayout(root, params) } catch (_: Exception) { }
+      }
+      sheetDragStartX = params?.x ?: 0
+      sheetDragStartY = params?.y ?: sheetHomeY
+    }
+    root.onMoveDrag = { dx, dy -> moveSheet(root, dx, dy) }
+    root.onMoveEnd = { keepPuckClearOfSheet() }
+    root.onDismissDrag = { offset -> dismissSheet(root, offset) }
+    root.onDismissSettle = { settleDismiss(root) }
+    root.onResizeStart = { beginSheetResize(root) }
+    root.onResizeDrag = { dx, dy -> dragSheetResize(root, dx, dy) }
+    root.onResizeEnd = {
+      resizeActive = false
+      keepPuckClearOfSheet()
+    }
+
+    val content = root.content
+    // The bottom padding leaves room for the resize grip drawn over the corner.
+    content.setPadding(dp(16), dp(8), dp(16), dp(58))
+
+    // The handle that says "swipe down to close": grabber, chevron, one hint
+    // line, and a progress line that fills while the sheet follows the finger.
+    val handle = LinearLayout(this).apply {
+      orientation = LinearLayout.VERTICAL
+      gravity = Gravity.CENTER_HORIZONTAL
+    }
+    val indicator = SheetDragIndicator(this, p.accent, p.ink)
+    sheetIndicator = indicator
+    root.onSwipeProgress = { fraction, active -> indicator.setProgress(fraction, active) }
+    handle.addView(indicator, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(24)))
+    val hint = TextView(this).apply {
+      text = L("sheetSwipeClose")
+      setTextColor(p.ink3)
+      textSize = 10.5f
+      typeface = fonts.medium
+      includeFontPadding = false
+      gravity = Gravity.CENTER
+      contentDescription = L("sheetSwipeClose")
+    }
+    sheetSwipeHint = hint
+    handle.addView(hint, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+      topMargin = dp(1)
+    })
+    content.addView(handle, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+      bottomMargin = dp(8)
+    })
+    root.handle = handle
 
     val header = LinearLayout(this).apply {
       orientation = LinearLayout.HORIZONTAL
       gravity = Gravity.CENTER_VERTICAL
     }
+    root.header = header
     val thumb = ScanThumb(this, ui, fonts)
     sheetThumb = thumb
     header.addView(thumb, LinearLayout.LayoutParams(dp(46), dp(58)).apply { marginEnd = dp(12) })
@@ -1200,12 +1271,12 @@ class KrikoOverlayService : Service() {
       setOnClickListener { minimizeSheet() }
     }
     header.addView(close, LinearLayout.LayoutParams(dp(44), dp(44)).apply { marginStart = dp(4); marginEnd = -dp(8) })
-    root.addView(header)
+    content.addView(header)
 
     val bar = IndeterminateBar(this, tint(p.ink, 0.08f), p.accentHi)
     bar.visibility = View.GONE
     sheetBar = bar
-    root.addView(bar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(3)).apply {
+    content.addView(bar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(7)).apply {
       topMargin = dp(10)
       bottomMargin = dp(2)
     })
@@ -1223,7 +1294,7 @@ class KrikoOverlayService : Service() {
     }
     sheetBody = body
     scroll.addView(body)
-    root.addView(scroll, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+    content.addView(scroll, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
 
     val chipsRow = LinearLayout(this).apply {
       orientation = LinearLayout.HORIZONTAL
@@ -1237,7 +1308,7 @@ class KrikoOverlayService : Service() {
       visibility = View.GONE
     }
     sheetChipsScroll = chipsScroll
-    root.addView(chipsScroll, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(34)).apply {
+    content.addView(chipsScroll, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(34)).apply {
       topMargin = dp(6)
     })
 
@@ -1246,15 +1317,28 @@ class KrikoOverlayService : Service() {
       gravity = Gravity.CENTER_VERTICAL
     }
     sheetActions = actions
-    root.addView(actions, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+    content.addView(actions, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
       topMargin = dp(8)
     })
 
-    root.addView(buildSiteSection(p), LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+    content.addView(buildSiteSection(p), LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+
+    // The corner grip lives over the sheet's bottom-right, inside the padding
+    // the content leaves free. It is 44x44dp for a real hit target (the glyph
+    // stays small), clickable and lifted above the content, and its own touch
+    // listener claims the gesture so the sheet never scrolls under it.
+    val grip = SheetResizeGrip(this, tint(p.ink, 0.45f), p.accent)
+    root.grip = grip
+    root.addView(grip, FrameLayout.LayoutParams(dp(44), dp(44), Gravity.BOTTOM or Gravity.END).apply {
+      setMargins(0, 0, dp(10), dp(10))
+    })
+    installResizeGrip(root, grip)
 
     sheet = root
-    sheetParams = overlayParams(dp(sheetWidthDp), ViewGroup.LayoutParams.WRAP_CONTENT,
-      Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply {
+    val sheetWidthPx = dp(sheetWidthDp)
+    sheetParams = overlayParams(sheetWidthPx, ViewGroup.LayoutParams.WRAP_CONTENT,
+      Gravity.TOP or Gravity.START).apply {
+      x = ((bounds.width() - sheetWidthPx) / 2).coerceAtLeast(dp(8))
       y = statusBarInset() + dp(8)
       softInputMode = WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
     }
@@ -1262,28 +1346,213 @@ class KrikoOverlayService : Service() {
     root.scaleX = 0.97f
     root.scaleY = 0.97f
     root.translationY = -dp(26).toFloat()
-    root.pivotX = (dp(sheetWidthDp) / 2).toFloat()
+    root.pivotX = (sheetWidthPx / 2).toFloat()
     root.pivotY = 0f
+    sheetHomeY = sheetParams?.y ?: 0
     windowManager.addView(root, sheetParams)
     if (appForeground) root.visibility = View.GONE
     else motion.animateIn(root, 0.97f, 260L, fromTranslationY = -dp(26).toFloat())
     root.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> keepPuckClearOfSheet() }
+    // A resized sheet keeps its rows fixed and gives the body what is left; a
+    // chips row appearing or a section opening changes that remainder, so the
+    // split is re-measured after every layout pass, not only on a resize drag.
+    root.viewTreeObserver.addOnGlobalLayoutListener {
+      if (sheetResized) fitSheetBody(root)
+    }
     wakePuck()
     renderedSignature = null
     renderSheet()
   }
 
-  /** If the sheet would cover the puck, move the puck just below it until the sheet closes. */
+  /** The header was dragged: move the sheet's window, kept inside the display. */
+  private fun moveSheet(root: View, dx: Float, dy: Float) {
+    val params = sheetParams ?: return
+    val bounds = displayBounds()
+    val width = if (root.width > 0) root.width else params.width.coerceAtLeast(1)
+    val height = if (root.height > 0) root.height else dp(300)
+    val minY = statusBarInset() + dp(4)
+    val maxX = (bounds.width() - width).coerceAtLeast(0)
+    val maxY = (bounds.height() - height).coerceAtLeast(minY)
+    params.x = (sheetDragStartX + dx.roundToInt()).coerceIn(0, maxX)
+    params.y = (sheetDragStartY + dy.roundToInt()).coerceIn(minY, maxY)
+    sheetHomeY = params.y
+    try { windowManager.updateViewLayout(root, params) } catch (_: Exception) { }
+  }
+
+  /** The window follows the finger while the reader pulls the sheet down to close. */
+  private fun dismissSheet(root: View, offset: Float) {
+    val params = sheetParams ?: return
+    params.y = sheetHomeY + offset.roundToInt()
+    try { windowManager.updateViewLayout(root, params) } catch (_: Exception) { }
+  }
+
+  /** Short of the close threshold: let the window settle back where it opened. */
+  private fun settleDismiss(root: View) {
+    val params = sheetParams ?: return
+    val from = params.y
+    val to = sheetHomeY
+    sheetDismissAnimator?.cancel()
+    sheetDismissAnimator = null
+    if (from == to) return
+    if (!animationsEnabled()) {
+      params.y = to
+      try { windowManager.updateViewLayout(root, params) } catch (_: Exception) { }
+      return
+    }
+    sheetDismissAnimator = android.animation.ValueAnimator.ofFloat(from.toFloat(), to.toFloat()).apply {
+      duration = 240L
+      interpolator = android.view.animation.DecelerateInterpolator()
+      addUpdateListener { animation ->
+        if (sheet !== root) return@addUpdateListener
+        params.y = (animation.animatedValue as Float).roundToInt()
+        try { windowManager.updateViewLayout(root, params) } catch (_: Exception) { }
+      }
+      start()
+    }
+  }
+
+  /**
+   * Resize from the corner. The grip claims its ACTION_DOWN and tells the sheet
+   * not to intercept, so this drag can never turn into a body scroll or a swipe;
+   * the same math is shared with the corner fallback in [SwipeSheet].
+   */
+  private fun installResizeGrip(root: SwipeSheet, grip: View) {
+    var downX = 0f
+    var downY = 0f
+    var resizing = false
+    grip.setOnTouchListener { view, event ->
+      when (event.actionMasked) {
+        MotionEvent.ACTION_DOWN -> {
+          if (sheetParams == null) return@setOnTouchListener false
+          parentDisallowIntercept(root, true)
+          view.alpha = 0.72f
+          downX = event.rawX
+          downY = event.rawY
+          resizing = true
+          beginSheetResize(root)
+          true
+        }
+        MotionEvent.ACTION_MOVE -> {
+          if (!resizing) return@setOnTouchListener true
+          dragSheetResize(root, event.rawX - downX, event.rawY - downY)
+          true
+        }
+        MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+          resizing = false
+          view.alpha = 1f
+          parentDisallowIntercept(root, false)
+          resizeActive = false
+          keepPuckClearOfSheet()
+          true
+        }
+        else -> false
+      }
+    }
+  }
+
+  /** Let the full-size sheet take the touch, or give it back to its children. */
+  private fun parentDisallowIntercept(view: View, disallow: Boolean) {
+    try {
+      view.parent?.requestDisallowInterceptTouchEvent(disallow)
+    } catch (_: Exception) { }
+  }
+
+  /** Capture the sheet's current window size before a corner drag changes it. */
+  private fun beginSheetResize(root: SwipeSheet) {
+    val params = sheetParams ?: return
+    motion.cancel(root)
+    sheetDismissAnimator?.cancel()
+    sheetDismissAnimator = null
+    params.y = sheetHomeY
+    resizeActive = true
+    resizeStartWidth = if (params.width > 0) params.width else root.width
+    resizeStartHeight = if (params.height > 0) params.height else root.height
+  }
+
+  /** One resize step: clamped width/height, the body re-fitting inside it. */
+  private fun dragSheetResize(root: SwipeSheet, dx: Float, dy: Float) {
+    if (!resizeActive) return
+    val bounds = displayBounds()
+    val maxWidth = (bounds.width() - dp(16)).coerceAtLeast(1)
+    val maxHeight = (bounds.height() - dp(16)).coerceAtLeast(1)
+    val minWidth = dp(MIN_SHEET_WIDTH_DP).coerceAtMost(maxWidth)
+    val minHeight = dp(MIN_SHEET_HEIGHT_DP).coerceAtMost(maxHeight)
+    val width = (resizeStartWidth + dx).roundToInt().coerceIn(minWidth, maxWidth)
+    val height = (resizeStartHeight + dy).roundToInt().coerceIn(minHeight, maxHeight)
+    applySheetSize(root, width, height)
+  }
+
+  /** Give the sheet an explicit window size and let the scroll body fill the rest. */
+  private fun applySheetSize(root: SwipeSheet, width: Int, height: Int) {
+    val params = sheetParams ?: return
+    params.width = width
+    params.height = height
+    val bounds = displayBounds()
+    val minY = statusBarInset() + dp(4)
+    params.x = params.x.coerceIn(0, (bounds.width() - width).coerceAtLeast(0))
+    params.y = params.y.coerceIn(minY, (bounds.height() - height).coerceAtLeast(minY))
+    sheetHomeY = params.y
+    val contentParams = root.content.layoutParams as? FrameLayout.LayoutParams
+    if (contentParams != null && contentParams.height != FrameLayout.LayoutParams.MATCH_PARENT) {
+      contentParams.height = FrameLayout.LayoutParams.MATCH_PARENT
+      root.content.layoutParams = contentParams
+    }
+    sheetResized = true
+    fitSheetBody(root)
+    try { windowManager.updateViewLayout(root, params) } catch (_: Exception) { }
+  }
+
+  /** The body takes whatever height the fixed rows leave, never a negative one. */
+  private fun fitSheetBody(root: SwipeSheet) {
+    val params = sheetParams ?: return
+    val scroll = sheetScroll ?: return
+    if (params.height <= 0) return
+    val bodyParams = scroll.layoutParams as? LinearLayout.LayoutParams ?: return
+    val bodyHeight = (params.height - sheetFixedChrome(root)).coerceAtLeast(0)
+    if (bodyParams.height == bodyHeight && bodyParams.weight == 0f) return
+    bodyParams.height = bodyHeight
+    bodyParams.weight = 0f
+    scroll.layoutParams = bodyParams
+    (scroll as? CappedScroll)?.fill = true
+  }
+
+  /** The measured height of everything in the sheet that is not the scroll body. */
+  private fun sheetFixedChrome(root: SwipeSheet): Int {
+    val content = root.content
+    var total = content.paddingTop + content.paddingBottom
+    for (index in 0 until content.childCount) {
+      val child = content.getChildAt(index)
+      if (child === sheetScroll) continue
+      if (child.visibility == View.GONE) continue
+      total += child.height
+    }
+    return total
+  }
+
+  /**
+   * If the sheet would cover the puck, move the puck just below it until the
+   * sheet closes or is dragged away. Re-checked after every move and resize, so
+   * a window the reader can place still never hides the button.
+   */
   private fun keepPuckClearOfSheet() {
     val params = puckParams ?: return
     val view = puck ?: return
     val shown = sheet ?: return
-    val sheetTop = sheetParams?.y ?: return
+    val sheetWindow = sheetParams ?: return
+    if (shown.height <= 0) return
     val bounds = displayBounds()
+    val sheetTop = sheetWindow.y
     val sheetBottom = sheetTop + shown.height + dp(8)
+    val sheetLeft = sheetWindow.x
+    val sheetRight = sheetLeft + shown.width
+    val puckWidth = if (view.width > 0) view.width else dp(KrikoPuckView.SIZE_DP + PUCK_PAD_DP * 2)
     val puckHeight = if (view.height > 0) view.height else dp(KrikoPuckView.SIZE_DP + PUCK_PAD_DP * 2)
-    val overlaps = params.y < sheetBottom && params.y + puckHeight > sheetTop
-    if (!overlaps) return
+    val horizontal = params.x < sheetRight && params.x + puckWidth > sheetLeft
+    val vertical = params.y < sheetBottom && params.y + puckHeight > sheetTop
+    if (!horizontal || !vertical) {
+      restorePuckHeight()
+      return
+    }
     if (puckYBeforeSheet == null) puckYBeforeSheet = params.y
     val target = sheetBottom.coerceAtMost((bounds.height() - puckHeight - dp(24)).coerceAtLeast(dp(24)))
     if (target == params.y) return
@@ -1666,11 +1935,11 @@ class KrikoOverlayService : Service() {
     var dx = 0f
     var dy = -target.height * 0.4f
     var end = 0.94f
-    if (buttonAt != null) {
-      val bounds = displayBounds()
+    val window = sheetParams
+    if (buttonAt != null && window != null) {
       val at = puckParams!!
-      dx = at.x + buttonAt.width / 2f - bounds.width() / 2f
-      dy = at.y + buttonAt.height / 2f - ((sheetParams?.y ?: 0) + target.height / 2f)
+      dx = at.x + buttonAt.width / 2f - (window.x + target.width / 2f)
+      dy = at.y + buttonAt.height / 2f - (window.y + target.height / 2f)
       end = 0.1f
     }
     target.pivotX = target.width / 2f
@@ -1695,6 +1964,10 @@ class KrikoOverlayService : Service() {
   }
 
   private fun removeSheet() {
+    sheetDismissAnimator?.cancel()
+    sheetDismissAnimator = null
+    sheetResized = false
+    resizeActive = false
     val view = sheet
     if (view != null) {
       motion.cancel(view)
@@ -1711,6 +1984,8 @@ class KrikoOverlayService : Service() {
     sheetChips = null
     sheetChipsScroll = null
     sheetActions = null
+    sheetIndicator = null
+    sheetSwipeHint = null
     siteUrlInput = null
     siteSection = null
     answerBox = null
@@ -1889,7 +2164,7 @@ class KrikoOverlayService : Service() {
       running.begin(x, y, hole)
       return
     }
-    val view = PixelWaveView(this, ui)
+    val view = LiquidScanView(this, ui)
     val params = overlayParams(bounds.width(), bounds.height(), Gravity.TOP or Gravity.START,
       WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS).apply {
       // Below Android's limit for a window that touches may pass through: the
