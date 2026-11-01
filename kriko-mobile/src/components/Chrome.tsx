@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStore } from '../engine/store';
 import { tr } from '../i18n';
 import { motion } from '../theme/motion';
-import { HEADER_H, PAGE_X, radius } from '../theme/tokens';
+import { elevation, HEADER_H, PAGE_X, radius } from '../theme/tokens';
 import { makeStyles, useColors } from '../theme/theme';
 import { Txt } from '../theme/Txt';
 import { FileIcon, HistoryIcon, ScanIcon, SlidersIcon } from './Icon';
@@ -30,7 +30,7 @@ export function AppHeader({ actions }: { actions?: ReactNode; transparent?: bool
     <View style={styles.barInner}>
       <View style={styles.brand}>
         <Wordmark height={18} tint={color.ink} />
-        <View style={styles.brandRule} />
+        <View style={styles.brandDot} />
         <Txt variant="monoSm" tone="ink3">a closer look</Txt>
       </View>
       {actions ? <View style={styles.actions}>{actions}</View> : null}
@@ -74,10 +74,10 @@ export function BottomNav() {
     { path: '/settings', label: 'Settings', Icon: SlidersIcon },
   ];
   const activeIndex = Math.max(0, items.findIndex((item) => pathname === item.path));
-  const slotWidth = trackWidth / items.length;
+  const slotWidth = (trackWidth - 12) / items.length;
   useEffect(() => {
     if (!slotWidth) return;
-    const target = activeIndex * slotWidth + (slotWidth - 48) / 2;
+    const target = activeIndex * slotWidth + (slotWidth - 56) / 2;
     indicatorX.stopAnimation();
     if (!positioned.current) {
       indicatorX.setValue(target);
@@ -92,7 +92,7 @@ export function BottomNav() {
   }, [activeIndex, indicatorX, reduced, slotWidth]);
   const measureTrack = (event: LayoutChangeEvent) => setTrackWidth(event.nativeEvent.layout.width);
   if (keyboard) return null;
-  return <View style={[styles.dock, { paddingBottom: Math.max(insets.bottom, 10) }]}>
+  return <View pointerEvents="box-none" style={[styles.dock, { paddingBottom: Math.max(insets.bottom, 10) }]}>
     <View style={styles.navTrack} onLayout={measureTrack}>
       <Animated.View pointerEvents="none" style={[styles.navIndicator, { transform: [{ translateX: indicatorX }] }]} />
       {items.map(({ path, label, Icon }, index) => {
@@ -101,12 +101,12 @@ export function BottomNav() {
           accessibilityState={{ selected: active }} onPress={() => { if (!active) router.replace(path as Href); }}
           style={styles.destination}>
           <View style={styles.navIcon}>
-            <Icon size={20} color={active ? color.accent : color.ink3} strokeWidth={active ? 1.9 : 1.5} />
+            <Icon size={21} color={active ? color.accent : color.ink3} strokeWidth={active ? 2 : 1.5} />
             {path === '/queue' && pending > 0 ? <View style={styles.count}>
               <Txt variant="monoSm" tone={color.onAccent} translate={false}>{pending}</Txt>
             </View> : null}
           </View>
-          <Txt variant="actionSmall" tone={active ? 'accent' : 'ink3'}>{label}</Txt>
+          <Txt variant="chip" tone={active ? 'accent' : 'ink3'}>{label}</Txt>
         </MotionPressable>;
       })}
     </View>
@@ -142,7 +142,7 @@ const useStyles = makeStyles((color) => StyleSheet.create({
   bar: { backgroundColor: color.ground, zIndex: 2 },
   barInner: { height: HEADER_H, paddingHorizontal: PAGE_X, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   brand: { flexDirection: 'row', alignItems: 'center', gap: 9 },
-  brandRule: { width: 1, height: 15, backgroundColor: color.edgeStrong },
+  brandDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: color.accent },
   actions: { flexDirection: 'row', alignItems: 'center', gap: 1 },
   action: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: radius.m },
   scroll: { flex: 1 }, content: { paddingBottom: 28 },
@@ -152,12 +152,16 @@ const useStyles = makeStyles((color) => StyleSheet.create({
   footer: { paddingHorizontal: PAGE_X, paddingTop: 12, paddingBottom: 12, backgroundColor: color.ground },
   note: { paddingHorizontal: PAGE_X, paddingVertical: 8 },
   divider: { height: StyleSheet.hairlineWidth, backgroundColor: color.edge, marginVertical: 8 },
-  footerSurface: { backgroundColor: color.surface, borderRadius: radius.l, borderWidth: 1, borderColor: color.edge, overflow: 'hidden' },
-  dock: { paddingHorizontal: 12, backgroundColor: color.ground, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: color.edge },
-  navTrack: { position: 'relative', flexDirection: 'row', minHeight: 62, paddingTop: 8 },
-  navIndicator: { position: 'absolute', top: 8, left: 0, width: 48, height: 30, borderRadius: 12, backgroundColor: color.accentSoft },
+  footerSurface: { backgroundColor: color.surface, borderRadius: radius.l, borderWidth: 1, borderColor: color.edgeSoft, overflow: 'hidden' },
+  dock: { paddingHorizontal: 14, paddingTop: 6, backgroundColor: color.ground },
+  navTrack: {
+    position: 'relative', flexDirection: 'row', minHeight: 64, paddingTop: 7, paddingHorizontal: 6,
+    backgroundColor: color.surface, borderRadius: radius.xl, borderWidth: 1, borderColor: color.edgeSoft,
+    ...elevation.float(color.shadow),
+  },
+  navIndicator: { position: 'absolute', top: 9, left: 6, width: 56, height: 32, borderRadius: radius.pill, backgroundColor: color.accentSoft },
   destination: { flex: 1, alignItems: 'center', gap: 3, minHeight: 54, zIndex: 1 },
-  navIcon: { width: 48, height: 30, alignItems: 'center', justifyContent: 'center', borderRadius: 12 },
+  navIcon: { width: 56, height: 32, alignItems: 'center', justifyContent: 'center', borderRadius: radius.pill },
   count: { position: 'absolute', top: -3, right: -2, minWidth: 17, height: 17, paddingHorizontal: 3,
     alignItems: 'center', justifyContent: 'center', borderRadius: 9, backgroundColor: color.accent },
 }));

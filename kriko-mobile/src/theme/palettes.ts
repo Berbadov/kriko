@@ -11,44 +11,49 @@
 
 export const darkColors = {
   /** Page background. */
-  ground: '#000000',
+  ground: '#07090E',
   /** Cards, sheets and the composer. */
-  surface: '#111111',
+  surface: '#0E1118',
   /** Inset tiles and recessed rows. */
-  inset: '#090909',
+  inset: '#0A0D13',
   /** A slightly lifted surface for rows inside a card. */
-  raise: '#1A1A1A',
+  raise: '#161A24',
 
-  edge: 'rgba(255, 255, 255, 0.07)',
+  edge: 'rgba(255, 255, 255, 0.08)',
   edgeSoft: 'rgba(255, 255, 255, 0.05)',
-  edgeStrong: 'rgba(255, 255, 255, 0.15)',
+  edgeStrong: 'rgba(255, 255, 255, 0.16)',
 
   /** Brand blue: the app mark and the one primary action. */
-  accent: '#3562E9',
-  accentDeep: '#2852D6',
-  accentDim: '#192548',
-  accentSoft: 'rgba(88, 124, 255, 0.16)',
-  accentWash: 'rgba(88, 124, 255, 0.10)',
-  accentHi: '#99B1FF',
+  accent: '#4672FF',
+  accentDeep: '#3459E6',
+  accentDim: '#17224A',
+  accentSoft: 'rgba(96, 134, 255, 0.17)',
+  accentWash: 'rgba(96, 134, 255, 0.09)',
+  accentHi: '#A3B8FF',
   /** Text and icons drawn on top of `accent`. */
   onAccent: '#FFFFFF',
 
-  ink: '#F5F5F5',
-  ink2: '#B8B8B8',
-  ink3: '#989898',
-  ink4: '#888888',
+  ink: '#F3F5FA',
+  ink2: '#B6BCCD',
+  ink3: '#8F96AA',
+  ink4: '#7C8398',
 
   /** Light blue used by the progress fill and inline citations. */
-  fill: '#99B1FF',
+  fill: '#A3B8FF',
 
-  ok: '#3DDC97',
-  warn: '#F5B84B',
-  risk: '#FF6B7A',
-  riskWash: 'rgba(255, 107, 122, 0.14)',
+  ok: '#43E0A0',
+  warn: '#F6BC52',
+  risk: '#FF7080',
+  riskWash: 'rgba(255, 112, 128, 0.14)',
 
-  glass: 'rgba(17, 17, 17, 0.94)',
-  scrim: 'rgba(0, 0, 0, 0.78)',
+  glass: 'rgba(14, 17, 24, 0.92)',
+  scrim: 'rgba(2, 4, 8, 0.74)',
   shadow: '#000000',
+  /** Halo behind the primary action and the scan ring. */
+  glow: 'rgba(70, 114, 255, 0.45)',
+  /** Quiet tints for a verdict that is fine, or needs care. */
+  okWash: 'rgba(67, 224, 160, 0.12)',
+  warnWash: 'rgba(246, 188, 82, 0.13)',
 } as const;
 
 export const paperColors = {
@@ -61,8 +66,8 @@ export const paperColors = {
   /** A slightly lifted surface for rows inside a card. */
   raise: '#FAF7EF',
 
-  edge: '#DED8CC',
-  edgeSoft: '#EAE4D8',
+  edge: '#E0DACE',
+  edgeSoft: '#ECE6DA',
   edgeStrong: '#C5BDAD',
 
   /** Brand blue on paper; `accentDim` is the pale fill behind it. */
@@ -90,33 +95,38 @@ export const paperColors = {
   glass: 'rgba(244, 240, 230, 0.94)',
   scrim: 'rgba(36, 35, 31, 0.38)',
   shadow: '#3A3428',
+  /** Halo behind the primary action and the scan ring. */
+  glow: 'rgba(46, 91, 239, 0.28)',
+  /** Quiet tints for a verdict that is fine, or needs care. */
+  okWash: '#E3EEE6',
+  warnWash: '#F4E8D2',
 } as const satisfies Record<keyof typeof darkColors, string>;
 
 /** Pure white, for a brighter light theme with no warm cast. */
 export const whiteColors = {
-  ground: '#F7F8FA',
+  ground: '#F3F5F9',
   surface: '#FFFFFF',
-  inset: '#EEF1F5',
+  inset: '#E9EDF4',
   raise: '#FFFFFF',
 
-  edge: '#E1E5EA',
-  edgeSoft: '#EDF0F3',
-  edgeStrong: '#C8CDD4',
+  edge: '#E2E6EE',
+  edgeSoft: '#ECEFF5',
+  edgeStrong: '#C9CFDA',
 
-  accent: '#2E5BEF',
-  accentDeep: '#2449CA',
-  accentDim: '#D5DFFB',
-  accentSoft: '#EAF0FE',
+  accent: '#2F5DF2',
+  accentDeep: '#2349CF',
+  accentDim: '#D4DEFC',
+  accentSoft: '#E8EEFE',
   accentWash: 'rgba(46, 91, 239, 0.05)',
   accentHi: '#2E5BEF',
   onAccent: '#FFFFFF',
 
-  ink: '#111318',
-  ink2: '#4A4F57',
-  ink3: '#6B7280',
-  ink4: '#8A9099',
+  ink: '#10131A',
+  ink2: '#474D5A',
+  ink3: '#697082',
+  ink4: '#868D9D',
 
-  fill: '#2E5BEF',
+  fill: '#2F5DF2',
 
   ok: '#1F7A54',
   warn: '#98600F',
@@ -125,7 +135,12 @@ export const whiteColors = {
 
   glass: 'rgba(255, 255, 255, 0.96)',
   scrim: 'rgba(17, 19, 24, 0.32)',
-  shadow: '#20242B',
+  shadow: '#1B2438',
+  /** Halo behind the primary action and the scan ring. */
+  glow: 'rgba(47, 93, 242, 0.30)',
+  /** Quiet tints for a verdict that is fine, or needs care. */
+  okWash: '#E4F4EC',
+  warnWash: '#FBF0DA',
 } as const satisfies Record<keyof typeof darkColors, string>;
 
 export type Colors = { [K in keyof typeof darkColors]: string };

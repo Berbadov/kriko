@@ -82,11 +82,11 @@ export function MotionPressable({
     }
     Animated.parallel([
       Animated.spring(scale, {
-        toValue: pressed ? 0.975 : 1,
-        ...motion.spring.snappy,
+        toValue: pressed ? 0.965 : 1,
+        ...(pressed ? motion.spring.snappy : motion.spring.press),
       }),
       Animated.timing(opacity, {
-        toValue: pressed ? 0.86 : 1,
+        toValue: pressed ? 0.9 : 1,
         duration: pressed ? motion.duration.instant : motion.duration.fast,
         easing: Easing.bezier(...motion.easing.standard),
         useNativeDriver: true,
@@ -112,7 +112,10 @@ export function MotionPressable({
   );
 }
 
-/** A short opacity/lift reveal; children remain visible while motion loads. */
+/**
+ * Content arriving: it rises, scales up a hair and fades in on a soft spring.
+ * The spring is over-damped, so nothing bounces; `delay` staggers siblings.
+ */
 export function MotionView({
   children,
   delay = 0,
@@ -131,12 +134,10 @@ export function MotionView({
       progress.setValue(1);
       return;
     }
-    const animation = Animated.timing(progress, {
+    const animation = Animated.spring(progress, {
       toValue: 1,
-      duration: motion.duration.considered,
-      delay: Math.max(0, Math.min(delay, 320)),
-      easing: Easing.bezier(...motion.easing.enter),
-      useNativeDriver: true,
+      delay: Math.max(0, Math.min(delay, 420)),
+      ...motion.spring.arrive,
     });
     animation.start();
     return () => animation.stop();
@@ -147,15 +148,115 @@ export function MotionView({
       style={[
         style,
         {
-          opacity: progress,
+          opacity: progress.interpolate({ inputRange: [0, 0.6, 1], outputRange: [0, 0.9, 1], extrapolate: 'clamp' }),
           transform: [
-            { translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) },
+            { translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) },
+            { scale: progress.interpolate({ inputRange: [0, 1], outputRange: [0.985, 1] }) },
           ],
         },
       ]}
     >
       {children}
     </Animated.View>
+  );
+}
+
+/**
+ * A ring that breathes outward from whatever it sits behind: the scan button's
+ * invitation. Still when motion is reduced; it never runs behind a press.
+ */
+export function PulseRing({
+  color,
+  radius,
+  style,
+}: {
+  color: string;
+  radius: number;
+  style?: StyleProp<ViewStyle>;
+}) {
+  const reduced = useReducedMotion();
+  const [phase] = useState(() => new Animated.Value(0));
+  useEffect(() => {
+    phase.stopAnimation();
+    phase.setValue(0);
+    if (reduced !== false) return;
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(phase, {
+          toValue: 1,
+          duration: motion.breathe,
+          easing: Easing.bezier(...motion.easing.standard),
+          useNativeDriver: true,
+        }),
+        Animated.delay(500),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [phase, reduced]);
+  if (reduced !== false) return null;
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={[
+        {
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          top: 0,
+          bottom: 0,
+          borderRadius: radius,
+          borderWidth: 2,
+          borderColor: color,
+          opacity: phase.interpolate({ inputRange: [0, 0.15, 1], outputRange: [0, 0.55, 0] }),
+          transform: [{ scale: phase.interpolate({ inputRange: [0, 1], outputRange: [1, 1.09] }) }],
+        },
+        style,
+      ]}
+    />
+  );
+}
+
+/** A soft sweep over a placeholder while real content is on its way. */
+export function Shimmer({ style }: { style?: StyleProp<ViewStyle> }) {
+  const palette = useColors();
+  const reduced = useReducedMotion();
+  const [phase] = useState(() => new Animated.Value(0));
+  const [width, setWidth] = useState(0);
+  useEffect(() => {
+    phase.stopAnimation();
+    phase.setValue(0);
+    if (reduced !== false || !width) return;
+    const loop = Animated.loop(
+      Animated.timing(phase, {
+        toValue: 1,
+        duration: 1400,
+        easing: Easing.inOut(Easing.quad),
+        useNativeDriver: true,
+      }),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [phase, reduced, width]);
+  return (
+    <View
+      onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
+      style={[{ overflow: 'hidden', backgroundColor: palette.raise, borderRadius: 8 }, style]}
+    >
+      {reduced === false && width ? (
+        <Animated.View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            top: 0,
+            bottom: 0,
+            width: width * 0.45,
+            backgroundColor: palette.accentWash,
+            transform: [{ translateX: phase.interpolate({ inputRange: [0, 1], outputRange: [-width * 0.45, width] }) }],
+          }}
+        />
+      ) : null}
+    </View>
   );
 }
 
@@ -211,7 +312,7 @@ export function ActivityDots({ color }: { color?: string }) {
             width: 5,
             height: 5,
             borderRadius: 3,
-            backgroundColor: color,
+            backgroundColor: tint,
             opacity: value,
             transform: [{ scale: value.interpolate({ inputRange: [0.4, 1], outputRange: [0.8, 1.15] }) }],
           }}

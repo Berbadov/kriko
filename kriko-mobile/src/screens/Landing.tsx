@@ -1,14 +1,15 @@
 /** The scan-first home screen shown before a conversation begins. */
 
+import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, View } from 'react-native';
 
 import type { QueueJob } from '../engine/types';
 import { tr } from '../i18n';
 import { press, tap } from '../theme/feedback';
-import { font, gap, PAGE_X, radius } from '../theme/tokens';
+import { elevation, font, gap, PAGE_X, radius } from '../theme/tokens';
 import { makeStyles, useColors } from '../theme/theme';
 import { Txt } from '../theme/Txt';
-import { MotionPressable, MotionView } from '../components/Motion';
+import { MotionPressable, MotionView, PulseRing } from '../components/Motion';
 import { ChevronRightIcon, ImageIcon2, ScanIcon, SearchIcon } from '../components/Icon';
 
 const SUGGESTIONS = [
@@ -57,11 +58,19 @@ export function Landing({
           accessibilityLabel={tr('Scan a product')}
           style={styles.scanButton}
         >
+          <LinearGradient
+            pointerEvents="none"
+            colors={[color.accent, color.accentDeep]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
           <View style={styles.scanIcon}>
-            <ScanIcon size={20} color={color.onAccent} strokeWidth={1.8} />
+            <PulseRing color="rgba(255,255,255,0.9)" radius={16} />
+            <ScanIcon size={22} color={color.onAccent} strokeWidth={1.8} />
           </View>
           <View style={styles.scanCopy}>
-            <Txt variant="action" tone={color.onAccent} style={styles.scanTitle}>
+            <Txt variant="cardTitle" tone={color.onAccent} style={styles.scanTitle}>
               Scan a product
             </Txt>
             <Txt variant="bodyTight" tone="rgba(255,255,255,0.78)" style={styles.scanSub}>
@@ -87,31 +96,34 @@ export function Landing({
 
       <MotionView delay={160} style={styles.suggestionsBlock}>
         <View style={styles.sectionHeading}>
-          <Txt variant="sectionLabel" tone="ink3">Or start with a question</Txt>
+          <Txt variant="sectionLabel" tone="ink3" caps>Or start with a question</Txt>
           <View style={styles.rule} />
         </View>
         {SUGGESTIONS.map((text, index) => (
-          <MotionPressable
-            key={text}
-            onPress={() => {
-              tap();
-              onSuggestion(text);
-            }}
-            accessibilityRole="button"
-            accessibilityLabel={text}
-            style={styles.suggestion}
-          >
-            <SearchIcon size={15} color={color.ink3} />
-            <Txt variant="bodyTight" tone="ink" style={styles.suggestionText}>{text}</Txt>
-            <Txt variant="monoSm" tone="ink4">0{index + 1}</Txt>
-          </MotionPressable>
+          <MotionView key={text} delay={200 + index * 60}>
+            <MotionPressable
+              onPress={() => {
+                tap();
+                onSuggestion(text);
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={text}
+              style={styles.suggestion}
+            >
+              <View style={styles.suggestionIcon}>
+                <SearchIcon size={15} color={color.accent} />
+              </View>
+              <Txt variant="bodyTight" tone="ink" style={styles.suggestionText}>{text}</Txt>
+              <ChevronRightIcon size={16} color={color.ink4} />
+            </MotionPressable>
+          </MotionView>
         ))}
       </MotionView>
 
       {recent.length ? (
         <MotionView delay={240} style={styles.recentBlock}>
           <View style={styles.sectionHeading}>
-            <Txt variant="sectionLabel" tone="ink3">Recently scanned</Txt>
+            <Txt variant="sectionLabel" tone="ink3" caps>Recently scanned</Txt>
             <View style={styles.rule} />
           </View>
           {recent.map((job) => {
@@ -156,67 +168,87 @@ const useStyles = makeStyles((color) => StyleSheet.create({
     gap: gap[5],
   },
   intro: { gap: 8, alignItems: 'flex-start' },
-  eyebrow: { letterSpacing: 1.05, marginBottom: 3 },
+  eyebrow: { letterSpacing: 1.4, marginBottom: 3, color: color.accent },
   headline: {
     fontFamily: font.editorial,
-    letterSpacing: -1.05,
+    letterSpacing: -1.3,
     maxWidth: 330,
   },
   subtitle: { maxWidth: 330, lineHeight: 23 },
-  actions: { gap: gap[1] },
+  actions: { gap: gap[3] },
   scanButton: {
-    minHeight: 78,
-    borderRadius: radius.l,
-    paddingHorizontal: 15,
-    paddingVertical: 13,
+    minHeight: 92,
+    borderRadius: radius.xl,
+    paddingHorizontal: 18,
+    paddingVertical: 16,
     backgroundColor: color.accent,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 14,
+    overflow: 'visible',
+    ...elevation.glow(color.glow),
   },
   scanIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.18)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   scanCopy: { flex: 1, gap: 3 },
-  scanTitle: { textTransform: 'none', fontSize: 16 },
-  scanSub: { fontSize: 12.5, lineHeight: 17 },
+  scanTitle: { textTransform: 'none', fontSize: 18, lineHeight: 23 },
+  scanSub: { fontSize: 13, lineHeight: 18 },
   pickRow: {
-    minHeight: 48,
+    minHeight: 54,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: color.edge,
+    gap: 12,
+    paddingHorizontal: 16,
+    borderRadius: radius.l,
+    backgroundColor: color.surface,
+    borderWidth: 1,
+    borderColor: color.edgeSoft,
+    ...elevation.card(color.shadow),
   },
   pickLabel: { flex: 1 },
-  suggestionsBlock: { gap: 4 },
+  suggestionsBlock: { gap: gap[2], marginTop: gap[1] },
   sectionHeading: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 4 },
   rule: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: color.edge },
   suggestion: {
-    minHeight: 46,
+    minHeight: 58,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: color.edge,
-    paddingHorizontal: 4,
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: radius.l,
+    backgroundColor: color.surface,
+    borderWidth: 1,
+    borderColor: color.edgeSoft,
+    ...elevation.card(color.shadow),
+  },
+  suggestionIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 11,
+    backgroundColor: color.accentWash,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   suggestionText: { flex: 1 },
-  recentBlock: { gap: 4 },
+  recentBlock: { gap: gap[2] },
   recentRow: {
-    minHeight: 56,
+    minHeight: 62,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: color.edge,
-    paddingVertical: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: radius.l,
+    backgroundColor: color.surface,
+    borderWidth: 1,
+    borderColor: color.edgeSoft,
   },
   recentText: { flex: 1, gap: 2 },
   footerNote: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingTop: 2 },
