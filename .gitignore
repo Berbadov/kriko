@@ -33,6 +33,7 @@ gate-*.log
 # or `tauri dev` run from a checkout, which still writes kriko-ui/src-tauri/target
 # (about 2 GB per worktree or agent, hence the glob). Installers come from
 # kriko-ui/package.ps1.
+kriko-harness/target/
 kriko-ui/src-tauri/target*/
 kriko-ui/src-tauri/binaries/
 kriko-ui/node_modules/
