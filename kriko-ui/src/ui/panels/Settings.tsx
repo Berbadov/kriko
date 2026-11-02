@@ -343,7 +343,7 @@ export function SettingsPanel(_: { onOpen?: (lookupId: string) => void }) {
                 <span>
                   Anonymous daily ping
                   <small>
-                    Once a day, Kriko sends a random install id and the app version — nothing else: no question, no product, no page, no key. Off by default, and
+                    Once a day, Kriko sends a random install id and the app version. Nothing else: no question, no product, no page, no key. Off by default, and
                     with no endpoint configured nothing is ever sent. Read the <a href="https://kriko.cc/privacy/">privacy policy</a> for the full list.
                   </small>
                 </span>
@@ -388,7 +388,7 @@ export function SettingsPanel(_: { onOpen?: (lookupId: string) => void }) {
               <h3>About</h3>
               <div className="setting">
                 <span>Engine</span>
-                <span className="value">{about.version || '—'}</span>
+                <span className="value">{about.version || 'n/a'}</span>
               </div>
               <div className="setting">
                 <span>
@@ -416,7 +416,7 @@ export function SettingsPanel(_: { onOpen?: (lookupId: string) => void }) {
               </div>
               <div className="setting stack">
                 <span>Your data</span>
-                <small className="panel-path">{about.folder || '—'}</small>
+                <small className="panel-path">{about.folder || 'n/a'}</small>
               </div>
             </section>
           )}
@@ -583,10 +583,10 @@ export function SharedAccessGroup() {
   // trial are the only two states, so one sentence says which one is in use.
   const fromWhom = doc.grant.label ? `${doc.grant.label}'s keys` : 'shared keys'
   const sharing = granted
-    ? `Sharing is on — Kriko Agent can use ${fromWhom}`
+    ? `Sharing is on: Kriko Agent can use ${fromWhom}`
     : trial.available
-      ? 'Sharing is on — Kriko Agent can use this build’s free trial'
-      : 'Sharing is off — Kriko Agent uses the keys saved on this computer'
+      ? 'Sharing is on: Kriko Agent can use this build’s free trial'
+      : 'Sharing is off: Kriko Agent uses the keys saved on this computer'
 
   return (
     <section className="panel-group" data-tour="shared-access">
@@ -599,7 +599,7 @@ export function SharedAccessGroup() {
       {problem && <p className="error-note">{problem}</p>}
       {!doc.bound && (
         <p className="panel-note">
-          This build carries no share pepper, so a code sealed elsewhere will not open here — and one
+          This build carries no share pepper, so a code sealed elsewhere will not open here. And one
           made here would open anywhere. A build for handing out codes needs one:
           <code>python tools/make_share_pepper.py</code>.
         </p>

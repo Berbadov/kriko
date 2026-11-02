@@ -61,9 +61,6 @@ export function CompareScreen() {
     <section className="compare">
       <header className="page-head rise" style={{ '--i': 0 } as CSSProperties}>
         <h1>Compare</h1>
-        <span className="mono muted">
-          {slots.length} products · {working.length} in research
-        </span>
         <div className="head-tools">
           <label className="inline-switch">
             <span>Differences only</span>
