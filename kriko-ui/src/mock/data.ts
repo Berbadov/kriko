@@ -77,6 +77,7 @@ export const DRAWER: Drawer[] = [
   { id: 'local', icon: 'cpu', title: 'Local model', note: 'Run on this computer' },
   { id: 'history', icon: 'clock', title: 'History', note: 'Past research' },
   { id: 'logs', icon: 'clock', title: 'Logs', note: 'Every step of every job, with its timing' },
+  { id: 'report', icon: 'spark', title: 'Report or suggest', note: 'Tell us what broke or what to add' },
   { id: 'browse', icon: 'book', title: 'Catalogs', note: 'Browse what is known' },
   { id: 'sites', icon: 'globe', title: 'Sites', note: 'Pages Kriko can read' },
   { id: 'settings', icon: 'gear', title: 'Settings', note: 'Look, motion, keys' },

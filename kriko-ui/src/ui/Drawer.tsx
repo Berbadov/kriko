@@ -13,6 +13,7 @@ import { ForYouPanel } from './panels/ForYou'
 import { HistoryPanel } from './panels/History'
 import { LocalPanel } from './panels/Local'
 import { LogsPanel } from './panels/Logs'
+import { ReportPanel } from './panels/Report'
 import { SettingsPanel } from './panels/Settings'
 import { SitesPanel } from './panels/Sites'
 import { SetupPanel } from './panels/Setup'
@@ -28,6 +29,7 @@ const PANELS: Record<string, ComponentType<{ onOpen: (lookupId: string) => void 
   browse: CatalogsPanel,
   history: HistoryPanel,
   logs: LogsPanel,
+  report: ReportPanel,
   local: LocalPanel,
   settings: SettingsPanel,
   sites: SitesPanel,

@@ -1,3 +1,4 @@
+import { ReportButton } from '../ReportButton'
 import { Disclosure } from '../Disclosure'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
@@ -259,7 +260,7 @@ export function AgentsPanel(_: { onOpen?: (lookupId: string) => void }) {
           <section className="panel-group">
             <h3>The market</h3>
             <p className="panel-note">Every way of answering a question this installation can run, and what the engine found behind it.</p>
-            {surface && <p className="error-note" role="alert">{surface}</p>}
+            {surface && <p className="error-note" role="alert">{surface} <ReportButton note={surface} /></p>}
             {market
               ? <MarketRows doc={market} presses={presses} onInstall={(agent) => void install(agent)} />
               : !surface && <p className="panel-note">{reading ? 'Reading the market…' : 'The engine reported no market.'}</p>}

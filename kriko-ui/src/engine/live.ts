@@ -154,6 +154,7 @@ export function useLiveRun(): RunApi {
         status: 'failed',
         endedAt: Date.now(),
         error: error instanceof EngineError ? error.message : 'The turn failed.',
+        jobId: job.current,
       },
     })
   }, [])

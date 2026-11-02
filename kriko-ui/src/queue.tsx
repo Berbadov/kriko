@@ -19,6 +19,8 @@ export interface QueueItem {
   note?: string
   /** The saved check, once the product is done. */
   lookupId?: string
+  /** The job that failed, while this window remembers it, so the failure can be reported with its log. */
+  jobId?: string
 }
 
 interface Queue {
@@ -217,7 +219,7 @@ function useLiveQueue(enabled: boolean): Queue {
 
   /** Put a product back to waiting. The engine keeps the reason. */
   const passOver = useCallback(
-    async (id: string, why: string, worker: Worker) => {
+    async (id: string, why: string, worker: Worker, jobId?: string) => {
       workers.current.delete(id)
       if (worker.removed) return
       try {
@@ -225,7 +227,7 @@ function useLiveQueue(enabled: boolean): Queue {
       } catch {
         /* The row may be gone. The next refresh tells. */
       }
-      update(id, { state: 'waiting', progress: 0, line: why || 'Waits', note: why || undefined })
+      update(id, { state: 'waiting', progress: 0, line: why || 'Waits', note: why || undefined, jobId })
     },
     [update],
   )
@@ -336,7 +338,7 @@ function useLiveQueue(enabled: boolean): Queue {
 
       // A job the reader stopped goes back to waiting without blame.
       const why = worker.cancelled ? '' : message ? `Research ${state}: ${message}` : `Research ${state}`
-      return passOver(id, why, worker)
+      return passOver(id, why, worker, job)
     },
     [harness, passOver, update],
   )

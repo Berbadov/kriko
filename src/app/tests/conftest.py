@@ -172,6 +172,15 @@ def every_test_finds_the_clis_afresh(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def tests_use_python_unless_they_ask_for_the_rust_helper(monkeypatch):
+    """A test's fake CLI on a fake PATH is what the Python path reads; the
+    helper is exercised by `test_the_rust_helper_bridge.py` and nothing else."""
+    from app.providers import hostbin
+
+    monkeypatch.setattr(hostbin, "binary", lambda: "")
+
+
+@pytest.fixture(autouse=True)
 def the_weekly_pack_update_stays_off(monkeypatch):
     """Entering a lifespan must not fetch the real pack index (B166).
 
