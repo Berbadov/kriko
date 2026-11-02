@@ -8,7 +8,9 @@ answer instead of a 500. All three are about what actually crosses the wire.
 
 import hashlib
 import json
+import time
 from dataclasses import replace
+from datetime import datetime, timedelta, timezone
 import textwrap
 import threading
 from functools import partial
@@ -299,35 +301,51 @@ def test_an_available_update_installs_without_a_click(client, serve, tmp_path):
     assert packautoupdate.submit_if_due(settings, runner) is None
 
 
-def test_the_automatic_pass_does_not_reinstall_an_uninstalled_pack(client, serve, tmp_path):
+def test_the_automatic_pass_installs_only_what_the_reader_has(client, serve, tmp_path):
     from app import packautoupdate
 
     published, base = serve
     newer = build.build(write_pack(tmp_path / "v2", "0.3.0", extra=True), tmp_path / "v2.kpack")
-    settings, runner = _pointed_at(client, publish(published, base, newer, "0.3.0"))
-    conn = connect(client.store_path)
-    packstore.uninstall(conn, "tools")
-    conn.commit()
-    conn.close()
+    url = publish(published, base, newer, "0.3.0")
+    # The index also names a pack this reader never installed. `installed_only`
+    # means it is never fetched, so its URL may be one that does not exist: a
+    # regression that ignored the flag would download it and fail this job.
+    index = json.loads((published / "packs.json").read_text(encoding="utf-8"))
+    index["packs"].append(
+        {"pack_id": "widgets", "name": "Widgets", "version": "0.5.0",
+         "url": f"{base}/widgets.kpack"}
+    )
+    (published / "packs.json").write_text(json.dumps(index), encoding="utf-8")
 
-    assert _wait(client, packautoupdate.submit_if_due(settings, runner))["state"] == "succeeded"
+    settings, runner = _pointed_at(client, url)
+    job = _wait(client, packautoupdate.submit_if_due(settings, runner))
+    assert job["state"] == "succeeded", job["message"]
+    assert [one["pack_id"] for one in job["result"]["updated"]] == ["tools"]
     conn = connect(client.store_path)
     try:
-        assert conn.execute("SELECT count(*) FROM packs").fetchone()[0] == 0
+        # A pack the reader removed is not brought back by a clock.
+        assert conn.execute("SELECT count(*) FROM packs").fetchone()[0] == 1
     finally:
         conn.close()
 
 
-def test_an_unreachable_index_is_asked_again_at_the_next_launch(client):
+def test_an_unreachable_index_is_asked_again_after_an_hour_not_at_every_launch(client):
     from app import packautoupdate
 
     settings, runner = _pointed_at(client, "http://127.0.0.1:9/packs.json")
+    launch = datetime(2026, 11, 2, 9, 0, tzinfo=timezone.utc)
 
-    job = _wait(client, packautoupdate.submit_if_due(settings, runner))
+    job = _wait(client, packautoupdate.submit_if_due(settings, runner, launch))
     # nobody pressed anything, so nothing turns red; the reason stays in the job
     assert job["state"] == "succeeded"
     assert job["result"]["index"].startswith("Kriko could not reach the catalog site.")
-    assert packautoupdate.submit_if_due(settings, runner), "an unreachable index is not a check"
+    # A second window ten minutes later must not ask the release page again: the
+    # failed pass used to repeat on every launch, and on a machine with no
+    # network that fetch held every other job behind it each time.
+    assert packautoupdate.submit_if_due(
+        settings, runner, launch + timedelta(minutes=10)) is None
+    # An hour later it is a new attempt, not a week of silence.
+    assert packautoupdate.submit_if_due(settings, runner, launch + timedelta(hours=1))
 
 
 def test_an_index_with_nothing_published_is_a_quiet_week(client, serve):
@@ -350,3 +368,77 @@ def test_a_pressed_update_still_says_the_index_is_missing(client, serve):
         job = run(client)
     assert job["state"] == "failed"
     assert "No catalogs are published for this version of Kriko yet." in job["message"]
+
+
+# ── the boot path never waits for the release page ──────────────────────
+
+def test_a_launch_does_not_wait_for_the_pack_index(tmp_path, monkeypatch):
+    """A launch must not wait on GitHub, whatever the answer is.
+
+    The weekly pass is a job, and this is the property that makes it one: the
+    lifespan returns, and `/api/health` answers, while the index fetch is still
+    in flight. The fetch is stubbed at the edge — the network boundary — so a
+    slow or absent network is measured without depending on one.
+    """
+    from app import packsource
+
+    store_path = tmp_path / "store.sqlite"
+    installed = build.build(
+        write_pack(tmp_path / "installed", "0.2.0"), tmp_path / "installed.kpack")
+    conn = connect(store_path)
+    packstore.install(conn, installed)
+    conn.commit()
+    conn.close()
+
+    started = threading.Event()
+    release = threading.Event()
+
+    def slow_index(_url, **_kwargs):
+        started.set()
+        release.wait(10)  # held until the assertions below are done
+        raise ConnectionError("no network")
+
+    monkeypatch.setattr(packsource, "fetch_index", slow_index)
+    monkeypatch.delenv("KRIKO_NO_PACK_AUTOUPDATE", raising=False)
+    app = create_app(
+        Settings(store_path=store_path, app_state_path=tmp_path / "app.sqlite",
+                 pack_index_url="https://index.invalid/packs.json")
+    )
+
+    began = time.monotonic()
+    try:
+        with TestClient(app) as client:
+            boot = time.monotonic() - began
+            assert boot < 10, f"the launch waited {boot:.1f}s for the pack index"
+            assert started.wait(5), "the weekly pass did not start"
+            assert not release.is_set(), "the fetch had already answered; nothing was proven"
+            assert client.get("/api/health").status_code == 200
+    finally:
+        release.set()
+
+
+def test_nothing_installed_is_no_reason_to_reach_the_index(tmp_path, monkeypatch):
+    """A fresh install has nothing to update, so it makes no request.
+
+    The installer carries no packs (#169), so the first launch used to fetch the
+    release page for a store that could not use an answer — on a machine that
+    may have no network at all.
+    """
+    from app import packautoupdate, packsource
+
+    asked: list[str] = []
+
+    def never(url, **_kwargs):
+        asked.append(url)
+        return []
+
+    monkeypatch.setattr(packsource, "fetch_index", never)
+    settings = Settings(store_path=tmp_path / "no-store-yet.sqlite",
+                        app_state_path=tmp_path / "app.sqlite",
+                        pack_index_url="https://index.invalid/packs.json")
+    app = create_app(settings)
+
+    assert packautoupdate.submit_if_due(app.state.settings, app.state.jobs) is None
+    assert asked == [], "an empty store has nothing to update, so nothing is fetched"
+    # The week starts, so the next launch inside it is quiet too.
+    assert packautoupdate.submit_if_due(app.state.settings, app.state.jobs) is None
