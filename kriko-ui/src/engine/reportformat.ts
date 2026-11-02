@@ -2,6 +2,25 @@ import type { LogJob } from './logformat'
 
 export type ReportKind = 'error' | 'suggestion'
 
+export interface ReportRequest {
+  jobId: string
+  note: string
+}
+
+let pending: ReportRequest | null = null
+
+/** An error asked to be reported. The report section, once open, picks it up. */
+export const askToReport = (request: Partial<ReportRequest>) => {
+  pending = { jobId: request.jobId ?? '', note: request.note ?? '' }
+}
+
+/** What was asked for last, once. */
+export const takeRequestedReport = (): ReportRequest | null => {
+  const asked = pending
+  pending = null
+  return asked
+}
+
 export const KINDS = [
   { value: 'error', label: 'Something went wrong' },
   { value: 'suggestion', label: 'A suggestion' },

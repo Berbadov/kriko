@@ -36,3 +36,12 @@ test('a suggestion never carries a run, and a problem may be only a run', () => 
   assert.equal(report.canDraft('error', 'j', ''), true)
   assert.equal(report.canDraft('error', '', ''), false)
 })
+
+test('an error that asks to be reported is handed to the report once, with its run', () => {
+  assert.equal(report.takeRequestedReport(), null)
+  report.askToReport({ jobId: 'j1', note: 'Mistral did not finish within 30s' })
+  assert.deepEqual(report.takeRequestedReport(), { jobId: 'j1', note: 'Mistral did not finish within 30s' })
+  assert.equal(report.takeRequestedReport(), null)
+  report.askToReport({ note: 'no run known' })
+  assert.deepEqual(report.takeRequestedReport(), { jobId: '', note: 'no run known' })
+})

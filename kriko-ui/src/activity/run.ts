@@ -137,6 +137,8 @@ export interface Run {
   answerFinal?: boolean
   /** Why the run failed, in the engine's words. */
   error?: string
+  /** The job that ran it, so a failure can be reported with its log. */
+  jobId?: string
   agent?: AgentRef
   /** Index of the active plan step. */
   step: number
@@ -156,6 +158,7 @@ export interface Turn {
   usage?: Usage
   /** Why the turn failed, when it did. */
   error?: string
+  jobId?: string
   agent?: AgentRef
 }
 
@@ -181,7 +184,7 @@ export interface RunApi {
 export const turnOf = (run: Run): Turn | null =>
   run.status === 'idle' || run.status === 'running' || !run.prompt
     ? null
-    : { id: String(run.startedAt), prompt: run.prompt, answer: run.answer, products: run.products, rows: run.rows, followups: run.followups, questions: run.questions, actions: run.actions, pages: run.pages, usage: run.usage, error: run.error, agent: run.agent }
+    : { id: String(run.startedAt), prompt: run.prompt, answer: run.answer, products: run.products, rows: run.rows, followups: run.followups, questions: run.questions, actions: run.actions, pages: run.pages, usage: run.usage, error: run.error, jobId: run.jobId, agent: run.agent }
 
 export type Action =
   | { type: 'start'; prompt: string; now: number }
