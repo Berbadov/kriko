@@ -1,0 +1,18 @@
+[package]
+name = "kriko-harness"
+version = "0.3.9"
+description = "Finds the coding-agent CLIs on this machine and asks them questions"
+license = "MIT"
+edition = "2024"
+rust-version = "1.90"
+
+[dependencies]
+serde_json = "1.0"
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[profile.release]
+opt-level = "s"
+lto = true
+strip = true
