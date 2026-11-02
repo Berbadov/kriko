@@ -20,6 +20,7 @@ import { ProductList } from '../ui/ProductList'
 import { Markdown } from '../ui/Markdown'
 import { Fold } from '../ui/text'
 import { showDrawer } from '../ui/drawerEvents'
+import { ReportButton } from '../ui/ReportButton'
 
 /** Chat is the first page. Before a question it is a sky, a box and recent work.
  *  After a question the box drops to the bottom and the run fills the page. */
@@ -448,7 +449,7 @@ function Thread({
             )}
             {turn.error && (
               <p className="error-note" role="alert">
-                {turn.error}
+                {turn.error} <ReportButton jobId={turn.jobId} note={turn.error} />
               </p>
             )}
             <ProductList products={turn.products} onOpen={onOpen} />
@@ -492,7 +493,7 @@ function Thread({
         )}
         {run.status === 'failed' && (
           <p className="error-note" role="alert">
-            {run.error}
+            {run.error} <ReportButton jobId={run.jobId} note={run.error ?? ''} />
           </p>
         )}
         {settled && <ActionCards actions={run.actions} onAction={onAction} />}

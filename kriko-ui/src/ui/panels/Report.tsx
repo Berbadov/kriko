@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useEngine } from '../../engine/Engine'
 import { useLogJobs } from '../../engine/logs'
-import { KINDS, canDraft, draftReport, jobLabel, reportable, type ReportDraft, type ReportKind } from '../../engine/report'
+import { KINDS, canDraft, draftReport, jobLabel, reportable, takeRequestedReport, type ReportDraft, type ReportKind } from '../../engine/report'
 import { copyText } from '../clipboard'
 import { Segmented, Select } from '../controls'
 import { openLink } from '../ExternalLink'
@@ -11,9 +11,10 @@ import { openLink } from '../ExternalLink'
 export function ReportPanel() {
   const { mode } = useEngine()
   const { jobs } = useLogJobs()
+  const [incoming] = useState(takeRequestedReport)
   const [kind, setKind] = useState<ReportKind>('error')
-  const [picked, setPicked] = useState<string | null>(null)
-  const [note, setNote] = useState('')
+  const [picked, setPicked] = useState<string | null>(incoming?.jobId || null)
+  const [note, setNote] = useState(incoming?.note ?? '')
   const [written, setWritten] = useState<{ asked: string; draft: ReportDraft } | null>(null)
   const [status, setStatus] = useState('')
   const [working, setWorking] = useState(false)
@@ -34,6 +35,15 @@ export function ReportPanel() {
       setWorking(false)
     }
   }
+
+  // An error that sent the reader here has its report written as soon as its run is known.
+  const wrote = useRef(false)
+  useEffect(() => {
+    if (!incoming || wrote.current || (!incoming.jobId && jobs === null)) return
+    wrote.current = true
+    void show()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, with what the error asked for
+  }, [incoming, jobs])
 
   const copy = async () => setStatus((await copyText(draft?.text ?? '')) ? 'Copied.' : 'Copying was refused. Select the text and copy it by hand.')
 

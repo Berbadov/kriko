@@ -1,7 +1,14 @@
+import { showDrawer } from '../ui/drawerEvents'
 import { post } from './api'
-import { askBody, type ReportKind } from './reportformat'
+import { askBody, askToReport, type ReportKind, type ReportRequest } from './reportformat'
 
 export * from './reportformat'
+
+/** Open the report section on this error, with its run's log. */
+export function reportProblem(request: Partial<ReportRequest> = {}) {
+  askToReport(request)
+  showDrawer('report')
+}
 
 export interface ReportDraft {
   title: string
