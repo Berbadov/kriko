@@ -112,6 +112,9 @@ class Settings:
     #: says so rather than implying an in-app switch that does not exist.
     #: Overridable so a fork does not send its readers here.
     releases_url: str = "https://github.com/Berbadov/kriko/releases"
+    #: Where a report or suggestion is opened, in the reader's own browser and
+    #: submitted by them (`app/report.py`). Kriko posts nothing to it.
+    issues_url: str = "https://github.com/Berbadov/kriko/issues/new"
     #: Where the app asks which release is newest (`app/appupdate.py`). The
     #: reader chooses to install it; nothing is downloaded by asking.
     app_release_api_url: str = "https://api.github.com/repos/Berbadov/kriko/releases/latest"

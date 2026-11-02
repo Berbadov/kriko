@@ -335,6 +335,14 @@ gate_tauri() {
             fi
         fi
     fi
+    if [ -n "$CARGO" ]; then
+        CRATE="kriko-harness"
+        step "cargo test (kriko-harness)"
+        result=0
+        _shell_cargo "the helper's cargo tests" test "${cargo_profile_args[@]}" || result=$?
+        [ "$result" = 1 ] && exit 1
+        [ "$result" = 2 ] && skipped=1
+    fi
     [ "$skipped" = 1 ] && exit 3
     return 0
 }

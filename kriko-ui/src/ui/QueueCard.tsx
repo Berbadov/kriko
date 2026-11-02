@@ -1,6 +1,7 @@
 import { useQueue, type QueueItem } from '../queue'
 import { AgentSteps } from './controls'
 import { Icon } from './Icon'
+import { ReportButton } from './ReportButton'
 
 export function QueueRow({ item, wide = false }: { item: QueueItem; wide?: boolean }) {
   const { toggle, cancel } = useQueue()
@@ -11,6 +12,7 @@ export function QueueRow({ item, wide = false }: { item: QueueItem; wide?: boole
         <span className="qc-name">{item.name}</span>
         <span className="qc-line">{wide ? `${item.agent} · ${item.line}` : item.line}</span>
         <AgentSteps value={item.progress} state={item.state} labels={wide} />
+        {wide && item.note && <ReportButton jobId={item.jobId} note={item.note} />}
       </div>
       <div className="qc-actions">
         {canToggle && (
