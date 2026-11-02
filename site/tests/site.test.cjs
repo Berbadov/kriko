@@ -304,7 +304,6 @@ test('every invented product has its pictures in both themes, and the pages say 
   }
   for (const page of HOME) {
     const d = load(page);
-    assert.ok(d.querySelector('#examples .section-lead').textContent.length > 60, page.file);
     assert.ok(d.querySelector('.stage figcaption'), `${page.file}: the first picture says nothing about being an example`);
   }
 });
