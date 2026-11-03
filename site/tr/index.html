@@ -16,7 +16,7 @@
   <meta property="og:image:alt" content="Kriko paneli, uydurma bir e-bisiklet ilanının yanında açık; başlık: Ters gidebilecek her şeyi satın almadan önce öğren.">
   <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" href="../assets/icon-32.png">
-  <link rel="stylesheet" href="../styles.css?v=df833b089619">
+  <link rel="stylesheet" href="../styles.css?v=c0b356404a52">
   <script src="../script.js?v=4e64a050f38a" defer=""></script>
   <link rel="canonical" href="https://kriko.cc/tr/">
   <link rel="alternate" href="https://kriko.cc/" hreflang="en">
@@ -76,10 +76,10 @@
           <h1>Ters gidebilecek her şeyi <span>satın almadan önce öğren.</span></h1>
           <div class="actions">
             <a class="button" href="https://github.com/Berbadov/kriko/releases/latest/download/kriko-0.3.9-x86_64-setup.exe"><svg class="icon" aria-hidden="true"><use href="#i-download"></use></svg><span>Kriko'yu Windows için indir</span></a>
-            <a class="button ghost" href="https://chromewebstore.google.com/detail/kriko/bdifnaggafjokndlpjgmlfappcoehdjb"><svg class="icon" aria-hidden="true"><use href="#i-browser"></use></svg><span>Tarayıcı uzantısını yükle</span></a>
+            <a class="button ghost" href="https://github.com/Berbadov/kriko/releases"><svg class="icon" aria-hidden="true"><use href="#i-android"></use></svg><span>Android için indir</span></a>
             <a class="button quiet" href="https://github.com/Berbadov/kriko"><svg class="icon" aria-hidden="true"><use href="#i-git"></use></svg><span>GitHub</span></a>
           </div>
-          <p class="lead">Kriko, baktığın modelin bilinen sorunlarını ilanın yanında gösterir. Her bulgu, açabileceğin bir kaynak ve satıcıya sorabileceğin bir soruyla gelir.</p>
+          <p class="lead">Bilgisayarında veya telefonunda bir ürünü araştır. Kriko bilinen sorunları kaynaklarıyla bir araya getirir, böylece satın almadan önce nelere bakacağını bilirsin.</p>
           <ul class="hero-points">
             <li><svg class="icon" aria-hidden="true"><use href="#i-check"></use></svg><span>Ücretsiz ve açık kaynak, hesap yok</span></li>
             <li><svg class="icon" aria-hidden="true"><use href="#i-check"></use></svg><span>Kataloglar çevrimdışı çalışır, yapay zekâ anahtarı gerekmez</span></li>
@@ -87,13 +87,17 @@
           </ul>
         </div>
         <figure class="stage">
-          <div class="stage-sky">
-            <picture>
-              <source srcset="../assets/examples/ebike-dark.webp" media="(prefers-color-scheme: dark)">
-              <img src="../assets/examples/ebike-light.webp" width="400" height="948" alt="Kurgusal bir elektrikli bisiklet için Kriko paneli. Kontrol edilecek dört şeyi listeliyor: zayıflayan bir bataryadan küçük bir ekran notuna kadar.">
+          <div class="stage-sky product-stage">
+            <picture class="stage-desktop">
+              <source media="(prefers-reduced-motion: reduce)" srcset="../assets/guide/saved-check-poster.webp">
+              <img src="../assets/guide/saved-check.gif" width="720" height="464" alt="Kriko masaüstü uygulamasında kayıtlı bir ürün incelemesi açılıyor ve bir bulgunun dayandığı kanıt gösteriliyor.">
             </picture>
+            <div class="stage-phone" role="img" aria-label="Android için Kriko: ürün hakkında soru sor ve kaynaklarıyla birlikte yanıtı oku.">
+              <img src="../assets/mobile/1-ask.webp" width="360" height="800" alt="">
+              <img class="stage-phone-answer" src="../assets/mobile/3-answer.webp" width="360" height="800" alt="">
+            </div>
           </div>
-          <figcaption>Kurgusal bir elektrikli bisiklet, gerçek panelde.</figcaption>
+          <figcaption>Masaüstünde kayıtlı bir incelemeyi, Android’de ise bir yanıtı gör.</figcaption>
         </figure>
       </div>
       <a class="scroll-cue" href="#how" aria-label="Nasıl çalışır"><span>Kaydır</span><svg class="icon" aria-hidden="true"><use href="#i-chevron"></use></svg></a>
@@ -340,7 +344,7 @@
         </ul>
         <p class="note">Görüntüler bir Pixel boyutlu Android emülatöründen, taklit değil. Telefon derlemesi arkadaşlar için test APK'sıdır, henüz Google Play'de değil.</p>
         <div class="actions">
-          <a class="button ghost" href="#get"><svg class="icon" aria-hidden="true"><use href="#i-android"></use></svg><span>Android APK'sını al</span></a>
+          <a class="button ghost" href="https://github.com/Berbadov/kriko/releases"><svg class="icon" aria-hidden="true"><use href="#i-android"></use></svg><span>Android APK'sını al</span></a>
           <a class="button ghost" href="https://github.com/Berbadov/kriko/tree/main/kriko-mobile"><svg class="icon" aria-hidden="true"><use href="#i-git"></use></svg><span>Kaynaktan derle</span></a>
         </div>
       </div>
@@ -368,14 +372,14 @@
               <p class="fine">Yükleyici henüz kod imzalı değil; bu yüzden Windows bir SmartScreen uyarısı gösterebilir. More info, ardından Run anyway seç.</p>
               <p class="fine"><a href="https://github.com/Berbadov/kriko/releases/latest">Taşınabilir sürümü mü tercih ediyorsun? .zip dosyasını seç.</a></p>
               <p class="fine">macOS ya da Linux mu kullanıyorsun? <a href="https://github.com/Berbadov/kriko#build-and-verify">Kaynaktan derleme seçeneklerine bak.</a></p>
-              <p class="fine handoff">Telefondan mı bakıyorsun? Kriko bir Windows bilgisayarda çalışır. <a href="mailto:?subject=Kriko'yu%20bilgisayar%C4%B1ma%20kural%C4%B1m&amp;body=https%3A%2F%2Fkriko.cc%2Ftr%2F%23get">Bağlantıyı kendine e-postala</a>.</p>
+              <p class="fine handoff">Kriko’yu bilgisayarında mı kullanmak istiyorsun? <a href="mailto:?subject=Kriko%20bilgisayar%C4%B1mda&amp;body=https%3A%2F%2Fkriko.cc%2Ftr%2F%23get">Bağlantıyı kendine e-postala</a>.</p>
               <p class="fine">Kaynak kodu <a href="https://github.com/Berbadov/kriko">GitHub</a>'da oku.</p>
             </div>
             <div class="download-card">
               <h3><span class="glyph" aria-hidden="true"><svg class="icon"><use href="#i-phone"></use></svg></span><span>Android için Kriko</span></h3>
               <p>Telefonda ajan: sor, ilanı fotoğrafla, ya da karşındaki ekranı tara. İngilizce ve Türkçe. Arkadaşlar için test derlemesi, doğrudan APK.</p>
-              <a class="button ghost" href="https://github.com/Berbadov/kriko/tree/main/kriko-mobile"><svg class="icon" aria-hidden="true"><use href="#i-android"></use></svg><span>APK'yı ve erişim adımlarını al</span></a>
-              <p class="fine">Android, uygulamanın Play Store'dan olmadığını uyaracak; doğrudan APK'da bu beklenir. Henüz Google Play'de değil.</p>
+              <a class="button ghost" href="https://github.com/Berbadov/kriko/releases"><svg class="icon" aria-hidden="true"><use href="#i-android"></use></svg><span>Android APK dosyasını sürümlerde bul</span></a>
+              <p class="fine">GitHub sürümlerinden APK dosyasını seç. Android, tarayıcından yüklemeye izin vermeni isteyebilir. Henüz Google Play’de değil. <a href="https://github.com/Berbadov/kriko/tree/main/kriko-mobile">Erişim ve kurulum adımlarını oku</a>.</p>
             </div>
           </div>
         </div>

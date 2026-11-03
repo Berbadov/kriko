@@ -789,3 +789,29 @@ h2 { font-size: clamp(2rem, 4.3vw, 3.3rem); max-width: 16em; letter-spacing: -.0
 @media (prefers-contrast: more) {
   :root { --muted: #2c3347; --line: #9aa1b5; }
 }
+
+/* Show both products in the opening view without cropping either capture. */
+.hero.home .hero-grid { gap: 0; }
+.hero.home .hero-copy { padding-block: clamp(36px, 5vh, 72px); }
+.hero.home h1 { font-size: clamp(2.8rem, 4.5vw, 4.6rem); }
+.hero.home .lead { margin-top: 24px; font-size: clamp(1.1rem, 1.3vw, 1.3rem); line-height: 1.5; }
+.hero.home .hero-points { margin-top: 24px; }
+.hero.home .stage { width: 100%; align-self: stretch; border-radius: 0; }
+.product-stage { gap: clamp(10px, 2vw, 24px); align-items: center; padding: 80px clamp(20px, 3vw, 48px) 48px; }
+.product-stage::after { display: none; }
+.product-stage .stage-desktop { width: 70%; }
+.product-stage .stage-phone { width: 25%; align-self: end; }
+.product-stage img { width: 100%; max-width: none; height: auto; animation: none; }
+@media (max-width: 980px) {
+  .hero.home .stage { min-height: 0; }
+  .product-stage { padding: 72px var(--gutter) 36px; justify-content: center; }
+  .product-stage .stage-desktop { width: min(60%, 380px); }
+  .product-stage .stage-phone { width: min(24%, 150px); }
+}
+
+/* A short product walkthrough, with still images for reduced motion. */
+.product-stage .stage-desktop { width: 72%; }
+.product-stage .stage-phone { position: relative; width: 23%; }
+.product-stage .stage-phone-answer { position: absolute; inset: 0; animation: phone-answer 10s ease-in-out infinite; }
+@keyframes phone-answer { 0%, 35% { opacity: 0; } 45%, 85% { opacity: 1; } 95%, 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .product-stage .stage-phone-answer { display: none; } }

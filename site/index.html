@@ -18,7 +18,7 @@
   <meta property="og:image:alt" content="The Kriko panel open beside an invented e-bike listing, with the headline: Know what can go wrong before you buy.">
   <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" href="assets/icon-32.png">
-  <link rel="stylesheet" href="styles.css?v=df833b089619">
+  <link rel="stylesheet" href="styles.css?v=c0b356404a52">
   <script src="script.js?v=4e64a050f38a" defer></script>
   <link rel="canonical" href="https://kriko.cc/">
   <link rel="alternate" href="https://kriko.cc/" hreflang="en">
@@ -78,10 +78,10 @@
           <h1>Know what can go wrong <span>before you buy.</span></h1>
           <div class="actions">
             <a class="button" href="https://github.com/Berbadov/kriko/releases/latest/download/kriko-0.3.9-x86_64-setup.exe"><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg><span>Download Kriko for Windows</span></a>
-            <a class="button ghost" href="https://chromewebstore.google.com/detail/kriko/bdifnaggafjokndlpjgmlfappcoehdjb"><svg class="icon" aria-hidden="true"><use href="#i-browser"/></svg><span>Get the browser extension</span></a>
+            <a class="button ghost" href="https://github.com/Berbadov/kriko/releases"><svg class="icon" aria-hidden="true"><use href="#i-android"/></svg><span>Download for Android</span></a>
             <a class="button quiet" href="https://github.com/Berbadov/kriko"><svg class="icon" aria-hidden="true"><use href="#i-git"/></svg><span>GitHub</span></a>
           </div>
-          <p class="lead">Kriko shows the known problems of the exact model you are looking at, beside the listing. Every finding comes with a source you can open and a question to ask the seller.</p>
+          <p class="lead">Research a product on your computer or phone. Kriko brings known problems and their sources together, so you know what to check before you buy.</p>
           <ul class="hero-points">
             <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span>Free and open source, no account</span></li>
             <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span>Catalogs work offline, no AI key</span></li>
@@ -89,13 +89,17 @@
           </ul>
         </div>
         <figure class="stage">
-          <div class="stage-sky">
-            <picture>
-              <source srcset="assets/examples/ebike-dark.webp" media="(prefers-color-scheme: dark)">
-              <img src="assets/examples/ebike-light.webp" width="400" height="948" alt="The Kriko panel for an invented e-bike. It lists four things to check, from a battery that fades down to a minor display note.">
+          <div class="stage-sky product-stage">
+            <picture class="stage-desktop">
+              <source media="(prefers-reduced-motion: reduce)" srcset="assets/guide/saved-check-poster.webp">
+              <img src="assets/guide/saved-check.gif" width="720" height="464" alt="In the Kriko desktop app, a saved product check opens to show the evidence behind a finding.">
             </picture>
+            <div class="stage-phone" role="img" aria-label="Kriko for Android: ask a product question and read an answer with sources.">
+              <img src="assets/mobile/1-ask.webp" width="360" height="800" alt="">
+              <img class="stage-phone-answer" src="assets/mobile/3-answer.webp" width="360" height="800" alt="">
+            </div>
           </div>
-          <figcaption>An invented e-bike in the real panel.</figcaption>
+          <figcaption>See a saved check on desktop and an answer on Android.</figcaption>
         </figure>
       </div>
       <a class="scroll-cue" href="#how" aria-label="How it works"><span>Scroll</span><svg class="icon" aria-hidden="true"><use href="#i-chevron"/></svg></a>
@@ -342,7 +346,7 @@
         </ul>
         <p class="note">The captures are from a Pixel-sized Android emulator, not a mock. The phone build is a friends-test APK, not yet on Google Play.</p>
         <div class="actions">
-          <a class="button ghost" href="#get"><svg class="icon" aria-hidden="true"><use href="#i-android"/></svg><span>Get the Android APK</span></a>
+          <a class="button ghost" href="https://github.com/Berbadov/kriko/releases"><svg class="icon" aria-hidden="true"><use href="#i-android"/></svg><span>Get the Android APK</span></a>
           <a class="button ghost" href="https://github.com/Berbadov/kriko/tree/main/kriko-mobile"><svg class="icon" aria-hidden="true"><use href="#i-git"/></svg><span>Build it from source</span></a>
         </div>
       </div>
@@ -370,14 +374,14 @@
               <p class="fine">The installer is not code-signed yet, so Windows may show a SmartScreen warning. Choose More info, then Run anyway.</p>
               <p class="fine"><a href="https://github.com/Berbadov/kriko/releases/latest">Prefer a portable version? Choose the .zip.</a></p>
               <p class="fine">On macOS or Linux? <a href="https://github.com/Berbadov/kriko#build-and-verify">See the source build options.</a></p>
-              <p class="fine handoff">On a phone? Kriko runs on a Windows computer. <a href="mailto:?subject=Kriko%20for%20my%20computer&amp;body=https%3A%2F%2Fkriko.cc%2F%23get">Email yourself the link</a>.</p>
+              <p class="fine handoff">Want Kriko on your computer? <a href="mailto:?subject=Kriko%20for%20my%20computer&amp;body=https%3A%2F%2Fkriko.cc%2F%23get">Email yourself the link</a>.</p>
               <p class="fine">Read the source on <a href="https://github.com/Berbadov/kriko">GitHub</a>.</p>
             </div>
             <div class="download-card">
               <h3><span class="glyph" aria-hidden="true"><svg class="icon"><use href="#i-phone"/></svg></span><span>Kriko for Android</span></h3>
               <p>The agent on a phone: ask, photograph a listing, or scan the screen in front of you. English and Turkish. Test build for friends, direct APK.</p>
-              <a class="button ghost" href="https://github.com/Berbadov/kriko/tree/main/kriko-mobile"><svg class="icon" aria-hidden="true"><use href="#i-android"/></svg><span>Get the APK and the access steps</span></a>
-              <p class="fine">Android will warn that the app is not from the Play Store; that is expected for a direct APK. Not on Google Play yet.</p>
+              <a class="button ghost" href="https://github.com/Berbadov/kriko/releases"><svg class="icon" aria-hidden="true"><use href="#i-android"/></svg><span>Find the Android APK in releases</span></a>
+              <p class="fine">Choose the APK from a GitHub release. Android may ask you to allow installation from your browser. Not on Google Play yet. <a href="https://github.com/Berbadov/kriko/tree/main/kriko-mobile">Read the access and setup steps</a>.</p>
             </div>
           </div>
         </div>
