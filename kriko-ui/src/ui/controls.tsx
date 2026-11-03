@@ -118,7 +118,13 @@ export function Segmented<T extends string>({
 export function Switch({ on, onChange, label }: { on: boolean; onChange: (v: boolean) => void; label: string }) {
   return (
     <button className="switch" role="switch" aria-checked={on} aria-label={label} data-on={on} onClick={() => onChange(!on)}>
-      <i />
+      <i>
+        {/* A tick when on and a dash when off. Drawn only where a stylesheet asks (Settings). */}
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path className="sw-on" pathLength={1} d="M6 12.5l4 4 8-9" />
+          <path className="sw-off" pathLength={1} d="M7.5 12h9" />
+        </svg>
+      </i>
     </button>
   )
 }

@@ -7,6 +7,7 @@ import ts from 'typescript'
 import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { JSDOM } from 'jsdom'
+import { realSettingsParts, unnamedButtons } from './settings_support.mjs'
 
 test('environment keys identify their source and only saved file keys offer removal', async () => {
   const directory = await mkdtemp(join(process.cwd(), '.settings-keys-'))
@@ -14,6 +15,7 @@ test('environment keys identify their source and only saved file keys offer remo
   const loader = require('node:module')
   const originalLoad = loader._load
   const compiled = join(directory, 'Settings.cjs')
+  const parts = await realSettingsParts(directory)
   const providers = ['environment', 'file'].map((source) => ({
     id: source, label: source, source, present: true, hint: '…1234', purpose: 'Research',
   }))
@@ -28,6 +30,7 @@ test('environment keys identify their source and only saved file keys offer remo
         if (request === '../../engine/settings') return {
           useKeys: () => ({ doc: { providers }, tested: {}, set() {}, remove() {}, test() {} }),
         }
+        if (request in parts) return parts[request]
         return {}
       }
       return originalLoad.call(this, request, parent, isMain)
@@ -36,9 +39,13 @@ test('environment keys identify their source and only saved file keys offer remo
     const dom = new JSDOM(renderToStaticMarkup(React.createElement(KeysGroup)))
     try {
       const rows = dom.window.document.querySelectorAll('li.key')
+      const names = (row) => [...row.querySelectorAll('button')].map((button) => button.getAttribute('aria-label'))
       assert.match(rows[0].textContent, /from the environment/)
-      assert.ok(![...rows[0].querySelectorAll('button')].some((button) => button.textContent === 'Remove'))
-      assert.ok([...rows[1].querySelectorAll('button')].some((button) => button.textContent === 'Remove'))
+      assert.ok(!names(rows[0]).some((name) => /^Remove/.test(name)))
+      assert.ok(names(rows[1]).some((name) => /^Remove/.test(name)))
+      // A key that is set shows a shut padlock, and every press is named.
+      assert.equal(rows[1].querySelector('.ico-lock').getAttribute('data-locked'), 'true')
+      assert.deepEqual(unnamedButtons(dom.window.document), [])
     } finally {
       dom.window.close()
     }
@@ -62,12 +69,14 @@ test('shared access says what the password can do, and how much trial is left', 
     providers: ['mercury', 'deepseek'],
     ...over,
   })
+  const parts = await realSettingsParts(directory)
   const render = async (doc) => {
     loader._load = function (request, parent, isMain) {
       if (parent?.filename === compiled && request.startsWith('.')) {
         if (request === '../../engine/settings') {
           return { useSharedAccess: () => ({ doc, code: '', unlock() {}, forget() {}, make() {} }) }
         }
+        if (request in parts) return parts[request]
         return {}
       }
       return originalLoad.call(this, request, parent, isMain)
@@ -95,9 +104,14 @@ test('shared access says what the password can do, and how much trial is left', 
       // the sentence that has to stay true.
       assert.match(asking.text, /works in this app only/)
       assert.match(asking.text, /Sharing\s*On, free trial/)
-      assert.match(asking.text, /Free trial\s*7 of 10 questions left/)
+      assert.match(asking.text, /Free trial\s*7 of 10 left/)
       assert.match(asking.text, /Access code/)
-      assert.match(asking.text, /Share your keys with a friend/)
+      assert.match(asking.text, /Share your keys/)
+      // What the password does is the description of a padlock, reachable by keyboard.
+      const lock = asking.dom.window.document.querySelector('button[aria-label="Password scope"]')
+      assert.ok(lock, 'the password note is a padlock with a name')
+      assert.match(asking.dom.window.document.getElementById(lock.getAttribute('aria-describedby')).textContent, /works in this app only/)
+      assert.deepEqual(unnamedButtons(asking.dom.window.document), [])
       // The friend's page owns up to the risk in one line: who can spend the keys.
       assert.match(asking.text, /Anyone with both can spend your keys/)
       // The access code field says what goes in it by its placeholder, not a line under it.
@@ -111,20 +125,20 @@ test('shared access says what the password can do, and how much trial is left', 
     }))
     try {
       assert.match(holding.text, /Sharing\s*On, Ada's keys/)
-      assert.match(holding.text, /Bound to this Windows account/)
+      assert.match(holding.text, /Windows account/)
       // One password field, one Save, one Remove: a second code can replace the
       // one in use without a hidden "forget first" step.
-      assert.match(holding.text, /Use these keys/)
-      assert.match(holding.text, /Forget them/)
+      assert.match(holding.text, /Use keys/)
+      assert.match(holding.text, /Forget/)
       // The trial is not what is in use, so its count is not drawn.
-      assert.doesNotMatch(holding.text, /questions left/)
+      assert.doesNotMatch(holding.text, /Free trial/)
     } finally {
       holding.dom.window.close()
     }
 
     const spent = await render(status({ trial: { limit: 10, used: 10, left: 0, available: false } }))
     try {
-      assert.match(spent.text, /Free trial\s*Used up, 10 of 10/)
+      assert.match(spent.text, /Free trial.*Used up, 10 of 10/)
       // A used-up trial says what to do next, since the reader is now stuck.
       assert.match(spent.text, /Paste an access code or add your own keys/)
     } finally {
@@ -139,7 +153,7 @@ test('shared access says what the password can do, and how much trial is left', 
     try {
       assert.match(none.text, /Sharing\s*Off, your own keys/)
       assert.match(none.text, /Free trial\s*Not in this build/)
-      assert.doesNotMatch(none.text, /questions left/)
+      assert.doesNotMatch(none.text, /\d left/)
     } finally {
       none.dom.window.close()
     }
