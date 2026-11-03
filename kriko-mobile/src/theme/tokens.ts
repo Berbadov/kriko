@@ -9,10 +9,10 @@
 import type { TextStyle } from 'react-native';
 
 export const radius = {
-  s: 8,
-  m: 14,
-  l: 20,
-  xl: 28,
+  s: 12,
+  m: 18,
+  l: 24,
+  xl: 32,
   pill: 999,
 } as const;
 
@@ -27,10 +27,10 @@ export const gap = {
 } as const;
 
 /** Horizontal page margin. */
-export const PAGE_X = 22;
+export const PAGE_X = 16;
 
-/** The app bar is 56 px tall above the safe-area inset. */
-export const HEADER_H = 64;
+/** The floating app bar is 56 px tall, a pill under the safe-area inset. */
+export const HEADER_H = 56;
 
 export const font = {
   display: 'Geist-SemiBold',

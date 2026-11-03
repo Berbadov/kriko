@@ -9,22 +9,25 @@
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import { router, type Href } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
 import {
-  Alert,
-  FlatList,
-  KeyboardAvoidingView,
-  Platform,
-  StyleSheet,
-  View,
-} from 'react-native';
+  useEffect,
+  useRef,
+  useState,
+  type ReactElement,
+  type RefObject,
+} from 'react';
+import { Alert, Animated, FlatList, StyleSheet, View } from 'react-native';
 
 import { AccessSheet } from '../components/AccessSheet';
-import { AppHeader, HeaderAction } from '../components/Chrome';
+import { Frame, HeaderAction, useFrameInsets } from '../components/Chrome';
+import { Glass } from '../components/Glass';
+import { HistoryDrawer, settleDrawer } from '../components/HistoryDrawer';
+import { ScanChips } from '../components/ScanChips';
+import { useDrawerSwipe } from '../components/useDrawerSwipe';
 import { Composer } from '../components/Composer';
 import { PlusIcon } from '../components/Icon';
 import { MessageRow } from '../components/Message';
-import { MotionPressable, MotionView } from '../components/Motion';
+import { MotionPressable, MotionView, useReducedMotion } from '../components/Motion';
 import { Landing } from './Landing';
 import { ScreenShareSheet } from '../components/ScreenShareSheet';
 import { useOverlaySession } from '../components/OverlaySession';
@@ -62,14 +65,23 @@ export function ChatScreen() {
   const [notice, setNotice] = useState('');
   const color = useColors();
   const styles = useStyles();
+  const reduced = useReducedMotion();
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [progress] = useState(() => new Animated.Value(0));
 
   const messages = activeThread?.messages ?? [];
   const last = messages[messages.length - 1];
   const working = Boolean(last?.pending);
   const empty = messages.length === 0;
-  const recentScans = queueJobs.filter(
-    (job) => job.threadId && (job.status === 'done' || job.status === 'error'),
-  );
+
+  const chipJobs = queueJobs.filter((job) => job.threadId).slice(-8).reverse();
+
+  const setDrawer = (open: boolean) => {
+    setDrawerOpen(open);
+    settleDrawer(progress, open, reduced);
+  };
+
+  const { swipe, claimTouch, resetTouch } = useDrawerSwipe(progress, setDrawer);
 
   useEffect(() => {
     if (!notice) return;
@@ -213,9 +225,65 @@ export function ChatScreen() {
     else if (screen === 'chat') router.push('/' as Href);
   };
 
+  const banner = overlay.active ? (
+    <MotionView delay={80}>
+      <Glass radius={radius.xl} style={styles.shareBanner}>
+        <View style={styles.shareStatus}>
+          <View style={styles.liveDot} />
+          <View style={styles.shareCopy}>
+            <Txt variant="monoSm" tone="ink" caps>{tr('Screen sharing is on')}</Txt>
+            <Txt variant="stepMeta" tone="ink3">{tr('Floating scanner ready · requested scans only')}</Txt>
+          </View>
+        </View>
+        <MotionPressable
+          onPress={() => { void overlay.stop().catch((error) => setNotice(error instanceof Error ? error.message : tr('Could not stop screen sharing.'))); }}
+          style={styles.stopShare}
+          accessibilityRole="button"
+          accessibilityLabel={tr('Stop screen sharing')}
+        >
+          <Txt variant="monoSm" tone="risk" caps>{tr('Stop')}</Txt>
+        </MotionPressable>
+      </Glass>
+    </MotionView>
+  ) : null;
+
+  const floating = (
+    <>
+      <View onTouchStart={claimTouch}>
+        <ScanChips jobs={chipJobs} activeThreadId={activeThread?.id} onOpen={openScanResult} />
+      </View>
+      {notice ? (
+        <Txt variant="monoSm" tone="warn" style={styles.notice}>
+          {notice}
+        </Txt>
+      ) : null}
+      {exhausted ? (
+        <MotionPressable onPress={openAccess} style={styles.trialBanner} accessibilityRole="button">
+          <Txt variant="body" tone="ink2">
+            The free questions on this phone are used up.
+          </Txt>
+          <Txt variant="monoSm" tone="fill" caps>
+            Paste an access code
+          </Txt>
+        </MotionPressable>
+      ) : null}
+      <Composer
+        value={draft}
+        onChangeText={setDraft}
+        onSend={onSend}
+        onStop={stop}
+        onPick={pick}
+        onScan={readScreen}
+        streaming={streaming}
+        placeholder={working ? 'Read the answer, or stop it…' : 'Ask about a product'}
+      />
+    </>
+  );
+
   return (
-    <View style={styles.page}>
-      <AppHeader
+    <View style={styles.flex} onTouchStartCapture={resetTouch} {...swipe.panHandlers}>
+      <Frame
+        title={empty ? undefined : activeThread?.title || 'Conversation'}
         actions={
           !empty ? (
             <HeaderAction label="New chat" onPress={startNewChat}>
@@ -223,105 +291,34 @@ export function ChatScreen() {
             </HeaderAction>
           ) : null
         }
-      />
-
-      {overlay.active ? (
-        <MotionView delay={80} style={styles.shareBanner}>
-          <View style={styles.shareStatus}>
-            <View style={styles.liveDot} />
-            <View style={styles.shareCopy}>
-              <Txt variant="monoSm" tone="ink" caps>{tr('Screen sharing is on')}</Txt>
-              <Txt variant="stepMeta" tone="ink3">{tr('Floating scanner ready · requested scans only')}</Txt>
-            </View>
-          </View>
-          <MotionPressable
-            onPress={() => { void overlay.stop().catch((error) => setNotice(error instanceof Error ? error.message : tr('Could not stop screen sharing.'))); }}
-            style={styles.stopShare}
-            accessibilityRole="button"
-            accessibilityLabel={tr('Stop screen sharing')}
-          >
-            <Txt variant="monoSm" tone="risk" caps>{tr('Stop')}</Txt>
-          </MotionPressable>
-        </MotionView>
-      ) : null}
-
-      {!empty ? (
-        <MotionView delay={40} style={styles.threadBar}>
-          <Txt variant="rowTitle" tone="ink" numberOfLines={1} style={styles.threadTitle}>
-            {activeThread?.title || 'Conversation'}
-          </Txt>
-        </MotionView>
-      ) : null}
-
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        banner={banner}
+        floating={floating}
+        overlay={(
+          <HistoryDrawer
+            progress={progress}
+            open={drawerOpen}
+            onClose={() => setDrawerOpen(false)}
+            onNewChat={() => { startNewChat(); setDrawer(false); }}
+          />
+        )}
       >
-        <FlatList
-          ref={list}
-          data={messages}
-          keyExtractor={(message) => message.id}
-          renderItem={({ item }) => (
-            <MessageRow
-              message={item}
-              onAction={openAction}
-              onOpenSources={
-                activeThread ? () => router.push(`/sources/${activeThread.id}` as Href) : undefined
-              }
-            />
-          )}
-          ListEmptyComponent={(
+        <Thread
+          list={list}
+          isAtBottom={() => atBottom.current}
+          setAtBottom={(value) => { atBottom.current = value; }}
+          messages={messages}
+          empty={empty}
+          openAction={openAction}
+          threadId={activeThread?.id}
+          landing={(
             <Landing
               onSuggestion={ask}
               onScan={readScreen}
               onPick={() => { void pick(); }}
-              recentScans={recentScans}
-              onOpenScan={openScanResult}
             />
           )}
-          contentContainerStyle={[styles.listBody, empty && styles.landingBody]}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="interactive"
-          showsVerticalScrollIndicator={false}
-          scrollEventThrottle={16}
-          onScroll={(event) => {
-            const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
-            atBottom.current =
-              contentOffset.y + layoutMeasurement.height >= contentSize.height - 90;
-          }}
-          onContentSizeChange={() => {
-            if (!empty && atBottom.current) list.current?.scrollToEnd({ animated: false });
-          }}
         />
-
-        <View style={styles.footer}>
-          {notice ? (
-            <Txt variant="monoSm" tone="warn" style={styles.notice}>
-              {notice}
-            </Txt>
-          ) : null}
-          {exhausted ? (
-            <MotionPressable onPress={openAccess} style={styles.trialBanner} accessibilityRole="button">
-              <Txt variant="body" tone="ink2">
-                The free questions on this phone are used up.
-              </Txt>
-              <Txt variant="monoSm" tone="fill" caps>
-                Paste an access code
-              </Txt>
-            </MotionPressable>
-          ) : null}
-          <Composer
-            value={draft}
-            onChangeText={setDraft}
-            onSend={onSend}
-            onStop={stop}
-            onPick={pick}
-            onScan={readScreen}
-            streaming={streaming}
-            placeholder={working ? 'Read the answer, or stop it…' : 'Ask about a product'}
-          />
-        </View>
-      </KeyboardAvoidingView>
+      </Frame>
 
       {accessOpen ? <AccessSheet visible onClose={() => setAccessOpen(false)} /> : null}
       {screenOpen ? (
@@ -345,26 +342,57 @@ export function ChatScreen() {
   );
 }
 
+/** The scrolling conversation, padded to run under the floating bars. */
+function Thread({ list, isAtBottom, setAtBottom, messages, empty, openAction, threadId, landing }: {
+  list: RefObject<FlatList<Message> | null>;
+  isAtBottom: () => boolean;
+  setAtBottom: (value: boolean) => void;
+  messages: Message[];
+  empty: boolean;
+  openAction: (action: AppAction) => void;
+  threadId?: string;
+  landing: ReactElement;
+}) {
+  const styles = useStyles();
+  const { top, bottom } = useFrameInsets();
+  return (
+    <FlatList
+      ref={list}
+      data={messages}
+      keyExtractor={(message) => message.id}
+      renderItem={({ item }) => (
+        <MessageRow
+          message={item}
+          onAction={openAction}
+          onOpenSources={threadId ? () => router.push(`/sources/${threadId}` as Href) : undefined}
+        />
+      )}
+      ListEmptyComponent={landing}
+      contentContainerStyle={[
+        styles.listBody,
+        empty && styles.landingBody,
+        { paddingTop: top + 6, paddingBottom: bottom + gap[3] },
+      ]}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="interactive"
+      showsVerticalScrollIndicator={false}
+      scrollEventThrottle={16}
+      onScroll={(event) => {
+        const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+        setAtBottom(contentOffset.y + layoutMeasurement.height >= contentSize.height - 90);
+      }}
+      onContentSizeChange={() => {
+        if (!empty && isAtBottom()) list.current?.scrollToEnd({ animated: false });
+      }}
+    />
+  );
+}
+
 const useStyles = makeStyles((color) => StyleSheet.create({
-  page: { flex: 1, backgroundColor: color.ground },
   flex: { flex: 1 },
-  threadBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: PAGE_X,
-    paddingVertical: 11,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: color.edge,
-  },
   shareBanner: {
-    marginHorizontal: PAGE_X,
-    marginTop: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    borderRadius: radius.m,
-    borderWidth: 1,
-    borderColor: color.edgeStrong,
-    backgroundColor: color.surface,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -373,27 +401,18 @@ const useStyles = makeStyles((color) => StyleSheet.create({
   shareStatus: { flexDirection: 'row', alignItems: 'center', gap: 9, flex: 1 },
   liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: color.ok },
   shareCopy: { flex: 1, gap: 2 },
-  stopShare: { paddingHorizontal: 11, paddingVertical: 7, backgroundColor: color.riskWash, borderRadius: radius.s },
-  threadTitle: { flex: 1 },
+  stopShare: { paddingHorizontal: 13, paddingVertical: 8, backgroundColor: color.riskWash, borderRadius: radius.pill },
   landingBody: { paddingHorizontal: 0 },
-  listBody: { paddingHorizontal: PAGE_X, paddingBottom: gap[4], flexGrow: 1 },
-  footer: {
-    paddingHorizontal: PAGE_X,
-    paddingTop: 8,
-    backgroundColor: 'transparent',
-    gap: 6,
-  },
-  notice: { paddingHorizontal: 4 },
+  listBody: { paddingHorizontal: PAGE_X, flexGrow: 1 },
+  notice: { paddingHorizontal: 8 },
   trialBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: gap[2],
     backgroundColor: color.riskWash,
-    borderWidth: 1,
-    borderColor: color.riskWash,
-    borderRadius: radius.m,
-    paddingHorizontal: 11,
-    paddingVertical: 8,
+    borderRadius: radius.xl,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
   },
 }));

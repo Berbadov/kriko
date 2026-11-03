@@ -22,7 +22,6 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StoreProvider, useStore } from '../engine/store';
 import { OverlaySessionProvider } from '../components/OverlaySession';
 import { MotionProvider, useReducedMotion } from '../components/Motion';
-import { BottomNav } from '../components/Chrome';
 import { ThemeProvider, useTheme } from '../theme/theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -70,7 +69,6 @@ function ThemedApp() {
 function AppStack() {
   const reduced = useReducedMotion();
   const { dark, color } = useTheme();
-  const { access } = useStore();
   return (
     <View style={[styles.root, { backgroundColor: color.ground }]}>
       <StatusBar style={dark ? 'light' : 'dark'} />
@@ -79,7 +77,7 @@ function AppStack() {
           screenOptions={{
             headerShown: false,
             contentStyle: { backgroundColor: color.ground },
-            animation: reduced === false ? 'fade_from_bottom' : 'none',
+            animation: reduced === false ? 'fade' : 'none',
           }}
         >
           <Stack.Screen name="index" />
@@ -90,7 +88,6 @@ function AppStack() {
           <Stack.Screen name="about" />
         </Stack>
       </View>
-      {access.kind === 'none' ? null : <BottomNav />}
     </View>
   );
 }
