@@ -58,7 +58,7 @@ test("the panel shows Learn this page under the error, and learns when it is pre
   p.openPanel();
   p.click(".lite-cta");
   const root = p.shadow();
-  assert.match(root.querySelector(".lite-error").textContent, /could not read this page/);
+  assert.match(root.querySelector(".lite-error").textContent, /could not read this page/i);
   assert.equal(root.querySelector(".lite-error-learn .lite-learn-btn").textContent, "Learn this page");
 
   p.click(".lite-learn-btn");

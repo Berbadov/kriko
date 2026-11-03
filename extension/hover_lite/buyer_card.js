@@ -66,11 +66,6 @@
     if (!price) return "";
     const tone = PRICE_TONE[price.verdict] || "muted";
     const word = PRICE_WORD[price.verdict];
-    let discount = "";
-    if (price.discount) {
-      discount = `<p class="lite-buy-discount" data-tone="${esc(DISCOUNT_TONE[price.discount] || "muted")}">
-        ${esc(price.discount_summary || DISCOUNT_WORD[price.discount] || "")}</p>`;
-    }
     // Only a web address becomes a link: the app keeps pages the reader opened,
     // but a link is the one place a stored string is followed, so it is checked here too.
     const elsewhere = (price.elsewhere || [])
@@ -84,9 +79,7 @@
         ${price.discount && DISCOUNT_WORD[price.discount] ? chip(DISCOUNT_TONE[price.discount], DISCOUNT_WORD[price.discount]) : ""}
       </div>
       ${sparkline(price.series)}
-      <p class="lite-buy-note">${esc(price.summary || "")}</p>
-      ${discount}
-      ${elsewhere ? `<p class="lite-buy-note">Cheaper elsewhere Kriko has seen:</p><ul class="lite-buy-elsewhere">${elsewhere}</ul>` : ""}
+      ${elsewhere ? `<p class="lite-buy-note">Cheaper elsewhere:</p><ul class="lite-buy-elsewhere">${elsewhere}</ul>` : ""}
     </div>`;
   }
 
@@ -95,7 +88,7 @@
     const broken = (fit.breaks || []).length > 0;
     const good = !broken && fit.score >= 60;
     if (!broken && !good && !(fit.reasons || []).length) return "";
-    const title = broken ? "Not for you" : good ? "Fits what you need" : "What Kriko can check against what you need";
+    const title = broken ? "Not for you" : good ? "Fits what you need" : "Checked against your needs";
     const rows = (fit.reasons || []).map((one) =>
       `<li data-kind="${esc(one.kind)}">${esc(one.message)}</li>`).join("");
     return `<div class="lite-buy-fit" data-tone="${broken ? "bad" : good ? "good" : "muted"}">
@@ -110,11 +103,11 @@
     const rows = [];
     if (seller.level && seller.level !== "green") {
       rows.push(`<li>${chip(SELLER_TONE[seller.level] || "muted", SELLER_WORD[seller.level] || "Seller")}
-        ${esc((seller.notes || []).join("; "))}</li>`);
+        ${esc((seller.notes || []).join(", "))}</li>`);
     }
     if (reviews.doubtful) {
       rows.push(`<li>${chip("warn", `Rated ${reviews.adjusted} after few ratings are discounted`)}
-        ${esc((reviews.notes || []).join("; "))}</li>`);
+        ${esc((reviews.notes || []).join(", "))}</li>`);
     }
     for (const one of claims) {
       rows.push(`<li>${chip(CLAIM_TONE[one.status] || "muted", one.status === "backed" ? "Backed" : "Unbacked")}
@@ -122,7 +115,7 @@
     }
     if (!rows.length) return "";
     const meter = audit.claims && audit.claims.meter != null
-      ? ` <span class="lite-buy-meter" title="Share of the page's checkable claims it also shows evidence for">${esc(audit.claims.meter)}% of claims backed</span>` : "";
+      ? ` <span class="lite-buy-meter">${esc(audit.claims.meter)}% of claims backed</span>` : "";
     return `<details class="lite-buy-audit" ${seller.level === "red" ? "open" : ""}>
       <summary>Listing check${meter}</summary><ul>${rows.join("")}</ul></details>`;
   }
@@ -135,8 +128,8 @@
         <label>Tell me at or below
           <input name="target" inputmode="decimal" value="${esc(suggested)}" aria-label="Price to be told at"/></label>
         ${buyer.cloud && buyer.cloud.connected
-          ? `<label class="lite-buy-check" title="Your relay reads this page while your computer is off, so it is told the page.">
-              <input type="checkbox" name="cloud"/> Also watch while my computer is off</label>` : ""}
+          ? `<label class="lite-buy-check">
+              <input type="checkbox" name="cloud"/> Also watch while my computer is off. The page goes to your relay.</label>` : ""}
         <button type="submit" class="lite-buy-btn" data-primary="1">Watch</button>
         <button type="button" class="lite-buy-btn" data-act="watch-cancel">Cancel</button></form>`;
     }
@@ -145,7 +138,7 @@
          <button type="button" class="lite-buy-btn" data-act="unwatch" data-id="${esc(watch.watch_id)}">Stop</button>`
       : `<button type="button" class="lite-buy-btn" data-act="watch-open">Watch this price</button>`;
     const bought = ui && ui.bought
-      ? `<span class="lite-buy-watching">Noted. Kriko will ask how it went.</span>`
+      ? `<span class="lite-buy-watching">Noted.</span>`
       : `<button type="button" class="lite-buy-btn" data-act="bought">I bought this</button>`;
     return `<div class="lite-buy-actions">${watchButton}${bought}</div>`;
   }
@@ -171,7 +164,7 @@
           <button type="submit" class="lite-buy-btn" data-primary="1">Save</button></form>`
         : `<div class="lite-buy-actions">
           <button type="button" class="lite-buy-btn" data-act="answer" data-id="${esc(one.purchase_id)}" data-verdict="glad">Glad I did</button>
-          <button type="button" class="lite-buy-btn" data-act="answer" data-id="${esc(one.purchase_id)}" data-verdict="fine">It's fine</button>
+          <button type="button" class="lite-buy-btn" data-act="answer" data-id="${esc(one.purchase_id)}" data-verdict="fine">It is fine</button>
           <button type="button" class="lite-buy-btn" data-act="regret" data-id="${esc(one.purchase_id)}">Regret it</button>
           <button type="button" class="lite-buy-btn" data-act="snooze" data-id="${esc(one.purchase_id)}">Ask later</button></div>`}
     </section>`;
@@ -183,7 +176,7 @@
     const picked = result.picked;
     if (!picked) {
       return `<section class="lite-pick"><h3 class="lite-buy-title">Decide</h3>
-        <p class="lite-buy-note">Kriko needs at least two products in the queue that it has read. Add more from their listings.</p></section>`;
+        <p class="lite-buy-note">Add at least two products.</p></section>`;
     }
     const list = (items) => (items || []).map((text) => `<li>${esc(text)}</li>`).join("");
     const advice = ui && ui.advice;
@@ -194,7 +187,7 @@
     const answer = advice && advice.answer
       ? `<div class="lite-pick-answer" data-mode="${esc(advice.mode)}">${
         window.__KrikoPanelClaimCard ? window.__KrikoPanelClaimCard.renderRichText(advice.answer) : esc(advice.answer)}</div>`
-      : busy ? `<p class="lite-buy-note" role="status">Your agent is working on it…</p>`
+      : busy ? `<p class="lite-buy-note" role="status">Working…</p>`
         : advice && advice.error ? `<p class="lite-buy-note" data-tone="bad">${esc(advice.error)}</p>` : "";
     const others = (result.ranked || []).slice(1).map((one) =>
       `<li>${esc(one.name)} <span class="lite-buy-note">${esc(one.score)}</span></li>`).join("");
