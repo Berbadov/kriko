@@ -85,7 +85,7 @@
     }
   }
   if (!('IntersectionObserver' in window)) return;
-  const targets = document.querySelectorAll('.section .label, .section h2, .section-lead, .gallery li, .step, .setup li, .download-card, .window, .shot, .stats li, .statement-line, .cta-panel, .split-copy > div');
+  const targets = document.querySelectorAll('.section .label, .section h2, .section-lead, .gallery li, .step, .setup li, .download-card, .window, .shot, .stats li, .statement-line, .cta-panel, .split-copy > div, .lp-trio li, .lp-shots, .lp-get > *');
   const seen = new WeakSet();
   const io = new IntersectionObserver((entries) => {
     for (const entry of entries) {
@@ -222,4 +222,63 @@
   }
   window.addEventListener('resize', resize, { passive: true });
   raf = requestAnimationFrame(loop);
+})();
+
+// The desktop app's tabs. Each tab fills a bar over five seconds in CSS, and the end of
+// the fill moves to the next tab, so there is no timer here: a press restarts the fill, a
+// section that is off screen pauses it, and a reader who asked for less motion gets the
+// tabs without the clock. Without script the first screen shows and the tabs stay hidden.
+(() => {
+  const showcase = document.querySelector('[data-showcase]');
+  if (!showcase) return;
+  const tabs = [...showcase.querySelectorAll('.lp-tabs button')];
+  const shots = [...showcase.querySelectorAll('.lp-shot')];
+  if (!tabs.length || tabs.length !== shots.length) return;
+  const select = (index) => {
+    tabs.forEach((tab, i) => {
+      const on = i === index;
+      tab.classList.toggle('is-on', on);
+      tab.setAttribute('aria-pressed', String(on));
+      shots[i].classList.toggle('is-on', on);
+    });
+    // Restart the fill from empty.
+    const bar = tabs[index].querySelector('.lp-bar');
+    bar.style.animation = 'none';
+    void bar.offsetWidth;
+    bar.style.animation = '';
+  };
+  tabs.forEach((tab, i) => {
+    tab.addEventListener('click', () => select(i));
+    tab.querySelector('.lp-bar').addEventListener('animationend', () => select((i + 1) % tabs.length));
+  });
+  showcase.classList.add('is-ready');
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver((entries) => {
+      for (const entry of entries) showcase.classList.toggle('is-paused', !entry.isIntersecting);
+    }, { threshold: 0.25 }).observe(showcase);
+  }
+})();
+
+// The hero's two apps lean a little toward the pointer: depth, and nothing else. Only for a
+// fine pointer and only when motion is welcome.
+(() => {
+  if (!window.matchMedia || !window.matchMedia('(pointer: fine)').matches) return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const hero = document.querySelector('.lp-hero');
+  const stage = hero && hero.querySelector('.lp-stage');
+  if (!stage) return;
+  let frame = 0;
+  hero.addEventListener('pointermove', (event) => {
+    if (frame) return;
+    frame = requestAnimationFrame(() => {
+      const box = hero.getBoundingClientRect();
+      stage.style.setProperty('--tx', String(((event.clientX - box.left) / box.width - 0.5).toFixed(3)));
+      stage.style.setProperty('--ty', String(((event.clientY - box.top) / box.height - 0.5).toFixed(3)));
+      frame = 0;
+    });
+  }, { passive: true });
+  hero.addEventListener('pointerleave', () => {
+    stage.style.setProperty('--tx', '0');
+    stage.style.setProperty('--ty', '0');
+  });
 })();

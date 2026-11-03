@@ -789,3 +789,101 @@ h2 { font-size: clamp(2rem, 4.3vw, 3.3rem); max-width: 16em; letter-spacing: -.0
 @media (prefers-contrast: more) {
   :root { --muted: #2c3347; --line: #9aa1b5; }
 }
+
+/* ===== The landing page: one headline, two apps, no sub-lines. =====
+   The hero is the headline, three buttons and the two apps cycling through their
+   screens. Everything here is CSS: without script the first screen of each app
+   shows and nothing moves, and a reader who asked for less motion gets the same. */
+.lp-hero { position: relative; overflow: hidden; padding: clamp(44px, 9vw, 112px) 0 0; text-align: center;
+  background: radial-gradient(52% 46% at 50% 0%, var(--halo), transparent 72%), radial-gradient(34% 36% at 88% 28%, var(--halo-warm), transparent 72%); }
+.lp-copy h1 { margin: 0 auto; max-width: 11ch; font: 600 clamp(3rem, 9.5vw, 6.6rem)/1 var(--display); letter-spacing: -.04em; text-wrap: balance; }
+.lp-copy .actions { justify-content: center; margin-top: var(--space-6); }
+.lp-stage { position: relative; display: flex; justify-content: center; align-items: flex-start; width: min(1060px, calc(100% - 2 * var(--gutter))); margin: clamp(40px, 6vw, 80px) auto 0;
+  transition: transform .5s var(--ease); transform: perspective(1400px) rotateX(calc(var(--ty, 0) * -1.6deg)) rotateY(calc(var(--tx, 0) * 2.4deg)); }
+
+.lp-window { position: relative; flex: none; width: 52%; margin: 0; aspect-ratio: 760 / 1000; overflow: hidden; border-radius: 18px; background: var(--card);
+  box-shadow: 0 50px 90px -34px rgba(12, 24, 80, .42), 0 0 0 1px var(--line); animation: lpFloat 9s ease-in-out infinite; }
+.lp-pic { position: absolute; inset: 0; display: block; }
+.lp-pic img, .lp-shot img { display: block; width: 100%; height: 100%; object-fit: cover; }
+
+.lp-phone { position: relative; flex: none; width: 22%; margin: 14% 0 0 -6%; padding: clamp(4px, .7vw, 8px); box-sizing: border-box; border-radius: 14% / 6.4%; background: #0c0d11;
+  box-shadow: 0 50px 80px -28px rgba(8, 14, 54, .55), inset 0 0 0 1px rgba(255, 255, 255, .16); animation: lpFloat 7s ease-in-out -3s infinite; }
+.lp-screen { position: relative; aspect-ratio: 390 / 844; overflow: hidden; border-radius: 12% / 5.6%; background: #000; }
+.lp-screen::after { content: ""; position: absolute; z-index: 3; top: 2.2%; left: 50%; width: 26%; height: 2.6%; transform: translateX(-50%); border-radius: 99px; background: #000; }
+
+/* Twelve seconds: each app moves through its three screens, and the phone's middle
+   screen is the assistant being called, with the shock crossing it. */
+@keyframes lpFloat { 0%, 100% { translate: 0 0; } 50% { translate: 0 -10px; } }
+@keyframes lpA { 0%, 29% { opacity: 1; transform: none; } 34%, 95% { opacity: 0; transform: translateY(10px); } 100% { opacity: 1; transform: none; } }
+@keyframes lpB { 0%, 28% { opacity: 0; transform: translateY(10px); } 34%, 62% { opacity: 1; transform: none; } 67%, 100% { opacity: 0; transform: translateY(10px); } }
+@keyframes lpC { 0%, 61% { opacity: 0; transform: translateY(10px); } 67%, 95% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(10px); } }
+.lp-w1, .lp-p1 { animation: lpA 12s var(--ease) infinite; }
+.lp-w2, .lp-p2 { opacity: 0; animation: lpB 12s var(--ease) infinite; }
+.lp-w3, .lp-p3 { opacity: 0; animation: lpC 12s var(--ease) infinite; }
+
+/* The shock: three rings, red then green then blue, a few frames apart, crossing the
+   screen from its bottom edge. Where they overlap the screen blend makes white, so
+   only the edges are coloured. It plays once per pass and never loops quickly. */
+.lp-shock { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+.lp-shock i { position: absolute; left: 50%; bottom: 0; width: 250%; aspect-ratio: 1; border-radius: 50%; border: 12px solid; mix-blend-mode: screen; opacity: 0;
+  transform: translate(-50%, 50%) scale(.02); animation: lpShock 12s cubic-bezier(.2, .75, .2, 1) infinite; }
+.lp-shock i:nth-child(1) { border-color: #ff3060; }
+.lp-shock i:nth-child(2) { border-color: #46ffb0; animation-delay: .07s; }
+.lp-shock i:nth-child(3) { border-color: #4080ff; animation-delay: .14s; }
+@keyframes lpShock { 0%, 35% { opacity: 0; transform: translate(-50%, 50%) scale(.02); } 36.5% { opacity: .95; } 50% { opacity: .8; } 53%, 100% { opacity: 0; transform: translate(-50%, 50%) scale(1); } }
+.lp-shock-loop i { animation-name: lpShockLoop; animation-duration: 6s; }
+@keyframes lpShockLoop { 0%, 8% { opacity: 0; transform: translate(-50%, 50%) scale(.02); } 10% { opacity: .95; } 28% { opacity: .8; } 34%, 100% { opacity: 0; transform: translate(-50%, 50%) scale(1); } }
+
+/* The desktop app: three tabs fill a bar one after another, and the end of the fill
+   moves to the next screen, so the clock is CSS. */
+.lp-showcase { padding-block: clamp(72px, 12vw, 160px); }
+.lp-split { display: grid; grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); gap: clamp(32px, 6vw, 96px); align-items: center; }
+.lp-side h2, .lp-phones h2, #get h2 { margin: 0; font: 600 clamp(2.4rem, 6vw, 4.2rem)/1.02 var(--display); letter-spacing: -.035em; }
+.lp-tabs { display: none; list-style: none; margin: var(--space-6) 0 0; padding: 0; gap: var(--space-3); }
+.lp-showcase.is-ready .lp-tabs { display: grid; }
+.lp-tabs button { position: relative; display: block; width: 100%; padding: 18px 22px 20px; overflow: hidden; text-align: left; cursor: pointer; border: 1px solid transparent; border-radius: var(--r-lg);
+  background: transparent; color: var(--muted); font: 600 clamp(1.3rem, 2.4vw, 1.7rem)/1.1 var(--display); letter-spacing: -.02em; transition: color .3s ease, background .3s ease, border-color .3s ease; }
+.lp-tabs button:hover { color: var(--ink); }
+.lp-tabs button.is-on { color: var(--ink); background: var(--card); border-color: var(--line); }
+.lp-bar { position: absolute; left: 0; bottom: 0; width: 100%; height: 3px; background: var(--accent); transform: scaleX(0); transform-origin: left; }
+.lp-tabs button.is-on .lp-bar { animation: lpFill 5s linear forwards; }
+.lp-showcase.is-paused .lp-tabs button.is-on .lp-bar { animation-play-state: paused; }
+@keyframes lpFill { to { transform: scaleX(1); } }
+.lp-shots { position: relative; width: min(100%, 520px); aspect-ratio: 760 / 1000; margin: 0 auto; overflow: hidden; border-radius: 20px; background: var(--card);
+  box-shadow: 0 50px 90px -40px rgba(12, 24, 80, .4), 0 0 0 1px var(--line); }
+.lp-shot { position: absolute; inset: 0; margin: 0; opacity: 0; visibility: hidden; transform: translateY(16px) scale(.985); transition: opacity .6s var(--ease), transform .9s var(--ease), visibility 0s .6s; }
+.lp-shot.is-on { opacity: 1; visibility: visible; transform: none; transition: opacity .6s var(--ease), transform .9s var(--ease); }
+
+/* The phone app: three screens in a row, the middle one with the shock. */
+.lp-phones { padding-block: clamp(72px, 12vw, 160px); }
+.lp-phones h2 { text-align: center; }
+.lp-trio { list-style: none; max-width: 920px; margin: clamp(40px, 6vw, 72px) auto 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(20px, 4vw, 56px); }
+.lp-trio li { text-align: center; }
+.lp-trio .lp-phone { width: min(260px, 100%); margin: 0 auto; animation: none; }
+.lp-trio h3 { margin: var(--space-5) 0 0; font: 600 clamp(1.4rem, 3vw, 1.9rem)/1.1 var(--display); letter-spacing: -.02em; }
+
+#get { padding-block: clamp(72px, 12vw, 160px); }
+.lp-get { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--space-5); margin-top: var(--space-7); }
+.lp-card { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-4); }
+.lp-card h3 { margin: 0; }
+.lp-card .fine { margin: 0; }
+
+@media (max-width: 860px) {
+  .lp-split { grid-template-columns: minmax(0, 1fr); }
+  .lp-tabs { grid-auto-flow: column; grid-auto-columns: 1fr; }
+  .lp-tabs button { padding: 14px 12px 16px; text-align: center; }
+  .lp-window { width: 60%; }
+  .lp-phone { width: 30%; margin-left: -8%; }
+}
+@media (max-width: 700px) {
+  .lp-trio { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 64%; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: var(--space-4); }
+  .lp-trio li { scroll-snap-align: center; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lp-w2, .lp-w3, .lp-p2, .lp-p3 { display: none; }
+  .lp-w1, .lp-p1, .lp-window, .lp-phone { animation: none; opacity: 1; transform: none; }
+  .lp-stage { transform: none; transition: none; }
+  .lp-shock { display: none; }
+  .lp-shot { transition: none; }
+  .lp-tabs button.is-on .lp-bar { animation: none; transform: scaleX(1); }
+}
