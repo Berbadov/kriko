@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import { CAP_ORDER, CAP_WORDS, usedToday, useCaps, type CapResource } from '../../engine/caps'
 import { useAppUpdate } from '../../engine/appupdate'
 import { useSensitivity } from '../../engine/sensitivity'
@@ -24,10 +24,11 @@ const PROFILES: { value: Profile; label: string }[] = [
   { value: 'standard', label: 'Standard' },
   { value: 'vivid', label: 'Vivid' },
 ]
-const SENSITIVITY: { value: Sensitivity; label: string }[] = [
-  { value: 'all', label: 'Show everything' },
-  { value: 'hide_thin', label: 'Hide thin' },
-  { value: 'strict', label: 'Strict' },
+/** What each choice does is the hover hint, so the row stays a label and a control. */
+const SENSITIVITY: { value: Sensitivity; label: string; hint: string }[] = [
+  { value: 'all', label: 'Show everything', hint: 'Every finding is drawn, with its indicator.' },
+  { value: 'hide_thin', label: 'Hide thin', hint: 'Findings with two or more reasons for doubt are hidden, and counted so you can show them.' },
+  { value: 'strict', label: 'Strict', hint: 'Only findings with no reason for doubt are drawn. The rest are counted.' },
 ]
 const PARALLEL = [1, 2, 3, 4].map((n) => ({ value: String(n), label: String(n) }))
 const SOURCE_COUNTS = [0, 5, 10, 20, 50]
@@ -64,11 +65,13 @@ export function SettingsPanel(_: { onOpen?: (lookupId: string) => void }) {
   useEffect(() => onSettingsPage(setPage), [])
 
   return (
-    <div className="panel-body">
+    <div className="panel-body settings">
+      <div className="settings-nav">
+        <Segmented label="Settings page" value={page} options={SETTINGS_PAGES} onChange={setPage} />
+      </div>
       {problem && <p className="error-note">{problem}</p>}
 
-      <Segmented label="Settings page" value={page} options={SETTINGS_PAGES} onChange={setPage} />
-
+      <div className="settings-page" key={page}>
       {page === 'look' && (
         <>
           <section className="panel-group">
@@ -86,10 +89,7 @@ export function SettingsPanel(_: { onOpen?: (lookupId: string) => void }) {
               <Switch label="Reduce motion" on={reduce} onChange={setReduce} />
             </div>
             <div className="setting">
-              <span>
-                Tour
-                <small>A short walk through the window.</small>
-              </span>
+              <span>Tour</span>
               <button className="btn" onClick={startTour}>
                 Take the tour
               </button>
@@ -99,37 +99,22 @@ export function SettingsPanel(_: { onOpen?: (lookupId: string) => void }) {
           <section className="panel-group">
             <h3>Information sensitivity</h3>
             <div className="setting stack">
-              <span>
-                How much doubt to show
-                <small>
-                  A finding is thin when one site alone says it, its best source is low in trust, its quote only partly matches
-                  its page, or it depends on a detail your listing does not state. Each card says which. This changes what is
-                  drawn, never what is stored.
-                </small>
-              </span>
+              <span>How much doubt to show</span>
               <Segmented
                 label="Information sensitivity"
                 value={sensitivity}
                 options={SENSITIVITY}
                 onChange={(value) => void choose(value).then(setSensitivityProblem)}
               />
-              <small className="panel-note">
-                {sensitivity === 'all' && 'Every finding is drawn, with its indicator.'}
-                {sensitivity === 'hide_thin' && 'Findings with two or more reasons for doubt are hidden, and counted so you can show them.'}
-                {sensitivity === 'strict' && 'Only findings with no reason for doubt are drawn. The rest are counted.'}
-              </small>
-              {sensitivityProblem && <p className="error-note">{sensitivityProblem}</p>}
             </div>
+            {sensitivityProblem && <p className="error-note">{sensitivityProblem}</p>}
           </section>
 
           <section className="panel-group">
             <h3>Chat</h3>
             <div className="setting">
-              <span>
-                Chat settings
-                <small>What it remembers, and how an answer is shaped.</small>
-              </span>
-              <button className="btn ghost" onClick={() => showDrawer('chat')}>
+              <span>Chat settings</span>
+              <button className="btn" onClick={() => showDrawer('chat')}>
                 Open
               </button>
             </div>
@@ -142,10 +127,7 @@ export function SettingsPanel(_: { onOpen?: (lookupId: string) => void }) {
           <section className="panel-group">
             <h3>How hard to look</h3>
             <div className="setting">
-              <span>
-                Products at once
-                <small>Each one uses an agent.</small>
-              </span>
+              <span>Products at once</span>
               <Segmented
                 label="Products at once"
                 value={doc.chosen.run_concurrency || '4'}
@@ -156,20 +138,16 @@ export function SettingsPanel(_: { onOpen?: (lookupId: string) => void }) {
             <RangeSetting
               label="Thoroughness"
               value={doc.research.thoroughness}
-              note="More search calls and results. Applies to Kriko Agent."
+              note="Higher means more search calls."
               onSave={(value) => void save({ kriko_agent_thoroughness: String(value) })}
             />
             <RangeSetting
               label="Validation sensitivity"
               value={doc.research.validation_sensitivity}
-              note="Higher values require longer, exact quotes. Applies to Kriko Agent."
               onSave={(value) => void save({ kriko_agent_validation_sensitivity: String(value) })}
             />
             <div className="setting">
-              <span>
-                Extra sources
-                <small>Pages to read for each product. 0 is the default.</small>
-              </span>
+              <span>Extra sources</span>
               <Select
                 label="Extra sources"
                 value={String(doc.research.sources)}
@@ -203,10 +181,7 @@ export function SettingsPanel(_: { onOpen?: (lookupId: string) => void }) {
           <section className="panel-group">
             <h3>Language and market</h3>
             <div className="setting">
-              <span>
-                Response language
-                <small>Automatic follows the product request. Quotes stay in their source language.</small>
-              </span>
+              <span>Response language</span>
               <Select
                 label="Response language"
                 value={doc.chosen.local_output_language || 'auto'}
@@ -221,10 +196,7 @@ export function SettingsPanel(_: { onOpen?: (lookupId: string) => void }) {
               />
             </div>
             <div className="setting">
-              <span>
-                Research language
-                <small>Language used to phrase web searches.</small>
-              </span>
+              <span>Research language</span>
               <Select
                 label="Research language"
                 value={doc.chosen.local_search_language || 'en'}
@@ -238,10 +210,7 @@ export function SettingsPanel(_: { onOpen?: (lookupId: string) => void }) {
               />
             </div>
             <div className="setting">
-              <span>
-                Market region
-                <small>Use this market when considering regional products and differences.</small>
-              </span>
+              <span>Market region</span>
               <Select
                 label="Market region"
                 value={doc.chosen.market_region || 'auto'}
@@ -254,10 +223,7 @@ export function SettingsPanel(_: { onOpen?: (lookupId: string) => void }) {
           <section className="panel-group">
             <h3>Model</h3>
             <div className="setting">
-              <span>
-                Product classification
-                <small>After deterministic checks, use your selected local, coding or API agent by default. Jev is an optional alternative that uses a separate TypeSafe key.</small>
-              </span>
+              <span>Product classification</span>
               <Select
                 label="Product classification"
                 value={doc.chosen.classification_provider || 'agent'}
@@ -269,17 +235,11 @@ export function SettingsPanel(_: { onOpen?: (lookupId: string) => void }) {
               />
             </div>
             <div className="setting stack">
-              <span>
-                OpenAI-compatible endpoint
-                <small>Optional API root for OpenAI-compatible services. Leave blank for OpenAI or the LLM_BASE_URL environment setting.</small>
-              </span>
+              <span>OpenAI-compatible endpoint</span>
               <EndpointField value={doc.chosen.llm_base_url || ''} onSave={(value) => save({ llm_base_url: value })} />
             </div>
             <div className="setting stack">
-              <span>
-                Completion model
-                <small>Model ID accepted by this endpoint for paid research. Leave blank to use its default.</small>
-              </span>
+              <span>Completion model</span>
               <ModelField value={doc.chosen.llm_model || ''} onSave={(value) => save({ llm_model: value })} />
             </div>
           </section>
@@ -298,11 +258,8 @@ export function SettingsPanel(_: { onOpen?: (lookupId: string) => void }) {
           <section className="panel-group">
             <h3>Setup</h3>
             <div className="setting">
-              <span>
-                Set up Kriko
-                <small>Verify an agent and connect your browser.</small>
-              </span>
-              <button className="btn ghost" onClick={() => showDrawer('setup')}>
+              <span>Set up Kriko</span>
+              <button className="btn" onClick={() => showDrawer('setup')}>
                 Open
               </button>
             </div>
@@ -320,10 +277,7 @@ export function SettingsPanel(_: { onOpen?: (lookupId: string) => void }) {
         <>
           <section className="panel-group">
             <h3>Usage caps</h3>
-            <p className="panel-note">
-              A cap is a warning, not a stop: the usage pill turns amber once a day passes one, and nothing is blocked. Leave a
-              field empty for no cap. Caps are kept on this computer.
-            </p>
+            <p className="panel-note">A cap only warns. Nothing is blocked.</p>
             {CAP_ORDER.map((id) => (
               <CapField
                 key={id}
@@ -333,31 +287,31 @@ export function SettingsPanel(_: { onOpen?: (lookupId: string) => void }) {
                 onChange={(value) => setCap(id, value)}
               />
             ))}
-            {demoMeters && <p className="panel-note">Example numbers, because no engine answers.</p>}
+            {demoMeters && <p className="panel-note" data-kind="warn">Example numbers, because no engine answers.</p>}
           </section>
 
           {presence && (
             <section className="panel-group">
               <h3>Count me as using Kriko</h3>
               <div className="setting">
-                <span>
-                  Anonymous daily ping
-                  <small>
-                    Once a day, Kriko sends a random install id and the app version — nothing else: no question, no product, no page, no key. Off by default, and
-                    with no endpoint configured nothing is ever sent. Read the <a href="https://kriko.cc/privacy/">privacy policy</a> for the full list.
-                  </small>
-                </span>
+                <span>Anonymous daily ping</span>
                 <Switch
                   label="Anonymous daily ping"
                   on={doc?.chosen.presence_enabled === '1' || presence.enabled}
                   onChange={(on) => void save({ presence_enabled: on ? '1' : '0' }).then(() => void reloadPresence())}
                 />
               </div>
+              <p className="panel-note" data-kind="data">
+                Once a day: a random install id and the app version, nothing else. Read the <a href="https://kriko.cc/privacy/">privacy policy</a>.
+              </p>
               {(doc?.chosen.presence_enabled === '1' || presence.enabled) && (
-                <p className="panel-note">
-                  {presence.last_day ? `Last sent ${presence.last_day}.` : 'Sends on the next start of Kriko.'}
-                  {presence.endpoint ? '' : ' No endpoint is configured, so nothing leaves this computer.'}
-                </p>
+                <>
+                  <div className="setting">
+                    <span>Last sent</span>
+                    <span className="value">{presence.last_day || 'On the next start'}</span>
+                  </div>
+                  {!presence.endpoint && <p className="panel-note" data-kind="data">No endpoint is set, so nothing leaves this computer.</p>}
+                </>
               )}
             </section>
           )}
@@ -379,7 +333,7 @@ export function SettingsPanel(_: { onOpen?: (lookupId: string) => void }) {
                   <small>measured spend</small>
                 </div>
               </div>
-              {!!spent.unpriced_runs && <p className="panel-note">{spent.unpriced_runs} runs have incomplete pricing. The amount shown is the measured portion.</p>}
+              {!!spent.unpriced_runs && <p className="panel-note" data-kind="data">{spent.unpriced_runs} runs have no price, so the amount is partial.</p>}
             </section>
           )}
 
@@ -388,42 +342,45 @@ export function SettingsPanel(_: { onOpen?: (lookupId: string) => void }) {
               <h3>About</h3>
               <div className="setting">
                 <span>Engine</span>
-                <span className="value">{about.version || '—'}</span>
+                <span className="value">{about.version || 'Not known'}</span>
               </div>
               <div className="setting">
-                <span>
-                  Updates
-                  <small>
-                    {update.phase === 'downloading'
-                      ? 'Downloading…'
-                      : update.phase === 'restarting'
-                        ? 'Starting the new engine…'
-                        : update.phase === 'installing'
-                          ? 'Installing. Kriko opens again by itself.'
-                          : update.problem ||
-                            (update.release ? `Kriko ${update.release.version} is available.` : update.checked ? 'This is the newest version.' : 'Looked for on its own while Kriko is open.')}
-                  </small>
+                <span>Updates</span>
+                <span className="setting-end">
+                  {updateState(update) && <span className="state" data-tone={update.release ? 'ok' : 'none'}>{updateState(update)}</span>}
+                  {update.release && (update.canInstall || update.release.engine) ? (
+                    <button className="btn primary" onClick={() => void update.install()} disabled={update.phase !== 'idle'}>
+                      Update now
+                    </button>
+                  ) : (
+                    <button className="btn" onClick={() => void update.check()} disabled={update.phase !== 'idle'}>
+                      {update.phase === 'checking' ? 'Checking…' : 'Check now'}
+                    </button>
+                  )}
                 </span>
-                {update.release && (update.canInstall || update.release.engine) ? (
-                  <button className="btn primary" onClick={() => void update.install()} disabled={update.phase !== 'idle'}>
-                    Update now
-                  </button>
-                ) : (
-                  <button className="btn ghost" onClick={() => void update.check()} disabled={update.phase !== 'idle'}>
-                    {update.phase === 'checking' ? 'Checking…' : 'Check now'}
-                  </button>
-                )}
               </div>
-              <div className="setting stack">
+              {update.problem && update.phase === 'idle' && <p className="error-note">{update.problem}</p>}
+              <div className="setting">
                 <span>Your data</span>
-                <small className="panel-path">{about.folder || '—'}</small>
+                <span className="value path">{about.folder || 'Not known'}</span>
               </div>
             </section>
           )}
         </>
       )}
+      </div>
     </div>
   )
+}
+
+/** The one short state an update row shows beside its button. A problem is its own line. */
+function updateState(update: ReturnType<typeof useAppUpdate>): string {
+  if (update.phase === 'downloading') return 'Downloading…'
+  if (update.phase === 'restarting') return 'Starting the new engine…'
+  if (update.phase === 'installing') return 'Installing. Kriko opens again by itself.'
+  if (update.problem) return ''
+  if (update.release) return `Kriko ${update.release.version} is available`
+  return update.checked ? 'Up to date' : ''
 }
 
 function CapField({ id, cap, today, onChange }: { id: CapResource; cap: number | null; today: number | null; onChange: (value: number | null) => void }) {
@@ -438,10 +395,13 @@ function CapField({ id, cap, today, onChange }: { id: CapResource; cap: number |
     if (value === 0) { if (cap !== null) onChange(null); setDraft(''); return }
     if (value !== cap) onChange(value)
   }
-  const used = today === null ? 'Nothing counted today.' : `${word.money ? `$${today.toFixed(today < 0.01 ? 4 : 2)}` : today.toLocaleString('en-GB')} today.`
+  const used = today === null ? '' : `${word.money ? `$${today.toFixed(today < 0.01 ? 4 : 2)}` : today.toLocaleString('en-GB')} today`
   return (
     <div className="setting">
-      <span>{word.title} a day<small>{used} {cap === null ? 'No cap set.' : 'A warning only.'}</small></span>
+      <span>
+        {word.title} a day
+        {used && <span className="state" data-tone="none">{used}</span>}
+      </span>
       <label className="cap-field">
         <input type="number" min="0" step={word.money ? '0.01' : '1'} inputMode={word.money ? 'decimal' : 'numeric'} placeholder="No cap" aria-label={`${word.title} a day`} value={draft} onChange={(event) => setDraft(event.target.value)} onBlur={commit} onKeyDown={(event) => { if (event.key === 'Enter') event.currentTarget.blur() }} />
         <span className="cap-unit">{word.money ? '$' : word.unit}</span>
@@ -450,6 +410,8 @@ function CapField({ id, cap, today, onChange }: { id: CapResource; cap: number |
   )
 }
 
+/** A dial from 0 to 100: its name and value on one line, the slider under them.
+ *  `note` is for a dial that costs money, and is one short line. */
 function RangeSetting({
   label,
   value,
@@ -458,7 +420,7 @@ function RangeSetting({
 }: {
   label: string
   value: number
-  note: string
+  note?: string
   onSave: (value: number) => void
 }) {
   const [draft, setDraft] = useState(value)
@@ -469,29 +431,26 @@ function RangeSetting({
 
   return (
     <div className="setting stack tuning-setting">
-      <span>
-        {label}
-        <small>{note}</small>
+      <span className="tuning-head">
+        <span>{label}</span>
+        <b className="mono">{draft}%</b>
       </span>
-      <div className="tuning-range-row">
-        <small>Low</small>
-        <input
-          className="tuning-range"
-          type="range"
-          min={0}
-          max={100}
-          step={5}
-          value={draft}
-          aria-label={label}
-          aria-valuetext={`${draft}%`}
-          onChange={(event) => setDraft(event.currentTarget.valueAsNumber)}
-          onPointerUp={commit}
-          onKeyUp={commit}
-          onBlur={commit}
-        />
-        <small>{draft}%</small>
-        <small>High</small>
-      </div>
+      <input
+        className="tuning-range"
+        style={{ '--fill': `${draft}%` } as CSSProperties}
+        type="range"
+        min={0}
+        max={100}
+        step={5}
+        value={draft}
+        aria-label={label}
+        aria-valuetext={`${draft}%`}
+        onChange={(event) => setDraft(event.currentTarget.valueAsNumber)}
+        onPointerUp={commit}
+        onKeyUp={commit}
+        onBlur={commit}
+      />
+      {note && <small className="cost-note">{note}</small>}
     </div>
   )
 }
@@ -548,7 +507,7 @@ function KeysGroup() {
   return (
     <section className="panel-group">
       <h3>Keys</h3>
-      <p className="panel-note">A key stays on this computer. The engine never sends it back.</p>
+      <p className="panel-note" data-kind="data">Keys stay on this computer. The engine never sends one back.</p>
       {problem && <p className="error-note">{problem}</p>}
       <ul className="key-list">
         {doc.providers.map((row) => (
@@ -580,125 +539,91 @@ export function SharedAccessGroup() {
   const granted = doc.grant.present
   // Whether Kriko Agent is answering on somebody else's keys here. Every number
   // below is the engine's own (`/api/keys/shared/status`); the grant and the
-  // trial are the only two states, so one sentence says which one is in use.
+  // trial are the only two states, so one short word says which one is in use.
   const fromWhom = doc.grant.label ? `${doc.grant.label}'s keys` : 'shared keys'
-  const sharing = granted
-    ? `Sharing is on — Kriko Agent can use ${fromWhom}`
-    : trial.available
-      ? 'Sharing is on — Kriko Agent can use this build’s free trial'
-      : 'Sharing is off — Kriko Agent uses the keys saved on this computer'
+  const sharing = granted ? `On, ${fromWhom}` : trial.available ? 'On, free trial' : 'Off, your own keys'
+  const trialState = trial.available
+    ? `${trial.left} of ${trial.limit} questions left`
+    : trial.used
+      ? `Used up, ${trial.used} of ${trial.limit}`
+      : 'Not in this build'
 
   return (
     <section className="panel-group" data-tour="shared-access">
       <h3>Shared access</h3>
-      <p className="panel-note">
-        Kriko Agent on someone else&apos;s Mercury and DeepSeek keys. Paste the access code and the
-        password that came with it. The password works in this app only: the code is sealed to the
-        build that made it, the keys are never written in the clear, and this app never sends one back.
-      </p>
       {problem && <p className="error-note">{problem}</p>}
       {!doc.bound && (
-        <p className="panel-note">
-          This build carries no share pepper, so a code sealed elsewhere will not open here — and one
-          made here would open anywhere. A build for handing out codes needs one:
+        <p className="panel-note" data-kind="warn">
+          This build has no share pepper, so a code made elsewhere will not open here. Build one with{' '}
           <code>python tools/make_share_pepper.py</code>.
         </p>
       )}
 
       <div className="setting">
-        <span>
-          {sharing}
-          <small>
-            {granted
-              ? `Mercury and DeepSeek, from an access code, kept sealed on this computer${
-                  doc.device === 'dpapi' ? ' and bound to this Windows account' : ''
-                }.`
-              : trial.available
-                ? 'Questions are counted on this computer, on the keys the build carries.'
-                : 'Nothing here is shared with anyone: these are the keys you added yourself.'}
-          </small>
+        <span>Sharing</span>
+        <span className="setting-end">
+          <span className="state" data-tone={granted || trial.available ? 'ok' : 'none'}>{sharing}</span>
+          {granted && doc.device === 'dpapi' && <span className="state" data-tone="none">Bound to this Windows account</span>}
         </span>
       </div>
+      {!granted && (
+        <div className="setting">
+          <span>Free trial</span>
+          <span className="value">{trialState}</span>
+        </div>
+      )}
+      {!granted && !trial.available && trial.used > 0 && (
+        <p className="panel-note" data-kind="warn">Paste an access code or add your own keys on this page.</p>
+      )}
 
       <div className="setting stack">
-        <span>
-          Access code
-          <small>The whole line, from whoever is sharing their keys.</small>
-        </span>
+        <span>Access code</span>
         <textarea aria-label="Access code" className="key-field" rows={3} value={pasted} spellCheck={false} placeholder="Paste the code" onChange={(event) => setPasted(event.target.value)} />
       </div>
       <div className="setting stack">
-        <span>
-          Password
-          <small>Sent separately from the code. It is not stored.</small>
-        </span>
-        <input aria-label="Shared access password" className="key-field" type="password" autoComplete="off" value={password} onChange={(event) => setPassword(event.target.value)} />
+        <span>Password</span>
+        <input aria-label="Shared access password" className="key-field" type="password" autoComplete="off" placeholder="Sent apart from the code" value={password} onChange={(event) => setPassword(event.target.value)} />
       </div>
       <div className="setting stack">
-        <span>
-          Whose keys
-          <small>Optional: a name, so you know what is in use.</small>
-        </span>
+        <span>Whose keys (optional)</span>
         <input aria-label="Whose keys" className="key-field" type="text" value={label} onChange={(event) => setLabel(event.target.value)} />
       </div>
-      <div className="setting">
-        <span>
-          Use the keys this code carries
-          <small>{granted ? 'Saving replaces the keys in use here.' : 'Saving keeps them sealed on this computer.'}</small>
-        </span>
-        <span className="key-actions">
-          <button className="btn" disabled={saving || !pasted.trim() || !password} onClick={() => void unlockCode()}>
-            {saving ? 'Opening code…' : 'Use these keys'}
+      <p className="panel-note" data-kind="data">The password works in this app only. Keys are sealed on this computer.</p>
+      <div className="setting actions">
+        <button className="btn primary" disabled={saving || !pasted.trim() || !password} onClick={() => void unlockCode()}>
+          {saving ? 'Opening code…' : 'Use these keys'}
+        </button>
+        {granted && (
+          <button className="btn" onClick={() => void forget()}>
+            Forget them
           </button>
-          {granted && (
-            <button className="btn ghost" onClick={() => void forget()}>
-              Forget them
-            </button>
-          )}
-        </span>
+        )}
       </div>
+      {granted && (
+        <div className="setting">
+          <span>Kriko Agent</span>
+          <button className="btn" onClick={() => showDrawer('agents')}>Choose agent</button>
+        </div>
+      )}
 
-      {granted && <p className="panel-note">
-        Access is ready. Choose <strong>Kriko Agent</strong> in Agents, then use <strong>Check connection</strong> in Set up Kriko.
-        {' '}<button className="btn" onClick={() => showDrawer('agents')}>Choose agent</button>
-      </p>}
-
-      <p className="panel-note">
-        {granted
-          ? ''
-          : trial.available
-            ? `Free trial on this computer: ${trial.left} of ${trial.limit} Kriko Agent questions left. When they are used up, paste an access code or add your own Mercury and DeepSeek keys in Settings → Keys.`
-            : trial.used
-              ? `The free trial on this computer is used up (${trial.used} of ${trial.limit} questions). Paste an access code or add your own Mercury and DeepSeek keys in Settings → Keys.`
-              : 'No free trial is included in this build.'}
-      </p>
-
-      <details className="panel-details">
-        <summary>Sharing your own keys with a friend</summary>
-        <p className="panel-note">
-          Make a code here, then send the code and the password to your friend in two separate
-          messages. Anyone with both can use your keys in their Kriko; nothing else can, and a code
-          made by a different build will not open in the build they have. To stop a code working,
-          replace your Mercury and DeepSeek keys at the providers: nothing here can reach into a
-          friend&apos;s computer and take a code back.
+      <details className="disclosure">
+        <summary>Share your keys with a friend</summary>
+        <p className="panel-note" data-kind="data">
+          Send the code and the password in two messages. Anyone with both can spend your keys. Replace the keys at the provider to stop a code.
         </p>
         <div className="setting stack">
-          <span>
-            Password for them
-            <small>At least 8 characters. It is not stored here or anywhere.</small>
-          </span>
-          <input className="key-field" type="text" autoComplete="off" value={madeWith} onChange={(event) => setMadeWith(event.target.value)} />
+          <span>Password for them</span>
+          <input className="key-field" type="text" autoComplete="off" placeholder="At least 8 characters" aria-label="Password for them" value={madeWith} onChange={(event) => setMadeWith(event.target.value)} />
         </div>
-        <button className="btn" disabled={madeWith.length < 8} onClick={() => void make(madeWith)}>
-          Make an access code
-        </button>
+        <div className="setting actions">
+          <button className="btn" disabled={madeWith.length < 8} onClick={() => void make(madeWith)}>
+            Make an access code
+          </button>
+        </div>
         {code && (
           <div className="setting stack">
-            <span>
-              The code
-              <small>Shown here only. Send it without the password.</small>
-            </span>
-            <textarea className="key-field" rows={4} readOnly value={code} onFocus={(event) => event.currentTarget.select()} />
+            <span>The code, shown once</span>
+            <textarea className="key-field" aria-label="The access code" rows={4} readOnly value={code} onFocus={(event) => event.currentTarget.select()} />
           </div>
         )}
       </details>
@@ -733,9 +658,11 @@ function KeyItem({
   return (
     <li className="key" data-present={row.present}>
       <div className="key-head">
-        <span>
+        <span className="key-name">
           <strong>{label}</strong>
-          <small>{row.present ? `Set${row.hint ? ` · ends ${row.hint}` : ''}${row.source === 'environment' ? ' · from the environment' : ''}` : 'Not set'}</small>
+          <span className="state" data-tone={row.present ? 'ok' : 'none'}>
+            {row.present ? `Set${row.hint ? `, ends ${row.hint}` : ''}${row.source === 'environment' ? ', from the environment' : ''}` : 'Not set'}
+          </span>
         </span>
         {!editing && (
           <span className="key-actions">

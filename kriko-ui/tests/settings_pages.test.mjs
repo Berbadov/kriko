@@ -117,6 +117,15 @@ test('the settings drawer shows one page at a time, and a requested page is the 
     assert.deepEqual(headings(render('keys')), ['Keys', 'Shared access'])
     assert.deepEqual(headings(render('connections')), ['Setup', 'Web search', 'Proxies', 'Use Kriko in another chat'])
     assert.deepEqual(headings(render('usage')), ['Usage caps', 'About'])
+
+    // A row is a label and one control: no grey sub-line under any label, on any
+    // page. The only small line a row may hold is a cost note.
+    for (const name of ['look', 'research', 'keys', 'connections', 'usage']) {
+      const page = render(name)
+      assert.equal(page.querySelector('.setting small:not(.cost-note)'), null, `${name} keeps a sub-line under a setting`)
+    }
+    // Where research costs money, one short line says so.
+    assert.match(render('research').querySelector('.cost-note').textContent, /more search calls/)
   } finally {
     loader._load = originalLoad
     globalThis.window = previous.window
