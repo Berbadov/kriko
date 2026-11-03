@@ -94,10 +94,14 @@ test('shared access says what the password can do, and how much trial is left', 
       // The promise made to a friend, and the one they are relying on: this is
       // the sentence that has to stay true.
       assert.match(asking.text, /works in this app only/)
-      assert.match(asking.text, /Sharing is on/)
-      assert.match(asking.text, /7 of 10 Kriko Agent questions left/)
-      assert.match(asking.text, /Paste the access code and the password/)
-      assert.match(asking.text, /Sharing your own keys with a friend/)
+      assert.match(asking.text, /Sharing\s*On, free trial/)
+      assert.match(asking.text, /Free trial\s*7 of 10 questions left/)
+      assert.match(asking.text, /Access code/)
+      assert.match(asking.text, /Share your keys with a friend/)
+      // The friend's page owns up to the risk in one line: who can spend the keys.
+      assert.match(asking.text, /Anyone with both can spend your keys/)
+      // The access code field says what goes in it by its placeholder, not a line under it.
+      assert.equal(asking.dom.window.document.querySelector('textarea[aria-label="Access code"]').getAttribute('placeholder'), 'Paste the code')
     } finally {
       asking.dom.window.close()
     }
@@ -106,9 +110,8 @@ test('shared access says what the password can do, and how much trial is left', 
       grant: { present: true, label: 'Ada', providers: ['mercury', 'deepseek'], state: 'shared' },
     }))
     try {
-      assert.match(holding.text, /Sharing is on/)
-      assert.match(holding.text, /Ada's keys/)
-      assert.match(holding.text, /bound to this Windows account/)
+      assert.match(holding.text, /Sharing\s*On, Ada's keys/)
+      assert.match(holding.text, /Bound to this Windows account/)
       // One password field, one Save, one Remove: a second code can replace the
       // one in use without a hidden "forget first" step.
       assert.match(holding.text, /Use these keys/)
@@ -121,7 +124,9 @@ test('shared access says what the password can do, and how much trial is left', 
 
     const spent = await render(status({ trial: { limit: 10, used: 10, left: 0, available: false } }))
     try {
-      assert.match(spent.text, /trial on this computer is used up \(10 of 10 questions\)/)
+      assert.match(spent.text, /Free trial\s*Used up, 10 of 10/)
+      // A used-up trial says what to do next, since the reader is now stuck.
+      assert.match(spent.text, /Paste an access code or add your own keys/)
     } finally {
       spent.dom.window.close()
     }
@@ -132,8 +137,8 @@ test('shared access says what the password can do, and how much trial is left', 
       trial: { limit: 10, used: 0, left: 10, available: false },
     }))
     try {
-      assert.match(none.text, /Sharing is off/)
-      assert.match(none.text, /No free trial is included in this build\./)
+      assert.match(none.text, /Sharing\s*Off, your own keys/)
+      assert.match(none.text, /Free trial\s*Not in this build/)
       assert.doesNotMatch(none.text, /questions left/)
     } finally {
       none.dom.window.close()

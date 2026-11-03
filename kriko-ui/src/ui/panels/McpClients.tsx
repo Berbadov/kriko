@@ -31,15 +31,20 @@ export function McpClientsGroup() {
   return (
     <section className="panel-group mcp">
       <h3>Use Kriko in another chat</h3>
-      <p className="panel-note">
-        Add Kriko to a chat app or an editor and ask it about a product there. It answers with its sources and quotes. Lookups are free; a chat answer uses your agent.
-      </p>
       {problem && <p className="error-note">{problem}</p>}
       <div className="setting">
         <span>Chat client</span>
         <Select label="Chat client" value={client.id} options={doc.clients.map((row) => ({ value: row.id, label: row.label }))} onChange={setPicked} />
       </div>
-      <p className="panel-note">{client.note}</p>
+      {STATE_WORDS[client.state] && (
+        <div className="setting">
+          <span>Status</span>
+          <span className="state" data-tone={client.state === 'connected' ? 'ok' : client.state === 'unreadable' ? 'risk' : 'warn'}>
+            {STATE_WORDS[client.state]}
+            {client.detail ? `: ${client.detail}` : ''}
+          </span>
+        </div>
+      )}
       {client.start && (
         <div className="command">
           <code>{client.start}</code>
@@ -49,7 +54,7 @@ export function McpClientsGroup() {
       <pre className="mcp-snippet" tabIndex={0} aria-label={`${client.label} config`}>
         {client.snippet}
       </pre>
-      <div className="mcp-actions">
+      <div className="setting actions">
         <button className="btn" onClick={() => void copy('snippet', client.snippet)}>
           {copied === 'snippet' ? 'Copied' : 'Copy config'}
         </button>
@@ -59,14 +64,20 @@ export function McpClientsGroup() {
           </button>
         )}
       </div>
-      {client.path && <small className="panel-path">{client.path}</small>}
-      {STATE_WORDS[client.state] && (
-        <p className="panel-note mcp-state" data-ok={client.state === 'connected'} data-state={client.state}>
-          {STATE_WORDS[client.state]}
-          {client.detail ? `: ${client.detail}` : ''}
-        </p>
+      {client.path && (
+        <div className="setting">
+          <span>Config file</span>
+          <span className="value path">{client.path}</span>
+        </div>
       )}
       {client.state === 'unreadable' && <p className="error-note">Fix that file by hand, or paste the config above into it. Kriko will not overwrite a file it cannot read.</p>}
+      <p className="panel-note" data-kind="data">Lookups are free. A chat answer uses your agent.</p>
+      {client.note && (
+        <details className="disclosure">
+          <summary>How to add it</summary>
+          <p className="panel-note">{client.note}</p>
+        </details>
+      )}
     </section>
   )
 }

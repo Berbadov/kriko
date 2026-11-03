@@ -80,6 +80,14 @@
   --glass-edge: rgba(255, 255, 255, 0.14);
   --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
   --shadow-2: 0 18px 50px -12px rgba(0, 0, 0, 0.6), 0 2px 6px rgba(0, 0, 0, 0.35);
+  /* a glass group: translucent fill, bright rim, a hairline outside it, a soft
+     shadow, and a solid fill for a platform with no backdrop blur */
+  --gl-fill: rgba(255, 255, 255, 0.07);
+  --gl-rim: rgba(255, 255, 255, 0.2);
+  --gl-line: rgba(0, 0, 0, 0.45);
+  --gl-hair: rgba(255, 255, 255, 0.09);
+  --gl-solid: #1d1d22;
+  --gl-shadow: 0 14px 34px -16px rgba(0, 0, 0, 0.7), 0 2px 6px rgba(0, 0, 0, 0.25);
 }
 
 /* light: neutral paper, white surfaces, hairline grey edges */
@@ -120,6 +128,12 @@
     --glass-edge: rgba(255, 255, 255, 0.9);
     --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.06);
     --shadow-2: 0 12px 28px -14px rgba(0, 0, 0, 0.14), 0 2px 6px rgba(0, 0, 0, 0.05);
+    --gl-fill: rgba(255, 255, 255, 0.66);
+    --gl-rim: rgba(255, 255, 255, 0.95);
+    --gl-line: rgba(20, 24, 50, 0.1);
+    --gl-hair: rgba(20, 24, 50, 0.09);
+    --gl-solid: #ffffff;
+    --gl-shadow: 0 14px 30px -18px rgba(30, 40, 90, 0.28), 0 2px 5px rgba(30, 40, 90, 0.06);
   }
 }
 
@@ -159,4 +173,10 @@
   --glass-edge: rgba(255, 255, 255, 0.9);
   --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.06);
   --shadow-2: 0 12px 28px -14px rgba(0, 0, 0, 0.14), 0 2px 6px rgba(0, 0, 0, 0.05);
+  --gl-fill: rgba(255, 255, 255, 0.66);
+  --gl-rim: rgba(255, 255, 255, 0.95);
+  --gl-line: rgba(20, 24, 50, 0.1);
+  --gl-hair: rgba(20, 24, 50, 0.09);
+  --gl-solid: #ffffff;
+  --gl-shadow: 0 14px 30px -18px rgba(30, 40, 90, 0.28), 0 2px 5px rgba(30, 40, 90, 0.06);
 }

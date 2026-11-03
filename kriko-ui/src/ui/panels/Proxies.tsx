@@ -3,7 +3,7 @@ import { useProxies } from '../../engine/proxies'
 import { Switch } from '../controls'
 import '../../styles/providers.css'
 
-/** Rotating proxies for pages that refuse to be read. Off by default, and honest about what it does. */
+/** Rotating proxies for pages that refuse to be read. Off by default. The one note says who sees the pages. */
 export function ProxiesGroup() {
   const { doc, problem, checked, save, check, reload } = useProxies()
   if (!doc) return problem ? <p className="error-note" role="alert">Could not read proxy settings. {problem} <button className="btn" onClick={() => void reload()}>Try again</button></p> : null
@@ -13,33 +13,25 @@ export function ProxiesGroup() {
   return (
     <section className="panel-group" data-tour="proxies">
       <h3>Proxies</h3>
-      <p className="panel-note">
-        Off. When on, a page that refuses a direct read (blocked, rate-limited or asking for a bot check) is read again through these proxies, one after another. Kriko does not solve
-        CAPTCHAs, sign in or get past paywalls, it follows robots.txt, and a page that stays blocked is reported as could not be read. A site&apos;s terms may forbid this; the choice is
-        yours. The proxy sees which pages you read. Hosted search services are not routed through it, and OpenSERP uses its own network settings.
-      </p>
       {problem && <p className="error-note">{problem}</p>}
       <div className="setting">
-        <span>
-          Use proxies for blocked pages
-          <small>{doc.active ? 'On. Only a site that has refused a read is sent through the pool.' : doc.enabled ? 'On, but no address is listed yet.' : 'Off. Every page is read directly.'}</small>
-        </span>
+        <span>Use proxies for blocked pages</span>
         <Switch label="Use proxies for blocked pages" on={doc.enabled} onChange={(on) => void save({ proxy_enabled: on ? '1' : '0' })} />
       </div>
+      {doc.enabled && !doc.active && <p className="panel-note" data-kind="warn">Add an address below to use them.</p>}
+      <p className="panel-note" data-kind="data">A proxy sees which pages you read, and a site&apos;s terms may forbid it. The choice is yours.</p>
       <div className="setting stack">
-        <span>
-          Proxy addresses
-          <small>One per line, like http://host:8080, or a single rotating gateway. No login in the address.</small>
-        </span>
+        <span>Proxy addresses</span>
         <PoolField key={pool} saved={pool} onSave={(next) => void save({ proxy_pool: next })} />
       </div>
       <div className="setting">
-        <span>
-          Login
-          <small>{doc.login_saved ? 'Saved under Keys.' : 'None saved. Add "Proxy login" under Keys if the proxies ask for one.'}</small>
-        </span>
+        <span>Proxy login</span>
+        <span className="state" data-tone={doc.login_saved ? 'ok' : 'none'}>{doc.login_saved ? 'Saved in Keys' : 'None saved'}</span>
+      </div>
+      <div className="setting">
+        <span>Check the proxies</span>
         <button className="btn" onClick={() => void check()} disabled={checked === 'checking' || doc.pool.length === 0}>
-          {checked === 'checking' ? 'Checking…' : 'Check the proxies'}
+          {checked === 'checking' ? 'Checking…' : 'Check now'}
         </button>
       </div>
       {Array.isArray(checked) && (
@@ -47,18 +39,42 @@ export function ProxiesGroup() {
           {checked.map((row) => (
             <li key={row.address}>
               <strong>{row.address}</strong>
-              <small>{row.ok ? `Answers in ${(row.ms / 1000).toFixed(1)} s.` : row.error || 'Does not answer.'}</small>
+              <span className="state" data-tone={row.ok ? 'ok' : 'risk'}>{row.ok ? `Answers in ${(row.ms / 1000).toFixed(1)} s` : row.error || 'Does not answer'}</span>
             </li>
           ))}
         </ul>
       )}
       {learned && (
-        <p className="panel-note">
-          Read through the pool {learned.proxied_reads} {learned.proxied_reads === 1 ? 'time' : 'times'}; {learned.unreadable} could not be read; {learned.retirements} {learned.retirements === 1 ? 'proxy' : 'proxies'} set aside
-          after failing ({learned.healthy} of {learned.pool} ready).
-          {learned.blocked_hosts.length > 0 && ` Sites that refused a direct read: ${learned.blocked_hosts.map((one) => one.host).join(', ')}.`}
-        </p>
+        <div className="tiles">
+          <div>
+            <strong>{learned.proxied_reads}</strong>
+            <small>read through the pool</small>
+          </div>
+          <div>
+            <strong>{learned.unreadable}</strong>
+            <small>could not be read</small>
+          </div>
+          <div>
+            <strong>
+              {learned.healthy} of {learned.pool}
+            </strong>
+            <small>proxies ready</small>
+          </div>
+        </div>
       )}
+      {learned && learned.blocked_hosts.length > 0 && (
+        <div className="setting">
+          <span>Sites that refused a direct read</span>
+          <span className="value">{learned.blocked_hosts.map((one) => one.host).join(', ')}</span>
+        </div>
+      )}
+      <details className="disclosure">
+        <summary>What proxies do here</summary>
+        <p className="panel-note">
+          A page that refuses a direct read (blocked, rate-limited or asking for a bot check) is read again through these proxies, one after another. Kriko does not solve CAPTCHAs, sign in or get past paywalls,
+          and it follows robots.txt. A page that stays blocked is reported as could not be read. Hosted search services are not routed through the pool, and OpenSERP uses its own network settings.
+        </p>
+      </details>
     </section>
   )
 }
