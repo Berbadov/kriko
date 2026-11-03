@@ -843,6 +843,9 @@ export const translations: Record<string, string> = {
   'Make Kriko your phone’s assistant, then hold the power or home button to scan the screen at once.':
     'Kriko’yu telefonunun asistanı yap, sonra ekranı hemen taramak için güç veya ana ekran düğmesini basılı tut.',
   'Reading your screen': 'Ekranın okunuyor',
+  'Finding the product': 'Ürün bulunuyor',
+  'Checking what is known': 'Bilinen sorunlar kontrol ediliyor',
+  'Swipe down to cancel': 'İptal etmek için aşağı kaydır',
   'Kriko could not finish': 'Kriko bitiremedi',
   'Kriko is checking the page you were on. The answer opens in a new chat.':
     'Kriko bulunduğun sayfayı kontrol ediyor. Yanıt yeni bir sohbette açılır.',
