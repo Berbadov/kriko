@@ -16,28 +16,29 @@ Playwright. `PLAYWRIGHT_MODULE` may name its `index.mjs`, `CHROMIUM_PATH` may
 name a local Chromium executable, and `SCREENSHOTS` may name an output folder.
 
 The page is white by default and follows the visitor's system for dark. Every
-colour is a token at the top of `styles.css`; the dark theme is one block. The
-look is Kriko's own and is kept on purpose, not left to defaults:
+colour is a token at the top of `styles.css`; the dark theme is one block.
+Headings are Space Grotesk and body text is Inter, bundled in `assets/fonts/`.
 
-- **Headings** are Space Grotesk; **body text** is Inter. Both are variable
-  fonts, bundled in `assets/fonts/` with their OFL licences.
-- **The hero aurora** is a WebGL shader on a `<canvas class="hero-shader">`,
-  drawn by `script.js` in the product's own blues. It draws one static frame
-  for a reader who asked for less motion, and pauses when hidden or off screen.
-- **The agent's orb** is the `.orb` class — a small breathing blue sphere — used
-  in the hero's label chip and free to use anywhere an agent works.
-- **The sky** is the app's dithered pixel sky, drawn by `tools/dither_sky.py` with
-  the app's own method and palette, in a light and a dark version.
-- **The paper** is a warm white, with the product's blue used only for actions,
-  numbers and links.
+The home page is a headline, three buttons and the two apps. It has no sub-line
+under a heading and no em dash in its text. A test holds both rules.
 
-The layout uses the whole width: a hero whose two halves run to the window's edges,
-tiles in rows instead of single columns, and on a phone a row of pictures becomes a
-strip to swipe. Section numbers come from a CSS counter, so a section added or moved
-renumbers itself. Motion is a rise on load, a drifting sky and stripe, scroll-in
-reveals, a light that follows the pointer over cards and a mark on the nav link of
-the section in view. `script.js` adds all of it as classes, so without script, or for
-a reader who asked for less motion, the page is complete and still.
+- **The hero** shows the desktop app and the phone app. Each cycles through three
+  screens in CSS over 12 seconds. The middle screen of the phone is the assistant
+  being called, and a red, green and blue shock crosses it. The `lp-*` classes in
+  `styles.css` draw all of it, and the stage leans a little toward the pointer.
+- **The desktop section** has three tabs. Each tab fills a bar in five seconds in
+  CSS, and the end of the fill moves to the next tab. `script.js` only wires the
+  buttons, so there is no timer.
+- **The phone section** shows three screens in a row, and on a phone a strip to
+  swipe. The shock loops on the middle screen.
+- **The pictures** of the desktop app are in `assets/desktop/`. The pictures of the
+  phone app are in `assets/phone/`. They come from the app's web build at 390 by
+  844 points, with an invented listing, in a light and a dark version.
+- Without script, or for a reader who asked for less motion, the first screen of
+  each app shows and nothing moves.
+
+The old hero shader, the sky pictures and the film are not on the home page now.
+Their code and files stay until a later change removes them.
 
 Both typefaces are served from `assets/fonts/` (OFL), so no page loads anything
 from another site.
