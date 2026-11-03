@@ -10,6 +10,7 @@ import { font, radius } from '../theme/tokens';
 import { makeStyles, useColors, useType } from '../theme/theme';
 import { Txt } from '../theme/Txt';
 import { ActivityDots, MotionPressable, useReducedMotion } from './Motion';
+import { GlassFill } from './Glass';
 import { ImageIcon2, ScanIcon, SendIcon, StopIcon } from './Icon';
 
 export function Composer({
@@ -59,7 +60,32 @@ export function Composer({
   return (
     <View style={styles.wrap}>
       <Animated.View style={[styles.surface, { borderColor: focus.interpolate({ inputRange: [0, 1], outputRange: [color.edge, color.accentHi] }) }]}>
+        <GlassFill />
+        {streaming ? (
+          <View style={styles.working}>
+            <ActivityDots color={color.accent} />
+            <Txt variant="monoSm" tone="ink3">{tr('Working')}</Txt>
+          </View>
+        ) : null}
         <View style={styles.inputRow}>
+          <MotionPressable
+            onPress={() => { press(); onScan(); }}
+            disabled={disabled}
+            accessibilityRole="button"
+            accessibilityLabel={tr('Scan a product')}
+            style={styles.tool}
+          >
+            <ScanIcon size={19} color={disabled ? color.ink4 : color.ink2} />
+          </MotionPressable>
+          <MotionPressable
+            onPress={() => { press(); onPick(); }}
+            disabled={disabled || streaming}
+            accessibilityRole="button"
+            accessibilityLabel={tr('Choose a screenshot')}
+            style={styles.tool}
+          >
+            <ImageIcon2 size={19} color={disabled || streaming ? color.ink4 : color.ink2} />
+          </MotionPressable>
           <TextInput
             value={value}
             onChangeText={onChangeText}
@@ -96,100 +122,47 @@ export function Composer({
             </MotionPressable>
           </Animated.View>
         </View>
-
-        <View style={styles.toolbar}>
-          <MotionPressable
-            onPress={() => {
-              press();
-              onScan();
-            }}
-            disabled={disabled}
-            accessibilityRole="button"
-            accessibilityLabel={tr('Scan a product')}
-            style={styles.tool}
-          >
-            <ScanIcon size={15} color={disabled ? color.ink4 : color.ink2} />
-            <Txt variant="monoSm" tone={disabled ? 'ink4' : 'ink2'}>{tr('Scan page')}</Txt>
-          </MotionPressable>
-          <View style={styles.toolbarRule} />
-          <MotionPressable
-            onPress={() => {
-              press();
-              onPick();
-            }}
-            disabled={disabled || streaming}
-            accessibilityRole="button"
-            accessibilityLabel={tr('Choose a screenshot')}
-            style={styles.tool}
-          >
-            <ImageIcon2 size={15} color={disabled || streaming ? color.ink4 : color.ink2} />
-            <Txt variant="monoSm" tone={disabled || streaming ? 'ink4' : 'ink2'}>{tr('Image')}</Txt>
-          </MotionPressable>
-          {streaming ? (
-            <View style={styles.working}>
-              <ActivityDots color={color.accent} />
-              <Txt variant="monoSm" tone="ink3">{tr('Working')}</Txt>
-            </View>
-          ) : null}
-        </View>
       </Animated.View>
     </View>
   );
 }
 
 const useStyles = makeStyles((color) => StyleSheet.create({
-  wrap: { paddingTop: 4 },
+  wrap: {},
   surface: {
-    backgroundColor: color.surface,
     borderWidth: 1,
     borderColor: color.edge,
-    borderRadius: radius.l,
-    paddingHorizontal: 13,
-    paddingTop: 10,
-    paddingBottom: 8,
-    shadowColor: color.shadow,
-    shadowOpacity: 0.06,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 2,
+    borderRadius: radius.xl,
+    overflow: 'hidden',
+    paddingHorizontal: 8,
+    paddingVertical: 6,
   },
-  inputRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8 },
+  inputRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 2 },
   input: {
     flex: 1,
-    minHeight: 42,
+    minHeight: 44,
     maxHeight: 132,
-    paddingTop: 8,
-    paddingBottom: 7,
-    paddingHorizontal: 2,
+    paddingTop: 11,
+    paddingBottom: 9,
+    paddingHorizontal: 6,
     color: color.ink,
     fontFamily: font.regular,
     fontSize: 16,
     lineHeight: 23,
   },
-  sendButton: { width: '100%', height: 44, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
+  sendButton: { width: '100%', height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   actionLayer: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 5 },
   sendOn: { backgroundColor: color.accent },
   sendOff: { backgroundColor: color.inset },
   stopButton: {
     minHeight: 38,
     paddingHorizontal: 9,
-    borderRadius: 12,
+    borderRadius: 19,
     backgroundColor: color.riskWash,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
   },
-  toolbar: {
-    minHeight: 34,
-    marginTop: 5,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: color.edge,
-    paddingTop: 7,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 11,
-  },
-  tool: { minHeight: 28, paddingHorizontal: 2, flexDirection: 'row', alignItems: 'center', gap: 6 },
-  toolbarRule: { width: StyleSheet.hairlineWidth, height: 16, backgroundColor: color.edge },
-  working: { marginLeft: 'auto', flexDirection: 'row', alignItems: 'center', gap: 6 },
+  tool: { width: 40, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 22 },
+  working: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingTop: 4 },
 }));
