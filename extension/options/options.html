@@ -23,7 +23,6 @@
         </div>
       </header>
       <h1>Settings</h1>
-      <p class="lede">What is known to go wrong with the product you are looking at.</p>
 
       <form id="form" data-step="address" novalidate>
         <label for="base">App address</label>
@@ -33,14 +32,8 @@
           type="text"
           spellcheck="false"
           autocomplete="off"
-          aria-describedby="base-hint"
           placeholder="http://127.0.0.1:8787"
         />
-        <p class="hint" id="base-hint">
-          Empty uses <code id="default">http://127.0.0.1:8787</code>. Pages go
-          to this address and nowhere else. Changed the port in Kriko? Enter
-          the full address.
-        </p>
         <div class="row">
           <button type="submit" id="save">Save and test</button>
           <button type="button" id="reset" class="quiet">
@@ -53,10 +46,6 @@
 
       <section class="sites" id="sites-section" data-step="sites">
         <h2>Sites</h2>
-        <p class="hint">
-          Packs choose what to read; you allow it here. A site you stop
-          reading is left alone everywhere.
-        </p>
         <ul id="sites" class="sites-list"></ul>
         <div class="row">
           <button type="button" id="grant">Allow the pending sites</button>
@@ -67,10 +56,6 @@
 
       <section class="kept" id="kept-section">
         <h2>Saved here</h2>
-        <p class="hint">
-          Recent answers, so reopening the panel is instant. It stays on this
-          computer, and Kriko works without it.
-        </p>
         <p class="kept-counts" id="kept-counts"></p>
         <div class="row">
           <button type="button" id="clear-answers" class="quiet">Forget the saved answers</button>
@@ -83,14 +68,12 @@
 
       <section class="appearance">
         <h2>Panel</h2>
-        <p class="hint">The page shows through, blurred.</p>
         <label class="check"><input type="checkbox" id="panel-solid" />
           Make the panel opaque.</label>
       </section>
 
       <section class="evidence">
         <h2>Doubt</h2>
-        <p class="hint">Which findings are drawn. Nothing is deleted. The app's Settings has the same choice.</p>
         <div class="choices" role="radiogroup" aria-label="How much doubt to show">
           <label class="check"><input type="radio" name="sensitivity" value="all" checked />
             <span>Show everything</span></label>
@@ -104,7 +87,6 @@
 
       <section class="buying">
         <h2>Shopping</h2>
-        <p class="hint">Help on shopping pages, once you have told Kriko what you need.</p>
         <label class="check"><input type="checkbox" id="buyer-guard" checked />
           Check carts and payment pages before I pay.</label>
         <label class="check"><input type="checkbox" id="buyer-marks" checked />
@@ -117,22 +99,15 @@
 
       <section class="version">
         <h2>Versions</h2>
-        <p class="hint">Shown when the app and the extension drift apart.</p>
         <p id="compat" class="status" role="status" aria-live="polite"></p>
       </section>
 
       <section class="tour">
         <h2>Tour</h2>
-        <p class="hint">A short walk through the panel, shown once.</p>
         <div class="row">
           <button type="button" id="tour" class="quiet">Show it again</button>
         </div>
         <p id="tour-status" class="status" role="status" aria-live="polite"></p>
-      </section>
-
-      <section class="about">
-        <h2>If nothing answers</h2>
-        <p>Start Kriko, then press <strong>Save and test</strong>.</p>
       </section>
     </main>
     <script src="options.js"></script>
