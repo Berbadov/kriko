@@ -110,7 +110,9 @@ const ORB = 150;
 const useStyles = makeStyles((color) => StyleSheet.create({
   root: { flexGrow: 1, paddingHorizontal: PAGE_X, paddingTop: 24, paddingBottom: 30, gap: gap[5] },
   intro: { alignItems: 'flex-start' },
-  headline: { maxWidth: 330 },
+  // Wide enough for "Check before" and no wider, so the line breaks after the
+  // verb phrase instead of leaving "buy." alone on the second line.
+  headline: { maxWidth: 270 },
   // The screen carries two things: the headline, and one large place to press.
   orbRow: { marginTop: gap[6], flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 30 },
   orbBox: { width: ORB, height: ORB },

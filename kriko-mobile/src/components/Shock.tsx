@@ -9,9 +9,9 @@
  *
  * Rules both keep:
  * - Everything is native-driver opacity and transform; nothing animates layout.
- * - The shock plays exactly once per summoning and never loops, so it cannot
- *   flash more than three times in a second (WCAG 2.3.1), and the flash at its
- *   origin is capped well under full white.
+ * - The shock plays exactly once per summoning and never loops, and it has no
+ *   flash of its own: the only brightness is the thin coloured front, so it
+ *   cannot flash more than three times in a second (WCAG 2.3.1).
  * - Reduced motion draws no rings at all: the dimmed veil stays, so the reader
  *   still sees that the assistant answered, without anything moving.
  */
@@ -91,14 +91,13 @@ export function ShockWave({ playKey, veil = 'rgba(6, 8, 18, 0.5)' }: { playKey: 
   const { width, height } = useWindowDimensions();
   const [front] = useState(() => CHANNELS.map(() => new Animated.Value(0)));
   const [echo] = useState(() => ECHOES.map(() => new Animated.Value(0)));
-  const [flash] = useState(() => new Animated.Value(0));
   const [dim] = useState(() => new Animated.Value(0));
 
   // From the bottom centre to the farthest corner, with room for the ring's width.
   const reach = Math.hypot(width / 2, height) + 80;
 
   useEffect(() => {
-    [...front, ...echo, flash, dim].forEach((value) => { value.stopAnimation(); value.setValue(0); });
+    [...front, ...echo, dim].forEach((value) => { value.stopAnimation(); value.setValue(0); });
     if (reduced !== false) {
       // Still, not silent: the veil says the assistant answered.
       dim.setValue(1);
@@ -110,16 +109,12 @@ export function ShockWave({ playKey, veil = 'rgba(6, 8, 18, 0.5)' }: { playKey: 
     ]);
     const animation = Animated.parallel([
       Animated.timing(dim, { toValue: 1, duration: 220, useNativeDriver: true }),
-      Animated.sequence([
-        Animated.timing(flash, { toValue: 1, duration: 140, useNativeDriver: true }),
-        Animated.timing(flash, { toValue: 0, duration: 520, useNativeDriver: true }),
-      ]),
       ...front.map((value, index) => run(value, CHANNELS[index].delay)),
       ...echo.map((value, index) => run(value, ECHOES[index])),
     ]);
     animation.start();
     return () => animation.stop();
-  }, [playKey, reduced, front, echo, flash, dim]);
+  }, [playKey, reduced, front, echo, dim]);
 
   const ringBase = {
     position: 'absolute' as const,
@@ -162,19 +157,6 @@ export function ShockWave({ playKey, veil = 'rgba(6, 8, 18, 0.5)' }: { playKey: 
               }]}
             />
           ))}
-          <Animated.View
-            style={{
-              position: 'absolute',
-              left: width / 2 - 150,
-              top: height - 150,
-              width: 300,
-              height: 300,
-              borderRadius: 150,
-              backgroundColor: 'rgba(255, 255, 255, 0.55)',
-              opacity: flash,
-              transform: [{ scale: flash.interpolate({ inputRange: [0, 1], outputRange: [0.2, 1.6] }) }],
-            }}
-          />
         </>
       ) : null}
     </View>
