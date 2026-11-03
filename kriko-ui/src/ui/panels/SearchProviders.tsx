@@ -1,5 +1,7 @@
 import { useSearchProviders, type SearchHealth, type SearchProviderRow, type SearchTest } from '../../engine/websearch'
 import { Select } from '../controls'
+import { Icon } from '../Icon'
+import { Group, Hint, IconButton, Row, State } from './settingsParts'
 import '../../styles/providers.css'
 
 /** "3 min ago", from seconds since the epoch. */
@@ -28,12 +30,12 @@ function healthLine(health: SearchHealth): string {
 
 function healthShort(health: SearchHealth): string {
   if (!health.calls) return 'Not used yet'
-  return health.last_success ? `Answered ${ago(health.last_success)}` : 'No answer yet'
+  return health.last_success ? ago(health.last_success) : 'No answer yet'
 }
 
 function keyState(row: SearchProviderRow): { text: string; tone: 'ok' | 'warn' | 'none' } {
-  if (!row.needs_key) return { text: 'No key needed', tone: 'none' }
-  return row.key_saved ? { text: 'Key saved', tone: 'ok' } : { text: 'Needs a key', tone: 'warn' }
+  if (!row.needs_key) return { text: 'No key', tone: 'none' }
+  return row.key_saved ? { text: 'Key set', tone: 'ok' } : { text: 'Needs a key', tone: 'warn' }
 }
 
 /** A trouble is shown while it is the latest word: a failure newer than the last answer. */
@@ -59,63 +61,61 @@ export function SearchProvidersGroup() {
   }
 
   return (
-    <section className="panel-group" data-tour="web-search">
-      <h3>Web search</h3>
+    <Group
+      icon="search"
+      title="Search"
+      tour="web-search"
+      hint={
+        <Hint icon="cloudup" title="Words sent">
+          A hosted provider receives the words you search.
+        </Hint>
+      }
+    >
       {problem && <p className="error-note">{problem}</p>}
 
-      <div className="setting">
-        <span>First choice</span>
+      <Row icon="search" label="First">
         <Select
           label="First search provider"
           value={doc.primary}
           options={doc.providers.map((row) => ({ value: row.id, label: row.needs_key && !row.key_saved ? `${row.label} (no key)` : row.label }))}
           onChange={(value) => void save({ search_provider: value })}
         />
-      </div>
+      </Row>
 
-      <div className="setting">
-        <span>
-          If that fails or finds nothing
-          {doc.automatic && <span className="state" data-tone="none">Automatic</span>}
-        </span>
+      <Row icon="swap" label="Then" state={doc.automatic ? <State>Automatic</State> : undefined}>
         {addable.length > 0 && (
           <Select
             label="Add a fallback"
             value=""
-            options={[{ value: '', label: 'Add a provider…' }, ...addable.map((row) => ({ value: row.id, label: row.label }))]}
+            options={[{ value: '', label: 'Add…' }, ...addable.map((row) => ({ value: row.id, label: row.label }))]}
             onChange={(value) => value && write([...doc.fallback, value])}
           />
         )}
-      </div>
+      </Row>
       {!doc.automatic && doc.fallback.length > 0 && (
         <ol className="order-list" aria-label="Fallback order">
           {doc.fallback.map((id, index) => (
             <li key={id}>
               <span className="key-name">
                 <strong>{label(id)}</strong>
-                {byId.get(id)?.needs_key && !byId.get(id)?.key_saved && <span className="state" data-tone="warn">No key, skipped</span>}
+                {byId.get(id)?.needs_key && !byId.get(id)?.key_saved && <State tone="warn" icon="lock">No key</State>}
               </span>
               <span className="key-actions">
-                <button onClick={() => move(index, -1)} disabled={index === 0} aria-label={`Move ${label(id)} earlier`}>
-                  Earlier
-                </button>
-                <button onClick={() => move(index, 1)} disabled={index === doc.fallback.length - 1} aria-label={`Move ${label(id)} later`}>
-                  Later
-                </button>
-                <button onClick={() => write(doc.fallback.filter((one) => one !== id))} aria-label={`Stop asking ${label(id)}`}>
-                  Remove
-                </button>
+                <IconButton icon="send" label={`Move ${label(id)} earlier`} onClick={() => move(index, -1)} disabled={index === 0} />
+                <IconButton icon="down" label={`Move ${label(id)} later`} onClick={() => move(index, 1)} disabled={index === doc.fallback.length - 1} />
+                <IconButton icon="x" label={`Stop asking ${label(id)}`} tone="danger" onClick={() => write(doc.fallback.filter((one) => one !== id))} />
               </span>
             </li>
           ))}
         </ol>
       )}
       {!doc.automatic && (
-        <div className="setting actions">
+        <Row actions>
           <button className="btn" onClick={() => void save({ search_fallback: '' })}>
-            Back to automatic
+            <Icon name="retry" size={18} />
+            Automatic
           </button>
-        </div>
+        </Row>
       )}
 
       <ul className="key-list" aria-label="Search providers">
@@ -123,9 +123,15 @@ export function SearchProvidersGroup() {
           <ProviderItem key={row.id} row={row} result={tested[row.id]} onTest={() => void test(row.id)} />
         ))}
       </ul>
-      <p className="panel-note" data-kind="data">A hosted provider receives the words you search.</p>
-    </section>
+    </Group>
   )
+}
+
+/** A provider is answering when it has answered lately and nothing newer has failed. */
+function answering(health: SearchHealth): boolean {
+  if (!health.last_success) return false
+  if (health.last_failure && health.last_failure > health.last_success) return false
+  return Math.round(Date.now() / 1000) - health.last_success < 1800
 }
 
 function ProviderItem({ row, result, onTest }: { row: SearchProviderRow; result: SearchTest | 'testing' | undefined; onTest: () => void }) {
@@ -135,14 +141,16 @@ function ProviderItem({ row, result, onTest }: { row: SearchProviderRow; result:
     <li className="key" data-present={row.ready} title={healthLine(row.health)}>
       <div className="key-head">
         <span className="key-name">
+          <span className="row-icon" data-tone={row.ready ? 'ok' : undefined} aria-hidden="true">
+            <Icon name="search" size={20} />
+            {answering(row.health) && <i className="live-dot" />}
+          </span>
           <strong>{row.label}</strong>
-          <span className="state" data-tone={key.tone}>{key.text}</span>
-          {row.health.calls > 0 && <span className="state" data-tone="none">{healthShort(row.health)}</span>}
+          <State tone={key.tone}>{key.text}</State>
+          {row.health.calls > 0 && <State>{healthShort(row.health)}</State>}
         </span>
         <span className="key-actions">
-          <button onClick={onTest} disabled={result === 'testing'} aria-label={`Test ${row.label}`}>
-            {result === 'testing' ? 'Testing…' : 'Test'}
-          </button>
+          <IconButton icon="play" label={result === 'testing' ? `Testing ${row.label}` : `Test ${row.label}`} onClick={onTest} disabled={result === 'testing'} />
         </span>
       </div>
       {trouble && <small className="key-result" data-tone="risk">{trouble}</small>}

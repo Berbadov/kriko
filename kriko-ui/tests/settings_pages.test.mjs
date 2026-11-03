@@ -7,6 +7,7 @@ import ts from 'typescript'
 import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { JSDOM } from 'jsdom'
+import { realSettingsParts, unnamedButtons } from './settings_support.mjs'
 
 const h = React.createElement
 
@@ -50,6 +51,7 @@ test('the settings drawer shows one page at a time, and a requested page is the 
     const pages = require(pagesFile)
 
     const stubs = {
+      ...(await realSettingsParts(directory)),
       '../../prefs': { usePrefs: () => ({ theme: 'system', setTheme() {}, profile: 'standard', setProfile() {}, reduce: false, setReduce() {} }) },
       '../../engine/caps': {
         CAP_ORDER: ['llm_api'],
@@ -74,7 +76,6 @@ test('the settings drawer shows one page at a time, and a requested page is the 
           h('div', { role: 'radiogroup', 'aria-label': label }, options.map((option) => h('button', { key: option.value, 'data-on': option.value === value }, option.label))),
         Select: ({ label }) => h('select', { 'aria-label': label }),
         Switch: ({ label }) => h('button', { role: 'switch', 'aria-label': label }),
-        Chip: ({ children }) => h('button', null, children),
       },
       '../drawerEvents': { showDrawer() {} },
       './McpClients': { McpClientsGroup: () => h('section', { className: 'panel-group' }, h('h3', null, 'Use Kriko in another chat')) },
@@ -101,31 +102,37 @@ test('the settings drawer shows one page at a time, and a requested page is the 
 
     // With nothing requested, the drawer opens on Look and holds only its own groups.
     const look = render()
-    assert.deepEqual(headings(look), ['Look', 'Information sensitivity', 'Chat'])
+    assert.deepEqual(headings(look), ['Look', 'Findings', 'Chat'])
     assert.equal(look.querySelector('[data-tour="source-kinds"]'), null)
 
     // The tour's "Where to look" step asks for Research, and the target is there.
     const research = render('research')
-    assert.deepEqual(headings(research), ['How hard to look', 'Language and market', 'Model'])
+    assert.deepEqual(headings(research), ['Effort', 'Region', 'Model'])
     const target = research.querySelector('[data-tour="source-kinds"]')
     assert.ok(target, 'the tour target is drawn on the Research page')
-    assert.equal(target.closest('section').querySelector('h3').textContent, 'How hard to look')
+    assert.equal(target.closest('section').querySelector('h3').textContent, 'Effort')
 
     // A request is spent once: the next opening is back on Look.
-    assert.deepEqual(headings(render()), ['Look', 'Information sensitivity', 'Chat'])
+    assert.deepEqual(headings(render()), ['Look', 'Findings', 'Chat'])
 
-    assert.deepEqual(headings(render('keys')), ['Keys', 'Shared access'])
+    assert.deepEqual(headings(render('keys')), ['Keys', 'Sharing'])
     assert.deepEqual(headings(render('connections')), ['Setup', 'Web search', 'Proxies', 'Use Kriko in another chat'])
-    assert.deepEqual(headings(render('usage')), ['Usage caps', 'About'])
+    assert.deepEqual(headings(render('usage')), ['Caps', 'About'])
 
-    // A row is a label and one control: no grey sub-line under any label, on any
-    // page. The only small line a row may hold is a cost note.
+    // A row is an icon, a name and one control: no grey sub-line under any
+    // label, on any page, and every icon-only control carries its name.
     for (const name of ['look', 'research', 'keys', 'connections', 'usage']) {
       const page = render(name)
-      assert.equal(page.querySelector('.setting small:not(.cost-note)'), null, `${name} keeps a sub-line under a setting`)
+      assert.equal(page.querySelector('.setting small'), null, `${name} keeps a sub-line under a setting`)
+      assert.deepEqual(unnamedButtons(page), [], `${name} has an icon-only control with no name`)
+      for (const row of page.querySelectorAll('.setting:not(.actions)')) {
+        assert.ok(row.querySelector('.row-icon'), `${name} has a row with no icon: ${row.textContent}`)
+      }
     }
-    // Where research costs money, one short line says so.
-    assert.match(render('research').querySelector('.cost-note').textContent, /more search calls/)
+    // Where research costs money, a coin says so and the words are its description.
+    const coin = render('research').querySelector('.hint')
+    assert.match(coin.querySelector('.hint-pop').textContent, /more search calls/)
+    assert.equal(coin.querySelector('button').getAttribute('aria-describedby'), coin.querySelector('.hint-pop').id)
   } finally {
     loader._load = originalLoad
     globalThis.window = previous.window

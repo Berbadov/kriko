@@ -4,21 +4,25 @@
 /* The settings drawer, in glass.
 
    Everything here is under `.drawer[data-panel='settings']` or `.settings`, so
-   the other drawer panels keep their own look. Three rules shape it:
+   the other drawer panels keep their own look. Four rules shape it:
 
    * A group is one soft surface (translucent fill, a bright 1px rim, a hairline
      outside the rim, a soft shadow). Where the platform has no backdrop blur the
      surface is the solid `--gl-solid`, which reads the same.
-   * A row is a label on the left and one control on the right, never shorter than
-     56px. The only text that is not a label or a control is a state (a pill beside
-     the label), an error, or one short note where a setting sends data off the
-     machine or costs money.
+   * A row is an icon tile, a name of one or two words, and one control, never
+     shorter than 60px. What used to be a grey line is a state pill (a word or
+     two), an error, or an icon with a tooltip (`.hint`) for the one fact a
+     setting must keep: data that leaves, money, keys that stay.
+   * Every icon-only control has an accessible name and a tooltip on hover and on
+     keyboard focus, and a 44px hit area. A chosen icon is filled, drawn heavier
+     and dotted, so the choice does not rest on colour.
    * Nothing is smaller than 14px. Atkinson Hyperlegible is bundled with the app
-     and never loaded from the network; it has two weights, so a heavier look is
-     the bold one or none.
+     and never loaded from the network.
 
    Every colour is a token or a `color-mix` of tokens, so both themes follow. All
-   motion is 150 to 300ms and reads `--tm`, so reduce motion stops it. */
+   motion is 150 to 300ms and reads `--tm`. Reduce motion sets every duration to
+   nothing (base.css), so an icon shows its final state and does not move; the one
+   thing that loops, a status dot, then draws once and rests. */
 
 .drawer[data-panel='settings'] {
   --set-font: 'Atkinson Hyperlegible', var(--font);
@@ -89,9 +93,10 @@
 .drawer[data-panel='settings'] .drawer-body {
   margin: 0 -10px;
   padding: 0 10px 10px;
+  overflow-x: hidden;
 }
 
-/* ---- the page list ---- */
+/* ---- the page list: five icons, and the chosen one says its name ---- */
 
 .settings {
   container-type: inline-size;
@@ -102,53 +107,26 @@
 .settings-nav {
   position: sticky;
   top: 0;
-  z-index: 3;
+  z-index: 6;
   padding-bottom: 2px;
 }
 
-.settings-nav .segmented {
+.settings-nav .iconchoice {
   display: flex;
-  gap: 2px;
+  justify-content: space-between;
   width: 100%;
-  padding: 4px;
   background: var(--gl-solid);
-  border: 1px solid var(--gl-rim);
-  border-radius: 999px;
+  border-color: var(--gl-rim);
   box-shadow:
     0 0 0 1px var(--gl-line),
     var(--gl-shadow);
 }
 
 @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
-  .settings-nav .segmented {
+  .settings-nav .iconchoice {
     background: var(--gl-fill);
     -webkit-backdrop-filter: blur(20px) saturate(1.5);
     backdrop-filter: blur(20px) saturate(1.5);
-  }
-}
-
-.settings-nav .segmented button {
-  flex: 1 1 auto;
-  min-width: 0;
-  min-height: 44px;
-  padding: 0 10px;
-  font-size: 15px;
-  font-weight: 400;
-  white-space: nowrap;
-}
-
-.settings-nav .segmented button[data-on='true'] {
-  font-weight: 400;
-}
-
-@container (max-width: 400px) {
-  .settings-nav .segmented {
-    flex-wrap: wrap;
-    border-radius: 26px;
-  }
-
-  .settings-nav .segmented button {
-    flex: 1 1 28%;
   }
 }
 
@@ -171,8 +149,8 @@
 /* ---- a group: one glass surface ---- */
 
 .settings .panel-group {
-  padding: 4px 0;
-  overflow: hidden;
+  position: relative;
+  padding: 0 0 4px;
   background: var(--gl-solid);
   border: 1px solid var(--gl-rim);
   border-radius: 24px;
@@ -189,41 +167,75 @@
   }
 }
 
-.settings .panel-group h3 {
-  margin: 0;
-  padding: 14px 20px 6px;
+/* A tooltip hangs outside its group. Each group is its own layer (the blur makes
+   it one), so the group that shows a tooltip is lifted above the ones after it. */
+.settings .panel-group:has([data-tip]:hover, [data-tip]:focus-visible, .hint-btn:hover, .hint-btn:focus-visible, .hint[data-open]) {
+  z-index: 5;
+}
+
+.settings .group-head {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 56px;
+  padding: 6px 12px 2px 20px;
+}
+
+.settings .group-head h3 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 auto 0 0;
+  padding: 0;
   color: var(--ink);
   font-size: 17px;
   font-weight: 700;
   letter-spacing: 0;
 }
 
-/* ---- a row: a label, and one control ---- */
+.settings .group-head h3 .icon {
+  color: var(--accent-hi);
+}
+
+.settings .group-head + .setting,
+.settings .group-head + .key-list > .key:first-child,
+.settings .group-head + .tiles {
+  border-top: 0;
+}
+
+/* ---- a row: a tile, a name of a word or two, and one control ---- */
 
 .settings .setting {
   flex-wrap: wrap;
   gap: 8px 16px;
-  min-height: 56px;
-  padding: 6px 20px;
+  min-height: 60px;
+  padding: 8px 20px;
   border-top: 1px solid var(--gl-hair);
 }
 
-.settings h3 + .setting {
-  border-top: 0;
-}
-
-.settings .setting > span:first-child {
+.settings .setting > .row-label,
+.settings .row-label {
   display: flex;
-  flex: 1 1 96px;
+  flex: 1 1 120px;
   flex-wrap: wrap;
   align-items: center;
-  gap: 4px 10px;
+  gap: 4px 12px;
+  min-width: 0;
   color: var(--ink);
   font-size: 15px;
 }
 
-.settings .setting > :last-child {
+.settings .row-name {
+  color: var(--ink);
+  font-size: 15px;
+}
+
+.settings .row-control {
+  display: flex;
   flex: none;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
   max-width: 100%;
 }
 
@@ -236,23 +248,24 @@
   padding-bottom: 12px;
 }
 
-.settings .setting.stack > :last-child {
-  flex: 0 1 auto;
+.settings .setting.stack > .row-control {
+  display: block;
+  width: 100%;
 }
 
-.settings .setting.stack > span:first-child {
+.settings .setting.stack > .row-label {
   flex: none;
 }
 
 .settings .setting.actions {
-  justify-content: flex-end;
-  gap: 10px;
   padding-top: 10px;
   padding-bottom: 12px;
 }
 
-.settings .setting.actions > :first-child:not(:last-child) {
-  margin-right: 0;
+.settings .setting.actions > .row-control {
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .settings .setting-end {
@@ -277,11 +290,35 @@
   font-size: 14px;
 }
 
-/* ---- a state: what a thing is now, beside its name ---- */
+/* The tile. It is decoration, so the name beside it carries the meaning. */
+.settings .row-icon {
+  position: relative;
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  border-radius: 12px;
+  color: var(--accent-hi);
+}
+
+.settings .row-icon[data-tone='ok'] {
+  background: color-mix(in srgb, var(--ok) 15%, transparent);
+  color: var(--set-ok);
+}
+
+.settings .row-icon[data-tone='warn'] {
+  background: color-mix(in srgb, var(--warn) 17%, transparent);
+  color: var(--set-warn);
+}
+
+/* ---- a state: what a thing is now, in a word or two ---- */
 
 .settings .state {
   display: inline-flex;
   align-items: center;
+  gap: 6px;
   padding: 1px 11px;
   background: var(--set-field);
   border: 1px solid transparent;
@@ -308,69 +345,321 @@
   color: var(--set-risk);
 }
 
-/* ---- a note: only for data that leaves, money that is spent, or a warning ---- */
+/* ---- a hint: the one fact a setting must keep, behind an icon ---- */
 
-.settings .panel-note,
-.settings .cost-note {
-  display: block;
-  margin: 0;
-  color: var(--ink-2);
-  font-size: 14px;
-  line-height: 1.5;
+.settings .hint {
+  position: relative;
+  display: inline-flex;
+  flex: none;
 }
 
-.settings .panel-note {
-  padding: 10px 20px 12px;
-  border-top: 1px solid var(--gl-hair);
-}
-
-.settings .panel-note::before,
-.settings .cost-note::before {
-  content: '';
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  margin-right: 9px;
+.settings .hint-btn {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin: -4px 0;
   border-radius: 50%;
-  background: var(--accent-hi);
-  vertical-align: 1px;
+  color: var(--ink-2);
+  transition:
+    background-color calc(150ms * var(--tm)),
+    color calc(150ms * var(--tm));
 }
 
-.settings .panel-note:not([data-kind])::before {
-  display: none;
+.settings .hint-btn:hover,
+.settings .hint[data-open] .hint-btn {
+  background: var(--set-field);
+  color: var(--ink);
 }
 
-.settings .panel-note[data-kind='warn'] {
+.settings .hint[data-tone='warn'] .hint-btn {
   color: var(--set-warn);
 }
 
-.settings .panel-note[data-kind='warn']::before {
-  background: var(--warn);
-}
-
-.settings a {
-  color: var(--accent-hi);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-.settings code {
-  font-family: var(--mono);
+.settings .hint-pop {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  z-index: 30;
+  width: max-content;
+  max-width: min(260px, calc(100cqw - 48px));
+  padding: 10px 14px;
+  background: var(--ink);
+  border-radius: 14px;
+  box-shadow: var(--shadow-2);
+  color: var(--ground);
   font-size: 14px;
-  overflow-wrap: anywhere;
+  line-height: 1.45;
+  text-align: left;
+  pointer-events: none;
+  display: none;
 }
 
-.settings .error-note {
-  margin: 8px 16px 12px;
-  padding: 12px 16px;
-  border-radius: 16px;
+.settings .group-head .hint-pop {
+  right: 0;
+  left: auto;
+}
+
+.settings .hint:hover .hint-pop,
+.settings .hint:focus-within .hint-pop,
+.settings .hint[data-open] .hint-pop {
+  display: block;
+  animation: tip-in calc(150ms * var(--tm)) var(--ease-out);
+}
+
+/* Shown only while wanted: a hidden tip that kept its box would widen the
+   drawer's scroll area. */
+@keyframes tip-in {
+  from {
+    opacity: 0;
+    translate: 0 4px;
+  }
+}
+
+.settings .hint-pop a {
+  color: inherit;
+  text-decoration: underline;
+}
+
+.settings .hint-pop code {
+  color: inherit;
+  font-size: 14px;
+}
+
+/* ---- a tooltip on an icon-only control ---- */
+
+.settings [data-tip] {
+  position: relative;
+}
+
+.settings [data-tip]::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  z-index: 30;
+  width: max-content;
+  max-width: 230px;
+  padding: 6px 12px;
+  background: var(--ink);
+  border-radius: 12px;
+  box-shadow: var(--shadow-2);
+  color: var(--ground);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.4;
+  pointer-events: none;
+  text-align: left;
+  transform: translate(-50%, 0);
+  white-space: normal;
+  display: none;
+}
+
+.settings [data-tip][data-side='bottom']::after {
+  top: calc(100% + 8px);
+  bottom: auto;
+}
+
+.settings [data-tip]:last-child::after {
+  right: 0;
+  left: auto;
+  transform: none;
+}
+
+.settings [data-tip]:first-child:not(:last-child)::after {
+  left: 0;
+  transform: none;
+}
+
+.settings [data-tip]:hover::after,
+.settings [data-tip]:focus-visible::after {
+  display: block;
+  animation: tip-in calc(150ms * var(--tm)) var(--ease-out);
+}
+
+/* The chosen tab already says its name. */
+.settings .iconchoice[data-tabs] [data-on='true']::after {
+  display: none;
+}
+
+/* ---- an icon choice ---- */
+
+.settings .iconchoice {
+  display: inline-flex;
+  gap: 2px;
+  padding: 4px;
+  background: var(--set-field);
+  border: 1px solid var(--set-field-edge);
+  border-radius: 999px;
+}
+
+.settings .iconchoice button {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  height: 44px;
+  padding: 0 11px;
+  border-radius: 999px;
+  color: color-mix(in srgb, var(--ink-2) 60%, var(--ink));
+  transition:
+    background-color calc(150ms * var(--tm)),
+    color calc(150ms * var(--tm));
+}
+
+.settings .iconchoice button:hover {
+  color: var(--ink);
+}
+
+.settings .iconchoice .ico {
+  display: grid;
+  place-items: center;
+}
+
+/* Chosen: filled, heavier, and a dot beneath, so it is not colour alone. */
+.settings .iconchoice button[data-on='true'] {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.settings .iconchoice button[data-on='true'] svg {
+  stroke-width: 2.2;
+}
+
+.settings .iconchoice button[data-on='true']::before {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  width: 4px;
+  height: 4px;
+  margin-left: -2px;
+  background: currentcolor;
+  border-radius: 50%;
+}
+
+.settings .iconchoice[data-tabs] button[data-on='true']::before {
+  display: none;
+}
+
+.settings .iconchoice .ico-word {
+  max-width: 0;
+  margin-left: 0;
+  overflow: hidden;
   font-size: 15px;
-  line-height: 1.5;
+  opacity: 0;
+  white-space: nowrap;
+  transition:
+    max-width calc(220ms * var(--tm)) var(--ease-out),
+    margin-left calc(220ms * var(--tm)) var(--ease-out),
+    opacity calc(180ms * var(--tm));
 }
 
-.settings > .error-note,
-.settings .settings-page > .error-note {
-  margin: 0;
+.settings .iconchoice button[data-on='true'] .ico-word {
+  max-width: 120px;
+  margin-left: 8px;
+  opacity: 1;
+}
+
+/* The chosen icon does a quick pop. A sun and a moon also turn into view, and
+   the bars of a level rise. It plays once, when the choice is made. */
+.settings .iconchoice button[data-on='true'] .ico {
+  animation: ico-pop calc(240ms * var(--tm)) var(--ease-out);
+}
+
+.settings .iconchoice button[data-on='true'] .ico-sun {
+  animation: sun-in calc(300ms * var(--tm)) var(--ease-out);
+}
+
+.settings .iconchoice button[data-on='true'] .ico-moon {
+  animation: moon-in calc(300ms * var(--tm)) var(--ease-out);
+}
+
+.settings .ico-sun,
+.settings .ico-moon {
+  display: grid;
+}
+
+@keyframes ico-pop {
+  from {
+    transform: scale(0.65);
+  }
+  60% {
+    transform: scale(1.14);
+  }
+}
+
+@keyframes sun-in {
+  from {
+    transform: rotate(-90deg) scale(0.6);
+  }
+}
+
+@keyframes moon-in {
+  from {
+    transform: rotate(-50deg) scale(0.6);
+  }
+}
+
+.settings .ico-level .bar {
+  fill: currentcolor;
+  opacity: 0.38;
+  stroke: none;
+  transform-box: fill-box;
+  transform-origin: bottom;
+}
+
+.settings .ico-level .bar[data-lit] {
+  opacity: 1;
+}
+
+.settings .iconchoice button[data-on='true'] .ico-level .bar {
+  animation: bar-rise calc(260ms * var(--tm)) var(--ease-out) both;
+}
+
+:root[data-motion='on'] .settings .iconchoice button[data-on='true'] .ico-level .bar {
+  animation-delay: calc(var(--i) * 45ms * var(--tm));
+}
+
+@keyframes bar-rise {
+  from {
+    transform: scaleY(0.25);
+  }
+}
+
+/* ---- a padlock: open until a key is set, then it shuts ---- */
+
+.settings .ico-lock .shackle {
+  transform-box: fill-box;
+  transform-origin: left bottom;
+  transition: transform calc(240ms * var(--tm)) var(--ease-out);
+}
+
+.settings .ico-lock[data-locked='false'] .shackle {
+  transform: translate(1px, -2px) rotate(-24deg);
+}
+
+/* ---- a provider that is answering ---- */
+
+.settings .live-dot {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 11px;
+  height: 11px;
+  background: var(--ok);
+  border: 2px solid var(--gl-solid);
+  border-radius: 50%;
+  animation: live calc(1800ms * var(--tm)) ease-in-out infinite;
+}
+
+@keyframes live {
+  50% {
+    opacity: 0.55;
+    transform: scale(1.35);
+  }
 }
 
 /* ---- controls ---- */
@@ -407,6 +696,45 @@
   cursor: default;
 }
 
+/* A press that is only an icon: 44px, the name in its tooltip. */
+.settings .icon-act {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  background: var(--set-field);
+  border: 1px solid var(--set-field-edge);
+  border-radius: 50%;
+  color: var(--ink);
+  transition:
+    background-color calc(150ms * var(--tm)),
+    transform calc(150ms * var(--tm));
+}
+
+.settings .icon-act:hover {
+  background: color-mix(in srgb, var(--ink) 13%, transparent);
+}
+
+.settings .icon-act:active {
+  transform: scale(0.92);
+}
+
+.settings .icon-act[data-tone='primary'] {
+  background: var(--accent);
+  border-color: transparent;
+  color: var(--accent-ink);
+}
+
+.settings .icon-act[data-tone='danger'] {
+  color: var(--set-risk);
+}
+
+.settings .icon-act:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
 .settings .segmented {
   gap: 2px;
   padding: 4px;
@@ -415,16 +743,14 @@
 }
 
 .settings .segmented button {
-  min-height: 40px;
-  padding: 0 16px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 14px;
+  color: color-mix(in srgb, var(--ink-2) 60%, var(--ink));
   font-size: 15px;
   transition:
     background-color calc(150ms * var(--tm)),
     color calc(150ms * var(--tm));
-}
-
-.settings .segmented button {
-  color: color-mix(in srgb, var(--ink-2) 60%, var(--ink));
 }
 
 .settings .segmented button:hover {
@@ -438,21 +764,10 @@
   font-weight: 700;
 }
 
-.settings .setting.stack .segmented {
-  display: flex;
-  width: 100%;
-}
-
-.settings .setting.stack .segmented button {
-  flex: 1 1 auto;
-  min-width: 0;
-  padding: 0 6px;
-  white-space: nowrap;
-}
-
+/* The switch: a knob that draws a tick when on and a dash when off. */
 .settings .switch {
-  width: 54px;
-  height: 32px;
+  width: 56px;
+  height: 34px;
   background: color-mix(in srgb, var(--ink) 28%, transparent);
   transition: background-color calc(180ms * var(--tm));
 }
@@ -460,13 +775,15 @@
 .settings .switch::before {
   content: '';
   position: absolute;
-  inset: -6px -4px;
+  inset: -5px -4px;
 }
 
 .settings .switch i {
+  display: grid;
+  place-items: center;
   left: 4px;
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
   background: var(--on-fill);
   box-shadow: var(--shadow-1);
   transition: transform calc(180ms * var(--tm)) var(--ease-out);
@@ -478,6 +795,35 @@
 
 .settings .switch[data-on='true'] i {
   transform: translate(22px, -50%);
+}
+
+.settings .switch i svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 3;
+}
+
+.settings .switch i path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  transition: stroke-dashoffset calc(220ms * var(--tm)) var(--ease-out);
+}
+
+.settings .switch .sw-on {
+  stroke: var(--accent);
+}
+
+.settings .switch .sw-off {
+  stroke: color-mix(in srgb, var(--accent) 35%, black);
+}
+
+.settings .switch[data-on='true'] .sw-on,
+.settings .switch:not([data-on='true']) .sw-off {
+  stroke-dashoffset: 0;
 }
 
 .settings .select {
@@ -508,14 +854,20 @@
 }
 
 .settings .choices {
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
 .settings .choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   min-height: 44px;
-  padding: 0 18px;
+  padding: 0 16px 0 12px;
   background: var(--set-field);
   border: 1px solid var(--set-field-edge);
+  border-radius: 999px;
   color: var(--ink);
   font-size: 15px;
 }
@@ -527,15 +879,15 @@
   font-weight: 700;
 }
 
-.settings .choice[data-on='true']::before {
+.settings .choice[data-on='true']::after {
   content: '';
-  display: inline-block;
   width: 5px;
   height: 10px;
-  margin: -3px 9px 0 0;
-  border-right: 2px solid currentColor;
-  border-bottom: 2px solid currentColor;
+  margin: -3px 0 0 2px;
+  border-right: 2px solid currentcolor;
+  border-bottom: 2px solid currentcolor;
   transform: rotate(40deg);
+  animation: ico-pop calc(240ms * var(--tm)) var(--ease-out);
 }
 
 .settings .key-field,
@@ -581,7 +933,7 @@
 }
 
 .settings .cap-unit {
-  min-width: 56px;
+  min-width: 64px;
   color: var(--ink-2);
   font-size: 14px;
 }
@@ -593,9 +945,10 @@
   padding-bottom: 10px;
 }
 
+.settings .setting > .tuning-head,
 .settings .tuning-head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
   color: var(--ink);
@@ -652,8 +1005,45 @@
   box-shadow: var(--shadow-1);
 }
 
-.settings .tuning-setting .cost-note {
-  padding-bottom: 2px;
+/* ---- a note: a warning or the text of a disclosure ---- */
+
+.settings .panel-note {
+  display: block;
+  margin: 0;
+  padding: 10px 20px 12px;
+  border-top: 1px solid var(--gl-hair);
+  color: var(--ink-2);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.settings .panel-note[data-kind='warn'] {
+  color: var(--set-warn);
+}
+
+.settings a {
+  color: var(--accent-hi);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.settings code {
+  font-family: var(--mono);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.settings .error-note {
+  margin: 8px 16px 12px;
+  padding: 12px 16px;
+  border-radius: 16px;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.settings > .error-note,
+.settings .settings-page > .error-note {
+  margin: 0;
 }
 
 /* ---- keys and providers ---- */
@@ -664,8 +1054,8 @@
 
 .settings .key {
   gap: 4px;
-  min-height: 56px;
-  padding: 6px 20px;
+  min-height: 60px;
+  padding: 8px 20px;
   border-top: 1px solid var(--gl-hair);
 }
 
@@ -693,27 +1083,7 @@
 
 .settings .key-actions {
   flex-wrap: wrap;
-  gap: 2px;
-}
-
-.settings .key-actions button,
-.settings .key-form > button:not(.btn) {
-  min-height: 44px;
-  padding: 0 12px;
-  border-radius: 14px;
-  color: var(--accent-hi);
-  font-size: 15px;
-  font-weight: 700;
-  transition: background-color calc(150ms * var(--tm));
-}
-
-.settings .key-actions button:hover,
-.settings .key-form > button:not(.btn):hover {
-  background: var(--set-field);
-}
-
-.settings .key-actions button:disabled {
-  color: var(--ink-3);
+  gap: 6px;
 }
 
 .settings .key-form {
@@ -731,17 +1101,13 @@
   color: var(--set-risk);
 }
 
-.settings .key[data-present='true'] .key-head small {
-  color: inherit;
-}
-
 .settings .order-list {
   padding: 0;
 }
 
 .settings .order-list li {
-  min-height: 56px;
-  padding: 6px 20px;
+  min-height: 60px;
+  padding: 8px 20px;
   border-top: 1px solid var(--gl-hair);
 }
 
@@ -762,6 +1128,7 @@
 
 .settings .test-result {
   gap: 4px;
+  margin: 0 0 4px;
   padding: 10px 14px;
   background: var(--set-field);
   border-radius: 16px;
@@ -815,7 +1182,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  min-height: 56px;
+  min-height: 60px;
   padding: 0 20px;
   color: var(--ink);
   cursor: pointer;
@@ -842,8 +1209,7 @@
   transform: translateY(2px) rotate(-135deg);
 }
 
-.settings .disclosure > .setting.stack,
-.settings .disclosure > .setting.actions {
+.settings .disclosure > .setting {
   border-top: 0;
 }
 
@@ -851,13 +1217,21 @@
 
 .settings .tiles {
   gap: 10px;
-  margin: 6px 16px 14px;
+  margin: 4px 16px 14px;
 }
 
 .settings .tiles > div {
+  display: grid;
+  justify-items: start;
+  gap: 0;
   padding: 12px 14px;
   background: var(--set-field);
   border-radius: 18px;
+}
+
+.settings .tiles > div > .icon {
+  margin-bottom: 4px;
+  color: var(--accent-hi);
 }
 
 .settings .tiles strong {
@@ -892,17 +1266,4 @@
 
 .settings .command code {
   font-size: 14px;
-}
-
-.settings .command button {
-  min-height: 44px;
-  padding: 0 14px;
-  border-radius: 14px;
-  color: var(--accent-hi);
-  font-size: 15px;
-  font-weight: 700;
-}
-
-.settings .command button:hover {
-  background: var(--set-field);
 }
