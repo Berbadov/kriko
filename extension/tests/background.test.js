@@ -427,7 +427,7 @@ test("the small toolbar icon reflects a live app without replacing a page's risk
   h.startupListeners[0]();
   await new Promise((resolve) => setImmediate(resolve));
   assert.equal(h.state.toolbarIcon[16], "assets/icons/icon-16.png");
-  assert.match(h.state.toolbarTitle, /connected.*open the panel/i);
+  assert.match(h.state.toolbarTitle, /connected/i);
   assert.equal(h.state.badge[1], "2");
   assert.ok(h.state.requests.some((request) =>
     request.url === "http://127.0.0.1:8787/api/health"));
@@ -438,7 +438,7 @@ test("the toolbar icon becomes muted when the app stops answering", async () => 
   h.alarmListeners[0]({ name: "kriko-connection" });
   await new Promise((resolve) => setImmediate(resolve));
   assert.equal(h.state.toolbarIcon[16], "assets/icons/icon-offline-16.png");
-  assert.match(h.state.toolbarTitle, /app is not running/i);
+  assert.match(h.state.toolbarTitle, /not running/i);
 });
 
 // An alarm is registered once and then lives in Chrome, not in the worker. So
@@ -1066,7 +1066,7 @@ test("LEARN_PAGE says so when the page cannot be read, and asks the app nothing"
   const h = loadBackground({ tabResponses: { GET_SCRAPE: { ok: false } } });
   const reply = await send(h, { type: "LEARN_PAGE", payload: {} });
   assert.equal(reply.ok, false);
-  assert.match(reply.error, /could not read this page/);
+  assert.match(reply.error, /could not read this page/i);
   assert.equal(h.state.requests.length, 0);
 });
 

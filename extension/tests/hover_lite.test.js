@@ -535,13 +535,13 @@ test("a recognised product with nothing known is not called unrecognised", () =>
   p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, claims: [], coverage: "MATCHED_NO_DATA" } });
   const empty = p.shadow().querySelector(".lite-empty");
   assert.ok(empty, "the empty line was rendered");
-  assert.match(empty.textContent, /Recognised, but the installed packs hold nothing/);
+  assert.match(empty.textContent, /Nothing known yet/);
   assert.doesNotMatch(empty.textContent, /recognises it/);
 
   const q = loadPanel();
   q.openPanel();
   q.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, claims: [], coverage: "NOT_MATCHED" } });
-  assert.match(q.shadow().querySelector(".lite-empty").textContent, /Nothing matched/);
+  assert.match(q.shadow().querySelector(".lite-empty").textContent, /Not recognised/);
 });
 
 test("a subject the packs know but hold nothing on opens a consent form, not a run", () => {
@@ -974,7 +974,7 @@ test("a search that finds nothing says so rather than showing an empty list", ()
   p.type(".lite-search-field", "nothing like this");
   p.flushTimers();
   assert.match(p.shadow().querySelector(".lite-search-note").textContent,
-               /Nothing in the installed packs matches/);
+               /No match/);
 });
 
 test("pressing a result raises the app on that subject", () => {
@@ -1001,9 +1001,9 @@ test("pressing Analyze on a site nothing reads says so, and offers the fix", () 
 
   const box = p.shadow().querySelector(".lite-verdict");
   assert.equal(box.dataset.verdict, "no-adapter");
-  assert.match(box.textContent.replace(/\s+/g, " "),
-               /Nothing installed knows how to read this site yet/);
-  p.click(".lite-verdict-btn");
+  assert.match(box.textContent.replace(/\s+/g, " "), /Not read here/);
+  assert.doesNotMatch(box.textContent, /Nothing installed knows/, "the word and the buttons, no sentence");
+  p.click(".lite-site-add");
   assert.equal(p.sent.filter((m) => m.type === "OPEN_IN_APP").pop().payload.route,
                "sites");
 });
@@ -1027,7 +1027,8 @@ test("a product nothing installed knows gets its name and one research button (B
 
   const box = p.shadow().querySelector(".lite-verdict");
   assert.equal(box.dataset.verdict, "unknown-product");
-  assert.match(box.textContent.replace(/\s+/g, " "), /doesn't know Bosch HSG 7584 B 1 yet/);
+  assert.match(box.textContent.replace(/\s+/g, " "), /New to Kriko.*Bosch HSG 7584 B 1/);
+  assert.doesNotMatch(box.textContent, /Research it|know/, "the name, not a sentence about it");
   assert.doesNotMatch(box.textContent, /Add this site/);
   assert.equal(p.errorText(), null, "not a red banner");
   assert.equal(p.shadow().querySelector(".lite-unknown-research"), null,
@@ -1053,7 +1054,7 @@ test("the primary button researches a product nothing installed knows; it does n
   });
   p.openPanel();
   assert.equal(p.shadow().querySelector(".lite-cta-label").textContent, "Research this product");
-  assert.match(p.statusText(), /Not in your catalogs/);
+  assert.equal(p.statusText(), "", "no line under the button");
 
   const asks = p.sent.filter((m) => m.type === "ANALYZE").length;
   p.click(".lite-cta");
@@ -1087,7 +1088,8 @@ test("a known site's page that just isn't a listing gets a quieter card, no 'Add
 
   const box = p.shadow().querySelector(".lite-verdict");
   assert.equal(box.dataset.verdict, "no-adapter");
-  assert.match(box.textContent.replace(/\s+/g, " "), /isn't one/);
+  assert.match(box.textContent.replace(/\s+/g, " "), /Not a listing/);
+  assert.doesNotMatch(box.textContent, /reads this site/, "the word, no sentence");
   assert.equal(box.querySelector(".lite-verdict-btn"), null);
 });
 

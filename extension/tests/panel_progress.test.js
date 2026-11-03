@@ -46,6 +46,17 @@ test("a run in flight shows its stage, which pages were read, and no percentage"
   assert.equal(p.shadow().querySelector(".lite-progress"), null, "the invented fill is gone from the card");
 });
 
+test("no raw log line is drawn while a run is in flight: the stage and the counts only", () => {
+  const p = research({ state: "running", log: LOG, message: "reading https://a.example/3 now" });
+  const card = p.shadow().querySelector(".lite-research").textContent;
+  for (const line of ["gearbox judder known problems", "https://a.example/1", "found 6 page(s)", "could not read:"]) {
+    assert.ok(!card.includes(line), `a log line reached the screen: ${line}`);
+  }
+  assert.equal(p.shadow().querySelector(".lite-task-log"), null, "there is no log view in the panel");
+  assert.equal(p.shadow().querySelector("pre"), null);
+  assert.ok(p.shadow().querySelector(".lite-research-output"), "the full job opens in the app on a press");
+});
+
 test("a run that has not said anything yet starts on reading the page", () => {
   const p = research({ state: "queued", log: "" });
   assert.deepEqual(segs(p), ["now", "todo", "todo", "todo"]);
@@ -206,7 +217,7 @@ test("an engine that stops answering says so rather than going dark", () => {
   p.type(".lite-research-name", "Example product");
   p.click(".lite-research-start");
   assert.match(p.shadow().querySelector(".lite-research-status").textContent,
-    /Cannot check progress/);
+    /Lost contact/);
   assert.deepEqual(segs(p), ["now", "todo", "todo", "todo"],
     "a stage was drawn from a log nobody could read");
 });
