@@ -615,6 +615,7 @@ export const translations: Record<string, string> = {
     'Her yanıtın ve etiketin ne kadar büyük çizileceği.',
   Small: 'Küçük',
   Large: 'Büyük',
+  'Extra large': 'Çok büyük',
   Motion: 'Hareket',
   'Transitions and reveals. System follows your phone’s setting.':
     'Geçişler ve açılışlar. Sistem, telefonunun ayarını izler.',
