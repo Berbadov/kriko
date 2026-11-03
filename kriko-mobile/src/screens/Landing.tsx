@@ -2,7 +2,6 @@
 
 import { StyleSheet, View } from 'react-native';
 
-import type { QueueJob } from '../engine/types';
 import { tr } from '../i18n';
 import { press, tap } from '../theme/feedback';
 import { font, gap, PAGE_X, radius } from '../theme/tokens';
@@ -20,18 +19,13 @@ export function Landing({
   onSuggestion,
   onScan,
   onPick,
-  recentScans,
-  onOpenScan,
 }: {
   onSuggestion: (text: string) => void;
   onScan: () => void;
   onPick: () => void;
-  recentScans: QueueJob[];
-  onOpenScan: (id: string) => void;
 }) {
   const color = useColors();
   const styles = useStyles();
-  const recent = recentScans.slice(-2).reverse();
 
   return (
     <View style={styles.root}>
@@ -108,37 +102,6 @@ export function Landing({
         ))}
       </MotionView>
 
-      {recent.length ? (
-        <MotionView delay={240} style={styles.recentBlock}>
-          <View style={styles.sectionHeading}>
-            <Txt variant="sectionLabel" tone="ink3">Recently scanned</Txt>
-            <View style={styles.rule} />
-          </View>
-          {recent.map((job) => {
-            const title = [job.reading.brand, job.reading.product, job.reading.model]
-              .filter(Boolean)
-              .join(' ') || 'Product scan';
-            return (
-              <MotionPressable
-                key={job.id}
-                onPress={() => onOpenScan(job.id)}
-                accessibilityRole="button"
-                accessibilityLabel={tr(`Open scan result for ${title}`)}
-                style={styles.recentRow}
-              >
-                <View style={styles.recentText}>
-                  <Txt variant="rowTitle" tone="ink" numberOfLines={1}>{title}</Txt>
-                  <Txt variant="bodyTight" tone="ink3" numberOfLines={1}>
-                    {job.text || job.error || job.reading.note || 'Open the saved scan'}
-                  </Txt>
-                </View>
-                <ChevronRightIcon size={17} color={color.ink3} />
-              </MotionPressable>
-            );
-          })}
-        </MotionView>
-      ) : null}
-
       <MotionView delay={320} style={styles.footerNote}>
         <View style={styles.footerDot} />
         <Txt variant="monoSm" tone="ink3">Evidence first. Clear about what is missing.</Txt>
@@ -151,8 +114,8 @@ const useStyles = makeStyles((color) => StyleSheet.create({
   root: {
     flexGrow: 1,
     paddingHorizontal: PAGE_X,
-    paddingTop: 24,
-    paddingBottom: 30,
+    paddingTop: 12,
+    paddingBottom: 12,
     gap: gap[5],
   },
   intro: { gap: 8, alignItems: 'flex-start' },
@@ -160,9 +123,8 @@ const useStyles = makeStyles((color) => StyleSheet.create({
   headline: {
     fontFamily: font.editorial,
     letterSpacing: -1.05,
-    maxWidth: 330,
   },
-  subtitle: { maxWidth: 330, lineHeight: 23 },
+  subtitle: { lineHeight: 23 },
   actions: { gap: gap[1] },
   scanButton: {
     minHeight: 78,
@@ -208,17 +170,6 @@ const useStyles = makeStyles((color) => StyleSheet.create({
     paddingHorizontal: 4,
   },
   suggestionText: { flex: 1 },
-  recentBlock: { gap: 4 },
-  recentRow: {
-    minHeight: 56,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: color.edge,
-    paddingVertical: 8,
-  },
-  recentText: { flex: 1, gap: 2 },
   footerNote: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingTop: 2 },
   footerDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: color.accent },
 }));

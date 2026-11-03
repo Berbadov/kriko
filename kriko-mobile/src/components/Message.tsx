@@ -392,15 +392,14 @@ export function MessageRow({
 
 const useStyles = makeStyles((color) => StyleSheet.create({
   userStage: { alignItems: 'flex-end', marginTop: gap[3] },
-  userRow: { alignItems: 'flex-end', gap: 3, maxWidth: 360, alignSelf: 'flex-end' },
+  userRow: { alignItems: 'flex-end', gap: 3, maxWidth: '100%', alignSelf: 'flex-end' },
   userBubble: {
-    maxWidth: '94%',
+    maxWidth: '92%',
     backgroundColor: color.surface,
     borderWidth: 1,
     borderColor: color.edgeSoft,
-    borderRadius: 16,
-    borderBottomRightRadius: 5,
-    paddingHorizontal: 14,
+    borderRadius: 22,
+    paddingHorizontal: 16,
     paddingVertical: 12,
     gap: gap[2],
   },
