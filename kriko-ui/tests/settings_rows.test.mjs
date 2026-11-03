@@ -7,15 +7,17 @@ import ts from 'typescript'
 import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { JSDOM } from 'jsdom'
+import { realSettingsParts, unnamedButtons } from './settings_support.mjs'
 
 const h = React.createElement
 
 /**
- * A row in the settings drawer is a label and one control. The text that used to
- * sit under a label as a grey line is gone, and the three groups that carried the
- * most of it (web search, proxies, chat clients) are drawn here from the engine's
- * own shapes to prove it. What stays is a state beside the label, an error, or one
- * short note where a setting sends data off the machine or costs money.
+ * A row in the settings drawer is an icon, a name and one control. The text that
+ * used to sit under a label as a grey line is gone, and the three groups that
+ * carried the most of it (web search, proxies, chat clients) are drawn here from
+ * the engine's own shapes to prove it. What stays is a state pill beside the name,
+ * an error, or an icon whose tooltip holds the one fact a setting must keep (data
+ * that leaves, money). Every icon-only press carries its name.
  */
 
 const compile = (source) =>
@@ -29,10 +31,12 @@ async function load(file, exportName, stubs) {
   const loader = require('node:module')
   const originalLoad = loader._load
   const compiled = join(directory, 'Group.cjs')
+  const parts = await realSettingsParts(directory)
   await writeFile(compiled, compile(await readFile(file, 'utf8')) + `\nexports.${exportName} = ${exportName}\n`)
   loader._load = function (request, parent, isMain) {
     if (parent?.filename === compiled && request.startsWith('.')) {
       if (request.endsWith('.css')) return {}
+      if (request in parts) return parts[request]
       if (!(request in stubs)) throw new Error(`no stub for ${request}`)
       return stubs[request]
     }
@@ -58,15 +62,15 @@ function assertRowsAreLabelAndControl(document) {
   const rows = [...document.querySelectorAll('.setting')]
   assert.ok(rows.length > 0, 'the group drew no rows')
   for (const row of rows) {
-    // The one small line a row may hold is a cost note, which is its own class.
-    assert.equal(row.querySelector('small:not(.cost-note)'), null, `a row keeps a sub-line: ${row.textContent}`)
+    assert.equal(row.querySelector('small'), null, `a row keeps a sub-line: ${row.textContent}`)
   }
+  assert.deepEqual(unnamedButtons(document), [], 'an icon-only control has no name')
 }
 
-const health = { calls: 4, recent: 4, last_success: 1, last_failure: null, last_problem: '', miss_rate: 0 }
+const health = { calls: 4, recent: 4, last_success: Math.round(Date.now() / 1000) - 60, last_failure: null, last_problem: '', miss_rate: 0 }
 const quiet = { calls: 0, recent: 0, last_success: null, last_failure: null, last_problem: '', miss_rate: null }
 
-test('web search draws its first choice and its fallbacks as rows with no sub-line, and says once that a hosted provider sees the words', async () => {
+test('web search draws its first choice and its fallbacks as rows with no sub-line, and a cloud says that a hosted provider sees the words', async () => {
   const doc = {
     primary: 'a',
     fallback: [],
@@ -86,17 +90,23 @@ test('web search draws its first choice and its fallbacks as rows with no sub-li
     const page = new JSDOM(renderToStaticMarkup(h(component))).window.document
     assertRowsAreLabelAndControl(page)
     const text = page.body.textContent
-    assert.match(text, /First choice/)
+    assert.match(text, /First/)
     assert.match(text, /Automatic/)
     assert.match(text, /Needs a key/)
-    assert.match(text, /A hosted provider receives the words you search/)
+    // The fact that words leave the machine is a cloud-up icon with a name.
+    const cloud = page.querySelector('button[aria-label="Words sent"]')
+    assert.ok(cloud, 'the data note is an icon with a name')
+    assert.match(page.getElementById(cloud.getAttribute('aria-describedby')).textContent, /A hosted provider receives the words you search/)
     assert.doesNotMatch(text, /Long description/, 'the engine description is not drawn under a provider')
+    assert.ok(page.querySelector('button[aria-label="Test Alpha"]'), 'the test press is named')
+    // Alpha answered lately, so its icon carries a live dot. Beta has not.
+    assert.equal(page.querySelectorAll('.live-dot').length, 1)
   } finally {
     await done()
   }
 })
 
-test('proxies keep the one note about who sees the pages, and fold the rest away', async () => {
+test('proxies keep one fact about who sees the pages behind an icon, and fold the rest away', async () => {
   const doc = { enabled: true, pool: [], login_saved: false, active: false, learned: null, limits: { tries: 3, retire_seconds: 300, block_memory_seconds: 1800 } }
   const { component, done } = await load('src/ui/panels/Proxies.tsx', 'ProxiesGroup', {
     '../../engine/proxies': { useProxies: () => ({ doc, problem: '', checked: null, save() {}, check() {}, reload() {} }) },
@@ -106,10 +116,11 @@ test('proxies keep the one note about who sees the pages, and fold the rest away
   try {
     const page = new JSDOM(renderToStaticMarkup(h(component))).window.document
     assertRowsAreLabelAndControl(page)
-    const notes = [...page.querySelectorAll('.panel-note')].filter((node) => !node.closest('details'))
-    assert.ok(notes.some((node) => /A proxy sees which pages you read/.test(node.textContent)), 'the data note is gone')
-    // Turned on with no address is a state worth a line.
-    assert.ok(notes.some((node) => /Add an address below/.test(node.textContent)))
+    const eye = page.querySelector('button[aria-label="Who sees pages"]')
+    assert.ok(eye, 'the data note is an icon with a name')
+    assert.match(page.getElementById(eye.getAttribute('aria-describedby')).textContent, /A proxy sees which pages you read/)
+    // Turned on with no address is a state, as a pill.
+    assert.match(page.body.textContent, /Needs an address/)
     // The long explanation is in a closed disclosure, not under a row.
     const fold = page.querySelector('details.disclosure')
     assert.ok(fold && !fold.open && /robots\.txt/.test(fold.textContent))
@@ -118,7 +129,7 @@ test('proxies keep the one note about who sees the pages, and fold the rest away
   }
 })
 
-test('the chat-client group is a client row, a status, the config, and one note about cost', async () => {
+test('the chat-client group is a client row with its state, the config, and a coin for the cost', async () => {
   const doc = {
     server_name: 'kriko',
     store: '/store',
@@ -139,8 +150,10 @@ test('the chat-client group is a client row, a status, the config, and one note 
     const page = new JSDOM(renderToStaticMarkup(h(component))).window.document
     assertRowsAreLabelAndControl(page)
     const text = page.body.textContent
-    assert.match(text, /Status\s*Not added yet/)
-    assert.match(text, /Lookups are free\. A chat answer uses your agent\./)
+    assert.match(text, /Not added/)
+    const coin = page.querySelector('button[aria-label="Cost"]')
+    assert.ok(coin, 'the cost note is an icon with a name')
+    assert.match(page.getElementById(coin.getAttribute('aria-describedby')).textContent, /Lookups are free\. A chat answer uses your agent\./)
     const fold = page.querySelector('details.disclosure')
     assert.ok(fold && !fold.open && /Where it goes depends/.test(fold.textContent), 'the client note moves into a closed disclosure')
   } finally {

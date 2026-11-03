@@ -575,6 +575,10 @@
   transition: transform calc(220ms * var(--tm)) var(--ease-out);
 }
 
+.switch i svg {
+  display: none;
+}
+
 .switch[data-on='true'] {
   background: var(--accent);
 }
@@ -845,13 +849,16 @@
 
 /* ---- drawer ---- */
 
+/* The scrim covers the whole window, every edge. It once started at the drawer's
+   own left edge (`left: offset + 20`), so the strip beside the sheet kept its
+   sharp, undimmed picture while everything else was blurred: the seam the reader
+   saw down the left of Settings. The sheet sits on the scrim, it never bounds it. */
 .scrim {
   position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   z-index: 40;
   background: rgba(0, 0, 0, 0.5);
+  -webkit-backdrop-filter: blur(3px);
   backdrop-filter: blur(3px);
 }
 

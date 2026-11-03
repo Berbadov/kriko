@@ -25,7 +25,8 @@ def test_every_target_is_marked_somewhere():
     for target in targets:
         mark = re.escape(target)
         # Marked as `data-tour="x"`, or built from a template like `nav-${item.id}`.
-        literal = re.search(rf'data-tour="{mark}"', SOURCES)
+        # A settings row or group is marked through its `tour="x"` prop, which writes `data-tour`.
+        literal = re.search(rf'(?<![\w-])(?:data-)?tour="{mark}"', SOURCES)
         built = target.startswith("nav-") and "data-tour={`nav-${item.id}`}" in SOURCES
         assert literal or built, f"nothing is marked data-tour={target}"
 
