@@ -12,7 +12,8 @@ function ago(seconds: number | null): string {
   return `${Math.round(gap / 86400)} days ago`
 }
 
-/** What the reader needs to judge a provider: when it last answered and how often it has not. */
+/** What the reader needs to judge a provider: when it last answered and how often it has not.
+ *  The row shows the short form. The whole line is its hover text. */
 function healthLine(health: SearchHealth): string {
   if (!health.calls) return 'Not used yet.'
   const parts: string[] = []
@@ -25,9 +26,21 @@ function healthLine(health: SearchHealth): string {
   return `${parts.join(' · ')}.`
 }
 
-function keyLine(row: SearchProviderRow): string {
-  if (!row.needs_key) return 'No key needed.'
-  return row.key_saved ? 'Key saved.' : 'Needs a key. Add it under Keys below.'
+function healthShort(health: SearchHealth): string {
+  if (!health.calls) return 'Not used yet'
+  return health.last_success ? `Answered ${ago(health.last_success)}` : 'No answer yet'
+}
+
+function keyState(row: SearchProviderRow): { text: string; tone: 'ok' | 'warn' | 'none' } {
+  if (!row.needs_key) return { text: 'No key needed', tone: 'none' }
+  return row.key_saved ? { text: 'Key saved', tone: 'ok' } : { text: 'Needs a key', tone: 'warn' }
+}
+
+/** A trouble is shown while it is the latest word: a failure newer than the last answer. */
+function troubleLine(health: SearchHealth): string {
+  if (!health.last_failure || !health.last_problem) return ''
+  if (health.last_success && health.last_success > health.last_failure) return ''
+  return `Trouble ${ago(health.last_failure)}: ${health.last_problem}`
 }
 
 /** Which service searches the web, what it falls back to, and whether each one works. */
@@ -48,14 +61,10 @@ export function SearchProvidersGroup() {
   return (
     <section className="panel-group" data-tour="web-search">
       <h3>Web search</h3>
-      <p className="panel-note">Chat and research search the web with the first choice. If it fails or finds nothing, the next one is asked, and the job log says so.</p>
       {problem && <p className="error-note">{problem}</p>}
 
       <div className="setting">
-        <span>
-          First choice
-          <small>{doc.primary === 'openserp' ? 'Runs on this computer. Used when no hosted search has a key.' : `${label(doc.primary)} is asked first${doc.automatic && doc.primary === 'deepseek' ? ', by default' : ''}.`}</small>
-        </span>
+        <span>First choice</span>
         <Select
           label="First search provider"
           value={doc.primary}
@@ -64,73 +73,71 @@ export function SearchProvidersGroup() {
         />
       </div>
 
-      <div className="setting stack">
+      <div className="setting">
         <span>
           If that fails or finds nothing
-          <small>
-            {doc.automatic
-              ? 'Automatic: nothing else is asked unless you add it. OpenSERP is never added on its own.'
-              : doc.fallback.length
-                ? 'Asked in this order.'
-                : 'Nothing is asked after the first choice.'}
-          </small>
+          {doc.automatic && <span className="state" data-tone="none">Automatic</span>}
         </span>
-        {!doc.automatic && doc.fallback.length > 0 && (
-          <ol className="order-list" aria-label="Fallback order">
-            {doc.fallback.map((id, index) => (
-              <li key={id}>
-                <span>
-                  <strong>{label(id)}</strong>
-                  {byId.get(id)?.needs_key && !byId.get(id)?.key_saved && <small>No key yet, so it is skipped.</small>}
-                </span>
-                <span className="key-actions">
-                  <button onClick={() => move(index, -1)} disabled={index === 0} aria-label={`Move ${label(id)} earlier`}>
-                    Earlier
-                  </button>
-                  <button onClick={() => move(index, 1)} disabled={index === doc.fallback.length - 1} aria-label={`Move ${label(id)} later`}>
-                    Later
-                  </button>
-                  <button onClick={() => write(doc.fallback.filter((one) => one !== id))} aria-label={`Stop asking ${label(id)}`}>
-                    Remove
-                  </button>
-                </span>
-              </li>
-            ))}
-          </ol>
+        {addable.length > 0 && (
+          <Select
+            label="Add a fallback"
+            value=""
+            options={[{ value: '', label: 'Add a provider…' }, ...addable.map((row) => ({ value: row.id, label: row.label }))]}
+            onChange={(value) => value && write([...doc.fallback, value])}
+          />
         )}
-        <div className="order-actions">
-          {addable.length > 0 && (
-            <Select
-              label="Add a fallback"
-              value=""
-              options={[{ value: '', label: 'Add a provider…' }, ...addable.map((row) => ({ value: row.id, label: row.label }))]}
-              onChange={(value) => value && write([...doc.fallback, value])}
-            />
-          )}
-          {!doc.automatic && (
-            <button className="btn ghost" onClick={() => void save({ search_fallback: '' })}>
-              Back to automatic
-            </button>
-          )}
-        </div>
       </div>
+      {!doc.automatic && doc.fallback.length > 0 && (
+        <ol className="order-list" aria-label="Fallback order">
+          {doc.fallback.map((id, index) => (
+            <li key={id}>
+              <span className="key-name">
+                <strong>{label(id)}</strong>
+                {byId.get(id)?.needs_key && !byId.get(id)?.key_saved && <span className="state" data-tone="warn">No key, skipped</span>}
+              </span>
+              <span className="key-actions">
+                <button onClick={() => move(index, -1)} disabled={index === 0} aria-label={`Move ${label(id)} earlier`}>
+                  Earlier
+                </button>
+                <button onClick={() => move(index, 1)} disabled={index === doc.fallback.length - 1} aria-label={`Move ${label(id)} later`}>
+                  Later
+                </button>
+                <button onClick={() => write(doc.fallback.filter((one) => one !== id))} aria-label={`Stop asking ${label(id)}`}>
+                  Remove
+                </button>
+              </span>
+            </li>
+          ))}
+        </ol>
+      )}
+      {!doc.automatic && (
+        <div className="setting actions">
+          <button className="btn" onClick={() => void save({ search_fallback: '' })}>
+            Back to automatic
+          </button>
+        </div>
+      )}
 
       <ul className="key-list" aria-label="Search providers">
         {doc.providers.map((row) => (
           <ProviderItem key={row.id} row={row} result={tested[row.id]} onTest={() => void test(row.id)} />
         ))}
       </ul>
+      <p className="panel-note" data-kind="data">A hosted provider receives the words you search.</p>
     </section>
   )
 }
 
 function ProviderItem({ row, result, onTest }: { row: SearchProviderRow; result: SearchTest | 'testing' | undefined; onTest: () => void }) {
+  const key = keyState(row)
+  const trouble = troubleLine(row.health)
   return (
-    <li className="key" data-present={row.ready}>
+    <li className="key" data-present={row.ready} title={healthLine(row.health)}>
       <div className="key-head">
-        <span>
+        <span className="key-name">
           <strong>{row.label}</strong>
-          <small>{keyLine(row)}</small>
+          <span className="state" data-tone={key.tone}>{key.text}</span>
+          {row.health.calls > 0 && <span className="state" data-tone="none">{healthShort(row.health)}</span>}
         </span>
         <span className="key-actions">
           <button onClick={onTest} disabled={result === 'testing'} aria-label={`Test ${row.label}`}>
@@ -138,8 +145,7 @@ function ProviderItem({ row, result, onTest }: { row: SearchProviderRow; result:
           </button>
         </span>
       </div>
-      <small className="key-result">{row.note}</small>
-      <small className="key-result">{healthLine(row.health)}</small>
+      {trouble && <small className="key-result" data-tone="risk">{trouble}</small>}
       {result && result !== 'testing' && <TestResult result={result} />}
     </li>
   )
