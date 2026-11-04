@@ -85,7 +85,7 @@ test("I bought this is sent with the page's price and acknowledged", async () =>
   const sent = p.sent.find((m) => m.type === "BUYER_BOUGHT");
   assert.equal(sent.payload.url, p.dom.window.location.href);
   assert.equal(sent.payload.price, 49.9);
-  assert.match(text(p, ".lite-buyer-slot"), /Kriko will ask how it went/);
+  assert.match(text(p, ".lite-buyer-slot"), /Noted\./);
 });
 
 test("a purchase that is due is asked about, and the answer clears the question", async () => {

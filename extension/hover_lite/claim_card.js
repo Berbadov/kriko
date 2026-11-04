@@ -84,7 +84,7 @@
     const word = STANDING_WORD[source.standing] || "";
     const kind = [word, source.tier].filter(Boolean).join(" \u00b7 ");
     return `<figure class="lite-rc-src" id="${id}" hidden${source.disputes ? ' data-stance="refutes"' : ""}>
-      ${source.quote ? `<blockquote>\u201c${escapeHtml(source.quote)}\u201d</blockquote>` : `<div class="lite-rc-src-none">No quote is recorded for this source.</div>`}
+      ${source.quote ? `<blockquote>\u201c${escapeHtml(source.quote)}\u201d</blockquote>` : `<div class="lite-rc-src-none">No quote.</div>`}
       <figcaption>${link}${kind ? ` <span class="lite-rc-src-kind">${escapeHtml(kind)}</span>` : ""}${source.disputes ? ' <span class="lite-rc-src-note">disputes this</span>' : ""}</figcaption>
     </figure>`;
   }
@@ -262,8 +262,8 @@
 
   function evidenceLabel(evidence) {
     const why = evidence.reasons.length
-      ? evidence.reasons.map(reasonWords).join("; ")
-      : (evidence.level === "solid" ? "more than one source, and no weakness found" : "");
+      ? evidence.reasons.map(reasonWords).join(", ")
+      : (evidence.level === "solid" ? "more than one source" : "");
     return why ? `${EVIDENCE_WORD[evidence.level]}: ${why}` : EVIDENCE_WORD[evidence.level];
   }
 
@@ -381,20 +381,18 @@
               </div>` : ""}
             ${canCheck(claim) ? `
               <div class="lite-rc-fact">
-                <button type="button" class="lite-rc-factbtn"
-                        title="Re-read the page this claim cites">Check the source</button>
+                <button type="button" class="lite-rc-factbtn">Check the source</button>
                 <span class="lite-rc-factverdict" hidden></span>
               </div>` : ""}
             ${claim.claim_id ? `
               <div class="lite-rc-mark" role="group" aria-label="Was this any use?">
                 <span class="lite-rc-mark-label">Was this any use?</span>
                 <button type="button" class="lite-rc-markbtn" data-verdict="useful"
-                        aria-pressed="false" title="Worth knowing">Useful</button>
+                        aria-pressed="false">Useful</button>
                 <button type="button" class="lite-rc-markbtn" data-verdict="not_applicable"
-                        aria-pressed="false"
-                        title="True of this engine, but not of this car">Not mine</button>
+                        aria-pressed="false">Not mine</button>
                 <button type="button" class="lite-rc-markbtn" data-verdict="wrong"
-                        aria-pressed="false" title="Not true">Wrong</button>
+                        aria-pressed="false">Wrong</button>
               </div>` : ""}
           </div>
         </div>

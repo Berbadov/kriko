@@ -2,7 +2,7 @@
   "expo": {
     "name": "Kriko Agent",
     "slug": "kriko-mobile",
-    "version": "0.10.0",
+    "version": "0.15.0",
     "scheme": "kriko",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -19,7 +19,7 @@
     },
     "android": {
       "package": "app.kriko.mobile",
-      "versionCode": 10,
+      "versionCode": 19,
       "softwareKeyboardLayoutMode": "resize",
       "predictiveBackGestureEnabled": false,
       "adaptiveIcon": {
@@ -27,15 +27,16 @@
         "foregroundImage": "./assets/adaptive-icon.png"
       },
       "permissions": [
+        "android.permission.RECORD_AUDIO",
         "android.permission.READ_MEDIA_IMAGES",
         "android.permission.SYSTEM_ALERT_WINDOW",
         "android.permission.FOREGROUND_SERVICE",
         "android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION",
-        "android.permission.POST_NOTIFICATIONS"
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.REQUEST_INSTALL_PACKAGES"
       ],
       "blockedPermissions": [
-        "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.CAMERA"
       ]
     },
     "web": {
@@ -69,3 +70,4 @@
     }
   }
 }
+

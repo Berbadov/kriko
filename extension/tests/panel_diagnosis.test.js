@@ -90,7 +90,7 @@ test("the comparison is drawn per key, with what the page said against what the 
   assert.equal(box.dataset.state, "done");
   const text = box.textContent;
   assert.match(text, /Read by/);
-  assert.match(text, /listing · listing\.example · from an installed pack/);
+  assert.match(text, /listing · listing\.example · pack/);
   assert.match(text, /make volkswagen/);
   assert.match(text, /No rule claimed.*Takasa Uygun/);
   assert.match(text, /narrowed · one key disagreed/);
@@ -120,7 +120,7 @@ test("a response with nothing to compare says so instead of inventing a why", ()
   p.click(".lite-diagnosis-btn");
   const text = detail(p).textContent;
   assert.match(text, /nothing installed/);
-  assert.match(text, /nothing: the engine had no candidate to compare/);
+  assert.match(text, /Weighed\s*nothing/);
   assert.match(text, /nothing reads this site/);
   assert.doesNotMatch(text, /undefined|null/);
 });

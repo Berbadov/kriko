@@ -33,10 +33,10 @@ test("each stage the worker writes becomes the status line", () => {
   const p = analyzing();
 
   p.deliverStage("adapters");
-  assert.match(p.statusText(), /pack reads this site/);
+  assert.match(p.statusText(), /Checking packs/);
 
   p.deliverStage("asking");
-  assert.match(p.statusText(), /Asking Kriko/);
+  assert.match(p.statusText(), /Looking up/);
 });
 
 test("a stage's detail is shown beside it", () => {
@@ -45,7 +45,7 @@ test("a stage's detail is shown beside it", () => {
   const p = analyzing();
   p.deliverStage("reading", "org.kriko.cars");
 
-  assert.match(p.statusText(), /Reading this page/);
+  assert.match(p.statusText(), /Reading page/);
   assert.match(p.statusText(), /org\.kriko\.cars/);
 });
 
@@ -53,7 +53,7 @@ test("a cached answer says so rather than pretending to work", () => {
   const p = analyzing();
   p.deliverStage("cached");
 
-  assert.match(p.statusText(), /already stored/);
+  assert.match(p.statusText(), /saved answer/);
 });
 
 test("a stage nobody has words for renders its own name, not a blank", () => {
