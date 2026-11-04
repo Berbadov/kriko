@@ -21,7 +21,6 @@ import { StoreProvider, useStore } from '../engine/store';
 import { useUpdateLifecycle } from '../engine/updater';
 import { OverlaySessionProvider } from '../components/OverlaySession';
 import { MotionProvider, useReducedMotion } from '../components/Motion';
-import { BottomNav } from '../components/Chrome';
 import { DockProvider } from '../components/dock';
 import { motion } from '../theme/motion';
 import { ThemeProvider, useTheme } from '../theme/theme';
@@ -69,7 +68,6 @@ function ThemedApp() {
 function AppStack() {
   const reduced = useReducedMotion();
   const { dark, color } = useTheme();
-  const { access } = useStore();
   useUpdateLifecycle();
   return (
     <DockProvider>
@@ -97,7 +95,6 @@ function AppStack() {
             <Stack.Screen name="about" />
           </Stack>
         </View>
-        {access.kind === 'none' ? null : <BottomNav />}
       </View>
     </DockProvider>
   );
