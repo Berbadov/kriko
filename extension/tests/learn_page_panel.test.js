@@ -174,7 +174,7 @@ test("no available Quick Look agent leaves research disabled", () => {
     ? { ok: true, chosen: "", agents: [] }
     : worker()(message));
   assert.equal(p.shadow().querySelector(".lite-research-start").disabled, true);
-  assert.match(p.shadow().querySelector(".lite-quick-agent-note").textContent, /No research agent is available/);
+  assert.match(p.shadow().querySelector(".lite-quick-agent-note").textContent, /No agent available/);
   assert.equal(p.sent.some((m) => m.type === "RESEARCH_PRODUCT"), false);
 });
 
@@ -188,7 +188,7 @@ test("a stale saved Quick Look choice does not fall back to the app agent", () =
   p.click(".lite-cta");
   const select = p.shadow().querySelector(".lite-quick-agent-select");
   assert.equal(select.value, "removed-agent");
-  assert.match(p.shadow().querySelector(".lite-quick-agent-note").textContent, /saved agent is unavailable/i);
+  assert.match(p.shadow().querySelector(".lite-quick-agent-note").textContent, /saved agent unavailable/i);
   assert.equal(p.shadow().querySelector(".lite-research-start").disabled, true);
   p.click(".lite-research-start");
   assert.equal(p.sent.some((m) => m.type === "RESEARCH_PRODUCT"), false);
@@ -210,7 +210,7 @@ test("pressing Learn this page shows what was taken, and swaps the title for the
   p.click(".lite-learn-btn");
 
   assert.equal(p.sent.find((m) => m.type === "LEARN_PAGE").payload.agent, "local");
-  assert.match(status(p), /Learned shop\.example\. It takes 2 things from this page/);
+  assert.equal(status(p), "Learned shop.example.");
   const grabs = [...p.shadow().querySelectorAll(".lite-learn-grabs li")].map((li) => li.textContent);
   assert.deepEqual(grabs, ["brandAcme", "modelRoadster"]);
   assert.equal(p.shadow().querySelector(".lite-learn-btn").textContent, "Learn again");
@@ -256,11 +256,11 @@ test("another agent is a job the panel follows until it ends", () => {
 
   p.click(".lite-learn-btn");
   assert.equal(p.sent.find((m) => m.type === "LEARN_PAGE").payload.agent, "claude");
-  assert.match(status(p), /Reading the page/);
+  assert.match(status(p), /Learning · \d+s/);
   assert.equal(p.shadow().querySelector(".lite-learn-btn").disabled, true, "pressed twice would start two runs");
 
   p.flushTimers();
-  assert.match(status(p), /^Learned shop\.example\. It takes 2 things/);
+  assert.equal(status(p), "Learned shop.example.");
   assert.deepEqual([...p.shadow().querySelectorAll(".lite-learn-grabs li")].map((li) => li.textContent),
     ["brandkingston", "seriesa400"]);
   assert.equal(p.shadow().querySelector(".lite-learn-btn").disabled, false);
