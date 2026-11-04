@@ -18,7 +18,7 @@ export function Gate() {
   )
   return (
     <UpdateProvider>
-      {mode === 'demo' && <aside className="demo-banner" role="status">Demo — example answers. No research is running. <button onClick={() => { window.location.search = '' }}>Connect to Kriko</button></aside>}
+      {mode === 'demo' && <aside className="demo-banner" role="status">Demo: example answers. No research is running. <button onClick={() => { window.location.search = '' }}>Connect to Kriko</button></aside>}
       <App />
       <UpdateNotice />
     </UpdateProvider>

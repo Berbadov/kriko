@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { AccessSheet } from '../components/AccessSheet';
-import { AppHeader, HeaderAction } from '../components/Chrome';
+import { Frame, HeaderAction, useFrameInsets } from '../components/Chrome';
 import { KeyIcon, ShieldIcon, SlidersIcon } from '../components/Icon';
 import { MotionPressable, MotionView } from '../components/Motion';
 import { Button } from '../components/Primitives';
@@ -16,22 +16,40 @@ import { Txt } from '../theme/Txt';
 export function WelcomeScreen() {
   const [sheet, setSheet] = useState<null | 'code' | 'own'>(null);
   const color = useColors();
-  const styles = useStyles();
 
   return (
-    <View style={styles.page}>
-      <AppHeader
-        actions={
-          <HeaderAction label="Settings" onPress={() => router.push('/settings')}>
-            <SlidersIcon size={21} color={color.ink} />
-          </HeaderAction>
-        }
-      />
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.body}
-        showsVerticalScrollIndicator={false}
-      >
+    <Frame
+      nav={false}
+      actions={
+        <HeaderAction label="Settings" onPress={() => router.push('/settings')}>
+          <SlidersIcon size={21} color={color.ink} />
+        </HeaderAction>
+      }
+    >
+      <WelcomeBody onSheet={setSheet} />
+      <WelcomeBody onSheet={setSheet} />
+      {sheet ? (
+        <AccessSheet
+          visible
+          initialMode={sheet}
+          firstRun
+          onClose={() => setSheet(null)}
+        />
+      ) : null}
+    </Frame>
+  );
+}
+
+function WelcomeBody({ onSheet }: { onSheet: (mode: 'code' | 'own') => void }) {
+  const color = useColors();
+  const styles = useStyles();
+  const { top, bottom } = useFrameInsets();
+  return (
+    <ScrollView
+      style={styles.scroll}
+      contentContainerStyle={[styles.body, { paddingTop: top + 18, paddingBottom: bottom + 24 }]}
+      showsVerticalScrollIndicator={false}
+    >
         <MotionView style={styles.hero}>
           <Txt variant="crumb" tone="ink3" style={styles.eyebrow}>A MORE INFORMED PURCHASE</Txt>
           <Txt variant="headline" tone="ink" style={styles.title}>
@@ -58,11 +76,11 @@ export function WelcomeScreen() {
             <Txt variant="bodyTight" tone="ink2" style={styles.cardCopy}>
               Enter the access code and password from the person who shared this build. They arrive separately for your security.
             </Txt>
-            <Button label="Enter access code" onPress={() => setSheet('code')} />
+            <Button label="Enter access code" onPress={() => onSheet('code')} />
           </View>
 
           <MotionPressable
-            onPress={() => setSheet('own')}
+            onPress={() => onSheet('own')}
             accessibilityRole="button"
             style={styles.ownKeys}
           >
@@ -77,32 +95,20 @@ export function WelcomeScreen() {
             Your question and the product details go to the research providers. Kriko keeps your chats on this phone.
           </Txt>
         </MotionView>
-      </ScrollView>
-
-      {sheet ? (
-        <AccessSheet
-          visible
-          initialMode={sheet}
-          firstRun
-          onClose={() => setSheet(null)}
-        />
-      ) : null}
-    </View>
+    </ScrollView>
   );
 }
 
 const useStyles = makeStyles((color) => StyleSheet.create({
-  page: { flex: 1, backgroundColor: color.ground },
   scroll: { flex: 1 },
-  body: { paddingHorizontal: PAGE_X, paddingTop: 30, paddingBottom: 40, gap: gap[6] },
-  hero: { gap: 10, maxWidth: 390 },
+  body: { paddingHorizontal: PAGE_X, gap: gap[6] },
+  hero: { gap: 10 },
   eyebrow: { letterSpacing: 1 },
   title: {
     fontFamily: font.editorial,
     letterSpacing: -1.05,
-    maxWidth: 340,
   },
-  sub: { maxWidth: 360, lineHeight: 23 },
+  sub: { lineHeight: 23 },
   accessSection: { gap: gap[3] },
   accessHeading: { flexDirection: 'row', alignItems: 'center', gap: 11, marginBottom: 1 },
   keyTile: {

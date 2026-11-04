@@ -1026,7 +1026,6 @@ function markResultCard(card, read, fit) {
   const mark = document.createElement("span");
   mark.setAttribute(FIT_MARK, broken ? "breaks" : "fits");
   mark.textContent = broken ? `Not for you: ${fit.breaks[0]}` : "Fits you";
-  mark.title = fit.reasons.map((one) => one.message).join("\n");
   mark.style.cssText = `display:inline-block;margin:2px 6px;padding:1px 7px;border-radius:9px;font:600 11px/1.5 system-ui,sans-serif;color:#fff;background:${broken ? "#b5392f" : "#2d7b41"};vertical-align:middle;`;
   (read.priceNode || card).insertAdjacentElement("afterend", mark);
 }
@@ -1073,7 +1072,7 @@ let _resultScanGeneration = 0;
 
 function scanMessage(items, callback) {
   chrome.runtime.sendMessage({ type: "PRODUCT_SCAN", payload: { items } }, (reply) => {
-    if (chrome.runtime.lastError) callback({ ok: false, error: "Kriko is unavailable. Open the app and try again." });
+    if (chrome.runtime.lastError) callback({ ok: false, error: "Kriko is not running. Start the app." });
     else callback(reply || { ok: false, error: "No answer from Kriko." });
   });
 }
@@ -1088,21 +1087,20 @@ function drawQuickSummary(parent, result, error, anchor = null) {
   if (error) line(error);
   else {
     line(`${result.name || "Product"} · ${result.level === "unknown" ? "No catalog risk rating" : result.level + " risk"}`);
-    line(`Matched by: ${result.basis}. ${result.method || ""}`);
     for (const claim of (result.claims || []).slice(0, 8)) line(`${claim.severity || "Unrated"}: ${claim.title}. ${claim.advice || claim.body || ""}`);
-    if (!(result.claims || []).length) line("No sourced findings on record. This does not establish that the product is safe.");
+    if (!(result.claims || []).length) line("No sourced findings.");
     const fresh = result.freshness || {};
-    line(`Last verified (source retrieval): ${fresh.last_verified ? fresh.last_verified.slice(0, 10) : "Unknown"}${fresh.stale ? " · Stale or incomplete dates" : ""}`);
+    line(`Verified ${fresh.last_verified ? fresh.last_verified.slice(0, 10) : "unknown"}${fresh.stale ? " · stale" : ""}`);
     for (const finding of result.audit?.claims?.items || []) {
       if (finding.status !== "backed") line(`Listing check: “${finding.phrase}”: ${finding.why}`);
     }
     for (const flag of result.audit?.flags || []) line(flag);
     for (const cost of result.costs?.items || []) {
-      line(`${cost.title}: ${cost.prices.join(", ")} (quoted cost)`);
+      line(`${cost.title}: ${cost.prices.join(", ")}`);
       const a = document.createElement("a");
       try { if (/^https?:$/.test(new URL(cost.url).protocol)) { a.href = cost.url; a.textContent = "Price source"; a.target = "_blank"; a.rel = "noopener noreferrer"; box.appendChild(a); } } catch (_) { /* invalid source */ }
     }
-    if ((result.costs?.missing || []).length) line(`Part prices not recorded for ${result.costs.missing.length} findings. Research the exact part and variant before budgeting.`);
+    if ((result.costs?.missing || []).length) line(`${result.costs.missing.length} findings have no part prices.`);
   }
   const close = document.createElement("button"); close.type = "button"; close.textContent = "Close";
   close.style.cssText = KRIKO_MARK_STYLE; close.onclick = () => box.remove(); box.appendChild(close);
@@ -1152,7 +1150,7 @@ function scanResultCards(reads) {
         const badge = document.createElement("span"); badge.setAttribute("data-kriko-risk", result.level);
         const known = ["critical", "high", "medium", "low"].includes(result.level);
         badge.textContent = known ? `Kriko · ${result.level} risk` : result.level === "uncertain" ? "Kriko · Confirm product" : "Kriko · No rating";
-        badge.title = (result.claims || []).map((one) => `${one.severity}: ${one.title}`).join("\n") || "No sourced findings. This does not establish that the product is safe.";
+        badge.title = (result.claims || []).map((one) => `${one.severity}: ${one.title}`).join("\n") || "No sourced findings.";
         badge.style.cssText = KRIKO_MARK_STYLE + (!known ? "background:#f1f2f3;color:#555d63;"
           : result.level === "high" || result.level === "critical" ? "background:#fff0e8;color:#842f17;"
           : result.level === "medium" ? "background:#fff4cf;color:#765a15;" : "");
@@ -1200,10 +1198,10 @@ function annotateListing(audit) {
   const tasks = findings.map((one) => ({ phrase: one.phrase, why: one.why, root: document.body }));
   if (audit.reviews?.doubtful) {
     for (const root of document.querySelectorAll("[itemprop='ratingValue'], [class*='rating' i], [class*='review-score' i]")) {
-      if (root.textContent.trim().length < 100) tasks.push({ phrase: root.textContent.trim(), why: audit.reviews.notes.join("; "), root });
+      if (root.textContent.trim().length < 100) tasks.push({ phrase: root.textContent.trim(), why: audit.reviews.notes.join(", "), root });
     }
   }
-  if (audit.seller?.level !== "green" && audit.seller?.signals?.seller_name) tasks.push({ phrase: audit.seller.signals.seller_name, why: audit.seller.notes.join("; "), root: document.body });
+  if (audit.seller?.level !== "green" && audit.seller?.signals?.seller_name) tasks.push({ phrase: audit.seller.signals.seller_name, why: audit.seller.notes.join(", "), root: document.body });
   let count = 0;
   for (const task of tasks) {
     if (!task.phrase) continue;
