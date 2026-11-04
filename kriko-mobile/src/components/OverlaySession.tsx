@@ -5,10 +5,12 @@ import { AppState, useColorScheme } from 'react-native';
 import {
   isOverlayActive, overlayAvailable, startOverlaySession, stopOverlaySession,
   subscribeOverlayAction, subscribeOverlayScan, subscribeOverlaySession,
-  setOverlayAppForeground, updateOverlayJobs, updateOverlayUi, type OverlayJob, type OverlayLabels, type OverlayScan,
+  setOverlayAppForeground, setOverlayUiReady, updateOverlayJobs, updateOverlayUi,
+  type OverlayJob, type OverlayLabels, type OverlayScan,
 } from '../engine/overlay';
 import { readingTitle } from '../engine/prompt';
 import { useStore } from '../engine/store';
+import { discardFrame, keepThumbnail, writeFrame } from '../engine/thumbs';
 import { tr } from '../i18n';
 import { resolvePalette } from '../theme/preferences';
 
@@ -23,7 +25,7 @@ const Context = createContext<Session | null>(null);
 
 export function OverlaySessionProvider({ children }: { children: React.ReactNode }) {
   const store = useStore();
-  const { queueJobs, readShot, enqueueScan, cancelQueue, language, appearance } = store;
+  const { queueJobs, readShot, enqueueScan, cancelQueue, language, appearance, puckOpacity, showDiagnostics } = store;
   const scheme = useColorScheme();
   const [active, setActive] = useState(false);
   const [readings, setReadings] = useState<OverlayJob[]>([]);
@@ -54,6 +56,7 @@ export function OverlaySessionProvider({ children }: { children: React.ReactNode
     siteUrlHint: tr('Review site (optional)', language),
     cancel: tr('Cancel', language),
     close: tr('Close', language),
+    sheetSwipeClose: tr('Swipe down to close', language),
     queued: tr('Queued', language),
     running: tr('Running', language),
     reading: tr('Reading', language),
@@ -63,9 +66,10 @@ export function OverlaySessionProvider({ children }: { children: React.ReactNode
     productScan: tr('Product scan', language),
     sources: tr('Sources', language),
     queueFull: tr('Queue is full', language),
-    dragHint: tr('Drag Kriko, or tap it to open the scan panel', language),
+    dragHint: tr('Tap Kriko to scan this page. Press and hold for more.', language),
+    dropToStop: tr('Drop here to stop sharing', language),
     notificationTitle: tr('Kriko screen scan is active', language),
-    notificationText: tr('Tap the floating bubble to scan one screen when you choose.', language),
+    notificationText: tr('Tap the floating K to scan one screen when you choose.', language),
     stopSharing: tr('Stop screen sharing', language),
     channelName: tr('Floating screen scan', language),
     channelDescription: tr("Shows when Kriko's user-started floating scan session is active.", language),
@@ -73,6 +77,25 @@ export function OverlaySessionProvider({ children }: { children: React.ReactNode
     answerEmpty: tr('Scan a product page to see its answer and sources here.', language),
     captureFailed: tr('Could not read that screen. Try scanning again.', language),
     sourceFailed: tr('Could not open that source.', language),
+    copy: tr('Copy', language),
+    copied: tr('Copied', language),
+    scannedPage: tr('Scanned page', language),
+    paused: tr('Screen capture paused', language),
+    notificationPausedText: tr('Screen capture stopped. Tap Scan on the floating K to start it again.', language),
+    resumeFailed: tr('Open Kriko and start the scanner again.', language),
+    openingKriko: tr('Opening Kriko…', language),
+    assistScanning: tr('Scanning this screen', language),
+    assistNoShot: tr('Kriko could not see your screen. In your phone’s assistant settings, turn on “Use screenshot”.', language),
+    // The brand reads the same in every language.
+    assistTitle: 'Kriko',
+    showAllSources: tr('Show all sources', language),
+    showFewerSources: tr('Show fewer sources', language),
+    stalledResearch: tr('Research is taking longer than expected. It may still finish in the background.', language),
+    openToRetry: tr('Open Kriko to check or retry', language),
+    writingAnswer: tr('Writing the answer…', language),
+    reviewingSources: tr('Reviewing sources…', language),
+
+    assistKeeps: tr('Kriko keeps reading. The answer will be in History.', language),
   }), [language]);
 
   // `system` follows the phone, exactly as the in-app theme provider resolves it.
@@ -89,11 +112,16 @@ export function OverlaySessionProvider({ children }: { children: React.ReactNode
         readingAbort.current = { id: shot.id, controller };
         setReadings((items) => items.map((item) => item.id === shot.id
           ? { ...item, status: 'reading', text: 'Identifying appearance and product details…' } : item));
+        // The scanner saves the frame as a file; if it could not, write one here.
+        // Either way the reader gets its tighter look at a tall page, and the
+        // chat gets a picture to keep.
+        const frame = shot.uri || await writeFrame(shot.base64);
         try {
-          const reading = await current.current.readShot(shot.base64, shot.mime, controller.signal, shot.uri);
+          const reading = await current.current.readShot(shot.base64, shot.mime, controller.signal, frame);
           if (!mounted.current) break;
           if (!cancelled.current.delete(shot.id)) {
-            current.current.enqueueScan(reading, shot.uri || undefined, undefined, {
+            const picture = frame ? await keepThumbnail(frame) : undefined;
+            current.current.enqueueScan(reading, picture, undefined, {
               researchMode: shot.mode ?? 'research', reviewSite: shot.reviewSite,
             });
           }
@@ -106,6 +134,7 @@ export function OverlaySessionProvider({ children }: { children: React.ReactNode
             : item));
         } finally {
           readingAbort.current = null;
+          await discardFrame(frame);
         }
       }
     } finally {
@@ -127,7 +156,9 @@ export function OverlaySessionProvider({ children }: { children: React.ReactNode
       }
       const id = `read-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
       waiting.current.push({ ...shot, id });
-      setReadings((items) => [...items.slice(-9), { id, title: 'New product scan', status: 'queued' }]);
+      setReadings((items) => [...items.slice(-9), {
+        id, title: 'New product scan', status: 'queued', image: shot.uri || undefined,
+      }]);
       void drain();
     });
     const offSession = subscribeOverlaySession(({ active: running }) => setActive(running));
@@ -142,12 +173,18 @@ export function OverlaySessionProvider({ children }: { children: React.ReactNode
         current.current.cancelQueue(id);
       }
     });
+    // The scanner outlives this screen. While we are mounted it hands scans to
+    // us; once we are gone it opens the app with the picture instead. Announced
+    // last: a scan the phone assistant queued while the app was closed is
+    // delivered the moment this is true, so the listener above must exist.
+    setOverlayUiReady(true);
     return () => {
       mounted.current = false;
       waiting.current = [];
       readingAbort.current?.controller.abort();
       offScan(); offSession(); offAction();
-      void stopOverlaySession().catch(() => {});
+      // Closing Kriko's screen must not end the scanner: only the reader's Stop does.
+      setOverlayUiReady(false);
     };
   }, [drain]);
 
@@ -165,8 +202,8 @@ export function OverlaySessionProvider({ children }: { children: React.ReactNode
   // Palette and words go first: the native side applies them to a live bubble
   // and keeps the last payload so the next session opens already themed.
   useEffect(() => {
-    updateOverlayUi({ theme, labels });
-  }, [theme, labels]);
+    updateOverlayUi({ theme, labels, puckOpacity });
+  }, [theme, labels, puckOpacity]);
 
   useEffect(() => {
     // Reading rows and queue titles are English keys at rest; translating them
@@ -183,10 +220,12 @@ export function OverlaySessionProvider({ children }: { children: React.ReactNode
         Number(a.status === 'running' || a.status === 'queued')).map((job) => ({
         id: job.id,
         title: `${readingTitle(job.reading) || tr('Product scan', language)}${job.researchMode === 'site_reviews' ? ` · ${tr('site comments', language)}` : ''}`,
-        status: job.status, text: job.text, error: job.error, sources: job.sources, steps: job.steps,
+        status: job.status, text: job.text, error: job.error, sources: job.sources,
+        steps: job.steps.filter((step) => showDiagnostics || !step.text.startsWith('diagnostic:')).map((step) => ({ ...step, text: tr(step.text, language) })),
+        image: job.imageUri,
       })),
     ]);
-  }, [queueJobs, readings, active, language]);
+  }, [queueJobs, readings, active, language, showDiagnostics]);
 
   const start = useCallback(async () => {
     await startOverlaySession();

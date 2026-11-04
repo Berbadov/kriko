@@ -22,18 +22,28 @@ import {
   useReducer,
   useRef,
 } from 'react';
+import { AppState } from 'react-native';
 
+import { startsFreshChat } from './freshchat';
+import { clearAnswerCache } from './answer-cache';
+import { checkWatchWithKey } from './priceTracking';
+import { DEFAULT_RESEARCH_PREFERENCES, normalizeResearchPreferences, type ResearchPreferences } from './researchPreferences';
 import { runTurn, readListing } from './providers';
+import { buildCatalog } from './memory';
 import { readingTitle, SCREENSHOT_QUESTION, type AnswerStyle } from './prompt';
 import { normalizeReading } from './reading';
+import { deleteThumbnail, keepThumbnail, pruneThumbnails, writeFrame, discardFrame } from './thumbs';
+import { beginScreenAudit, clearScreenAudit, finishScreenAudit, loadScreenAudit } from './screenAudit';
 import { prepareVisionImage } from './visionimage';
 import { hasTrialBundle, openAccess, openTrial, type TrialAccess } from './sharekeys';
-import { setLanguage, type Language } from '../i18n';
+import { setLanguage, tr, type Language } from '../i18n';
 import { setHapticsEnabled } from '../theme/feedback';
 import {
   isAppearance,
   isMotionPreference,
   isTextSize,
+  normalizePuckOpacity,
+  PUCK_OPACITY_DEFAULT,
   type Appearance,
   type MotionPreference,
   type TextSize,
@@ -177,6 +187,10 @@ interface Prefs {
   textSize: TextSize;
   motion: MotionPreference;
   haptics: boolean;
+  /** Percent. How opaque the floating K is while it waits. */
+  puckOpacity: number;
+  researchPreferences: ResearchPreferences;
+  showDiagnostics: boolean;
 }
 
 const INITIAL_PREFS: Prefs = {
@@ -187,6 +201,9 @@ const INITIAL_PREFS: Prefs = {
   textSize: 'default',
   motion: 'system',
   haptics: true,
+  puckOpacity: PUCK_OPACITY_DEFAULT,
+  researchPreferences: DEFAULT_RESEARCH_PREFERENCES,
+  showDiagnostics: false,
 };
 
 interface State extends Prefs {
@@ -446,10 +463,10 @@ interface Store extends State {
   ) => string;
   cancelQueue: (id: string) => void;
   unlock: (code: string, password: string, label: string) => Promise<void>;
-  saveOwnKeys: (mercury: string, deepseek: string) => Promise<void>;
+  saveOwnKeys: (mercury: string, deepseek: string, mistral?: string) => Promise<void>;
   forgetAccess: () => Promise<void>;
   deleteThread: (id: string) => void;
-  clearHistory: () => void;
+  clearHistory: () => Promise<void>;
   setThoroughness: (value: number) => void;
   setAnswerStyle: (value: AnswerStyle) => void;
   setAppLanguage: (value: Language) => void;
@@ -457,7 +474,11 @@ interface Store extends State {
   setTextSize: (value: TextSize) => void;
   setMotion: (value: MotionPreference) => void;
   setHaptics: (value: boolean) => void;
+  setPuckOpacity: (value: number) => void;
   resetPreferences: () => void;
+  setResearchPreferences: (value: ResearchPreferences) => void;
+  setShowDiagnostics: (value: boolean) => void;
+  checkPriceWatch: (watchId: string) => Promise<void>;
 }
 
 const Ctx = createContext<Store | null>(null);
@@ -522,7 +543,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     let alive = true;
     (async () => {
       let threads: Thread[] = [];
-      let activeId: string | null = null;
       let trialUsed = 0;
       let queueJobs: QueueJob[] = [];
       let access: AccessState = EMPTY_ACCESS;
@@ -551,6 +571,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
               textSize: isTextSize(stored.textSize) ? stored.textSize : 'default',
               motion: isMotionPreference(stored.motion) ? stored.motion : 'system',
               haptics: stored.haptics !== false,
+              puckOpacity: normalizePuckOpacity(stored.puckOpacity),
+              researchPreferences: normalizeResearchPreferences(stored.researchPreferences),
+              showDiagnostics: stored.showDiagnostics === true,
             };
           } catch {
             prefs = INITIAL_PREFS;
@@ -583,19 +606,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         setLanguage(prefs.language);
         if (saved) {
           try {
-            const parsed = JSON.parse(saved) as {
-              threads?: unknown[];
-              activeId?: string | null;
-            };
+            const parsed = JSON.parse(saved) as { threads?: unknown[] };
             if (Array.isArray(parsed.threads)) {
               threads = parsed.threads
                 .map(normalizeThread)
                 .filter((thread): thread is Thread => thread !== null);
             }
-            if (typeof parsed.activeId === 'string') activeId = parsed.activeId;
           } catch {
             threads = [];
-            activeId = null;
           }
         }
         if (used) {
@@ -606,6 +624,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           const stored = JSON.parse(keysRaw) as {
             mercury?: string;
             deepseek?: string;
+            mistral?: string;
             source?: string;
             label?: string;
             limit?: number;
@@ -621,7 +640,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             const limit =
               Number.isFinite(storedLimit) && storedLimit > 0 ? storedLimit : undefined;
             held.current = {
-              keys: { mercury: stored.mercury, deepseek: stored.deepseek },
+              keys: {
+                mercury: stored.mercury,
+                deepseek: stored.deepseek,
+                ...(typeof stored.mistral === 'string' && stored.mistral.trim()
+                  ? { mistral: stored.mistral }
+                  : {}),
+              },
               source,
               label: stored.label ?? '',
               limit,
@@ -693,11 +718,20 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (!alive) return;
+      const kept = capThreads(threads);
+      const audits = await loadScreenAudit();
+      // Pictures no chat, scan, or screen-read audit refers to are dropped once per launch.
+      void pruneThumbnails([
+        ...kept.flatMap((thread) => thread.messages.map((message) => message.imageUri)),
+        ...queueJobs.map((job) => job.imageUri),
+        ...audits.map((audit) => audit.imageUri),
+      ]);
       dispatch({
         type: 'hydrate',
         access,
-        threads: capThreads(threads),
-        activeId: threads.some((thread) => thread.id === activeId) ? activeId : null,
+        threads: kept,
+        // Every launch opens on a blank chat; the last one is in History.
+        activeId: null,
         trialUsed,
         prefs,
         queueJobs,
@@ -710,12 +744,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!state.hydrated) return;
-    const payload = JSON.stringify({
-      threads: capThreads(state.threads),
-      activeId: state.activeId,
-    });
+    // Which chat is open is not saved: the next launch starts on a blank one.
+    const payload = JSON.stringify({ threads: capThreads(state.threads) });
     persistLatest(threadWrite, THREADS_KEY, payload);
-  }, [state.threads, state.activeId, state.hydrated]);
+  }, [state.threads, state.hydrated]);
 
   useEffect(() => {
     if (!state.hydrated) return;
@@ -737,6 +769,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       textSize: state.textSize,
       motion: state.motion,
       haptics: state.haptics,
+      puckOpacity: state.puckOpacity,
+      researchPreferences: state.researchPreferences,
+      showDiagnostics: state.showDiagnostics,
     };
     AsyncStorage.setItem(PREFS_KEY, JSON.stringify(prefs)).catch(() => {});
   }, [
@@ -747,8 +782,35 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     state.textSize,
     state.motion,
     state.haptics,
+    state.puckOpacity,
+    state.researchPreferences,
+    state.showDiagnostics,
     state.hydrated,
   ]);
+
+  // Coming back after a real absence opens a blank chat, like a launch does.
+  // A short trip to another app keeps the conversation, and a turn that is
+  // still being written is never replaced.
+  useEffect(() => {
+    let leftAt: number | null = null;
+    const subscription = AppState.addEventListener('change', (next) => {
+      if (next !== 'active') {
+        if (leftAt === null) leftAt = Date.now();
+        return;
+      }
+      const awayMs = leftAt === null ? 0 : Date.now() - leftAt;
+      leftAt = null;
+      const current = stateRef.current;
+      if (startsFreshChat({
+        awayMs,
+        streaming: current.streamingId !== null,
+        hasActiveChat: current.activeId !== null,
+      })) {
+        dispatch({ type: 'active/set', id: null });
+      }
+    });
+    return () => subscription.remove();
+  }, []);
 
   useEffect(() => {
     setHapticsEnabled(state.haptics);
@@ -893,8 +955,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           reading,
           signal: controller.signal,
           thoroughness: stateRef.current.thoroughness,
+          researchPreferences: stateRef.current.researchPreferences,
           answerStyle: stateRef.current.answerStyle,
           language: stateRef.current.language,
+          // What earlier turns researched, so this follow-up can name it.
+          memory: buildCatalog(stateRef.current.threads, stateRef.current.queueJobs),
           onText: (delta) => {
             dispatch({
               type: 'message/appendText',
@@ -979,12 +1044,44 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const readShot = useCallback(
     async (base64: string, mime: string, signal?: AbortSignal, uri?: string): Promise<Reading> => {
-      const keys = await keysForVision();
-      // A tall listing gets a tighter label band beside the full frame; the
-      // helper returns the original image when it cannot improve it.
-      const detail = uri ? await prepareVisionImage(uri, base64, mime) : null;
-      const detailBase64 = detail && detail.base64 !== base64 ? detail.base64 : undefined;
-      return readListing(base64, mime, keys.deepseek, signal, detailBase64);
+      if (signal?.aborted) throw new Error('Screen read cancelled.');
+      const auditId = `screen-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+      let imageUri = uri ? await keepThumbnail(uri) : undefined;
+      const frame = imageUri ? '' : await writeFrame(base64);
+      if (!imageUri && frame) imageUri = await keepThumbnail(frame);
+      if (frame) await discardFrame(frame);
+      if (signal?.aborted) {
+        await deleteThumbnail(imageUri);
+        throw new Error('Screen read cancelled.');
+      }
+      // The audit must be durable before the image is sent for vision reading.
+      let auditEpoch: number | null;
+      try {
+        auditEpoch = await beginScreenAudit({ id: auditId, at: Date.now(), imageUri, status: 'reading' });
+      } catch (error) {
+        await deleteThumbnail(imageUri);
+        throw error;
+      }
+      if (auditEpoch === null) {
+        await deleteThumbnail(imageUri);
+        throw new Error('History was cleared before this screen read began. Start the read again.');
+      }
+      try {
+        const keys = await keysForVision();
+        // A tall listing gets a tighter label band beside the full frame; the
+        // helper returns the original image when it cannot improve it.
+        const detail = uri ? await prepareVisionImage(uri, base64, mime) : null;
+        const detailBase64 = detail && detail.base64 !== base64 ? detail.base64 : undefined;
+        if (signal?.aborted) throw new Error('Screen read cancelled.');
+        const reading = await readListing(base64, mime, keys.deepseek, signal, detailBase64);
+        const recorded = await finishScreenAudit(auditId, { reading }, auditEpoch);
+        if (!recorded) throw new Error(tr('History was cleared before this screen read began. Start the read again.'));
+        return reading;
+      } catch (error) {
+        // Provider error messages may contain request details; store only status.
+        await finishScreenAudit(auditId, { failed: true }, auditEpoch);
+        throw error;
+      }
     },
     [keysForVision],
   );
@@ -1087,8 +1184,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           reviewSite: job.reviewSite,
           signal: controller.signal,
           thoroughness: stateRef.current.thoroughness,
+          researchPreferences: stateRef.current.researchPreferences,
           answerStyle: stateRef.current.answerStyle,
           language: stateRef.current.language,
+          // What earlier turns researched, so this follow-up can name it.
+          memory: buildCatalog(stateRef.current.threads, stateRef.current.queueJobs),
           onText: (delta) => {
             dispatch({ type: 'queue/appendText', id: job.id, delta });
             dispatch({ type: 'message/appendText', threadId, messageId: answer.id, delta });
@@ -1172,6 +1272,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       KEYS_KEY,
       JSON.stringify({ ...keys, source: 'shared', label }),
     );
+    clearAnswerCache();
     held.current = { keys, source: 'shared', label };
     dispatch({
       type: 'access/set',
@@ -1179,8 +1280,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  const saveOwnKeys = useCallback(async (mercury: string, deepseek: string) => {
-    const keys = { mercury: mercury.trim(), deepseek: deepseek.trim() };
+  const saveOwnKeys = useCallback(async (mercury: string, deepseek: string, mistral?: string) => {
+    const keys: ProviderKeys = {
+      mercury: mercury.trim(),
+      deepseek: deepseek.trim(),
+      ...(mistral?.trim() ? { mistral: mistral.trim() } : {}),
+    };
     if (!keys.mercury || !keys.deepseek) {
       throw new Error('Both keys are needed: Mercury runs the agent, DeepSeek runs the search.');
     }
@@ -1188,6 +1293,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       KEYS_KEY,
       JSON.stringify({ ...keys, source: 'own', label: 'Your own keys' }),
     );
+    clearAnswerCache();
     held.current = { keys, source: 'own', label: 'Your own keys' };
     dispatch({
       type: 'access/set',
@@ -1197,6 +1303,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const forgetAccess = useCallback(async () => {
     await SecureStore.deleteItemAsync(KEYS_KEY);
+    clearAnswerCache();
     held.current = null;
     let opened = trial.current;
     if (!opened && hasTrialBundle()) opened = openTrial();
@@ -1252,6 +1359,20 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     (value: boolean) => dispatch({ type: 'prefs/patch', patch: { haptics: value } }),
     [],
   );
+  const setPuckOpacity = useCallback(
+    (value: number) => dispatch({ type: 'prefs/patch', patch: { puckOpacity: normalizePuckOpacity(value) } }),
+    [],
+  );
+  const setResearchPreferences = useCallback((value: ResearchPreferences) => {
+    dispatch({ type: 'prefs/patch', patch: { researchPreferences: normalizeResearchPreferences(value) } });
+  }, []);
+  const setShowDiagnostics = useCallback((value: boolean) => {
+    dispatch({ type: 'prefs/patch', patch: { showDiagnostics: value } });
+  }, []);
+  const checkPriceWatchForStore = useCallback(async (watchId: string) => {
+    const keys = await keysForVision();
+    await checkWatchWithKey(watchId, keys.deepseek);
+  }, [keysForVision]);
   const resetPreferences = useCallback(() => {
     setLanguage(INITIAL_PREFS.language);
     dispatch({
@@ -1264,6 +1385,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         textSize: INITIAL_PREFS.textSize,
         motion: INITIAL_PREFS.motion,
         haptics: INITIAL_PREFS.haptics,
+        puckOpacity: INITIAL_PREFS.puckOpacity,
+        researchPreferences: INITIAL_PREFS.researchPreferences,
+        showDiagnostics: INITIAL_PREFS.showDiagnostics,
       },
     });
   }, []);
@@ -1286,7 +1410,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     }
     dispatch({ type: 'thread/remove', id });
   }, []);
-  const clearHistory = useCallback(() => {
+  const clearHistory = useCallback(async () => {
+    clearAnswerCache();
+    const pictures = [
+      ...stateRef.current.threads.flatMap((thread) => thread.messages.map((message) => message.imageUri)),
+      ...stateRef.current.queueJobs.map((job) => job.imageUri),
+    ];
     abort.current?.abort();
     for (const job of stateRef.current.queueJobs) {
       if (job.status !== 'queued' && job.status !== 'running') continue;
@@ -1295,6 +1424,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     }
     queueAbort.current?.abort();
     dispatch({ type: 'threads/clear' });
+    const entries = await clearScreenAudit();
+    await Promise.all([...new Set([...pictures, ...entries.map((entry) => entry.imageUri)])]
+      .map((uri) => deleteThumbnail(uri)));
   }, []);
 
   const activeThread = useMemo(
@@ -1332,7 +1464,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       setTextSize,
       setMotion,
       setHaptics,
+      setPuckOpacity,
       resetPreferences,
+      setResearchPreferences,
+      setShowDiagnostics,
+      checkPriceWatch: checkPriceWatchForStore,
     }),
     [
       state,
@@ -1358,7 +1494,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       setTextSize,
       setMotion,
       setHaptics,
+      setPuckOpacity,
       resetPreferences,
+      setResearchPreferences,
+      setShowDiagnostics,
+      checkPriceWatchForStore,
     ],
   );
 
