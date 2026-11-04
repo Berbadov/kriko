@@ -84,7 +84,7 @@ export function Drawer({ open, panel: asked, onClose, offset, onOpen }: { open: 
     <AnimatePresence>
       {open && (
         <>
-          <motion.div className="scrim" style={{ left: offset + 20 }} onClick={onClose} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={m.tx.soft} />
+          <motion.div className="scrim" onClick={onClose} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={m.tx.soft} />
           <motion.div
             ref={panel}
             className="drawer"
