@@ -240,7 +240,10 @@ downloading the next one, and `app/appupdate.py` matches the Windows installer
 name only, so a Mac build offers no update. Checking is a
 request; the weekly pass is `app/packautoupdate.py`, which at startup submits
 a `pack_update` job for already-installed packs only when a week has passed
-since the last success. There is no pack-updates block in the UI.
+since the last success. Nothing installed is no check at all, and a pass that
+did not end well is tried again at most once an hour rather than at every
+launch, so a launch on a machine with no network never waits on the release
+page. There is no pack-updates block in the UI.
 
 **The installer carries no packs** (#169). A fresh install opens onto an empty
 store, and Overview (the Knowledge group) offers the published index's packs with an
