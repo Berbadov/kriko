@@ -137,7 +137,7 @@ test("deeper research progress keeps quick-look cards expanded without blinking"
   assert.equal(p.sent.filter(m => m.type === "JOB_STATUS" && m.payload.job_id !== "quick").length, 0);
 });
 
-test("a research run that kept nothing says no data showed an issue", () => {
+test("a research run that kept nothing is the no-issue card, with no sentence under its title", () => {
   const p = loadPanel({ workerResponse: m => {
     if (m.type === "RESEARCH_PLANE") return { ok: true, plane: { backend: "agent" } };
     if (m.type === "JOB_STATUS") return { ok: true, job: { job_id: "research", kind: "research",
@@ -154,9 +154,9 @@ test("a research run that kept nothing says no data showed an issue", () => {
   p.flushTimers();
   const card = p.shadow().querySelector(".lite-noissue");
   assert.ok(card);
-  assert.match(card.querySelector(".lite-noissue-note").textContent, /No data found that shows an issue/);
-  assert.match(card.querySelector(".lite-noissue-note").textContent,
-    /read 4 source\(s\), none of them said anything keepable/);
+  assert.match(card.querySelector(".lite-noissue-title").textContent, /No sourced issues kept/);
+  assert.equal(card.querySelector(".lite-noissue-note"), null, "no caveat paragraph, and no engine outcome line");
+  assert.doesNotMatch(card.textContent, /none of them said anything keepable/);
   assert.equal(p.shadow().querySelector(".lite-research-status").textContent, "",
     "the completed result is not repeated in the status line");
 });
@@ -179,7 +179,7 @@ test("a research run with a kept claim or a brief is not called empty", () => {
     p.click(".lite-research-start");
     p.flushTimers();
     const status = p.shadow().querySelector(".lite-research-status").textContent;
-    assert.match(status, /Open the research job for findings/);
+    assert.match(status, /Open in Kriko/);
     assert.doesNotMatch(status, /No data found/);
   }
 });
@@ -284,8 +284,7 @@ test("a quick look that kept nothing is a card with the pages and no agent box",
   assert.ok(card, "the empty quick look rendered a card");
   assert.equal(card.dataset.empty, "quick");
   assert.match(card.querySelector(".lite-noissue-title").textContent, /No sourced issues kept/);
-  assert.match(card.querySelector(".lite-noissue-note").textContent,
-    /candidate findings did not pass the evidence checks/);
+  assert.match(card.querySelector(".lite-noissue-note").textContent, /Nothing passed source checks/);
   assert.equal(p.shadow().querySelector(".lite-research-status").textContent, "",
     "the diagnostic is not repeated beside the empty card");
   assert.match(card.querySelector(".lite-noissue-stats").textContent, /3\s*pages read/);
@@ -319,7 +318,8 @@ test("a deep run that kept nothing shows the same no-issue card", () => {
   const card = p.shadow().querySelector(".lite-noissue");
   assert.ok(card, "the empty deep run rendered the same card");
   assert.equal(card.dataset.empty, "deep");
-  assert.match(card.textContent, /not proof that there is no issue/);
+  assert.equal(card.querySelector(".lite-noissue-note"), null);
+  assert.doesNotMatch(card.textContent, /not proof/);
   assert.equal(card.querySelector(".lite-quick-source-list a").href,
     "https://example.test/thread");
   assert.equal(p.shadow().querySelector(".lite-research-status").textContent, "",
@@ -342,7 +342,7 @@ test("a quick look with no pages says it could not check findings", () => {
   p.type(".lite-research-name", "Example");
   p.click(".lite-research-start");
   const card = p.shadow().querySelector(".lite-noissue");
-  assert.match(card.querySelector(".lite-noissue-note").textContent, /No source pages were read/);
+  assert.match(card.querySelector(".lite-noissue-note").textContent, /No pages read/);
   assert.match(card.querySelector(".lite-noissue-stats").textContent, /0\s*pages read/);
   assert.equal(p.shadow().querySelector(".lite-research-status").textContent, "");
 });
@@ -363,7 +363,7 @@ test("an unreadable answer with missing coverage does not claim zero pages", () 
   p.type(".lite-research-name", "Example");
   p.click(".lite-research-start");
   const card = p.shadow().querySelector(".lite-noissue");
-  assert.match(card.querySelector(".lite-noissue-note").textContent, /unreadable answer.*Retry research/i);
+  assert.match(card.querySelector(".lite-noissue-note").textContent, /Unreadable answer\. Retry/);
   assert.equal(card.querySelector(".lite-noissue-stats"), null);
   assert.equal(card.querySelector(".lite-quick-source-list a"), null,
     "a listing URL is not presented as a page read or citation");
@@ -519,7 +519,7 @@ test("the motion profile paints the host, follows a switch, and reduced motion s
 
 // ── minimal by default ──────────────────────────────────────────────────
 
-test("a recognised gap is a phrase, with the engine's sentence as the title", () => {
+test("a recognised gap is a word and a button, with no sentence and no tooltip", () => {
   const say = "This one is recognised, but the installed packs hold nothing "
     + "about it yet. That is a gap, not a clean bill of health.";
   const p = loadPanel();
@@ -529,12 +529,12 @@ test("a recognised gap is a phrase, with the engine's sentence as the title", ()
 
   const box = p.shadow().querySelector(".lite-verdict");
   assert.equal(box.dataset.verdict, "recognised");
-  assert.equal(box.querySelector(".lite-verdict-say").textContent,
-    "Recognised. Nothing installed covers it yet.");
-  assert.equal(box.title, say, "the engine's sentence survived as the tooltip");
+  assert.equal(box.querySelector(".lite-verdict-word").textContent, "No data yet");
+  assert.equal(box.querySelector(".lite-verdict-say"), null);
+  assert.equal(box.title, "");
   const button = box.querySelector(".lite-verdict-btn");
   assert.equal(button.textContent, "Research");
-  assert.equal(button.title, say);
+  assert.equal(button.title, "");
 });
 
 test("no claims means no count row and no expand/collapse controls", () => {
