@@ -6,8 +6,8 @@
 **Why a script for a `sed`.** The app version is in four build files:
 `pyproject.toml`, `kriko-ui/src-tauri/Cargo.toml`, `kriko-ui/package.json` and
 the `kriko` entry of `kriko-ui/src-tauri/Cargo.lock`. `test_the_version_strings_agree` fails if they
-disagree. README's badge and download filenames, and kriko.cc's download button,
-are updated alongside them.
+disagree. README's badge and download filenames are updated alongside them. The
+website's download button is not: see the note by `README_DOWNLOAD` below.
 That test is the reason bumping by hand mostly works and is exactly
 the wrong shape: it tells you afterwards, once, that you missed one.
 
@@ -61,8 +61,15 @@ README_DOWNLOAD = re.compile(
 
 # The website's download button is not here any more: the site is its own
 # repository (kriko-website). kriko.cc hands the reader the installer file itself,
-# so its pages name the version in the asset's filename, and a release has to move
-# them there by hand; this script no longer reaches them.
+# so its pages name the version in the asset's filename, and once a release is
+# published the pages have to follow it, or the button is a 404. In that
+# repository, after the release:
+#
+#     node tools/download-version.mjs set <version>
+#
+# This script cannot reach them. Its pipeline runs `download-version.mjs live`
+# on a schedule and warns when a linked installer no longer exists, so a
+# missed step is noticed rather than found by a visitor.
 
 
 def current() -> dict[Path, str]:

@@ -125,6 +125,13 @@ checks its sha256) and exits 1 with the address that failed. 0.3.6 and 0.3.7
 shipped without a `packs.json`, and 0.3.5's index named catalogs that were never
 attached, so for those releases no reader could install one.
 
+Once a release is published, the website has to follow it: its download buttons
+name the installer's file (`kriko-X.Y.Z-x86_64-setup.exe`), so until its pages
+say the new version the button is a 404. The site is its own repository
+(kriko-website); there, `node tools/download-version.mjs set X.Y.Z`, then
+`node tools/render-locales.cjs` and `npm run test`, then push. That repository's
+pipeline checks the links on a schedule and warns when one has gone dead.
+
 The Windows installer is unsigned. Windows can show a SmartScreen warning.
 
 ## Build the macOS package
