@@ -470,7 +470,6 @@ const useStyles = makeStyles((color) => StyleSheet.create({
     borderWidth: 1,
     borderColor: color.rim,
     borderRadius: radius.l,
-    borderBottomRightRadius: radius.s,
     paddingHorizontal: gap[4],
     paddingVertical: gap[3],
   },

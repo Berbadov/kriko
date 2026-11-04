@@ -586,6 +586,13 @@ export const translations: Record<string, string> = {
   'A clear page.': 'Temiz bir sayfa.',
   'Your conversations and product scans will appear here as you use Kriko.':
     'Kriko’yu kullandıkça konuşmaların ve ürün taramaların burada görünür.',
+  'Chats and screen reads, kept apart.': 'Sohbetler ve ekran okumaları, ayrı tutulur.',
+  'Swipe left to close.': 'Kapatmak için sola kaydırın.',
+  'No chats yet.': 'Henüz sohbet yok.',
+  'Questions you ask stay here, on this phone.': 'Sorduğunuz sorular bu telefonda burada kalır.',
+  'No screen reads yet.': 'Henüz ekran okuması yok.',
+  'Scan a listing and its findings are kept here, apart from your chats.': 'Bir ilanı tarayın; bulgular sohbetlerinizden ayrı olarak burada saklanır.',
+  'Chats': 'Sohbetler',
   'Scanned products': 'Taranan ürünler',
   Queue: 'Sıra',
   'No sources yet.': 'Henüz kaynak yok.',
