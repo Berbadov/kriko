@@ -11,17 +11,17 @@
 
 export const darkColors = {
   /** Page background. */
-  ground: '#000000',
+  ground: '#08090D',
   /** Cards, sheets and the composer. */
-  surface: '#111111',
+  surface: '#10131A',
   /** Inset tiles and recessed rows. */
-  inset: '#090909',
+  inset: '#0B0D12',
   /** A slightly lifted surface for rows inside a card. */
-  raise: '#1A1A1A',
+  raise: '#171B24',
 
-  edge: 'rgba(255, 255, 255, 0.07)',
-  edgeSoft: 'rgba(255, 255, 255, 0.05)',
-  edgeStrong: 'rgba(255, 255, 255, 0.15)',
+  edge: 'rgba(255, 255, 255, 0.09)',
+  edgeSoft: 'rgba(255, 255, 255, 0.06)',
+  edgeStrong: 'rgba(255, 255, 255, 0.18)',
 
   /** Brand blue: the app mark and the one primary action. */
   accent: '#3562E9',
@@ -29,14 +29,14 @@ export const darkColors = {
   accentDim: '#192548',
   accentSoft: 'rgba(88, 124, 255, 0.16)',
   accentWash: 'rgba(88, 124, 255, 0.10)',
-  accentHi: '#99B1FF',
+  accentHi: '#A3B8FF',
   /** Text and icons drawn on top of `accent`. */
   onAccent: '#FFFFFF',
 
-  ink: '#F5F5F5',
-  ink2: '#B8B8B8',
-  ink3: '#989898',
-  ink4: '#888888',
+  ink: '#F6F7FA',
+  ink2: '#CDD2DC',
+  ink3: '#A8AFBD',
+  ink4: '#8E95A4',
 
   /** Light blue used by the progress fill and inline citations. */
   fill: '#99B1FF',
@@ -46,9 +46,13 @@ export const darkColors = {
   risk: '#FF6B7A',
   riskWash: 'rgba(255, 107, 122, 0.14)',
 
-  glass: 'rgba(17, 17, 17, 0.94)',
+  glass: 'rgba(16, 19, 26, 0.92)',
   scrim: 'rgba(0, 0, 0, 0.78)',
   shadow: '#000000',
+  /** The reading surface under running text: near-opaque, so text never sits on raw glass. */
+  plate: 'rgba(16, 19, 26, 0.9)',
+  /** The bright edge a glass surface catches on its top rim. */
+  rim: 'rgba(255, 255, 255, 0.18)',
 } as const;
 
 export const paperColors = {
@@ -75,9 +79,9 @@ export const paperColors = {
   onAccent: '#FFFFFF',
 
   ink: '#24231F',
-  ink2: '#5D5A52',
-  ink3: '#78756D',
-  ink4: '#918B7F',
+  ink2: '#4A4740',
+  ink3: '#66625A',
+  ink4: '#7E786D',
 
   /** Blue used by the progress fill and inline citations. */
   fill: '#2E5BEF',
@@ -90,6 +94,8 @@ export const paperColors = {
   glass: 'rgba(244, 240, 230, 0.94)',
   scrim: 'rgba(36, 35, 31, 0.38)',
   shadow: '#3A3428',
+  plate: 'rgba(255, 253, 247, 0.94)',
+  rim: 'rgba(255, 255, 255, 0.9)',
 } as const satisfies Record<keyof typeof darkColors, string>;
 
 /** Neutral charcoal, with lifted gray panels and readable near-white text. */
@@ -120,6 +126,8 @@ export const grayColors = {
   glass: 'rgba(43, 46, 51, 0.96)',
   scrim: 'rgba(0, 0, 0, 0.68)',
   shadow: '#111214',
+  plate: 'rgba(43, 46, 51, 0.92)',
+  rim: 'rgba(255, 255, 255, 0.2)',
 } as const satisfies Record<keyof typeof darkColors, string>;
 
 /** Pure white, for a brighter light theme with no warm cast. */
@@ -142,9 +150,9 @@ export const whiteColors = {
   onAccent: '#FFFFFF',
 
   ink: '#111318',
-  ink2: '#4A4F57',
-  ink3: '#6B7280',
-  ink4: '#8A9099',
+  ink2: '#3F4450',
+  ink3: '#5A606D',
+  ink4: '#757C8A',
 
   fill: '#2E5BEF',
 
@@ -156,6 +164,8 @@ export const whiteColors = {
   glass: 'rgba(255, 255, 255, 0.96)',
   scrim: 'rgba(17, 19, 24, 0.32)',
   shadow: '#20242B',
+  plate: 'rgba(255, 255, 255, 0.94)',
+  rim: 'rgba(255, 255, 255, 0.95)',
 } as const satisfies Record<keyof typeof darkColors, string>;
 
 export type Colors = { [K in keyof typeof darkColors]: string };

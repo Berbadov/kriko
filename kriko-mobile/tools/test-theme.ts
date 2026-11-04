@@ -22,6 +22,7 @@ import {
   TEXT_SCALE,
 } from '../src/theme/preferences';
 import { toneColor } from '../src/theme/tone';
+import { type as typeScale } from '../src/theme/tokens';
 
 const darkKeys = Object.keys(darkColors).sort();
 assert.deepEqual(Object.keys(paperColors).sort(), darkKeys, 'paper must carry every dark token');
@@ -38,12 +39,29 @@ function luminance(hex: string): number {
   });
   return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
 }
-for (const palette of [darkColors, grayColors]) {
+// Every palette, light or dark: body, secondary and tertiary text reach WCAG AA
+// (4.5:1) on both the page and a card, so no theme is a readability trade-off.
+for (const palette of [darkColors, grayColors, paperColors, whiteColors]) {
   for (const ink of [palette.ink, palette.ink2, palette.ink3]) {
-    const values = [luminance(ink), luminance(palette.surface)].sort((a, b) => a - b);
-    assert.ok((values[1] + 0.05) / (values[0] + 0.05) >= 4.5, `${ink} must remain readable on ${palette.surface}`);
+    for (const ground of [palette.surface, palette.ground]) {
+      const values = [luminance(ink), luminance(ground)].sort((a, b) => a - b);
+      assert.ok((values[1] + 0.05) / (values[0] + 0.05) >= 4.5, `${ink} must remain readable on ${ground}`);
+    }
   }
 }
+
+// The reading floor: nothing in the type scale is drawn below 13 pt, running
+// text is at least 16 pt, and tracking is never negative (it closes the gaps
+// the typeface was drawn to keep open).
+for (const [name, style] of Object.entries(typeScale)) {
+  assert.ok(style.fontSize >= 13, `${name} is drawn at ${style.fontSize} pt, below the 13 pt floor`);
+  assert.ok(style.letterSpacing >= 0, `${name} has negative tracking`);
+  // Display sizes may close up to 1.1; anything under 28 pt keeps a 1.25 line.
+  const leading = style.fontSize >= 28 ? 1.1 : 1.25;
+  assert.ok(style.lineHeight >= style.fontSize * leading, `${name} is set too tight to read`);
+}
+assert.ok(typeScale.body.fontSize >= 16 && typeScale.rowText.fontSize >= 16 && typeScale.input.fontSize >= 16);
+assert.equal(typeScale.body.fontFamily, 'Atkinson-Regular');
 
 assert.equal(resolvePalette('system', 'light'), 'paper');
 assert.equal(resolvePalette('system', 'dark'), 'dark');
@@ -64,6 +82,11 @@ assert.equal(isMotionPreference('reduced'), true);
 assert.equal(isMotionPreference('none'), false);
 assert.equal(TEXT_SCALE.default, 1);
 assert.ok(TEXT_SCALE.small < 1 && TEXT_SCALE.large > 1);
+assert.ok(TEXT_SCALE.large < TEXT_SCALE.xlarge, 'extra large is larger than large');
+assert.equal(isTextSize('xlarge'), true);
+for (const palette of [darkColors, grayColors, paperColors, whiteColors]) {
+  assert.ok(palette.plate && palette.rim, 'every palette names a reading plate and a glass rim');
+}
 
 // The floating K's opacity: every offered step survives a round trip, a stored
 // value outside the range is pulled back into it, and junk is the default, so a

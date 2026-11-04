@@ -159,11 +159,11 @@ internal object KrikoTheme {
   fun opacityFraction(percent: Int): Float = (percent.coerceIn(20, 100)) / 100f
 }
 
-/** The faces the windows draw with, copied from the Geist files the plugin ships. */
+/** The faces the windows draw with, copied from the Atkinson Hyperlegible files the plugin ships. */
 internal class KrikoFonts(private val context: Context) {
-  val regular: Typeface by lazy { load("KrikoGeist-Regular", Typeface.DEFAULT) }
-  val medium: Typeface by lazy { load("KrikoGeist-Medium", Typeface.DEFAULT) }
-  val semiBold: Typeface by lazy { load("KrikoGeist-SemiBold", Typeface.DEFAULT_BOLD) }
+  val regular: Typeface by lazy { load("KrikoFace-Regular", Typeface.DEFAULT) }
+  val medium: Typeface by lazy { load("KrikoFace-Medium", Typeface.DEFAULT) }
+  val semiBold: Typeface by lazy { load("KrikoFace-SemiBold", Typeface.DEFAULT_BOLD) }
 
   private fun load(name: String, fallback: Typeface): Typeface =
     runCatching { Typeface.createFromAsset(context.assets, "fonts/$name.ttf") }.getOrDefault(fallback)
