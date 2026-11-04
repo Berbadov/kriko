@@ -46,11 +46,14 @@ test("a first sighting and thin history are muted, never reassuring", () => {
   assert.equal(unknown.querySelector(".lite-buy-chip"), null, "an unknown verdict gets no chip at all");
 });
 
-test("a discount the history cannot support is drawn as a warning with the app's own sentence", () => {
+test("a discount the history cannot support is a warning chip, with no sentence under it", () => {
   const card = html(B.renderPrice({ ...PRICE, verdict: "usual", discount: "inflated",
-    discount_summary: "The old price looks invented." }));
-  assert.equal(card.querySelector(".lite-buy-discount").dataset.tone, "bad");
-  assert.match(card.querySelector(".lite-buy-discount").textContent, /invented/);
+    discount_summary: "The old price looks invented and this is a long explanation.",
+    summary: "A long summary the panel no longer repeats." }));
+  const chips = [...card.querySelectorAll(".lite-buy-chip")];
+  assert.equal(chips.find((chip) => /invented/.test(chip.textContent)).dataset.tone, "bad");
+  assert.equal(card.querySelector(".lite-buy-discount"), null);
+  assert.doesNotMatch(card.textContent, /long explanation|long summary/);
 });
 
 test("a cheaper shop is named only when it is meaningfully cheaper", () => {
@@ -133,11 +136,11 @@ test("the pick names a winner, its confidence, what it costs and what would chan
 });
 
 test("a shortlist with nothing to rank says what to do, and a running agent disables the buttons", () => {
-  assert.match(html(B.renderPick({ picked: null, ranked: [] }, {})).textContent, /at least two products/);
+  assert.match(html(B.renderPick({ picked: null, ranked: [] }, {})).textContent, /at least two products/i);
   const running = html(B.renderPick({ picked: { name: "A" }, ranked: [], confidence: "clear" },
     { advice: { state: "running", mode: "debate" } }));
   assert.ok([...running.querySelectorAll('[data-act="advise"]')].every((b) => b.disabled));
-  assert.match(running.textContent, /Your agent is working/);
+  assert.match(running.textContent, /Working/);
   const done = html(B.renderPick({ picked: { name: "A" }, ranked: [], confidence: "clear" },
     { advice: { state: "done", mode: "pick", answer: "**Buy: A** now" } }));
   assert.equal(done.querySelector(".lite-pick-answer strong").textContent, "Buy: A");
@@ -159,10 +162,10 @@ test("only a web address is ever made into a link", () => {
   assert.deepEqual(hrefs, ["https://ok.test/p"]);
 });
 
-test("the watch form offers the relay only to a reader who has one, and says it is told the page", () => {
+test("the watch form offers the relay only to a reader who has one, and says the page goes to it", () => {
   const without = html(B.renderBuyerCard({ price: PRICE, watch: null, cloud: { connected: false } }, { watchForm: true }));
   assert.equal(without.querySelector('input[name="cloud"]'), null);
   const paired = html(B.renderBuyerCard({ price: PRICE, watch: null, cloud: { connected: true } }, { watchForm: true }));
   assert.ok(paired.querySelector('input[name="cloud"]'));
-  assert.match(paired.querySelector(".lite-buy-check").title, /is told the page/);
+  assert.match(paired.querySelector(".lite-buy-check").textContent, /page goes to your relay/);
 });

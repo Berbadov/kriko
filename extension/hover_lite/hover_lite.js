@@ -24,20 +24,19 @@
 
   const HOST_TAG = "kriko-panel-host";
 
-  /* What the panel says before anything has been analysed.
-   *
-   * It used to name one site — "Open a <site> listing, then analyze." —
-   * which was the last of the site's own knowledge left in the client after
-   * every other trace of it was pushed into the pack's adapter. The panel only
-   * ever mounts on a page an adapter matched, so naming *which* site was never
-   * information the reader needed; it was only a sentence that would be wrong
-   * on the second site and unnoticed on the third. */
-  // The button already says what a press does, so an idle panel adds no line
-  // under it. Only a product nothing installed knows gets one.
-  const IDLE_HINT = "";
-  // A product nothing installed knows: the button researches it, so the hint
-  // says why rather than promising a search that cannot find it.
-  const UNKNOWN_HINT = "Not in your catalogs yet.";
+  // The button says what a press does, so an idle panel adds no line under it.
+
+  /* A failure the reader sees: the engine's first sentences, up to about a
+   * line. Whole paragraphs and stack traces stay in the app. */
+  function brief(text, max = 100) {
+    let out = "";
+    for (const sentence of String(text || "").trim().split(/(?<=[.!?])\s+/)) {
+      if (out && out.length + sentence.length + 1 > max) break;
+      out = out ? `${out} ${sentence}` : sentence;
+    }
+    return out.length > max ? `${out.slice(0, max - 1).trimEnd()}\u2026` : out;
+  }
+  const NOT_RUNNING = "Kriko is not running. Start the app.";
 
   /* The reader's light/dark choice, shared with the options page. Absent when
    * they have never chosen, in which case the system preference decides — the
@@ -179,7 +178,6 @@
     researchRun: null,
     // The saved quick look the "Add to a pack" button would file, or null.
     researchQuickJob: null,
-    taskLogs: new Map(),
     quickSourcesOpen: false,
     // When the followed run started, for the elapsed time beside its stage.
     researchStartedAt: 0,
@@ -219,7 +217,7 @@
     sensitivity: "all",
     revealThin: false,
     /* A run that kept nothing has a card of its own. null means none; the
-     * object is `{ title, note, coverage, evidence_pages, outcome }`. */
+     * object is `{ title, note, coverage, evidence_pages }`. */
     researchEmpty: null,
     /* The engine's own comparison of this page against what it holds, asked
      * for by a press on a doubtful verdict (`/api/diagnose/identity`), never
@@ -866,7 +864,7 @@
           if (["APP_NOT_RUNNING", "APP_NOT_RESPONDING", "DESKTOP_NOT_CONNECTED"].includes(response?.code)) {
             showFooterStatus(message);
           } else {
-            console.warn("Kriko: could not open the app on", route, message);
+            console.warn(`Kriko: app refused route ${route}`);
           }
         }
       }
@@ -901,7 +899,7 @@
     state.researchPlaneRequested = true;
     chrome.runtime.sendMessage({ type: "RESEARCH_PLANE" }, (response) => {
       if (chrome.runtime.lastError || !response || !response.ok) {
-        state.researchPlaneError = response?.error || "Cannot read research costs. Open Kriko and retry.";
+        state.researchPlaneError = response?.error || "Costs unavailable. Open Kriko.";
         renderResearch();
         return;
       }
@@ -985,7 +983,7 @@
   function unavailableOptions(list) {
     return (state.agentsUnavailable || [])
       .filter((one) => !list.some((ready) => ready.id === one.id))
-      .map((one) => `<option value="" disabled title="${escapeHtml(one.detail)}">${escapeHtml(one.label)} (not set up in Kriko)</option>`);
+      .map((one) => `<option value="" disabled title="${escapeHtml(one.detail)}">${escapeHtml(one.label)} (not set up)</option>`);
   }
 
   function quickAgentRowMarkup(busy) {
@@ -998,18 +996,18 @@
     const stale = Boolean(state.quickAgentPick && !current);
     const selected = stale ? state.quickAgentPick : current;
     const options = [
-      `<option value=""${selected ? "" : " selected"}>Choose an available agent</option>`,
+      `<option value=""${selected ? "" : " selected"}>Choose an agent</option>`,
       ...(stale ? [`<option value="${escapeHtml(state.quickAgentPick)}" selected>Unavailable: ${escapeHtml(state.quickAgentPick)}</option>`] : []),
       ...list.map((one) => `<option value="${escapeHtml(one.id)}"${one.id === selected ? " selected" : ""}>${escapeHtml(one.label)}</option>`),
       ...unavailableOptions(list),
     ].join("");
     const note = stale
-      ? "The saved agent is unavailable. Choose another to continue."
-      : !list.length ? "No research agent is available. Connect or install one in Kriko."
-        : !current ? "Choose an agent before starting Quick Look." : "";
+      ? "Saved agent unavailable. Choose another."
+      : !list.length ? "No agent available. Set one up in Kriko."
+        : !current ? "Choose an agent." : "";
     return `<label class="lite-agent-row lite-quick-agent-row"><span>Quick Look agent</span>
       <select class="lite-agent-select lite-quick-agent-select" aria-label="Agent for Quick Look" ${busy ? "disabled" : ""}>${options}</select></label>
-      <p class="lite-quick-agent-note" role="status">${escapeHtml(note)}</p>`;
+      ${note ? `<p class="lite-quick-agent-note" role="status">${escapeHtml(note)}</p>` : ""}`;
   }
 
   /* Whether a press can start a quick look. A roster the app never answered is
@@ -1033,19 +1031,10 @@
     return state.agentsKnown ? "" : state.quickAgentPick;
   }
 
-  /* What the card's head does not already say: the cost is there, the wait is not. */
-  function learnWaitWords() {
-    return pickedAgent()?.kind === "cli" ? "Takes a few minutes." : "";
-  }
-
   function lessonWords(lesson) {
     if (!lesson) return "";
-    if (!lesson.learned) return lesson.reason || "Nothing was learned from this page.";
-    const count = Array.isArray(lesson.grabs) ? lesson.grabs.length : 0;
-    const site = lesson.host || "this site";
-    return count
-      ? `Learned ${site}. It takes ${count} thing${count === 1 ? "" : "s"} from this page:`
-      : `Learned ${site}.`;
+    if (!lesson.learned) return brief(lesson.reason) || "Nothing learned.";
+    return `Learned ${lesson.host || "this site"}.`;
   }
 
   function learnMarkup() {
@@ -1053,10 +1042,8 @@
     const grabs = lesson?.learned && Array.isArray(lesson.grabs) ? lesson.grabs : [];
     return `<div class="lite-learn">
       <div class="lite-learn-row">
-        <button type="button" class="lite-learn-btn" ${state.learning ? "disabled" : ""}
-          title="An agent goes through this page and learns what to take from it">${
+        <button type="button" class="lite-learn-btn" ${state.learning ? "disabled" : ""}>${
           state.learning ? "Learning…" : lesson?.learned ? "Learn again" : "Learn this page"}</button>
-        <small>${escapeHtml(learnWaitWords())}</small>
       </div>
       <p class="lite-learn-status" role="status"></p>
       ${grabs.length ? `<ul class="lite-learn-grabs">${grabs.map((one) =>
@@ -1113,12 +1100,12 @@
     renderLearnSurfaces();
     chrome.runtime.sendMessage({ type: "LEARN_PAGE", payload: { agent: currentAgent() } }, (response) => {
       if (chrome.runtime.lastError || !response?.ok) {
-        finishLearn({ learned: false, reason: response?.error || "Could not reach Kriko. Open the app and try again." });
+        finishLearn({ learned: false, reason: response?.error || NOT_RUNNING });
         return;
       }
       const lesson = response.lesson || {};
       if (lesson.mode === "agent" && lesson.job_id) {
-        state.learnMessage = "Your agent is reading the page…";
+        state.learnMessage = "Agent reading…";
         renderLearnSurfaces();
         pollLearnJob(lesson);
         return;
@@ -1131,7 +1118,7 @@
     chrome.runtime.sendMessage({ type: "JOB_STATUS", payload: { job_id: lesson.job_id } }, (response) => {
       if (!state.learning) return;
       if (chrome.runtime.lastError || !response?.ok || !response.job) {
-        state.learnMessage = "Cannot check progress. Open the app to follow it.";
+        state.learnMessage = "Lost contact. Open Kriko.";
         renderLearnSurfaces();
         pollLater("learn", () => pollLearnJob(lesson), 3000);
         return;
@@ -1139,7 +1126,7 @@
       const job = response.job;
       const done = job.done || ["succeeded", "cancelled", "failed", "interrupted"].includes(job.state);
       if (!done) {
-        state.learnMessage = `${job.message || "Reading the page"} · ${elapsedWords(state.learnStartedAt)}`;
+        state.learnMessage = `Learning · ${elapsedWords(state.learnStartedAt)}`;
         paintLearn(bodyEl);
         pollLater("learn", () => pollLearnJob(lesson), 1500);
         return;
@@ -1151,7 +1138,7 @@
         .map(([as, value]) => ({ as, value: String(value), kind })));
       finishLearn({
         ...lesson, learned, grabs,
-        reason: learned ? "" : (job.error || job.message || `Learning ${job.state}.`),
+        reason: learned ? "" : (brief(job.error || job.message) || `Learning ${job.state}.`),
       });
     });
   }
@@ -1253,8 +1240,8 @@
     if (state.researching || !state.researchPlane) return;
     if (!quickLookReady()) {
       state.researchMessage = state.quickAgentPick
-        ? "The saved Quick Look agent is unavailable. Choose an available agent."
-        : "Choose an available agent before starting Quick Look.";
+        ? "Saved agent unavailable. Choose another."
+        : "Choose an agent.";
       renderResearch();
       return;
     }
@@ -1289,7 +1276,7 @@
       if (chrome.runtime.lastError || !response?.ok || !response.job?.job_id) {
         state.researching = null;
         state.researchState = "failed";
-        state.researchMessage = response?.error || "Could not start. Open Kriko and retry.";
+        state.researchMessage = brief(response?.error) || "Could not start. Open Kriko.";
         renderResearch();
         return;
       }
@@ -1312,7 +1299,7 @@
     const result = job.result || {};
     if (job.state !== "succeeded") {
       state.researching = null;
-      state.researchMessage = job.error || job.message || "The quick look did not finish. Retry below.";
+      state.researchMessage = brief(job.error || job.message) || "Did not finish.";
       renderResearch();
       return;
     }
@@ -1331,18 +1318,18 @@
     };
     const deepen = result.deepen_job_id || state.researchJob?.deepen_job_id;
     const found = state.researchQuick.risks.length;
-    const diagnostic = String(result.diagnostic?.message || "").trim();
+    const diagnostic = brief(result.diagnostic?.message);
     const coverage = result.coverage || result.telemetry?.coverage || {};
     const pagesRead = Number(coverage.pages_read) || 0;
     const said = found
       ? `${found} thing${found === 1 ? "" : "s"} to know.`
       : diagnostic || (state.researchQuick.dropped
-        ? `Candidate findings did not pass source checks (${state.researchQuick.dropped} dropped).`
+        ? "Nothing passed source checks."
         : state.researchQuick.specs.length
-          ? `${state.researchQuick.specs.length} sourced product specification(s) found; no sourced risks.`
+          ? `${state.researchQuick.specs.length} specs found. No risks.`
           : pagesRead
-            ? `Read ${pagesRead} page(s); no supported risks were kept.`
-            : "No source pages were read; findings could not be checked.");
+            ? `${pagesRead} ${pagesRead === 1 ? "page" : "pages"} read. No risks kept.`
+            : "No pages read.");
     if (!deepen) {
       // A quick look is not a pack: it is saved as it is, and joins a pack
       // only when the reader presses "Add to a pack".
@@ -1377,7 +1364,7 @@
       } }, (response) => {
         const heard = !chrome.runtime.lastError && response?.ok && response.delivered;
         state.researchTold = { ...state.researchTold,
-          [question.id]: heard ? "It heard you." : "Not delivered. The run may have ended." };
+          [question.id]: heard ? "It heard you." : "Not delivered." };
         renderResearch();
       });
       return;
@@ -1394,7 +1381,7 @@
         if (chrome.runtime.lastError || !response?.ok || !response.job_id) {
           state.researching = null;
           state.researchState = "failed";
-          state.researchMessage = response?.error || "Could not run it again. Open Kriko and retry.";
+          state.researchMessage = brief(response?.error) || "Could not rerun. Open Kriko.";
           renderResearch();
           return;
         }
@@ -1417,14 +1404,14 @@
       if (state.researchJob?.job_id !== jobId || !state.researching) return;
       if (chrome.runtime.lastError || !response?.ok) {
         state.cancelling = false;
-        state.researchMessage = response?.error || "Could not cancel. Try again.";
+        state.researchMessage = brief(response?.error) || "Could not cancel.";
       } else if (response.job?.state === "cancelled") {
         state.researching = null;
         state.cancelling = false;
         state.researchState = "cancelled";
         state.researchMessage = "Research cancelled.";
       } else {
-        state.researchMessage = "Cancellation requested…";
+        state.researchMessage = "Cancelling…";
       }
       renderResearch();
     });
@@ -1462,8 +1449,7 @@
         <span class="lite-noissue-icon">${iconSvg("searchOff", { size: 18 })}</span>
         <div>
           <h3 class="lite-noissue-title">${escapeHtml(empty.title || "No sourced issues found")}</h3>
-          <p class="lite-noissue-note">${escapeHtml(empty.note
-            || "Nothing found in the pages read. Not proof there is no issue.")}</p>
+          ${empty.note ? `<p class="lite-noissue-note">${escapeHtml(empty.note)}</p>` : ""}
         </div>
       </div>
       ${statChips}
@@ -1505,15 +1491,6 @@
       + (distinctAssumption ? 1 : 0);
     const quickReadCountKnown = quickCoverage?.pages_read !== undefined
       && quickCoverage?.pages_read !== null;
-    const rejectionReasons = quickCoverage?.rejection_reasons;
-    const rejectionSummary = rejectionReasons && typeof rejectionReasons === "object"
-      ? Object.entries(rejectionReasons)
-        .filter(([, count]) => Number(count) > 0)
-        .sort((a, b) => Number(b[1]) - Number(a[1]))
-        .slice(0, 3)
-        .map(([reason, count]) => `${reason.replaceAll("_", " ")} (${count})`)
-        .join(", ")
-      : "";
     // A quick look that kept nothing and a deep run that kept nothing show the
     // same card.
     const emptyCard = quickIsEmpty
@@ -1521,19 +1498,15 @@
         kind: "quick",
         title: "No sourced issues kept",
         note: state.researchQuick?.diagnostic?.code === "unreadable_answer"
-          ? "Research returned an unreadable answer. Retry research."
+          ? "Unreadable answer. Retry."
           : quickReadCountKnown && !(Number(quickCoverage.pages_read) > 0)
-          ? "No source pages were read, so findings could not be checked."
-          : state.researchQuick?.diagnostic?.message
-          || (state.researchQuick?.dropped
-            ? `Candidate findings did not pass source checks (${state.researchQuick.dropped} dropped).`
-            : quickReadCountKnown && Number(quickCoverage.pages_read) > 0
-              ? "No supported risks were found in the pages read. This does not prove there is no issue."
-              : "Research could not confirm any findings. Retry research."),
+          ? "No pages read."
+          : state.researchQuick?.dropped
+            ? "Nothing passed source checks."
+            : quickReadCountKnown ? "" : "Not confirmed. Retry.",
         coverage: quickCoverage,
         hasProductDetails: detailCount > 0,
         detailCount,
-        outcome: state.researchQuick?.diagnostic?.message || "",
       }
       : state.researchEmpty;
     const markup = `
@@ -1552,7 +1525,7 @@
         <p class="lite-research-status" role="status"></p>
         ${quickCoverage && !quickIsEmpty ? `<p class="lite-quick-coverage" role="status">${escapeHtml(
           coverageWords(quickCoverage)
-          + (rejectionSummary ? ` · reasons: ${rejectionSummary}` : ""))}</p>` : ""}
+          )}</p>` : ""}
         <div class="lite-run" hidden>
           <div class="lite-run-bar" role="progressbar" aria-label="Research progress" aria-valuemin="1" aria-valuemax="4">
             <span class="lite-run-seg" data-n="1"><i></i></span><span class="lite-run-seg" data-n="2"><i></i></span><span class="lite-run-seg" data-n="3"><i></i></span><span class="lite-run-seg" data-n="4"><i></i></span>
@@ -1568,9 +1541,6 @@
           </details>
         </div>` : ""}
         ${asked.length ? `<div class="lite-asked" aria-live="polite">
-          <p class="lite-asked-lede"><span class="lite-asked-mark" aria-hidden="true">?</span>${busy
-            ? "Your agent has a question. Pick an answer."
-            : "Pick an answer to run it again."}</p>
           ${asked.map((q, qi) => `<fieldset class="lite-asked-q"><legend>${renderRichText(q.ask)}</legend>
             ${(q.options || []).length ? `<div class="lite-chips">${q.options.map((o, oi) => `
               <button type="button" class="lite-chip" data-q="${qi}" data-o="${oi}"
@@ -1592,7 +1562,6 @@
           ${state.researchJob ? `<button type="button" class="lite-research-output">Open in Kriko</button>` : ""}
           ${state.researchPlaneError ? `<button type="button" class="lite-research-cost-retry">Retry cost check</button>` : ""}
         </div>
-        <div class="lite-task-log-slot"></div>
       </section>`;
     // Progress-only polls should update the sentence, never re-create the
     // quick-look cards or the question the reader is typing an answer to.
@@ -1600,7 +1569,6 @@
       + JSON.stringify(state.researchEmpty);
     if (slot._researchMarkup === signature) {
       paintLearn(slot);
-      renderTaskLog(slot.querySelector(".lite-task-log-slot"), state.researchJob);
       slot.querySelector(".lite-research").dataset.state = state.researchState;
       slot.querySelector(".lite-research-status").textContent = emptyCard && !busy ? "" : state.researchMessage;
       paintRun(slot);
@@ -1637,7 +1605,6 @@
     paintLearn(slot);
     wireLearn(slot);
     wireQuickAgent(slot);
-    renderTaskLog(slot.querySelector(".lite-task-log-slot"), state.researchJob);
     slot.querySelector(".lite-research").dataset.state = state.researchState;
     slot.querySelector(".lite-research-status").textContent = emptyCard && !busy ? "" : state.researchMessage;
     paintRun(slot);
@@ -1798,70 +1765,6 @@
     bar.style.setProperty("--p", `${Math.max(6, value * 100)}%`);
   }
 
-  function renderTaskLog(slot, job) {
-    if (!slot || !job?.job_id) return;
-    if (!state.taskLogs.has(job.job_id)) state.taskLogs.set(job.job_id, { open: false, filter: "" });
-    const view = state.taskLogs.get(job.job_id);
-    if (slot.dataset.jobId !== job.job_id) {
-      slot.dataset.jobId = job.job_id;
-      // A bar that says how the run is (a light, a state, how long), opening
-      // onto who ran it, what it said, and the log itself.
-      slot.innerHTML = `<details class="lite-task-log">
-        <summary><span class="lite-tl-led" aria-hidden="true"></span><span class="lite-tl-title">Task log</span>
-          <span class="lite-tl-state"></span><span class="lite-tl-chev" aria-hidden="true"></span></summary>
-        <div class="lite-tl-body">
-          <p class="lite-tl-meta lite-task-log-meta"></p>
-          <p class="lite-tl-msg"></p>
-          <div class="lite-task-log-controls">
-            <select aria-label="Log filter"><option value="">All lines</option><option value="search">Search</option>
-              <option value="read">Sources</option><option value="fail">Problems</option></select>
-            <button type="button">Copy log</button></div>
-          <pre class="lite-task-log-text"></pre>
-        </div></details>`;
-      const details = slot.querySelector("details");
-      details.open = view.open;
-      details.addEventListener("toggle", () => { view.open = details.open; });
-      const filter = slot.querySelector("select");
-      filter.value = view.filter;
-      filter.addEventListener("change", () => { view.filter = filter.value; renderTaskLog(slot, state.researchJob); });
-      slot.querySelector("button").addEventListener("click", () => {
-        const text = slot.querySelector("pre").textContent;
-        window.navigator.clipboard?.writeText(text).catch(() => {});
-      });
-    }
-    const agent = job.result?.agent;
-    const started = Date.parse(job.created_at || "");
-    const end = Date.parse(job.finished_at || "") || Date.now();
-    const meta = slot.querySelector(".lite-task-log-meta");
-    meta.replaceChildren(...[
-      agent?.label || job.result?.harness || job.params?.harness || job.params?.backend || "Agent",
-      agent?.model || job.result?.model || job.params?.model || "Model not reported",
-      job.kind || "Task",
-    ].map((text) => {
-      const chip = document.createElement("span");
-      chip.className = "lite-tl-chip";
-      chip.textContent = text;
-      return chip;
-    }));
-    slot.querySelector(".lite-tl-state").textContent = [
-      job.state || "queued",
-      Number.isFinite(started) ? `${Math.max(0, Math.round((end - started) / 1000))} s` : "",
-    ].filter(Boolean).join(" · ");
-    const message = slot.querySelector(".lite-tl-msg");
-    message.textContent = job.message || "";
-    message.title = job.message || "";
-    slot.querySelector("details").dataset.state = job.state || "queued";
-    slot.querySelector("details").dataset.active = String(!job.done && job.state === "running");
-    const log = String(job.log || "").split("\n").filter(line => !view.filter || line.toLowerCase().includes(view.filter)).join("\n");
-    const body = slot.querySelector("pre");
-    const bottom = body.scrollHeight - body.scrollTop - body.clientHeight < 16;
-    if (body.textContent !== log) {
-      const position = body.scrollTop;
-      body.textContent = log || (job.done ? "No log entries for this filter." : "Waiting for log entries.");
-      body.scrollTop = bottom ? body.scrollHeight : position;
-    }
-  }
-
   /* "1m 12s" since the run started, from this panel's own clock. */
   function elapsedWords(since) {
     const seconds = Math.max(0, Math.round((Date.now() - (since || Date.now())) / 1000));
@@ -1879,13 +1782,13 @@
     state.researchStartedAt = Date.now();
     state.researchRun = null;
     state.researchState = "queued";
-    state.researchMessage = "Adding the quick look to a pack…";
+    state.researchMessage = "Adding to a pack…";
     renderResearch();
     chrome.runtime.sendMessage({ type: "QUICK_TO_PACK", payload: { job_id: jobId } }, (response) => {
       if (chrome.runtime.lastError || !response?.ok || !response.job?.job_id) {
         state.researching = null;
         state.researchState = "failed";
-        state.researchMessage = response?.error || "Could not start. Open Kriko and retry.";
+        state.researchMessage = brief(response?.error) || "Could not start. Open Kriko.";
         renderResearch();
         return;
       }
@@ -1911,10 +1814,7 @@
   }
 
   function noKeptData(result) {
-    const plain = "Research completed. Open the research job for findings.";
-    if (!keptNothing(result)) return plain;
-    const what = result.outcome || "nothing kept";
-    return `No data found that shows an issue (${what}); not proof that there is no issue.`;
+    return keptNothing(result) ? "" : "Done. Open in Kriko.";
   }
 
   /* A run's own log, accumulated across ticks.
@@ -1992,7 +1892,7 @@
     chrome.runtime.sendMessage({ type: "JOB_STATUS", payload: { job_id: jobId } }, (response) => {
       if (state.researchJob?.job_id !== jobId || !state.researching) return;
       if (chrome.runtime.lastError || !response?.ok || !response.job) {
-        state.researchMessage = "Cannot check progress. Open its output below or cancel.";
+        state.researchMessage = "Lost contact. Open in Kriko.";
         renderResearch();
         pollLater("research", () => pollResearchJob(jobId), 3000);
         return;
@@ -2031,18 +1931,17 @@
         evidence_pages: Array.isArray(job.result?.evidence_pages)
           ? job.result.evidence_pages
           : (Array.isArray(job.result?.sources) ? job.result.sources : []),
-        outcome: job.result?.outcome || "",
       } : null;
       state.researchMessage = job.state === "cancelled" ? "Research cancelled."
         : job.state === "succeeded" ? (state.researchJob.kind === "pack_author"
           ? (job.result?.installed
-            ? "Deeper research installed. Refreshing…"
-            : `${state.researchQuick ? "Deeper research done. " : ""}Draft pack ready in Kriko; it could not install itself. Open it there.`)
+            ? "Installed. Refreshing…"
+            : "Draft ready. Open Kriko to install.")
           : job.result?.brief && !job.result?.documents
-            ? "Brief ready. Open the research job."
+            ? "Brief ready. Open in Kriko."
             : noKeptData(job.result))
-        : job.state === "interrupted" ? "Research interrupted by an app restart."
-        : `Research failed. ${job.error || job.message || "Open the job for details."}`;
+        : job.state === "interrupted" ? "Interrupted. Run again."
+        : `Failed. ${brief(job.error || job.message) || "Open in Kriko."}`;
       const installed = job.state === "succeeded" && Boolean(job.result?.installed);
       if (installed) state.researchOpen = false;
       renderResearch();
@@ -2077,7 +1976,7 @@
         if (chrome.runtime.lastError) {
           setPipeline("error");
           state.errorCode = null;
-          state.errorMsg = chrome.runtime.lastError.message || "Background unreachable.";
+          state.errorMsg = NOT_RUNNING;
           renderBody();
           return;
         }
@@ -2119,7 +2018,7 @@
           // fix the reader can act on from here — every other failure is the
           // app's to report, and offering its settings would be a guess.
           state.errorCode = response.code || null;
-          state.errorMsg = response.error || "Analysis failed.";
+          state.errorMsg = brief(response.error) || "Analysis failed.";
           renderBody();
           return;
         }
@@ -2343,20 +2242,14 @@
    * walk comes back until the reader has made a choice about it. */
   const TOUR_KEY = "kriko.panelTour";
   const TOUR_STEPS = [
-    { target: ".lite-header", title: "Kriko is on this page",
-      text: "It shows what is known about the product here. Drag the top bar to move it." },
+    { target: ".lite-header", title: "Drag the top bar to move" },
     // The big button is gone once there is a result, and the small one takes
     // its place, so the step points at whichever the panel is showing.
-    { target: ".lite-cta, .lite-product-actions", title: "Look it up",
-      text: "Checks the product against your catalogs." },
-    { target: ".lite-compare-bar", title: "Compare",
-      text: "Add the products you are weighing. They line up here, side by side." },
-    { target: ".lite-btn-search", title: "Search",
-      text: "Look up any product, without being on its page." },
-    { target: ".lite-btn-theme", title: "Light or dark",
-      text: "The app and this panel share it." },
-    { target: ".lite-btn-close", title: "Close and open",
-      text: "Open it again from the Kriko button in the toolbar." },
+    { target: ".lite-cta, .lite-product-actions", title: "Look it up" },
+    { target: ".lite-compare-bar", title: "Compare" },
+    { target: ".lite-btn-search", title: "Search" },
+    { target: ".lite-btn-theme", title: "Light or dark" },
+    { target: ".lite-btn-close", title: "Close" },
   ];
   let tourEl = null;
 
@@ -2427,7 +2320,6 @@
         <div class="lite-tour-card" style="${below ? `top:${spot ? spot.top + spot.height + 12 : 80}px` : `bottom:${spot ? frame.height - spot.top + 12 : 80}px`}">
           <small class="lite-tour-count">${at + 1} of ${TOUR_STEPS.length}</small>
           <h2>${escapeHtml(step.title)}</h2>
-          <p>${escapeHtml(step.text)}</p>
           <div class="lite-tour-actions">
             ${last ? "" : `<button type="button" class="lite-tour-skip">Skip</button>`}
             ${at > 0 ? `<button type="button" class="lite-tour-back">Back</button>` : ""}
@@ -2644,7 +2536,7 @@
             <span class="lite-cta-icon">${iconSvg("scan", { size: 15 })}</span>
             <span class="lite-cta-label">Search this product</span>
           </button>
-          <p class="lite-status" role="status">${escapeHtml(IDLE_HINT)}</p>
+          <p class="lite-status" role="status"></p>
         </div>
         <div class="lite-compare-slot"></div>
         <div class="lite-product-actions">
@@ -2739,7 +2631,7 @@
             // The title already says it when the engine read the page the way
             // the page reads; a second line repeating it is noise (B152.5).
             ? (sameWords(lm.identity_line, lm.title) ? "" : `<div class="lite-listing-engine">${escapeHtml(lm.identity_line)}</div>`)
-            : `<div class="lite-listing-engine" data-unresolved="1">Not recognised by any installed pack</div>`}
+            : `<div class="lite-listing-engine" data-unresolved="1">Not recognised</div>`}
       </div>
     `;
   }
@@ -2847,7 +2739,7 @@
   function removeFromCompare(queueId) {
     askWorker("COMPARE_REMOVE", { queue_id: queueId }).then((reply) => {
       if (!reply.ok) {
-        state.compareError = reply.error || "Could not remove it. Try again.";
+        state.compareError = brief(reply.error) || "Could not remove it.";
         renderCompare();
         return;
       }
@@ -2883,7 +2775,7 @@
         const full = response && response.status === 409;
         state.queue = { url, phase: "error", text: full
           ? "Compare is full. Remove one first."
-          : (response && response.error) || "Kriko is not running. Open the app, then try again." };
+          : brief(response && response.error) || NOT_RUNNING };
         // A full list is fixed from the list, so show it.
         if (full) { state.compareOpen = true; loadCompare(); }
       } else {
@@ -2918,7 +2810,7 @@
     if (compareItems().length < 2 && !state.pick) { slot.innerHTML = ""; return; }
     const busy = state.buyerUi.deciding;
     slot.innerHTML = `<div class="lite-buy-actions"><button type="button" class="lite-buy-btn" data-act="decide"
-      ${busy ? "disabled" : ""} title="Rank the shortlist for what you told Kriko you need">
+      ${busy ? "disabled" : ""}>
       ${busy ? "Deciding…" : "Help me decide"}</button></div>`
       + (state.buyerUi.decideError ? `<p class="lite-buy-note" data-tone="bad">${BUYER.esc(state.buyerUi.decideError)}</p>` : "")
       + BUYER.renderPick(state.pick, state.buyerUi);
@@ -2929,7 +2821,7 @@
     return new Promise((resolve) => {
       chrome.runtime.sendMessage({ type, payload }, (response) => {
         if (chrome.runtime.lastError || !response) {
-          resolve({ ok: false, error: "Kriko is not running. Open the Kriko app, then try again." });
+          resolve({ ok: false, error: NOT_RUNNING });
         } else {
           resolve(response);
         }
@@ -2958,12 +2850,12 @@
       if (!advice || advice.jobId !== jobId) return;
       const job = reply.job;
       if (!reply.ok || !job) {
-        state.buyerUi.advice = { ...advice, state: "failed", error: "Cannot check the answer. Try again." };
+        state.buyerUi.advice = { ...advice, state: "failed", error: "Lost contact. Try again." };
       } else if (job.state === "succeeded") {
         state.buyerUi.advice = { ...advice, state: "done", answer: (job.result && job.result.answer) || "" };
       } else if (["failed", "cancelled", "interrupted"].includes(job.state)) {
         state.buyerUi.advice = { ...advice, state: "failed",
-          error: job.error || job.message || "The agent did not finish. Try again." };
+          error: brief(job.error || job.message) || "The agent did not finish." };
       } else {
         pollLater("advice", () => pollAdvice(jobId), 1200);
       }
@@ -3006,7 +2898,7 @@
       askWorker("BUYER_PICK", {}).then((reply) => {
         ui.deciding = false;
         if (reply.ok) { state.pick = reply; ui.advice = null; }
-        else ui.decideError = reply.error || "Could not rank the shortlist.";
+        else ui.decideError = brief(reply.error) || "Could not rank the shortlist.";
         renderDecide();
       });
     } else if (act === "advise") {
@@ -3018,7 +2910,7 @@
           pollAdvice(reply.job_id);
         } else {
           ui.advice = { mode: target.dataset.mode, state: "failed",
-            error: reply.error || "Could not start your agent. Check Agents in Kriko." };
+            error: brief(reply.error) || "Could not start the agent." };
         }
         renderDecide();
       });
@@ -3040,7 +2932,7 @@
         price: buyer.price ? buyer.price.price : null, currency: buyer.price ? buyer.price.currency : "",
       }).then((reply) => {
         if (reply.ok && state.buyer) { state.buyer.watch = reply; state.buyerUi.watchForm = false; }
-        else state.buyerUi.watchError = reply.error || "Could not watch this page.";
+        else state.buyerUi.watchError = brief(reply.error) || "Could not watch this page.";
         renderBuyer();
       });
     } else if (form.dataset.act === "regret-save") {
@@ -3184,7 +3076,7 @@
       const items = Array.isArray(damage[state.key]) ? damage[state.key] : [];
       if (!items.length) continue;
       declaredRows.push({
-        title: state.title, tone: state.tone || "neutral", items, hint: state.hint || "",
+        title: state.title, tone: state.tone || "neutral", items,
       });
     }
     for (const measure of panel.measures || []) {
@@ -3197,7 +3089,6 @@
       declaredRows.push({
         title: measure.title, tone: measure.tone || "neutral",
         items: [`${Number(amount).toLocaleString()}${currency ? ` ${currency}` : ""}`],
-        hint: measure.hint || "",
       });
     }
 
@@ -3232,7 +3123,6 @@
               <span>${escapeHtml(r.title)}</span>
               <span class="count">· ${r.items.length}</span>
             </button>
-            ${r.hint ? `<div class="lite-detrow-hint">${escapeHtml(r.hint)}</div>` : ""}
             <div class="lite-detrow-bodywrap">
               <div class="lite-detrow-bodyclip">
                 <div class="lite-detrow-chips">${chips}</div>
@@ -3329,10 +3219,10 @@
    * shown as itself rather than smoothed into a nicer lie.
    */
   const STAGE_WORDS = {
-    adapters: "Checking which pack reads this site",
-    reading: "Reading this page",
-    asking: "Asking Kriko what is known",
-    cached: "Reusing the answer already stored",
+    adapters: "Checking packs",
+    reading: "Reading page",
+    asking: "Looking up",
+    cached: "Using saved answer",
     done: "Done",
     failed: "Could not finish",
   };
@@ -3527,9 +3417,8 @@
   function renderStatus() {
     if (!statusEl) return;
     if (state.pipeline === "idle") {
-      const hint = ctaIsResearch() ? UNKNOWN_HINT : IDLE_HINT;
-      statusEl.textContent = hint;
-      statusEl.style.display = hint ? "" : "none";
+      statusEl.textContent = "";
+      statusEl.style.display = "none";
     } else if (state.pipeline === "analyzing") {
       statusEl.textContent = stageSentence(state.stage);
       statusEl.style.display = "";
@@ -3578,7 +3467,7 @@
     if (action === "research") {
       return "Research this product";
     }
-    if (action === "confirm") return "Not this one; search";
+    if (action === "confirm") return "Search by name";
     return "";
   }
 
@@ -3736,19 +3625,13 @@
       return;
     }
     if (state.searchError) {
-      box.innerHTML = `<p class="lite-search-note">${escapeHtml(state.searchError)}</p>`;
+      box.innerHTML = `<p class="lite-search-note">${escapeHtml(brief(state.searchError))}</p>`;
       return;
     }
-    if (state.searchResults === null) {
-      box.innerHTML =
-        `<p class="lite-search-note">At least ${SEARCH_MIN} characters. ` +
-        `Names, aliases or values.</p>`;
-      return;
-    }
+    if (state.searchResults === null) return;
     if (!state.searchResults.length) {
       box.innerHTML =
-        `<p class="lite-search-note">${webSearch ? "No web results found. Try fewer words."
-          : "Nothing in the installed packs matches that. Try Search the web."}</p>`;
+        `<p class="lite-search-note">${webSearch ? "No web results." : "No match. Try the web."}</p>`;
       return;
     }
 
@@ -3815,8 +3698,7 @@
         <div class="lite-verdict-head">
           <span class="lite-verdict-word">New to Kriko</span>
         </div>
-        <p class="lite-verdict-say">Kriko doesn't know
-          <strong class="lite-unknown-name"></strong> yet. Research it.</p>
+        <p class="lite-verdict-say"><strong class="lite-unknown-name"></strong></p>
       `;
       card.querySelector(".lite-unknown-name").textContent = state.unknownProduct;
       // The primary key above already says "Research this product" while the
@@ -3826,7 +3708,6 @@
         button.type = "button";
         button.className = "lite-verdict-btn lite-unknown-research";
         button.textContent = "Research";
-        button.title = "A quick look answers here; a deeper run follows.";
         button.setAttribute("aria-label", "Research this product");
         button.addEventListener("click", () =>
           researchSubject({ label: state.unknownProduct }));
@@ -3859,8 +3740,6 @@
           <div class="lite-verdict-head">
             <span class="lite-verdict-word">Not a listing</span>
           </div>
-          <p class="lite-verdict-say">Kriko reads this site's listings. This
-            page isn't one.</p>
         `;
         slot.replaceChildren(card);
         return;
@@ -3874,8 +3753,6 @@
         <div class="lite-verdict-head">
           <span class="lite-verdict-word">Not read here</span>
         </div>
-        <p class="lite-verdict-say">Nothing installed knows how to read this
-          site yet. Kriko can learn it from this page.</p>
         ${learnAgentRowMarkup(false)}
         ${learnMarkup()}
       `;
@@ -3885,8 +3762,6 @@
       button.type = "button";
       button.className = "lite-verdict-btn lite-site-add";
       button.textContent = "Add this site";
-      button.title = "In Kriko, an agent can write most of it.";
-      button.setAttribute("aria-label", "Add this site; an agent can write most of the adapter");
       button.addEventListener("click", () =>
         openInApp("sites", appUrlFor("sites")));
       card.appendChild(button);
@@ -3907,42 +3782,27 @@
     card.className = "lite-verdict";
     card.dataset.verdict = verdict || "unknown";
 
+    const action = step && step.action && step.action !== "none" ? step.action : "";
+    // A recognised product the packs hold nothing on is the one `recognised`
+    // case worth a banner, and its word says so.
+    const recognisedGap = verdict === "recognised" && action === "research";
     const head = document.createElement("div");
     head.className = "lite-verdict-head";
     head.innerHTML = `
-      <span class="lite-verdict-word">${escapeHtml(VERDICT_WORD[verdict] || verdict)}</span>
+      <span class="lite-verdict-word">${escapeHtml(recognisedGap ? "No data yet" : (VERDICT_WORD[verdict] || verdict))}</span>
       ${typeof state.result.score === "number" && verdict !== "recognised" && verdict !== "several"
         ? `<span class="lite-verdict-score">${(state.result.score * 100).toFixed(0)}%</span>`
         : ""}
     `;
     card.appendChild(head);
 
-    const action = step && step.action && step.action !== "none" ? step.action : "";
-    // A recognised product the packs hold nothing on is the one `recognised`
-    // case worth a banner. The engine's sentence is the warrant, not the
-    // headline: the card states the gap in a phrase and keeps the full
-    // sentence as the card's title, so nothing is hidden and nothing is read
-    // twice. `several` is the other long engine sentence the reader meets by
-    // default; it gets the same treatment. `probably` stays word for word —
-    // the engine's own question is the point of that card.
-    const recognisedGap = verdict === "recognised" && action === "research";
-    const shortSay = recognisedGap ? "Recognised. Nothing installed covers it yet."
-      : verdict === "several" ? "One of several. Pick the one on the listing."
-        : "";
-    if (step && step.say) {
-      if (shortSay) {
-        card.title = step.say;
-        const say = document.createElement("p");
-        say.className = "lite-verdict-say";
-        say.textContent = shortSay;
-        say.title = step.say;
-        card.appendChild(say);
-      } else {
-        const say = document.createElement("p");
-        say.className = "lite-verdict-say";
-        say.textContent = step.say;
-        card.appendChild(say);
-      }
+    // The engine's sentence is shown only where the reader has to answer it:
+    // "probably" is a question. Every other verdict is its word and its button.
+    if (verdict === "probably" && step && step.say) {
+      const say = document.createElement("p");
+      say.className = "lite-verdict-say";
+      say.textContent = step.say;
+      card.appendChild(say);
     }
 
     const weighed = renderConsidered();
@@ -3970,7 +3830,6 @@
       button.type = "button";
       button.className = "lite-verdict-btn";
       button.textContent = label;
-      if (recognisedGap) button.title = step.say;
       button.addEventListener("click", () => takeNextStep(action, step, button));
       card.appendChild(button);
     }
@@ -3986,7 +3845,6 @@
         why.type = "button";
         why.className = "lite-verdict-btn lite-diagnosis-btn";
         why.textContent = asked ? "Try again" : "What was compared";
-        why.title = "The adapter, the keys it read, and what each candidate agreed on.";
         why.addEventListener("click", diagnoseIdentity);
         card.appendChild(why);
       }
@@ -4053,7 +3911,7 @@
         if (chrome.runtime.lastError || !response?.ok || !response.diagnosis) {
           state.diagnosis = { loading: false, value: null,
             error: response?.error
-              || "Could not read what Kriko compared. Open the Kriko app and try again." };
+              || "Could not compare. Start the app." };
         } else {
           state.diagnosis = { loading: false, error: "", value: response.diagnosis };
         }
@@ -4087,7 +3945,7 @@
     };
 
     if (asked.loading) {
-      say("Compared", "Asking Kriko what it compared\u2026");
+      say("Compared", "Asking\u2026");
       return box;
     }
     if (asked.error) {
@@ -4103,7 +3961,7 @@
 
     say("Read by", adapter
       ? [adapter.id, adapter.site,
-         adapter.source === "local" ? "learned on this machine" : "from an installed pack"]
+         adapter.source === "local" ? "learned here" : "pack"]
         .filter(Boolean).join(" \u00b7 ")
       : "nothing installed");
     const identity = Object.entries(page.identity || {})
@@ -4119,7 +3977,7 @@
     if (!considered.length) {
       // The honest empty case, and a common one: no subject was weighed at all
       // (a site nothing reads, or an identity too thin to compare).
-      say("Weighed", "nothing: the engine had no candidate to compare");
+      say("Weighed", "nothing");
     }
     for (const one of considered) {
       const candidate = document.createElement("div");
@@ -4387,8 +4245,8 @@
           // Recognised with nothing known is a gap, not "not recognised":
           // the header above already names the product.
           empty.textContent = state.result.coverage === "MATCHED_NO_DATA"
-            ? "Recognised, but the installed packs hold nothing about it yet."
-            : "Nothing matched this listing. No pack recognises it.";
+            ? "Nothing known yet."
+            : "Not recognised.";
           claimsListEl.appendChild(empty);
         }
       }
@@ -4517,7 +4375,6 @@
           const title = card.querySelector(".lite-rc-title");
           const chip = document.createElement("span");
           chip.className = "lite-rc-new";
-          chip.title = "Added while this answer was open";
           chip.textContent = "New";
           if (title) title.prepend(chip);
           card.dataset.fresh = "1";
@@ -4588,15 +4445,13 @@
     for (const subject of gaps) {
       const card = document.createElement("div");
       card.className = "lite-gap";
-      // The explanation is the card's tooltip; the card itself is a phrase.
-      card.title = "In the catalogue, but nothing researched for it yet.";
       card.innerHTML = `
         <div class="lite-gap-body">
-          <div class="lite-gap-title">No knowledge on
-            ${escapeHtml(subject.label)} yet</div>
+          <div class="lite-gap-title">Nothing known on
+            ${escapeHtml(subject.label)}</div>
           ${cost ? `<div class="lite-gap-cost">${escapeHtml(cost)}</div>` : ""}
         </div>
-        <button type="button" class="lite-gap-btn" title="Research this product with your agent"
+        <button type="button" class="lite-gap-btn"
           aria-label="Research this product">Research</button>
       `;
       const button = card.querySelector(".lite-gap-btn");
