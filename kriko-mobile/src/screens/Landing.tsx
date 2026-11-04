@@ -1,175 +1,157 @@
 /** The scan-first home screen shown before a conversation begins. */
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
+import { plainPreview } from '../engine/preview';
+import type { QueueJob } from '../engine/types';
 import { tr } from '../i18n';
-import { press, tap } from '../theme/feedback';
-import { font, gap, PAGE_X, radius } from '../theme/tokens';
+import { press } from '../theme/feedback';
+import { elevation, gap, PAGE_X, radius } from '../theme/tokens';
 import { makeStyles, useColors } from '../theme/theme';
 import { Txt } from '../theme/Txt';
 import { MotionPressable, MotionView } from '../components/Motion';
-import { ChevronRightIcon, ImageIcon2, ScanIcon, SearchIcon } from '../components/Icon';
+import { PulseRing } from '../components/Shock';
+import { ChevronRightIcon, ImageIcon2, InfoIcon, ScanIcon } from '../components/Icon';
+import { FirstRunGuide } from '../components/FirstRunGuide';
 
-const SUGGESTIONS = [
-  'What do owners report about the Bosch GSB 600?',
-  'Are used Galaxy Buds2 Pro worth $90?',
-] as const;
+const GUIDE_KEY = 'kriko:first-run-guide:complete:v1';
 
 export function Landing({
-  onSuggestion,
   onScan,
   onPick,
+  recentScans,
+  onOpenScan,
 }: {
-  onSuggestion: (text: string) => void;
   onScan: () => void;
   onPick: () => void;
+  recentScans: QueueJob[];
+  onOpenScan: (id: string) => void;
 }) {
   const color = useColors();
   const styles = useStyles();
+  const recent = recentScans.slice(-2).reverse();
+  const [guideVisible, setGuideVisible] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    void AsyncStorage.getItem(GUIDE_KEY).then((done) => {
+      if (mounted && !done) setGuideVisible(true);
+    }).catch(() => {
+      if (mounted) setGuideVisible(true);
+    });
+    return () => { mounted = false; };
+  }, []);
+
+  const completeGuide = () => {
+    setGuideVisible(false);
+    void AsyncStorage.setItem(GUIDE_KEY, '1').catch(() => {});
+  };
 
   return (
     <View style={styles.root}>
       <MotionView style={styles.intro}>
-        <Txt variant="crumb" tone="ink3" style={styles.eyebrow}>
-          BUY WITH A CLEARER PICTURE
-        </Txt>
         <Txt variant="headline" tone="ink" accessibilityRole="header" style={styles.headline}>
-          Take a closer look.
-        </Txt>
-        <Txt variant="heroSub" tone="ink2" style={styles.subtitle}>
-          Scan a listing or ask a question. Kriko checks the details against independent sources.
+          Check before you buy.
         </Txt>
       </MotionView>
 
-      <MotionView delay={80} style={styles.actions}>
-        <MotionPressable
-          onPress={() => {
-            press();
-            onScan();
-          }}
-          accessibilityRole="button"
-          accessibilityLabel={tr('Scan a product')}
-          style={styles.scanButton}
-        >
-          <View style={styles.scanIcon}>
-            <ScanIcon size={20} color={color.onAccent} strokeWidth={1.8} />
-          </View>
-          <View style={styles.scanCopy}>
-            <Txt variant="action" tone={color.onAccent} style={styles.scanTitle}>
-              Scan a product
-            </Txt>
-            <Txt variant="bodyTight" tone="rgba(255,255,255,0.78)" style={styles.scanSub}>
-              Read the page open on your phone
-            </Txt>
-          </View>
-          <ChevronRightIcon size={19} color="rgba(255,255,255,0.82)" />
+      <MotionView delay={80} style={styles.orbRow}>
+        <MotionPressable onPress={onPick} accessibilityRole="button"
+          accessibilityLabel={tr('Choose a screenshot')} style={styles.sideButton}>
+          <ImageIcon2 size={22} color={color.ink} />
         </MotionPressable>
 
-        <MotionPressable
-          onPress={onPick}
-          accessibilityRole="button"
-          accessibilityLabel={tr('Choose a screenshot')}
-          style={styles.pickRow}
-        >
-          <ImageIcon2 size={18} color={color.ink2} />
-          <Txt variant="rowText" tone="ink" style={styles.pickLabel}>
-            Choose a screenshot instead
-          </Txt>
-          <ChevronRightIcon size={17} color={color.ink3} />
-        </MotionPressable>
-      </MotionView>
-
-      <MotionView delay={160} style={styles.suggestionsBlock}>
-        <View style={styles.sectionHeading}>
-          <Txt variant="sectionLabel" tone="ink3">Or start with a question</Txt>
-          <View style={styles.rule} />
-        </View>
-        {SUGGESTIONS.map((text, index) => (
-          <MotionPressable
-            key={text}
-            onPress={() => {
-              tap();
-              onSuggestion(text);
-            }}
-            accessibilityRole="button"
-            accessibilityLabel={text}
-            style={styles.suggestion}
-          >
-            <SearchIcon size={15} color={color.ink3} />
-            <Txt variant="bodyTight" tone="ink" style={styles.suggestionText}>{text}</Txt>
-            <Txt variant="monoSm" tone="ink4">0{index + 1}</Txt>
+        <View style={styles.orbBox}>
+          <PulseRing color={color.edgeStrong} radius={ORB / 2} />
+          <PulseRing color={color.edgeStrong} radius={ORB / 2} delay={1600} />
+          <MotionPressable onPress={() => { press(); onScan(); }} accessibilityRole="button"
+            accessibilityLabel={tr('Scan a product')} style={styles.orb}>
+            <ScanIcon size={48} color={color.ink} strokeWidth={1.5} />
           </MotionPressable>
-        ))}
+        </View>
+
+        <MotionPressable onPress={() => setGuideVisible(true)} accessibilityRole="button"
+          accessibilityLabel={tr('How Kriko works')} style={styles.sideButton}>
+          <InfoIcon size={22} color={color.ink} />
+        </MotionPressable>
       </MotionView>
 
-      <MotionView delay={320} style={styles.footerNote}>
-        <View style={styles.footerDot} />
-        <Txt variant="monoSm" tone="ink3">Evidence first. Clear about what is missing.</Txt>
+      <MotionView delay={140}>
+        <Txt variant="cardTitle" tone="ink" style={styles.orbLabel}>Scan a product</Txt>
       </MotionView>
+
+      {recent.length ? (
+        <MotionView delay={200} style={styles.recentBlock}>
+          <Txt variant="sectionLabel" tone="ink2">Recently scanned</Txt>
+          {recent.map((job) => {
+            const title = [job.reading.brand, job.reading.product, job.reading.model].filter(Boolean).join(' ') || 'Product scan';
+            return <MotionPressable key={job.id} onPress={() => onOpenScan(job.id)} accessibilityRole="button"
+              accessibilityLabel={tr(`Open scan result for ${title}`)} style={styles.recentRow}>
+              <View style={styles.recentText}>
+                <Txt variant="rowTitle" tone="ink" numberOfLines={1}>{title}</Txt>
+                <Txt variant="bodyTight" tone="ink2" numberOfLines={1}>{plainPreview(job.text) || job.error || job.reading.note || 'Open the saved scan'}</Txt>
+              </View>
+              <ChevronRightIcon size={20} color={color.ink2} />
+            </MotionPressable>;
+          })}
+        </MotionView>
+      ) : null}
+
+      {guideVisible ? <FirstRunGuide onComplete={completeGuide} onSkip={completeGuide} /> : null}
     </View>
   );
 }
 
+/** The scan orb's diameter. Large on purpose: it is the one thing this screen is for. */
+const ORB = 150;
+
 const useStyles = makeStyles((color) => StyleSheet.create({
-  root: {
-    flexGrow: 1,
-    paddingHorizontal: PAGE_X,
-    paddingTop: 12,
-    paddingBottom: 12,
-    gap: gap[5],
-  },
-  intro: { gap: 8, alignItems: 'flex-start' },
-  eyebrow: { letterSpacing: 1.05, marginBottom: 3 },
-  headline: {
-    fontFamily: font.editorial,
-    letterSpacing: -1.05,
-  },
-  subtitle: { lineHeight: 23 },
-  actions: { gap: gap[1] },
-  scanButton: {
-    minHeight: 78,
-    borderRadius: radius.l,
-    paddingHorizontal: 15,
-    paddingVertical: 13,
-    backgroundColor: color.accent,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  scanIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+  root: { flexGrow: 1, paddingHorizontal: PAGE_X, paddingTop: 24, paddingBottom: 30, gap: gap[5] },
+  intro: { alignItems: 'flex-start' },
+  // Wide enough for "Check before" and no wider, so the line breaks after the
+  // verb phrase instead of leaving "buy." alone on the second line.
+  headline: { maxWidth: 270 },
+  // The screen carries two things: the headline, and one large place to press.
+  orbRow: { marginTop: gap[6], flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 30 },
+  orbBox: { width: ORB, height: ORB },
+  orb: {
+    width: ORB,
+    height: ORB,
+    borderRadius: ORB / 2,
+    backgroundColor: color.raise,
+    borderWidth: 1.5,
+    borderColor: color.rim,
     alignItems: 'center',
     justifyContent: 'center',
+    ...elevation.float(color.shadow),
   },
-  scanCopy: { flex: 1, gap: 3 },
-  scanTitle: { textTransform: 'none', fontSize: 16 },
-  scanSub: { fontSize: 12.5, lineHeight: 17 },
-  pickRow: {
-    minHeight: 48,
+  sideButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: color.raise,
+    borderWidth: 1,
+    borderColor: color.rim,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...elevation.card(color.shadow),
+  },
+  orbLabel: { textAlign: 'center' },
+  recentBlock: { gap: gap[2], marginTop: gap[3] },
+  recentRow: {
+    minHeight: 64,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: color.edge,
+    gap: gap[3],
+    paddingHorizontal: gap[4],
+    paddingVertical: gap[3],
+    borderRadius: radius.l,
+    backgroundColor: color.surface,
+    borderWidth: 1,
+    borderColor: color.rim,
+    ...elevation.card(color.shadow),
   },
-  pickLabel: { flex: 1 },
-  suggestionsBlock: { gap: 4 },
-  sectionHeading: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 4 },
-  rule: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: color.edge },
-  suggestion: {
-    minHeight: 46,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: color.edge,
-    paddingHorizontal: 4,
-  },
-  suggestionText: { flex: 1 },
-  footerNote: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingTop: 2 },
-  footerDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: color.accent },
+  recentText: { flex: 1, gap: 2 },
 }));

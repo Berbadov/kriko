@@ -8,6 +8,8 @@ export type OverlayJob = {
   error?: string;
   sources?: { n: number; url: string; title?: string }[];
   steps?: { kind: string; text: string }[];
+  /** A picture of the scanned page (a local file), shown beside the title. */
+  image?: string;
 };
 
 export type OverlayScan = {
@@ -17,11 +19,12 @@ export type OverlayScan = {
   mode?: "research" | "site_reviews";
   reviewSite?: string;
 };
-export type OverlaySession = { active: boolean };
+/** `paused` means the session stands but Android ended screen capture (the phone locked). */
+export type OverlaySession = { active: boolean; paused?: boolean };
 export type OverlayAction = { action: "select" | "cancel"; id: string };
 
 /** The resolved palette the native bubble and panel should draw in. */
-export type OverlayTheme = "dark" | "paper" | "white";
+export type OverlayTheme = "dark" | "gray" | "paper" | "white";
 
 /**
  * Every word the native bubble and panel draw, already translated.
@@ -45,6 +48,8 @@ export type OverlayLabels = {
   siteUrlHint: string;
   cancel: string;
   close: string;
+  /** The answer sheet's swipe-down handle: says the gesture closes it. */
+  sheetSwipeClose: string;
   queued: string;
   running: string;
   reading: string;
@@ -55,6 +60,8 @@ export type OverlayLabels = {
   sources: string;
   queueFull: string;
   dragHint: string;
+  /** The label of the drop target shown while the floating K is being dragged. */
+  dropToStop: string;
   notificationTitle: string;
   notificationText: string;
   stopSharing: string;
@@ -65,9 +72,34 @@ export type OverlayLabels = {
   answerEmpty: string;
   captureFailed: string;
   sourceFailed: string;
+  copy: string;
+  copied: string;
+  scannedPage: string;
+  /** The grey page: capture ended, the next Scan asks for it again. */
+  paused: string;
+  notificationPausedText: string;
+  resumeFailed: string;
+  /** The phone-assistant card: shown at once, then while the app opens. */
+  openingKriko: string;
+  assistScanning: string;
+  assistNoShot: string;
+  assistTitle: string;
+  /** Toast when a phone-assistant scan is folded away while it is still being read. */
+  assistKeeps: string;
+  showAllSources: string;
+  showFewerSources: string;
+  stalledResearch: string;
+  openToRetry: string;
+  writingAnswer: string;
+  reviewingSources: string;
+
 };
 
-export type OverlayUi = { theme: OverlayTheme; labels: OverlayLabels };
+/**
+ * `puckOpacity` is a percentage, 20 to 100: how solid the floating K and the
+ * glass panels around it are drawn.
+ */
+export type OverlayUi = { theme: OverlayTheme; labels: OverlayLabels; puckOpacity: number };
 
 type KrikoOverlayNative = {
   startSession(): Promise<void>;
@@ -76,8 +108,19 @@ type KrikoOverlayNative = {
   ensureHeadlessSession(): void;
   moveToBack(): Promise<boolean>;
   setAppForeground(foreground: boolean): void;
+  setUiReady(ready: boolean): void;
+  isDefaultAssistant(): Promise<boolean>;
+  openAssistantSettings(): Promise<boolean>;
+  canDrawOverlays(): Promise<boolean>;
+  openOverlaySettings(): Promise<boolean>;
   updateJobs(json: string): void;
   updateUi(json: string): void;
+  appVersion(): Promise<{ versionName: string; versionCode: number }>;
+  canInstallPackages(): Promise<boolean>;
+  openInstallSettings(): Promise<boolean>;
+  downloadUpdate(version: string, url: string, sha256: string, bytes: number): Promise<{ sha256: string; bytes: number }>;
+  cancelUpdate(): void;
+  installUpdate(version: string): Promise<boolean>;
   addListener(eventName: string): void;
   removeListeners(count: number): void;
 };
@@ -99,7 +142,7 @@ const native = NativeModules.KrikoOverlay as KrikoOverlayNative | undefined;
 const events = native ? new NativeEventEmitter(native as never) : null;
 
 if (events && !sessionRuntime.listener) {
-  sessionRuntime.listener = events.addListener("onSession", (payload) => {
+  sessionRuntime.listener = events.addListener("onRuntime", (payload) => {
     sessionRuntime.active = Boolean((payload as OverlaySession)?.active);
     if (!sessionRuntime.active) {
       const resolve = sessionRuntime.resolveTask;
@@ -110,7 +153,8 @@ if (events && !sessionRuntime.listener) {
 }
 
 if (Platform.OS === 'android' && !sessionRuntime.registered) {
-  AppRegistry.registerHeadlessTask("KrikoOverlaySession", () => async () => {
+  AppRegistry.registerHeadlessTask("KrikoOverlaySession", () => async (data?: { active?: boolean }) => {
+    if (data?.active) sessionRuntime.active = true;
     if (!sessionRuntime.active) return;
     await new Promise<void>((resolve) => {
       sessionRuntime.resolveTask = resolve;
@@ -131,8 +175,9 @@ export function overlayAvailable(): boolean {
 export function isOverlayActive(): Promise<boolean> {
   if (!overlayAvailable()) return Promise.resolve(false);
   return native!.isActive().then((active) => {
-    sessionRuntime.active = active;
-    if (active) native!.ensureHeadlessSession();
+    // A power-button task can be running with screen sharing off. This query
+    // describes only sharing; onRuntime owns the background-task lifecycle.
+    if (active) { sessionRuntime.active = true; native!.ensureHeadlessSession(); }
     return active;
   });
 }
@@ -170,6 +215,41 @@ export function moveAppToBack(): Promise<boolean> {
   return native!.moveToBack().catch(() => false);
 }
 
+/**
+ * Tell the scanner whether Kriko's screen is mounted and listening. The scanner
+ * outlives the screen; while nobody listens it opens the app with the picture.
+ */
+export function setOverlayUiReady(ready: boolean): void {
+  if (overlayAvailable()) native!.setUiReady(ready);
+}
+
+/** Whether Kriko is the phone's chosen digital assistant (power or home long-press). */
+export function isDefaultAssistant(): Promise<boolean> {
+  if (!overlayAvailable()) return Promise.resolve(false);
+  return native!.isDefaultAssistant().catch(() => false);
+}
+
+/** Open the phone's own page for choosing the digital assistant. */
+export function openAssistantSettings(): Promise<boolean> {
+  if (!overlayAvailable()) return Promise.resolve(false);
+  return native!.openAssistantSettings().catch(() => false);
+}
+
+/**
+ * Whether Kriko may draw over other apps. The phone assistant needs it to show
+ * its answer over the reader's own page; without it the answer opens in the app.
+ */
+export function canDrawOverApps(): Promise<boolean> {
+  if (!overlayAvailable()) return Promise.resolve(false);
+  return native!.canDrawOverlays().catch(() => false);
+}
+
+/** Open the phone's own page for allowing Kriko to draw over other apps. */
+export function openDrawOverAppsSettings(): Promise<boolean> {
+  if (!overlayAvailable()) return Promise.resolve(false);
+  return native!.openOverlaySettings().catch(() => false);
+}
+
 export function updateOverlayJobs(jobs: OverlayJob[]): void {
   if (overlayAvailable()) native!.updateJobs(JSON.stringify(jobs));
 }
@@ -200,5 +280,65 @@ export function subscribeOverlaySession(callback: (session: OverlaySession) => v
 export function subscribeOverlayAction(callback: (action: OverlayAction) => void): () => void {
   if (!events) return () => undefined;
   const subscription = events.addListener("onAction", (payload) => callback(payload as OverlayAction));
+  return () => subscription.remove();
+}
+
+/** What the phone itself says is installed: `versionName` as shown, `versionCode` as Android orders builds. */
+export function installedVersion(): Promise<{ versionName: string; versionCode: number } | null> {
+  if (!overlayAvailable()) return Promise.resolve(null);
+  return native!.appVersion().catch(() => null);
+}
+
+/** Whether the phone lets Kriko install an app. Off until the reader allows it once. */
+export function canInstallApps(): Promise<boolean> {
+  if (!overlayAvailable()) return Promise.resolve(false);
+  return native!.canInstallPackages().catch(() => false);
+}
+
+/** Open the phone's own page for allowing Kriko to install apps. */
+export function openInstallAppsSettings(): Promise<boolean> {
+  if (!overlayAvailable()) return Promise.resolve(false);
+  return native!.openInstallSettings().catch(() => false);
+}
+
+const noInstaller = () => Object.assign(new Error(), { code: 'unavailable' });
+
+/**
+ * Download one version into the app's own cache and verify it. Rejects with the
+ * native failure kind as `code`: network, checksum, size, storage, cancelled, busy.
+ */
+export function downloadUpdateFile(version: string, url: string, sha256: string, bytes: number): Promise<{ sha256: string; bytes: number }> {
+  if (!overlayAvailable()) return Promise.reject(noInstaller());
+  return native!.downloadUpdate(version, url, sha256, bytes);
+}
+
+export function cancelUpdateDownload(): void {
+  if (overlayAvailable()) native!.cancelUpdate();
+}
+
+/**
+ * Hand the downloaded version to Android's installer. Rejects with `permission`
+ * (not yet allowed), `signature` (another key), `older`, `invalid`, `missing`, `storage`.
+ */
+export function installUpdateFile(version: string): Promise<boolean> {
+  if (!overlayAvailable()) return Promise.reject(noInstaller());
+  return native!.installUpdate(version);
+}
+
+export type UpdateProgress = { received: number; total: number };
+export type UpdateInstall = {
+  state: 'confirm' | 'installed' | 'cancelled' | 'blocked' | 'signature' | 'storage' | 'failed';
+  message: string;
+};
+
+export function subscribeUpdateProgress(callback: (progress: UpdateProgress) => void): () => void {
+  if (!events) return () => undefined;
+  const subscription = events.addListener("onUpdateProgress", (payload) => callback(payload as UpdateProgress));
+  return () => subscription.remove();
+}
+
+export function subscribeUpdateInstall(callback: (install: UpdateInstall) => void): () => void {
+  if (!events) return () => undefined;
+  const subscription = events.addListener("onUpdateInstall", (payload) => callback(payload as UpdateInstall));
   return () => subscription.remove();
 }
