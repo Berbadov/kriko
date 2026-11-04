@@ -2,6 +2,7 @@ import { Image } from 'expo-image';
 import { Linking, ScrollView, StyleSheet, View } from 'react-native';
 
 import type { QueueJob } from '../engine/types';
+import { useStore } from '../engine/store';
 import { tr } from '../i18n';
 import { readingTitle } from '../engine/prompt';
 import { gap, radius } from '../theme/tokens';
@@ -56,6 +57,7 @@ export function QueueSheet({
 
 /** Shared queue rows for the sheet and the full Queue tab. */
 export function QueueList({ jobs, onCancel }: { jobs: QueueJob[]; onCancel: (id: string) => void }) {
+  const { showDiagnostics } = useStore();
   const color = useColors();
   const styles = useStyles();
   if (!jobs.length) {
@@ -100,10 +102,14 @@ export function QueueList({ jobs, onCancel }: { jobs: QueueJob[]; onCancel: (id:
               <View style={styles.waiting}><ActivityDots color={color.accent} /><Txt variant="bodyTight" tone="ink3">Gathering useful evidence…</Txt></View>
             ) : null}
             {cancellable && job.steps?.length ? (
-              <View style={styles.steps}>{job.steps.slice(-2).map((step) => <StepLine key={step.id} step={step} />)}</View>
+              <View style={styles.steps}>{job.steps.filter((step) => !step.text.startsWith('diagnostic:')).slice(-2).map((step) => <StepLine key={step.id} step={step} />)}</View>
             ) : null}
             {job.text ? <View style={styles.answer}><Markdown text={job.text} /></View> : null}
             {job.error ? <Txt variant="bodyTight" tone="risk">{job.error}</Txt> : null}
+            {showDiagnostics ? job.steps.filter((step) => step.text.startsWith('diagnostic:tokens:')).map((step) => {
+              const [, , input, output, total] = step.text.split(':');
+              return <Txt key={step.id} variant="monoSm" tone="ink3">{`Tokens · ${input} input · ${output} output · ${total} total`}</Txt>;
+            }) : null}
             {job.sources.length ? (
               <View style={styles.sources}>
                 <Txt variant="monoSm" tone="ink3" caps>{tr(`Sources · ${job.sources.length}`)}</Txt>
@@ -137,10 +143,10 @@ const useStyles = makeStyles((color) => StyleSheet.create({
   jobTitle: { flex: 1, gap: 5 },
   statusLine: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   cancel: { minHeight: 44, minWidth: 48, alignItems: 'flex-end', justifyContent: 'center', paddingHorizontal: 4 },
-  waiting: { flexDirection: 'row', alignItems: 'center', gap: gap[2], paddingLeft: 60 },
-  steps: { gap: 2, paddingLeft: 60 },
-  answer: { paddingLeft: 60 },
-  sources: { gap: gap[2], paddingLeft: 60, paddingTop: gap[1] },
+  waiting: { flexDirection: 'row', alignItems: 'center', gap: gap[2] },
+  steps: { gap: 2 },
+  answer: { paddingTop: gap[1] },
+  sources: { gap: gap[2], paddingTop: gap[1] },
   sourceLink: { minHeight: 40, justifyContent: 'center', gap: 2 },
   rule: { height: StyleSheet.hairlineWidth, backgroundColor: color.edge, marginTop: gap[3] },
 }));

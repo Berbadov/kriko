@@ -24,7 +24,8 @@ import type { Reading } from '../engine/types';
 import { font, gap, radius } from '../theme/tokens';
 import { makeStyles, useColors, useType } from '../theme/theme';
 import { Txt } from '../theme/Txt';
-import { ActivityDots, MotionPressable, MotionView } from './Motion';
+import { LiquidDots, MatrixLed } from './MatrixLed';
+import { MotionPressable, MotionView } from './Motion';
 import { XIcon } from './Icon';
 import { Divider } from './Chrome';
 import { Button, SectionLabel } from './Primitives';
@@ -141,10 +142,31 @@ export function ScreenshotSheet({
                 accessibilityLabel={tr('Full screenshot being read')}
               />
               {busy ? (
-                <View style={styles.previewBusy}>
-                  <ActivityDots color={color.accent} />
-                  <Txt variant="bodyTight" tone="ink">Recognising the product</Txt>
-                </View>
+                <>
+                  {/* A dot-matrix sweep over the picture: this is a read in progress. */}
+                  <View pointerEvents="none" style={styles.scanStrip}>
+                    <MatrixLed
+                      rows={2}
+                      cols={14}
+                      mode="scan"
+                      dot={3}
+                      gap={4}
+                      color={color.accentHi}
+                      intensity={0.62}
+                      speed={1400}
+                    />
+                  </View>
+                  <View style={styles.previewBusy}>
+                    <LiquidDots
+                      count={7}
+                      size={4}
+                      width={46}
+                      height={18}
+                      colors={[color.accentHi, color.accent, color.ok]}
+                    />
+                    <Txt variant="bodyTight" tone="ink">Recognising the product</Txt>
+                  </View>
+                </>
               ) : null}
             </MotionView>
 
@@ -313,6 +335,8 @@ const useStyles = makeStyles((color) => StyleSheet.create({
     height: 230,
   },
   image: { width: '100%', height: '100%', backgroundColor: color.surface },
+  /* The LED sweep sits over the top of the picture while vision reads it. */
+  scanStrip: { position: 'absolute', left: 0, right: 0, top: 10, alignItems: 'center' },
   previewBusy: {
     position: 'absolute',
     left: 10,

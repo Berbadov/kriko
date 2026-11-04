@@ -30,7 +30,9 @@ export const gap = {
 export const PAGE_X = 22;
 
 /** The app bar is 56 px tall above the safe-area inset. */
-export const HEADER_H = 64;
+export const HEADER_H = 52;
+/** The top bar of an open conversation: the thread's name and one action. */
+export const TITLE_BAR_H = 44;
 
 export const font = {
   display: 'Geist-SemiBold',
@@ -55,6 +57,8 @@ export const type = {
   headline: { fontFamily: font.editorial, fontSize: 36, lineHeight: 42, letterSpacing: -0.8 },
   heroSub: { fontFamily: font.regular, fontSize: 15, lineHeight: 22, letterSpacing: 0.05 },
   productTitle: { fontFamily: font.semibold, fontSize: 22, lineHeight: 27, letterSpacing: -0.35 },
+  /** A section heading inside a long answer: quieter than the product title. */
+  heading: { fontFamily: font.editorial, fontSize: 19, lineHeight: 25, letterSpacing: -0.15 },
   crumb: { fontFamily: font.mono, fontSize: 12, lineHeight: 16, letterSpacing: 0 },
   cardTitle: { fontFamily: font.semibold, fontSize: 16.5, lineHeight: 21, letterSpacing: -0.15 },
   body: { fontFamily: font.regular, fontSize: 15.5, lineHeight: 24, letterSpacing: 0 },
