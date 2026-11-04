@@ -23,6 +23,7 @@ import { Appearance, useColorScheme } from 'react-native';
 import { palettes, type Colors } from './palettes';
 import {
   resolvePalette,
+  isDarkPalette,
   TEXT_SCALE,
   type Appearance as AppearanceChoice,
   type PaletteName,
@@ -72,7 +73,7 @@ export function ThemeProvider({
   useEffect(() => {
     try {
       Appearance.setColorScheme(
-        appearance === 'system' ? 'auto' : name === 'dark' ? 'dark' : 'light',
+        appearance === 'system' ? 'auto' : isDarkPalette(name) ? 'dark' : 'light',
       );
     } catch {
       // Older native runtimes may not expose it; the in-app colours still work.
@@ -82,7 +83,7 @@ export function ThemeProvider({
   const theme = useMemo<Theme>(
     () => ({
       name,
-      dark: name === 'dark',
+      dark: isDarkPalette(name),
       color: palettes[name],
       type: scaledType(TEXT_SCALE[textSize]),
     }),

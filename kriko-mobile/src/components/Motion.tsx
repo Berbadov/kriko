@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import {
   AccessibilityInfo,
   Animated,
+  AppState,
   Easing,
   Pressable,
   View,
@@ -83,11 +84,11 @@ export function MotionPressable({
     Animated.parallel([
       Animated.spring(scale, {
         toValue: pressed ? 0.975 : 1,
-        ...motion.spring.snappy,
+        ...motion.spring.press,
       }),
       Animated.timing(opacity, {
         toValue: pressed ? 0.86 : 1,
-        duration: pressed ? motion.duration.instant : motion.duration.fast,
+        duration: pressed ? motion.duration.instant : motion.duration.press,
         easing: Easing.bezier(...motion.easing.standard),
         useNativeDriver: true,
       }),
@@ -112,14 +113,30 @@ export function MotionPressable({
   );
 }
 
-/** A short opacity/lift reveal; children remain visible while motion loads. */
+/**
+ * A short opacity/lift reveal; children remain visible while motion loads.
+ * `duration` and `rise` shorten and flatten it for things that arrive in a
+ * stream, where the default would still be rising when the next one lands.
+ * `index`/`stagger` add the stream's own delay, so a list can pass its position
+ * instead of each caller hand-computing a delay.
+ */
 export function MotionView({
   children,
   delay = 0,
+  duration = motion.duration.reveal,
+  rise = 10,
+  index = 0,
+  stagger = motion.stagger.item,
   style,
 }: {
   children: ReactNode;
   delay?: number;
+  duration?: number;
+  rise?: number;
+  /** Position in a stream; multiplies `stagger` into the delay. */
+  index?: number;
+  /** Milliseconds between stream items. Defaults to `motion.stagger.item`. */
+  stagger?: number;
   style?: StyleProp<ViewStyle>;
 }) {
   const reduced = useReducedMotion();
@@ -133,14 +150,14 @@ export function MotionView({
     }
     const animation = Animated.timing(progress, {
       toValue: 1,
-      duration: motion.duration.considered,
-      delay: Math.max(0, Math.min(delay, 320)),
+      duration,
+      delay: Math.max(0, Math.min(delay + index * stagger, 320)),
       easing: Easing.bezier(...motion.easing.enter),
       useNativeDriver: true,
     });
     animation.start();
     return () => animation.stop();
-  }, [progress, delay, reduced]);
+  }, [progress, delay, duration, index, reduced, stagger]);
 
   return (
     <Animated.View
@@ -149,7 +166,7 @@ export function MotionView({
         {
           opacity: progress,
           transform: [
-            { translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) },
+            { translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [rise, 0] }) },
           ],
         },
       ]}
@@ -164,17 +181,27 @@ export function ActivityDots({ color }: { color?: string }) {
   const palette = useColors();
   const tint = color ?? palette.accent;
   const reduced = useReducedMotion();
+  // A loop left running in the background is battery spent on a screen nobody
+  // sees: park it when the app leaves the foreground and restart on return.
+  const [awake, setAwake] = useState(() => AppState.currentState === 'active');
   const [values] = useState(() => [
     new Animated.Value(0.4),
     new Animated.Value(0.4),
     new Animated.Value(0.4),
   ]);
   useEffect(() => {
+    const subscription = AppState.addEventListener('change', (state) => {
+      setAwake(state === 'active');
+    });
+    return () => subscription.remove();
+  }, []);
+  useEffect(() => {
     values.forEach((value) => value.stopAnimation());
     if (reduced !== false) {
       values.forEach((value) => value.setValue(0.65));
       return;
     }
+    if (!awake) return;
     const loops = values.map((value, index) =>
       Animated.loop(
         Animated.sequence([
@@ -197,7 +224,7 @@ export function ActivityDots({ color }: { color?: string }) {
     );
     loops.forEach((loop) => loop.start());
     return () => loops.forEach((loop) => loop.stop());
-  }, [values, reduced]);
+  }, [awake, values, reduced]);
 
   return (
     <View
@@ -211,7 +238,7 @@ export function ActivityDots({ color }: { color?: string }) {
             width: 5,
             height: 5,
             borderRadius: 3,
-            backgroundColor: color,
+            backgroundColor: tint,
             opacity: value,
             transform: [{ scale: value.interpolate({ inputRange: [0.4, 1], outputRange: [0.8, 1.15] }) }],
           }}

@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const {
+  AndroidConfig,
   withAndroidManifest,
   withDangerousMod,
   withMainApplication,
@@ -9,9 +10,46 @@ const {
 const PACKAGE_CLASS = 'KrikoOverlayPackage';
 const TEMPLATE_FILES = [
   'KrikoOverlayModule.kt',
+  'KrikoVoice.kt',
   'KrikoOverlayPackage.kt',
   'KrikoOverlayService.kt',
+  'KrikoTheme.kt',
+  'KrikoWidgets.kt',
+  'KrikoPuckView.kt',
+  'KrikoGlass.kt',
+  'KrikoScanFx.kt',
+  'KrikoMarkdown.kt',
+  'KrikoAssist.kt',
+  'KrikoUpdater.kt',
 ];
+
+/** Used by prebuild and the supported incremental native-source sync. */
+function withVoiceManifest(manifest) {
+  manifest['uses-permission'] = manifest['uses-permission'] || [];
+  const audio = manifest['uses-permission'].find((permission) => permission.$?.['android:name'] === 'android.permission.RECORD_AUDIO');
+  if (audio) delete audio.$['tools:node'];
+  else manifest['uses-permission'].push({ $: { 'android:name': 'android.permission.RECORD_AUDIO' } });
+  manifest.queries = manifest.queries || [];
+  const present = manifest.queries.some((query) => query.intent?.some((intent) =>
+    intent.action?.some((action) => action.$?.['android:name'] === 'android.speech.RecognitionService')));
+  if (!present) manifest.queries.push({ intent: [{ action: [{ $: { 'android:name': 'android.speech.RecognitionService' } }] }] });
+}
+
+/**
+ * The file Android reads to learn that Kriko is a digital assistant. Both the
+ * session service and a recognition service are required by the platform; the
+ * names are written out in full because Android does not expand a leading dot
+ * in this file the way it does in the manifest.
+ */
+function voiceInteractionXml(appPackage) {
+  return `<?xml version="1.0" encoding="utf-8"?>
+<voice-interaction-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:sessionService="${appPackage}.overlay.KrikoAssistSessionService"
+    android:recognitionService="${appPackage}.overlay.KrikoRecognitionService"
+    android:supportsAssist="true"
+    android:supportsLaunchVoiceAssistFromKeyguard="true" />
+`;
+}
 
 async function syncNativeSources(projectRoot, platformProjectRoot, appPackage) {
   if (!/^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)+$/.test(appPackage)) {
@@ -32,11 +70,25 @@ async function syncNativeSources(projectRoot, platformProjectRoot, appPackage) {
       'utf8',
     );
   }
+  const xmlDirectory = path.join(platformProjectRoot, 'app', 'src', 'main', 'res', 'xml');
+  await fs.promises.mkdir(xmlDirectory, { recursive: true });
+  await fs.promises.writeFile(
+    path.join(xmlDirectory, 'kriko_voice_interaction.xml'),
+    voiceInteractionXml(appPackage),
+    'utf8',
+  );
   const fontDirectory = path.join(platformProjectRoot, 'app', 'src', 'main', 'assets', 'fonts');
   await fs.promises.mkdir(fontDirectory, { recursive: true });
-  for (const [weight, face] of [['400Regular', 'Regular'], ['500Medium', 'Medium'], ['600SemiBold', 'SemiBold']]) {
-    const font = require.resolve(`@expo-google-fonts/geist/${weight}/Geist_${weight}.ttf`, { paths: [projectRoot] });
-    await fs.promises.copyFile(font, path.join(fontDirectory, `KrikoGeist-${face}.ttf`));
+  // Atkinson Hyperlegible ships two weights, so the windows' medium face is the
+  // regular file and the semi-bold face is the bold one.
+  for (const [weight, faces] of [['400Regular', ['Regular', 'Medium']], ['700Bold', ['SemiBold']]]) {
+    const font = require.resolve(
+      `@expo-google-fonts/atkinson-hyperlegible/${weight}/AtkinsonHyperlegible_${weight}.ttf`,
+      { paths: [projectRoot] },
+    );
+    for (const face of faces) {
+      await fs.promises.copyFile(font, path.join(fontDirectory, `KrikoFace-${face}.ttf`));
+    }
   }
 }
 
@@ -47,6 +99,8 @@ function withKrikoOverlay(config) {
   }
 
   config = withAndroidManifest(config, (mod) => {
+    const manifest = mod.modResults.manifest;
+    withVoiceManifest(manifest);
     const application = mod.modResults.manifest.application?.[0];
     if (!application) throw new Error('Kriko overlay could not locate the Android application manifest.');
     const serviceName = `${appPackage}.overlay.KrikoOverlayService`;
@@ -60,6 +114,54 @@ function withKrikoOverlay(config) {
       'android:stopWithTask': 'false',
     };
     if (!service) application.service.push(entry);
+
+    // Kriko as a digital assistant: listed under Default apps → Digital assistant,
+    // started by a long press of the power or home button.
+    const upsertService = (name, attributes, extras = {}) => {
+      const full = `${appPackage}.overlay.${name}`;
+      const existing = application.service.find((row) => row.$?.['android:name'] === full);
+      const row = existing || { $: { 'android:name': full } };
+      row.$ = { ...row.$, ...attributes };
+      Object.assign(row, extras);
+      if (!existing) application.service.push(row);
+    };
+    upsertService('KrikoAssistService', {
+      'android:permission': 'android.permission.BIND_VOICE_INTERACTION',
+      'android:exported': 'true',
+    }, {
+      'meta-data': [{ $: {
+        'android:name': 'android.voice_interaction',
+        'android:resource': '@xml/kriko_voice_interaction',
+      } }],
+      'intent-filter': [{ action: [{ $: { 'android:name': 'android.service.voice.VoiceInteractionService' } }] }],
+    });
+    upsertService('KrikoAssistSessionService', {
+      'android:permission': 'android.permission.BIND_VOICE_INTERACTION',
+      'android:exported': 'true',
+    });
+    upsertService('KrikoRecognitionService', {
+      'android:exported': 'true',
+    }, {
+      'intent-filter': [{
+        action: [{ $: { 'android:name': 'android.speech.RecognitionService' } }],
+        category: [{ $: { 'android:name': 'android.intent.category.DEFAULT' } }],
+      }],
+    });
+
+    // The see-through screen that asks for screen capture again when Scan is
+    // pressed after the system ended the previous grant.
+    application.activity = application.activity || [];
+    const captureName = `${appPackage}.overlay.KrikoCaptureActivity`;
+    const capture = application.activity.find((row) => row.$?.['android:name'] === captureName);
+    const captureEntry = capture || { $: { 'android:name': captureName } };
+    captureEntry.$ = {
+      ...captureEntry.$,
+      'android:exported': 'false',
+      'android:theme': '@android:style/Theme.Translucent.NoTitleBar',
+      'android:excludeFromRecents': 'true',
+      'android:taskAffinity': '',
+    };
+    if (!capture) application.activity.push(captureEntry);
     return mod;
   });
 
@@ -107,6 +209,9 @@ async function syncAndroidCli() {
   const appPackage = appConfig?.expo?.android?.package;
   if (!appPackage) throw new Error('app.json does not declare expo.android.package.');
   await syncNativeSources(projectRoot, platformProjectRoot, appPackage);
+  const parsedManifest = await AndroidConfig.Manifest.readAndroidManifestAsync(manifest);
+  withVoiceManifest(parsedManifest.manifest);
+  await AndroidConfig.Manifest.writeAndroidManifestAsync(manifest, parsedManifest);
   // Keep generated release metadata aligned without clearing Gradle outputs.
   const gradlePath = path.join(platformProjectRoot, 'app', 'build.gradle');
   const version = appConfig.expo.version;
