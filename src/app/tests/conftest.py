@@ -55,6 +55,27 @@ def the_app_log_is_not_the_readers(tmp_path_factory):
         os.environ["KRIKO_LOG"] = before
 
 
+@pytest.fixture(autouse=True, scope="session")
+def the_probe_store_is_not_the_readers(tmp_path_factory):
+    """Persisted CLI probe answers go to a temp file, never `~/.kriko`.
+
+    Same shape as the log redirect above: `cliprobe.store_path()` reads
+    `KRIKO_PROBE_STORE`, and without this every harness test that probes a
+    fake CLI would append to the reader's own `cli-probes.json`.
+    """
+    import os
+
+    before = os.environ.get("KRIKO_PROBE_STORE")
+    os.environ["KRIKO_PROBE_STORE"] = str(
+        tmp_path_factory.mktemp("probes") / "cli-probes.json"
+    )
+    yield
+    if before is None:
+        os.environ.pop("KRIKO_PROBE_STORE", None)
+    else:
+        os.environ["KRIKO_PROBE_STORE"] = before
+
+
 @pytest.fixture(autouse=True)
 def no_writes_to_the_readers_home(monkeypatch):
     from app.web import state
