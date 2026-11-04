@@ -1,10 +1,10 @@
-import { router } from 'expo-router';
+import { router, type Href } from 'expo-router';
 import { useMemo } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
 
 import { Divider, HeaderAction, Hero, Page } from '../components/Chrome';
 import { ActivityDots, MotionPressable, MotionView } from '../components/Motion';
-import { BackIcon, ClockIcon, PlusIcon, TrashIcon } from '../components/Icon';
+import { BackIcon, CheckCircleIcon, ClockIcon, PlusIcon, TrashIcon } from '../components/Icon';
 import { Button, Chip, SectionLabel } from '../components/Primitives';
 import { plainPreview } from '../engine/preview';
 import { buildCatalog } from '../engine/memory';
@@ -50,7 +50,10 @@ export default function History() {
   };
 
   return (
-    <Page artHeight={0} actions={<HeaderAction label="Back" onPress={() => router.back()}><BackIcon size={21} color={color.ink} /></HeaderAction>}>
+    <Page artHeight={0} actions={<>
+      <HeaderAction label="Open shortlist" onPress={() => router.push('/shortlist' as Href)}><CheckCircleIcon size={21} color={color.ink} /></HeaderAction>
+      <HeaderAction label="Back" onPress={() => router.back()}><BackIcon size={21} color={color.ink} /></HeaderAction>
+    </>}>
       <Hero crumb="kriko / your shelf" title="History" subtitle="The questions you asked, and what the scans found." />
 
       <View style={styles.body}>

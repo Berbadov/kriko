@@ -901,6 +901,27 @@ export const translations: Record<string, string> = {
   'That download is not a Kriko update.': 'İndirilen dosya bir Kriko güncellemesi değil.',
   'The download is gone. Try again.': 'İndirilen dosya kayboldu. Tekrar dene.',
   'The update did not install. Try again.': 'Güncelleme kurulamadı. Tekrar dene.',
+  /* -------------------------------------------------- shortlist + decide -- */
+  'Shortlist': 'Kısa liste',
+  'Open shortlist': 'Kısa listeyi aç',
+  'The products you are deciding between, with the price drops Kriko has seen.': 'Karar verdiğin ürünler; Kriko’nun gördüğü fiyat düşüşleriyle birlikte.',
+  'Help me decide': 'Karar vermeme yardım et',
+  'What matters most': 'En çok ne önemli',
+  'Evidence': 'Kanıt',
+  'Recency': 'Güncellik',
+  'Add': 'Ekle',
+  'Watched': 'İzleniyor',
+  'No price yet': 'Henüz fiyat yok',
+  'On your shortlist': 'Kısa listende',
+  'Add from what Kriko remembers': 'Kriko’nun hatırladıklarından ekle',
+  'Nothing on your shortlist yet.': 'Henüz kısa listende ürün yok.',
+  'Add the products you are deciding between from the list below.': 'Karar verdiğin ürünleri aşağıdaki listeden ekle.',
+  'No remembered products yet.': 'Henüz hatırlanan ürün yok.',
+  'Ask or scan a product first, and it appears here.': 'Önce bir ürün sor veya tara; burada görünür.',
+  '#1 pick': '#1 seçim',
+  'lowest price': 'en düşük fiyat',
+  'most sources': 'en çok kaynak',
+  'added most recently': 'en son eklenen',
 };
 
 /**
@@ -909,6 +930,8 @@ export const translations: Record<string, string> = {
  * a sentence that happens to contain one of these words.
  */
 const patterns: readonly (readonly [RegExp, string])[] = [
+  [/^Open the chat about (.+)$/, '$1 hakkındaki sohbete aç'],
+  [/^Price dropped (\d+)%$/, 'Fiyat %$1 düştü'],
   [/^Open product listing: (.+)$/, 'Ürün ilanını aç: $1'],
   [/^Check merchant for (.+)$/, '$1 için satıcıyı araştır'],
   [/^Tokens · (\d+) input · (\d+) output · (\d+) total$/, 'Token · $1 girdi · $2 çıktı · $3 toplam'],

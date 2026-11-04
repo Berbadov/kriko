@@ -91,6 +91,7 @@ function AppStack() {
             <Stack.Screen name="index" />
             <Stack.Screen name="assist" />
             <Stack.Screen name="history" />
+            <Stack.Screen name="shortlist" />
             <Stack.Screen name="queue" />
             <Stack.Screen name="sources/[id]" />
             <Stack.Screen name="settings" />
