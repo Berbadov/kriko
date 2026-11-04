@@ -127,7 +127,7 @@ UI: dict[str, dict[str, Any]] = {
         "footer_home": "kriko.cc",
         "footer_help": "Help and feedback",
         "privacy": "Privacy",
-        "nav_how": "How it works",
+        "nav_how": "Desktop",
         "nav_cta": "Get Kriko",
         "nav_guide": "Guide",
         "stat_products": "Products",
@@ -214,7 +214,7 @@ UI: dict[str, dict[str, Any]] = {
         "footer_home": "kriko.cc",
         "footer_help": "Yardım ve geri bildirim",
         "privacy": "Gizlilik",
-        "nav_how": "Nasıl çalışır",
+        "nav_how": "Masaüstü",
         "nav_cta": "Kriko'yu indir",
         "nav_guide": "Rehber",
         "stat_products": "Ürün",
@@ -570,7 +570,7 @@ def _chrome(lang: str, *, title: str, description: str, path: str, alternates: d
     <div class="wrap bar">
       {brand}
       <nav class="main-nav" id="main-nav" aria-label="Main navigation">
-        <a href="{ui["prefix"]}/#how">{_e(ui["nav_how"])}</a>
+        <a href="{ui["prefix"]}/#desktop">{_e(ui["nav_how"])}</a>
         <a href="{ui["prefix"]}/guide/">{_e(ui["nav_guide"])}</a>
         <a href="{ui["prefix"]}/problems/" aria-current="page">{_e(ui["crumb"])}</a>
       </nav>
