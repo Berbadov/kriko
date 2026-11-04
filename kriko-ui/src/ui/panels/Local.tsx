@@ -31,11 +31,11 @@ export function LocalPanel(_: { onOpen?: (lookupId: string) => void }) {
               <small>{machine.gpu ? 'graphics memory' : 'no graphics card'}</small>
             </div>
             <div>
-              <strong>{machine.ram_total_mb ? mb(machine.ram_total_mb) : '—'}</strong>
+              <strong>{machine.ram_total_mb ? mb(machine.ram_total_mb) : 'n/a'}</strong>
               <small>memory</small>
             </div>
             <div>
-              <strong>{machine.cpu?.cores ?? '—'}</strong>
+              <strong>{machine.cpu?.cores ?? 'n/a'}</strong>
               <small>processor cores</small>
             </div>
           </div>
@@ -275,7 +275,7 @@ function LibraryRow({ row, installed, disabled, onGet }: { row: Library; install
 
 function ModelRow({ model, active, onUse, onRemove }: { model: Model; active: boolean; onUse: () => void; onRemove: () => Promise<void> }) {
   const [asking, setAsking] = useState(false)
-  const meta = [gb(model.size_bytes), model.params !== '—' && model.params, model.quant].filter(Boolean).join(' · ')
+  const meta = [gb(model.size_bytes), model.params !== 'n/a' && model.params, model.quant].filter(Boolean).join(' · ')
   return (
     <li className="past" data-asking={asking}>
       <button className="radio" role="radio" aria-checked={active} aria-label={`Use ${model.name}`} onClick={onUse}>

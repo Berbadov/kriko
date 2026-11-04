@@ -202,7 +202,7 @@ function ResearchRuns({ runs, usage, problem, reload }: {
       {totals && (
         <p className="panel-note">
           {totals}
-          {unmetered ? ` — ${unmetered}` : ''}
+          {unmetered ? ` · ${unmetered}` : ''}
         </p>
       )}
       {note && <p className="panel-note" role="status">{note}</p>}

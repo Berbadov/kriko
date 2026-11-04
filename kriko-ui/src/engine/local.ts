@@ -197,7 +197,7 @@ export function useLocal() {
           setPull({ model, progress: step / 10, message: 'Downloading', error: '' })
         }
         if (!alive.current) return
-        setModels((now) => [...now, { name: model, size_bytes: 2e9, params: '—', quant: '' }])
+        setModels((now) => [...now, { name: model, size_bytes: 2e9, params: 'n/a', quant: '' }])
         setPull(null)
         return
       }
