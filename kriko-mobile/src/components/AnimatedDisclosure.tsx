@@ -14,7 +14,9 @@ function useDisclosureProgress(open: boolean) {
     progress.stopAnimation();
     if (reduced !== false) { progress.setValue(open ? 1 : 0); return; }
     const animation = Animated.spring(progress, {
-      ...motion.spring.morph, toValue: open ? 1 : 0,
+      // Height is a layout property, so this spring runs on the JS clock; the
+      // reveal is small (a fold inside one message), never a whole screen.
+      ...motion.spring.reveal, toValue: open ? 1 : 0,
       overshootClamping: true, useNativeDriver: false,
     });
     animation.start();
@@ -23,6 +25,11 @@ function useDisclosureProgress(open: boolean) {
   return progress;
 }
 
+/**
+ * A measured fold: the content is laid out at its natural height, then the
+ * reveal animates between that measurement and zero while its opacity follows.
+ * Reduced motion opens and closes instantly.
+ */
 export function AnimatedDisclosure({ open, children, style }: {
   open: boolean; children: ReactNode; style?: StyleProp<ViewStyle>;
 }) {

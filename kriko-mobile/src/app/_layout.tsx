@@ -20,9 +20,12 @@ import { StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { StoreProvider, useStore } from '../engine/store';
+import { useUpdateLifecycle } from '../engine/updater';
 import { OverlaySessionProvider } from '../components/OverlaySession';
 import { MotionProvider, useReducedMotion } from '../components/Motion';
 import { BottomNav } from '../components/Chrome';
+import { DockProvider } from '../components/dock';
+import { motion } from '../theme/motion';
 import { ThemeProvider, useTheme } from '../theme/theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -71,27 +74,36 @@ function AppStack() {
   const reduced = useReducedMotion();
   const { dark, color } = useTheme();
   const { access } = useStore();
+  useUpdateLifecycle();
   return (
-    <View style={[styles.root, { backgroundColor: color.ground }]}>
-      <StatusBar style={dark ? 'light' : 'dark'} />
-      <View style={styles.stack}>
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: color.ground },
-            animation: reduced === false ? 'fade_from_bottom' : 'none',
-          }}
-        >
-          <Stack.Screen name="index" />
-          <Stack.Screen name="history" />
-          <Stack.Screen name="queue" />
-          <Stack.Screen name="sources/[id]" />
-          <Stack.Screen name="settings" />
-          <Stack.Screen name="about" />
-        </Stack>
+    <DockProvider>
+      <View style={[styles.root, { backgroundColor: color.ground }]}>
+        <StatusBar style={dark ? 'light' : 'dark'} />
+        <View style={styles.stack}>
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: color.ground },
+              // One native transition per push: the stack fades the screen in on
+              // top of the page, so no screen draws a second arrival of its own.
+              // Reduced motion removes it entirely. `animationDuration` is iOS
+              // only; Android uses the platform's own short fade.
+              animation: reduced === false ? 'fade' : 'none',
+              animationDuration: motion.duration.screen,
+            }}
+          >
+            <Stack.Screen name="index" />
+            <Stack.Screen name="assist" />
+            <Stack.Screen name="history" />
+            <Stack.Screen name="queue" />
+            <Stack.Screen name="sources/[id]" />
+            <Stack.Screen name="settings" />
+            <Stack.Screen name="about" />
+          </Stack>
+        </View>
+        {access.kind === 'none' ? null : <BottomNav />}
       </View>
-      {access.kind === 'none' ? null : <BottomNav />}
-    </View>
+    </DockProvider>
   );
 }
 

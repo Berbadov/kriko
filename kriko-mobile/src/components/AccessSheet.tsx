@@ -33,6 +33,7 @@ export function AccessSheet({ visible, onClose, firstRun, initialMode = 'code' }
   const [label, setLabel] = useState('');
   const [mercury, setMercury] = useState('');
   const [deepseek, setDeepseek] = useState('');
+  const [mistral, setMistral] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -55,11 +56,12 @@ export function AccessSheet({ visible, onClose, firstRun, initialMode = 'code' }
     await new Promise((resolve) => setTimeout(resolve, 40));
     try {
       if (mode === 'code') await unlock(code, password, label.trim() || 'Shared access');
-      else await saveOwnKeys(mercury, deepseek);
+      else await saveOwnKeys(mercury, deepseek, mistral);
       setCode('');
       setPassword('');
       setMercury('');
       setDeepseek('');
+      setMistral('');
       dismiss();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'That did not open.');
@@ -110,6 +112,7 @@ export function AccessSheet({ visible, onClose, firstRun, initialMode = 'code' }
               <MotionView key={mode} delay={0} style={styles.fieldGroup}>
                 <Field label="Mercury key" value={mercury} onChangeText={setMercury} placeholder="mercury_…" autoCapitalize="none" secureTextEntry />
                 <Field label="DeepSeek key" value={deepseek} onChangeText={setDeepseek} placeholder="sk-…" autoCapitalize="none" secureTextEntry />
+                <Field label={tr('Mistral key · optional')} value={mistral} onChangeText={setMistral} placeholder="…" autoCapitalize="none" secureTextEntry />
                 <Txt variant="bodyTight" tone="ink3">Mercury writes the answer. DeepSeek searches and reads the web.</Txt>
               </MotionView>
             )}
@@ -133,7 +136,7 @@ function Tab({ label, active, onPress }: { label: string; active: boolean; onPre
   const styles = useStyles();
   return (
     <MotionPressable onPress={onPress} accessibilityRole="tab" accessibilityState={{ selected: active }} style={[styles.tab, active && styles.tabOn]}>
-      <Txt variant="actionSmall" tone={active ? 'accent' : 'muted'}>{label}</Txt>
+      <Txt variant="actionSmall" tone={active ? 'accent' : 'ink2'}>{label}</Txt>
     </MotionPressable>
   );
 }
