@@ -79,9 +79,16 @@ async function syncNativeSources(projectRoot, platformProjectRoot, appPackage) {
   );
   const fontDirectory = path.join(platformProjectRoot, 'app', 'src', 'main', 'assets', 'fonts');
   await fs.promises.mkdir(fontDirectory, { recursive: true });
-  for (const [weight, face] of [['400Regular', 'Regular'], ['500Medium', 'Medium'], ['600SemiBold', 'SemiBold']]) {
-    const font = require.resolve(`@expo-google-fonts/geist/${weight}/Geist_${weight}.ttf`, { paths: [projectRoot] });
-    await fs.promises.copyFile(font, path.join(fontDirectory, `KrikoGeist-${face}.ttf`));
+  // Atkinson Hyperlegible ships two weights, so the windows' medium face is the
+  // regular file and the semi-bold face is the bold one.
+  for (const [weight, faces] of [['400Regular', ['Regular', 'Medium']], ['700Bold', ['SemiBold']]]) {
+    const font = require.resolve(
+      `@expo-google-fonts/atkinson-hyperlegible/${weight}/AtkinsonHyperlegible_${weight}.ttf`,
+      { paths: [projectRoot] },
+    );
+    for (const face of faces) {
+      await fs.promises.copyFile(font, path.join(fontDirectory, `KrikoFace-${face}.ttf`));
+    }
   }
 }
 

@@ -11,19 +11,20 @@ export type Appearance = 'system' | 'dark' | 'gray' | 'paper' | 'white';
 /** A resolved palette name. */
 export type PaletteName = 'dark' | 'gray' | 'paper' | 'white';
 
-export type TextSize = 'small' | 'default' | 'large';
+export type TextSize = 'small' | 'default' | 'large' | 'xlarge';
 
 /** `system` follows Android's reduce-motion setting. */
 export type MotionPreference = 'system' | 'reduced' | 'full';
 
 export const APPEARANCES: readonly Appearance[] = ['system', 'dark', 'gray', 'paper', 'white'];
-export const TEXT_SIZES: readonly TextSize[] = ['small', 'default', 'large'];
+export const TEXT_SIZES: readonly TextSize[] = ['small', 'default', 'large', 'xlarge'];
 export const MOTION_PREFERENCES: readonly MotionPreference[] = ['system', 'reduced', 'full'];
 
 export const TEXT_SCALE: Record<TextSize, number> = {
-  small: 0.92,
+  small: 0.94,
   default: 1,
-  large: 1.14,
+  large: 1.15,
+  xlarge: 1.32,
 };
 
 /**

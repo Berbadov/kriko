@@ -466,10 +466,10 @@ const useStyles = makeStyles((color) => StyleSheet.create({
   userRow: { alignItems: 'flex-end', gap: gap[2], maxWidth: '92%', alignSelf: 'flex-end' },
   userRowWide: { alignSelf: 'stretch', maxWidth: '100%' },
   userBubble: {
-    backgroundColor: color.surface,
+    backgroundColor: color.raise,
     borderWidth: 1,
-    borderColor: color.edgeSoft,
-    borderRadius: radius.m,
+    borderColor: color.rim,
+    borderRadius: radius.l,
     borderBottomRightRadius: radius.s,
     paddingHorizontal: gap[4],
     paddingVertical: gap[3],
@@ -539,7 +539,17 @@ const useStyles = makeStyles((color) => StyleSheet.create({
   sourceText: { flex: 1, gap: 2 },
 
   /* The answer's own foot: copy, and why the answer is thin when it is. */
-  answer: { gap: gap[3] },
+  // The reading plate: running text sits on a near-opaque surface, never on raw
+  // glass or the moving field behind it, so contrast does not depend on what is
+  // scrolled underneath. The rim is the one bright edge the glass catches.
+  answer: {
+    gap: gap[3],
+    padding: gap[4],
+    borderRadius: radius.l,
+    backgroundColor: color.plate,
+    borderWidth: 1,
+    borderColor: color.rim,
+  },
   answerFoot: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: gap[3] },
   copy: { minHeight: TARGET, flexDirection: 'row', alignItems: 'center', gap: gap[2], paddingRight: gap[2] },
 

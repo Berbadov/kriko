@@ -289,12 +289,14 @@ const useStyles = makeStyles((color) => StyleSheet.create({
     borderRadius: 4,
     paddingHorizontal: gap[1],
   },
+  // A citation is a target as well as a mark: a bold number on a soft chip, wide
+  // enough to see and to tap beside the sentence it supports.
   cite: {
     color: color.fill,
-    fontFamily: font.semibold,
-    backgroundColor: color.accentWash,
-    borderRadius: 4,
-    paddingHorizontal: 3,
+    fontFamily: font.bold,
+    backgroundColor: color.accentSoft,
+    borderRadius: 7,
+    paddingHorizontal: 6,
   },
   link: { color: color.fill, textDecorationLine: 'underline' },
   quote: {

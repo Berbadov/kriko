@@ -8,10 +8,11 @@ import { plainPreview } from '../engine/preview';
 import type { QueueJob } from '../engine/types';
 import { tr } from '../i18n';
 import { press } from '../theme/feedback';
-import { font, gap, PAGE_X, radius } from '../theme/tokens';
+import { elevation, gap, PAGE_X, radius } from '../theme/tokens';
 import { makeStyles, useColors } from '../theme/theme';
 import { Txt } from '../theme/Txt';
 import { MotionPressable, MotionView } from '../components/Motion';
+import { PulseRing } from '../components/Shock';
 import { ChevronRightIcon, ImageIcon2, InfoIcon, ScanIcon } from '../components/Icon';
 import { FirstRunGuide } from '../components/FirstRunGuide';
 
@@ -51,53 +52,48 @@ export function Landing({
   return (
     <View style={styles.root}>
       <MotionView style={styles.intro}>
-        <View style={styles.headingRow}>
-          <Txt variant="headline" tone="ink" accessibilityRole="header" style={styles.headline}>
-            Check before you buy.
-          </Txt>
-          <MotionPressable onPress={() => setGuideVisible(true)} accessibilityRole="button"
-            accessibilityLabel={tr('How Kriko works')} style={styles.helpButton}>
-            <InfoIcon size={19} color={color.ink2} />
-          </MotionPressable>
-        </View>
-        <Txt variant="heroSub" tone="ink2" style={styles.subtitle}>
-          Scan a product to see the details and sources behind it.
+        <Txt variant="headline" tone="ink" accessibilityRole="header" style={styles.headline}>
+          Check before you buy.
         </Txt>
       </MotionView>
 
-      <MotionView delay={80} style={styles.actions}>
-        <MotionPressable onPress={() => { press(); onScan(); }} accessibilityRole="button"
-          accessibilityLabel={tr('Scan a product')} style={styles.scanButton}>
-          <View style={styles.scanIcon}><ScanIcon size={20} color={color.onAccent} strokeWidth={1.8} /></View>
-          <View style={styles.scanCopy}>
-            <Txt variant="action" tone={color.onAccent} style={styles.scanTitle}>Scan a product</Txt>
-            <Txt variant="bodyTight" tone="rgba(255,255,255,0.78)" style={styles.scanSub}>Read the page open on your phone</Txt>
-          </View>
-          <ChevronRightIcon size={19} color="rgba(255,255,255,0.82)" />
+      <MotionView delay={80} style={styles.orbRow}>
+        <MotionPressable onPress={onPick} accessibilityRole="button"
+          accessibilityLabel={tr('Choose a screenshot')} style={styles.sideButton}>
+          <ImageIcon2 size={22} color={color.ink} />
         </MotionPressable>
 
-        <MotionPressable onPress={onPick} accessibilityRole="button"
-          accessibilityLabel={tr('Choose a screenshot')} style={styles.pickRow}>
-          <ImageIcon2 size={18} color={color.ink2} />
-          <Txt variant="rowText" tone="ink" style={styles.pickLabel}>Choose a screenshot instead</Txt>
-          <ChevronRightIcon size={17} color={color.ink3} />
+        <View style={styles.orbBox}>
+          <PulseRing color={color.edgeStrong} radius={ORB / 2} />
+          <PulseRing color={color.edgeStrong} radius={ORB / 2} delay={1600} />
+          <MotionPressable onPress={() => { press(); onScan(); }} accessibilityRole="button"
+            accessibilityLabel={tr('Scan a product')} style={styles.orb}>
+            <ScanIcon size={48} color={color.ink} strokeWidth={1.5} />
+          </MotionPressable>
+        </View>
+
+        <MotionPressable onPress={() => setGuideVisible(true)} accessibilityRole="button"
+          accessibilityLabel={tr('How Kriko works')} style={styles.sideButton}>
+          <InfoIcon size={22} color={color.ink} />
         </MotionPressable>
       </MotionView>
 
+      <MotionView delay={140}>
+        <Txt variant="cardTitle" tone="ink" style={styles.orbLabel}>Scan a product</Txt>
+      </MotionView>
+
       {recent.length ? (
-        <MotionView delay={160} style={styles.recentBlock}>
-          <View style={styles.sectionHeading}>
-            <Txt variant="sectionLabel" tone="ink3">Recently scanned</Txt><View style={styles.rule} />
-          </View>
+        <MotionView delay={200} style={styles.recentBlock}>
+          <Txt variant="sectionLabel" tone="ink2">Recently scanned</Txt>
           {recent.map((job) => {
             const title = [job.reading.brand, job.reading.product, job.reading.model].filter(Boolean).join(' ') || 'Product scan';
             return <MotionPressable key={job.id} onPress={() => onOpenScan(job.id)} accessibilityRole="button"
               accessibilityLabel={tr(`Open scan result for ${title}`)} style={styles.recentRow}>
               <View style={styles.recentText}>
                 <Txt variant="rowTitle" tone="ink" numberOfLines={1}>{title}</Txt>
-                <Txt variant="bodyTight" tone="ink3" numberOfLines={1}>{plainPreview(job.text) || job.error || job.reading.note || 'Open the saved scan'}</Txt>
+                <Txt variant="bodyTight" tone="ink2" numberOfLines={1}>{plainPreview(job.text) || job.error || job.reading.note || 'Open the saved scan'}</Txt>
               </View>
-              <ChevronRightIcon size={17} color={color.ink3} />
+              <ChevronRightIcon size={20} color={color.ink2} />
             </MotionPressable>;
           })}
         </MotionView>
@@ -108,20 +104,54 @@ export function Landing({
   );
 }
 
+/** The scan orb's diameter. Large on purpose: it is the one thing this screen is for. */
+const ORB = 150;
+
 const useStyles = makeStyles((color) => StyleSheet.create({
   root: { flexGrow: 1, paddingHorizontal: PAGE_X, paddingTop: 24, paddingBottom: 30, gap: gap[5] },
-  intro: { gap: 8, alignItems: 'flex-start' },
-  headingRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  headline: { fontFamily: font.editorial, letterSpacing: -1.05, maxWidth: 310, flex: 1 },
-  helpButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: radius.pill },
-  subtitle: { maxWidth: 330, lineHeight: 23 },
-  actions: { gap: gap[1] },
-  scanButton: { minHeight: 78, borderRadius: radius.l, paddingHorizontal: 15, paddingVertical: 13, backgroundColor: color.accent, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  scanIcon: { width: 38, height: 38, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' },
-  scanCopy: { flex: 1, gap: 3 }, scanTitle: { textTransform: 'none', fontSize: 16 }, scanSub: { fontSize: 12.5, lineHeight: 17 },
-  pickRow: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: color.edge },
-  pickLabel: { flex: 1 }, sectionHeading: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 4 },
-  rule: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: color.edge }, recentBlock: { gap: 4 },
-  recentRow: { minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: color.edge, paddingVertical: 8 },
+  intro: { alignItems: 'flex-start' },
+  // Wide enough for "Check before" and no wider, so the line breaks after the
+  // verb phrase instead of leaving "buy." alone on the second line.
+  headline: { maxWidth: 270 },
+  // The screen carries two things: the headline, and one large place to press.
+  orbRow: { marginTop: gap[6], flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 30 },
+  orbBox: { width: ORB, height: ORB },
+  orb: {
+    width: ORB,
+    height: ORB,
+    borderRadius: ORB / 2,
+    backgroundColor: color.raise,
+    borderWidth: 1.5,
+    borderColor: color.rim,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...elevation.float(color.shadow),
+  },
+  sideButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: color.raise,
+    borderWidth: 1,
+    borderColor: color.rim,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...elevation.card(color.shadow),
+  },
+  orbLabel: { textAlign: 'center' },
+  recentBlock: { gap: gap[2], marginTop: gap[3] },
+  recentRow: {
+    minHeight: 64,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: gap[3],
+    paddingHorizontal: gap[4],
+    paddingVertical: gap[3],
+    borderRadius: radius.l,
+    backgroundColor: color.surface,
+    borderWidth: 1,
+    borderColor: color.rim,
+    ...elevation.card(color.shadow),
+  },
   recentText: { flex: 1, gap: 2 },
 }));

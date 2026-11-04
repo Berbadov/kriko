@@ -116,6 +116,7 @@ const TEXT_SIZE_OPTIONS: readonly Choice<TextSize>[] = [
   { value: 'small', label: 'Small' },
   { value: 'default', label: 'Default' },
   { value: 'large', label: 'Large' },
+  { value: 'xlarge', label: 'Extra large' },
 ];
 
 const MOTION_OPTIONS: readonly Choice<MotionPreference>[] = [
