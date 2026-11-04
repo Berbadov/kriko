@@ -300,7 +300,7 @@ const useStyles = makeStyles((color) => StyleSheet.create({
   },
   link: { color: color.fill, textDecorationLine: 'underline' },
   quote: {
-    borderLeftWidth: 2,
+    borderLeftWidth: 3,
     borderLeftColor: color.edgeStrong,
     paddingLeft: gap[3],
     paddingVertical: gap[1],
