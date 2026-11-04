@@ -82,7 +82,7 @@ test("a mark is drawn beside the price: red when the reader's limits break, gree
   s.markResultCard(cards[2], reads[2], { score: 50, reasons: [], breaks: [] });
   const marks = [...cards].map((card) => card.querySelector("[data-kriko-fit]"));
   assert.equal(marks[0].textContent, "Not for you: avoid");
-  assert.equal(marks[0].title, "mentions Acme, which you avoid");
+  assert.equal(marks[0].title, "", "the reason is not a hover line under the mark");
   assert.equal(marks[1].textContent, "Fits you");
   assert.equal(marks[2], null);
   // Marking again replaces the mark rather than stacking one.

@@ -10,7 +10,6 @@
 const form = document.getElementById("form");
 const input = document.getElementById("base");
 const statusEl = document.getElementById("status");
-const defaultEl = document.getElementById("default");
 const resetButton = document.getElementById("reset");
 const saveButton = document.getElementById("save");
 
@@ -38,7 +37,6 @@ async function load() {
     say(reply.error, "error");
     return;
   }
-  if (defaultEl) defaultEl.textContent = reply.default;
   input.placeholder = reply.default;
   // The *stored* value, not the effective one. Showing the default in the
   // field would make "I have not chosen" indistinguishable from "I chose the
@@ -59,15 +57,9 @@ async function save(value) {
   // actually kept, and it keeps nothing when the reader asked for the default.
   input.value = reply.stored ?? "";
   if (reply.reachable) {
-    say(
-      `Saved. Kriko ${reply.version || ""} answered at ${reply.base}.`.replace(
-        /\s+/g, " "),
-      "ok");
+    say(`Saved. Kriko ${reply.version || ""} answered.`.replace(/\s+/g, " "), "ok");
   } else {
-    say(
-      `Saved ${reply.base}, but nothing answered there yet. ${reply.detail || ""}`
-        .trim(),
-      "warn");
+    say(`Saved. Nothing answered at ${reply.base}. Start Kriko.`, "warn");
   }
 }
 
@@ -137,9 +129,7 @@ function renderSites(status) {
     li.className = "empty";
     // Not an error: the packaged extension already reads the sites the packs
     // shipped with, and this list is only the ones it had to learn.
-    li.textContent = status && status.error
-      ? "Kriko has not been reachable; nothing new to report."
-      : "Nothing beyond the sites this extension already covers.";
+    li.textContent = status && status.error ? "Could not reach Kriko." : "No extra sites.";
     sitesList.appendChild(li);
   }
 
@@ -177,8 +167,7 @@ function renderSites(status) {
   if (status && status.error) {
     saySites(
       status.code === "APP_NOT_RUNNING"
-        ? "Kriko is not running; this list may be stale. "
-          + "Start it, then Check again."
+        ? "Kriko is not running. Start it, then check again."
         : status.error,
       "warn");
   } else if (status) {
@@ -208,7 +197,7 @@ grantButton.addEventListener("click", () => {
       return;
     }
     if (!granted) {
-      saySites("Left as it was; Kriko will not read those sites.", "warn");
+      saySites("Permission refused.", "warn");
       return;
     }
     // The worker's own `permissions.onAdded` does the registering; this only
@@ -227,9 +216,7 @@ async function setMuted(site, muted) {
     return;
   }
   renderSites(reply.status);
-  saySites(muted
-    ? `Kriko will not read ${site} again until you say so.`
-    : `Kriko reads ${site} again.`, muted ? "warn" : "ok");
+  saySites(muted ? `${site} is off.` : `${site} is on.`, muted ? "warn" : "ok");
 }
 
 void loadSites(false).then(() => { void showStep(); });
@@ -259,13 +246,11 @@ function renderKept(kept) {
   }
   keptCounts.textContent = parts.length
     ? `Kept now: ${parts.join(", ")}.`
-    : "Kriko is keeping nothing at the moment.";
+    : "Nothing saved.";
   // A cache that stopped working is something the reader can be told about
   // here rather than in a console warning nobody reads.
   if (kept && kept.trouble && keptStatus && !keptStatus.textContent) {
-    keptStatus.textContent =
-      "The saved answers could not be written on this computer (the browser's "
-      + "storage is full), so Kriko stops remembering them.";
+    keptStatus.textContent = "Storage is full. Answers are not saved.";
     keptStatus.dataset.state = "warn";
   }
 }
@@ -318,8 +303,7 @@ function renderCompat(compat) {
     // Never having reached the app is not a version problem, and saying
     // "up to date" would be a claim we have no evidence for.
     compatEl.textContent =
-      `Extension ${chrome.runtime.getManifest().version}. `
-      + "The app has not answered, so there is nothing to compare.";
+      `Extension ${chrome.runtime.getManifest().version}. App not reached.`;
     delete compatEl.dataset.state;
     return;
   }
@@ -330,14 +314,12 @@ function renderCompat(compat) {
     // wrong: the copy this page must not point at is the app's own staged
     // one, which is the install path this release turned off.
     compatEl.textContent =
-      `Extension ${compat.running} is older than the ${compat.minimum} this `
-      + "app needs. Update Kriko from the Chrome Web Store: yours is out of "
-      + "date, not broken.";
+      `Extension ${compat.running} is older than ${compat.minimum}. Update it.`;
     compatEl.dataset.state = "error";
     return;
   }
   compatEl.textContent =
-    `Extension ${compat.running}; the app accepts ${compat.minimum} or newer.`;
+    `Extension ${compat.running}. Needs ${compat.minimum} or newer.`;
   compatEl.dataset.state = "ok";
 }
 
@@ -485,7 +467,7 @@ document.getElementById("tour").addEventListener("click", () => {
     chrome.storage.local.remove("kriko.panelTour", () => {
       note.textContent = chrome.runtime.lastError
         ? "Could not reset the tour."
-        : "Done. Open the panel on a product page to see it.";
+        : "Done.";
     });
   } catch (_) {
     note.textContent = "Could not reset the tour.";
@@ -521,8 +503,7 @@ document.getElementById("tour").addEventListener("click", () => {
   notify.addEventListener("click", () => {
     chrome.permissions.request({ permissions: ["notifications"] }, (granted) => {
       void chrome.runtime.lastError;
-      say(granted ? "Kriko will show a notification when a page you watch crosses your price."
-        : "Without notifications, a drop still shows on the toolbar button and in the panel.");
+      say(granted ? "Notifications on." : "Notifications off.");
       showState();
     });
   });
@@ -626,7 +607,7 @@ const GLASS_KEY = "kriko.glass";
   const show = (value) => {
     for (const radio of radios) radio.checked = radio.value === value;
   };
-  const closed = "Kriko is not running, so this cannot be read or changed. Start it, then reload this page.";
+  const closed = "Kriko is not running. Start it, then reload.";
   ask({ type: "INFO_SENSITIVITY" }).then((reply) => {
     if (!reply.ok) {
       for (const radio of radios) radio.disabled = true;
