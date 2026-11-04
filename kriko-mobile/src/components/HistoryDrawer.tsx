@@ -15,7 +15,7 @@ import { motion } from '../theme/motion';
 import { gap, radius } from '../theme/tokens';
 import { makeStyles, useColors } from '../theme/theme';
 import { Txt } from '../theme/Txt';
-import { Glass } from './Glass';
+import { Glass } from './GlassLayer';
 import { HistoryLists } from './HistoryLists';
 import { PlusIcon, XIcon } from './Icon';
 import { MotionPressable, useReducedMotion } from './Motion';

@@ -23,7 +23,7 @@ import { Txt } from '../theme/Txt';
 import { FileIcon, HistoryIcon, ScanIcon, SlidersIcon } from './Icon';
 import { Wordmark } from './Logo';
 import { Aurora } from './Aurora';
-import { Fade, Glass, GlassProvider, GlassTarget } from './Glass';
+import { Fade, Glass, GlassProvider, GlassTarget } from './GlassLayer';
 import { MotionPressable, MotionView, useReducedMotion } from './Motion';
 
 export function HeaderAction({ onPress, children, label }: {

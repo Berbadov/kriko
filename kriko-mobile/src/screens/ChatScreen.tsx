@@ -8,40 +8,69 @@
 
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
-import { router, type Href } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { router, useFocusEffect, type Href } from 'expo-router';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  useEffect,
-  useRef,
-  useState,
-  type ReactElement,
-  type RefObject,
-} from 'react';
-import { Alert, Animated, FlatList, StyleSheet, View } from 'react-native';
+  Alert,
+  BackHandler,
+  Keyboard,
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  View,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+} from 'react-native';
 
 import { AccessSheet } from '../components/AccessSheet';
-import { Frame, HeaderAction, useFrameInsets } from '../components/Chrome';
-import { Glass } from '../components/Glass';
-import { HistoryDrawer, settleDrawer } from '../components/HistoryDrawer';
-import { ScanChips } from '../components/ScanChips';
-import { useDrawerSwipe } from '../components/useDrawerSwipe';
+import { AppHeader, HeaderAction } from '../components/Chrome';
+import { ChatBackground } from '../components/ChatBackground';
+import { UpdateNotice } from '../components/UpdateCard';
 import { Composer } from '../components/Composer';
-import { PlusIcon } from '../components/Icon';
+import { useDock } from '../components/dock';
+import { BackIcon, ChevronRightIcon, KeyIcon } from '../components/Icon';
 import { MessageRow } from '../components/Message';
 import { MotionPressable, MotionView, useReducedMotion } from '../components/Motion';
+import { PastSearchRow, PastSearchesSheet, pastSearchText } from '../components/PastSearchesSheet';
 import { Landing } from './Landing';
 import { ScreenShareSheet } from '../components/ScreenShareSheet';
 import { useOverlaySession } from '../components/OverlaySession';
 import { ScreenshotSheet, type Shot } from '../components/ScreenshotSheet';
+import { ScrollScrubber, type ScrubberHandle } from '../components/ScrollScrubber';
+import { buildCatalog, type CatalogEntry } from '../engine/memory';
 import { moveAppToBack } from '../engine/overlay';
 import { AccessError, useStore } from '../engine/store';
+import { keepThumbnail } from '../engine/thumbs';
 import { tr } from '../i18n';
 import type { AppAction, Message, Reading } from '../engine/types';
 import { gap, PAGE_X, radius } from '../theme/tokens';
 import { makeStyles, useColors } from '../theme/theme';
 import { Txt } from '../theme/Txt';
 
+/** A growing answer is followed to the bottom at most this often. */
+const FOLLOW_EVERY_MS = 110;
+/** Within this of the end counts as reading the end. */
+const NEAR_END = 90;
+
+interface Place {
+  offset: number;
+  viewport: number;
+  content: number;
+}
+
+const nearEnd = (place: Place) => place.offset + place.viewport >= place.content - NEAR_END;
+
 export function ChatScreen() {
   const overlay = useOverlaySession();
+  const insets = useSafeAreaInsets();
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+  useEffect(() => {
+    const shown = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
+    const hidden = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
+    return () => { shown.remove(); hidden.remove(); };
+  }, []);
   const {
     access,
     activeThread,
@@ -52,36 +81,52 @@ export function ChatScreen() {
     send,
     stop,
     streaming,
+    threads,
     trialLeft,
+    showDiagnostics,
   } = useStore();
   const list = useRef<FlatList<Message>>(null);
-  const atBottom = useRef(true);
+  const scrubber = useRef<ScrubberHandle>(null);
+  const reduced = useReducedMotion();
+  const dock = useDock();
+  /**
+   * Where the list is and who is moving it. Kept out of state: a scroll must
+   * not re-render the conversation.
+   */
+  const flow = useRef({
+    place: { offset: 0, viewport: 0, content: 0 } as Place,
+    /** At the end, so a growing answer is followed; scrolling away lets go. */
+    stick: true,
+    /** A finger is moving the list, as opposed to the app following the answer. */
+    touching: false,
+    scrubbing: false,
+    empty: true,
+    glide: false,
+    followedAt: 0,
+    lift: null as ReturnType<typeof setTimeout> | null,
+    follow: null as ReturnType<typeof setTimeout> | null,
+  });
 
   const [draft, setDraft] = useState('');
   const [accessOpen, setAccessOpen] = useState(false);
   const [screenOpen, setScreenOpen] = useState(false);
+  const [pastOpen, setPastOpen] = useState(false);
   const [shot, setShot] = useState<Shot | null>(null);
   const [picking, setPicking] = useState(false);
   const [notice, setNotice] = useState('');
   const color = useColors();
   const styles = useStyles();
-  const reduced = useReducedMotion();
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [progress] = useState(() => new Animated.Value(0));
+
+  /** What the phone already remembers: one row per product, newest first. */
+  const catalog = useMemo(() => buildCatalog(threads, queueJobs), [threads, queueJobs]);
 
   const messages = activeThread?.messages ?? [];
   const last = messages[messages.length - 1];
   const working = Boolean(last?.pending);
   const empty = messages.length === 0;
-
-  const chipJobs = queueJobs.filter((job) => job.threadId).slice(-8).reverse();
-
-  const setDrawer = (open: boolean) => {
-    setDrawerOpen(open);
-    settleDrawer(progress, open, reduced);
-  };
-
-  const { swipe, claimTouch, resetTouch } = useDrawerSwipe(progress, setDrawer);
+  const recentScans = queueJobs.filter(
+    (job) => job.threadId && (job.status === 'done' || job.status === 'error'),
+  );
 
   useEffect(() => {
     if (!notice) return;
@@ -90,36 +135,98 @@ export function ChatScreen() {
   }, [notice]);
 
   useEffect(() => {
-    atBottom.current = true;
+    flow.current.empty = empty;
+    flow.current.glide = reduced === false;
+  }, [empty, reduced]);
+
+  useEffect(() => {
+    flow.current.stick = true;
     requestAnimationFrame(() => {
       if (empty) list.current?.scrollToOffset({ offset: 0, animated: false });
       else list.current?.scrollToEnd({ animated: false });
     });
   }, [activeThread?.id, empty]);
 
-  useEffect(() => {
-    if (working && atBottom.current) {
-      requestAnimationFrame(() => list.current?.scrollToEnd({ animated: false }));
+  // A growing answer is followed to the bottom with a glide, a few times a
+  // second, and only for a reader who is still at the end. Scrolling up lets go.
+  const followEnd = useCallback(() => {
+    const state = flow.current;
+    if (!state.stick || state.scrubbing || state.empty) return;
+    const wait = FOLLOW_EVERY_MS - (Date.now() - state.followedAt);
+    if (wait > 0) {
+      if (!state.follow) {
+        state.follow = setTimeout(() => {
+          state.follow = null;
+          if (!state.stick || state.scrubbing) return;
+          state.followedAt = Date.now();
+          list.current?.scrollToEnd({ animated: state.glide });
+        }, wait);
+      }
+      return;
     }
-  }, [working, last?.text, last?.steps?.length]);
+    state.followedAt = Date.now();
+    list.current?.scrollToEnd({ animated: state.glide });
+  }, []);
+
+  useEffect(() => {
+    if (working) followEnd();
+  }, [working, last?.steps?.length, followEnd]);
+
+  useEffect(() => {
+    const state = flow.current;
+    return () => {
+      if (state.lift) clearTimeout(state.lift);
+      if (state.follow) clearTimeout(state.follow);
+    };
+  }, []);
+
+  /** The list moved: remember where, tell the rail, and let the bar decide. */
+  const onScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+    const state = flow.current;
+    state.place = { offset: contentOffset.y, viewport: layoutMeasurement.height, content: contentSize.height };
+    if (state.touching) state.stick = nearEnd(state.place);
+    scrubber.current?.update(state.place, state.touching);
+    // The rail's own scrolling is not the reader asking for room.
+    if (!state.scrubbing) dock.report(state.place, state.touching);
+  };
+
+  const letGo = () => {
+    const state = flow.current;
+    if (state.lift) clearTimeout(state.lift);
+    state.lift = null;
+    state.touching = false;
+    state.stick = nearEnd(state.place);
+  };
+
+  const touchBegan = () => {
+    const state = flow.current;
+    if (state.lift) clearTimeout(state.lift);
+    state.lift = null;
+    state.touching = true;
+  };
 
   const openAccess = () => setAccessOpen(true);
 
-  const startNewChat = () => {
-    if (streaming) {
-      Alert.alert(tr('Kriko is still working'), tr('Stop the answer first, then start a new chat.'));
-      return;
+  // A new chat is started from the bottom bar's plus button, which opens compose
+  // mode. Whatever was half-written or staged for the last chat goes with it.
+  const composing = dock.composing;
+  const [wasComposing, setWasComposing] = useState(composing);
+  if (composing !== wasComposing) {
+    setWasComposing(composing);
+    if (composing) {
+      setDraft('');
+      setShot(null);
     }
-    newChat();
-    setDraft('');
-    setShot(null);
-  };
+  }
 
   const ask = async (text: string, reading?: Reading, imageUri?: string) => {
     if (!canAsk) {
       openAccess();
       return;
     }
+    // A new question is read where it lands, wherever the reader had scrolled to.
+    flow.current.stick = true;
     try {
       await send(text, { reading, imageUri });
     } catch (error) {
@@ -136,6 +243,11 @@ export function ChatScreen() {
     if (!text || streaming || working) return;
     setDraft('');
     void ask(text);
+  };
+
+  /** A remembered search fills the composer; it never sends itself. */
+  const fillFromPast = (entry: CatalogEntry) => {
+    setDraft(pastSearchText(entry));
   };
 
   const pick = async () => {
@@ -212,9 +324,26 @@ export function ChatScreen() {
   const onAskShot = (reading: Reading, question: string) => {
     const uri = shot?.uri;
     setShot(null);
-    void ask(question, reading, uri);
+    // The chat keeps a small copy in the app's own storage, not the picker's cache.
+    void (async () => {
+      const kept = uri ? await keepThumbnail(uri) : undefined;
+      await ask(question, reading, kept ?? uri);
+    })();
   };
 
+  const goHome = useCallback(() => {
+    Keyboard.dismiss();
+    newChat();
+    dock.endCompose();
+  }, [newChat, dock]);
+  useFocusEffect(useCallback(() => {
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (!empty || dock.composing) { goHome(); return true; }
+      return false;
+    });
+    return () => subscription.remove();
+  }, [empty, dock.composing, goHome]));
+  const inChat = !empty || dock.composing;
   const exhausted = access.kind === 'trial' && trialLeft <= 0;
   /** A navigation the agent proposed. The phone performs it on the press. */
   const openAction = (action: AppAction) => {
@@ -225,102 +354,172 @@ export function ChatScreen() {
     else if (screen === 'chat') router.push('/' as Href);
   };
 
-  const banner = overlay.active ? (
-    <MotionView delay={80}>
-      <Glass radius={radius.xl} style={styles.shareBanner}>
-        <View style={styles.shareStatus}>
-          <View style={styles.liveDot} />
-          <View style={styles.shareCopy}>
-            <Txt variant="monoSm" tone="ink" caps>{tr('Screen sharing is on')}</Txt>
-            <Txt variant="stepMeta" tone="ink3">{tr('Floating scanner ready · requested scans only')}</Txt>
-          </View>
-        </View>
-        <MotionPressable
-          onPress={() => { void overlay.stop().catch((error) => setNotice(error instanceof Error ? error.message : tr('Could not stop screen sharing.'))); }}
-          style={styles.stopShare}
-          accessibilityRole="button"
-          accessibilityLabel={tr('Stop screen sharing')}
-        >
-          <Txt variant="monoSm" tone="risk" caps>{tr('Stop')}</Txt>
-        </MotionPressable>
-      </Glass>
-    </MotionView>
-  ) : null;
-
-  const floating = (
-    <>
-      <View onTouchStart={claimTouch}>
-        <ScanChips jobs={chipJobs} activeThreadId={activeThread?.id} onOpen={openScanResult} />
-      </View>
-      {notice ? (
-        <Txt variant="monoSm" tone="warn" style={styles.notice}>
-          {notice}
-        </Txt>
-      ) : null}
-      {exhausted ? (
-        <MotionPressable onPress={openAccess} style={styles.trialBanner} accessibilityRole="button">
-          <Txt variant="body" tone="ink2">
-            The free questions on this phone are used up.
-          </Txt>
-          <Txt variant="monoSm" tone="fill" caps>
-            Paste an access code
-          </Txt>
-        </MotionPressable>
-      ) : null}
-      <Composer
-        value={draft}
-        onChangeText={setDraft}
-        onSend={onSend}
-        onStop={stop}
-        onPick={pick}
-        onScan={readScreen}
-        streaming={streaming}
-        placeholder={working ? 'Read the answer, or stop it…' : 'Ask about a product'}
-      />
-    </>
-  );
-
   return (
-    <View style={styles.flex} onTouchStartCapture={resetTouch} {...swipe.panHandlers}>
-      <Frame
-        title={empty ? undefined : activeThread?.title || 'Conversation'}
+    <View style={styles.page}>
+      <ChatBackground />
+      <AppHeader
+        title={!empty ? activeThread?.title || 'Conversation' : dock.composing ? tr('New chat') : undefined}
         actions={
-          !empty ? (
-            <HeaderAction label="New chat" onPress={startNewChat}>
-              <PlusIcon size={20} color={color.ink} />
-            </HeaderAction>
-          ) : null
+          <>
+            {inChat ? <HeaderAction label="Home" onPress={goHome}><BackIcon size={20} color={color.ink} /></HeaderAction> : null}
+          </>
         }
-        banner={banner}
-        floating={floating}
-        overlay={(
-          <HistoryDrawer
-            progress={progress}
-            open={drawerOpen}
-            onClose={() => setDrawerOpen(false)}
-            onNewChat={() => { startNewChat(); setDrawer(false); }}
-          />
-        )}
+      />
+
+      {empty ? <UpdateNotice onOpen={() => router.push('/settings' as Href)} /> : null}
+
+      {overlay.active ? (
+        <MotionView delay={80} style={styles.shareBanner}>
+          <View style={styles.shareStatus}>
+            <View style={styles.liveDot} />
+            <View style={styles.shareCopy}>
+              <Txt variant="monoSm" tone="ink" caps>{tr('Screen sharing is on')}</Txt>
+              {/* The reassurance line is for the home screen; an open chat keeps its room. */}
+              {empty ? <Txt variant="stepMeta" tone="ink3">{tr('Floating scanner ready · requested scans only')}</Txt> : null}
+            </View>
+          </View>
+          <MotionPressable
+            onPress={() => { void overlay.stop().catch((error) => setNotice(error instanceof Error ? error.message : tr('Could not stop screen sharing.'))); }}
+            hitSlop={4}
+            style={styles.stopShare}
+            accessibilityRole="button"
+            accessibilityLabel={tr('Stop screen sharing')}
+          >
+            <Txt variant="monoSm" tone="risk" caps>{tr('Stop')}</Txt>
+          </MotionPressable>
+        </MotionView>
+      ) : null}
+
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <Thread
-          list={list}
-          isAtBottom={() => atBottom.current}
-          setAtBottom={(value) => { atBottom.current = value; }}
-          messages={messages}
-          empty={empty}
-          openAction={openAction}
-          threadId={activeThread?.id}
-          landing={(
-            <Landing
-              onSuggestion={ask}
-              onScan={readScreen}
-              onPick={() => { void pick(); }}
+        <View style={styles.flex}>
+          <FlatList
+            ref={list}
+            data={messages}
+            keyExtractor={(message) => message.id}
+            renderItem={({ item, index }) => (
+              <MessageRow
+                message={item}
+                showDiagnostics={showDiagnostics}
+                onCheckMerchant={streaming ? undefined : (source) => {
+                  void ask(`Investigate the credibility of the merchant at ${source.host}, for this exact listing: ${source.url}. Verify its identity, independent complaints, consumer protection notices, returns and payment protections. Distinguish verified evidence from unproven claims.`);
+                }}
+                scanning={working && item.role === 'user' && index === messages.length - 2}
+                onAction={openAction}
+                onOpenSources={
+                  activeThread ? () => router.push(`/sources/${activeThread.id}` as Href) : undefined
+                }
+              />
+            )}
+            ListEmptyComponent={dock.composing ? (
+              <View style={{ paddingHorizontal: PAGE_X, paddingTop: 30 }}><Txt variant="rowTitle" tone="ink3">Ask a question</Txt></View>
+            ) : (
+              <Landing
+                onScan={readScreen}
+                onPick={() => { void pick(); }}
+                recentScans={recentScans}
+                onOpenScan={openScanResult}
+              />
+            )}
+            contentContainerStyle={[styles.listBody, empty && styles.landingBody]}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="interactive"
+            showsVerticalScrollIndicator={false}
+            scrollEventThrottle={16}
+            onScroll={onScroll}
+            onScrollBeginDrag={touchBegan}
+            onScrollEndDrag={() => {
+              // A lift with a fling goes straight into momentum; give it a moment.
+              const state = flow.current;
+              if (state.lift) clearTimeout(state.lift);
+              state.lift = setTimeout(letGo, 250);
+            }}
+            onMomentumScrollBegin={touchBegan}
+            onMomentumScrollEnd={letGo}
+            onLayout={(event) => {
+              const state = flow.current;
+              state.place = { ...state.place, viewport: event.nativeEvent.layout.height };
+              scrubber.current?.update(state.place, false);
+              // The list changed size (the bar left, the keyboard came): not a scroll.
+              dock.report(state.place, false);
+            }}
+            onContentSizeChange={(_width, height) => {
+              const state = flow.current;
+              state.place = { ...state.place, content: height };
+              scrubber.current?.update(state.place, false);
+              // A page that has become too short to scroll gets its bar back.
+              dock.report(state.place, false);
+              followEnd();
+            }}
+          />
+          <ScrollScrubber
+            ref={scrubber}
+            onScrub={(offset) => list.current?.scrollToOffset({ offset, animated: false })}
+            onScrubStart={() => {
+              const state = flow.current;
+              if (state.lift) clearTimeout(state.lift);
+              state.lift = null;
+              state.scrubbing = true;
+              state.touching = true;
+            }}
+            onScrubEnd={() => {
+              flow.current.scrubbing = false;
+              letGo();
+            }}
+            onNudge={(direction) => {
+              const { offset, viewport } = flow.current.place;
+              list.current?.scrollToOffset({ offset: Math.max(0, offset + direction * viewport * 0.8), animated: true });
+            }}
+          />
+        </View>
+
+        <View style={[styles.footer, { paddingBottom: !keyboardVisible && access.kind === 'none' ? Math.max(insets.bottom, gap[3]) : gap[2] }]}>
+          {notice ? (
+            <Txt variant="monoSm" tone="warn" style={styles.notice}>
+              {notice}
+            </Txt>
+          ) : null}
+          {exhausted ? (
+            <MotionPressable onPress={openAccess} style={styles.trialBanner} accessibilityRole="button" accessibilityLabel={tr('Trial complete. Add access to continue.')}>
+              <KeyIcon size={17} color={color.ink3} />
+              <Txt variant="bodyTight" tone="ink2" style={styles.trialText}>Trial complete</Txt>
+              <Txt variant="bodyTight" tone="fill">Add access</Txt>
+              <ChevronRightIcon size={15} color={color.ink3} />
+            </MotionPressable>
+          ) : null}
+          {!empty && !streaming && catalog.length ? (
+            <PastSearchRow
+              entries={catalog.slice(0, 3)}
+              onPick={fillFromPast}
+              onSeeAll={() => setPastOpen(true)}
             />
-          )}
-        />
-      </Frame>
+          ) : null}
+          <Composer
+            autoFocus={empty && dock.composing}
+            key={activeThread?.id ?? 'new-chat'}
+            value={draft}
+            onChangeText={setDraft}
+            onSend={onSend}
+            onStop={stop}
+            onPick={pick}
+            onScan={readScreen}
+            streaming={streaming}
+            placeholder={working ? 'Read the answer, or stop it…' : 'Ask about a product'}
+          />
+        </View>
+      </KeyboardAvoidingView>
 
       {accessOpen ? <AccessSheet visible onClose={() => setAccessOpen(false)} /> : null}
+      {pastOpen ? (
+        <PastSearchesSheet
+          visible
+          entries={catalog}
+          onClose={() => setPastOpen(false)}
+          onPick={fillFromPast}
+        />
+      ) : null}
       {screenOpen ? (
         <ScreenShareSheet
           onClose={() => setScreenOpen(false)}
@@ -342,77 +541,58 @@ export function ChatScreen() {
   );
 }
 
-/** The scrolling conversation, padded to run under the floating bars. */
-function Thread({ list, isAtBottom, setAtBottom, messages, empty, openAction, threadId, landing }: {
-  list: RefObject<FlatList<Message> | null>;
-  isAtBottom: () => boolean;
-  setAtBottom: (value: boolean) => void;
-  messages: Message[];
-  empty: boolean;
-  openAction: (action: AppAction) => void;
-  threadId?: string;
-  landing: ReactElement;
-}) {
-  const styles = useStyles();
-  const { top, bottom } = useFrameInsets();
-  return (
-    <FlatList
-      ref={list}
-      data={messages}
-      keyExtractor={(message) => message.id}
-      renderItem={({ item }) => (
-        <MessageRow
-          message={item}
-          onAction={openAction}
-          onOpenSources={threadId ? () => router.push(`/sources/${threadId}` as Href) : undefined}
-        />
-      )}
-      ListEmptyComponent={landing}
-      contentContainerStyle={[
-        styles.listBody,
-        empty && styles.landingBody,
-        { paddingTop: top + 6, paddingBottom: bottom + gap[3] },
-      ]}
-      keyboardShouldPersistTaps="handled"
-      keyboardDismissMode="interactive"
-      showsVerticalScrollIndicator={false}
-      scrollEventThrottle={16}
-      onScroll={(event) => {
-        const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
-        setAtBottom(contentOffset.y + layoutMeasurement.height >= contentSize.height - 90);
-      }}
-      onContentSizeChange={() => {
-        if (!empty && isAtBottom()) list.current?.scrollToEnd({ animated: false });
-      }}
-    />
-  );
-}
-
 const useStyles = makeStyles((color) => StyleSheet.create({
+  page: { flex: 1, backgroundColor: color.ground },
   flex: { flex: 1 },
   shareBanner: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    marginHorizontal: PAGE_X,
+    marginBottom: gap[2],
+    paddingHorizontal: gap[3],
+    paddingVertical: gap[2],
+    minHeight: 48,
+    borderRadius: radius.m,
+    borderWidth: 1,
+    borderColor: color.edgeStrong,
+    backgroundColor: color.surface,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: gap[2],
   },
-  shareStatus: { flexDirection: 'row', alignItems: 'center', gap: 9, flex: 1 },
+  shareStatus: { flexDirection: 'row', alignItems: 'center', gap: gap[2], flex: 1 },
   liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: color.ok },
   shareCopy: { flex: 1, gap: 2 },
-  stopShare: { paddingHorizontal: 13, paddingVertical: 8, backgroundColor: color.riskWash, borderRadius: radius.pill },
+  stopShare: {
+    minHeight: 36,
+    paddingHorizontal: gap[3],
+    backgroundColor: color.riskWash,
+    borderRadius: radius.s,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   landingBody: { paddingHorizontal: 0 },
-  listBody: { paddingHorizontal: PAGE_X, flexGrow: 1 },
-  notice: { paddingHorizontal: 8 },
+  listBody: { paddingHorizontal: PAGE_X, paddingBottom: gap[4], flexGrow: 1 },
+  footer: {
+    paddingHorizontal: gap[3],
+    paddingTop: gap[3],
+    backgroundColor: 'transparent',
+    gap: gap[2],
+  },
+  notice: { paddingHorizontal: gap[1] },
   trialBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: gap[2],
-    backgroundColor: color.riskWash,
-    borderRadius: radius.xl,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    minHeight: 44,
+    backgroundColor: color.surface,
+    borderWidth: 1,
+    borderColor: color.edge,
+    borderRadius: radius.m,
+    paddingHorizontal: gap[3],
+    paddingVertical: gap[2],
   },
+  // The message gives way (it wraps) so the call to action is never pushed off the edge.
+  trialText: { flex: 1 },
+  trialAction: { flexShrink: 0 },
 }));
