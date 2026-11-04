@@ -15,9 +15,10 @@ import { gap } from '../theme/tokens';
 import { makeStyles, useColors } from '../theme/theme';
 import { Txt } from '../theme/Txt';
 import { ScanIcon, XIcon } from './Icon';
+import { LedStatus, LiquidDots, MatrixLed } from './MatrixLed';
 import { Button } from './Primitives';
 import { AnimatedSheet } from './AnimatedSheet';
-import { ActivityDots, MotionPressable, MotionView } from './Motion';
+import { MotionPressable, MotionView } from './Motion';
 
 type Phase = 'intro' | 'asking' | 'countdown' | 'reading' | 'error';
 
@@ -124,6 +125,16 @@ export function ScreenReadSheet({
           {phase === 'countdown' ? (
             count > 0 ? (
               <View style={styles.countBlock}>
+                <MatrixLed
+                  rows={2}
+                  cols={9}
+                  mode="scan"
+                  dot={3}
+                  gap={3}
+                  color={color.accentHi}
+                  intensity={0.7}
+                  speed={1300}
+                />
                 <Txt variant="monoSm" tone="ink3" caps>
                   Switch to the listing now
                 </Txt>
@@ -138,21 +149,28 @@ export function ScreenReadSheet({
               </View>
             ) : (
               <View style={styles.countBlock}>
-                <ActivityDots color={color.accentHi} />
-                <Txt variant="body" tone="ink2" style={styles.center}>
-                  Reading the screen…
-                </Txt>
+                <ReadingRow label={tr('Reading the screen…')} />
               </View>
             )
           ) : phase === 'asking' ? (
             <View style={styles.countBlock}>
-              <ActivityDots color={color.accentHi} />
-              <Txt variant="body" tone="ink2" style={styles.center}>
-                {phase === 'asking' ? 'Waiting for Android…' : 'Reading the screen…'}
-              </Txt>
+              <LedStatus label={tr('Waiting for Android…')} mode="scan" color={color.accentHi} />
             </View>
           ) : (
             <View style={styles.body}>
+              {/* At rest the sheet still breathes a little: the LED field is ready. */}
+              <View pointerEvents="none" style={styles.idle}>
+                <MatrixLed
+                  rows={2}
+                  cols={14}
+                  mode="drift"
+                  dot={3}
+                  gap={4}
+                  colors={[color.accentHi, color.ok, color.warn]}
+                  intensity={0.5}
+                  speed={7000}
+                />
+              </View>
               <Txt variant="body" tone="ink2">
                 {phase === 'error'
                   ? error
@@ -189,6 +207,23 @@ export function ScreenReadSheet({
   );
 }
 
+function ReadingRow({ label }: { label: string }) {
+  const color = useColors();
+  const styles = useStyles();
+  return (
+    <View style={styles.readRow}>
+      <LiquidDots
+        count={7}
+        size={4}
+        width={46}
+        height={18}
+        colors={[color.accentHi, color.accent, color.ok]}
+      />
+      <Txt variant="body" tone="ink2">{label}</Txt>
+    </View>
+  );
+}
+
 function Line({ n, text }: { n: string; text: string }) {
   const styles = useStyles();
   return (
@@ -222,6 +257,9 @@ const useStyles = makeStyles((color) => StyleSheet.create({
   },
   headText: { flex: 1, gap: 3 },
   body: { gap: gap[4] },
+  /* The idle LED strip that keeps the starting state alive without moving layout. */
+  idle: { alignItems: 'center', paddingVertical: gap[1] },
+  readRow: { flexDirection: 'row', alignItems: 'center', gap: gap[3] },
   steps: { gap: gap[3] },
   step: { flexDirection: 'row', alignItems: 'flex-start', gap: gap[2] },
   stepNumber: {

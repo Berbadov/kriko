@@ -129,7 +129,7 @@ test("every card carries a mark whose label says the level and why", () => {
   assert.equal(thin.getAttribute("role"), "img");
   assert.equal(thin.getAttribute("tabindex"), "0", "reachable by keyboard");
   assert.equal(thin.getAttribute("aria-label"),
-    "Thin evidence: it rests on a single source; its sources are of a low trust tier");
+    "Thin evidence: it rests on a single source, its sources are of a low trust tier");
   const part = markOf(claim([src("manufacturer")]));
   assert.equal(part.getAttribute("aria-label"), "Partial evidence: it rests on a single source");
   const solid = markOf(claim([src("community"), src("manufacturer")]));
@@ -149,7 +149,7 @@ test("the mark's shape carries the level without colour: one, two or three bars 
 test("the card says what its mark is the engine's verdict on, with the engine's own reasons", () => {
   const mark = markOf(claim([src("community"), src("manufacturer")], { thin: { level: "thin", reasons: ["partial_quote", "unmet_condition"] } }));
   assert.equal(mark.dataset.level, "thin");
-  assert.match(mark.getAttribute("aria-label"), /the quote only partly matches; it depends on a condition your product may not meet/);
+  assert.match(mark.getAttribute("aria-label"), /the quote only partly matches, it depends on a condition your product may not meet/);
 });
 
 // ── the panel applies the setting ───────────────────────────────────────

@@ -151,8 +151,9 @@ function openSealed(code: string, key: Uint8Array, aad: Uint8Array): Record<stri
 function keysOf(payload: Record<string, unknown>): ProviderKeys | null {
   const mercury = typeof payload.mercury === 'string' ? payload.mercury.trim() : '';
   const deepseek = typeof payload.deepseek === 'string' ? payload.deepseek.trim() : '';
+  const mistral = typeof payload.mistral === 'string' ? payload.mistral.trim() : '';
   if (!mercury || !deepseek) return null;
-  return { mercury, deepseek };
+  return mistral ? { mercury, deepseek, mistral } : { mercury, deepseek };
 }
 
 /** True when this build carries the pepper the owner's codes are sealed with. */

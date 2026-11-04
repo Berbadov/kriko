@@ -181,7 +181,6 @@
         onMessage: { addListener: (fn) => runtimeListeners.push(fn) },
         lastError: null,
         sendMessage(message, callback) {
-          console.log("[panel ->]", message.type, message);
           if (typeof callback !== "function") return;
           // With ?lookup=<id>, the browser journey uses the real saved-job API
           // of the app serving /preview/. Only chrome.* is replaced here.
@@ -233,7 +232,7 @@
               agent: { id: "preview", label: "Preview agent", model: "Preview model" } },
           } });
           if (message.type === "ANALYZE") {
-            if (state === "error") return callback({ ok: false, code: "APP_NOT_RUNNING", error: "Kriko is not running. Open the Kriko app, then try again." });
+            if (state === "error") return callback({ ok: false, code: "APP_NOT_RUNNING", error: "Kriko is not running. Start the app." });
             if (state === "idle") return callback({ ok: false, code: "NO_ADAPTER", error: "No installed pack can read this page." });
             return callback({ ok: true, pending: true });
           }

@@ -439,7 +439,7 @@ export function useAbout() {
   const [about, setAbout] = useState<{ version: string; folder: string } | null>(null)
   useEffect(() => {
     if (mode !== 'live') {
-      setAbout({ version: 'demo', folder: '—' })
+      setAbout({ version: 'demo', folder: 'n/a' })
       return
     }
     get<{ version?: string; app_state?: string }>('/api/health')

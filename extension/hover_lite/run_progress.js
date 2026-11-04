@@ -20,7 +20,8 @@
  *
  * Pure: no DOM, no clock, no chrome.*. The panel owns drawing and the clock.
  * Words are English panel chrome; nothing here names a site, a category or a
- * product, and no line the run wrote is shown (the log is the task log's).
+ * product, and no line the run wrote is shown. The panel has no log view: the
+ * reader opens the job in the app for that.
  */
 (function () {
   const STAGES = [
@@ -142,7 +143,7 @@
     if (succeeded) headline = "Done";
     else if (finished) headline = state === "cancelled" ? "Stopped" : "Stopped early";
     else if (now) headline = now.label;
-    else headline = String(row.message || state || "Working");
+    else headline = String(row.message || state || "Working").split(/(?<=[.!?])\s/)[0].slice(0, 60);
 
     const step = staged && !finished ? Math.min(seen.reached, STAGES.length - 1) + 1 : 0;
     const spoken = [headline, detail, pages].filter(Boolean).join(", ");

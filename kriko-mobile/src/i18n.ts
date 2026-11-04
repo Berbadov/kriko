@@ -76,6 +76,139 @@ export function upper(text: string, lang: Language = current): string {
  * renders through `Txt`; names, URLs, prices and key shapes are left alone.
  */
 export const translations: Record<string, string> = {
+  /* -------------------------------------------------- 0.15 chat + motion -- */
+  'Swipe down to close': 'Kapatmak için aşağı kaydır',
+  'Swipe sideways for the rest': 'Kalanı için yana kaydır',
+  'Past searches': 'Geçmiş aramalar',
+  'Use past search': 'Geçmiş aramayı kullan',
+  'Fills the composer without sending.': 'Mesaj alanını doldurur, göndermez.',
+  'See all past searches': 'Tüm geçmiş aramaları gör',
+  'See all': 'Tümünü gör',
+  'Tap one to put it back in the composer.': 'Birine dokun, mesaj alanına geri gelsin.',
+  'No past searches yet.': 'Henüz geçmiş arama yok.',
+  'Products you scan or ask about in a chat show up here.': 'Taradığın veya sohbette sorduğun ürünler burada görünür.',
+  /* -------------------------------------------------- 0.14 settings + memory -- */
+  'Data': 'Veriler',
+  'Products Kriko remembers': 'Kriko’nun hatırladığı ürünler',
+  "Sources language": "Kaynak dili",
+  "Any searches all languages by default.": "Tümü seçeneği tüm dillerde arar.",
+  "Answers language": "Yanıt dili",
+  "Auto follows your question; if unclear, uses the interface language.": "Otomatik, sorunun dilini izler; dil belirsizse arayüz dilini kullanır.",
+  "Any": "Tümü",
+  "Auto": "Otomatik",
+  'Ask a question': 'Bir soru sor',
+  'Tap + to ask by voice or text.': '+ ile sesle veya yazarak sor.',
+  'Type below or tap the microphone to ask.': 'Aşağıya yaz veya sormak için mikrofona dokun.',
+  'Next': 'İleri',
+  'Kriko': 'Kriko',
+  'Trial complete': 'Deneme tamamlandı',
+  'Trial complete. Add access to continue.': 'Deneme tamamlandı. Devam etmek için erişim ekle.',
+
+  "Scan the listing": "İlanı tara",
+  "Ask by voice or text": "Sesle veya yazarak sor",
+  "Check the sources": "Kaynakları incele",
+  "Skip guide": "Rehberi geç",
+  "Skip": "Geç",
+  "Check before you buy.": "Almadan önce kontrol et.",
+  "How Kriko works": "Kriko nasıl çalışır",
+  "Scan a product to see the details and sources behind it.": "Ürün ayrıntılarını ve kaynaklarını görmek için tara.",
+  "Kriko reads product details from your screen or screenshot.": "Kriko, ekranından veya ekran görüntüsünden ürün ayrıntılarını okur.",
+  "Ask what matters. Voice starts only when you choose it.": "Merak ettiğini sor. Sesle yazma yalnızca sen başlattığında açılır.",
+  "Review the evidence behind each answer.": "Her yanıtın dayandığı kaynakları incele.",
+  "Show fewer sources": "Daha az kaynak göster",
+  "Show all sources": "Tüm kaynakları göster",
+  "Research is taking longer than expected. It may still finish in the background.": "Araştırma beklenenden uzun sürüyor. Arka planda tamamlanabilir.",
+  "Open Kriko to check or retry": "Kontrol etmek veya yeniden denemek için Kriko’yu aç",
+  "Writing the answer…": "Yanıt yazılıyor…",
+  "Reviewing sources…": "Kaynaklar inceleniyor…",
+  "Reading sources…": "Kaynaklar okunuyor…",
+  "Finding sources…": "Kaynaklar aranıyor…",
+  'Eligible simple answers may be reused from memory for up to ten minutes. This cache is not saved to disk and is cleared when you clear history or change access keys. Screen reads and product research are excluded.': 'Uygun basit yanıtlar en fazla on dakika boyunca bellekten yeniden kullanılabilir. Bu önbellek diske kaydedilmez; geçmişi temizlediğinizde veya erişim anahtarlarını değiştirdiğinizde silinir. Ekran okumaları ve ürün araştırmaları buna dahil değildir.',
+  'Open microphone settings': 'Mikrofon ayarlarını aç',
+  'Voice typing': 'Sesle yazma',
+  'The microphone starts only when you tap it and stops when you finish, cancel, or leave the app. Android’s speech recognition service processes the audio and may send it to its provider. Kriko does not save audio recordings. Recognized words stay in your editable draft until you press Send; sending includes them in the normal question and history.': 'Mikrofon yalnızca dokunduğunuzda açılır; bitirdiğinizde, iptal ettiğinizde veya uygulamadan çıktığınızda kapanır. Android’in konuşma tanıma hizmeti sesi işler ve sağlayıcısına gönderebilir. Kriko ses kaydı saklamaz. Tanınan kelimeler Gönder’e basana kadar düzenlenebilir taslağınızda kalır; gönderildiğinde normal soruya ve geçmişe eklenir.',
+  'Finish voice typing': 'Sesle yazmayı bitir',
+  'Type with your voice': 'Sesinizle yazın',
+  'Your words appear in the message field. Review them before you send.': 'Kelimeleriniz mesaj alanında görünür. Göndermeden önce kontrol edin.',
+  'Opening the microphone…': 'Mikrofon açılıyor…',
+  'Finishing your words…': 'Kelimeleriniz tamamlanıyor…',
+  'Listening… Speak now.': 'Dinleniyor… Şimdi konuşun.',
+  'Cancel voice typing': 'Sesle yazmayı iptal et',
+  'Microphone access is off. Allow it in your phone’s app settings, then try again.': 'Mikrofon erişimi kapalı. Telefonunuzun uygulama ayarlarından izin verip tekrar deneyin.',
+  'I could not hear the words clearly. Tap the microphone and try again.': 'Kelimeler net duyulamadı. Mikrofona dokunup tekrar deneyin.',
+  'Voice typing could not connect. Check your connection and try again.': 'Sesle yazma bağlanamadı. Bağlantınızı kontrol edip tekrar deneyin.',
+  'The microphone is busy. Wait a moment and try again.': 'Mikrofon meşgul. Biraz bekleyip tekrar deneyin.',
+  'Voice typing stopped after waiting. Your draft is still here.': 'Sesle yazma bekledikten sonra durdu. Taslağınız burada duruyor.',
+  'This speech language is not available on your phone. Check its voice typing settings.': 'Bu konuşma dili telefonunuzda kullanılamıyor. Sesle yazma ayarlarını kontrol edin.',
+  'Voice typing needs an enabled speech recognition service on this Android phone.': 'Sesle yazmak için bu Android telefonda etkin bir konuşma tanıma hizmeti gerekir.',
+  'Voice typing could not start. Your draft is still here. Try again.': 'Sesle yazma başlatılamadı. Taslağınız burada duruyor. Tekrar deneyin.',
+  'Make Kriko work for you.': 'Kriko’yu kendinize göre ayarlayın.',
+  'Save priorities': 'Öncelikleri kaydet',
+  'Products and priorities': 'Ürünler ve öncelikler',
+  'Tell Kriko what you’re considering and what matters. Separate items with commas or new lines.': 'Düşündüğünüz ürünleri ve önceliklerinizi Kriko’ya anlatın. Öğeleri virgülle veya yeni satırla ayırın.',
+  'Quiet laptop, USB-C monitor, small kitchen': 'Sessiz dizüstü bilgisayar, USB-C monitör, küçük mutfak',
+  'Gray': 'Gri',
+  'Screen read cancelled.': 'Ekran okuması iptal edildi.',
+  'Conversation text, answers, product reading fields, screenshots or their local thumbnail references, sources, and search/read steps are saved in app storage. Price watches are also stored here, including product name, merchant URL, currency, check interval, last observed price and next check time. Provider keys are stored separately using the phone’s secure storage. Chat history and price-watch records are not encrypted by Kriko itself. Clearing chats and scan results also clears screen-read audit thumbnails and records; price watches can be removed individually in Settings.': 'Sohbetler, yanıtlar, okunan ürün bilgileri, ekran görüntüleri veya küçük resim bağlantıları, kaynaklar ve arama/okuma adımları uygulama alanında saklanır. Fiyat takiplerinde ürün adı, satıcı adresi, para birimi, kontrol aralığı, son gözlenen fiyat ve sonraki kontrol zamanı tutulur. Sağlayıcı anahtarları telefonun güvenli depolamasında ayrı saklanır. Kriko sohbet ve fiyat takibi kayıtlarını kendisi şifrelemez. Sohbetleri ve tarama sonuçlarını temizlemek ekran okuma kayıtlarını ve küçük resimlerini de siler; fiyat takipleri Ayarlar’dan tek tek kaldırılabilir.',
+  'The question and relevant context go to Mercury to write an answer. When a Mistral key is configured, eligible simple text questions may go to Mistral instead. Search terms and selected pages go to DeepSeek Search and Fetch. A screenshot is uploaded to DeepSeek vision when image reading is needed. Product research may fetch the exact merchant result page to extract product metadata and its image URL, then request the advertised image from its HTTPS host. Tracked price checks request the saved product page and search provider. These third-party providers and sites process requests under their own terms. This build has no Kriko account or analytics upload.': 'Yanıt için soru ve ilgili bağlam Mercury’ye gönderilir. Bir Mistral anahtarı ayarlanmışsa uygun basit metin soruları Mistral’a gönderilebilir. Arama terimleri ve seçilen sayfalar DeepSeek Search ve Fetch’e iletilir. Görsel okuma gerektiğinde ekran görüntüsü DeepSeek vision’a yüklenir. Ürün araştırması, ürün bilgileri ve görsel adresini almak için sonuçtaki satıcı sayfasını, ardından görselin HTTPS sunucusunu isteyebilir. Fiyat kontrolleri kayıtlı ürün sayfasını ve arama sağlayıcısını kullanır. Bu üçüncü taraflar istekleri kendi koşulları altında işler. Bu sürümde Kriko hesabı veya analitik yüklemesi yoktur.',
+  'Screen reads': 'Ekran okumaları',
+  'Each attempted vision read is recorded before upload. The log keeps a small local screenshot thumbnail, time, outcome, and observed product text. A screenshot can include personal or sensitive information visible on screen; review what you capture before asking Kriko to read it. Provider keys and raw error details are never saved in the audit record.': 'Her görsel okuma denemesi yüklemeden önce kaydedilir. Kayıt, yerel küçük ekran görüntüsünü, zamanı, sonucu ve gözlenen ürün metnini tutar. Ekran görüntüsü kişisel veya hassas bilgiler içerebilir; Kriko’dan okumasını istemeden önce yakaladığınız içeriği gözden geçirin. Sağlayıcı anahtarları ve ham hata ayrıntıları okuma kaydına yazılmaz.',
+  'Observed:': 'Gözlenen:',
+  'Screenshot saved for this screen read': 'Bu ekran okuması için kaydedilen görüntü',
+  'No thumbnail could be kept for this capture.': 'Bu yakalama için küçük resim saklanamadı.',
+  'No screen reads recorded.': 'Kayıtlı ekran okuması yok.',
+  'Chats, scan results, screen-read audit thumbnails, and price watches (including merchant URLs and observed prices) stay in this phone’s app storage. Provider keys are held in secure storage. Questions and relevant context go to Mercury; search queries and selected pages go to DeepSeek. Product research can fetch the exact merchant result page for product metadata and its image URL, then request that image from its advertised HTTPS host. Screenshots are sent for vision reading and can contain sensitive information visible on screen. Kriko does not encrypt local history and this build has no Kriko account or analytics upload.': 'Sohbetler, tarama sonuçları, ekran okuma küçük resimleri ve fiyat takipleri (satıcı adresleri ve gözlenen fiyatlar dahil) telefonun uygulama alanında tutulur. Sağlayıcı anahtarları güvenli depolamada saklanır. Sorular ve ilgili bağlam Mercury’ye; arama sorguları ve seçilen sayfalar DeepSeek’e gönderilir. Ürün araştırması, ürün bilgileri ve görsel adresi için sonuçtaki satıcı sayfasını, ardından görselin HTTPS sunucusunu isteyebilir. Görsel okuma için gönderilen ekran görüntüleri hassas bilgiler içerebilir. Kriko yerel geçmişi şifrelemez; bu sürümde Kriko hesabı veya analitik yüklemesi yoktur.',
+  'Check merchant': 'Satıcıyı araştır',
+  'History was cleared before this screen read began. Start the read again.': 'Bu ekran okuması başlamadan geçmiş temizlendi. Okumayı yeniden başlatın.',
+  'Saved screenshot attached to this message': 'Bu mesaja eklenen kayıtlı ekran görüntüsü',
+  'Saved scan queue': 'Kayıtlı tarama kuyruğu',
+  'Question:': 'Soru:',
+  'Saved result:': 'Kayıtlı sonuç:',
+  'Product details:': 'Ürün bilgileri:',
+  'Saved screenshot for this scan': 'Bu taramanın kayıtlı ekran görüntüsü',
+  'No saved scan queue records.': 'Kayıtlı tarama kuyruğu girdisi yok.',
+  'Privacy and saved data': 'Gizlilik ve kayıtlı veriler',
+  'What this phone keeps, and what a question sends.': 'Bu telefonda saklanan ve sorularla gönderilen bilgiler.',
+  'Stored on this phone': 'Bu telefonda saklananlar',
+  'Conversation text, answers, product reading fields, screenshots or their local thumbnail references, sources, and the search/read steps are saved in app storage. Provider keys are stored separately using the phone’s secure storage. Chat history is not encrypted by Kriko itself. Clearing chats and scan results removes the saved records from the app.': 'Sohbet metinleri, yanıtlar, okunan ürün bilgileri, ekran görüntüleri veya yerel küçük resim bağlantıları, kaynaklar ve arama/okuma adımları uygulama alanında saklanır. Sağlayıcı anahtarları telefonun güvenli depolamasında ayrı tutulur. Kriko sohbet geçmişini kendisi şifrelemez. Sohbetleri ve tarama sonuçlarını temizlemek kayıtları uygulamadan kaldırır.',
+  'Sent to providers': 'Sağlayıcılara gönderilenler',
+  'The question and relevant context go to Mercury to write an answer. Search terms and selected pages go to DeepSeek Search and Fetch. A screenshot is uploaded to DeepSeek vision when image reading is needed. These third-party providers process the information under their own terms. This build has no Kriko account or analytics upload.': 'Yanıt yazılması için soru ve ilgili bağlam Mercury’ye gönderilir. Arama terimleri ve seçilen sayfalar DeepSeek Search ve Fetch’e iletilir. Görsel okuma gerektiğinde ekran görüntüsü DeepSeek vision’a yüklenir. Bu üçüncü taraflar bilgileri kendi koşulları altında işler. Bu sürümde Kriko hesabı veya analitik veri yüklemesi yoktur.',
+  'Saved conversation content': 'Kayıtlı sohbet içeriği',
+  'Product details saved:': 'Kaydedilen ürün bilgileri:',
+  'A screenshot reference is saved with this message.': 'Bu mesajla bir ekran görüntüsü bağlantısı saklanır.',
+  'Source:': 'Kaynak:',
+  'Saved error:': 'Kayıtlı hata:',
+  'No saved chat or scan content.': 'Kayıtlı sohbet veya tarama içeriği yok.',
+  'Products to consider': 'Değerlendirilecek ürünler',
+  'Choose the product areas that matter in your results.': 'Sonuçlarda önem verdiğiniz ürün alanlarını seçin.',
+  'Electronics': 'Elektronik',
+  'Other': 'Diğer',
+  'Sources to compare': 'Karşılaştırılacak kaynaklar',
+  'How many useful sources to aim for, up to ten.': 'En fazla on olmak üzere hedeflenen yararlı kaynak sayısı.',
+  'Include isolated reports': 'Tek kaynaklı bildirimleri dahil et',
+  'Show concerns reported by only one source.': 'Yalnızca bir kaynağın bildirdiği sorunları göster.',
+  'Include one-time issues': 'Bir defalık sorunları dahil et',
+  'Keep rare, non-recurring faults in the summary.': 'Nadir ve tekrarlanmayan arızaları özette tut.',
+  'Show usage details': 'Kullanım ayrıntılarını göster',
+  'Token counts and run diagnostics appear only when enabled.': 'Token sayıları ve tanılama bilgileri yalnızca açıldığında görünür.',
+  'Your saved chats, scan results, questions, answers, reading details, sources and troubleshooting steps are stored in this phone’s app storage. Provider keys are held in secure storage. When you ask a question, its text and relevant conversation context are sent to Mercury; search queries and selected pages are sent to DeepSeek. Screenshots are sent for vision reading and a thumbnail may be retained with the local chat. Kriko does not encrypt chat history itself and this build does not send it to a Kriko account or analytics service.': 'Kayıtlı sohbetler, tarama sonuçları, sorular, yanıtlar, okunan bilgiler, kaynaklar ve tanılama adımları bu telefonun uygulama alanında saklanır. Sağlayıcı anahtarları güvenli depolamada tutulur. Soru sorduğunuzda metni ve ilgili sohbet bağlamı Mercury’ye; arama sorguları ve seçilen sayfalar DeepSeek’e gönderilir. Ekran görüntüleri görsel okuma için gönderilir ve küçük bir kopyası yerel sohbette tutulabilir. Kriko sohbet geçmişini kendisi şifrelemez; bu sürüm geçmişi Kriko hesabına veya analitik hizmetine göndermez.',
+  'See the actual content kept in chat and scan history.': 'Sohbet ve tarama geçmişinde tutulan gerçek içeriği görün.',
+  'What stays here and what is sent to providers.': 'Burada saklanan ve sağlayıcılara gönderilen bilgiler.',
+  'Price tracking': 'Fiyat takibi',
+  'Checks run only while Kriko is open and active. There is no background scheduler; due checks run when you open this screen.': 'Kontroller yalnızca Kriko açık ve etkinken çalışır. Arka planda zamanlama yoktur; zamanı gelen kontroller bu ekranı açtığınızda yapılır.',
+  'Check interval': 'Kontrol aralığı',
+  'Track product': 'Ürünü takip et',
+  'Add provider access to check prices.': 'Fiyatları kontrol etmek için sağlayıcı erişimi ekleyin.',
+  'Check now': 'Şimdi kontrol et',
+  'Add provider access first.': 'Önce sağlayıcı erişimi ekleyin.',
+  'Remove': 'Kaldır',
+  'Enter a valid product URL, name, ISO currency code, and interval.': 'Geçerli ürün adresi, ad, ISO para birimi kodu ve aralık girin.',
+  'This product is already being tracked.': 'Bu ürün zaten takip ediliyor.',
+  'Research continues in the scan queue and is saved in History.': 'Araştırma tarama kuyruğunda devam eder ve Geçmiş’e kaydedilir.',
+  /* -------------------------------------------------- chat scroll rail -- */
+  'Scroll the conversation': 'Sohbeti kaydır',
+  'Scroll down': 'Aşağı kaydır',
+  'Scroll up': 'Yukarı kaydır',
 
 
   /* ------------------------------------------------ agent settings -- */
@@ -154,8 +287,6 @@ export const translations: Record<string, string> = {
 
   /* --------------------------------------------------------- welcome -- */
   'What do you want to check?': 'Neyi kontrol etmek istiyorsun?',
-  'What do owners report about the Bosch GSB 600?':
-    'Sahipler Bosch GSB 600 hakkında ne bildiriyor?',
   'A careful researcher for the product in front of you. It searches the web, reads the pages, and answers with what it found — or says what it could not.':
     'Önündeki ürün için dikkatli bir araştırmacı. Webde arar, sayfaları okur ve bulduklarıyla yanıtlar — bulamadığını da söyler.',
   'No keys on this phone yet': 'Bu telefonda henüz anahtar yok',
@@ -180,6 +311,7 @@ export const translations: Record<string, string> = {
   'The long line that starts with S1NB…': 'S1NB… ile başlayan uzun satır',
   'The password that came separately': 'Ayrı gelen parola',
   'Who this access is from': 'Bu erişim kimden',
+  'Mistral key · optional': 'Mistral anahtarı · isteğe bağlı',
   'Mercury key': 'Mercury anahtarı',
   'DeepSeek key': 'DeepSeek anahtarı',
   Paste: 'Yapıştır',
@@ -257,8 +389,6 @@ export const translations: Record<string, string> = {
     'Bir ürün hakkında sor ya da önündeki ekranı oku.',
   'Searched, read and cited. It says what it could not find instead of filling the gap.':
     'Arandı, okundu, kaynak gösterildi. Boşluğu doldurmak yerine bulamadığını söyler.',
-  'What goes wrong with a Bosch GSB 600 drill?': 'Bosch GSB 600 matkapta ne ters gidebilir?',
-  'Are used Galaxy Buds2 Pro worth $90?': 'Kullanılmış Galaxy Buds2 Pro 90 dolara değer mi?',
   'Trial used': 'Deneme bitti',
   Shared: 'Paylaşılan',
   'Own keys': 'Kendi anahtarlarım',
@@ -456,6 +586,13 @@ export const translations: Record<string, string> = {
   'A clear page.': 'Temiz bir sayfa.',
   'Your conversations and product scans will appear here as you use Kriko.':
     'Kriko’yu kullandıkça konuşmaların ve ürün taramaların burada görünür.',
+  'Chats and screen reads, kept apart.': 'Sohbetler ve ekran okumaları, ayrı tutulur.',
+  'Swipe left to close.': 'Kapatmak için sola kaydırın.',
+  'No chats yet.': 'Henüz sohbet yok.',
+  'Questions you ask stay here, on this phone.': 'Sorduğunuz sorular bu telefonda burada kalır.',
+  'No screen reads yet.': 'Henüz ekran okuması yok.',
+  'Scan a listing and its findings are kept here, apart from your chats.': 'Bir ilanı tarayın; bulgular sohbetlerinizden ayrı olarak burada saklanır.',
+  'Chats': 'Sohbetler',
   'Scanned products': 'Taranan ürünler',
   Queue: 'Sıra',
   'No sources yet.': 'Henüz kaynak yok.',
@@ -485,6 +622,7 @@ export const translations: Record<string, string> = {
     'Her yanıtın ve etiketin ne kadar büyük çizileceği.',
   Small: 'Küçük',
   Large: 'Büyük',
+  'Extra large': 'Çok büyük',
   Motion: 'Hareket',
   'Transitions and reveals. System follows your phone’s setting.':
     'Geçişler ve açılışlar. Sistem, telefonunun ayarını izler.',
@@ -567,11 +705,14 @@ export const translations: Record<string, string> = {
   Error: 'Hata',
   Cancelled: 'İptal edildi',
   'Queue is full': 'Sıra dolu',
-  'Drag Kriko, or tap it to open the scan panel':
-    'Kriko’yu sürükle veya tarama panelini açmak için dokun',
+  'Tap Kriko to scan this page. Press and hold for more.':
+    'Bu sayfayı taramak için Kriko’ya dokun. Daha fazlası için basılı tut.',
+  'Drop here to stop sharing': 'Paylaşımı durdurmak için buraya bırak',
+  'Kriko keeps reading. The answer will be in History.':
+    'Kriko okumaya devam ediyor. Yanıt Geçmiş’te olacak.',
   'Kriko screen scan is active': 'Kriko ekran taraması açık',
-  'Tap the floating bubble to scan one screen when you choose.':
-    'İstediğinde tek bir ekranı taramak için yüzen balona dokun.',
+  'Tap the floating K to scan one screen when you choose.':
+    'İstediğinde tek bir ekranı taramak için yüzen K’ye dokun.',
   'Scan a product page. Each scan joins the queue here.':
     'Bir ürün sayfası tara. Her tarama burada sıraya girer.',
   'Scan a product page to see its answer and sources here.':
@@ -591,10 +732,10 @@ export const translations: Record<string, string> = {
   'Scan products while you browse.': 'Gezinirken ürünleri tara.',
   'Allow Kriko over other apps.': 'Kriko’nun diğer uygulamaların üzerinde görünmesine izin ver.',
   'Approve Android’s screen sharing prompt.': 'Android’in ekran paylaşımı isteğini onayla.',
-  'Open the page you want, then tap the K and Scan this page.':
-    'İstediğin sayfayı aç, sonra K’ye dokun ve Bu sayfayı tara’ya bas.',
-  'Only screens you scan are sent for reading. Stop from the K’s tray or the Android notification.':
-    'Yalnızca taradığın ekranlar okunmak üzere gönderilir. K’nin menüsünden ya da Android bildiriminden durdur.',
+  'Open the page you want, then tap the K to scan it. Press and hold for more.':
+    'İstediğin sayfayı aç, sonra taramak için K’ye dokun. Daha fazlası için basılı tut.',
+  'Only screens you scan are sent for reading. Stop by dropping the K on the ×, from its menu, or from the Android notification.':
+    'Yalnızca taradığın ekranlar okunmak üzere gönderilir. K’yi ×’in üzerine bırakarak, menüsünden ya da Android bildiriminden durdur.',
   'Scan this page': 'Bu sayfayı tara',
   'Scan again': 'Yeniden tara',
   'Results': 'Sonuçlar',
@@ -642,7 +783,6 @@ export const translations: Record<string, string> = {
     'Bir ilanı tara ya da soru sor. Kriko ayrıntıları bağımsız kaynaklarla karşılaştırır.',
   'Read the page open on your phone': 'Telefonunda açık olan sayfayı oku',
   'Choose a screenshot instead': 'Bunun yerine ekran görüntüsü seç',
-  'Or start with a question': 'Ya da bir soruyla başla',
   'Recently scanned': 'Son tarananlar',
   'Open the saved scan': 'Kaydedilen taramayı aç',
   'Your recent product scans': 'Son ürün taramaların',
@@ -671,6 +811,103 @@ export const translations: Record<string, string> = {
     'görüntü okuyucu kullanılabilir ürün ayrıntıları vermeden kesildi',
   'The image reader replied in prose, so these details are observations, not a confirmed identity.':
     'Görüntü okuyucu düz metin yanıt verdi; bu ayrıntılar gözlemdir, doğrulanmış bir kimlik değildir.',
+
+  /* ------------------------------------------------- the scanned picture -- */
+  'Scanned page': 'Taranan sayfa',
+  'Open the scanned picture': 'Taranan resmi aç',
+  'Close the picture': 'Resmi kapat',
+  'Checking this page': 'Bu sayfa kontrol ediliyor',
+
+  /* ------------------------------------- the floating K and the assistant -- */
+  'Screen capture paused': 'Ekran yakalama duraklatıldı',
+  'Screen capture stopped. Tap Scan on the floating K to start it again.':
+    'Ekran yakalama durdu. Yeniden başlatmak için yüzen K’deki Tara’ya dokun.',
+  'Open Kriko and start the scanner again.': 'Kriko’yu açıp tarayıcıyı yeniden başlat.',
+  'Opening Kriko…': 'Kriko açılıyor…',
+  'Scanning this screen': 'Bu ekran taranıyor',
+  'Kriko could not see your screen. In your phone’s assistant settings, turn on “Use screenshot”.':
+    'Kriko ekranını göremedi. Telefonunun asistan ayarlarında “Ekran görüntüsünü kullan” seçeneğini aç.',
+  'Floating scanner': 'Yüzen tarayıcı',
+  Transparency: 'Saydamlık',
+  'How see-through the floating K and its glass panels are. Faint shows the most of your page; Solid shows none.':
+    'Yüzen K ve cam panellerin ne kadar şeffaf olacağı. Silik sayfanı en çok gösterir; Tam hiç göstermez.',
+  'Answer over your page': 'Yanıt sayfanın üstünde',
+  'The answer opens over the page you scanned, so you never leave it.':
+    'Yanıt taradığın sayfanın üstünde açılır, o sayfadan hiç çıkmazsın.',
+  'Allow Kriko over other apps and the answer opens over the page you scanned, instead of taking you into Kriko.':
+    'Kriko’nun diğer uygulamaların üzerinde görünmesine izin ver; yanıt seni Kriko’ya götürmek yerine taradığın sayfanın üstünde açılır.',
+  Allowed: 'İzinli',
+  Off: 'Kapalı',
+  'Over-other-apps settings': 'Üstte gösterme ayarları',
+  'Allow over other apps': 'Diğer uygulamaların üzerinde göster',
+  Faint: 'Silik',
+  Soft: 'Yumuşak',
+  Strong: 'Güçlü',
+  Solid: 'Tam',
+  'Phone assistant': 'Telefon asistanı',
+  'Kriko is your phone’s assistant. Hold the power or home button to scan the screen at once.':
+    'Kriko telefonunun asistanı. Ekranı hemen taramak için güç veya ana ekran düğmesini basılı tut.',
+  'Make Kriko your phone’s assistant, then hold the power or home button to scan the screen at once.':
+    'Kriko’yu telefonunun asistanı yap, sonra ekranı hemen taramak için güç veya ana ekran düğmesini basılı tut.',
+  'Reading your screen': 'Ekranın okunuyor',
+  'Finding the product': 'Ürün bulunuyor',
+  'Checking what is known': 'Bilinen sorunlar kontrol ediliyor',
+  'Swipe down to cancel': 'İptal etmek için aşağı kaydır',
+  'Kriko could not finish': 'Kriko bitiremedi',
+  'Kriko is checking the page you were on. The answer opens in a new chat.':
+    'Kriko bulunduğun sayfayı kontrol ediyor. Yanıt yeni bir sohbette açılır.',
+  'Back to chat': 'Sohbete dön',
+  'Scan with a long press': 'Uzun basarak tara',
+  'Set as assistant': 'Asistan olarak ayarla',
+  'Assistant settings': 'Asistan ayarları',
+  'Active': 'Açık',
+  'Not set': 'Ayarlı değil',
+  'In the list, choose Kriko under Digital assistant app, and keep “Use screenshot” on.':
+    'Listede Dijital asistan uygulaması altında Kriko’yu seç ve “Ekran görüntüsünü kullan” seçeneğini açık tut.',
+  'Kriko could not read the screenshot your phone sent. Try again.':
+    'Kriko telefonunun gönderdiği ekran görüntüsünü okuyamadı. Tekrar dene.',
+  'Kriko did not receive a screenshot. In your phone’s assistant settings, turn on “Use screenshot”.':
+    'Kriko bir ekran görüntüsü almadı. Telefonunun asistan ayarlarında “Ekran görüntüsünü kullan” seçeneğini aç.',
+
+  /* The in-app update. */
+  'Updates': 'Güncellemeler',
+  'Kriko Agent': 'Kriko Agent',
+  'Looking for a newer version…': 'Daha yeni bir sürüm aranıyor…',
+  'Downloading. Keep Kriko open.': 'İndiriliyor. Kriko’yu açık tut.',
+  'Android asks once. Turn on “Allow from this source”, then come back here.':
+    'Android bunu bir kez sorar. “Bu kaynaktan izin ver”i aç, sonra buraya dön.',
+  'Confirm on the screen Android shows. Kriko restarts when it is done.':
+    'Android’in gösterdiği ekranda onayla. Bitince Kriko yeniden açılır.',
+  'Handing it to Android…': 'Android’e veriliyor…',
+  'You have the newest version.': 'En yeni sürümdesin.',
+  'Updates come from Kriko’s releases on GitHub. Nothing installs without your press.':
+    'Güncellemeler Kriko’nun GitHub sürümlerinden gelir. Sen basmadan hiçbir şey kurulmaz.',
+  'Update now': 'Şimdi güncelle',
+  'Open the setting': 'Ayarı aç',
+  'Check again': 'Tekrar kontrol et',
+  'Check for updates': 'Güncellemeleri denetle',
+  'Not now': 'Şimdi değil',
+  'Update': 'Güncelle',
+  'Could not reach GitHub. Check your connection and try again.':
+    'GitHub’a ulaşılamadı. Bağlantını kontrol edip tekrar dene.',
+  'GitHub is limiting requests for now. Try again in a few minutes.':
+    'GitHub şimdilik istekleri sınırlıyor. Birkaç dakika sonra tekrar dene.',
+  'GitHub answered with something Kriko could not read.':
+    'GitHub, Kriko’nun okuyamadığı bir yanıt verdi.',
+  'The download did not match its checksum, so Kriko threw it away. Try again.':
+    'İndirilen dosya sağlama toplamıyla eşleşmedi, bu yüzden Kriko onu sildi. Tekrar dene.',
+  'The download stopped early. Try again.': 'İndirme erken durdu. Tekrar dene.',
+  'There is not enough room on this phone for the update.':
+    'Güncelleme için bu telefonda yeterli yer yok.',
+  'This build was signed with a different key, so Android will not let it replace this app.':
+    'Bu sürüm farklı bir anahtarla imzalanmış, bu yüzden Android bunun bu uygulamanın yerine geçmesine izin vermiyor.',
+  'Android blocked the install. Allow Kriko to install apps, then try again.':
+    'Android kurulumu engelledi. Kriko’nun uygulama kurmasına izin ver, sonra tekrar dene.',
+  'That download is older than the version on this phone.':
+    'İndirilen dosya bu telefondaki sürümden eski.',
+  'That download is not a Kriko update.': 'İndirilen dosya bir Kriko güncellemesi değil.',
+  'The download is gone. Try again.': 'İndirilen dosya kayboldu. Tekrar dene.',
+  'The update did not install. Try again.': 'Güncelleme kurulamadı. Tekrar dene.',
 };
 
 /**
@@ -679,12 +916,19 @@ export const translations: Record<string, string> = {
  * a sentence that happens to contain one of these words.
  */
 const patterns: readonly (readonly [RegExp, string])[] = [
+  [/^Open product listing: (.+)$/, 'Ürün ilanını aç: $1'],
+  [/^Check merchant for (.+)$/, '$1 için satıcıyı araştır'],
+  [/^Tokens · (\d+) input · (\d+) output · (\d+) total$/, 'Token · $1 girdi · $2 çıktı · $3 toplam'],
   [/^Version (.+) · Friends test$/, 'Sürüm $1 · Arkadaş testi'],
   [
     /^Kriko Agent for mobile · (.+) · Mercury and DeepSeek are third-party services\.$/,
     'Mobil için Kriko Agent · $1 · Mercury ve DeepSeek üçüncü taraf hizmetlerdir.',
   ],
   [/^Open scan result for (.+)$/, '$1 için tarama sonucunu aç'],
+  [/^Kriko (\d+\.\d+\.\d+) is ready$/, 'Kriko $1 hazır'],
+  [/^Kriko Agent (\d+\.\d+\.\d+)$/, 'Kriko Agent $1'],
+  [/^Open the update to (\d+\.\d+\.\d+)$/, '$1 güncellemesini aç'],
+  [/^(\d+(?:\.\d)?) MB · from GitHub, checked on this phone$/, '$1 MB · GitHub’dan, bu telefonda doğrulanır'],
   [/^(.+) · site comments$/, '$1 · site yorumları'],
   [/^(\d+) products? in progress$/, '$1 ürün işleniyor'],
   [/^(\d+) products? (?:is|are) moving$/, '$1 ürün ilerliyor'],
@@ -700,6 +944,10 @@ const patterns: readonly (readonly [RegExp, string])[] = [
   /* Counts. Turkish takes the bare noun after a number. */
   [/^(\d+) questions?$/, '$1 soru'],
   [/^(\d+) conversations?$/, '$1 konuşma'],
+  [
+    /^(\d+) conversation\(s\), scan results, and their sources are removed from this phone\.$/,
+    '$1 sohbet, tarama sonucu ve bunların kaynakları bu telefondan kaldırılır.',
+  ],
   [/^(\d+) chats?$/, '$1 sohbet'],
   [/^(\d+) messages$/, '$1 mesaj'],
   [/^(\d+) steps?$/, '$1 adım'],
@@ -738,6 +986,9 @@ const patterns: readonly (readonly [RegExp, string])[] = [
 
   /* Lists, counters and build lines. */
   [/^Sources · (\d+)$/, 'Kaynaklar · $1'],
+  [/^Show all (\d+) sources$/, 'Tüm $1 kaynağı göster'],
+  [/^STEP (\d+) OF (\d+)$/, 'ADIM $1 / $2'],
+  [/^Step (\d+) of (\d+)$/, 'Adım $1 / $2'],
   [/^Show all (\d+)$/, 'Tümünü göster ($1)'],
   [/^Answer (\d+) · (.+)$/, 'Yanıt $1 · $2'],
   [/^Latest answer · (.+)$/, 'Son yanıt · $1'],

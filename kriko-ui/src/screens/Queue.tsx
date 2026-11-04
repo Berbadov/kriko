@@ -14,7 +14,6 @@ export function QueueScreen() {
     <section className="queue-page">
       <header className="page-head rise" style={{ '--i': 0 } as CSSProperties}>
         <h1>Queue</h1>
-        <span className="mono muted">{items.filter((i) => i.state === 'done').length} of {items.length} done</span>
         {mode === 'live' && (
           <div className="head-tools">
             {running ? (

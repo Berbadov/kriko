@@ -197,10 +197,7 @@ test("the detail rows take their names and warnings from the pack", () => {
   const rows = Array.from(p.shadow().querySelectorAll(".lite-detrow"));
   const titles = rows.map((r) => r.dataset.row);
   assert.deepEqual(titles, ["Replaced"]);
-  assert.match(
-    rows[0].querySelector(".lite-detrow-hint").textContent,
-    /removed and a new one installed/
-  );
+  assert.equal(rows[0].querySelector(".lite-detrow-hint"), null, "a row is its title and its chips");
 });
 
 test("a state the pack declares without a title is read but not shown", () => {

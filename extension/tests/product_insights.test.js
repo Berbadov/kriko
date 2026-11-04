@@ -43,7 +43,8 @@ test("automatic product recognition adds one button, and a quick check stays on 
   h.document.querySelector("[data-kriko-quick]").click();
   assert.equal(h.document.querySelector("[data-kriko-quick]").nextElementSibling.getAttribute("data-kriko-summary"), "");
   assert.match(h.document.querySelector("[data-kriko-summary]").textContent, /Bearing fails/);
-  assert.match(h.document.querySelector("[data-kriko-summary]").textContent, /Last verified.*Unknown/);
+  assert.match(h.document.querySelector("[data-kriko-summary]").textContent, /Verified unknown/);
+  assert.doesNotMatch(h.document.querySelector("[data-kriko-summary]").textContent, /Matched by/, "no line explaining the match");
 });
 
 test("batch scan badges each result and never presents a gap as low risk", () => {
@@ -107,6 +108,6 @@ test("right-click scans selected URLs without fetching or opening the product pa
   assert.equal(h.state.requests.length, 1);
   assert.equal(h.state.requests[0].body.items[0].url, "https://shop.invalid/tool");
   assert.match(h.state.notified.at(-1), /Bearing failure/);
-  assert.match(h.state.notified.at(-1), /stale or incomplete/);
+  assert.doesNotMatch(h.state.notified.at(-1), /Last verified|saved page check/, "the notice is the product, the level and the findings");
   assert.equal(h.state.tabsCreated.length, 0);
 });
