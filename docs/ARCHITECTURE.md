@@ -50,7 +50,7 @@ Start with these files:
 | Package | Read first |
 |---|---|
 | `kriko-ui/` | `kriko-ui/README.md`, then `kriko-ui/src-tauri/src/engine.rs` |
-| `kriko-harness/` | `kriko-harness/src/main.rs`, then `src/app/providers/hostbin.py` |
+| `kriko-harness/` | `kriko-harness/src/main.rs`, then `src/app/providers/hostbin.py`, then `src/app/providers/cliprobe.py` (probe answers persisted beside the store, keyed by the CLI binary's mtime+size — an updated CLI is re-probed, an unchanged one never is) |
 | `src/app/` | `src/app/cli.py`, then `src/app/sidecar.py` |
 | `src/app/pipeline/` | `src/app/pipeline/ledger_run.py` |
 | `src/kriko/` | `src/kriko/store/packstore.py` |
