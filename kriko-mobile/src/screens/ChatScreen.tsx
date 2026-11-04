@@ -30,7 +30,7 @@ import { ChatBackground } from '../components/ChatBackground';
 import { UpdateNotice } from '../components/UpdateCard';
 import { Composer } from '../components/Composer';
 import { useDock } from '../components/dock';
-import { BackIcon, ChevronRightIcon, KeyIcon, PlusIcon } from '../components/Icon';
+import { BackIcon, ChevronRightIcon, KeyIcon } from '../components/Icon';
 import { MessageRow } from '../components/Message';
 import { MotionPressable, MotionView, useReducedMotion } from '../components/Motion';
 import { PastSearchRow, PastSearchesSheet, pastSearchText } from '../components/PastSearchesSheet';
@@ -208,16 +208,17 @@ export function ChatScreen() {
 
   const openAccess = () => setAccessOpen(true);
 
-  const startNewChat = () => {
-    if (streaming) {
-      Alert.alert(tr('Kriko is still working'), tr('Stop the answer first, then start a new chat.'));
-      return;
+  // A new chat is started from the bottom bar's plus button, which opens compose
+  // mode. Whatever was half-written or staged for the last chat goes with it.
+  const composing = dock.composing;
+  const [wasComposing, setWasComposing] = useState(composing);
+  if (composing !== wasComposing) {
+    setWasComposing(composing);
+    if (composing) {
+      setDraft('');
+      setShot(null);
     }
-    newChat();
-    setDraft('');
-    setShot(null);
-    dock.beginCompose();
-  };
+  }
 
   const ask = async (text: string, reading?: Reading, imageUri?: string) => {
     if (!canAsk) {
@@ -361,7 +362,6 @@ export function ChatScreen() {
         actions={
           <>
             {inChat ? <HeaderAction label="Home" onPress={goHome}><BackIcon size={20} color={color.ink} /></HeaderAction> : null}
-            <HeaderAction label="New chat" onPress={startNewChat}><PlusIcon size={20} color={color.ink} /></HeaderAction>
           </>
         }
       />

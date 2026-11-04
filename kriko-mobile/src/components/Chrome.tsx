@@ -1,7 +1,7 @@
 import type { ComponentRef, ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import {
-  Animated, Keyboard, ScrollView, StyleSheet, View,
+  Alert, Animated, Keyboard, ScrollView, StyleSheet, View,
    type NativeScrollEvent, type NativeSyntheticEvent, type ViewStyle,
 } from 'react-native';
 import { router, usePathname, type Href } from 'expo-router';
@@ -13,12 +13,13 @@ import { useStore } from '../engine/store';
 import { updateNeedsAttention } from '../engine/updatecore';
 import { useAppUpdate } from '../engine/updater';
 import { tr } from '../i18n';
-import { HEADER_H, PAGE_X, radius, TITLE_BAR_H } from '../theme/tokens';
+import { press } from '../theme/feedback';
+import { elevation, HEADER_H, PAGE_X, radius, TITLE_BAR_H } from '../theme/tokens';
 import { makeStyles, useColors } from '../theme/theme';
 import { Txt } from '../theme/Txt';
 import { useDock } from './dock';
 import { GlassBar, type GlassTarget } from './Glass';
-import { HistoryIcon, SlidersIcon } from './Icon';
+import { HistoryIcon, PlusIcon, SlidersIcon } from './Icon';
 import { Wordmark } from './Logo';
 import { MotionPressable, MotionView } from './Motion';
 
@@ -125,7 +126,7 @@ export function Hero({ crumb, title, subtitle }: { crumb: string; title: string;
 export function BottomNav() {
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
-  const { newChat } = useStore();
+  const { newChat, streaming } = useStore();
   const dock = useDock();
   const color = useColors();
   const styles = useStyles();
@@ -143,6 +144,18 @@ export function BottomNav() {
     { path: '/settings', label: 'Settings', Icon: SlidersIcon },
   ];
   if (keyboard || pathname === '/assist') return null;
+  // A new conversation is an action, not a place, so it stands apart from the
+  // three destinations: one solid circle beside the pill, always in the same spot.
+  const startNewChat = () => {
+    if (streaming) {
+      Alert.alert(tr('Kriko is still working'), tr('Stop the answer first, then start a new chat.'));
+      return;
+    }
+    press();
+    newChat();
+    dock.beginCompose();
+    if (pathname !== '/') router.replace('/' as Href);
+  };
   return <View style={[styles.navigation, { paddingBottom: Math.max(insets.bottom, 8) }]}>
     <View style={styles.navTrack} accessibilityRole="tablist">
       {items.map(({ path, label, Icon }) => {
@@ -154,10 +167,14 @@ export function BottomNav() {
             <Icon size={21} color={selected ? color.ink : color.ink3} strokeWidth={selected ? 1.9 : 1.5} />
             {path === '/settings' && update ? <View style={styles.updateDot} /> : null}
           </View>
-          <Txt variant="monoSm" tone={selected ? 'ink' : 'ink3'} numberOfLines={1}>{label}</Txt>
+          <Txt variant="chip" tone={selected ? 'ink' : 'ink2'} numberOfLines={1}>{label}</Txt>
         </MotionPressable>;
       })}
     </View>
+    <MotionPressable accessibilityRole="button" accessibilityLabel={tr('New chat')} onPress={startNewChat}
+      style={styles.newChat}>
+      <PlusIcon size={24} color={color.ground} strokeWidth={2.2} />
+    </MotionPressable>
   </View>;
 }
 
@@ -229,8 +246,15 @@ const useStyles = makeStyles((color) => StyleSheet.create({
   note: { paddingHorizontal: PAGE_X, paddingVertical: 8 },
   divider: { height: StyleSheet.hairlineWidth, backgroundColor: color.edge, marginVertical: 8 },
   footerSurface: { backgroundColor: color.surface, borderRadius: radius.l, borderWidth: 1, borderColor: color.edge, overflow: 'hidden' },
-  navigation: { flexShrink: 0, paddingTop: 4, paddingHorizontal: PAGE_X, backgroundColor: color.ground },
-  navTrack: { flexDirection: 'row', minHeight: 52, alignItems: 'center' },
+  navigation: { flexShrink: 0, paddingTop: 6, paddingHorizontal: 14, backgroundColor: color.ground,
+    flexDirection: 'row', alignItems: 'center', gap: 10 },
+  // The destinations live in one floating pill: a raised surface with a bright
+  // rim and a soft shadow, not a hairline across the bottom of the page.
+  navTrack: { flex: 1, flexDirection: 'row', minHeight: 60, alignItems: 'center', paddingHorizontal: 6,
+    borderRadius: radius.xl, backgroundColor: color.raise, borderWidth: 1, borderColor: color.rim,
+    ...elevation.float(color.shadow) },
+  newChat: { width: 60, height: 60, borderRadius: 30, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: color.ink, ...elevation.float(color.shadow) },
   destination: { flex: 1, minHeight: 52, minWidth: 44, alignItems: 'center', justifyContent: 'center', gap: 3 },
   navIcon: { width: 24, height: 24, alignItems: 'center', justifyContent: 'center' },
   updateDot: { position: 'absolute', top: -2, right: -3, width: 9, height: 9, borderRadius: 5,
