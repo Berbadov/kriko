@@ -59,15 +59,10 @@ README_DOWNLOAD = re.compile(
     r"(kriko-)(\d+\.\d+\.\d+)"
     r"(-(?:x86_64-setup\.exe|win64-portable\.zip|macos-(?:arm64|x86_64)(?:-portable\.zip|\.dmg)))")
 
-#: The website's download button. kriko.cc hands the reader the installer file
-#: itself, not the release page it sits on, so the version is in the asset's own
-#: name and has to move with the tree the way the README's filenames do. The
-#: Turkish page is the renderer's copy of the same anchor and is checked too: a
-#: release that moved one and not the other is a dead button in one language.
-SITE_DOWNLOAD = re.compile(
-    r"(releases/latest/download/kriko-)(\d+\.\d+\.\d+)(-x86_64-setup\.exe)")
-SITE_PAGES = (Path("site/index.html"), Path("site/tr/index.html"),
-              Path("site/install/index.html"), Path("site/tr/install/index.html"))
+# The website's download button is not here any more: the site is its own
+# repository (kriko-website). kriko.cc hands the reader the installer file itself,
+# so its pages name the version in the asset's filename, and a release has to move
+# them there by hand; this script no longer reaches them.
 
 
 def current() -> dict[Path, str]:
@@ -108,21 +103,6 @@ def show(strict: bool = False) -> int:
     if not downloads or any(version != readme.group(2) for _, version, _ in downloads):
         print("README.md download filenames disagree with its version badge")
         return 1
-    # The website's button names the installer file, so it is one more place the
-    # version lives. Checked here rather than only at bump time: the gate runs
-    # `--show --strict`, and so does the release job before it publishes.
-    for page in SITE_PAGES:
-        full = ROOT / page
-        if not full.exists():
-            continue
-        link = SITE_DOWNLOAD.search(full.read_text(encoding="utf-8"))
-        if link is None:
-            print(f"{page} has no direct installer download link")
-            return 1
-        if link.group(2) != readme.group(2):
-            print(f"{page} downloads {link.group(2)} while the tree is {readme.group(2)}")
-            return 1
-        found[page] = link.group(2)
     width = max(len(str(p)) for p in found)
     for path, version in found.items():
         print(f"{str(path):<{width}}  {version}")
@@ -177,25 +157,6 @@ def bump(version: str, reset: bool = False) -> int:
     if count != 1:
         raise SystemExit("README.md must have exactly one version badge")
     readme = README_DOWNLOAD.sub(rf"\g<1>{version}\g<3>", readme)
-    for page in SITE_PAGES:
-        full = ROOT / page
-        if not full.exists():
-            continue
-        text = full.read_text(encoding="utf-8")
-        text, count = SITE_DOWNLOAD.subn(rf"\g<1>{version}\g<3>", text)
-        if count < 1:
-            raise SystemExit(f"{page} must link the installer download at least once")
-        # Portable downloads and the checksum command name the same release.
-        text = README_DOWNLOAD.sub(rf"\g<1>{version}\g<3>", text)
-        # Bytes, like the version files above: the newlines stay the file's own.
-        full.write_bytes(text.encode("utf-8"))
-        print(f"{page} -> {version}")
-    translations = ROOT / "site/locales/tr.json"
-    if translations.exists():
-        # Translation keys include full HTML units and the verification command.
-        # Move keys and values together, so the locale build still finds them.
-        text = translations.read_text(encoding="utf-8")
-        translations.write_bytes(README_DOWNLOAD.sub(rf"\g<1>{version}\g<3>", text).encode("utf-8"))
     for path, pattern in PLACES:
         full = ROOT / path
         text = full.read_text(encoding="utf-8")

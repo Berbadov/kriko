@@ -36,8 +36,8 @@ is 0.10.0, with a floating scanner you can drag, open and read. See the
   <tr>
     <td width="50%" valign="top" align="center">
       <a href="https://kriko.cc/guide/"><picture>
-        <source media="(prefers-color-scheme: dark)" srcset="site/assets/desktop/compare-dark.webp">
-        <img src="site/assets/desktop/compare-light.webp" alt="The desktop app comparing three invented e-bikes side by side, each risk with its sources.">
+        <source media="(prefers-color-scheme: dark)" srcset="docs/images/compare-dark.webp">
+        <img src="docs/images/compare-light.webp" alt="The desktop app comparing three invented e-bikes side by side, each risk with its sources.">
       </picture></a>
       <br><sub><b>Compare</b> in the desktop app: three listings, the same checks, the sources beside each.</sub>
     </td>
@@ -49,8 +49,8 @@ is 0.10.0, with a floating scanner you can drag, open and read. See the
   <tr>
     <td width="50%" valign="top" align="center">
       <a href="https://kriko.cc/guide/"><picture>
-        <source media="(prefers-color-scheme: dark)" srcset="site/assets/desktop/home-compact-dark.webp">
-        <img src="site/assets/desktop/home-compact-light.webp" width="320" alt="The desktop app's start screen with the question What do you want to check, and recent checks below.">
+        <source media="(prefers-color-scheme: dark)" srcset="docs/images/home-compact-dark.webp">
+        <img src="docs/images/home-compact-light.webp" width="320" alt="The desktop app's start screen with the question What do you want to check, and recent checks below.">
       </picture></a>
       <br><sub><b>Ask</b> about any product; the answer cites what it read.</sub>
     </td>
