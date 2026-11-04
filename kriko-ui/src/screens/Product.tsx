@@ -163,7 +163,6 @@ export function ProductScreen({ lookupId, onBack, onCompare }: { lookupId: strin
             <Icon name="collapse" size={18} />
           </button>
           <h1 title={check?.name}>{check?.name ?? 'Check'}</h1>
-          {check && <span className="muted">{check.category || 'Quick look'}</span>}
         </div>
         <div className="head-tools">
           {check && <button className="btn" disabled={turns.some((turn) => turn.state === 'running')} onClick={() => void ask('Research this exact product again for current evidence, prices and availability. Keep the recorded variant and market assumptions explicit and cite the sources.')}>Ask for fresh evidence</button>}
