@@ -149,24 +149,38 @@ test('a shared link to a page unfurls into a large picture that exists, with a d
   }
 });
 
-test('the film on the home page waits for a press, has a still and a way to save it, and is small enough to host', () => {
+test('the home page is a headline, three buttons and the two apps, with no sub-line and no em dash', () => {
   for (const page of HOME) {
     const d = load(page);
-    const dir = path.dirname(path.join(root, page.file));
-    const video = d.querySelector('#film video');
-    assert.ok(video, `${page.file} has no film`);
-    assert.ok(video.hasAttribute('controls'), `${page.file}: the film has no controls`);
-    assert.ok(!video.hasAttribute('autoplay'), `${page.file}: the film starts with sound by itself`);
-    assert.equal(video.getAttribute('preload'), 'none', `${page.file}: the film would download before it is wanted`);
-    assert.ok(video.getAttribute('aria-label').length > 40, `${page.file}: the film is not described`);
-    const still = path.resolve(dir, video.getAttribute('poster'));
-    assert.ok(fs.existsSync(still), `${page.file}: the film's still is missing`);
-    const file = path.resolve(dir, video.querySelector('source').getAttribute('src'));
-    // Cloudflare Pages refuses a file over 25 MiB; keep well under it.
-    assert.ok(fs.statSync(file).size < 12 * 1024 * 1024, `${page.file}: the film is over 12 MB`);
-    assert.ok(video.querySelector('a[href$=".mp4"]'), `${page.file}: a browser that cannot play it has no link to the file`);
-    assert.ok(d.querySelector('#film figcaption').textContent.length > 20, `${page.file}: the film has no caption`);
+    const copy = d.querySelector('.lp-copy');
+    assert.ok(copy && copy.querySelector('h1'), `${page.file} has no headline`);
+    assert.equal(copy.querySelectorAll('p').length, 0, `${page.file}: the headline has a sub-line under it`);
+    assert.equal(copy.querySelectorAll('.actions a').length, 3, `${page.file}: the hero has the download, the phone app and GitHub`);
+    assert.equal(d.querySelectorAll('.lp-side h2 + p, .lp-phones h2 + p, #get h2 + p').length, 0, `${page.file}: a heading has a sub-line under it`);
+    assert.ok(d.querySelector('.lp-window picture'), `${page.file} does not show the desktop app`);
+    assert.ok(d.querySelector('.lp-phone picture'), `${page.file} does not show the phone app`);
+    assert.ok(!d.body.textContent.includes('\u2014'), `${page.file} has an em dash`);
   }
+});
+
+test('the desktop tabs change the picture on a press, and the end of a fill moves on to the next tab', () => {
+  const page = PAGES[0];
+  const dom = new JSDOM(read(page.file), { url: page.url, runScripts: 'outside-only' });
+  dom.window.eval(read('script.js'));
+  const { document } = dom.window;
+  const showcase = document.querySelector('[data-showcase]');
+  assert.ok(showcase.classList.contains('is-ready'), 'the tabs wait for the script, so a page without it shows the first picture alone');
+  const tabs = [...showcase.querySelectorAll('.lp-tabs button')];
+  const shown = () => [...showcase.querySelectorAll('.lp-shot')].map((shot) => shot.classList.contains('is-on'));
+  assert.deepEqual(shown(), [true, false, false]);
+  tabs[1].click();
+  assert.deepEqual(shown(), [false, true, false]);
+  assert.equal(tabs[1].getAttribute('aria-pressed'), 'true');
+  assert.equal(tabs[0].getAttribute('aria-pressed'), 'false');
+  tabs[1].querySelector('.lp-bar').dispatchEvent(new dom.window.Event('animationend'));
+  assert.deepEqual(shown(), [false, false, true]);
+  tabs[2].querySelector('.lp-bar').dispatchEvent(new dom.window.Event('animationend'));
+  assert.deepEqual(shown(), [true, false, false], 'the last fill wraps to the first tab');
 });
 
 test('robots.txt names the sitemap, the sitemap lists exactly the pages that exist, and an unknown address gets a real 404 page', () => {
@@ -297,14 +311,10 @@ test('the privacy policy runs no script and both home pages link to it', () => {
   }
 });
 
-test('every invented product has its pictures in both themes, and the pages say the first one is an example', () => {
+test('every invented product has its pictures in both themes', () => {
   const examples = JSON.parse(read('tools/examples.json')).products;
   for (const key of Object.keys(examples)) {
     for (const theme of ['light', 'dark']) assert.ok(fs.existsSync(path.join(root, `assets/examples/${key}-${theme}.webp`)), `${key}-${theme}`);
-  }
-  for (const page of HOME) {
-    const d = load(page);
-    assert.ok(d.querySelector('.stage figcaption'), `${page.file}: the first picture says nothing about being an example`);
   }
 });
 
