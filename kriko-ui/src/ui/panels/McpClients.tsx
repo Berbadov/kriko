@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { useMcpClients, type McpClient, type McpState } from '../../engine/mcpclients'
 import { copyText } from '../clipboard'
 import { Select } from '../controls'
+import { Icon } from '../Icon'
+import { Group, Hint, IconButton, Row, State } from './settingsParts'
 import '../../styles/mcp.css'
 
 const STATE_WORDS: Record<McpState, string> = {
@@ -10,6 +12,15 @@ const STATE_WORDS: Record<McpState, string> = {
   connected: 'Added',
   stale: 'Added, but it points at a different Kriko store',
   unreadable: 'Its config file cannot be read',
+}
+
+/** The same states in a word or two, for the pill beside the name. */
+const STATE_SHORT: Record<McpState, string> = {
+  shown: '',
+  absent: 'Not added',
+  connected: 'Added',
+  stale: 'Other store',
+  unreadable: 'Unreadable',
 }
 
 /** Kriko inside a chat app that is not Kriko: the exact config for it, to copy
@@ -29,44 +40,70 @@ export function McpClientsGroup() {
   }
 
   return (
-    <section className="panel-group mcp">
-      <h3>Use Kriko in another chat</h3>
-      <p className="panel-note">
-        Add Kriko to a chat app or an editor and ask it about a product there. It answers with its sources and quotes. Lookups are free; a chat answer uses your agent.
-      </p>
+    <Group
+      icon="plug"
+      title="Chat apps"
+      hint={
+        <Hint icon="coins" title="Cost">
+          Lookups are free. A chat answer uses your agent.
+        </Hint>
+      }
+    >
       {problem && <p className="error-note">{problem}</p>}
-      <div className="setting">
-        <span>Chat client</span>
+      <Row
+        icon="chat"
+        label="App"
+        state={
+          STATE_WORDS[client.state] ? (
+            <State tone={client.state === 'connected' ? 'ok' : client.state === 'unreadable' ? 'risk' : 'warn'} icon={client.state === 'connected' ? 'check' : 'alert'}>
+              {STATE_SHORT[client.state]}
+            </State>
+          ) : undefined
+        }
+      >
         <Select label="Chat client" value={client.id} options={doc.clients.map((row) => ({ value: row.id, label: row.label }))} onChange={setPicked} />
-      </div>
-      <p className="panel-note">{client.note}</p>
+      </Row>
+      {STATE_WORDS[client.state] && client.detail && <p className="panel-note" data-kind="warn">{STATE_WORDS[client.state]}: {client.detail}</p>}
       {client.start && (
         <div className="command">
           <code>{client.start}</code>
-          <button onClick={() => void copy('start', client.start ?? '')}>{copied === 'start' ? 'Copied' : 'Copy'}</button>
+          <IconButton icon="copy" label={copied === 'start' ? 'Copied' : 'Copy the start command'} onClick={() => void copy('start', client.start ?? '')} />
         </div>
       )}
       <pre className="mcp-snippet" tabIndex={0} aria-label={`${client.label} config`}>
         {client.snippet}
       </pre>
-      <div className="mcp-actions">
+      <Row actions>
         <button className="btn" onClick={() => void copy('snippet', client.snippet)}>
-          {copied === 'snippet' ? 'Copied' : 'Copy config'}
+          <Icon name={copied === 'snippet' ? 'check' : 'copy'} size={18} />
+          {copied === 'snippet' ? 'Copied' : 'Copy'}
         </button>
         {client.writable && (
           <button className="btn primary" onClick={() => void write(client.id)} disabled={writing === client.id || client.state === 'connected'}>
-            {writing === client.id ? 'Writing…' : client.state === 'connected' ? 'Already added' : 'Add it for me'}
+            <Icon name={client.state === 'connected' ? 'check' : 'plus'} size={18} />
+            {writing === client.id ? 'Writing…' : client.state === 'connected' ? 'Added' : 'Add it'}
           </button>
         )}
-      </div>
-      {client.path && <small className="panel-path">{client.path}</small>}
-      {STATE_WORDS[client.state] && (
-        <p className="panel-note mcp-state" data-ok={client.state === 'connected'} data-state={client.state}>
-          {STATE_WORDS[client.state]}
-          {client.detail ? `: ${client.detail}` : ''}
-        </p>
+      </Row>
+      {client.path && (
+        <Row icon="folder" label="File">
+          <span className="value path">{client.path}</span>
+        </Row>
       )}
       {client.state === 'unreadable' && <p className="error-note">Fix that file by hand, or paste the config above into it. Kriko will not overwrite a file it cannot read.</p>}
-    </section>
+      {client.note && (
+        <details className="disclosure">
+          <summary>
+            <span className="row-label">
+              <span className="row-icon" aria-hidden="true">
+                <Icon name="info" size={20} />
+              </span>
+              <span className="row-name">How to add it</span>
+            </span>
+          </summary>
+          <p className="panel-note">{client.note}</p>
+        </details>
+      )}
+    </Group>
   )
 }
