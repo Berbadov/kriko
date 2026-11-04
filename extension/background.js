@@ -295,31 +295,29 @@ async function reportUnreadableSite(tab) {
       if (row && row.state === "pending") {
         await notify(
           tab,
-          "Kriko reads this site, but your browser has not granted it "
-          + "permission yet. Open Kriko's extension options and press Grant: "
-          + "only the extension can ask.",
+          "Permission needed. Allow the site in options.",
         );
         if (extensionApi.runtime.openOptionsPage) extensionApi.runtime.openOptionsPage();
         return true;
       }
       if (row && row.state === "refused") {
-        await notify(tab, `Kriko cannot register this site: ${row.detail || "the browser refused it"}`);
+        await notify(tab, `Cannot register this site: ${row.detail || "refused"}`);
         return true;
       }
       // Registered and permitted. A content script only starts on a load, so
       // here — and only here — a reload really is the missing step, and we do
       // it rather than asking for it.
-      await notify(tab, "Kriko reads this site. Reloading to show the panel…");
+      await notify(tab, "Kriko reads this site. Reloading…");
       if (extensionApi.tabs && extensionApi.tabs.reload) await extensionApi.tabs.reload(tab.id);
       return true;
     }
     await notify(
       tab,
-      "Kriko cannot read this site yet. It has been added to Sites in the app, where you can ask an agent to learn it.",
+      "Site not readable yet. Added to Sites in the app.",
     );
     return true;
   } catch (_) {
-    await notify(tab, "Kriko is not running. Open the app and press this again.");
+    await notify(tab, "Kriko is not running. Start the app.");
     return false;
   }
 }
@@ -386,10 +384,9 @@ if (extensionApi.contextMenus) {
       }] });
       const result = reply.items?.[0];
       const summary = result ? `${result.name || "Product"}: ${result.level} risk. `
-        + (result.claims || []).slice(0, 3).map((one) => one.title).join("; ")
-        + `\n${result.basis}. Last verified: ${result.freshness?.last_verified?.slice(0, 10) || "Unknown"}`
-        + (result.freshness?.stale ? " (stale or incomplete dates)" : "")
-        + (!(result.claims || []).length ? "\nNo sourced findings; this does not establish safety." : "")
+        + ((result.claims || []).length
+          ? result.claims.slice(0, 3).map((one) => one.title).join(", ")
+          : "No sourced findings.")
         : "No answer from Kriko.";
       await notify(tab, summary);
     } catch (error) {
@@ -463,9 +460,7 @@ async function _hostAllowed(origin) {
  *  the options page and a failed request cannot disagree about the cause. */
 function _notPermittedError(origin) {
   const error = new Error(
-    `Kriko cannot call ${origin}. Chrome only lets this extension reach an app `
-    + "on this computer (127.0.0.1 or localhost); an app at another address is "
-    + "out of reach, however it is configured.");
+    `Cannot call ${origin}. Use 127.0.0.1 or localhost.`);
   error.code = "APP_HOST_NOT_PERMITTED";
   return error;
 }
@@ -598,9 +593,8 @@ async function _fetchApp(url, init) {
       throw _notPermittedError(origin);
     }
     const down = hung
-      ? new Error("Kriko is open but did not answer in 30 seconds. Try again; "
-          + "if it keeps happening, quit Kriko from its tray icon and open it again.")
-      : new Error("Kriko is not running. Open the Kriko app, then try again.");
+      ? new Error("Kriko did not answer in 30 seconds. Try again.")
+      : new Error("Kriko is not running. Start the app.");
     down.code = hung ? "APP_NOT_RESPONDING" : "APP_NOT_RUNNING";
     down.cause = cause;
     throw down;
@@ -630,8 +624,8 @@ async function refreshConnectionIcon() {
     }
     await extensionApi.action.setIcon({ path: connected ? ACTION_ICONS.online : ACTION_ICONS.offline });
     await extensionApi.action.setTitle({ title: connected
-      ? `Kriko ${version}: connected. Click to open the panel.`
-      : "Kriko: app is not running. Open Kriko to connect." });
+      ? `Kriko ${version}: connected`
+      : "Kriko: not running" });
     return connected;
   })();
   try {
@@ -1622,7 +1616,7 @@ async function _readCachedAnalysis(url, signature) {
     try {
       await extensionApi.storage.local.remove(cacheKey);
     } catch (error) {
-      console.warn("[kriko] local result cache cleanup failed", error?.message || error);
+      console.warn("[kriko] cache cleanup failed");
     }
   }
   return null;
@@ -2054,7 +2048,7 @@ async function _runAnalysisForTab(tabId, url, storageKey, { fresh = false, auto 
       // is exactly what Learn this page is for, so it is offered, with the
       // reason the page gave instead of a bare sentence.
       const failed = new Error(
-        "Kriko could not read this page" + (reply && reply.error ? ` (${reply.error})` : "."));
+        "Could not read this page" + (reply && reply.error ? ` (${String(reply.error).slice(0, 60)})` : "."));
       failed.code = "SCRAPE_FAILED";
       failed.learnable = true;
       throw failed;
@@ -2096,7 +2090,7 @@ async function _runAnalysisForTab(tabId, url, storageKey, { fresh = false, auto 
     const raw = await requestAnalysis(scrape, timings);
     if (raw && raw.readable === false) {
       if (raw.reason === "unknown_product") {
-        const unknown = new Error("Kriko doesn't know this product yet.");
+        const unknown = new Error("Unknown product.");
         unknown.code = "UNKNOWN_PRODUCT";
         unknown.productName = (raw.product && raw.product.name) || "";
         // A product the packs do not hold, on a site nothing reads: learning
@@ -2137,7 +2131,7 @@ async function _runAnalysisForTab(tabId, url, storageKey, { fresh = false, auto 
     timings.total_ms = _elapsed(totalStartedAt);
     return result;
   } catch (error) {
-    console.warn("[kriko] analysis failed", error?.message || error);
+    console.warn("[kriko] analysis failed");
     if (latestRunIdByStorageKey.get(storageKey) !== runId) throw error;
 
     const errEntry = {
@@ -2232,7 +2226,7 @@ async function guardCheckout(tabId, url) {
       await extensionApi.tabs.sendMessage(tabId, { type: "SHOW_GUARD", result }).catch(() => {});
     }
   } catch (error) {
-    console.warn("[kriko] checkout look failed", error?.message || error);
+    console.warn("[kriko] checkout look failed");
   }
 }
 
@@ -2291,12 +2285,12 @@ async function checkBuyerAlerts() {
       extensionApi.notifications.create(`kriko-due:${one.purchase_id}`, {
         type: "basic", iconUrl: "assets/icons/icon-128.png",
         title: "Did it hold up?",
-        message: `How is your ${one.name}? Tell Kriko so it can learn what you regret.`,
+        message: `How is your ${one.name}?`,
       });
     }
     await extensionApi.storage.local.set({ krikoToldAbout: [...told].slice(-200) });
   } catch (error) {
-    console.warn("[kriko] alert check failed", error?.message || error);
+    console.warn("[kriko] alert check failed");
   }
 }
 
@@ -2614,7 +2608,7 @@ async function openInApp(route, fallbackUrl) {
     // A refusal is an answer: the app is running and objected. Only a
     // *transport* failure means there is nothing to raise.
     if (error.status) {
-      console.warn(`Kriko rejected the route ${route}:`, error.message);
+      console.warn(`[kriko] route rejected: ${route}`);
       throw error;
     }
     if (error.code === "APP_NOT_RESPONDING") return { ok: false, code: error.code, error: error.message };
@@ -2630,14 +2624,14 @@ async function openInApp(route, fallbackUrl) {
     return {
       ok: false,
       code: "APP_NOT_RUNNING",
-      error: "Kriko is not running. Open the Kriko app, then try again.",
+      error: "Kriko is not running. Start the app.",
     };
   }
 
   return {
     ok: false,
     code: "DESKTOP_NOT_CONNECTED",
-    error: "The Kriko engine is running, but its desktop window is not connected. Open the Kriko app, then try again.",
+    error: "Kriko window is not connected. Open the app.",
     delivery,
   };
 }
@@ -2807,7 +2801,7 @@ extensionApi.runtime.onMessage.addListener((request, sender, sendResponse) => {
       }
       if (!tabId) throw new Error("No active tab found.");
       const reply = await _requestScrape(tabId, [], {}, true);
-      if (!reply || !reply.ok || !reply.payload) throw new Error("Kriko could not read this page.");
+      if (!reply || !reply.ok || !reply.payload) throw new Error("Could not read this page.");
       const scrape = reply.payload;
       return _postApp("/api/sites/learn", {
         url: scrape.url,
@@ -2830,7 +2824,7 @@ extensionApi.runtime.onMessage.addListener((request, sender, sendResponse) => {
     const subject_id = String(input.subject_id || "").trim();
     const q = String(input.q || "").trim();
     if (!subject_id && !q) {
-      sendResponse({ ok: false, error: "Enter a product name or select a subject." });
+      sendResponse({ ok: false, error: "Enter a product name." });
       return false;
     }
     const body = subject_id ? { subject_id } : { q, allow_draft: input.allow_draft === true };
@@ -2920,7 +2914,7 @@ extensionApi.runtime.onMessage.addListener((request, sender, sendResponse) => {
     const input = request.payload || {};
     const url = typeof input.url === "string" ? input.url.slice(0, 2000) : "";
     if (!url) {
-      sendResponse({ ok: false, error: "This page has no address to queue." });
+      sendResponse({ ok: false, error: "This page has no address." });
       return false;
     }
     _postApp("/api/queue", {
@@ -3115,7 +3109,7 @@ extensionApi.runtime.onMessage.addListener((request, sender, sendResponse) => {
       if (!scrape) {
         const reply = await _requestScrape(tabId, [], {}, true);
         if (!reply || !reply.ok || !reply.payload) {
-          throw new Error("Kriko could not read this page to compare it.");
+          throw new Error("Could not read this page.");
         }
         scrape = reply.payload;
         _rememberScrape(tabId, scrape);
@@ -3231,7 +3225,7 @@ extensionApi.runtime.onMessage.addListener((request, sender, sendResponse) => {
     const raw = (request.payload?.url ?? "").trim();
     const base = _normalizeBaseUrl(raw);
     if (raw && !base) {
-      sendResponse({ ok: false, error: "That is not a URL Kriko can reach." });
+      sendResponse({ ok: false, error: "Not a URL Kriko can reach." });
       return false;
     }
     const run = async () => {
@@ -3309,7 +3303,7 @@ extensionApi.runtime.onMessage.addListener((request, sender, sendResponse) => {
     (async () => {
       const list = await setSiteMuted(site, muted);
       if (!list) {
-        sendResponse({ ok: false, error: "That is not a site Kriko can read." });
+        sendResponse({ ok: false, error: "Not a readable site." });
         return;
       }
       const record = await syncSites();
@@ -3364,7 +3358,7 @@ extensionApi.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.type === "SET_INFO_SENSITIVITY") {
     const wanted = String(request.payload?.sensitivity || "");
     if (!INFO_SENSITIVITIES.includes(wanted)) {
-      sendResponse({ ok: false, error: "That is not one of the three settings." });
+      sendResponse({ ok: false, error: "Not a valid setting." });
       return false;
     }
     _postApp("/api/settings", { values: { info_sensitivity: wanted } })

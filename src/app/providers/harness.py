@@ -67,7 +67,7 @@ from collections import deque
 from app.loginpath import child_env, login_path
 from app.winprocess import hidden_startup
 from app import processcontrol
-from app.providers import hostbin
+from app.providers import cliprobe, hostbin
 import sys
 import tempfile
 import tomllib
@@ -200,7 +200,7 @@ def _clear_resident_health(one: "Harness") -> None:
     with _RESIDENT_HEALTH_LOCK:
         _RESIDENT_UNHEALTHY.pop(one.id, None)
 
-_CODEX_SUPPORT: dict[tuple[str, float], bool] = {}
+_CODEX_SUPPORT: dict[tuple[str, tuple[int, int]], bool] = {}
 _CODEX_SUPPORT_LOCK = threading.Lock()
 
 #: The page reader (B155): Parallel's hosted MCP reader. Only its fetch tool is
@@ -1096,14 +1096,35 @@ def chosen(preferred: str = "") -> Harness | None:
 
 #: One `--help` per executable per process. Cached because `_run` is called
 #: once per subject in an agenda run and spawning a second process to ask a
-#: question whose answer cannot change mid-run is waste.
+#: question whose answer cannot change mid-run is waste. The stamp beside
+#: each entry is the binary's (mtime, size) when the answer was read: a CLI
+#: upgraded while the app runs is re-asked, and an answer persisted by a
+#: previous run (`cliprobe`) is reused without spawning anything at all.
 _DECLARED: dict[str, frozenset[str]] = {}
 _HELP: dict[str, str] = {}
+_HELP_STAMP: dict[str, tuple[int, int]] = {}
 _HELP_FAILED: dict[str, float] = {}
 #: How long a `--help` that said nothing is left alone before it is asked again.
 HELP_RETRY_SECONDS = 15.0
 
+
+def _drop_help(executable: str) -> None:
+    """Forget everything cached about one executable's `--help`."""
+    _HELP.pop(executable, None)
+    _DECLARED.pop(executable, None)
+    _HELP_STAMP.pop(executable, None)
+
 _OPTION = re.compile(r"--[A-Za-z][A-Za-z0-9-]*")
+
+#: What an argument-parsing rejection looks like in a CLI's own error text.
+#: Matched against the raised reason to trigger the one plain-vector retry
+#: in `_invoke`; every phrase here exits before the CLI does any work.
+_ARG_ERROR = re.compile(
+    r"unknown option|unknown argument|unrecognized|unrecognised|"
+    r"unexpected argument|invalid option|invalid argument|invalid value|"
+    r"error: unrecognized|not a valid (option|flag)|usage:",
+    re.IGNORECASE,
+)
 
 
 def _ask(executable: str, *argv: str, keep_lines: int = 400) -> str:
@@ -1201,8 +1222,23 @@ def helptext(executable: str) -> str:
     with _MODELS_LOCK:
         lock = _HELP_LOCKS.setdefault(executable, threading.Lock())
     with lock:
+        now_stamp = cliprobe.stamp(executable)
         if executable in _HELP:
-            return _HELP[executable]
+            # No recorded stamp means the entry was pinned by hand (a test);
+            # only an entry we stamped ourselves can go stale.
+            if _HELP_STAMP.get(executable, now_stamp) == now_stamp:
+                return _HELP[executable]
+            # The binary changed under a running app: the cached answer
+            # describes the old CLI, and every flag decision made from it
+            # would be wrong. Drop it before anything else reads it.
+            _drop_help(executable)
+        persisted = cliprobe.entry(executable, "help")
+        if persisted is not None:
+            text = str(persisted["help"]["text"])
+            _HELP[executable] = text
+            _DECLARED[executable] = frozenset(persisted["help"]["declared"])
+            _HELP_STAMP[executable] = now_stamp
+            return text
         failed = _HELP_FAILED.get(executable)
         if failed is not None and time.monotonic() - failed < HELP_RETRY_SECONDS:
             return ""
@@ -1218,7 +1254,24 @@ def helptext(executable: str) -> str:
         _HELP_FAILED.pop(executable, None)
         _HELP[executable] = text
         _DECLARED[executable] = frozenset(_OPTION.findall(text))
+        _HELP_STAMP[executable] = now_stamp
+        cliprobe.record(executable, "help", {
+            "text": text, "declared": sorted(_DECLARED[executable]),
+        })
         return text
+
+
+def _remember_help(executable: str, text: str) -> None:
+    """Store one `--help` answer in memory and on disk, under its stamp."""
+    with _MODELS_LOCK:
+        lock = _HELP_LOCKS.setdefault(executable, threading.Lock())
+    with lock:
+        _HELP[executable] = text
+        _DECLARED[executable] = frozenset(_OPTION.findall(text))
+        _HELP_STAMP[executable] = cliprobe.stamp(executable)
+        cliprobe.record(executable, "help", {
+            "text": text, "declared": sorted(_DECLARED[executable]),
+        })
 
 
 def declared(executable: str) -> frozenset[str]:
@@ -1276,13 +1329,13 @@ _MODELS_TTL_EMPTY = 60.0
 #: The most lines of a `models` listing kept. The listing is bounded by the
 #: probe's own timeout; this stops a CLI that never stops printing.
 _LISTING_LINES = 20_000
-_MODELS: dict[tuple[str, str, float], tuple[float, list[str]]] = {}
+_MODELS: dict[tuple[str, str, tuple[int, int]], tuple[float, list[str]]] = {}
 _MODELS_LOCK = threading.Lock()
 _ASKING: dict[str, threading.Lock] = {}
-_MODELS_PENDING: set[tuple[str, str, float]] = set()
-_EFFORTS: dict[tuple[str, str, float], list[str]] = {}
+_MODELS_PENDING: set[tuple[str, str, tuple[int, int]]] = set()
+_EFFORTS: dict[tuple[str, str, tuple[int, int]], list[str]] = {}
 _EFFORTS_LOCK = threading.Lock()
-_EFFORT_PENDING: set[tuple[str, str, float]] = set()
+_EFFORT_PENDING: set[tuple[str, str, tuple[int, int]]] = set()
 _HELP_LOCKS: dict[str, threading.Lock] = {}
 
 # Claude's --model help quotes examples, not its complete model catalogue.
@@ -1426,9 +1479,17 @@ def efforts_for(one: Harness, *, fresh: bool = False) -> list[str]:
         cached = _EFFORTS.get(key)
     if cached is not None and not fresh:
         return list(cached)
+    if not fresh:
+        # Efforts come out of `--help`, which is stamp-keyed rather than
+        # TTL-keyed, so the persisted copy is valid for this exact binary.
+        persisted = cliprobe.entry(executable, "efforts")
+        if persisted is not None and isinstance(persisted["efforts"], list):
+            names = [str(name) for name in persisted["efforts"]]
+            with _EFFORTS_LOCK:
+                _EFFORTS[key] = list(names)
+            return list(names)
     if fresh:
-        _HELP.pop(executable, None)
-        _DECLARED.pop(executable, None)
+        _drop_help(executable)
     if one.effort_flag not in declared(executable):
         names = []
     else:
@@ -1438,6 +1499,7 @@ def efforts_for(one: Harness, *, fresh: bool = False) -> list[str]:
         names = _from_help(helptext(executable), one.effort_flag) or list(one.effort_choices)
     with _EFFORTS_LOCK:
         _EFFORTS[key] = list(names)
+    cliprobe.record(executable, "efforts", list(names))
     return list(names)
 
 
@@ -1705,15 +1767,12 @@ def _from_models_command(one: Harness, executable: str) -> list[str]:
     return out
 
 
-def _stamp(executable: str) -> float:
+def _stamp(executable: str) -> tuple[int, int]:
     """When this binary last changed — an update is a new cache entry."""
-    try:
-        return os.stat(executable).st_mtime
-    except OSError:
-        return 0.0
+    return cliprobe.stamp(executable)
 
 
-def _model_key(one: Harness, executable: str) -> tuple[str, str, float]:
+def _model_key(one: Harness, executable: str) -> tuple[str, str, tuple[int, int]]:
     return (one.id, executable, _stamp(executable))
 
 
@@ -1722,9 +1781,20 @@ def _asking_lock(one_id: str) -> threading.Lock:
         return _ASKING.setdefault(one_id, threading.Lock())
 
 
-def _read_models(one: Harness, executable: str, key: tuple[str, str, float],
+def _read_models(one: Harness, executable: str, key: tuple,
                  *, fresh: bool) -> list[str]:
     """Ask one source and cache it. Caller owns the per-harness ask lock."""
+    if not fresh:
+        # An answer a previous run persisted for this exact binary, still
+        # inside the same freshness TTL: served without spawning anything.
+        persisted = cliprobe.entry(executable, "models")
+        if persisted is not None and isinstance(persisted["models"], list):
+            names = [str(name) for name in persisted["models"]]
+            ttl = MODELS_TTL if names else _MODELS_TTL_EMPTY
+            if time.time() - persisted["at"] < ttl:
+                with _MODELS_LOCK:
+                    _MODELS[key] = (time.monotonic(), list(names))
+                return list(names)
     if one.model_source == "vibe-config":
         try:
             config = tomllib.loads((Path.home() / ".vibe" / "config.toml").read_text(encoding="utf-8"))
@@ -1757,8 +1827,7 @@ def _read_models(one: Harness, executable: str, key: tuple[str, str, float],
         with _MODELS_LOCK:
             changed = any(k[:2] == key[:2] and k != key for k in _MODELS)
         if fresh or changed:
-            _HELP.pop(executable, None)
-            _DECLARED.pop(executable, None)
+            _drop_help(executable)
         names = _from_help(helptext(executable), one.model_flag)
         if one.id == "claude-code":
             names = _dedupe_claude_aliases([*CLAUDE_FAST_MODELS, *names])
@@ -1766,11 +1835,12 @@ def _read_models(one: Harness, executable: str, key: tuple[str, str, float],
         names = _from_models_command(one, executable)
     with _MODELS_LOCK:
         _MODELS[key] = (time.monotonic(), names)
+    cliprobe.record(executable, "models", list(names))
     return list(names)
 
 
 def _schedule_model_refresh(one: Harness, executable: str,
-                            key: tuple[str, str, float]) -> None:
+                            key: tuple[str, str, tuple[int, int]]) -> None:
     """Start a single refresh without making the caller wait for a CLI."""
     asking = _asking_lock(one.id)
     if not asking.acquire(blocking=False):
@@ -1924,6 +1994,47 @@ def models_for_each(harnesses: list[Harness], *, fresh: bool = False,
         return dict(zip((one.id for one in harnesses), lists, strict=True))
 
 
+def _warm_one(one: Harness) -> None:
+    """Probe one installed CLI once, batched, and fill every cache from it.
+
+    One harness process asks `--help` and (when the CLI lists models by
+    command) `models` together, instead of one process per question. Without
+    the harness binary the questions fall back to one at a time.
+    """
+    executable = locate(one)
+    if not executable:
+        return
+    questions = {"help": ["--help"]}
+    if one.model_source == "models":
+        questions["models"] = ["models"]
+    answered = cliprobe.ask_many(
+        executable, questions, keep=_LISTING_LINES, seconds=HELP_TIMEOUT_SECONDS,
+    )
+    if answered is None:
+        models_for(one)
+        efforts_for(one)
+        declared(executable)
+        return
+    help_text = answered.get("help", "")
+    if help_text:
+        _remember_help(executable, help_text)
+    else:
+        declared(executable)
+    if "models" in questions:
+        names: list[str] = []
+        for line in answered.get("models", "").splitlines():
+            name = _model_id(line)
+            if name and name not in names:
+                names.append(name)
+        key = _model_key(one, executable)
+        with _MODELS_LOCK:
+            _MODELS[key] = (time.monotonic(), list(names))
+        cliprobe.record(executable, "models", list(names))
+    else:
+        models_for(one)
+    efforts_for(one)
+
+
 def warm_models() -> None:
     """Warm installed CLI catalogues and launch checks away from the UI.
 
@@ -1939,17 +2050,10 @@ def warm_models() -> None:
             return
         from concurrent.futures import ThreadPoolExecutor
 
-        # These probes are independent. In particular, a slow `agy models`
-        # response must not postpone warming the `--help` capabilities needed
-        # to safely launch that CLI. They share helptext's per-executable lock,
-        # so asking for models and effort together still starts one help child.
-        probes = [
-            *(lambda one=one: models_for(one) for one in installed),
-            *(lambda one=one: efforts_for(one) for one in installed),
-            *(lambda one=one: declared(locate(one)) for one in installed),
-        ]
-        with ThreadPoolExecutor(max_workers=max(1, len(probes))) as pool:
-            futures = [pool.submit(probe) for probe in probes]
+        # One batched probe per CLI; the CLIs are independent of each other,
+        # so a slow `agy models` never postpones another CLI's `--help`.
+        with ThreadPoolExecutor(max_workers=max(1, len(installed))) as pool:
+            futures = [pool.submit(_warm_one, one) for one in installed]
             for future in futures:
                 try:
                     future.result()
@@ -2052,7 +2156,7 @@ def _vibe_config(model: str, effort: str, sessions: Path, *, log_sessions: bool 
 
 def command_for(one: Harness, *, model: str = "", effort: str = "",
                 max_documents: int = 0, budget_usd: float = 0.0,
-                reader_config: str = "") -> list[str]:
+                reader_config: str = "", force_plain: bool = False) -> list[str]:
     """The vector this machine will actually run — `args` plus what it takes.
 
     A function rather than a line inside `_run` because the gate that matters
@@ -2079,9 +2183,10 @@ def command_for(one: Harness, *, model: str = "", effort: str = "",
     if effort and one.effort_choices and effort not in one.effort_choices:
         raise NoHarness(f"{one.label} does not support effort {effort!r}")
     args = one.args
-    if one.needs_in_help and one.plain_args:
-        if one.needs_in_help not in helptext(executable):
-            args = one.plain_args
+    # `force_plain` is the run-level adaptation: a vector the CLI rejected at
+    # argument-parsing time is retried once on the plain one (see `_invoke`).
+    if one.plain_args and (force_plain or (one.needs_in_help and one.needs_in_help not in helptext(executable))):
+        args = one.plain_args
     missing = set(one.required) - supported
     if one.unusable or missing:
         raise NoHarness(one.unusable or f"{one.label} lacks required flags: {', '.join(sorted(missing))}")
@@ -4321,6 +4426,7 @@ class HarnessResearcher(AgentResearcher):
     def _invoke(self, prompt: str, on_line: Callable[[str], None] | None) -> str:
         if self.harness.id == "opencode":
             _ensure_opencode_agent()
+        say = on_line if on_line is not None else self.on_action
         command = command_for(
             self.harness,
             model=self.requested_model,
@@ -4329,6 +4435,38 @@ class HarnessResearcher(AgentResearcher):
             budget_usd=self.budget_usd,
             reader_config=self._reader_config,
         )
+        try:
+            return self._invoke_with(command, prompt, say)
+        except RuntimeError as error:
+            # Run-level adaptation: the CLI rejected the probed vector at
+            # argument-parsing time — its interface changed since `--help`
+            # was read, or the help lied. Retry once on the plain vector,
+            # which exists for exactly this. An argument error exits before
+            # any work is done, so the retry costs nothing on the account.
+            plain = None
+            if self.harness.plain_args and _ARG_ERROR.search(str(error)):
+                candidate = command_for(
+                    self.harness,
+                    model=self.requested_model,
+                    effort=self.requested_effort,
+                    max_documents=self.max_documents,
+                    budget_usd=self.budget_usd,
+                    reader_config=self._reader_config,
+                    force_plain=True,
+                )
+                if candidate != command:
+                    plain = candidate
+            if plain is None:
+                raise
+            if say is not None:
+                say(
+                    f"{self.harness.label} rejected the probed flags; "
+                    "retrying with its plain mode"
+                )
+            return self._invoke_with(plain, prompt, say)
+
+    def _invoke_with(self, command: list[str], prompt: str,
+                     say: Callable[[str], None] | None) -> str:
         if self.harness.protocol in ("vibe", "gemini"):
             command.extend(["--prompt", ""])
         # The page reader is mentioned only when this actual verified command
@@ -4344,7 +4482,6 @@ class HarnessResearcher(AgentResearcher):
         # switch `--model` is, expressed the only way this CLI offers.
         if self.requested_model and not self.harness.model_flag and self.harness.model_env:
             self._run_env[self.harness.model_env] = self.requested_model
-        say = on_line if on_line is not None else self.on_action
         if say is not None and self.effort_settled:
             say(self.effort_settled)
 

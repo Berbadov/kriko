@@ -6,6 +6,7 @@ import { tr, upper, useLanguage } from '../i18n';
 import type { Colors } from './palettes';
 import type { TypeToken } from './tokens';
 import { useTheme } from './theme';
+import { toneColor } from './tone';
 
 type Props = TextProps & {
   /** A token from the type scale. Defaults to body copy. */
@@ -47,7 +48,7 @@ export function Txt({
   const language = useLanguage();
   const theme = useTheme();
   const palette = theme.color as Record<string, string>;
-  const tint = palette[tone as string] ?? (tone as string);
+  const tint = toneColor(palette, tone as string);
   // Only one string can be swapped. An array or an element is a composed run —
   // a value interpolated into a sentence — and its owner translates that, not
   // this component.
