@@ -246,6 +246,7 @@
     bar.style.animation = 'none';
     void bar.offsetWidth;
     bar.style.animation = '';
+    showcase.dispatchEvent(new CustomEvent('lp-switch'));
   };
   tabs.forEach((tab, i) => {
     tab.addEventListener('click', () => select(i));
@@ -312,10 +313,10 @@
   }
 
   const blues = ['#dfe7ff', '#a9bcff', '#7f9bff', '#5a7bff', '#2447e6', '#16277e'];
-  const build = (target, cols, rows, start) => {
-    if (!target) return;
+  const build = (target, cols, rows, start, spread = 700, wait = false) => {
+    if (!target) return null;
     const grid = document.createElement('span');
-    grid.className = 'lp-tiles';
+    grid.className = wait ? 'lp-tiles is-waiting' : 'lp-tiles';
     grid.setAttribute('aria-hidden', 'true');
     grid.style.setProperty('--cols', String(cols));
     grid.style.setProperty('--rows', String(rows));
@@ -323,15 +324,50 @@
       for (let c = 0; c < cols; c += 1) {
         const tile = document.createElement('i');
         const sweep = (c / cols + r / rows) / 2;
-        tile.style.setProperty('--d', `${Math.round(start + sweep * 700 + Math.random() * 420)}ms`);
+        tile.style.setProperty('--d', `${Math.round(start + sweep * spread + Math.random() * spread * 0.6)}ms`);
         tile.style.background = blues[Math.min(5, Math.floor((c / cols) * 6 + Math.random() * 1.6))];
         grid.appendChild(tile);
       }
     }
     target.appendChild(grid);
-    window.setTimeout(() => grid.remove(), start + 2600);
+    if (!wait) window.setTimeout(() => grid.remove(), start + spread * 1.6 + 1200);
+    return grid;
   };
   build(hero.querySelector('.lp-window'), 10, 13, 350);
   build(hero.querySelector('.lp-stage > .lp-phone .lp-screen'), 8, 16, 800);
   build(hero.querySelector('.lp-ext'), 9, 10, 1250);
+
+  // Further down, each set of screens waits under its cover until it scrolls into view,
+  // then dissolves the same way. The cover is made now so nothing shows before it.
+  if ('IntersectionObserver' in window) {
+    const waiting = new Map();
+    const watch = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        const grid = waiting.get(entry.target);
+        if (!entry.isIntersecting || !grid) continue;
+        watch.unobserve(entry.target);
+        waiting.delete(entry.target);
+        grid.classList.remove('is-waiting');
+        window.setTimeout(() => grid.remove(), 3200);
+      }
+    }, { threshold: 0.35 });
+    const cover = (target, cols, rows) => {
+      const grid = build(target, cols, rows, 100, 600, true);
+      if (!grid) return;
+      waiting.set(target, grid);
+      watch.observe(target);
+    };
+    cover(document.querySelector('.lp-shots'), 10, 13);
+    document.querySelectorAll('.lp-trio .lp-screen').forEach((screen) => cover(screen, 8, 16));
+  }
+
+  // A tab press in the desktop showcase swaps the screen under a quicker cover.
+  const showcase = document.querySelector('[data-showcase]');
+  if (showcase) {
+    let ready = false;
+    window.setTimeout(() => { ready = true; }, 1500);
+    showcase.addEventListener('lp-switch', () => {
+      if (ready) build(showcase.querySelector('.lp-shots'), 10, 13, 0, 420);
+    });
+  }
 })();
