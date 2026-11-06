@@ -282,3 +282,56 @@
     stage.style.setProperty('--ty', '0');
   });
 })();
+
+// The first screen builds itself. The headline's words rise one after another, then each
+// app is covered in blocks of the stripe's blue that dissolve in a scatter, so the
+// screens look assembled rather than loaded. Without script, or for a reader who asked
+// for less motion, none of this exists and the page is simply there.
+(() => {
+  const hero = document.querySelector('.lp-hero');
+  if (!hero) return;
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  const title = hero.querySelector('.lp-copy h1');
+  if (title) {
+    const words = title.textContent.trim().split(/\s+/);
+    title.setAttribute('aria-label', words.join(' '));
+    title.textContent = '';
+    words.forEach((word, i) => {
+      const outer = document.createElement('span');
+      const inner = document.createElement('span');
+      outer.className = 'w';
+      outer.setAttribute('aria-hidden', 'true');
+      inner.style.setProperty('--i', String(i));
+      inner.textContent = word;
+      outer.appendChild(inner);
+      title.appendChild(outer);
+      if (i < words.length - 1) title.appendChild(document.createTextNode(' '));
+    });
+    title.classList.add('is-split');
+  }
+
+  const blues = ['#dfe7ff', '#a9bcff', '#7f9bff', '#5a7bff', '#2447e6', '#16277e'];
+  const build = (target, cols, rows, start) => {
+    if (!target) return;
+    const grid = document.createElement('span');
+    grid.className = 'lp-tiles';
+    grid.setAttribute('aria-hidden', 'true');
+    grid.style.setProperty('--cols', String(cols));
+    grid.style.setProperty('--rows', String(rows));
+    for (let r = 0; r < rows; r += 1) {
+      for (let c = 0; c < cols; c += 1) {
+        const tile = document.createElement('i');
+        const sweep = (c / cols + r / rows) / 2;
+        tile.style.setProperty('--d', `${Math.round(start + sweep * 700 + Math.random() * 420)}ms`);
+        tile.style.background = blues[Math.min(5, Math.floor((c / cols) * 6 + Math.random() * 1.6))];
+        grid.appendChild(tile);
+      }
+    }
+    target.appendChild(grid);
+    window.setTimeout(() => grid.remove(), start + 2600);
+  };
+  build(hero.querySelector('.lp-window'), 10, 13, 350);
+  build(hero.querySelector('.lp-stage > .lp-phone .lp-screen'), 8, 16, 800);
+  build(hero.querySelector('.lp-ext'), 9, 10, 1250);
+})();
