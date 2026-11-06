@@ -5,8 +5,8 @@ Two files drawing the same letter is how they end up drawing different letters.
 committed PNG and the extension's toolbar icon from
 drifting apart.
 
-The mark is a K on the extension's near-black ground, with the amber joint at
-its spine — and it is a K in three places at once: the browser toolbar the
+The mark is the jack turned on its side, white on a navy plate, and it is
+the same mark in three places at once: the browser toolbar the
 reader met the product in, the taskbar tile the installer creates, and the rail
 at the top-left of every screen. Until 0.3.1 the last two were a lemon, left
 over from a design that was never the product. That is the failure with the
@@ -84,7 +84,7 @@ def test_the_toolbar_shows_the_desktop_app_s_own_icon(size: int):
     """All four sizes, byte for byte, are the desktop icon's own images.
 
     Since 1.0.1 there is one mark: the toolbar, the exe, the taskbar and the
-    installer all show the white K on the brand plate from `kriko.ico`. A
+    installer all show the jack on the navy plate from `icon.ico`. A
     toolbar icon that is not those bytes is a second drawing of the letter,
     which is how the extension kept the old mark after the app changed.
     Chrome picks a size by display density, so every size is checked.

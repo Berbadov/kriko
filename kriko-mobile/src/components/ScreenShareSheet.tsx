@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { gap } from '../theme/tokens';
+import { gap, radius } from '../theme/tokens';
 import { makeStyles, useColors } from '../theme/theme';
 import { Txt } from '../theme/Txt';
 import { tr } from '../i18n';
@@ -142,12 +142,12 @@ const useStyles = makeStyles((color) => StyleSheet.create({
   panel: { paddingHorizontal: gap[4] },
   content: { gap: gap[4] },
   head: { flexDirection: 'row', alignItems: 'center', gap: gap[3] },
-  mark: { width: 42, height: 42, borderRadius: 21, backgroundColor: color.accentSoft, alignItems: 'center', justifyContent: 'center' },
+  mark: { width: 42, height: 42, borderRadius: radius.m, backgroundColor: color.accentSoft, alignItems: 'center', justifyContent: 'center' },
   headText: { flex: 1, gap: 2 },
   close: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   steps: { paddingVertical: gap[1] },
   step: { minHeight: 50, flexDirection: 'row', alignItems: 'center', gap: gap[3] },
-  number: { width: 28, height: 28, borderRadius: 14, backgroundColor: color.accentSoft, alignItems: 'center', justifyContent: 'center' },
+  number: { width: 28, height: 28, borderRadius: radius.m, backgroundColor: color.accentSoft, alignItems: 'center', justifyContent: 'center' },
   stepText: { flex: 1 },
   note: { gap: gap[2] },
   progress: { minHeight: 36, flexDirection: 'row', alignItems: 'center', gap: gap[2] },

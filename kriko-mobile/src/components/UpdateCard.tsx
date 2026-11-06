@@ -11,7 +11,7 @@ import { formatSize } from '../engine/appupdate';
 import type { UpdateFailure, UpdateSnapshot } from '../engine/updatecore';
 import { updater, updatesSupported, useAppUpdate } from '../engine/updater';
 import { tr } from '../i18n';
-import { gap, PAGE_X } from '../theme/tokens';
+import { gap, PAGE_X, radius } from '../theme/tokens';
 import { makeStyles, useColors } from '../theme/theme';
 import { Txt } from '../theme/Txt';
 import { DownloadIcon, XIcon } from './Icon';
@@ -173,7 +173,7 @@ export function UpdateNotice({ onOpen }: { onOpen: () => void }) {
 const useStyles = makeStyles((color) => StyleSheet.create({
   card: { gap: gap[3] },
   head: { flexDirection: 'row', alignItems: 'center', gap: gap[3] },
-  mark: { width: 40, height: 40, borderRadius: 20, backgroundColor: color.accentSoft, alignItems: 'center', justifyContent: 'center' },
+  mark: { width: 40, height: 40, borderRadius: radius.m, backgroundColor: color.accentSoft, alignItems: 'center', justifyContent: 'center' },
   headText: { flex: 1, gap: 3 },
   notes: { gap: 6, paddingLeft: 2 },
   noteRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 9 },
@@ -189,7 +189,7 @@ const useStyles = makeStyles((color) => StyleSheet.create({
     marginBottom: 6,
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 14,
+    borderRadius: radius.l,
     borderWidth: 1,
     borderColor: color.edge,
     backgroundColor: color.accentWash,
