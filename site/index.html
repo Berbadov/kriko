@@ -18,8 +18,8 @@
   <meta property="og:image:alt" content="The Kriko panel open beside an invented e-bike listing, with the headline: Know what can go wrong before you buy.">
   <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" href="assets/icon-32.png">
-  <link rel="stylesheet" href="styles.css?v=b51d94d22a5b">
-  <script src="script.js?v=fed287036f02" defer></script>
+  <link rel="stylesheet" href="styles.css?v=29216135328c">
+  <script src="script.js?v=5f690983caee" defer></script>
   <link rel="canonical" href="https://kriko.cc/">
   <link rel="alternate" href="https://kriko.cc/" hreflang="en">
   <link rel="alternate" href="https://kriko.cc/tr/" hreflang="tr">
@@ -85,6 +85,9 @@
           <picture class="lp-pic lp-w2"><source srcset="assets/desktop/product-compact-dark.webp" media="(prefers-color-scheme: dark)"><img src="assets/desktop/product-compact-light.webp" width="760" height="1000" alt="The Kriko desktop app for an invented e-bike: four findings, from a battery that fades to a minor display note, each with its sources."></picture>
           <picture class="lp-pic lp-w3"><source srcset="assets/desktop/compare-compact-dark.webp" media="(prefers-color-scheme: dark)"><img src="assets/desktop/compare-compact-light.webp" width="760" height="1000" alt="The Kriko desktop app comparing two invented e-bikes side by side, with the same battery finding in both."></picture>
         </figure>
+        <figure class="lp-ext">
+          <picture><source srcset="assets/examples/hero-dark.webp" media="(prefers-color-scheme: dark)"><img src="assets/examples/hero-light.webp" width="1520" height="1600" alt="The Kriko browser extension open over a bike listing, with each known problem and its source."></picture>
+        </figure>
         <figure class="lp-phone">
           <div class="lp-screen">
             <picture class="lp-pic lp-p1"><source srcset="assets/phone/home-dark.webp" media="(prefers-color-scheme: dark)"><img src="assets/phone/home-light.webp" width="780" height="1688" alt="The Kriko phone app home: the headline Check before you buy, one large scan button, and a floating bar with a separate new chat button."></picture>
@@ -99,6 +102,7 @@
     <section class="section lp-showcase" id="desktop" data-showcase>
       <div class="wrap lp-split">
         <div class="lp-side">
+          <p class="lp-label">Desktop</p>
           <h2>On your computer.</h2>
           <ol class="lp-tabs">
             <li><button type="button" class="is-on" aria-pressed="true"><span class="lp-bar"></span><span>Home</span></button></li>
@@ -116,7 +120,10 @@
 
     <section class="section soft lp-phones" id="phone">
       <div class="wrap">
-        <h2>On your phone.</h2>
+        <div class="lp-head">
+          <p class="lp-label">Phone</p>
+          <h2>On your phone.</h2>
+        </div>
         <ul class="lp-trio">
           <li>
             <figure class="lp-phone"><div class="lp-screen"><picture class="lp-pic"><source srcset="assets/phone/home-dark.webp" media="(prefers-color-scheme: dark)"><img src="assets/phone/home-light.webp" width="780" height="1688" alt="The Kriko phone app home: the headline Check before you buy, one large scan button, and a floating bar with a separate new chat button."></picture></div></figure>
@@ -134,9 +141,20 @@
       </div>
     </section>
 
+    <section class="lp-statement" aria-labelledby="lp-finding">
+      <div class="wrap">
+        <p class="lp-label">One finding, as an example</p>
+        <p class="lp-finding" id="lp-finding">Battery range drops by a third after two winters.</p>
+        <p class="lp-cite"><span>Owner forum thread</span><span>example.org</span><span>From an invented e-bike</span></p>
+      </div>
+    </section>
+
     <section class="section" id="get">
       <div class="wrap">
-        <h2>Get Kriko.</h2>
+        <div class="lp-head">
+          <p class="lp-label">Download</p>
+          <h2>Get Kriko.</h2>
+        </div>
         <div class="lp-get">
           <div class="download-card lp-card">
             <h3><span class="glyph" aria-hidden="true"><svg class="icon" aria-hidden="true"><use href="#i-desktop"/></svg></span><span>Windows</span></h3>
@@ -159,6 +177,7 @@
     <section class="section soft" id="data">
       <div class="wrap faq-grid">
         <div class="faq-head">
+          <p class="lp-label">Help</p>
           <h2>Questions</h2>
         </div>
         <div class="faq">

@@ -139,7 +139,7 @@
   height: 28px;
   padding: 0 11px;
   border: 1px solid var(--edge);
-  border-radius: 999px;
+  border-radius: var(--r-m);
   background: transparent;
   color: var(--ink-2);
   font-size: 12.5px;

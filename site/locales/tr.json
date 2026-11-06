@@ -69,7 +69,7 @@
   "Get the browser extension": "Tarayıcı uzantısını yükle",
   "Install <a href=\"https://chromewebstore.google.com/detail/kriko/bdifnaggafjokndlpjgmlfappcoehdjb\">Kriko from the Chrome Web Store</a> in Chrome, Edge or Brave. The store handles updates. Keep the desktop app running; the extension needs it to work.": "Chrome, Edge ya da Brave için <a href=\"https://chromewebstore.google.com/detail/kriko/bdifnaggafjokndlpjgmlfappcoehdjb\">Kriko’yu Chrome Web Mağazası’ndan yükle</a>. Güncellemeleri mağaza yapar. Masaüstü uygulamasını açık tut; uzantının çalışması için gereklidir.",
   "On a phone? Kriko runs on a Windows computer. <a href=\"mailto:?subject=Kriko%20for%20my%20computer&amp;body=https%3A%2F%2Fkriko.cc%2F%23get\">Email yourself the link</a>.": "Telefondan mı bakıyorsun? Kriko bir Windows bilgisayarda çalışır. <a href=\"mailto:?subject=Kriko'yu%20bilgisayar%C4%B1ma%20kural%C4%B1m&amp;body=https%3A%2F%2Fkriko.cc%2Ftr%2F%23get\">Bağlantıyı kendine e-postala</a>.",
-  "On macOS or Linux? <a href=\"https://github.com/Berbadov/kriko#build-and-verify\">See the source build options.</a>":"macOS ya da Linux mu kullanıyorsun? <a href=\"https://github.com/Berbadov/kriko#build-and-verify\">Kaynaktan derleme seçeneklerine bak.</a>",
+  "On macOS or Linux? <a href=\"https://github.com/Berbadov/kriko#build-and-verify\">See the source build options.</a>": "macOS ya da Linux mu kullanıyorsun? <a href=\"https://github.com/Berbadov/kriko#build-and-verify\">Kaynaktan derleme seçeneklerine bak.</a>",
   "For 64-bit Windows. It installs for the current user and needs no administrator rights.": "64 bit Windows için. Geçerli kullanıcı için kurulur ve yönetici yetkisi gerekmez.",
   "Read the source on <a href=\"https://github.com/Berbadov/kriko\">GitHub</a>.": "Kaynak kodu <a href=\"https://github.com/Berbadov/kriko\">GitHub</a>'da oku.",
   "Before you buy": "Almadan önce",
@@ -298,5 +298,13 @@
   "The Kriko desktop app comparing two invented e-bikes side by side, with the same battery finding in both.": "Kriko masaüstü uygulaması iki uydurma e-bisikleti yan yana karşılaştırıyor. İkisinde de aynı batarya bulgusu var.",
   "The Kriko phone app home: the headline Check before you buy, one large scan button, and a floating bar with a separate new chat button.": "Kriko telefon uygulamasının ana ekranı: Almadan önce kontrol et başlığı, büyük bir tarama düğmesi ve ayrı bir yeni sohbet düğmesi olan yüzen çubuk.",
   "The Kriko phone app reading a scanned page, with a status card that says Reading your screen.": "Kriko telefon uygulaması taranan bir sayfayı okuyor. Durum kartında Ekranın okunuyor yazıyor.",
-  "An answer in the Kriko phone app: Thin evidence, three checks with numbered source chips, and the question box below.": "Kriko telefon uygulamasında bir yanıt: İnce kanıt, numaralı kaynak etiketleriyle üç kontrol ve altta soru kutusu."
+  "An answer in the Kriko phone app: Thin evidence, three checks with numbered source chips, and the question box below.": "Kriko telefon uygulamasında bir yanıt: İnce kanıt, numaralı kaynak etiketleriyle üç kontrol ve altta soru kutusu.",
+  "The Kriko browser extension open over a bike listing, with each known problem and its source.": "Kriko tarayıcı eklentisi bir bisiklet ilanının üzerinde açık; her bilinen sorun kaynağıyla birlikte.",
+  "Download": "İndir",
+  "Help": "Yardım",
+  "One finding, as an example": "Örnek olarak tek bir bulgu",
+  "Battery range drops by a third after two winters.": "Batarya menzili iki kıştan sonra üçte bir azalıyor.",
+  "Owner forum thread": "Kullanıcı forumu başlığı",
+  "From an invented e-bike": "Kurgusal bir e-bisikletten",
+  "example.org": "example.org"
 }

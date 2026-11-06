@@ -10,6 +10,7 @@ import Svg, { Path } from 'react-native-svg';
 
 import { LOGO_PATHS } from '../assets/logoPaths';
 import { makeStyles, useColors } from '../theme/theme';
+import { radius } from '../theme/tokens';
 
 /** The mark is the first outline of the wordmark: the K, without the letters after it. */
 const MARK = LOGO_PATHS.slice(0, LOGO_PATHS.indexOf('Z') + 1);
@@ -50,7 +51,7 @@ const useStyles = makeStyles((color) => StyleSheet.create({
   tile: {
     width: 64,
     height: 72,
-    borderRadius: 14,
+    borderRadius: radius.l,
     backgroundColor: color.inset,
     borderWidth: 1,
     borderColor: color.edge,
@@ -66,7 +67,7 @@ const useStyles = makeStyles((color) => StyleSheet.create({
     top: 14,
     width: 36,
     height: 36,
-    borderRadius: 12,
+    borderRadius: radius.m,
     backgroundColor: color.accent,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.45)',

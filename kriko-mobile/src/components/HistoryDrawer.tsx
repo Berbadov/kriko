@@ -117,7 +117,7 @@ const useStyles = makeStyles((color) => StyleSheet.create({
   panel: { flex: 1, padding: gap[3], gap: gap[3] },
   head: { flexDirection: 'row', alignItems: 'center', gap: gap[3], paddingLeft: 6 },
   headText: { flex: 1, gap: 2 },
-  close: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: color.raise },
+  close: { width: 42, height: 42, borderRadius: radius.m, alignItems: 'center', justifyContent: 'center', backgroundColor: color.raise },
   newChat: {
     minHeight: 48,
     borderRadius: radius.pill,

@@ -35,6 +35,7 @@ import { motion } from '../theme/motion';
 import { makeStyles } from '../theme/theme';
 import { Txt } from '../theme/Txt';
 import { useReducedMotion } from './Motion';
+import { radius } from '../theme/tokens';
 
 export interface ScrubMetrics {
   offset: number;
@@ -253,7 +254,7 @@ const useStyles = makeStyles((color) => StyleSheet.create({
   handleHeld: { backgroundColor: color.accent },
   hint: {
     position: 'absolute', right: RAIL_W + 6, top: (SCRUB_HANDLE_H - 26) / 2, minWidth: 48, height: 26,
-    paddingHorizontal: 10, borderRadius: 13, alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: 10, borderRadius: radius.m, alignItems: 'center', justifyContent: 'center',
     backgroundColor: color.surface, borderWidth: 1, borderColor: color.edgeStrong,
   },
 }));

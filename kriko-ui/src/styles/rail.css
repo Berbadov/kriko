@@ -208,7 +208,7 @@
 .cr-tier {
   padding: 1px 8px;
   border: 1px solid var(--edge-strong);
-  border-radius: 999px;
+  border-radius: var(--r-m);
   color: var(--ink-2);
   font-size: 11.5px;
 }
@@ -279,7 +279,7 @@
   padding: 0 13px;
   background: var(--glass);
   border: 1px solid var(--glass-edge);
-  border-radius: 999px;
+  border-radius: var(--r-m);
   color: var(--ink);
   font-size: 13px;
   backdrop-filter: blur(16px);
@@ -362,7 +362,7 @@
   height: 8px;
   background: var(--inset);
   border: 1px solid var(--edge);
-  border-radius: 999px;
+  border-radius: var(--r-m);
   box-shadow: inset 0 1px 2px var(--sunk);
   overflow: hidden;
 }
@@ -371,7 +371,7 @@
   display: block;
   height: 100%;
   background: var(--bar);
-  border-radius: 999px;
+  border-radius: var(--r-m);
   box-shadow: inset 0 1px 0 var(--lit);
   transition:
     width calc(320ms * var(--tm)) var(--ease-out),
@@ -453,7 +453,7 @@
   padding: 0 9px 0 7px;
   background: transparent;
   border: 1px solid var(--edge-strong);
-  border-radius: 999px;
+  border-radius: var(--r-m);
   color: var(--ink-2);
   cursor: help;
   font: inherit;
@@ -630,7 +630,7 @@
   padding: 3px 9px 3px 6px;
   background: linear-gradient(180deg, color-mix(in srgb, var(--ink) 7%, var(--panel-2)), var(--panel-2));
   border: 1px solid var(--edge);
-  border-radius: 999px;
+  border-radius: var(--r-m);
   box-shadow: inset 0 1px 0 color-mix(in srgb, var(--ink) 9%, transparent), var(--shadow-1);
   color: var(--ink-2);
   cursor: pointer;
@@ -795,7 +795,7 @@
   margin-left: auto;
   padding: 2px 7px;
   background: color-mix(in srgb, var(--tone) 14%, transparent);
-  border-radius: 999px;
+  border-radius: var(--r-m);
   color: color-mix(in srgb, var(--tone) 60%, var(--ink));
   font-size: 10.5px;
   letter-spacing: 0.06em;
@@ -869,7 +869,7 @@
   padding: 0 13px 0 11px;
   background: var(--inset);
   border: 1px solid var(--edge);
-  border-radius: 999px;
+  border-radius: var(--r-m);
   color: var(--ink-2);
   font-size: 12px;
   white-space: nowrap;

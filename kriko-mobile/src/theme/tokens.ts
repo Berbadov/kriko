@@ -9,11 +9,11 @@
 import type { TextStyle } from 'react-native';
 
 export const radius = {
-  s: 10,
-  m: 16,
-  l: 24,
-  xl: 32,
-  pill: 999,
+  s: 4,
+  m: 6,
+  l: 10,
+  xl: 10,
+  pill: 6,
 } as const;
 
 /**

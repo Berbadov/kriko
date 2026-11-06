@@ -6,77 +6,77 @@
  * The palette below uses the same tokens as the panel; the face is the extension's own
  * bundled file, so the page fetches nothing from anywhere. */
 
-@font-face { font-family: "Kriko Sans"; font-weight: 100 900; font-display: swap; src: url("../assets/fonts/Geist-latin.woff2") format("woff2"); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
-@font-face { font-family: "Kriko Sans"; font-weight: 100 900; font-display: swap; src: url("../assets/fonts/Geist-latin-ext.woff2") format("woff2"); unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+@font-face { font-family: "Kriko Sans"; font-weight: 100 900; font-display: swap; src: url("../assets/fonts/InterTight-latin.woff2") format("woff2"); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+@font-face { font-family: "Kriko Sans"; font-weight: 100 900; font-display: swap; src: url("../assets/fonts/InterTight-latin-ext.woff2") format("woff2"); unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
 
 :root {
   /* BEGIN shared palette tokens */
 
   /* Dark palette */
-  --bg-base:     #0b0b0d;
-  --bg-panel:    #131316;
-  --bg-header:   #131316;
-  --bg-surface:  #17171a;
-  --bg-item:     #1e1e22;
+  --bg-base:     #161618;
+  --bg-panel:    #1b1b1e;
+  --bg-header:   #1b1b1e;
+  --bg-surface:  #202023;
+  --bg-item:     #27272b;
   --border:      rgba(255,255,255,0.09);
   --border-soft: rgba(255,255,255,0.06);
 
   /* Text — three levels, each at least 4.5:1 on its surface.
      Mild, subtle and faint are one value now, not three. */
-  --fg:          #eef1f9;
-  --fg-body:     #cdd3e4;
-  --fg-muted:    #9aa3bb;
+  --fg:          #ededed;
+  --fg-body:     #cfcfcf;
+  --fg-muted:    #acacac;
 
   /* Severity — surface and edge derived from the ink, so a
      fourth one costs a single value rather than three. */
-  --high-surface: rgba(255,107,122,0.10);
-  --high-border: rgba(255,107,122,0.30);
-  --high-ink:    #ff6b7a;
-  --med-surface: rgba(245,184,75,0.10);
-  --med-border:  rgba(245,184,75,0.30);
-  --med-ink:     #f5b84b;
-  --low-surface: rgba(61,220,151,0.10);
-  --low-border:  rgba(61,220,151,0.30);
-  --low-ink:     #3ddc97;
+  --high-surface: rgba(82,104,209,0.14);
+  --high-border: rgba(82,104,209,0.40);
+  --high-ink:    #8a9be4;
+  --med-surface: rgba(214,214,214,0.08);
+  --med-border:  rgba(214,214,214,0.26);
+  --med-ink:     #d6d6d6;
+  --low-surface: rgba(189,189,189,0.08);
+  --low-border:  rgba(189,189,189,0.24);
+  --low-ink:     #bdbdbd;
 
   /* Design system: brand, ice, LED, bezel, glass, well */
-  --brand:       #3563f5;
-  --brand-hover: #5a82ff;
-  --brand-low:   #2c53e0;
-  --brand-bright: #7b98ff;
+  --brand:       #5268d1;
+  --brand-hover: #8a9be4;
+  --brand-low:   #4256b8;
+  --brand-bright: #8a9be4;
   --on-brand:    #ffffff;
-  --ice:         #9db6ff;
-  --led-off:     #2a3045;
-  --led-dim:     #5a6279;
-  --bezel-hi:    #1e1e22;
-  --bezel-lo:    #17171a;
+  --ice:         #d6d6d6;
+  --led-off:     #333338;
+  --led-dim:     #5a5a60;
+  --bezel-hi:    #27272b;
+  --bezel-lo:    #202023;
   --bezel-edge:  rgba(255,255,255,0.12);
   --glass-1:     rgba(255, 255, 255, 0.03);
   --glass-2:     rgba(255, 255, 255, 0.06);
   --glass-3:     rgba(255, 255, 255, 0.1);
-  --well:        #131316;
+  --well:        #1b1b1e;
   --border-control: rgba(255,255,255,0.16);
 
   /* Accent, resolved from the panel's alias */
-  --accent:      #7b98ff;
+  --accent:      #8a9be4;
 
   /* Faces and edges the rules below share, so a light theme is a
      value rather than a second skin. */
-  --hover-face:  #1f2538;
+  --hover-face:  #2c2c31;
   --hover-edge:  rgba(255,255,255,0.18);
-  --row-face:    #17171a;
-  --scroll-track: #131316;
-  --skeleton-a:  #17171a;
-  --skeleton-b:  #1c2133;
-  --alert-ink:   #d6c2c3;
-  --ok-ink:      #3ddc97;
-  --ok-surface:  rgba(61,220,151,0.12);
-  --ok-border:   rgba(61,220,151,0.32);
-  --warn-ink:    #f5b84b;
-  --warn-surface: rgba(245,184,75,0.12);
-  --warn-border: rgba(245,184,75,0.32);
-  --key-edge:    #2c53e0;
-  --sky-base:    #1a3fd0;
+  --row-face:    #202023;
+  --scroll-track: #1b1b1e;
+  --skeleton-a:  #202023;
+  --skeleton-b:  #2c2c31;
+  --alert-ink:   #d0d0d4;
+  --ok-ink:      #bdbdbd;
+  --ok-surface:  rgba(189,189,189,0.10);
+  --ok-border:   rgba(189,189,189,0.28);
+  --warn-ink:    #8a9be4;
+  --warn-surface: rgba(82,104,209,0.14);
+  --warn-border: rgba(82,104,209,0.36);
+  --key-edge:    #4256b8;
+  --sky-base:    #222226;
   --sunken-face: rgba(0, 0, 0, 0.22);
   --shadow-panel: 0 18px 50px -12px rgba(0,0,0,0.6), 0 2px 6px rgba(0,0,0,0.35);
   --shadow-card:  0 1px 2px rgba(0,0,0,0.4);
@@ -92,65 +92,65 @@
 
   /* Light palette. Applied by the media query and the explicit override
      after this rule; every key here has a dark twin above. */
-  --light-bg-base:     #f2f3f7;
+  --light-bg-base:     #f2f2f2;
   --light-bg-panel:    #ffffff;
   --light-bg-header:   #ffffff;
-  --light-bg-surface:  #f6f7fa;
-  --light-bg-item:     #eef0f5;
-  --light-border:      rgba(12,18,40,0.10);
-  --light-border-soft: rgba(12,18,40,0.06);
+  --light-bg-surface:  #f7f7f7;
+  --light-bg-item:     #f2f2f2;
+  --light-border:      rgba(0,0,0,0.14);
+  --light-border-soft: rgba(0,0,0,0.08);
 
-  --light-fg:          #0d1220;
-  --light-fg-body:     #2a3147;
-  --light-fg-muted:    #515a72;
+  --light-fg:          #111111;
+  --light-fg-body:     #333333;
+  --light-fg-muted:    #595959;
 
-  --light-high-surface: rgba(179,38,30,0.08);
-  --light-high-border:  rgba(179,38,30,0.30);
-  --light-high-ink:     #b3261e;
-  --light-med-surface:  rgba(138,90,0,0.10);
-  --light-med-border:   rgba(138,90,0,0.30);
-  --light-med-ink:      #8a5a00;
-  --light-low-surface:  rgba(15,122,82,0.10);
-  --light-low-border:   rgba(15,122,82,0.30);
-  --light-low-ink:      #0f7a52;
+  --light-high-surface: rgba(29,45,127,0.08);
+  --light-high-border:  rgba(29,45,127,0.30);
+  --light-high-ink:     #17246a;
+  --light-med-surface:  rgba(51,51,51,0.06);
+  --light-med-border:   rgba(51,51,51,0.24);
+  --light-med-ink:      #333333;
+  --light-low-surface:  rgba(85,85,85,0.06);
+  --light-low-border:   rgba(85,85,85,0.22);
+  --light-low-ink:      #555555;
 
-  --light-brand:        #2f5bff;
-  --light-brand-hover:  #4670ff;
-  --light-brand-low:    #2448d6;
-  --light-brand-bright: #2448d6;
+  --light-brand:        #1d2d7f;
+  --light-brand-hover:  #17246a;
+  --light-brand-low:    #121d57;
+  --light-brand-bright: #1d2d7f;
   --light-on-brand:     #ffffff;
-  --light-ice:          #2448d6;
-  --light-led-off:      #d3d8e6;
-  --light-led-dim:      #8c94ad;
+  --light-ice:          #1d2d7f;
+  --light-led-off:      #dcdcdc;
+  --light-led-dim:      #a0a0a0;
   --light-bezel-hi:     #ffffff;
-  --light-bezel-lo:     #f6f7fa;
-  --light-bezel-edge:   rgba(12,18,40,0.10);
-  --light-glass-1:      rgba(16, 20, 40, 0.03);
-  --light-glass-2:      rgba(16, 20, 40, 0.06);
-  --light-glass-3:      rgba(16, 20, 40, 0.10);
-  --light-well:         #f2f3f7;
-  --light-border-control: rgba(12,18,40,0.17);
-  --light-accent:       #2448d6;
+  --light-bezel-lo:     #f7f7f7;
+  --light-bezel-edge:   rgba(0,0,0,0.10);
+  --light-glass-1:      rgba(0,0,0,0.025);
+  --light-glass-2:      rgba(0,0,0,0.05);
+  --light-glass-3:      rgba(0,0,0,0.08);
+  --light-well:         #f2f2f2;
+  --light-border-control: rgba(0,0,0,0.2);
+  --light-accent:       #1d2d7f;
 
-  --light-hover-face:  #e9ecf4;
-  --light-hover-edge:  rgba(12,18,40,0.17);
-  --light-row-face:    #f3f4f8;
-  --light-scroll-track: #eef0f5;
-  --light-skeleton-a:  #e9edf5;
-  --light-skeleton-b:  #f7f9fd;
-  --light-alert-ink:   #6e2a2c;
-  --light-ok-ink:      #0f6b45;
-  --light-ok-surface:  rgba(15, 107, 69, 0.10);
-  --light-ok-border:   rgba(15, 107, 69, 0.28);
-  --light-warn-ink:    #7a5000;
-  --light-warn-surface: rgba(122, 80, 0, 0.10);
-  --light-warn-border: rgba(122, 80, 0, 0.28);
-  --light-key-edge:    #9db0ee;
-  --light-sky-base:    #2c53e0;
-  --light-sunken-face: rgba(16, 20, 40, 0.04);
-  --light-shadow-panel: 0 18px 50px -16px rgba(30,45,90,0.28), 0 2px 6px rgba(30,45,90,0.08);
-  --light-shadow-card:  0 1px 2px rgba(20,30,60,0.08);
-  --light-well-shadow:  inset 0 1px 2px rgba(20,28,60,0.06);
+  --light-hover-face:  #ececec;
+  --light-hover-edge:  rgba(0,0,0,0.22);
+  --light-row-face:    #ffffff;
+  --light-scroll-track: #f2f2f2;
+  --light-skeleton-a:  #e6e6e6;
+  --light-skeleton-b:  #f5f5f5;
+  --light-alert-ink:   #17246a;
+  --light-ok-ink:      #444444;
+  --light-ok-surface:  rgba(68, 68, 68, 0.07);
+  --light-ok-border:   rgba(68, 68, 68, 0.22);
+  --light-warn-ink:    #17246a;
+  --light-warn-surface: rgba(29, 45, 127, 0.08);
+  --light-warn-border: rgba(29, 45, 127, 0.26);
+  --light-key-edge:    #9aa3cf;
+  --light-sky-base:    #28282c;
+  --light-sunken-face: rgba(0, 0, 0, 0.04);
+  --light-shadow-panel: 0 18px 50px -18px rgba(0,0,0,0.28), 0 2px 6px rgba(0,0,0,0.10);
+  --light-shadow-card:  0 1px 3px rgba(0,0,0,0.08);
+  --light-well-shadow:  inset 0 1px 2px rgba(0,0,0,0.05);
   --light-shadow-lift: 0 18px 40px rgba(20,28,60,0.16);
   --light-shadow-key:  0 10px 20px rgba(20,28,60,0.22);
 
@@ -414,7 +414,7 @@ body {
   margin: 0;
   min-height: 100vh;
   background:
-    radial-gradient(80% 50% at 85% 0%, rgba(61, 107, 255, 0.12), transparent 60%),
+    radial-gradient(80% 50% at 85% 0%, rgba(82, 104, 209, 0.08), transparent 60%),
     var(--bg-base);
   color: var(--fg-body);
   font: 14px/1.55 var(--font-body);
@@ -433,14 +433,15 @@ main {
   gap: 1rem;
   padding: 18px 22px;
   margin-bottom: 1.75rem;
-  border-radius: 22px;
+  border-radius: 10px;
   background-color: var(--sky-base);
-  background-image: linear-gradient(180deg, rgba(6, 10, 60, 0) 0%, rgba(6, 10, 60, 0.38) 100%), url("../assets/sky/sky-wide.png");
+  background-image: linear-gradient(180deg, rgba(22, 22, 24, 0) 0%, rgba(22, 22, 24, 0.38) 100%), url("../assets/sky/sky-wide.png");
   background-repeat: no-repeat;
   background-size: auto, auto 480px;
   background-position: 0 0, 0% 8%;
   box-shadow: var(--shadow-card);
-  color: var(--on-brand);
+  /* The sky is dark in both themes, so the mark on it is always paper. */
+  color: #ffffff;
 }
 .brand svg { display: block; height: 26px; width: auto; }
 
@@ -466,7 +467,7 @@ form,
   margin: 0 0 1.25rem;
   padding: 1.25rem 1.35rem;
   border: 1px solid var(--border);
-  border-radius: 20px;
+  border-radius: 10px;
   background: var(--glass-1);
 }
 
@@ -489,7 +490,7 @@ input {
   height: 46px;
   padding: 0 14px;
   border: 1px solid var(--border-control);
-  border-radius: 14px;
+  border-radius: 10px;
   background: var(--well);
   box-shadow: none;
   color: var(--fg);
@@ -572,7 +573,7 @@ button {
   height: 40px;
   padding: 0 20px;
   border: 0;
-  border-radius: 999px;
+  border-radius: 6px;
   background: var(--brand);
   box-shadow: none;
   color: var(--on-brand);
@@ -620,7 +621,7 @@ form + .status { margin: -0.5rem 0 1.25rem; padding: 0 0.25rem; }
   list-style: none;
   margin: 1rem 0;
   padding: 4px 14px;
-  border-radius: 14px;
+  border-radius: 10px;
   background: var(--well);
   box-shadow: none;
 }
@@ -689,7 +690,7 @@ form + .status { margin: -0.5rem 0 1.25rem; padding: 0 0.25rem; }
   align-items: center;
   gap: 2px;
   padding: 2px;
-  border-radius: 999px;
+  border-radius: 6px;
   background: rgba(255, 255, 255, 0.12);
   border: 1px solid rgba(255, 255, 255, 0.22);
 }
@@ -700,7 +701,7 @@ form + .status { margin: -0.5rem 0 1.25rem; padding: 0 0.25rem; }
   padding: 0 11px;
   display: inline-flex;
   align-items: center;
-  border-radius: 999px;
+  border-radius: 6px;
   color: rgba(240, 243, 255, 0.82);
   font: 540 12px/1 var(--font-body);
   cursor: pointer;

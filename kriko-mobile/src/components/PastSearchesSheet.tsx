@@ -69,7 +69,7 @@ function KindTile({ kind, size }: { kind: CatalogEntry['kind']; size: number }) 
       importantForAccessibility="no-hide-descendants"
       style={[
         styles.tile,
-        { width: size, height: size, borderRadius: size * 0.3 },
+        { width: size, height: size, borderRadius: radius.m },
         scan ? { backgroundColor: wash(color.warn, 0.16) } : { backgroundColor: color.accentSoft },
       ]}
     >
@@ -127,7 +127,7 @@ export function PastSearchRow({
         accessibilityLabel={tr('See all past searches')}
         style={[styles.chip, styles.seeAll]}
       >
-        <View style={[styles.tile, styles.seeAllTile, { width: 24, height: 24, borderRadius: 8 }]}>
+        <View style={[styles.tile, styles.seeAllTile, { width: 24, height: 24, borderRadius: radius.m }]}>
           <HistoryIcon size={13} color={color.ok} />
         </View>
         <Txt variant="actionSmall" tone="ink2">See all</Txt>
@@ -271,7 +271,7 @@ const useStyles = makeStyles((color) => StyleSheet.create({
   emptyTile: {
     width: 52,
     height: 52,
-    borderRadius: 16,
+    borderRadius: radius.l,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: color.inset,

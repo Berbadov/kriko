@@ -11,7 +11,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { READ_SECONDS, readPhoneScreen, type CapturedImage } from '../engine/screen';
 import { tr } from '../i18n';
-import { gap } from '../theme/tokens';
+import { gap, radius } from '../theme/tokens';
 import { makeStyles, useColors } from '../theme/theme';
 import { Txt } from '../theme/Txt';
 import { ScanIcon, XIcon } from './Icon';
@@ -248,7 +248,7 @@ const useStyles = makeStyles((color) => StyleSheet.create({
   mark: {
     width: 38,
     height: 38,
-    borderRadius: 12,
+    borderRadius: radius.m,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: color.accentSoft,
@@ -265,7 +265,7 @@ const useStyles = makeStyles((color) => StyleSheet.create({
   stepNumber: {
     width: 22,
     height: 22,
-    borderRadius: 11,
+    borderRadius: radius.m,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,

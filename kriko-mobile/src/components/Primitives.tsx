@@ -32,7 +32,7 @@ export function Card({
 export function Tile({ children, size = 35 }: { children: ReactNode; size?: number }) {
   const styles = useStyles();
   return (
-    <View style={[styles.tile, { width: size, height: size, borderRadius: size * 0.29 }]}>{children}</View>
+    <View style={[styles.tile, { width: size, height: size, borderRadius: radius.l }]}>{children}</View>
   );
 }
 
@@ -451,7 +451,7 @@ const useStyles = makeStyles((color) => StyleSheet.create({
   knob: {
     width: 24,
     height: 24,
-    borderRadius: 12,
+    borderRadius: radius.m,
     borderWidth: 1,
     borderColor: color.edgeSoft,
     shadowColor: color.shadow,
