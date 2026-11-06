@@ -918,3 +918,34 @@ h2 { letter-spacing: -.035em; line-height: .98; }
 @media (prefers-color-scheme: dark) { :root { --float: -8px 16px 39px rgba(0, 0, 0, .45), -33px 64px 72px rgba(0, 0, 0, .3), -73px 144px 97px rgba(0, 0, 0, .2); } }
 .topbar.is-scrolled { box-shadow: none; }
 .download-card:hover, .gallery li:hover .shot img { box-shadow: var(--float); }
+
+/* Use the whole width. The page is a left column that names the section and a
+   right column that shows it, the same split in every section, so the eye finds
+   the heading in one place and the content in another. Below 1000px it is one
+   centred column again. */
+:root { --gutter: clamp(20px, 4.5vw, 64px); }
+.wrap { max-width: 1520px; }
+.section { padding-block: clamp(72px, 9vw, 136px); }
+.download-card { background: var(--soft); border-color: transparent; }
+.faq-grid { grid-template-columns: minmax(0, .7fr) minmax(0, 1.3fr); }
+@media (min-width: 1000px) {
+  .lp-hero { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); align-items: center; column-gap: clamp(24px, 3vw, 56px); padding-top: clamp(72px, 7vw, 120px); text-align: left; }
+  .lp-copy { max-width: none; margin: 0; padding-right: 0; }
+  .lp-copy h1 { margin: 0; max-width: 8ch; font-size: clamp(4.4rem, 8.6vw, 9.5rem); }
+  .lp-copy .actions { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .lp-copy .actions .button { width: min(100%, 340px); justify-content: flex-start; }
+  .lp-stage { width: 100%; margin: 0; padding-right: var(--gutter); justify-content: flex-end; }
+  .lp-window { width: 60%; }
+  .lp-phone { width: 27%; }
+  .lp-hero::after { grid-column: 1 / -1; }
+  .lp-split { grid-template-columns: minmax(0, .7fr) minmax(0, 1.3fr); }
+  .lp-shots { width: min(100%, 640px); margin-right: 0; }
+  .lp-phones .wrap, #get .wrap { display: grid; grid-template-columns: minmax(0, .7fr) minmax(0, 1.3fr); column-gap: clamp(32px, 6vw, 96px); align-items: start; }
+  .lp-phones h2 { text-align: left; position: sticky; top: 104px; }
+  #get h2 { position: sticky; top: 104px; }
+  .lp-trio { max-width: none; margin: 0; }
+  .lp-trio .lp-phone { width: min(300px, 100%); }
+  #get .lp-get { margin-top: 0; grid-template-columns: minmax(0, 1fr); gap: var(--space-3); }
+  .lp-card { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px 24px; }
+  .lp-card .fine { flex-basis: 100%; }
+}
