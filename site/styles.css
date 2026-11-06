@@ -949,3 +949,27 @@ h2 { letter-spacing: -.035em; line-height: .98; }
   .lp-card { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px 24px; }
   .lp-card .fine { flex-basis: 100%; }
 }
+
+/* The first screen builds itself. The words rise, the buttons and the band follow,
+   and each app arrives under a cover of blocks that script dissolves (see script.js).
+   All of it is `both`-filled, so a browser that skips an animation shows the end. */
+.lp-copy h1:not(.is-split) { opacity: 0; animation: lpShow .3s ease .45s forwards; }
+@keyframes lpShow { to { opacity: 1; } }
+.lp-copy h1 .w > span { animation-duration: 1.05s; }
+.lp-copy .actions { animation: lpUp .9s var(--ease) .8s both; }
+@keyframes lpUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+@keyframes lpRise { from { opacity: 0; transform: translateY(46px) scale(.97); } to { opacity: 1; transform: none; } }
+.lp-window { animation: lpFloat 9s ease-in-out 1.6s infinite, lpRise 1.1s var(--ease) .2s both; }
+.lp-stage > .lp-phone { animation: lpFloat 7s ease-in-out 2s infinite, lpRise 1.1s var(--ease) .6s both; }
+@keyframes lpBand { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+.lp-hero::after { animation: lpBand .9s steps(6, end) 1.3s both; }
+.lp-ext { position: absolute; left: 0; bottom: -7%; z-index: 4; width: 34%; margin: 0; aspect-ratio: 1 / 1.3; overflow: hidden; background: var(--card); box-shadow: var(--float), 0 0 0 1px var(--line); animation: lpFloat 8s ease-in-out -2s infinite, lpRise 1.1s var(--ease) 1s both; }
+.lp-ext picture { display: block; }
+/* The picture is a listing with the panel on its right; only the panel is shown. */
+.lp-ext img { display: block; width: 190%; max-width: none; height: auto; margin-left: -86%; }
+.lp-tiles { position: absolute; inset: 0; z-index: 6; display: grid; grid-template-columns: repeat(var(--cols), 1fr); grid-template-rows: repeat(var(--rows), 1fr); pointer-events: none; }
+.lp-tiles i { transform: scale(1.04); animation: lpTile .55s steps(4, end) var(--d) both; }
+@keyframes lpTile { from { opacity: 1; } to { opacity: 0; } }
+@media (max-width: 999px) { .lp-ext { display: none; } }
+@media (prefers-reduced-motion: reduce) { .lp-copy h1:not(.is-split) { opacity: 1; animation: none; } .lp-tiles { display: none; } }
+.lp-copy h1 span { color: inherit; display: inline-block; }
