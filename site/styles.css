@@ -1008,7 +1008,7 @@ main { counter-reset: lp; }
    same six blocks, cut from the band itself. */
 .band { height: 14px; background: var(--stripe); }
 .footer { overflow: hidden; padding-bottom: clamp(24px, 3vw, 40px); --stripe-light: linear-gradient(90deg, #dfe7ff 0.00% 16.67%, #a9bcff 16.67% 33.33%, #7f9bff 33.33% 50.00%, #5a7bff 50.00% 66.67%, #2447e6 66.67% 83.33%, #3b57c8 83.33% 100%); }
-.footer::after { content: ""; display: block; width: calc(min(100%, 1520px) - 2 * var(--gutter)); aspect-ratio: 268 / 100; margin: clamp(40px, 7vw, 96px) auto 0; background: var(--stripe-light, var(--stripe)); -webkit-mask: url("assets/kriko-wordmark.svg") center / contain no-repeat; mask: url("assets/kriko-wordmark.svg") center / contain no-repeat; }
+.footer::after { content: ""; display: block; width: calc(min(100%, 1520px) - 2 * var(--gutter)); aspect-ratio: 274 / 100; margin: clamp(40px, 7vw, 96px) auto 0; background: var(--stripe-light, var(--stripe)); -webkit-mask: url("assets/kriko-wordmark.svg") center / contain no-repeat; mask: url("assets/kriko-wordmark.svg") center / contain no-repeat; }
 @media (prefers-reduced-motion: no-preference) { .footer::after { animation: lpBand 1.2s var(--ease) both; animation-timeline: view(); animation-range: entry 0% entry 90%; } }
 
 /* The corner system: 6px on controls, cards and chips, 10px on the big objects (the

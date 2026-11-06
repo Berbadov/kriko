@@ -268,20 +268,20 @@
   //   * It mutated the host document's `<head>`, from a content script, on a
   //     page we do not own.
   //
-  // The Kriko face is Geist, one variable file per script, and it ships
+  // The Kriko face is Inter Tight, one variable file per script, and it ships
   // *inside* the extension (assets/fonts, SIL OFL, licence beside it). It is
   // registered from there: the URL is the extension's own, so nothing leaves
   // the machine and it loads offline. `@font-face` inside a shadow root is
   // ignored by the browser, so the faces go to `document.fonts` through the
   // FontFace API, which adds no element to the page's `<head>`. The family
-  // name is Kriko's own, so a page that happens to load Geist is never
+  // name is Kriko's own, so a page that happens to load Inter Tight is never
   // restyled by ours, nor ours by it. The Turkish letters sit in the second
   // file. Guarded by a test that fails on a remote URL anywhere in the
   // extension.
   const FACES = [
-    ["Kriko Sans", "Geist-latin.woff2",
+    ["Kriko Sans", "InterTight-latin.woff2",
       "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"],
-    ["Kriko Sans", "Geist-latin-ext.woff2",
+    ["Kriko Sans", "InterTight-latin-ext.woff2",
       "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"],
   ];
   let facesLoaded = false;
@@ -2489,7 +2489,7 @@
   function renderShell() {
     // The app's wordmark, inline: no file to fetch and no font to wait for.
     // The same drawing the desktop app's brand block carries.
-    const wordmark = `<svg class="lite-wordmark" viewBox="18 0 268 100" role="img" aria-label="Kriko"><defs><clipPath id="kriko-cap"><rect x="-30" y="0" width="362" height="100"/></clipPath></defs><g transform="translate(18 0)"><g clip-path="url(#kriko-cap)" fill="none" stroke="currentColor" stroke-width="16" stroke-linejoin="miter" stroke-miterlimit="6"><path d="M8 -2V102M8 50L54 -16M8 50L54 116"/></g></g><g transform="translate(80 0)" clip-path="url(#kriko-cap)" fill="none" stroke="currentColor" stroke-width="16" stroke-linejoin="miter" stroke-miterlimit="6"><path d="M8 102V8H36L48 20V38L36 50H8M28 50L52 108"/></g><g transform="translate(148 0)" fill="currentColor"><rect x="0" y="0" width="16" height="100"/></g><g transform="translate(178 0)" clip-path="url(#kriko-cap)" fill="none" stroke="currentColor" stroke-width="16" stroke-linejoin="miter" stroke-miterlimit="6"><path d="M8 -2V102M8 50L54 -16M8 50L54 116"/></g><g transform="translate(230 0)" fill="none" stroke="currentColor" stroke-width="16" stroke-linejoin="miter" stroke-miterlimit="6"><path d="M20 8H36L48 20V80L36 92H20L8 80V20Z"/></g></svg>`;
+    const wordmark = `<svg class="lite-wordmark" viewBox="0 0 273.7 100" role="img" aria-label="Kriko"><defs><clipPath id="kriko-cap"><rect x="-30" y="0" width="333.7" height="100"/></clipPath></defs><g transform="translate(0 0)" clip-path="url(#kriko-cap)" fill="none" stroke="currentColor" stroke-linejoin="miter" stroke-miterlimit="6"><path d="M8 -2V102" stroke-width="16"/><path d="M8 50L52 -16M8 50L52 116" stroke-width="14"/></g><g transform="translate(59.8 0)" clip-path="url(#kriko-cap)" fill="none" stroke="currentColor" stroke-linejoin="miter" stroke-miterlimit="6"><path d="M8 102V8H36L48 20V30L36 42H8" stroke-width="16"/><path d="M30 42L55.4 108" stroke-width="14"/></g><g transform="translate(128.8 0)" fill="currentColor"><rect x="0" y="0" width="16" height="100"/></g><g transform="translate(157.8 0)" clip-path="url(#kriko-cap)" fill="none" stroke="currentColor" stroke-linejoin="miter" stroke-miterlimit="6"><path d="M8 -2V102" stroke-width="16"/><path d="M8 50L52 -16M8 50L52 116" stroke-width="14"/></g><g transform="translate(217.7 0)" fill="none" stroke="currentColor" stroke-linejoin="miter" stroke-miterlimit="6" stroke-width="16"><path d="M20 8H36L48 20V80L36 92H20L8 80V20Z"/></g></svg>`;
 
     // The header is the drag handle: the whole brand block moves the panel.
     //

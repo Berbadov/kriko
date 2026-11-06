@@ -31,10 +31,10 @@ const LOOKS: Record<string, Look> = {
   'mistral-vibe': { svg: mistral, tone: 'var(--ink)', own: true },
   'mistral-api': { svg: mistral, tone: 'var(--ink)', own: true },
   cursor: { svg: cursor, tone: 'var(--ink)' },
-  local: { tone: '#3ddc97', glyph: 'chip' },
+  local: { tone: 'var(--ok)', glyph: 'chip' },
 }
 
-const FALLBACK: Look = { tone: '#7b98ff', glyph: 'spark' }
+const FALLBACK: Look = { tone: 'var(--accent)', glyph: 'spark' }
 
 export const lookOf = (id: string): Look => LOOKS[id] ?? FALLBACK
 

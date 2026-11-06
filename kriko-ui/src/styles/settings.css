@@ -82,7 +82,7 @@
 .drawer[data-panel='settings'] .drawer-head .icon-btn {
   width: 44px;
   height: 44px;
-  border-radius: 50%;
+  border-radius: var(--r-m);
   color: var(--ink);
 }
 
@@ -322,7 +322,7 @@
   padding: 1px 11px;
   background: var(--set-field);
   border: 1px solid transparent;
-  border-radius: 999px;
+  border-radius: var(--r-m);
   color: color-mix(in srgb, var(--ink-2) 55%, var(--ink));
   font-size: 14px;
   font-weight: 400;
@@ -490,7 +490,7 @@
   padding: 4px;
   background: var(--set-field);
   border: 1px solid var(--set-field-edge);
-  border-radius: 999px;
+  border-radius: var(--r-m);
 }
 
 .settings .iconchoice button {
@@ -502,7 +502,7 @@
   min-width: 44px;
   height: 44px;
   padding: 0 11px;
-  border-radius: 999px;
+  border-radius: var(--r-m);
   color: color-mix(in srgb, var(--ink-2) 60%, var(--ink));
   transition:
     background-color calc(150ms * var(--tm)),
@@ -836,7 +836,7 @@
   padding: 0 42px 0 18px;
   background: var(--set-field);
   border: 1px solid var(--set-field-edge);
-  border-radius: 999px;
+  border-radius: var(--r-m);
   font-family: var(--set-font);
   font-size: 15px;
   transition: border-color calc(150ms * var(--tm));
@@ -867,7 +867,7 @@
   padding: 0 16px 0 12px;
   background: var(--set-field);
   border: 1px solid var(--set-field-edge);
-  border-radius: 999px;
+  border-radius: var(--r-m);
   color: var(--ink);
   font-size: 15px;
 }
@@ -975,13 +975,13 @@
 .settings .tuning-range::-webkit-slider-runnable-track {
   height: 8px;
   background: linear-gradient(to right, var(--accent) var(--fill, 50%), var(--set-field-edge) var(--fill, 50%));
-  border-radius: 999px;
+  border-radius: var(--r-m);
 }
 
 .settings .tuning-range::-moz-range-track {
   height: 8px;
   background: linear-gradient(to right, var(--accent) var(--fill, 50%), var(--set-field-edge) var(--fill, 50%));
-  border-radius: 999px;
+  border-radius: var(--r-m);
 }
 
 .settings .tuning-range::-webkit-slider-thumb {
