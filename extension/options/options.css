@@ -13,11 +13,11 @@
   /* BEGIN shared palette tokens */
 
   /* Dark palette */
-  --bg-base:     #0b0b0c;
-  --bg-panel:    #121213;
-  --bg-header:   #121213;
-  --bg-surface:  #161617;
-  --bg-item:     #1d1d1f;
+  --bg-base:     #161618;
+  --bg-panel:    #1b1b1e;
+  --bg-header:   #1b1b1e;
+  --bg-surface:  #202023;
+  --bg-item:     #27272b;
   --border:      rgba(255,255,255,0.09);
   --border-soft: rgba(255,255,255,0.06);
 
@@ -25,13 +25,13 @@
      Mild, subtle and faint are one value now, not three. */
   --fg:          #ededed;
   --fg-body:     #cfcfcf;
-  --fg-muted:    #a0a0a0;
+  --fg-muted:    #acacac;
 
   /* Severity — surface and edge derived from the ink, so a
      fourth one costs a single value rather than three. */
-  --high-surface: rgba(74,104,255,0.12);
-  --high-border: rgba(74,104,255,0.36);
-  --high-ink:    #7d93ff;
+  --high-surface: rgba(82,104,209,0.14);
+  --high-border: rgba(82,104,209,0.40);
+  --high-ink:    #8a9be4;
   --med-surface: rgba(214,214,214,0.08);
   --med-border:  rgba(214,214,214,0.26);
   --med-ink:     #d6d6d6;
@@ -40,43 +40,43 @@
   --low-ink:     #bdbdbd;
 
   /* Design system: brand, ice, LED, bezel, glass, well */
-  --brand:       #4a68ff;
-  --brand-hover: #7d93ff;
-  --brand-low:   #3552e0;
-  --brand-bright: #7d93ff;
+  --brand:       #5268d1;
+  --brand-hover: #8a9be4;
+  --brand-low:   #4256b8;
+  --brand-bright: #8a9be4;
   --on-brand:    #ffffff;
   --ice:         #d6d6d6;
-  --led-off:     #2a2a2d;
+  --led-off:     #333338;
   --led-dim:     #5a5a60;
-  --bezel-hi:    #1d1d1f;
-  --bezel-lo:    #161617;
+  --bezel-hi:    #27272b;
+  --bezel-lo:    #202023;
   --bezel-edge:  rgba(255,255,255,0.12);
   --glass-1:     rgba(255, 255, 255, 0.03);
   --glass-2:     rgba(255, 255, 255, 0.06);
   --glass-3:     rgba(255, 255, 255, 0.1);
-  --well:        #121213;
+  --well:        #1b1b1e;
   --border-control: rgba(255,255,255,0.16);
 
   /* Accent, resolved from the panel's alias */
-  --accent:      #7d93ff;
+  --accent:      #8a9be4;
 
   /* Faces and edges the rules below share, so a light theme is a
      value rather than a second skin. */
-  --hover-face:  #222226;
+  --hover-face:  #2c2c31;
   --hover-edge:  rgba(255,255,255,0.18);
-  --row-face:    #161617;
-  --scroll-track: #121213;
-  --skeleton-a:  #161617;
-  --skeleton-b:  #222226;
+  --row-face:    #202023;
+  --scroll-track: #1b1b1e;
+  --skeleton-a:  #202023;
+  --skeleton-b:  #2c2c31;
   --alert-ink:   #d0d0d4;
   --ok-ink:      #bdbdbd;
   --ok-surface:  rgba(189,189,189,0.10);
   --ok-border:   rgba(189,189,189,0.28);
-  --warn-ink:    #7d93ff;
-  --warn-surface: rgba(74,104,255,0.12);
-  --warn-border: rgba(74,104,255,0.32);
-  --key-edge:    #3552e0;
-  --sky-base:    #1c1c1f;
+  --warn-ink:    #8a9be4;
+  --warn-surface: rgba(82,104,209,0.14);
+  --warn-border: rgba(82,104,209,0.36);
+  --key-edge:    #4256b8;
+  --sky-base:    #222226;
   --sunken-face: rgba(0, 0, 0, 0.22);
   --shadow-panel: 0 18px 50px -12px rgba(0,0,0,0.6), 0 2px 6px rgba(0,0,0,0.35);
   --shadow-card:  0 1px 2px rgba(0,0,0,0.4);
@@ -104,9 +104,9 @@
   --light-fg-body:     #333333;
   --light-fg-muted:    #595959;
 
-  --light-high-surface: rgba(31,63,209,0.08);
-  --light-high-border:  rgba(31,63,209,0.30);
-  --light-high-ink:     #1a35b3;
+  --light-high-surface: rgba(29,45,127,0.08);
+  --light-high-border:  rgba(29,45,127,0.30);
+  --light-high-ink:     #17246a;
   --light-med-surface:  rgba(51,51,51,0.06);
   --light-med-border:   rgba(51,51,51,0.24);
   --light-med-ink:      #333333;
@@ -114,12 +114,12 @@
   --light-low-border:   rgba(85,85,85,0.22);
   --light-low-ink:      #555555;
 
-  --light-brand:        #1f3fd1;
-  --light-brand-hover:  #1a35b3;
-  --light-brand-low:    #162d99;
-  --light-brand-bright: #1f3fd1;
+  --light-brand:        #1d2d7f;
+  --light-brand-hover:  #17246a;
+  --light-brand-low:    #121d57;
+  --light-brand-bright: #1d2d7f;
   --light-on-brand:     #ffffff;
-  --light-ice:          #1f3fd1;
+  --light-ice:          #1d2d7f;
   --light-led-off:      #dcdcdc;
   --light-led-dim:      #a0a0a0;
   --light-bezel-hi:     #ffffff;
@@ -130,7 +130,7 @@
   --light-glass-3:      rgba(0,0,0,0.08);
   --light-well:         #f2f2f2;
   --light-border-control: rgba(0,0,0,0.2);
-  --light-accent:       #1f3fd1;
+  --light-accent:       #1d2d7f;
 
   --light-hover-face:  #ececec;
   --light-hover-edge:  rgba(0,0,0,0.22);
@@ -138,14 +138,14 @@
   --light-scroll-track: #f2f2f2;
   --light-skeleton-a:  #e6e6e6;
   --light-skeleton-b:  #f5f5f5;
-  --light-alert-ink:   #1a2a80;
+  --light-alert-ink:   #17246a;
   --light-ok-ink:      #444444;
   --light-ok-surface:  rgba(68, 68, 68, 0.07);
   --light-ok-border:   rgba(68, 68, 68, 0.22);
-  --light-warn-ink:    #1a35b3;
-  --light-warn-surface: rgba(31, 63, 209, 0.08);
-  --light-warn-border: rgba(31, 63, 209, 0.26);
-  --light-key-edge:    #9aa8e8;
+  --light-warn-ink:    #17246a;
+  --light-warn-surface: rgba(29, 45, 127, 0.08);
+  --light-warn-border: rgba(29, 45, 127, 0.26);
+  --light-key-edge:    #9aa3cf;
   --light-sky-base:    #28282c;
   --light-sunken-face: rgba(0, 0, 0, 0.04);
   --light-shadow-panel: 0 18px 50px -18px rgba(0,0,0,0.28), 0 2px 6px rgba(0,0,0,0.10);
@@ -414,7 +414,7 @@ body {
   margin: 0;
   min-height: 100vh;
   background:
-    radial-gradient(80% 50% at 85% 0%, rgba(74, 104, 255, 0.08), transparent 60%),
+    radial-gradient(80% 50% at 85% 0%, rgba(82, 104, 209, 0.08), transparent 60%),
     var(--bg-base);
   color: var(--fg-body);
   font: 14px/1.55 var(--font-body);
@@ -435,7 +435,7 @@ main {
   margin-bottom: 1.75rem;
   border-radius: 10px;
   background-color: var(--sky-base);
-  background-image: linear-gradient(180deg, rgba(11, 11, 12, 0) 0%, rgba(11, 11, 12, 0.38) 100%), url("../assets/sky/sky-wide.png");
+  background-image: linear-gradient(180deg, rgba(22, 22, 24, 0) 0%, rgba(22, 22, 24, 0.38) 100%), url("../assets/sky/sky-wide.png");
   background-repeat: no-repeat;
   background-size: auto, auto 480px;
   background-position: 0 0, 0% 8%;

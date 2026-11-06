@@ -1,7 +1,7 @@
 /* Every colour, size and time in the interface comes from here.
    Dark is the first theme. `data-theme` is "system", "dark" or "light".
 
-   Flat neutrals, black to white with plain greys between, and one dark blue
+   Flat neutrals, a lifted charcoal to white with plain greys between, and one navy
    that is the only hue that carries meaning. Severity is not a traffic light:
    serious takes the blue, to-check the plain ink, a good sign a quieter grey,
    and the rule under each finding says it again by shape. Radii: 4 / 6 / 10 / 10. Semantic hues get a `-text` pair that
@@ -36,30 +36,30 @@
   color-scheme: dark;
 
   /* dark: neutral charcoal, no blue cast */
-  --ground: #0b0b0c;
-  --raise: #121213;
-  --panel: #161617;
-  --panel-2: #1d1d1f;
+  --ground: #161618;
+  --raise: #1b1b1e;
+  --panel: #202023;
+  --panel-2: #27272b;
   --edge: rgba(255, 255, 255, 0.08);
   --edge-strong: rgba(255, 255, 255, 0.16);
   --ink: #ededed;
   --ink-2: #a8a8a8;
   --ink-3: #8c8c8c;
-  --accent: #4a68ff;
-  --accent-hi: #7d93ff;
+  --accent: #5268d1;
+  --accent-hi: #8a9be4;
   --accent-ink: #ffffff;
-  --accent-soft: rgba(74, 104, 255, 0.16);
-  --warm: #7d93ff;
+  --accent-soft: rgba(82, 104, 209, 0.18);
+  --warm: #8a9be4;
   --ok: #bdbdbd;
   --warn: #d6d6d6;
-  --risk: #4a68ff;
+  --risk: #5268d1;
   --ok-text: #bdbdbd;
   --warn-text: #d6d6d6;
-  --risk-text: #7d93ff;
+  --risk-text: #8a9be4;
   --on-risk: #ffffff;
-  --on-warn: #0b0b0c;
+  --on-warn: #161618;
   /* data companions to the brand blue: one hue each, used by bars, meters and charts */
-  --violet: #7d93ff;
+  --violet: #8a9be4;
   --teal: #a8a8a8;
   --mint: #bdbdbd;
   --sky: #d6d6d6;
@@ -68,7 +68,7 @@
   --on-fill: #ffffff;
   --lit: rgba(255, 255, 255, 0.3);
   --sunk: rgba(0, 0, 0, 0.18);
-  --pill-bg: rgba(11, 11, 12, 0.6);
+  --pill-bg: rgba(22, 22, 24, 0.6);
   --pill-edge: rgba(255, 255, 255, 0.22);
   --step-0: var(--ink-3);
   --step-1: var(--warn);
@@ -77,7 +77,7 @@
   --bar-done: linear-gradient(90deg, var(--ok), var(--ok));
   --inset: color-mix(in srgb, var(--ink) 5%, var(--ground));
   --scrim: rgba(0, 0, 0, 0.66);
-  --glass: rgba(18, 18, 19, 0.62);
+  --glass: rgba(27, 27, 30, 0.62);
   --glass-edge: rgba(255, 255, 255, 0.14);
   --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
   --shadow-2: 0 18px 50px -12px rgba(0, 0, 0, 0.6), 0 2px 6px rgba(0, 0, 0, 0.35);
@@ -87,7 +87,7 @@
   --gl-rim: rgba(255, 255, 255, 0.18);
   --gl-line: rgba(0, 0, 0, 0.45);
   --gl-hair: rgba(255, 255, 255, 0.08);
-  --gl-solid: #1a1a1c;
+  --gl-solid: #232326;
   --gl-shadow: 0 14px 34px -16px rgba(0, 0, 0, 0.7), 0 2px 6px rgba(0, 0, 0, 0.25);
 }
 
@@ -104,20 +104,20 @@
     --ink: #111111;
     --ink-2: #444444;
     --ink-3: #666666;
-    --accent: #1f3fd1;
-    --accent-hi: #1a35b3;
+    --accent: #1d2d7f;
+    --accent-hi: #17246a;
     --accent-ink: #ffffff;
-    --accent-soft: rgba(31, 63, 209, 0.10);
-    --warm: #1f3fd1;
+    --accent-soft: rgba(29, 45, 127, 0.10);
+    --warm: #1d2d7f;
     --ok: #555555;
     --warn: #333333;
-    --risk: #1f3fd1;
+    --risk: #1d2d7f;
     --ok-text: #555555;
     --warn-text: #333333;
-    --risk-text: #1a35b3;
+    --risk-text: #17246a;
     --on-risk: #ffffff;
     --on-warn: #ffffff;
-    --violet: #1f3fd1;
+    --violet: #1d2d7f;
     --teal: #555555;
     --mint: #555555;
     --sky: #333333;
@@ -149,20 +149,20 @@
   --ink: #111111;
   --ink-2: #444444;
   --ink-3: #666666;
-  --accent: #1f3fd1;
-  --accent-hi: #1a35b3;
+  --accent: #1d2d7f;
+  --accent-hi: #17246a;
   --accent-ink: #ffffff;
-  --accent-soft: rgba(31, 63, 209, 0.10);
-  --warm: #1f3fd1;
+  --accent-soft: rgba(29, 45, 127, 0.10);
+  --warm: #1d2d7f;
   --ok: #555555;
   --warn: #333333;
-  --risk: #1f3fd1;
+  --risk: #1d2d7f;
   --ok-text: #555555;
   --warn-text: #333333;
-  --risk-text: #1a35b3;
+  --risk-text: #17246a;
   --on-risk: #ffffff;
   --on-warn: #ffffff;
-  --violet: #1f3fd1;
+  --violet: #1d2d7f;
   --teal: #555555;
   --mint: #555555;
   --sky: #333333;

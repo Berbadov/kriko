@@ -11,11 +11,11 @@
   /* BEGIN shared palette tokens */
 
   /* Dark palette */
-  --bg-base:     #0b0b0c;
-  --bg-panel:    #121213;
-  --bg-header:   #121213;
-  --bg-surface:  #161617;
-  --bg-item:     #1d1d1f;
+  --bg-base:     #161618;
+  --bg-panel:    #1b1b1e;
+  --bg-header:   #1b1b1e;
+  --bg-surface:  #202023;
+  --bg-item:     #27272b;
   --border:      rgba(255,255,255,0.09);
   --border-soft: rgba(255,255,255,0.06);
 
@@ -23,13 +23,13 @@
      Mild, subtle and faint are one value now, not three. */
   --fg:          #ededed;
   --fg-body:     #cfcfcf;
-  --fg-muted:    #a0a0a0;
+  --fg-muted:    #acacac;
 
   /* Severity — surface and edge derived from the ink, so a
      fourth one costs a single value rather than three. */
-  --high-surface: rgba(74,104,255,0.12);
-  --high-border: rgba(74,104,255,0.36);
-  --high-ink:    #7d93ff;
+  --high-surface: rgba(82,104,209,0.14);
+  --high-border: rgba(82,104,209,0.40);
+  --high-ink:    #8a9be4;
   --med-surface: rgba(214,214,214,0.08);
   --med-border:  rgba(214,214,214,0.26);
   --med-ink:     #d6d6d6;
@@ -38,27 +38,27 @@
   --low-ink:     #bdbdbd;
 
   /* Data companions to the brand blue, the app's own (kriko-ui tokens.css). */
-  --violet:      #7d93ff;
+  --violet:      #8a9be4;
   --teal:        #a8a8a8;
   --mint:        #bdbdbd;
   --sky:         #d6d6d6;
 
   /* Design system: brand, ice, LED, bezel, glass, well */
-  --brand:       #4a68ff;
-  --brand-hover: #7d93ff;
-  --brand-low:   #3552e0;
-  --brand-bright: #7d93ff;
+  --brand:       #5268d1;
+  --brand-hover: #8a9be4;
+  --brand-low:   #4256b8;
+  --brand-bright: #8a9be4;
   --on-brand:    #ffffff;
   --ice:         #d6d6d6;
-  --led-off:     #2a2a2d;
+  --led-off:     #333338;
   --led-dim:     #5a5a60;
-  --bezel-hi:    #1d1d1f;
-  --bezel-lo:    #161617;
+  --bezel-hi:    #27272b;
+  --bezel-lo:    #202023;
   --bezel-edge:  rgba(255,255,255,0.12);
   --glass-1:     rgba(255, 255, 255, 0.03);
   --glass-2:     rgba(255, 255, 255, 0.06);
   --glass-3:     rgba(255, 255, 255, 0.1);
-  --well:        #121213;
+  --well:        #1b1b1e;
   --border-control: rgba(255,255,255,0.16);
 
   /* The panel lets the page show through (#260). The colour is kept as bare
@@ -68,30 +68,30 @@
      the light one; a test computes it from these very values). `brightness` on the dark backdrop is what pays for that:
      it is a pane of smoked glass, not a clear one. Settings can make it
      opaque (`data-glass="solid"`), and so does the system's own request. */
-  --bg-panel-rgb: 11, 11, 12;
+  --bg-panel-rgb: 22, 22, 24;
   --glass-panel-alpha: 0.72;
   --glass-backdrop: blur(16px) saturate(1.6) brightness(0.6);
 
   /* Accent, resolved from the panel's alias */
-  --accent:      #7d93ff;
+  --accent:      #8a9be4;
 
   /* Faces and edges the rules below share, so a light theme is a
      value rather than a second skin. */
-  --hover-face:  #222226;
+  --hover-face:  #2c2c31;
   --hover-edge:  rgba(255,255,255,0.18);
-  --row-face:    #161617;
-  --scroll-track: #121213;
-  --skeleton-a:  #161617;
-  --skeleton-b:  #222226;
+  --row-face:    #202023;
+  --scroll-track: #1b1b1e;
+  --skeleton-a:  #202023;
+  --skeleton-b:  #2c2c31;
   --alert-ink:   #d0d0d4;
   --ok-ink:      #bdbdbd;
   --ok-surface:  rgba(189,189,189,0.10);
   --ok-border:   rgba(189,189,189,0.28);
-  --warn-ink:    #7d93ff;
-  --warn-surface: rgba(74,104,255,0.12);
-  --warn-border: rgba(74,104,255,0.32);
-  --key-edge:    #3552e0;
-  --sky-base:    #1c1c1f;
+  --warn-ink:    #8a9be4;
+  --warn-surface: rgba(82,104,209,0.14);
+  --warn-border: rgba(82,104,209,0.36);
+  --key-edge:    #4256b8;
+  --sky-base:    #222226;
   --sunken-face: rgba(0, 0, 0, 0.22);
   --shadow-panel: 0 18px 50px -12px rgba(0,0,0,0.6), 0 2px 6px rgba(0,0,0,0.35);
   --tour-scrim: rgba(4, 4, 6, 0.66);
@@ -112,9 +112,9 @@
   --light-fg-body:     #333333;
   --light-fg-muted:    #595959;
 
-  --light-high-surface: rgba(31,63,209,0.08);
-  --light-high-border:  rgba(31,63,209,0.30);
-  --light-high-ink:     #1a35b3;
+  --light-high-surface: rgba(29,45,127,0.08);
+  --light-high-border:  rgba(29,45,127,0.30);
+  --light-high-ink:     #17246a;
   --light-med-surface:  rgba(51,51,51,0.06);
   --light-med-border:   rgba(51,51,51,0.24);
   --light-med-ink:      #333333;
@@ -122,12 +122,12 @@
   --light-low-border:   rgba(85,85,85,0.22);
   --light-low-ink:      #555555;
 
-  --light-brand:        #1f3fd1;
-  --light-brand-hover:  #1a35b3;
-  --light-brand-low:    #162d99;
-  --light-brand-bright: #1f3fd1;
+  --light-brand:        #1d2d7f;
+  --light-brand-hover:  #17246a;
+  --light-brand-low:    #121d57;
+  --light-brand-bright: #1d2d7f;
   --light-on-brand:     #ffffff;
-  --light-ice:          #1f3fd1;
+  --light-ice:          #1d2d7f;
   --light-led-off:      #dcdcdc;
   --light-led-dim:      #a0a0a0;
   --light-bezel-hi:     #ffffff;
@@ -141,7 +141,7 @@
   --light-bg-panel-rgb: 245, 245, 245;
   --light-glass-panel-alpha: 0.96;
   --light-glass-backdrop: blur(12px) saturate(1.05);
-  --light-accent:       #1f3fd1;
+  --light-accent:       #1d2d7f;
 
   --light-hover-face:  #ececec;
   --light-hover-edge:  rgba(0,0,0,0.22);
@@ -149,14 +149,14 @@
   --light-scroll-track: #f2f2f2;
   --light-skeleton-a:  #e6e6e6;
   --light-skeleton-b:  #f5f5f5;
-  --light-alert-ink:   #1a2a80;
+  --light-alert-ink:   #17246a;
   --light-ok-ink:      #444444;
   --light-ok-surface:  rgba(68, 68, 68, 0.07);
   --light-ok-border:   rgba(68, 68, 68, 0.22);
-  --light-warn-ink:    #1a35b3;
-  --light-warn-surface: rgba(31, 63, 209, 0.08);
-  --light-warn-border: rgba(31, 63, 209, 0.26);
-  --light-key-edge:    #9aa8e8;
+  --light-warn-ink:    #17246a;
+  --light-warn-surface: rgba(29, 45, 127, 0.08);
+  --light-warn-border: rgba(29, 45, 127, 0.26);
+  --light-key-edge:    #9aa3cf;
   --light-sky-base:    #28282c;
   --light-sunken-face: rgba(0, 0, 0, 0.04);
   --light-shadow-panel: 0 18px 50px -18px rgba(0,0,0,0.28), 0 2px 6px rgba(0,0,0,0.10);
@@ -2077,7 +2077,7 @@
 
 .lite-panel {
   background:
-    radial-gradient(120% 60% at 100% 0%, rgba(74,104,255,0.07), transparent 60%),
+    radial-gradient(120% 60% at 100% 0%, rgba(82,104,209,0.07), transparent 60%),
     rgba(var(--bg-panel-rgb), var(--glass-panel-alpha));
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -2613,7 +2613,7 @@
 }
 .lite-iconbtn:hover { background: rgba(255,255,255,0.20); border-color: transparent; color: var(--on-brand); }
 .lite-iconbtn:active { transform: scale(0.92); }
-.lite-iconbtn.lite-btn-close:hover { background: rgba(74,104,255,0.30); border-color: transparent; }
+.lite-iconbtn.lite-btn-close:hover { background: rgba(82,104,209,0.30); border-color: transparent; }
 
 /* content first: tighter body and gaps, a smooth scroll */
 .lite-body {
@@ -2699,8 +2699,8 @@
 .lite-rc-toggle:hover,
 .lite-rc-factbtn:hover:not(:disabled),
 .lite-rc-markbtn:hover {
-  background: rgba(74,104,255,0.16);
-  border-color: rgba(125,147,255,0.5);
+  background: rgba(82,104,209,0.16);
+  border-color: rgba(138,155,228,0.5);
   color: var(--fg);
   filter: none;
 }
@@ -2736,7 +2736,7 @@
   transition: border-color var(--dur-quick), box-shadow var(--dur-quick);
 }
 .lite-research input:focus,
-.lite-research textarea:focus { outline: 0; border-color: var(--brand-bright); box-shadow: 0 0 0 3px rgba(74,104,255,0.28); }
+.lite-research textarea:focus { outline: 0; border-color: var(--brand-bright); box-shadow: 0 0 0 3px rgba(82,104,209,0.28); }
 .lite-research textarea { resize: none; min-height: 52px; display: block; }
 /* a fold: height eases between 0 and its content */
 .lite-fold { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows var(--dur-med) var(--ease-out), opacity var(--dur-med) var(--ease-out), margin var(--dur-med) var(--ease-out); }
@@ -3109,7 +3109,7 @@
   content: ""; width: 4px; height: 8px; border: solid #fff; border-width: 0 2px 2px 0;
   transform: translateY(-1px) rotate(45deg) scale(0); transition: transform var(--dur-quick, 140ms);
 }
-.lite-buy-form input[type="checkbox"]:checked { background: var(--brand-low, #3552e0); box-shadow: 0 0 0 1px var(--brand-low, #3552e0); }
+.lite-buy-form input[type="checkbox"]:checked { background: var(--brand-low, #4256b8); box-shadow: 0 0 0 1px var(--brand-low, #4256b8); }
 .lite-buy-form input[type="checkbox"]:checked::after { transform: translateY(-1px) rotate(45deg) scale(1); }
 @media (prefers-reduced-motion: reduce) {
   .lite-buy-form input[type="checkbox"], .lite-buy-form input[type="checkbox"]::after { transition: none; }
@@ -3134,7 +3134,7 @@
 /* A browser that cannot blur what is behind the panel gets the opaque one:
    text over an unblurred page is the thing the blur exists to prevent. */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .lite-panel { background: radial-gradient(120% 60% at 100% 0%, rgba(74,104,255,0.07), transparent 60%), var(--bg-base); }
+  .lite-panel { background: radial-gradient(120% 60% at 100% 0%, rgba(82,104,209,0.07), transparent 60%), var(--bg-base); }
 }
 
 /* Warm paper / ink pass: calm surfaces, one blue action, readable sources. */
@@ -3502,7 +3502,7 @@
 }
 
 /* The identity layer: every finding sits on a rule that says how much it
-   matters, so severity reads by shape as well as by colour. A heavy blue bar
+   matters, so severity reads by shape as well as by colour. A heavy navy bar
    is serious, ticks are worth checking, dashes are minor. Headings are set
    heavy and close, as in the app. */
 .lite-rc { position: relative; padding-bottom: 10px; }
