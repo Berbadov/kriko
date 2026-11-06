@@ -43,7 +43,7 @@
   --radius-control: var(--r-m);
   --radius-panel: var(--r-l);
   --radius-surface: var(--r-xl);
-  --radius-pill: 999px;
+  --radius-pill: var(--r-m);
   --control-height-sm: 30px;
   --control-height-md: 34px;
   --control-height-lg: 40px;

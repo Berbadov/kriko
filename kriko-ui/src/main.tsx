@@ -15,6 +15,7 @@ import './styles/settings.css'
 import './styles/logs.css'
 import './styles/rail.css'
 import './styles/tour.css'
+import './styles/identity.css'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
