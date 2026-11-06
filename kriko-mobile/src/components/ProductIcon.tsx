@@ -35,6 +35,7 @@ import { StyleSheet, View } from 'react-native';
 
 import type { Reading } from '../engine/types';
 import { useColors } from '../theme/theme';
+import { radius } from '../theme/tokens';
 
 const KINDS: { icon: LucideIcon; words: RegExp }[] = [
   { icon: Keyboard, words: /keyboard|keycap|klavye/i },
@@ -81,7 +82,7 @@ export function ProductTile({ icon: Icon, size = 36, active }: {
         {
           width: size,
           height: size,
-          borderRadius: size / 2.6,
+          borderRadius: radius.m,
           backgroundColor: active ? color.accentSoft : color.raise,
         },
       ]}

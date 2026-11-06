@@ -188,10 +188,10 @@ const useStyles = makeStyles((color) => StyleSheet.create({
     borderRadius: radius.l,
   },
   rowActive: { backgroundColor: color.accentWash },
-  glyph: { width: 42, height: 42, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  glyph: { width: 42, height: 42, borderRadius: radius.m, alignItems: 'center', justifyContent: 'center' },
   text: { flex: 1, gap: 3 },
   titleLine: { flexDirection: 'row', alignItems: 'center', gap: gap[2] },
   title: { flex: 1 },
-  delete: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 20 },
+  delete: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: radius.m },
   empty: { gap: gap[2], paddingVertical: gap[5], paddingHorizontal: 6 },
 }));

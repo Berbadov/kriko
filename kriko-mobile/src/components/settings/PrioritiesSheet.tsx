@@ -11,7 +11,7 @@ import { useState } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
 
 import { tr } from '../../i18n';
-import { gap } from '../../theme/tokens';
+import { gap, radius } from '../../theme/tokens';
 import { makeStyles, useColors, useType } from '../../theme/theme';
 import { Txt } from '../../theme/Txt';
 import { AnimatedSheet } from '../AnimatedSheet';
@@ -94,7 +94,7 @@ const useStyles = makeStyles((color) => StyleSheet.create({
     textAlignVertical: 'top',
     borderWidth: 1,
     borderColor: color.edgeStrong,
-    borderRadius: 12,
+    borderRadius: radius.m,
     color: color.ink,
     backgroundColor: color.inset,
     paddingHorizontal: gap[3],
