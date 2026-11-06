@@ -1,6 +1,6 @@
 """Build the macOS iconset from the desktop app's checked ICO artwork.
 
-The source icon is the same white K on the Kriko blue plate used by the
+The source icon is the same jack on the gold plate used by the
 Windows executable. macOS's ``sips`` makes the additional sizes and
 ``iconutil`` wraps them in the native ICNS container.
 """
