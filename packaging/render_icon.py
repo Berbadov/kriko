@@ -219,7 +219,7 @@ def smooth_png(shapes, side: int, size: int) -> bytes:
 
 
 #: The extension's toolbar icons are the desktop app's own icon, not a render.
-#: Since 1.0.1 the product has one mark, the jack on the gold plate that
+#: Since 1.0.1 the product has one mark, the jack on the dark blue plate that
 #: `kriko-ui/src-tauri/icons/icon.ico` carries for the exe, the taskbar and the
 #: installer. That file already holds a PNG at every size the manifest asks
 #: for, so the toolbar copies those bytes out rather than drawing a second

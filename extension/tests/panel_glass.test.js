@@ -60,12 +60,12 @@ const THEMES = {
 };
 const PAGES = { white: [255, 255, 255], black: [0, 0, 0], grey: [128, 128, 128], "listing yellow": [241, 214, 138] };
 
-test("the light surface uses the Devs palette's grey-green paper, ink and gold", () => {
-  assert.equal(token("--light-bg-base"), "#e9ece8");
-  assert.equal(token("--light-bg-panel"), "#f5f6f4");
-  assert.equal(token("--light-fg"), "#121513");
-  assert.equal(token("--light-brand"), "#9c7424");
-  assert.equal(token("--light-border"), "rgba(18,21,19,0.16)");
+test("the light surface is flat white and grey, with ink and one dark blue", () => {
+  assert.equal(token("--light-bg-base"), "#f2f2f2");
+  assert.equal(token("--light-bg-panel"), "#ffffff");
+  assert.equal(token("--light-fg"), "#111111");
+  assert.equal(token("--light-brand"), "#1f3fd1");
+  assert.equal(token("--light-border"), "rgba(0,0,0,0.14)");
 });
 
 for (const [name, theme] of Object.entries(THEMES)) {
