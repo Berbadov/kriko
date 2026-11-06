@@ -73,7 +73,7 @@ export function ChatScreen({ onOpen, onAction }: {
               exit={{ opacity: 0, y: -m.d(12) }}
               transition={m.tx.page}
             >
-              <DitherMark height={96} />
+              <DitherMark height={84} />
               <h1>What do you want to check?</h1>
             </motion.header>
           )}
