@@ -155,7 +155,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("draft", type=Path, help="a finished draft directory")
     parser.add_argument("--name", help="the directory under packs/ (default: the draft's own name)")
-    parser.add_argument("--icon", default="", help="the drawing its pages show, by name (ICONS in site/tools/render_problems.py)")
+    parser.add_argument("--icon", default="", help="the drawing its pages show, by name (ICONS in the website repository's tools/render_problems.py)")
     parser.add_argument("--packs", type=Path, default=Path(__file__).resolve().parents[1] / "packs")
     args = parser.parse_args()
     target, kept, dropped = import_draft(args.draft, args.packs, args.name or args.draft.name, args.icon)

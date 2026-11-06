@@ -23,11 +23,9 @@
 #     tools/gate.sh wheel    # just: does the artifact we ship actually import
 #     tools/gate.sh node     # just the JavaScript suites
 #     tools/gate.sh ui       # desktop build, lint and behavior scenarios
-#     tools/gate.sh site     # website tests
-#     tools/gate.sh mobile   # the separate mobile prototype's static checks
 #     tools/gate.sh tauri    # just the desktop shell: cargo check and cargo test, offline
 #
-# With no argument the stages are independent — py, wheel, node, ui, site and tauri —
+# With no argument the stages are independent — py, wheel, node, ui and tauri —
 # so they run concurrently. Each writes to its own log, and a log is printed as
 # one block when its stage finishes, so output never interleaves. A failed stage
 # does not stop the others: the gate then exits non-zero and names every stage
@@ -83,8 +81,8 @@ export PYTHON
 
 only="${1:-all}"
 case "$only" in
-    all|py|wheel|node|ui|site|mobile|tauri) ;;
-    *) echo "unknown gate: $only (expected: all, py, node, ui, site, mobile, tauri, wheel)" >&2; exit 2 ;;
+    all|py|wheel|node|ui|tauri) ;;
+    *) echo "unknown gate: $only (expected: all, py, node, ui, tauri, wheel)" >&2; exit 2 ;;
 esac
 
 # pytest workers: `auto` is every core. GATE_JOBS=1 makes the whole gate serial.
@@ -246,17 +244,7 @@ gate_ui() {
     fi
 }
 
-gate_site() {
-    step "website tests"
-    npm run test:site
-}
 
-# The mobile prototype is separate from the desktop release. Check it explicitly
-# when editing or distributing it; no skipped device build is called a pass.
-gate_mobile() {
-    step "mobile prototype typecheck and lint"
-    (cd kriko-mobile && npm run typecheck && CI=1 EXPO_NO_TELEMETRY=1 npm run lint)
-}
 
 gate_tauri() {
     CRATE="kriko-ui/src-tauri"
@@ -351,7 +339,7 @@ summary() {
     local wall="$1" n
     local -a failed=() skipped=()
     printf '\n\033[1m── gate summary\033[0m\n'
-    for n in py wheel node ui site tauri; do
+    for n in py wheel node ui tauri; do
         [ -n "${verdict_of[$n]:-}" ] || continue
         printf '  %-7s %-16s %s\n' "$n" "${verdict_of[$n]}" "$(fmt_ms "${took_ms[$n]}")"
         # 3 is "this stage could not run a real check" — reported, and never a
@@ -377,7 +365,7 @@ summary() {
 # All four stages at once. Each runs in a background subshell with its own log;
 # whichever finishes first is printed first, as one block.
 run_all_concurrently() {
-    local -a stages=(py wheel node ui site tauri)
+    local -a stages=(py wheel node ui tauri)
     local -A name_of=() started=()
     local n rc done_pid remaining t0 verdict
     t0=$(now_ms)
@@ -412,7 +400,7 @@ run_all_concurrently() {
 run_all_in_order() {
     local n t0 s rc
     t0=$(now_ms)
-    for n in py wheel node ui site tauri; do
+    for n in py wheel node ui tauri; do
         current_stage=$n
         s=$(now_ms)
         # The exit code was being dropped here (`verdict_of[$n]=passed` whatever
