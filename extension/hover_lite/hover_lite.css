@@ -11,55 +11,55 @@
   /* BEGIN shared palette tokens */
 
   /* Dark palette */
-  --bg-base:     #0a0d0b;
-  --bg-panel:    #0f1310;
-  --bg-header:   #0f1310;
-  --bg-surface:  #141814;
-  --bg-item:     #1a1f1b;
-  --border:      rgba(223,230,223,0.09);
-  --border-soft: rgba(223,230,223,0.06);
+  --bg-base:     #0b0b0c;
+  --bg-panel:    #121213;
+  --bg-header:   #121213;
+  --bg-surface:  #161617;
+  --bg-item:     #1d1d1f;
+  --border:      rgba(255,255,255,0.09);
+  --border-soft: rgba(255,255,255,0.06);
 
   /* Text — three levels, each at least 4.5:1 on its surface.
      Mild, subtle and faint are one value now, not three. */
-  --fg:          #e6ece6;
-  --fg-body:     #c9d1c9;
-  --fg-muted:    #9aa49c;
+  --fg:          #ededed;
+  --fg-body:     #cfcfcf;
+  --fg-muted:    #a0a0a0;
 
   /* Severity — surface and edge derived from the ink, so a
      fourth one costs a single value rather than three. */
-  --high-surface: rgba(212,166,78,0.10);
-  --high-border: rgba(212,166,78,0.32);
-  --high-ink:    #e2bd72;
-  --med-surface: rgba(201,211,198,0.08);
-  --med-border:  rgba(201,211,198,0.26);
-  --med-ink:     #c9d3c6;
-  --low-surface: rgba(156,199,166,0.10);
-  --low-border:  rgba(156,199,166,0.30);
-  --low-ink:     #9cc7a6;
+  --high-surface: rgba(74,104,255,0.12);
+  --high-border: rgba(74,104,255,0.36);
+  --high-ink:    #7d93ff;
+  --med-surface: rgba(214,214,214,0.08);
+  --med-border:  rgba(214,214,214,0.26);
+  --med-ink:     #d6d6d6;
+  --low-surface: rgba(189,189,189,0.08);
+  --low-border:  rgba(189,189,189,0.24);
+  --low-ink:     #bdbdbd;
 
   /* Data companions to the brand blue, the app's own (kriko-ui tokens.css). */
-  --violet:      #b59a62;
-  --teal:        #8fb5a0;
-  --mint:        #9cc7a6;
-  --sky:         #c9d3c6;
+  --violet:      #7d93ff;
+  --teal:        #a8a8a8;
+  --mint:        #bdbdbd;
+  --sky:         #d6d6d6;
 
   /* Design system: brand, ice, LED, bezel, glass, well */
-  --brand:       #d4a64e;
-  --brand-hover: #e2bd72;
-  --brand-low:   #b88d3c;
-  --brand-bright: #e2bd72;
-  --on-brand:    #0a0d0b;
-  --ice:         #c9d3c6;
-  --led-off:     #222a24;
-  --led-dim:     #55665a;
-  --bezel-hi:    #1a1f1b;
-  --bezel-lo:    #141814;
-  --bezel-edge:  rgba(223,230,223,0.12);
-  --glass-1:     rgba(223, 230, 223, 0.03);
-  --glass-2:     rgba(223, 230, 223, 0.06);
-  --glass-3:     rgba(223, 230, 223, 0.1);
-  --well:        #0f1310;
-  --border-control: rgba(223,230,223,0.16);
+  --brand:       #4a68ff;
+  --brand-hover: #7d93ff;
+  --brand-low:   #3552e0;
+  --brand-bright: #7d93ff;
+  --on-brand:    #ffffff;
+  --ice:         #d6d6d6;
+  --led-off:     #2a2a2d;
+  --led-dim:     #5a5a60;
+  --bezel-hi:    #1d1d1f;
+  --bezel-lo:    #161617;
+  --bezel-edge:  rgba(255,255,255,0.12);
+  --glass-1:     rgba(255, 255, 255, 0.03);
+  --glass-2:     rgba(255, 255, 255, 0.06);
+  --glass-3:     rgba(255, 255, 255, 0.1);
+  --well:        #121213;
+  --border-control: rgba(255,255,255,0.16);
 
   /* The panel lets the page show through (#260). The colour is kept as bare
      channels so one alpha can sit over it; the alpha and the backdrop are
@@ -68,101 +68,101 @@
      the light one; a test computes it from these very values). `brightness` on the dark backdrop is what pays for that:
      it is a pane of smoked glass, not a clear one. Settings can make it
      opaque (`data-glass="solid"`), and so does the system's own request. */
-  --bg-panel-rgb: 9, 12, 10;
+  --bg-panel-rgb: 11, 11, 12;
   --glass-panel-alpha: 0.72;
   --glass-backdrop: blur(16px) saturate(1.6) brightness(0.6);
 
   /* Accent, resolved from the panel's alias */
-  --accent:      #e2bd72;
+  --accent:      #7d93ff;
 
   /* Faces and edges the rules below share, so a light theme is a
      value rather than a second skin. */
-  --hover-face:  #1c231e;
-  --hover-edge:  rgba(223,230,223,0.18);
-  --row-face:    #141814;
-  --scroll-track: #0f1310;
-  --skeleton-a:  #141814;
-  --skeleton-b:  #1c231e;
-  --alert-ink:   #d9cdb8;
-  --ok-ink:      #9cc7a6;
-  --ok-surface:  rgba(156,199,166,0.12);
-  --ok-border:   rgba(156,199,166,0.32);
-  --warn-ink:    #e2bd72;
-  --warn-surface: rgba(212,166,78,0.12);
-  --warn-border: rgba(212,166,78,0.32);
-  --key-edge:    #b88d3c;
-  --sky-base:    #1f2a22;
+  --hover-face:  #222226;
+  --hover-edge:  rgba(255,255,255,0.18);
+  --row-face:    #161617;
+  --scroll-track: #121213;
+  --skeleton-a:  #161617;
+  --skeleton-b:  #222226;
+  --alert-ink:   #d0d0d4;
+  --ok-ink:      #bdbdbd;
+  --ok-surface:  rgba(189,189,189,0.10);
+  --ok-border:   rgba(189,189,189,0.28);
+  --warn-ink:    #7d93ff;
+  --warn-surface: rgba(74,104,255,0.12);
+  --warn-border: rgba(74,104,255,0.32);
+  --key-edge:    #3552e0;
+  --sky-base:    #1c1c1f;
   --sunken-face: rgba(0, 0, 0, 0.22);
   --shadow-panel: 0 18px 50px -12px rgba(0,0,0,0.6), 0 2px 6px rgba(0,0,0,0.35);
-  --tour-scrim: rgba(4, 6, 5, 0.66);
+  --tour-scrim: rgba(4, 4, 6, 0.66);
   --shadow-card:  0 1px 2px rgba(0,0,0,0.4);
   --well-shadow:  inset 0 1px 2px rgba(0,0,0,0.35);
 
   /* Light palette. Applied by the media query and the explicit override
      after this rule; every key here has a dark twin above. */
-  --light-bg-base:     #e9ece8;
-  --light-bg-panel:    #f5f6f4;
-  --light-bg-header:   #f5f6f4;
-  --light-bg-surface:  #eef0ec;
-  --light-bg-item:     #e9ece8;
-  --light-border:      rgba(18,21,19,0.16);
-  --light-border-soft: rgba(18,21,19,0.10);
+  --light-bg-base:     #f2f2f2;
+  --light-bg-panel:    #ffffff;
+  --light-bg-header:   #ffffff;
+  --light-bg-surface:  #f7f7f7;
+  --light-bg-item:     #f2f2f2;
+  --light-border:      rgba(0,0,0,0.14);
+  --light-border-soft: rgba(0,0,0,0.08);
 
-  --light-fg:          #121513;
-  --light-fg-body:     #2f3531;
-  --light-fg-muted:    #545b55;
+  --light-fg:          #111111;
+  --light-fg-body:     #333333;
+  --light-fg-muted:    #595959;
 
-  --light-high-surface: rgba(156,116,36,0.10);
-  --light-high-border:  rgba(156,116,36,0.30);
-  --light-high-ink:     #7f5d1a;
-  --light-med-surface:  rgba(63,74,64,0.08);
-  --light-med-border:   rgba(63,74,64,0.26);
-  --light-med-ink:      #3f4a40;
-  --light-low-surface:  rgba(47,107,69,0.10);
-  --light-low-border:   rgba(47,107,69,0.30);
-  --light-low-ink:      #2f6b45;
+  --light-high-surface: rgba(31,63,209,0.08);
+  --light-high-border:  rgba(31,63,209,0.30);
+  --light-high-ink:     #1a35b3;
+  --light-med-surface:  rgba(51,51,51,0.06);
+  --light-med-border:   rgba(51,51,51,0.24);
+  --light-med-ink:      #333333;
+  --light-low-surface:  rgba(85,85,85,0.06);
+  --light-low-border:   rgba(85,85,85,0.22);
+  --light-low-ink:      #555555;
 
-  --light-brand:        #9c7424;
-  --light-brand-hover:  #8a6620;
-  --light-brand-low:    #7f5d1a;
-  --light-brand-bright: #9c7424;
-  --light-on-brand:     #f5f6f4;
-  --light-ice:          #9c7424;
-  --light-led-off:      #d3d9d1;
-  --light-led-dim:      #98a39a;
-  --light-bezel-hi:     #f5f6f4;
-  --light-bezel-lo:     #eef0ec;
-  --light-bezel-edge:   rgba(18,21,19,0.10);
-  --light-glass-1:      rgba(18,21,19,0.025);
-  --light-glass-2:      rgba(18,21,19,0.05);
-  --light-glass-3:      rgba(18,21,19,0.08);
-  --light-well:         #e9ece8;
-  --light-border-control: rgba(18,21,19,0.2);
-  --light-bg-panel-rgb: 233, 236, 232;
+  --light-brand:        #1f3fd1;
+  --light-brand-hover:  #1a35b3;
+  --light-brand-low:    #162d99;
+  --light-brand-bright: #1f3fd1;
+  --light-on-brand:     #ffffff;
+  --light-ice:          #1f3fd1;
+  --light-led-off:      #dcdcdc;
+  --light-led-dim:      #a0a0a0;
+  --light-bezel-hi:     #ffffff;
+  --light-bezel-lo:     #f7f7f7;
+  --light-bezel-edge:   rgba(0,0,0,0.10);
+  --light-glass-1:      rgba(0,0,0,0.025);
+  --light-glass-2:      rgba(0,0,0,0.05);
+  --light-glass-3:      rgba(0,0,0,0.08);
+  --light-well:         #f2f2f2;
+  --light-border-control: rgba(0,0,0,0.2);
+  --light-bg-panel-rgb: 245, 245, 245;
   --light-glass-panel-alpha: 0.96;
   --light-glass-backdrop: blur(12px) saturate(1.05);
-  --light-accent:       #9c7424;
+  --light-accent:       #1f3fd1;
 
-  --light-hover-face:  #e3e7e1;
-  --light-hover-edge:  rgba(18,21,19,0.24);
-  --light-row-face:    #f5f6f4;
-  --light-scroll-track: #e9ece8;
-  --light-skeleton-a:  #dfe4dd;
-  --light-skeleton-b:  #eef0ec;
-  --light-alert-ink:   #5b4410;
-  --light-ok-ink:      #2f6b45;
-  --light-ok-surface:  rgba(47, 107, 69, 0.08);
-  --light-ok-border:   rgba(47, 107, 69, 0.24);
-  --light-warn-ink:    #7f5d1a;
-  --light-warn-surface: rgba(156, 116, 36, 0.10);
-  --light-warn-border: rgba(156, 116, 36, 0.28);
-  --light-key-edge:    #c9b27e;
-  --light-sky-base:    #3e4d41;
-  --light-sunken-face: rgba(18, 21, 19, 0.04);
-  --light-shadow-panel: 0 18px 50px -18px rgba(18,21,19,0.28), 0 2px 6px rgba(18,21,19,0.10);
-  --light-tour-scrim: rgba(18, 21, 19, 0.48);
-  --light-shadow-card:  0 1px 3px rgba(18,21,19,0.08);
-  --light-well-shadow:  inset 0 1px 2px rgba(18,21,19,0.05);
+  --light-hover-face:  #ececec;
+  --light-hover-edge:  rgba(0,0,0,0.22);
+  --light-row-face:    #ffffff;
+  --light-scroll-track: #f2f2f2;
+  --light-skeleton-a:  #e6e6e6;
+  --light-skeleton-b:  #f5f5f5;
+  --light-alert-ink:   #1a2a80;
+  --light-ok-ink:      #444444;
+  --light-ok-surface:  rgba(68, 68, 68, 0.07);
+  --light-ok-border:   rgba(68, 68, 68, 0.22);
+  --light-warn-ink:    #1a35b3;
+  --light-warn-surface: rgba(31, 63, 209, 0.08);
+  --light-warn-border: rgba(31, 63, 209, 0.26);
+  --light-key-edge:    #9aa8e8;
+  --light-sky-base:    #28282c;
+  --light-sunken-face: rgba(0, 0, 0, 0.04);
+  --light-shadow-panel: 0 18px 50px -18px rgba(0,0,0,0.28), 0 2px 6px rgba(0,0,0,0.10);
+  --light-tour-scrim: rgba(17, 17, 17, 0.48);
+  --light-shadow-card:  0 1px 3px rgba(0,0,0,0.08);
+  --light-well-shadow:  inset 0 1px 2px rgba(0,0,0,0.05);
 
   /* Motion profile — Calm · Standard · Vivid. These are the Standard
      values; the [data-motion] selectors after this rule remap them, so one
@@ -2077,7 +2077,7 @@
 
 .lite-panel {
   background:
-    radial-gradient(120% 60% at 100% 0%, rgba(212,166,78,0.07), transparent 60%),
+    radial-gradient(120% 60% at 100% 0%, rgba(74,104,255,0.07), transparent 60%),
     rgba(var(--bg-panel-rgb), var(--glass-panel-alpha));
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -2613,7 +2613,7 @@
 }
 .lite-iconbtn:hover { background: rgba(255,255,255,0.20); border-color: transparent; color: var(--on-brand); }
 .lite-iconbtn:active { transform: scale(0.92); }
-.lite-iconbtn.lite-btn-close:hover { background: rgba(212,166,78,0.30); border-color: transparent; }
+.lite-iconbtn.lite-btn-close:hover { background: rgba(74,104,255,0.30); border-color: transparent; }
 
 /* content first: tighter body and gaps, a smooth scroll */
 .lite-body {
@@ -2699,8 +2699,8 @@
 .lite-rc-toggle:hover,
 .lite-rc-factbtn:hover:not(:disabled),
 .lite-rc-markbtn:hover {
-  background: rgba(212,166,78,0.16);
-  border-color: rgba(226,189,114,0.5);
+  background: rgba(74,104,255,0.16);
+  border-color: rgba(125,147,255,0.5);
   color: var(--fg);
   filter: none;
 }
@@ -2736,7 +2736,7 @@
   transition: border-color var(--dur-quick), box-shadow var(--dur-quick);
 }
 .lite-research input:focus,
-.lite-research textarea:focus { outline: 0; border-color: var(--brand-bright); box-shadow: 0 0 0 3px rgba(212,166,78,0.28); }
+.lite-research textarea:focus { outline: 0; border-color: var(--brand-bright); box-shadow: 0 0 0 3px rgba(74,104,255,0.28); }
 .lite-research textarea { resize: none; min-height: 52px; display: block; }
 /* a fold: height eases between 0 and its content */
 .lite-fold { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows var(--dur-med) var(--ease-out), opacity var(--dur-med) var(--ease-out), margin var(--dur-med) var(--ease-out); }
@@ -3109,7 +3109,7 @@
   content: ""; width: 4px; height: 8px; border: solid #fff; border-width: 0 2px 2px 0;
   transform: translateY(-1px) rotate(45deg) scale(0); transition: transform var(--dur-quick, 140ms);
 }
-.lite-buy-form input[type="checkbox"]:checked { background: var(--brand-low, #b88d3c); box-shadow: 0 0 0 1px var(--brand-low, #b88d3c); }
+.lite-buy-form input[type="checkbox"]:checked { background: var(--brand-low, #3552e0); box-shadow: 0 0 0 1px var(--brand-low, #3552e0); }
 .lite-buy-form input[type="checkbox"]:checked::after { transform: translateY(-1px) rotate(45deg) scale(1); }
 @media (prefers-reduced-motion: reduce) {
   .lite-buy-form input[type="checkbox"], .lite-buy-form input[type="checkbox"]::after { transition: none; }
@@ -3134,7 +3134,7 @@
 /* A browser that cannot blur what is behind the panel gets the opaque one:
    text over an unblurred page is the thing the blur exists to prevent. */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .lite-panel { background: radial-gradient(120% 60% at 100% 0%, rgba(212,166,78,0.07), transparent 60%), var(--bg-base); }
+  .lite-panel { background: radial-gradient(120% 60% at 100% 0%, rgba(74,104,255,0.07), transparent 60%), var(--bg-base); }
 }
 
 /* Warm paper / ink pass: calm surfaces, one blue action, readable sources. */
@@ -3502,7 +3502,7 @@
 }
 
 /* The identity layer: every finding sits on a rule that says how much it
-   matters, so severity reads by shape as well as by colour. A heavy gold bar
+   matters, so severity reads by shape as well as by colour. A heavy blue bar
    is serious, ticks are worth checking, dashes are minor. Headings are set
    heavy and close, as in the app. */
 .lite-rc { position: relative; padding-bottom: 10px; }

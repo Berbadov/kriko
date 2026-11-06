@@ -1,10 +1,10 @@
 /* Every colour, size and time in the interface comes from here.
    Dark is the first theme. `data-theme` is "system", "dark" or "light".
 
-   The Devs palette: a green-black ground in dark and a grey-green paper in
-   light, one ink, and one dull gold accent that is the only hue that carries
-   meaning. Severity is not a traffic light: serious takes the gold, to-check
-   the plain ink, a good sign a muted green. Radii: 4 / 6 / 10 / 10. Semantic hues get a `-text` pair that
+   Flat neutrals, black to white with plain greys between, and one dark blue
+   that is the only hue that carries meaning. Severity is not a traffic light:
+   serious takes the blue, to-check the plain ink, a good sign a quieter grey,
+   and the rule under each finding says it again by shape. Radii: 4 / 6 / 10 / 10. Semantic hues get a `-text` pair that
    passes contrast as text, and an `on-` pair that passes on their solid fill. */
 
 :root {
@@ -36,40 +36,40 @@
   color-scheme: dark;
 
   /* dark: neutral charcoal, no blue cast */
-  --ground: #0a0d0b;
-  --raise: #0f1310;
-  --panel: #141814;
-  --panel-2: #1a1f1b;
-  --edge: rgba(223, 230, 223, 0.08);
-  --edge-strong: rgba(223, 230, 223, 0.16);
-  --ink: #dfe6df;
-  --ink-2: #aab3ab;
-  --ink-3: #8c968e;
-  --accent: #d4a64e;
-  --accent-hi: #e2bd72;
-  --accent-ink: #0a0d0b;
-  --accent-soft: rgba(212, 166, 78, 0.16);
-  --warm: #e2bd72;
-  --ok: #9cc7a6;
-  --warn: #c9d3c6;
-  --risk: #d4a64e;
-  --ok-text: #9cc7a6;
-  --warn-text: #c9d3c6;
-  --risk-text: #e2bd72;
-  --on-risk: #0a0d0b;
-  --on-warn: #0a0d0b;
+  --ground: #0b0b0c;
+  --raise: #121213;
+  --panel: #161617;
+  --panel-2: #1d1d1f;
+  --edge: rgba(255, 255, 255, 0.08);
+  --edge-strong: rgba(255, 255, 255, 0.16);
+  --ink: #ededed;
+  --ink-2: #a8a8a8;
+  --ink-3: #8c8c8c;
+  --accent: #4a68ff;
+  --accent-hi: #7d93ff;
+  --accent-ink: #ffffff;
+  --accent-soft: rgba(74, 104, 255, 0.16);
+  --warm: #7d93ff;
+  --ok: #bdbdbd;
+  --warn: #d6d6d6;
+  --risk: #4a68ff;
+  --ok-text: #bdbdbd;
+  --warn-text: #d6d6d6;
+  --risk-text: #7d93ff;
+  --on-risk: #ffffff;
+  --on-warn: #0b0b0c;
   /* data companions to the brand blue: one hue each, used by bars, meters and charts */
-  --violet: #b59a62;
-  --teal: #8fb5a0;
-  --mint: #9cc7a6;
-  --sky: #c9d3c6;
+  --violet: #7d93ff;
+  --teal: #a8a8a8;
+  --mint: #bdbdbd;
+  --sky: #d6d6d6;
   --bar: linear-gradient(90deg, var(--accent), var(--accent-hi));
   /* on a lit fill, in both themes: the fill is the same gradient either way */
-  --on-fill: #0a0d0b;
+  --on-fill: #ffffff;
   --lit: rgba(255, 255, 255, 0.3);
   --sunk: rgba(0, 0, 0, 0.18);
-  --pill-bg: rgba(10, 13, 11, 0.6);
-  --pill-edge: rgba(223, 230, 223, 0.22);
+  --pill-bg: rgba(11, 11, 12, 0.6);
+  --pill-edge: rgba(255, 255, 255, 0.22);
   --step-0: var(--ink-3);
   --step-1: var(--warn);
   --step-2: var(--accent-hi);
@@ -77,17 +77,17 @@
   --bar-done: linear-gradient(90deg, var(--ok), var(--ok));
   --inset: color-mix(in srgb, var(--ink) 5%, var(--ground));
   --scrim: rgba(0, 0, 0, 0.66);
-  --glass: rgba(16, 20, 17, 0.62);
-  --glass-edge: rgba(223, 230, 223, 0.14);
+  --glass: rgba(18, 18, 19, 0.62);
+  --glass-edge: rgba(255, 255, 255, 0.14);
   --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
   --shadow-2: 0 18px 50px -12px rgba(0, 0, 0, 0.6), 0 2px 6px rgba(0, 0, 0, 0.35);
   /* a glass group: translucent fill, bright rim, a hairline outside it, a soft
      shadow, and a solid fill for a platform with no backdrop blur */
-  --gl-fill: rgba(223, 230, 223, 0.06);
-  --gl-rim: rgba(223, 230, 223, 0.18);
+  --gl-fill: rgba(255, 255, 255, 0.06);
+  --gl-rim: rgba(255, 255, 255, 0.18);
   --gl-line: rgba(0, 0, 0, 0.45);
-  --gl-hair: rgba(223, 230, 223, 0.08);
-  --gl-solid: #171c18;
+  --gl-hair: rgba(255, 255, 255, 0.08);
+  --gl-solid: #1a1a1c;
   --gl-shadow: 0 14px 34px -16px rgba(0, 0, 0, 0.7), 0 2px 6px rgba(0, 0, 0, 0.25);
 }
 
@@ -95,89 +95,89 @@
 @media (prefers-color-scheme: light) {
   :root:not([data-theme='dark']) {
     color-scheme: light;
-    --ground: #e9ece8;
-    --raise: #f5f6f4;
-    --panel: #f5f6f4;
-    --panel-2: #eef0ec;
-    --edge: rgba(18, 21, 19, 0.09);
-    --edge-strong: rgba(18, 21, 19, 0.18);
-    --ink: #121513;
-    --ink-2: #3f4641;
-    --ink-3: #5c625d;
-    --accent: #9c7424;
-    --accent-hi: #8a6620;
-    --accent-ink: #f5f6f4;
-    --accent-soft: rgba(156, 116, 36, 0.12);
-    --warm: #9c7424;
-    --ok: #2f6b45;
-    --warn: #4b5a4c;
-    --risk: #9c7424;
-    --ok-text: #2f6b45;
-    --warn-text: #3f4a40;
-    --risk-text: #7f5d1a;
-    --on-risk: #f5f6f4;
-    --on-warn: #f5f6f4;
-    --violet: #8a7444;
-    --teal: #3f6b58;
-    --mint: #2f6b45;
-    --sky: #4b5a4c;
+    --ground: #f2f2f2;
+    --raise: #ffffff;
+    --panel: #ffffff;
+    --panel-2: #f2f2f2;
+    --edge: rgba(0, 0, 0, 0.09);
+    --edge-strong: rgba(0, 0, 0, 0.18);
+    --ink: #111111;
+    --ink-2: #444444;
+    --ink-3: #666666;
+    --accent: #1f3fd1;
+    --accent-hi: #1a35b3;
+    --accent-ink: #ffffff;
+    --accent-soft: rgba(31, 63, 209, 0.10);
+    --warm: #1f3fd1;
+    --ok: #555555;
+    --warn: #333333;
+    --risk: #1f3fd1;
+    --ok-text: #555555;
+    --warn-text: #333333;
+    --risk-text: #1a35b3;
+    --on-risk: #ffffff;
+    --on-warn: #ffffff;
+    --violet: #1f3fd1;
+    --teal: #555555;
+    --mint: #555555;
+    --sky: #333333;
     --bar: linear-gradient(90deg, var(--accent), var(--accent-hi));
     --bar-done: linear-gradient(90deg, var(--ok), var(--ok));
     --inset: color-mix(in srgb, var(--ink) 5%, var(--panel));
     --scrim: rgba(0, 0, 0, 0.45);
-    --glass: rgba(245, 246, 244, 0.72);
+    --glass: rgba(255, 255, 255, 0.72);
     --glass-edge: rgba(255, 255, 255, 0.9);
     --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.06);
     --shadow-2: 0 12px 28px -14px rgba(0, 0, 0, 0.14), 0 2px 6px rgba(0, 0, 0, 0.05);
-    --gl-fill: rgba(245, 246, 244, 0.7);
-    --gl-rim: rgba(255, 255, 255, 0.9);
-    --gl-line: rgba(18, 21, 19, 0.1);
-    --gl-hair: rgba(18, 21, 19, 0.09);
-    --gl-solid: #f5f6f4;
-    --gl-shadow: 0 14px 30px -18px rgba(18, 21, 19, 0.28), 0 2px 5px rgba(18, 21, 19, 0.06);
+    --gl-fill: rgba(255, 255, 255, 0.7);
+    --gl-rim: rgba(255, 255, 255, 0.95);
+    --gl-line: rgba(0, 0, 0, 0.1);
+    --gl-hair: rgba(0, 0, 0, 0.09);
+    --gl-solid: #ffffff;
+    --gl-shadow: 0 14px 30px -18px rgba(0, 0, 0, 0.28), 0 2px 5px rgba(0, 0, 0, 0.06);
   }
 }
 
 :root[data-theme='light'] {
   color-scheme: light;
-  --ground: #e9ece8;
-  --raise: #f5f6f4;
-  --panel: #f5f6f4;
-  --panel-2: #eef0ec;
-  --edge: rgba(18, 21, 19, 0.09);
-  --edge-strong: rgba(18, 21, 19, 0.18);
-  --ink: #121513;
-  --ink-2: #3f4641;
-  --ink-3: #5c625d;
-  --accent: #9c7424;
-  --accent-hi: #8a6620;
-  --accent-ink: #f5f6f4;
-  --accent-soft: rgba(156, 116, 36, 0.12);
-  --warm: #9c7424;
-  --ok: #2f6b45;
-  --warn: #4b5a4c;
-  --risk: #9c7424;
-  --ok-text: #2f6b45;
-  --warn-text: #3f4a40;
-  --risk-text: #7f5d1a;
-  --on-risk: #f5f6f4;
-  --on-warn: #f5f6f4;
-  --violet: #8a7444;
-  --teal: #3f6b58;
-  --mint: #2f6b45;
-  --sky: #4b5a4c;
+  --ground: #f2f2f2;
+  --raise: #ffffff;
+  --panel: #ffffff;
+  --panel-2: #f2f2f2;
+  --edge: rgba(0, 0, 0, 0.09);
+  --edge-strong: rgba(0, 0, 0, 0.18);
+  --ink: #111111;
+  --ink-2: #444444;
+  --ink-3: #666666;
+  --accent: #1f3fd1;
+  --accent-hi: #1a35b3;
+  --accent-ink: #ffffff;
+  --accent-soft: rgba(31, 63, 209, 0.10);
+  --warm: #1f3fd1;
+  --ok: #555555;
+  --warn: #333333;
+  --risk: #1f3fd1;
+  --ok-text: #555555;
+  --warn-text: #333333;
+  --risk-text: #1a35b3;
+  --on-risk: #ffffff;
+  --on-warn: #ffffff;
+  --violet: #1f3fd1;
+  --teal: #555555;
+  --mint: #555555;
+  --sky: #333333;
   --bar: linear-gradient(90deg, var(--accent), var(--accent-hi));
   --bar-done: linear-gradient(90deg, var(--ok), var(--ok));
   --inset: color-mix(in srgb, var(--ink) 5%, var(--panel));
   --scrim: rgba(0, 0, 0, 0.45);
-  --glass: rgba(245, 246, 244, 0.72);
+  --glass: rgba(255, 255, 255, 0.72);
   --glass-edge: rgba(255, 255, 255, 0.9);
   --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.06);
   --shadow-2: 0 12px 28px -14px rgba(0, 0, 0, 0.14), 0 2px 6px rgba(0, 0, 0, 0.05);
-  --gl-fill: rgba(245, 246, 244, 0.7);
-  --gl-rim: rgba(255, 255, 255, 0.9);
-  --gl-line: rgba(18, 21, 19, 0.1);
-  --gl-hair: rgba(18, 21, 19, 0.09);
-  --gl-solid: #f5f6f4;
-  --gl-shadow: 0 14px 30px -18px rgba(18, 21, 19, 0.28), 0 2px 5px rgba(18, 21, 19, 0.06);
+  --gl-fill: rgba(255, 255, 255, 0.7);
+  --gl-rim: rgba(255, 255, 255, 0.95);
+  --gl-line: rgba(0, 0, 0, 0.1);
+  --gl-hair: rgba(0, 0, 0, 0.09);
+  --gl-solid: #ffffff;
+  --gl-shadow: 0 14px 30px -18px rgba(0, 0, 0, 0.28), 0 2px 5px rgba(0, 0, 0, 0.06);
 }
