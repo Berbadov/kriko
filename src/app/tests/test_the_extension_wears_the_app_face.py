@@ -50,7 +50,7 @@ def test_the_panel_and_the_page_keep_one_palette_with_the_app():
     app = (EXT.parent / "kriko-ui" / "src" / "styles" / "tokens.css").read_text(encoding="utf-8").lower()
     for sheet in (EXT / "hover_lite" / "hover_lite.css", EXT / "options" / "options.css"):
         text = sheet.read_text(encoding="utf-8").lower()
-        # Keep the shared dark ground, the gold accent, the serious ink and
-        # the good-sign green of the Devs palette.
-        for colour in ("#0a0d0b", "#d4a64e", "#e2bd72", "#9cc7a6"):
+        # Keep the shared dark ground, the dark blue accent, the serious ink
+        # and the good-sign grey: flat neutrals and one blue.
+        for colour in ("#0b0b0c", "#4a68ff", "#7d93ff", "#bdbdbd"):
             assert colour in app and colour in text, f"{sheet.name} lacks {colour}"
