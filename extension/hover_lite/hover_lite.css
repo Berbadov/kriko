@@ -11,54 +11,54 @@
   /* BEGIN shared palette tokens */
 
   /* Dark palette */
-  --bg-base:     #0b0b0d;
-  --bg-panel:    #131316;
-  --bg-header:   #131316;
-  --bg-surface:  #17171a;
-  --bg-item:     #1e1e22;
+  --bg-base:     #161618;
+  --bg-panel:    #1b1b1e;
+  --bg-header:   #1b1b1e;
+  --bg-surface:  #202023;
+  --bg-item:     #27272b;
   --border:      rgba(255,255,255,0.09);
   --border-soft: rgba(255,255,255,0.06);
 
   /* Text — three levels, each at least 4.5:1 on its surface.
      Mild, subtle and faint are one value now, not three. */
-  --fg:          #eef1f9;
-  --fg-body:     #cdd3e4;
-  --fg-muted:    #9aa3bb;
+  --fg:          #ededed;
+  --fg-body:     #cfcfcf;
+  --fg-muted:    #acacac;
 
   /* Severity — surface and edge derived from the ink, so a
      fourth one costs a single value rather than three. */
-  --high-surface: rgba(255,107,122,0.10);
-  --high-border: rgba(255,107,122,0.30);
-  --high-ink:    #ff6b7a;
-  --med-surface: rgba(245,184,75,0.10);
-  --med-border:  rgba(245,184,75,0.30);
-  --med-ink:     #f5b84b;
-  --low-surface: rgba(61,220,151,0.10);
-  --low-border:  rgba(61,220,151,0.30);
-  --low-ink:     #3ddc97;
+  --high-surface: rgba(82,104,209,0.14);
+  --high-border: rgba(82,104,209,0.40);
+  --high-ink:    #8a9be4;
+  --med-surface: rgba(214,214,214,0.08);
+  --med-border:  rgba(214,214,214,0.26);
+  --med-ink:     #d6d6d6;
+  --low-surface: rgba(189,189,189,0.08);
+  --low-border:  rgba(189,189,189,0.24);
+  --low-ink:     #bdbdbd;
 
   /* Data companions to the brand blue, the app's own (kriko-ui tokens.css). */
-  --violet:      #9d8cff;
-  --teal:        #38d9e3;
-  --mint:        #52e5b3;
-  --sky:         #6cc6ff;
+  --violet:      #8a9be4;
+  --teal:        #a8a8a8;
+  --mint:        #bdbdbd;
+  --sky:         #d6d6d6;
 
   /* Design system: brand, ice, LED, bezel, glass, well */
-  --brand:       #3563f5;
-  --brand-hover: #5a82ff;
-  --brand-low:   #2c53e0;
-  --brand-bright: #7b98ff;
+  --brand:       #5268d1;
+  --brand-hover: #8a9be4;
+  --brand-low:   #4256b8;
+  --brand-bright: #8a9be4;
   --on-brand:    #ffffff;
-  --ice:         #9db6ff;
-  --led-off:     #2a3045;
-  --led-dim:     #5a6279;
-  --bezel-hi:    #1e1e22;
-  --bezel-lo:    #17171a;
+  --ice:         #d6d6d6;
+  --led-off:     #333338;
+  --led-dim:     #5a5a60;
+  --bezel-hi:    #27272b;
+  --bezel-lo:    #202023;
   --bezel-edge:  rgba(255,255,255,0.12);
   --glass-1:     rgba(255, 255, 255, 0.03);
   --glass-2:     rgba(255, 255, 255, 0.06);
   --glass-3:     rgba(255, 255, 255, 0.1);
-  --well:        #131316;
+  --well:        #1b1b1e;
   --border-control: rgba(255,255,255,0.16);
 
   /* The panel lets the page show through (#260). The colour is kept as bare
@@ -68,101 +68,101 @@
      the light one; a test computes it from these very values). `brightness` on the dark backdrop is what pays for that:
      it is a pane of smoked glass, not a clear one. Settings can make it
      opaque (`data-glass="solid"`), and so does the system's own request. */
-  --bg-panel-rgb: 9, 11, 17;
+  --bg-panel-rgb: 22, 22, 24;
   --glass-panel-alpha: 0.72;
   --glass-backdrop: blur(16px) saturate(1.6) brightness(0.6);
 
   /* Accent, resolved from the panel's alias */
-  --accent:      #7b98ff;
+  --accent:      #8a9be4;
 
   /* Faces and edges the rules below share, so a light theme is a
      value rather than a second skin. */
-  --hover-face:  #1f2538;
+  --hover-face:  #2c2c31;
   --hover-edge:  rgba(255,255,255,0.18);
-  --row-face:    #17171a;
-  --scroll-track: #131316;
-  --skeleton-a:  #17171a;
-  --skeleton-b:  #1c2133;
-  --alert-ink:   #d6c2c3;
-  --ok-ink:      #3ddc97;
-  --ok-surface:  rgba(61,220,151,0.12);
-  --ok-border:   rgba(61,220,151,0.32);
-  --warn-ink:    #f5b84b;
-  --warn-surface: rgba(245,184,75,0.12);
-  --warn-border: rgba(245,184,75,0.32);
-  --key-edge:    #2c53e0;
-  --sky-base:    #1a3fd0;
+  --row-face:    #202023;
+  --scroll-track: #1b1b1e;
+  --skeleton-a:  #202023;
+  --skeleton-b:  #2c2c31;
+  --alert-ink:   #d0d0d4;
+  --ok-ink:      #bdbdbd;
+  --ok-surface:  rgba(189,189,189,0.10);
+  --ok-border:   rgba(189,189,189,0.28);
+  --warn-ink:    #8a9be4;
+  --warn-surface: rgba(82,104,209,0.14);
+  --warn-border: rgba(82,104,209,0.36);
+  --key-edge:    #4256b8;
+  --sky-base:    #222226;
   --sunken-face: rgba(0, 0, 0, 0.22);
   --shadow-panel: 0 18px 50px -12px rgba(0,0,0,0.6), 0 2px 6px rgba(0,0,0,0.35);
-  --tour-scrim: rgba(4, 6, 12, 0.66);
+  --tour-scrim: rgba(4, 4, 6, 0.66);
   --shadow-card:  0 1px 2px rgba(0,0,0,0.4);
   --well-shadow:  inset 0 1px 2px rgba(0,0,0,0.35);
 
   /* Light palette. Applied by the media query and the explicit override
      after this rule; every key here has a dark twin above. */
-  --light-bg-base:     #f4f0e6;
-  --light-bg-panel:    #fffdf7;
-  --light-bg-header:   #fffdf7;
-  --light-bg-surface:  #f8f5ee;
-  --light-bg-item:     #f4f0e6;
-  --light-border:      rgba(83,72,50,0.16);
-  --light-border-soft: rgba(83,72,50,0.10);
+  --light-bg-base:     #f2f2f2;
+  --light-bg-panel:    #ffffff;
+  --light-bg-header:   #ffffff;
+  --light-bg-surface:  #f7f7f7;
+  --light-bg-item:     #f2f2f2;
+  --light-border:      rgba(0,0,0,0.14);
+  --light-border-soft: rgba(0,0,0,0.08);
 
-  --light-fg:          #24231f;
-  --light-fg-body:     #3e3a33;
-  --light-fg-muted:    #69655e;
+  --light-fg:          #111111;
+  --light-fg-body:     #333333;
+  --light-fg-muted:    #595959;
 
-  --light-high-surface: rgba(166,61,52,0.08);
-  --light-high-border:  rgba(166,61,52,0.25);
-  --light-high-ink:     #a63d34;
-  --light-med-surface:  rgba(138,90,0,0.10);
-  --light-med-border:   rgba(138,90,0,0.30);
-  --light-med-ink:      #8a5a00;
-  --light-low-surface:  rgba(15,122,82,0.10);
-  --light-low-border:   rgba(15,122,82,0.30);
-  --light-low-ink:      #277345;
+  --light-high-surface: rgba(29,45,127,0.08);
+  --light-high-border:  rgba(29,45,127,0.30);
+  --light-high-ink:     #17246a;
+  --light-med-surface:  rgba(51,51,51,0.06);
+  --light-med-border:   rgba(51,51,51,0.24);
+  --light-med-ink:      #333333;
+  --light-low-surface:  rgba(85,85,85,0.06);
+  --light-low-border:   rgba(85,85,85,0.22);
+  --light-low-ink:      #555555;
 
-  --light-brand:        #2e5bef;
-  --light-brand-hover:  #244bcf;
-  --light-brand-low:    #2448c2;
-  --light-brand-bright: #2e5bef;
+  --light-brand:        #1d2d7f;
+  --light-brand-hover:  #17246a;
+  --light-brand-low:    #121d57;
+  --light-brand-bright: #1d2d7f;
   --light-on-brand:     #ffffff;
-  --light-ice:          #2e5bef;
-  --light-led-off:      #ded8cc;
-  --light-led-dim:      #aaa397;
-  --light-bezel-hi:     #fffdf7;
-  --light-bezel-lo:     #f8f5ee;
-  --light-bezel-edge:   rgba(83,72,50,0.10);
-  --light-glass-1:      rgba(83,72,50,0.025);
-  --light-glass-2:      rgba(83,72,50,0.05);
-  --light-glass-3:      rgba(83,72,50,0.08);
-  --light-well:         #f4f0e6;
-  --light-border-control: rgba(83,72,50,0.2);
-  --light-bg-panel-rgb: 244, 240, 230;
+  --light-ice:          #1d2d7f;
+  --light-led-off:      #dcdcdc;
+  --light-led-dim:      #a0a0a0;
+  --light-bezel-hi:     #ffffff;
+  --light-bezel-lo:     #f7f7f7;
+  --light-bezel-edge:   rgba(0,0,0,0.10);
+  --light-glass-1:      rgba(0,0,0,0.025);
+  --light-glass-2:      rgba(0,0,0,0.05);
+  --light-glass-3:      rgba(0,0,0,0.08);
+  --light-well:         #f2f2f2;
+  --light-border-control: rgba(0,0,0,0.2);
+  --light-bg-panel-rgb: 245, 245, 245;
   --light-glass-panel-alpha: 0.96;
   --light-glass-backdrop: blur(12px) saturate(1.05);
-  --light-accent:       #2e5bef;
+  --light-accent:       #1d2d7f;
 
-  --light-hover-face:  #f0eadf;
-  --light-hover-edge:  rgba(83,72,50,0.24);
-  --light-row-face:    #fffdf7;
-  --light-scroll-track: #f4f0e6;
-  --light-skeleton-a:  #ebe5d9;
-  --light-skeleton-b:  #f8f5ee;
-  --light-alert-ink:   #71372f;
-  --light-ok-ink:      #286342;
-  --light-ok-surface:  rgba(39, 115, 69, 0.08);
-  --light-ok-border:   rgba(39, 115, 69, 0.24);
-  --light-warn-ink:    #7a5000;
-  --light-warn-surface: rgba(122, 80, 0, 0.10);
-  --light-warn-border: rgba(122, 80, 0, 0.28);
-  --light-key-edge:    #9db0ee;
-  --light-sky-base:    #2c53e0;
-  --light-sunken-face: rgba(16, 20, 40, 0.04);
-  --light-shadow-panel: 0 18px 50px -18px rgba(54,45,28,0.28), 0 2px 6px rgba(54,45,28,0.10);
-  --light-tour-scrim: rgba(36, 35, 31, 0.48);
-  --light-shadow-card:  0 1px 3px rgba(54,45,28,0.08);
-  --light-well-shadow:  inset 0 1px 2px rgba(54,45,28,0.05);
+  --light-hover-face:  #ececec;
+  --light-hover-edge:  rgba(0,0,0,0.22);
+  --light-row-face:    #ffffff;
+  --light-scroll-track: #f2f2f2;
+  --light-skeleton-a:  #e6e6e6;
+  --light-skeleton-b:  #f5f5f5;
+  --light-alert-ink:   #17246a;
+  --light-ok-ink:      #444444;
+  --light-ok-surface:  rgba(68, 68, 68, 0.07);
+  --light-ok-border:   rgba(68, 68, 68, 0.22);
+  --light-warn-ink:    #17246a;
+  --light-warn-surface: rgba(29, 45, 127, 0.08);
+  --light-warn-border: rgba(29, 45, 127, 0.26);
+  --light-key-edge:    #9aa3cf;
+  --light-sky-base:    #28282c;
+  --light-sunken-face: rgba(0, 0, 0, 0.04);
+  --light-shadow-panel: 0 18px 50px -18px rgba(0,0,0,0.28), 0 2px 6px rgba(0,0,0,0.10);
+  --light-tour-scrim: rgba(17, 17, 17, 0.48);
+  --light-shadow-card:  0 1px 3px rgba(0,0,0,0.08);
+  --light-well-shadow:  inset 0 1px 2px rgba(0,0,0,0.05);
 
   /* Motion profile — Calm · Standard · Vivid. These are the Standard
      values; the [data-motion] selectors after this rule remap them, so one
@@ -237,7 +237,7 @@
   /* END shared palette tokens */
 
   /* Type */
-  /* The Kriko face, Geist, bundled in assets/fonts and registered by
+  /* The Kriko face, Inter Tight, bundled in assets/fonts and registered by
    * hover_lite.js from the extension's own files: never fetched from
    * anywhere, so nothing tells a third party what the reader is shopping
    * for, and they are there offline. The names are Kriko's own, so a host
@@ -642,7 +642,7 @@
   font-size: 10px;
   line-height: 1;
   padding: 4px 8px;
-  border-radius: 999px;
+  border-radius: 6px;
   background: transparent;
   border: 1px solid var(--border-soft);
   color: var(--fg-muted);
@@ -686,7 +686,7 @@
   font-size: 10px;
   line-height: 1;
   padding: 4px 8px;
-  border-radius: 999px;
+  border-radius: 6px;
   background: transparent;
   border: 1px solid var(--border-soft);
   color: var(--fg-muted);
@@ -738,7 +738,7 @@
   margin: 8px 0 0;
   padding: 11px 12px;
   border: 1px dashed var(--border);
-  border-radius: 8px;
+  border-radius: 6px;
   background: var(--bg-surface);
   animation: lite-gap-in var(--dur-med) var(--ease-out) both;
 }
@@ -981,7 +981,7 @@
   padding: 7px 9px;
   border-left: 2px solid var(--accent);
   background: rgba(127, 127, 127, 0.07);
-  border-radius: 3px;
+  border-radius: 6px;
 }
 .lite-live-head {
   font-size: 10px;
@@ -1106,7 +1106,7 @@
   margin-right: 6px;
   padding: 0 6px;
   border: 1px solid var(--accent);
-  border-radius: 999px;
+  border-radius: 6px;
   color: var(--accent);
   font-size: 11px;
   font-weight: 600;
@@ -1130,7 +1130,7 @@
   color: var(--fg-muted);
   background: var(--bg-base);
   border: 1px solid var(--bg-item);
-  border-radius: 999px;
+  border-radius: 6px;
   padding: 0 7px;
   white-space: nowrap;
   overflow: hidden;
@@ -1156,7 +1156,7 @@
   font-weight: 600;
   letter-spacing: 0;
   padding: 1.5px 6px;
-  border-radius: 4px;
+  border-radius: 6px;
   border: 1px solid transparent;
   white-space: nowrap;
 }
@@ -1397,7 +1397,7 @@
   /* The same corner as the keys and cards it is standing in for: a square
      placeholder in a rounded panel reads as a broken box rather than as the
      shape of an answer. */
-  border-radius: 8px;
+  border-radius: 6px;
   animation: shimmer 1.4s linear infinite;
 }
 
@@ -1485,7 +1485,7 @@
   font-weight: 500;
   font-size: 11px;
   background: var(--bg-base);
-  border-radius: 8px;
+  border-radius: 6px;
   padding: 0 6px;
   line-height: 16px;
   min-width: 18px;
@@ -1571,7 +1571,7 @@
 .lite-verdict {
   border: 1px solid var(--border);
   border-left-width: 3px;
-  border-radius: 8px;
+  border-radius: 6px;
   background: var(--bg-surface);
   padding: 12px 13px;
   margin-bottom: 14px;
@@ -1673,7 +1673,7 @@
   align-items: baseline;
   padding: 2px 6px;
   border: 1px solid var(--border-soft);
-  border-radius: 4px;
+  border-radius: 6px;
   font-family: var(--font-mono);
   font-size: 10.5px;
   color: var(--fg-muted);
@@ -1749,7 +1749,7 @@
   align-items: baseline;
   padding: 3px 6px;
   border: 1px solid var(--border-soft);
-  border-radius: 4px;
+  border-radius: 6px;
   font-family: var(--font-mono);
   font-size: 10.5px;
   color: var(--fg-body);
@@ -1794,7 +1794,7 @@
 .lite-research button:disabled { opacity: .55; cursor: default; }
 .lite-research {
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 6px;
   padding: 12px;
   margin-bottom: 14px;
   font-size: 12px;
@@ -1805,7 +1805,7 @@
   width: 100%;
   padding: 8px;
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: 6px;
   background: var(--bg-surface);
   color: var(--fg);
   font: inherit;
@@ -1816,7 +1816,7 @@
 .lite-progress {
   height: 4px;
   margin: 6px 0 2px;
-  border-radius: 2px;
+  border-radius: 6px;
   background: rgba(127, 127, 127, 0.18);
   overflow: hidden;
 }
@@ -1825,7 +1825,7 @@
 .lite-progress-fill {
   height: 100%;
   width: var(--p, 6%);
-  border-radius: inherit;
+  border-radius: 0;
   background: linear-gradient(90deg, var(--accent) 0%, var(--on-brand) 50%, var(--accent) 100%);
   background-size: 200% 100%;
   animation: shimmer 1.4s linear infinite;
@@ -1934,7 +1934,7 @@
   margin: 10px 0;
   padding: 10px;
   border: 1px solid var(--accent);
-  border-radius: 8px;
+  border-radius: 6px;
   background: rgba(232,192,75,0.08);
   animation: lite-gap-in var(--dur-med) var(--ease-out) both;
 }
@@ -1943,7 +1943,7 @@
 .lite-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .lite-research .lite-chip {
   margin: 0;
-  border-radius: 999px;
+  border-radius: 6px;
   padding: 5px 12px;
   transition: background-color var(--dur-med) var(--ease-out), transform var(--dur-med) var(--ease-out);
 }
@@ -1963,7 +1963,7 @@
   gap: 8px;
   padding: 7px 9px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 6px;
   background: var(--bg-surface);
 }
 .lite-search-bar:focus-within { border-color: var(--accent); }
@@ -2011,7 +2011,7 @@
   margin-top: 7px;
   padding: 9px 10px;
   border: 1px solid var(--border-soft);
-  border-radius: 7px;
+  border-radius: 6px;
   background: var(--bg-item);
 }
 .lite-search-hit:hover { border-color: var(--accent); }
@@ -2077,10 +2077,10 @@
 
 .lite-panel {
   background:
-    radial-gradient(120% 60% at 100% 0%, rgba(44,83,224,0.10), transparent 60%),
+    radial-gradient(120% 60% at 100% 0%, rgba(82,104,209,0.07), transparent 60%),
     rgba(var(--bg-panel-rgb), var(--glass-panel-alpha));
   border: 1px solid var(--border);
-  border-radius: 22px;
+  border-radius: 10px;
   box-shadow:
     var(--shadow-panel),
     0 0 0 1px var(--glass-1) inset;
@@ -2105,13 +2105,13 @@
 .lite-iconbtn:focus-visible { outline: 2px solid var(--ice); outline-offset: 2px; }
 
 .lite-body::-webkit-scrollbar-track { background: transparent; }
-.lite-body::-webkit-scrollbar-thumb { background: var(--bezel-hi); border: 2px solid var(--bg-base); border-radius: 4px; }
+.lite-body::-webkit-scrollbar-thumb { background: var(--bezel-hi); border: 2px solid var(--bg-base); border-radius: 6px; }
 
 /* severity counts: a well each, an LED dot, the number in the display face */
 .lite-count {
   gap: 7px;
   padding: 5px 12px 5px 9px;
-  border-radius: 999px;
+  border-radius: 6px;
   font-family: var(--font-display);
   font-size: 12.5px;
 }
@@ -2144,7 +2144,7 @@
 .lite-gap-btn,
 .lite-verdict-btn {
   border: 0;
-  border-radius: 999px;
+  border-radius: 6px;
   font-family: var(--font-display);
   font-weight: 540;
   font-size: 13px;
@@ -2189,7 +2189,7 @@
 }
 .lite-chip {
   border: 0;
-  border-radius: 999px;
+  border-radius: 6px;
   font-family: var(--font-display);
   font-size: 12px;
   color: var(--fg-muted);
@@ -2204,7 +2204,7 @@
 .lite-domain-groups { gap: 10px; }
 .lite-domain-group {
   border: 1px solid var(--border);
-  border-radius: 16px;
+  border-radius: 10px;
   background: var(--glass-1);
   overflow: hidden;
 }
@@ -2219,7 +2219,7 @@
 .lite-domain-head:hover { background: var(--glass-2); color: var(--fg); }
 .lite-domain-icon { color: var(--ice); }
 .lite-domain-count {
-  border-radius: 999px;
+  border-radius: 6px;
   background: var(--well);
   box-shadow: none;
   font-family: var(--font-body);
@@ -2231,7 +2231,7 @@
 .lite-rc {
   background: transparent;
   border: 0;
-  border-radius: 12px;
+  border-radius: 6px;
   font-family: var(--font-body);
 }
 .lite-claims > .lite-rc,
@@ -2250,7 +2250,7 @@
   width: 38px;
   height: 38px;
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 6px;
   background: var(--well);
   box-shadow: none;
 }
@@ -2282,7 +2282,7 @@
   align-items: center;
   gap: 5px;
   padding: 2px 7px 2px 6px;
-  border-radius: 999px;
+  border-radius: 6px;
   border: 1px solid var(--border);
   background: var(--well);
   font-family: var(--font-body);
@@ -2305,7 +2305,7 @@
   align-self: center;
   margin-right: 10px;
   border: 0;
-  border-radius: 999px;
+  border-radius: 6px;
   font-size: 16px;
   color: var(--fg-muted);
   background: var(--bg-item);
@@ -2359,7 +2359,7 @@
   padding: 4px 10px 4px 7px;
   background: linear-gradient(180deg, color-mix(in srgb, var(--fg) 7%, var(--bg-item)), var(--bg-item));
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: 6px;
   box-shadow: inset 0 1px 0 color-mix(in srgb, var(--fg) 9%, transparent);
   color: var(--fg-muted);
   cursor: pointer;
@@ -2379,7 +2379,7 @@
 /* The tier meter: three bars that rise like a signal, lit 3, 2 or 1. Flat, so it
    can never read as an emoji; the app draws the same meter. */
 .lite-chip-meter { display: inline-flex; flex: none; align-items: flex-end; gap: 2px; height: 11px; }
-.lite-chip-meter i { width: 3px; border-radius: 1.5px; background: color-mix(in srgb, var(--tone) 26%, transparent); }
+.lite-chip-meter i { width: 3px; border-radius: 6px; background: color-mix(in srgb, var(--tone) 26%, transparent); }
 .lite-chip-meter i:nth-child(1) { height: 5px; }
 .lite-chip-meter i:nth-child(2) { height: 8px; }
 .lite-chip-meter i:nth-child(3) { height: 11px; }
@@ -2416,7 +2416,7 @@
   gap: 5px;
   margin-left: 8px;
   padding: 1px 6px;
-  border-radius: 999px;
+  border-radius: 6px;
   font-size: 11px;
   font-weight: 600;
   color: var(--fg-muted);
@@ -2434,7 +2434,7 @@
   width: max-content;
   max-width: min(260px, calc(100% - 16px));
   padding: 7px 10px;
-  border-radius: 10px;
+  border-radius: 6px;
   border: 1px solid var(--hover-edge);
   background: var(--hover-face);
   color: var(--fg);
@@ -2454,11 +2454,11 @@
   margin-top: 8px;
   padding: 7px 10px;
   border: 1px dashed var(--border-control);
-  border-radius: 10px;
+  border-radius: 6px;
   font-size: 12px;
 }
 .lite-thin-text { flex: 1 1 auto; color: var(--fg-body); }
-.lite-thin-note .lite-chip { border-radius: 999px; }
+.lite-thin-note .lite-chip { border-radius: 6px; }
 
 /* the footer: the pack that answered, and the way into the app as a key */
 .lite-footer {
@@ -2471,7 +2471,7 @@
 }
 .lite-open-app {
   padding: 7px 14px;
-  border-radius: 999px;
+  border-radius: 6px;
   font-family: var(--font-display);
   font-size: 13px;
   font-weight: 540;
@@ -2486,7 +2486,7 @@
 /* errors and empties keep their words; the frame matches the cards */
 .lite-error,
 .lite-empty {
-  border-radius: 16px;
+  border-radius: 10px;
 }
 
 /* inside an opened risk: small plates for checking and marking it */
@@ -2494,7 +2494,7 @@
 .lite-rc-markbtn {
   padding: 6px 11px;
   border: 0;
-  border-radius: 999px;
+  border-radius: 6px;
   font-family: var(--font-display);
   font-size: 12px;
   color: var(--fg-muted);
@@ -2613,7 +2613,7 @@
 }
 .lite-iconbtn:hover { background: rgba(255,255,255,0.20); border-color: transparent; color: var(--on-brand); }
 .lite-iconbtn:active { transform: scale(0.92); }
-.lite-iconbtn.lite-btn-close:hover { background: rgba(255,107,112,0.30); border-color: transparent; }
+.lite-iconbtn.lite-btn-close:hover { background: rgba(82,104,209,0.30); border-color: transparent; }
 
 /* content first: tighter body and gaps, a smooth scroll */
 .lite-body {
@@ -2641,7 +2641,7 @@
   height: 36px;
   padding: 0 16px;
   border: 0;
-  border-radius: 999px;
+  border-radius: 6px;
   font-size: 13.5px;
   text-shadow: none;
   box-shadow: none;
@@ -2672,7 +2672,7 @@
 .lite-rc-factbtn,
 .lite-rc-markbtn {
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: 6px;
   background: var(--glass-1);
   box-shadow: none;
   color: var(--fg-body);
@@ -2699,8 +2699,8 @@
 .lite-rc-toggle:hover,
 .lite-rc-factbtn:hover:not(:disabled),
 .lite-rc-markbtn:hover {
-  background: rgba(61,107,255,0.16);
-  border-color: rgba(123,152,255,0.5);
+  background: rgba(82,104,209,0.16);
+  border-color: rgba(138,155,228,0.5);
   color: var(--fg);
   filter: none;
 }
@@ -2716,7 +2716,7 @@
 .lite-research {
   padding: 10px 12px 12px;
   margin-bottom: 0;
-  border-radius: 16px;
+  border-radius: 10px;
   border: 1px solid var(--border);
   background: var(--glass-1);
   transform-origin: top center;
@@ -2729,14 +2729,14 @@
 .lite-research input,
 .lite-research textarea {
   padding: 8px 11px;
-  border-radius: 12px;
+  border-radius: 6px;
   border: 1px solid var(--border);
   background: var(--well);
   font-size: 12.5px;
   transition: border-color var(--dur-quick), box-shadow var(--dur-quick);
 }
 .lite-research input:focus,
-.lite-research textarea:focus { outline: 0; border-color: var(--brand-bright); box-shadow: 0 0 0 3px rgba(61,107,255,0.28); }
+.lite-research textarea:focus { outline: 0; border-color: var(--brand-bright); box-shadow: 0 0 0 3px rgba(82,104,209,0.28); }
 .lite-research textarea { resize: none; min-height: 52px; display: block; }
 /* a fold: height eases between 0 and its content */
 .lite-fold { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows var(--dur-med) var(--ease-out), opacity var(--dur-med) var(--ease-out), margin var(--dur-med) var(--ease-out); }
@@ -2753,14 +2753,14 @@
   transition: color var(--dur-quick);
 }
 .lite-more:hover { color: var(--fg); }
-.lite-more:focus-visible { outline: 2px solid var(--ice); outline-offset: 2px; border-radius: 4px; }
+.lite-more:focus-visible { outline: 2px solid var(--ice); outline-offset: 2px; border-radius: 6px; }
 .lite-research-status { margin: 6px 0 0; font-size: 11.5px; line-height: 1.4; color: var(--fg-muted); }
 .lite-research-status:empty { display: none; }
 .lite-research[data-state="failed"] .lite-research-status {
   max-height: 4.4em;
   overflow: auto;
   padding: 6px 8px;
-  border-radius: 8px;
+  border-radius: 6px;
   background: var(--high-surface);
   border: 1px solid var(--high-border);
   color: var(--high-ink);
@@ -2770,7 +2770,7 @@
 .lite-research-actions .lite-research-start {
   flex: 1 1 140px;
   border: 0;
-  border-radius: 999px;
+  border-radius: 6px;
   color: var(--on-brand);
   background: var(--brand);
 }
@@ -2779,7 +2779,7 @@
 
 /* a bar, not a block: the footer asks less room */
 .lite-footer { padding: 6px 14px; }
-.lite-open-app { padding: 5px 12px; border-radius: 999px; box-shadow: none; font-size: 12.5px; text-decoration: none; }
+.lite-open-app { padding: 5px 12px; border-radius: 6px; box-shadow: none; font-size: 12.5px; text-decoration: none; }
 .lite-open-app:hover { color: var(--on-brand); background: var(--brand-hover); }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2802,7 +2802,7 @@
   margin: 7px 0;
   padding: 9px 10px 8px;
   border: 1px solid var(--border);
-  border-radius: 16px;
+  border-radius: 10px;
   background: var(--glass-1);
   animation: claimIn var(--dur-slow) var(--ease-out) both;
   animation-delay: 80ms;
@@ -2812,7 +2812,7 @@
   flex: 0 0 auto;
   width: 28px;
   height: 28px;
-  border-radius: 9px;
+  border-radius: 6px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2839,7 +2839,7 @@
 }
 .lite-noissue-stats li {
   padding: 2px 8px;
-  border-radius: 999px;
+  border-radius: 6px;
   font: 10.5px/1.7 var(--font-mono);
   color: var(--fg-muted);
   background: var(--bg-item);
@@ -2925,12 +2925,12 @@
   inset: 0;
   z-index: 10;
   overflow: hidden;
-  border-radius: inherit;
+  border-radius: 0;
 }
 
 .lite-tour-spot {
   position: absolute;
-  border-radius: 14px;
+  border-radius: 10px;
   box-shadow: 0 0 0 2px var(--brand-bright), 0 0 0 9999px var(--tour-scrim);
   transition: top var(--dur-med) var(--ease-out), left var(--dur-med) var(--ease-out), width var(--dur-med) var(--ease-out), height var(--dur-med) var(--ease-out);
   pointer-events: none;
@@ -2946,7 +2946,7 @@
   padding: 14px 16px;
   background: var(--bg-surface);
   border: 1px solid var(--border-control);
-  border-radius: 18px;
+  border-radius: 10px;
   box-shadow: var(--shadow-panel);
   animation: lite-tour-in var(--dur-med) var(--ease-out);
 }
@@ -2973,7 +2973,7 @@
   height: 32px;
   padding: 0 14px;
   border: 0;
-  border-radius: 999px;
+  border-radius: 6px;
   background: var(--bg-item);
   color: var(--fg-body);
   font: 540 13px var(--font-body);
@@ -3004,7 +3004,7 @@
   height: 28px;
   padding: 0 10px;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: 6px;
   background: var(--glass-1);
   color: var(--fg-body);
   font: 12.5px var(--font-body);
@@ -3013,7 +3013,7 @@
 .lite-agent-select:hover:not(:disabled) { border-color: var(--border-control); }
 .lite-agent-select:focus-visible { outline: 2px solid var(--ice); outline-offset: 2px; }
 
-.lite-learn { display: flex; flex-direction: column; gap: 6px; margin: 10px 0 4px; padding: 10px 12px; border: 1px dashed var(--border); border-radius: 14px; }
+.lite-learn { display: flex; flex-direction: column; gap: 6px; margin: 10px 0 4px; padding: 10px 12px; border: 1px dashed var(--border); border-radius: 10px; }
 .lite-learn-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
 .lite-learn-btn {
   display: inline-flex;
@@ -3022,7 +3022,7 @@
   justify-content: center;
   padding: 0 14px;
   border: 1px solid var(--border-control);
-  border-radius: 999px;
+  border-radius: 6px;
   background: var(--brand);
   color: var(--on-brand);
   font: 560 12.5px/1 var(--font-display);
@@ -3053,7 +3053,7 @@
 .lite-buy, .lite-pick, .lite-buy-due {
   margin-top: 10px;
   padding: 10px 12px;
-  border-radius: 10px;
+  border-radius: 6px;
   background: var(--bg-surface);
   box-shadow: 0 0 0 1px var(--border-soft);
   font: 13px/1.45 var(--font-body);
@@ -3063,7 +3063,7 @@
 .lite-buy-now { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; color: var(--fg); }
 .lite-buy-now strong { font: 650 17px/1.2 var(--font-display); }
 .lite-buy-chip {
-  display: inline-block; padding: 1px 8px; border-radius: 999px;
+  display: inline-block; padding: 1px 8px; border-radius: 6px;
   font: 600 11px/1.6 var(--font-body); color: var(--fg-muted); background: var(--glass-2);
 }
 .lite-buy-chip[data-tone="good"] { color: var(--ok-ink); background: var(--ok-surface); }
@@ -3074,7 +3074,7 @@
 .lite-buy-note[data-tone="bad"] { color: var(--high-ink); }
 .lite-buy-elsewhere, .lite-buy-fit ul, .lite-buy-audit ul, .lite-pick ul { margin: 4px 0; padding-left: 18px; }
 .lite-buy-elsewhere a { color: var(--ice); }
-.lite-buy-fit { margin-top: 8px; padding: 6px 8px; border-radius: 8px; background: var(--glass-1); }
+.lite-buy-fit { margin-top: 8px; padding: 6px 8px; border-radius: 6px; background: var(--glass-1); }
 .lite-buy-fit[data-tone="bad"] { background: var(--high-surface); box-shadow: 0 0 0 1px var(--high-border); }
 .lite-buy-fit[data-tone="good"] { background: var(--ok-surface); box-shadow: 0 0 0 1px var(--ok-border); }
 .lite-buy-audit { margin-top: 8px; font-size: 12.5px; }
@@ -3101,7 +3101,7 @@
    take it away. */
 .lite-buy-form input[type="checkbox"] {
   all: unset; box-sizing: border-box; display: inline-grid; place-content: center; flex: 0 0 auto;
-  width: 16px; height: 16px; min-width: 0; padding: 0; border-radius: 5px; cursor: pointer;
+  width: 16px; height: 16px; min-width: 0; padding: 0; border-radius: 6px; cursor: pointer;
   background: var(--well); box-shadow: 0 0 0 1px var(--border-control);
   transition: background var(--dur-quick, 140ms), box-shadow var(--dur-quick, 140ms);
 }
@@ -3109,14 +3109,14 @@
   content: ""; width: 4px; height: 8px; border: solid #fff; border-width: 0 2px 2px 0;
   transform: translateY(-1px) rotate(45deg) scale(0); transition: transform var(--dur-quick, 140ms);
 }
-.lite-buy-form input[type="checkbox"]:checked { background: var(--brand-low, #2c53e0); box-shadow: 0 0 0 1px var(--brand-low, #2c53e0); }
+.lite-buy-form input[type="checkbox"]:checked { background: var(--brand-low, #4256b8); box-shadow: 0 0 0 1px var(--brand-low, #4256b8); }
 .lite-buy-form input[type="checkbox"]:checked::after { transform: translateY(-1px) rotate(45deg) scale(1); }
 @media (prefers-reduced-motion: reduce) {
   .lite-buy-form input[type="checkbox"], .lite-buy-form input[type="checkbox"]::after { transition: none; }
 }
 .lite-buy-btn {
   all: unset; box-sizing: border-box; display: inline-flex; align-items: center; height: 26px; padding: 0 11px;
-  border-radius: 999px; cursor: pointer; font: 540 12.5px/1 var(--font-display);
+  border-radius: 6px; cursor: pointer; font: 540 12.5px/1 var(--font-display);
   color: var(--fg-body); background: var(--bg-item); box-shadow: 0 0 0 1px var(--bezel-edge);
 }
 .lite-buy-btn[data-primary="1"] { color: var(--on-brand); background: var(--brand); box-shadow: none; }
@@ -3134,7 +3134,7 @@
 /* A browser that cannot blur what is behind the panel gets the opaque one:
    text over an unblurred page is the thing the blur exists to prevent. */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .lite-panel { background: radial-gradient(120% 60% at 100% 0%, rgba(44,83,224,0.10), transparent 60%), var(--bg-base); }
+  .lite-panel { background: radial-gradient(120% 60% at 100% 0%, rgba(82,104,209,0.07), transparent 60%), var(--bg-base); }
 }
 
 /* Warm paper / ink pass: calm surfaces, one blue action, readable sources. */
@@ -3143,7 +3143,7 @@
   max-width: calc(100vw - 20px);
   background: rgba(var(--bg-panel-rgb), var(--glass-panel-alpha));
   border-color: var(--border);
-  border-radius: 18px;
+  border-radius: 10px;
   box-shadow: var(--shadow-panel);
 }
 .lite-header {
@@ -3161,7 +3161,7 @@
 .lite-iconbtn.lite-btn-close {
   width: 30px;
   height: 30px;
-  border-radius: 8px;
+  border-radius: 6px;
   background: var(--bg-surface);
   border: 1px solid var(--border-soft);
   color: var(--fg-muted);
@@ -3170,7 +3170,7 @@
 .lite-iconbtn.lite-btn-close:hover { background: var(--high-surface); color: var(--high-ink); }
 .lite-body { padding: 12px 14px 16px; gap: 9px; }
 .lite-listing-title { font-size: 18px; line-height: 1.25; text-transform: none; }
-.lite-count { border-radius: 8px; background: var(--bg-surface); border-color: var(--border-soft); }
+.lite-count { border-radius: 6px; background: var(--bg-surface); border-color: var(--border-soft); }
 .lite-cta,
 .lite-product-actions button,
 .lite-research button:not(.lite-research-start):not(.lite-more),
@@ -3184,15 +3184,15 @@
 .lite-rc-toggle,
 .lite-rc-factbtn,
 .lite-rc-markbtn {
-  border-radius: 9px;
+  border-radius: 6px;
 }
-.lite-cta { height: 34px; border-radius: 10px; }
+.lite-cta { height: 34px; border-radius: 6px; }
 .lite-product-actions { gap: 6px; }
 .lite-product-actions button { min-height: 30px; padding: 0 10px; }
 .lite-research {
   padding: 10px;
   border: 1px solid var(--border-soft);
-  border-radius: 12px;
+  border-radius: 6px;
   background: var(--bg-surface);
 }
 .lite-research-head { margin-bottom: 6px; }
@@ -3201,7 +3201,7 @@
 .lite-research input,
 .lite-research textarea {
   padding: 7px 9px;
-  border-radius: 8px;
+  border-radius: 6px;
   border-color: var(--border);
   background: var(--bg-panel);
 }
@@ -3209,7 +3209,7 @@
 .lite-research textarea:focus { box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand) 22%, transparent); }
 .lite-research-actions { gap: 6px; margin-top: 8px; }
 .lite-research-actions button { height: 30px; padding: 0 10px; font-size: 12px; }
-.lite-research-actions .lite-research-start { flex: 1 1 100%; border-radius: 9px; }
+.lite-research-actions .lite-research-start { flex: 1 1 100%; border-radius: 6px; }
 .lite-research .lite-agent-select { max-width: 62%; height: 28px; background: var(--bg-panel); }
 .lite-quick { gap: 7px; margin: 8px 0; }
 .lite-quick-assumed { color: var(--fg-body); font-size: 12px; }
@@ -3218,7 +3218,7 @@
 .lite-quick-details summary { color: var(--fg-muted); font: 12px/1.4 var(--font-body); }
 .lite-quick-specs { max-height: 180px; }
 .lite-quick-specs p { font-size: 12px; }
-.lite-noissue { border-color: var(--border-soft); border-radius: 12px; background: var(--bg-surface); }
+.lite-noissue { border-color: var(--border-soft); border-radius: 6px; background: var(--bg-surface); }
 .lite-noissue-stats li { border-radius: 6px; border-color: var(--border-soft); background: var(--bg-panel); }
 .lite-noissue .lite-quick-sources summary { font: 12px/1.4 var(--font-body); }
 .lite-quick-sources a { color: var(--accent); }
@@ -3229,7 +3229,7 @@
 .lite-run-seg::after { width: 18px; height: 18px; border-radius: 50%; clip-path: none; }
 .lite-run-facts { color: var(--fg-body); }
 .lite-rc {
-  border-radius: 11px;
+  border-radius: 6px;
   background: var(--bg-panel);
   font-family: var(--font-body);
 }
@@ -3248,17 +3248,17 @@
   width: 28px;
   height: 28px;
   border: 0;
-  border-radius: 7px;
+  border-radius: 6px;
 }
 .lite-rc-titlebox { padding: 0 4px; }
 .lite-rc-title { color: var(--fg); font-size: 14px; line-height: 1.35; }
 .lite-rc-meta { margin-top: 5px; color: var(--fg-muted); font-size: 11px; letter-spacing: 0; }
 .lite-rc-strength,
 .lite-rc-strength[data-strength="confirmed"],
-.lite-rc-strength[data-strength="reported"] { border: 0; border-radius: 5px; background: transparent; padding: 0; }
+.lite-rc-strength[data-strength="reported"] { border: 0; border-radius: 6px; background: transparent; padding: 0; }
 .lite-rc-strength[data-strength="confirmed"] { color: var(--ok-ink); }
 .lite-rc-strength[data-strength="reported"] { color: var(--warn-ink); }
-.lite-rc-toggle { border: 0; border-radius: 7px; background: var(--bg-surface); box-shadow: none; }
+.lite-rc-toggle { border: 0; border-radius: 6px; background: var(--bg-surface); box-shadow: none; }
 .lite-rc-toggle:hover { background: var(--hover-face); }
 .lite-rc-body { padding: 0 12px 12px; }
 .lite-rc-text { padding-top: 10px; color: var(--fg-body); font-size: 14px; line-height: 1.6; }
@@ -3272,9 +3272,9 @@
 .lite-quick-sources a,
 .lite-rc-src figcaption a,
 .lite-buy-elsewhere a { color: var(--brand-low); }
-.lite-learn { border-style: solid; border-color: var(--border-soft); border-radius: 11px; background: var(--bg-surface); }
-.lite-learn-btn { border: 0; border-radius: 9px; }
-.lite-search-hit { border-color: var(--border-soft); border-radius: 10px; background: var(--bg-panel); }
+.lite-learn { border-style: solid; border-color: var(--border-soft); border-radius: 6px; background: var(--bg-surface); }
+.lite-learn-btn { border: 0; border-radius: 6px; }
+.lite-search-hit { border-color: var(--border-soft); border-radius: 6px; background: var(--bg-panel); }
 .lite-search-hit:hover { border-color: var(--brand); }
 .lite-claims > .lite-rc,
 .lite-claims > .lite-claim-anim > .lite-rc {
@@ -3289,7 +3289,7 @@
 .lite-domain-body .lite-rc + .lite-rc { border-top: 0; border-bottom: 1px solid var(--border-soft); }
 .lite-noissue-stats li { border: 0; border-radius: 0; background: transparent; padding: 0; }
 .lite-noissue-stats li + li::before { content: "·"; margin-right: 7px; color: var(--fg-muted); }
-.lite-open-app { border-radius: 9px; }
+.lite-open-app { border-radius: 6px; }
 .lite-product-actions button:hover,
 .lite-research button:hover:not(:disabled):not(.lite-research-start):not(.lite-more),
 .lite-search-research:hover,
@@ -3365,7 +3365,7 @@
   gap: 6px;
   height: 30px;
   padding: 0 12px;
-  border-radius: 9px;
+  border-radius: 6px;
   cursor: pointer;
   font: 540 12.5px/1 var(--font-display);
   color: var(--fg-body);
@@ -3388,7 +3388,7 @@
   align-items: center;
   gap: 7px;
   padding: 6px 6px 6px 10px;
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
   font: 540 12.5px/1 var(--font-display);
   color: var(--fg-muted);
@@ -3408,7 +3408,7 @@
 
 .lite-compare-tray {
   padding: 2px 12px 10px;
-  border-radius: 11px;
+  border-radius: 6px;
   background: var(--bg-surface);
   box-shadow: 0 0 0 1px var(--border-soft);
   animation: liteDrop var(--dur-med) var(--ease-out) both;
@@ -3434,7 +3434,7 @@
 .lite-cmp-here {
   margin-left: 8px;
   padding: 1px 6px;
-  border-radius: 5px;
+  border-radius: 6px;
   font: 11px/1.4 var(--font-body);
   color: var(--ice);
   background: color-mix(in srgb, var(--brand) 14%, transparent);
@@ -3475,7 +3475,7 @@
   all: unset;
   box-sizing: border-box;
   padding: 5px 8px;
-  border-radius: 7px;
+  border-radius: 6px;
   cursor: pointer;
   font: 540 12.5px/1 var(--font-display);
   color: var(--ice);
@@ -3500,3 +3500,31 @@
   .lite-compare-tray { animation: none; }
   .lite-compare-toggle .chev { transition: none; }
 }
+
+/* The identity layer: every finding sits on a rule that says how much it
+   matters, so severity reads by shape as well as by colour. A heavy navy bar
+   is serious, ticks are worth checking, dashes are minor. Headings are set
+   heavy and close, as in the app. */
+.lite-rc { position: relative; padding-bottom: 10px; }
+.lite-rc::after {
+  content: "";
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 2px;
+  height: 9px;
+  pointer-events: none;
+  color: var(--fg-muted);
+  background:
+    linear-gradient(currentColor, currentColor) 0 100% / 100% 1px no-repeat,
+    repeating-linear-gradient(90deg, currentColor 0 1px, transparent 1px 7px) 0 100% / 100% 6px no-repeat,
+    repeating-linear-gradient(90deg, currentColor 0 1px, transparent 1px 35px) 0 100% / 100% 9px no-repeat;
+}
+.lite-rc[data-sev="high"]::after {
+  color: var(--high-ink);
+  background: linear-gradient(currentColor, currentColor) 0 100% / 100% 4px no-repeat;
+}
+.lite-rc[data-sev="low"]::after {
+  background: repeating-linear-gradient(90deg, currentColor 0 12px, transparent 12px 20px) 0 100% / 100% 1.5px no-repeat;
+}
+.lite-panel h1, .lite-panel h2, .lite-panel h3 { letter-spacing: -0.03em; }

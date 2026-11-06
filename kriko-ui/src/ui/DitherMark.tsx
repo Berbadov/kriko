@@ -6,6 +6,8 @@ import mark from '../assets/mark.svg'
  *  at any size. It prints itself once, row by row, and then holds still: the
  *  landing screen shows no animation that repeats. */
 export function DitherMark({ height = 64 }: { height?: number }) {
-  const width = Math.round(height * 0.72)
+  // The mark is the jack turned on its side: a perch, two raised arms and the
+  // screw between them, about twice as wide as it is tall.
+  const width = Math.round(height * (134 / 64))
   return <span className="dither-mark" style={{ height, width, '--mark': `url("${mark}")` } as React.CSSProperties} aria-hidden="true" />
 }

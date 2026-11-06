@@ -28,9 +28,10 @@ carry the risk.
 
 Writes `packaging/icon-master.png`, the 1024px master, and the two copies the
     extension toolbar icons out of the desktop icon. The desktop app's own
-`kriko-ui/src-tauri/icons/icon.ico` is a separate, hand-drawn tile (the white K on
-the brand blue, rounded) that the exe and the installer both read; it is not
-derived here, and `test_the_desktop_icon_is_a_whole_ico` holds its shape.
+`kriko-ui/src-tauri/icons/icon.ico`, the tile the exe and the installer read,
+is derived here too since the jack replaced the K: the grid at 16, 32 and 48px,
+the large mark above that. The Tauri PNGs beside it come from the same two
+sources, so there is one drawing of the mark and every size is a render of it.
 """
 
 import re
@@ -218,7 +219,7 @@ def smooth_png(shapes, side: int, size: int) -> bytes:
 
 
 #: The extension's toolbar icons are the desktop app's own icon, not a render.
-#: Since 1.0.1 the product has one mark, the white K on the brand plate that
+#: Since 1.0.1 the product has one mark, the jack on the navy plate that
 #: `kriko-ui/src-tauri/icons/icon.ico` carries for the exe, the taskbar and the
 #: installer. That file already holds a PNG at every size the manifest asks
 #: for, so the toolbar copies those bytes out rather than drawing a second
@@ -252,10 +253,20 @@ def ico_images(data: bytes) -> dict[int, bytes]:
 
 
 def offline_grid(pixels: list[list[tuple[int, int, int, int]]]) -> list[list[tuple[int, int, int, int]]]:
-    """Keep the same small K, muted while the local app is unreachable."""
-    ground = pixels[0][0]
+    """Keep the same small mark, muted while the local app is unreachable.
+
+    The plate is the commonest opaque colour, not the corner cell: the plate's
+    corners are left out to round it, so the corner is transparent and stays so.
+    """
+    counts: dict[tuple[int, int, int, int], int] = {}
+    for row in pixels:
+        for pixel in row:
+            if pixel[3]:
+                counts[pixel] = counts.get(pixel, 0) + 1
+    ground = max(counts, key=counts.__getitem__)
     return [
-        [(37, 43, 53, 255) if pixel == ground else (137, 147, 162, 255)
+        [pixel if not pixel[3]
+         else (37, 43, 53, 255) if pixel == ground else (137, 147, 162, 255)
          for pixel in row]
         for row in pixels
     ]
@@ -360,6 +371,40 @@ def roles_from_png(data: bytes, side: int) -> list[str]:
     return out
 
 
+#: The ICO's sizes. The grid renders where its side divides the size (16, 32,
+#: 48); the large mark renders everything else.
+ICO_SIZES = (16, 24, 32, 48, 64, 128, 256)
+#: The PNGs Tauri and the Windows store tiles read, by file name.
+TAURI_PNGS = {
+    "32x32.png": 32, "128x128.png": 128, "128x128@2x.png": 256, "icon.png": 512,
+    "Square30x30Logo.png": 30, "Square44x44Logo.png": 44, "Square71x71Logo.png": 71,
+    "Square89x89Logo.png": 89, "Square107x107Logo.png": 107, "Square142x142Logo.png": 142,
+    "Square150x150Logo.png": 150, "Square284x284Logo.png": 284,
+    "Square310x310Logo.png": 310, "StoreLogo.png": 50,
+}
+
+
+def at_size(pixels, shapes, units: int, size: int) -> bytes:
+    """One size of the icon: pixel art where the grid divides it, else the drawn mark."""
+    side = len(pixels)
+    if size <= 48 and size % side == 0:
+        return png(pixels, size // side)
+    return smooth_png(shapes, units, size)
+
+
+def ico(images: dict[int, bytes]) -> bytes:
+    """An ICO of PNG entries, smallest first; a side of 256 is written as 0."""
+    sizes = sorted(images)
+    header = struct.pack("<HHH", 0, 1, len(sizes))
+    offset, entries, data = 6 + 16 * len(sizes), b"", b""
+    for side in sizes:
+        blob = images[side]
+        entries += struct.pack("<BBBBHHII", side % 256, side % 256, 0, 0, 1, 32,
+                               len(blob), offset + len(data))
+        data += blob
+    return header + entries + data
+
+
 def main() -> None:
     svg = SOURCE.read_text(encoding="utf-8")
     side, pixels = grid(svg)
@@ -372,6 +417,10 @@ def main() -> None:
     TARGET.parent.mkdir(parents=True, exist_ok=True)
     TARGET.write_bytes(smooth_png(shapes, units, MASTER))
     print(f"{LARGE_SOURCE.name} ({units}x{units}) -> {TARGET} ({MASTER}px)")
+    DESKTOP_ICO.write_bytes(ico({one: at_size(pixels, shapes, units, one) for one in ICO_SIZES}))
+    for name, size in TAURI_PNGS.items():
+        (DESKTOP_ICO.parent / name).write_bytes(at_size(pixels, shapes, units, size))
+    print(f"-> {DESKTOP_ICO} and {len(TAURI_PNGS)} Tauri PNGs")
     EXTENSION_DIR.mkdir(parents=True, exist_ok=True)
     images = ico_images(DESKTOP_ICO.read_bytes())
     disconnected = offline_grid(pixels)
