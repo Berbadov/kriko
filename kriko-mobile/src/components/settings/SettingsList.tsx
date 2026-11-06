@@ -12,7 +12,7 @@ import { Children, Fragment, type ReactNode } from 'react';
 import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { tr } from '../../i18n';
-import { gap } from '../../theme/tokens';
+import { gap, radius } from '../../theme/tokens';
 import { makeStyles, useColors } from '../../theme/theme';
 import { Txt } from '../../theme/Txt';
 import { GlassCard } from '../Glass';
@@ -206,7 +206,7 @@ const useStyles = makeStyles((color) => StyleSheet.create({
   tile: {
     width: TILE,
     height: TILE,
-    borderRadius: 9,
+    borderRadius: radius.m,
     backgroundColor: color.accentSoft,
     alignItems: 'center',
     justifyContent: 'center',
