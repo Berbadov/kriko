@@ -989,3 +989,24 @@ main { counter-reset: lp; }
 @media (min-width: 1000px) { .lp-head { margin-bottom: 0; } }
 .lp-label, .lp-head .lp-label { justify-content: flex-start; }
 .lp-head, .lp-phones h2, #get h2 { text-align: left; }
+
+/* The stat boxes sat in a column on a phone with a 190px flex basis, so each was 190px
+   tall and mostly empty. In a column the basis is a height. */
+@media (max-width: 700px) { .stats li { flex: 0 0 auto; } }
+
+.lp-tiles.is-waiting i { animation-play-state: paused; }
+
+/* A single finding, set large. It is the whole product in one line. */
+.lp-statement { padding-block: clamp(72px, 11vw, 160px); background: var(--bg); }
+.lp-statement .lp-label { margin-bottom: clamp(24px, 4vw, 48px); }
+.lp-finding { max-width: 15em; margin: 0; font-family: var(--display, var(--sans)); font-weight: 400; font-size: clamp(2.5rem, 7.4vw, 6.75rem); line-height: .96; letter-spacing: -.05em; text-wrap: balance; }
+.lp-cite { display: flex; flex-wrap: wrap; gap: 8px 0; margin: clamp(28px, 4vw, 52px) 0 0; padding: 0; font-size: .9375rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.lp-cite span { padding-right: 18px; margin-right: 18px; border-right: 1px solid var(--line); }
+.lp-cite span:last-child { border-right: 0; margin-right: 0; padding-right: 0; }
+
+/* The six-block band closes every page, and the footer carries the wordmark in the
+   same six blocks, cut from the band itself. */
+.band { height: 14px; background: var(--stripe); }
+.footer { overflow: hidden; padding-bottom: clamp(24px, 3vw, 40px); --stripe-light: linear-gradient(90deg, #dfe7ff 0.00% 16.67%, #a9bcff 16.67% 33.33%, #7f9bff 33.33% 50.00%, #5a7bff 50.00% 66.67%, #2447e6 66.67% 83.33%, #3b57c8 83.33% 100%); }
+.footer::after { content: ""; display: block; width: calc(min(100%, 1520px) - 2 * var(--gutter)); aspect-ratio: 268 / 100; margin: clamp(40px, 7vw, 96px) auto 0; background: var(--stripe-light, var(--stripe)); -webkit-mask: url("assets/kriko-wordmark.svg") center / contain no-repeat; mask: url("assets/kriko-wordmark.svg") center / contain no-repeat; }
+@media (prefers-reduced-motion: no-preference) { .footer::after { animation: lpBand 1.2s var(--ease) both; animation-timeline: view(); animation-range: entry 0% entry 90%; } }
