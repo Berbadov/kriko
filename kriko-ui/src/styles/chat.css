@@ -716,7 +716,7 @@
    same print texture as the sky. It prints once and holds still. */
 .dither-mark {
   display: block;
-  margin: 0 auto 28px;
+  margin: 0 auto 18px;
   color: rgba(255, 255, 255, 0.96);
   background-image: radial-gradient(circle at 1px 1px, currentColor 0.85px, transparent 1.1px);
   background-size: 2px 2px;
