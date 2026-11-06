@@ -163,7 +163,7 @@
   padding: 4px 8px 4px 8px;
   background: color-mix(in srgb, var(--accent) 16%, var(--panel-2));
   border: 1px solid var(--edge);
-  border-radius: 999px;
+  border-radius: var(--r-m);
   color: var(--ink);
   font-size: 13px;
   font-weight: 520;
@@ -314,7 +314,7 @@
   padding: 0 12px;
   background: var(--inset);
   border: 1px solid var(--edge);
-  border-radius: 999px;
+  border-radius: var(--r-m);
   color: var(--ink-2);
   font-size: 12px;
   white-space: nowrap;
@@ -331,7 +331,7 @@
   right: -3px;
   min-width: 16px;
   padding: 1px 4px;
-  border-radius: 999px;
+  border-radius: var(--r-m);
   background: var(--accent);
   color: var(--accent-ink);
   font-size: 10.5px;
@@ -379,7 +379,7 @@
   margin-left: auto;
   min-width: 22px;
   padding: 1px 7px;
-  border-radius: 999px;
+  border-radius: var(--r-m);
   background: var(--accent);
   color: var(--accent-ink);
   font-size: 11.5px;
@@ -458,7 +458,7 @@
   align-items: center;
   gap: 7px;
   border: 1px solid var(--edge-strong);
-  border-radius: 999px;
+  border-radius: var(--r-m);
   background: var(--panel);
   color: var(--ink);
   transition:
@@ -534,12 +534,12 @@
   display: inline-flex;
   padding: 3px;
   background: var(--panel-2);
-  border-radius: 999px;
+  border-radius: var(--r-m);
 }
 
 .segmented button {
   padding: 5px 13px;
-  border-radius: 999px;
+  border-radius: var(--r-m);
   color: var(--ink-2);
   font-size: 13px;
   transition:
@@ -557,7 +557,7 @@
   position: relative;
   width: 42px;
   height: 25px;
-  border-radius: 999px;
+  border-radius: var(--r-m);
   background: var(--edge-strong);
   transition: background-color calc(180ms * var(--tm));
 }

@@ -67,9 +67,44 @@ const PATHS = {
   swap: 'M4 8h13M13 4l4 4-4 4M20 16H7M11 12l-4 4 4 4',
 } as const
 
+
+/** The everyday icons, as solid shapes cut from paper. Drawn on the full
+ *  24 grid and set at 80% so they sit at the weight of the line icons. */
+const SOLID: Partial<Record<keyof typeof PATHS, string>> = {
+  send: 'M12 1 23 12.5l-6.5-1.2V23h-9V11.3L1 12.5z',
+  down: 'M12 23 1 11.5l6.5 1.2V1h9v11.7L23 11.5z',
+  download: 'M12 19 3 9.6l5 .9V1h8v9.5l5-.9zM2 20h20v3H2z',
+  x: 'M4 1.5 12 9.5l8-8L22.5 4l-8 8 8 8-2.5 2.5-8-8-8 8L1.5 20l8-8-8-8z',
+  check: 'M1.5 12.6 4.7 9.4l4.8 4.8L19.3 4.4l3.2 3.2-13 13z',
+  plus: 'M10 2h4v8h8v4h-8v8h-4v-8H2v-4h8z',
+  search: 'M10 1a9 9 0 0 1 7.3 14.3l5.9 5.9-2.1 2.1-5.9-5.9A9 9 0 1 1 10 1zm0 3.4a5.6 5.6 0 1 0 0 11.2 5.6 5.6 0 0 0 0-11.2z',
+  clock: 'M12 1a11 11 0 1 1 0 22 11 11 0 0 1 0-22zm-1.4 4v8.1l5.6 3.3 1.4-2.4-4.2-2.5V5z',
+  gear: 'M1 4h22v3H1zM14 1.5h5v8h-5zM1 11h22v3H1zM5 8.5h5v8H5zM1 18h22v3H1zM11 15.5h5v8h-5z',
+  stop: 'M4 4h16v16H4z',
+  play: 'M5 2v20l17-10z',
+  pause: 'M4 2h6v20H4zM14 2h6v20h-6z',
+  chevron: 'M1.5 7.5 4.5 4.5l7.5 7.5 7.5-7.5 3 3L12 18z',
+  collapse: 'M16.5 1.5l3 3L12 12l7.5 7.5-3 3L6 12z',
+  expand: 'M7.5 1.5l-3 3L12 12l-7.5 7.5 3 3L18 12z',
+  compare: 'M1 3h10v18H1zM13 3h10v18H13z',
+  queue: 'M1 3h22v4.5H1zM1 9.75h15v4.5H1zM1 16.5h9V21H1z',
+  copy: 'M8 8h15v15H8zM1 1h15v5H6v10H1z',
+  trash: 'M2 3.5h20v3H2zM8.5 1h7v2h-7zM4 8h16l-1.4 15H5.4z',
+  more: 'M1 9.5h5v5H1zM9.5 9.5h5v5h-5zM18 9.5h5v5h-5z',
+  dots: 'M1 9.5h5v5H1zM9.5 9.5h5v5h-5zM18 9.5h5v5h-5z',
+}
+
 export type IconName = keyof typeof PATHS
 
 export function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
+  const solid = SOLID[name]
+  if (solid) {
+    return (
+      <svg className="icon solid" viewBox="0 0 24 24" width={size} height={size} aria-hidden="true">
+        <path d={solid} fillRule="evenodd" transform="translate(2.4 2.4) scale(0.8)" />
+      </svg>
+    )
+  }
   return (
     <svg className="icon" viewBox="0 0 24 24" width={size} height={size} aria-hidden="true">
       <path d={PATHS[name]} />

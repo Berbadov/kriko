@@ -11,55 +11,55 @@
   /* BEGIN shared palette tokens */
 
   /* Dark palette */
-  --bg-base:     #0b0b0d;
-  --bg-panel:    #131316;
-  --bg-header:   #131316;
-  --bg-surface:  #17171a;
-  --bg-item:     #1e1e22;
-  --border:      rgba(255,255,255,0.09);
-  --border-soft: rgba(255,255,255,0.06);
+  --bg-base:     #0a0d0b;
+  --bg-panel:    #0f1310;
+  --bg-header:   #0f1310;
+  --bg-surface:  #141814;
+  --bg-item:     #1a1f1b;
+  --border:      rgba(223,230,223,0.09);
+  --border-soft: rgba(223,230,223,0.06);
 
   /* Text — three levels, each at least 4.5:1 on its surface.
      Mild, subtle and faint are one value now, not three. */
-  --fg:          #eef1f9;
-  --fg-body:     #cdd3e4;
-  --fg-muted:    #9aa3bb;
+  --fg:          #e6ece6;
+  --fg-body:     #c9d1c9;
+  --fg-muted:    #9aa49c;
 
   /* Severity — surface and edge derived from the ink, so a
      fourth one costs a single value rather than three. */
-  --high-surface: rgba(255,107,122,0.10);
-  --high-border: rgba(255,107,122,0.30);
-  --high-ink:    #ff6b7a;
-  --med-surface: rgba(245,184,75,0.10);
-  --med-border:  rgba(245,184,75,0.30);
-  --med-ink:     #f5b84b;
-  --low-surface: rgba(61,220,151,0.10);
-  --low-border:  rgba(61,220,151,0.30);
-  --low-ink:     #3ddc97;
+  --high-surface: rgba(212,166,78,0.10);
+  --high-border: rgba(212,166,78,0.32);
+  --high-ink:    #e2bd72;
+  --med-surface: rgba(201,211,198,0.08);
+  --med-border:  rgba(201,211,198,0.26);
+  --med-ink:     #c9d3c6;
+  --low-surface: rgba(156,199,166,0.10);
+  --low-border:  rgba(156,199,166,0.30);
+  --low-ink:     #9cc7a6;
 
   /* Data companions to the brand blue, the app's own (kriko-ui tokens.css). */
-  --violet:      #9d8cff;
-  --teal:        #38d9e3;
-  --mint:        #52e5b3;
-  --sky:         #6cc6ff;
+  --violet:      #b59a62;
+  --teal:        #8fb5a0;
+  --mint:        #9cc7a6;
+  --sky:         #c9d3c6;
 
   /* Design system: brand, ice, LED, bezel, glass, well */
-  --brand:       #3563f5;
-  --brand-hover: #5a82ff;
-  --brand-low:   #2c53e0;
-  --brand-bright: #7b98ff;
-  --on-brand:    #ffffff;
-  --ice:         #9db6ff;
-  --led-off:     #2a3045;
-  --led-dim:     #5a6279;
-  --bezel-hi:    #1e1e22;
-  --bezel-lo:    #17171a;
-  --bezel-edge:  rgba(255,255,255,0.12);
-  --glass-1:     rgba(255, 255, 255, 0.03);
-  --glass-2:     rgba(255, 255, 255, 0.06);
-  --glass-3:     rgba(255, 255, 255, 0.1);
-  --well:        #131316;
-  --border-control: rgba(255,255,255,0.16);
+  --brand:       #d4a64e;
+  --brand-hover: #e2bd72;
+  --brand-low:   #b88d3c;
+  --brand-bright: #e2bd72;
+  --on-brand:    #0a0d0b;
+  --ice:         #c9d3c6;
+  --led-off:     #222a24;
+  --led-dim:     #55665a;
+  --bezel-hi:    #1a1f1b;
+  --bezel-lo:    #141814;
+  --bezel-edge:  rgba(223,230,223,0.12);
+  --glass-1:     rgba(223, 230, 223, 0.03);
+  --glass-2:     rgba(223, 230, 223, 0.06);
+  --glass-3:     rgba(223, 230, 223, 0.1);
+  --well:        #0f1310;
+  --border-control: rgba(223,230,223,0.16);
 
   /* The panel lets the page show through (#260). The colour is kept as bare
      channels so one alpha can sit over it; the alpha and the backdrop are
@@ -68,101 +68,101 @@
      the light one; a test computes it from these very values). `brightness` on the dark backdrop is what pays for that:
      it is a pane of smoked glass, not a clear one. Settings can make it
      opaque (`data-glass="solid"`), and so does the system's own request. */
-  --bg-panel-rgb: 9, 11, 17;
+  --bg-panel-rgb: 9, 12, 10;
   --glass-panel-alpha: 0.72;
   --glass-backdrop: blur(16px) saturate(1.6) brightness(0.6);
 
   /* Accent, resolved from the panel's alias */
-  --accent:      #7b98ff;
+  --accent:      #e2bd72;
 
   /* Faces and edges the rules below share, so a light theme is a
      value rather than a second skin. */
-  --hover-face:  #1f2538;
-  --hover-edge:  rgba(255,255,255,0.18);
-  --row-face:    #17171a;
-  --scroll-track: #131316;
-  --skeleton-a:  #17171a;
-  --skeleton-b:  #1c2133;
-  --alert-ink:   #d6c2c3;
-  --ok-ink:      #3ddc97;
-  --ok-surface:  rgba(61,220,151,0.12);
-  --ok-border:   rgba(61,220,151,0.32);
-  --warn-ink:    #f5b84b;
-  --warn-surface: rgba(245,184,75,0.12);
-  --warn-border: rgba(245,184,75,0.32);
-  --key-edge:    #2c53e0;
-  --sky-base:    #1a3fd0;
+  --hover-face:  #1c231e;
+  --hover-edge:  rgba(223,230,223,0.18);
+  --row-face:    #141814;
+  --scroll-track: #0f1310;
+  --skeleton-a:  #141814;
+  --skeleton-b:  #1c231e;
+  --alert-ink:   #d9cdb8;
+  --ok-ink:      #9cc7a6;
+  --ok-surface:  rgba(156,199,166,0.12);
+  --ok-border:   rgba(156,199,166,0.32);
+  --warn-ink:    #e2bd72;
+  --warn-surface: rgba(212,166,78,0.12);
+  --warn-border: rgba(212,166,78,0.32);
+  --key-edge:    #b88d3c;
+  --sky-base:    #1f2a22;
   --sunken-face: rgba(0, 0, 0, 0.22);
   --shadow-panel: 0 18px 50px -12px rgba(0,0,0,0.6), 0 2px 6px rgba(0,0,0,0.35);
-  --tour-scrim: rgba(4, 6, 12, 0.66);
+  --tour-scrim: rgba(4, 6, 5, 0.66);
   --shadow-card:  0 1px 2px rgba(0,0,0,0.4);
   --well-shadow:  inset 0 1px 2px rgba(0,0,0,0.35);
 
   /* Light palette. Applied by the media query and the explicit override
      after this rule; every key here has a dark twin above. */
-  --light-bg-base:     #f4f0e6;
-  --light-bg-panel:    #fffdf7;
-  --light-bg-header:   #fffdf7;
-  --light-bg-surface:  #f8f5ee;
-  --light-bg-item:     #f4f0e6;
-  --light-border:      rgba(83,72,50,0.16);
-  --light-border-soft: rgba(83,72,50,0.10);
+  --light-bg-base:     #e9ece8;
+  --light-bg-panel:    #f5f6f4;
+  --light-bg-header:   #f5f6f4;
+  --light-bg-surface:  #eef0ec;
+  --light-bg-item:     #e9ece8;
+  --light-border:      rgba(18,21,19,0.16);
+  --light-border-soft: rgba(18,21,19,0.10);
 
-  --light-fg:          #24231f;
-  --light-fg-body:     #3e3a33;
-  --light-fg-muted:    #69655e;
+  --light-fg:          #121513;
+  --light-fg-body:     #2f3531;
+  --light-fg-muted:    #545b55;
 
-  --light-high-surface: rgba(166,61,52,0.08);
-  --light-high-border:  rgba(166,61,52,0.25);
-  --light-high-ink:     #a63d34;
-  --light-med-surface:  rgba(138,90,0,0.10);
-  --light-med-border:   rgba(138,90,0,0.30);
-  --light-med-ink:      #8a5a00;
-  --light-low-surface:  rgba(15,122,82,0.10);
-  --light-low-border:   rgba(15,122,82,0.30);
-  --light-low-ink:      #277345;
+  --light-high-surface: rgba(156,116,36,0.10);
+  --light-high-border:  rgba(156,116,36,0.30);
+  --light-high-ink:     #7f5d1a;
+  --light-med-surface:  rgba(63,74,64,0.08);
+  --light-med-border:   rgba(63,74,64,0.26);
+  --light-med-ink:      #3f4a40;
+  --light-low-surface:  rgba(47,107,69,0.10);
+  --light-low-border:   rgba(47,107,69,0.30);
+  --light-low-ink:      #2f6b45;
 
-  --light-brand:        #2e5bef;
-  --light-brand-hover:  #244bcf;
-  --light-brand-low:    #2448c2;
-  --light-brand-bright: #2e5bef;
-  --light-on-brand:     #ffffff;
-  --light-ice:          #2e5bef;
-  --light-led-off:      #ded8cc;
-  --light-led-dim:      #aaa397;
-  --light-bezel-hi:     #fffdf7;
-  --light-bezel-lo:     #f8f5ee;
-  --light-bezel-edge:   rgba(83,72,50,0.10);
-  --light-glass-1:      rgba(83,72,50,0.025);
-  --light-glass-2:      rgba(83,72,50,0.05);
-  --light-glass-3:      rgba(83,72,50,0.08);
-  --light-well:         #f4f0e6;
-  --light-border-control: rgba(83,72,50,0.2);
-  --light-bg-panel-rgb: 244, 240, 230;
+  --light-brand:        #9c7424;
+  --light-brand-hover:  #8a6620;
+  --light-brand-low:    #7f5d1a;
+  --light-brand-bright: #9c7424;
+  --light-on-brand:     #f5f6f4;
+  --light-ice:          #9c7424;
+  --light-led-off:      #d3d9d1;
+  --light-led-dim:      #98a39a;
+  --light-bezel-hi:     #f5f6f4;
+  --light-bezel-lo:     #eef0ec;
+  --light-bezel-edge:   rgba(18,21,19,0.10);
+  --light-glass-1:      rgba(18,21,19,0.025);
+  --light-glass-2:      rgba(18,21,19,0.05);
+  --light-glass-3:      rgba(18,21,19,0.08);
+  --light-well:         #e9ece8;
+  --light-border-control: rgba(18,21,19,0.2);
+  --light-bg-panel-rgb: 233, 236, 232;
   --light-glass-panel-alpha: 0.96;
   --light-glass-backdrop: blur(12px) saturate(1.05);
-  --light-accent:       #2e5bef;
+  --light-accent:       #9c7424;
 
-  --light-hover-face:  #f0eadf;
-  --light-hover-edge:  rgba(83,72,50,0.24);
-  --light-row-face:    #fffdf7;
-  --light-scroll-track: #f4f0e6;
-  --light-skeleton-a:  #ebe5d9;
-  --light-skeleton-b:  #f8f5ee;
-  --light-alert-ink:   #71372f;
-  --light-ok-ink:      #286342;
-  --light-ok-surface:  rgba(39, 115, 69, 0.08);
-  --light-ok-border:   rgba(39, 115, 69, 0.24);
-  --light-warn-ink:    #7a5000;
-  --light-warn-surface: rgba(122, 80, 0, 0.10);
-  --light-warn-border: rgba(122, 80, 0, 0.28);
-  --light-key-edge:    #9db0ee;
-  --light-sky-base:    #2c53e0;
-  --light-sunken-face: rgba(16, 20, 40, 0.04);
-  --light-shadow-panel: 0 18px 50px -18px rgba(54,45,28,0.28), 0 2px 6px rgba(54,45,28,0.10);
-  --light-tour-scrim: rgba(36, 35, 31, 0.48);
-  --light-shadow-card:  0 1px 3px rgba(54,45,28,0.08);
-  --light-well-shadow:  inset 0 1px 2px rgba(54,45,28,0.05);
+  --light-hover-face:  #e3e7e1;
+  --light-hover-edge:  rgba(18,21,19,0.24);
+  --light-row-face:    #f5f6f4;
+  --light-scroll-track: #e9ece8;
+  --light-skeleton-a:  #dfe4dd;
+  --light-skeleton-b:  #eef0ec;
+  --light-alert-ink:   #5b4410;
+  --light-ok-ink:      #2f6b45;
+  --light-ok-surface:  rgba(47, 107, 69, 0.08);
+  --light-ok-border:   rgba(47, 107, 69, 0.24);
+  --light-warn-ink:    #7f5d1a;
+  --light-warn-surface: rgba(156, 116, 36, 0.10);
+  --light-warn-border: rgba(156, 116, 36, 0.28);
+  --light-key-edge:    #c9b27e;
+  --light-sky-base:    #3e4d41;
+  --light-sunken-face: rgba(18, 21, 19, 0.04);
+  --light-shadow-panel: 0 18px 50px -18px rgba(18,21,19,0.28), 0 2px 6px rgba(18,21,19,0.10);
+  --light-tour-scrim: rgba(18, 21, 19, 0.48);
+  --light-shadow-card:  0 1px 3px rgba(18,21,19,0.08);
+  --light-well-shadow:  inset 0 1px 2px rgba(18,21,19,0.05);
 
   /* Motion profile — Calm · Standard · Vivid. These are the Standard
      values; the [data-motion] selectors after this rule remap them, so one
@@ -237,7 +237,7 @@
   /* END shared palette tokens */
 
   /* Type */
-  /* The Kriko face, Geist, bundled in assets/fonts and registered by
+  /* The Kriko face, Inter Tight, bundled in assets/fonts and registered by
    * hover_lite.js from the extension's own files: never fetched from
    * anywhere, so nothing tells a third party what the reader is shopping
    * for, and they are there offline. The names are Kriko's own, so a host
@@ -2077,7 +2077,7 @@
 
 .lite-panel {
   background:
-    radial-gradient(120% 60% at 100% 0%, rgba(44,83,224,0.10), transparent 60%),
+    radial-gradient(120% 60% at 100% 0%, rgba(212,166,78,0.07), transparent 60%),
     rgba(var(--bg-panel-rgb), var(--glass-panel-alpha));
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -2613,7 +2613,7 @@
 }
 .lite-iconbtn:hover { background: rgba(255,255,255,0.20); border-color: transparent; color: var(--on-brand); }
 .lite-iconbtn:active { transform: scale(0.92); }
-.lite-iconbtn.lite-btn-close:hover { background: rgba(255,107,112,0.30); border-color: transparent; }
+.lite-iconbtn.lite-btn-close:hover { background: rgba(212,166,78,0.30); border-color: transparent; }
 
 /* content first: tighter body and gaps, a smooth scroll */
 .lite-body {
@@ -2699,8 +2699,8 @@
 .lite-rc-toggle:hover,
 .lite-rc-factbtn:hover:not(:disabled),
 .lite-rc-markbtn:hover {
-  background: rgba(61,107,255,0.16);
-  border-color: rgba(123,152,255,0.5);
+  background: rgba(212,166,78,0.16);
+  border-color: rgba(226,189,114,0.5);
   color: var(--fg);
   filter: none;
 }
@@ -2736,7 +2736,7 @@
   transition: border-color var(--dur-quick), box-shadow var(--dur-quick);
 }
 .lite-research input:focus,
-.lite-research textarea:focus { outline: 0; border-color: var(--brand-bright); box-shadow: 0 0 0 3px rgba(61,107,255,0.28); }
+.lite-research textarea:focus { outline: 0; border-color: var(--brand-bright); box-shadow: 0 0 0 3px rgba(212,166,78,0.28); }
 .lite-research textarea { resize: none; min-height: 52px; display: block; }
 /* a fold: height eases between 0 and its content */
 .lite-fold { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows var(--dur-med) var(--ease-out), opacity var(--dur-med) var(--ease-out), margin var(--dur-med) var(--ease-out); }
@@ -3109,7 +3109,7 @@
   content: ""; width: 4px; height: 8px; border: solid #fff; border-width: 0 2px 2px 0;
   transform: translateY(-1px) rotate(45deg) scale(0); transition: transform var(--dur-quick, 140ms);
 }
-.lite-buy-form input[type="checkbox"]:checked { background: var(--brand-low, #2c53e0); box-shadow: 0 0 0 1px var(--brand-low, #2c53e0); }
+.lite-buy-form input[type="checkbox"]:checked { background: var(--brand-low, #b88d3c); box-shadow: 0 0 0 1px var(--brand-low, #b88d3c); }
 .lite-buy-form input[type="checkbox"]:checked::after { transform: translateY(-1px) rotate(45deg) scale(1); }
 @media (prefers-reduced-motion: reduce) {
   .lite-buy-form input[type="checkbox"], .lite-buy-form input[type="checkbox"]::after { transition: none; }
@@ -3134,7 +3134,7 @@
 /* A browser that cannot blur what is behind the panel gets the opaque one:
    text over an unblurred page is the thing the blur exists to prevent. */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .lite-panel { background: radial-gradient(120% 60% at 100% 0%, rgba(44,83,224,0.10), transparent 60%), var(--bg-base); }
+  .lite-panel { background: radial-gradient(120% 60% at 100% 0%, rgba(212,166,78,0.07), transparent 60%), var(--bg-base); }
 }
 
 /* Warm paper / ink pass: calm surfaces, one blue action, readable sources. */
@@ -3500,3 +3500,31 @@
   .lite-compare-tray { animation: none; }
   .lite-compare-toggle .chev { transition: none; }
 }
+
+/* The identity layer: every finding sits on a rule that says how much it
+   matters, so severity reads by shape as well as by colour. A heavy gold bar
+   is serious, ticks are worth checking, dashes are minor. Headings are set
+   heavy and close, as in the app. */
+.lite-rc { position: relative; padding-bottom: 10px; }
+.lite-rc::after {
+  content: "";
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 2px;
+  height: 9px;
+  pointer-events: none;
+  color: var(--fg-muted);
+  background:
+    linear-gradient(currentColor, currentColor) 0 100% / 100% 1px no-repeat,
+    repeating-linear-gradient(90deg, currentColor 0 1px, transparent 1px 7px) 0 100% / 100% 6px no-repeat,
+    repeating-linear-gradient(90deg, currentColor 0 1px, transparent 1px 35px) 0 100% / 100% 9px no-repeat;
+}
+.lite-rc[data-sev="high"]::after {
+  color: var(--high-ink);
+  background: linear-gradient(currentColor, currentColor) 0 100% / 100% 4px no-repeat;
+}
+.lite-rc[data-sev="low"]::after {
+  background: repeating-linear-gradient(90deg, currentColor 0 12px, transparent 12px 20px) 0 100% / 100% 1.5px no-repeat;
+}
+.lite-panel h1, .lite-panel h2, .lite-panel h3 { letter-spacing: -0.03em; }

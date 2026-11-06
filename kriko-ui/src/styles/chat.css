@@ -150,7 +150,7 @@
   place-items: center;
   width: 38px;
   height: 38px;
-  border-radius: 50%;
+  border-radius: var(--r-m);
   background: var(--ink);
   color: var(--ground);
   transition:
@@ -406,7 +406,7 @@
   padding: 6px 13px;
   background: var(--glass);
   border: 1px solid var(--glass-edge);
-  border-radius: 999px;
+  border-radius: var(--r-m);
   box-shadow: var(--shadow-1);
   backdrop-filter: blur(16px);
   font-size: 12.5px;
@@ -867,7 +867,7 @@ button.ask-head:hover {
   min-height: 30px;
   padding: 4px 12px;
   border: 1px solid var(--edge-strong);
-  border-radius: 999px;
+  border-radius: var(--r-m);
   color: var(--ink);
   background: var(--panel-2);
   font-size: 13px;
@@ -998,7 +998,7 @@ button.ask-head:hover {
   padding: 0 14px;
   background: var(--panel-2);
   border: 1px solid var(--edge-strong);
-  border-radius: 999px;
+  border-radius: var(--r-m);
   box-shadow: var(--shadow-2);
   color: var(--ink);
   font-size: 13px;

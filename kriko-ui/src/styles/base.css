@@ -1,3 +1,4 @@
+@import '@fontsource-variable/inter-tight';
 @import '@fontsource-variable/geist';
 @import '@fontsource-variable/geist-mono';
 @import './tokens.css';
@@ -82,9 +83,47 @@ button {
   flex: none;
   fill: none;
   stroke: currentColor;
-  stroke-width: 1.6;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+  stroke-width: 1.9;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+}
+
+/* The everyday icons are solid shapes cut from paper, not outlines. */
+.icon.solid {
+  fill: currentColor;
+  stroke: none;
+}
+
+/* Type: a tight grotesk, set heavy and close for anything that is a title. */
+h1,
+h2,
+h3 {
+  font-weight: 800;
+  letter-spacing: -0.035em;
+}
+
+/* A rule under a line says how much it matters: a heavy bar serious, ticks
+   to check, dashes minor, dots a good sign. */
+.rule {
+  height: 9px;
+  color: var(--ink-3);
+}
+.rule.heavy {
+  background: linear-gradient(currentColor, currentColor) 0 100% / 100% 4px no-repeat;
+  color: var(--accent);
+}
+.rule.ticks {
+  background:
+    linear-gradient(currentColor, currentColor) 0 100% / 100% 1px no-repeat,
+    repeating-linear-gradient(90deg, currentColor 0 1px, transparent 1px 7px) 0 100% / 100% 6px no-repeat,
+    repeating-linear-gradient(90deg, currentColor 0 1px, transparent 1px 35px) 0 100% / 100% 9px no-repeat;
+}
+.rule.dashes {
+  background: repeating-linear-gradient(90deg, currentColor 0 12px, transparent 12px 20px) 0 100% / 100% 1.5px no-repeat;
+}
+.rule.dots {
+  background: radial-gradient(circle, currentColor 1.1px, transparent 1.4px) 0 100% / 7px 4px repeat-x;
+  color: var(--ok);
 }
 
 .logo-mark,

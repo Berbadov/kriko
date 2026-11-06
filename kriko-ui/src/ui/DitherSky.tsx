@@ -36,12 +36,12 @@ const hex = (h: string): Rgb => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3
 
 const PALETTES = {
   light: {
-    sky: ['#3f6be9', '#6a8cf0', '#9db2f6'].map(hex),
-    cloud: ['#8f82e6', '#c28fe8', '#f58fb2', '#ffbf9f', '#fff0d4'].map(hex),
+    sky: ['#1f2a22', '#2d3a30', '#3e4d41'].map(hex),
+    cloud: ['#556657', '#73857a', '#98a99c', '#c3cfbf', '#e8d9b0'].map(hex),
   },
   dark: {
-    sky: ['#0a0f36', '#16215f', '#2c3c9a'].map(hex),
-    cloud: ['#1d2260', '#43347f', '#8a4a97', '#d97aa0', '#f5b9a8'].map(hex),
+    sky: ['#070a08', '#0e1410', '#18211b'].map(hex),
+    cloud: ['#1f2a22', '#34433a', '#55665a', '#8b9a8e', '#d4b878'].map(hex),
   },
 }
 
