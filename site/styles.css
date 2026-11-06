@@ -941,8 +941,11 @@ h2 { letter-spacing: -.035em; line-height: .98; }
   .lp-split { grid-template-columns: minmax(0, .7fr) minmax(0, 1.3fr); }
   .lp-shots { width: min(100%, 640px); margin-right: 0; }
   .lp-phones .wrap, #get .wrap { display: grid; grid-template-columns: minmax(0, .7fr) minmax(0, 1.3fr); column-gap: clamp(32px, 6vw, 96px); align-items: start; }
-  .lp-phones h2 { text-align: left; position: sticky; top: 104px; }
-  #get h2 { position: sticky; top: 104px; }
+  .lp-phones h2 { text-align: left; }
+  .lp-head, .lp-side { position: sticky; top: 104px; }
+  .lp-split { align-items: start; }
+  .lp-head, .lp-side, .faq-head { text-align: left; }
+  .lp-head .lp-label, .lp-side .lp-label, .faq-head .lp-label { justify-content: flex-start; }
   .lp-trio { max-width: none; margin: 0; }
   .lp-trio .lp-phone { width: min(300px, 100%); }
   #get .lp-get { margin-top: 0; grid-template-columns: minmax(0, 1fr); gap: var(--space-3); }
@@ -973,3 +976,16 @@ h2 { letter-spacing: -.035em; line-height: .98; }
 @media (max-width: 999px) { .lp-ext { display: none; } }
 @media (prefers-reduced-motion: reduce) { .lp-copy h1:not(.is-split) { opacity: 1; animation: none; } .lp-tiles { display: none; } }
 .lp-copy h1 span { color: inherit; display: inline-block; }
+
+/* Section names: a numbered marker above the heading, the heading smaller, and every
+   heading top-aligned with its content and held at the same height as you scroll. */
+main { counter-reset: lp; }
+.lp-label { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 0 0 22px; font: 500 .9375rem/1 var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.lp-label::before { counter-increment: lp; content: counter(lp, decimal-leading-zero); color: var(--accent-text); }
+.lp-label::after { content: ""; flex: none; width: 56px; height: 6px; background: var(--stripe); }
+.lp-side h2, .lp-phones h2, #get h2, .faq-head h2 { font-size: clamp(2.1rem, 3.6vw, 3.2rem); line-height: 1; }
+.lp-head { margin-bottom: clamp(32px, 5vw, 56px); }
+.lp-side .lp-label, .faq-head .lp-label { justify-content: flex-start; }
+@media (min-width: 1000px) { .lp-head { margin-bottom: 0; } }
+.lp-label, .lp-head .lp-label { justify-content: flex-start; }
+.lp-head, .lp-phones h2, #get h2 { text-align: left; }
