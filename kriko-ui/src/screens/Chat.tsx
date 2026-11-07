@@ -15,7 +15,8 @@ import { ChatRail } from '../ui/ChatRail'
 import { Composer } from '../ui/Composer'
 import { ContextBar } from '../ui/ContextBar'
 import { Icon } from '../ui/Icon'
-import { DitherSky } from '../ui/DitherSky'
+import { DustField } from '../dust/DustField'
+import { cloud } from '../dust/engine'
 import { ProductList } from '../ui/ProductList'
 import { Markdown } from '../ui/Markdown'
 import { Fold } from '../ui/text'
@@ -24,6 +25,9 @@ import { ReportButton } from '../ui/ReportButton'
 
 /** Chat is the first page. Before a question it is a sky, a box and recent work.
  *  After a question the box drops to the bottom and the run fills the page. */
+/** The home's resting cloud: banks at the edges, open where the question sits. */
+const SKY = cloud({ x: 0.5, y: 0.62, r: 0.26 })
+
 export function ChatScreen({ onOpen, onAction }: {
   onOpen: (lookupId: string) => void
   onAction: (action: AppAction) => void
@@ -57,7 +61,7 @@ export function ChatScreen({ onOpen, onAction }: {
     <FocusProvider reduceMotion={!m.on}>
     <section className="chat" data-thread={thread}>
       <motion.div className="sky" initial={false} animate={{ opacity: thread ? 0 : 1, y: thread ? -m.d(30) : 0 }} transition={m.tx.page} aria-hidden="true">
-        <DitherSky />
+        <DustField className="dust-sky" scene={SKY} follow cap={12000} />
       </motion.div>
 
       <div className="chat-main">
