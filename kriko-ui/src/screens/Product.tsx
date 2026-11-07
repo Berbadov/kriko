@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { demoCheck, loadCheck, type Check, type Level } from '../compare/checks'
 import { useCompare } from '../compare'
@@ -16,6 +16,8 @@ import { Markdown } from '../ui/Markdown'
 import { PixelGlyph } from '../ui/PixelGlyph'
 import { CheckContext, RiskEvidence } from '../ui/CheckContext'
 import { ProductInsights } from '../ui/ProductInsights'
+import { DustField } from '../dust/DustField'
+import { kindFor, product, reading } from '../dust/engine'
 
 const LEVEL_WORD: Record<Level, string> = { critical: 'Critical', high: 'High', medium: 'Medium', low: 'Low', unrated: 'Unrated' }
 const DEMO_ANSWER = 'The maker states a limit of **40 minutes** of full load.\n\n- Short jobs are fine.\n- For long jobs, add a fan or pick another unit.'
@@ -146,6 +148,10 @@ export function ProductScreen({ lookupId, onBack, onCompare }: { lookupId: strin
   const hidden = check ? check.risks.filter((risk) => !shown(risk.evidence?.level, sensitivity)) : []
   const drawn = check ? check.risks.filter((risk) => revealed || shown(risk.evidence?.level, sensitivity)) : []
 
+  // The product rebuilt in dust: the cloud reads while the check loads, then
+  // gathers into the outline of whatever kind of thing the check is about.
+  const portrait = useMemo(() => (check ? product(kindFor(check.name, check.category)) : reading), [check])
+
   const onBoard = slots.includes(lookupId)
   const asking = turns.some((t) => t.state === 'running')
   const stop = () => {
@@ -179,6 +185,11 @@ export function ProductScreen({ lookupId, onBack, onCompare }: { lookupId: strin
       </header>
 
       <div className="product-body">
+        {!problem && (
+          <div className="product-dust rise" style={{ '--i': 0 } as CSSProperties}>
+            <DustField scene={portrait} reading={!check} per={12} cap={9000} />
+          </div>
+        )}
         {problem && (
           <p className="error-note" role="alert">
             {problem}
