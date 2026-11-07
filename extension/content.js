@@ -1026,7 +1026,7 @@ function markResultCard(card, read, fit) {
   const mark = document.createElement("span");
   mark.setAttribute(FIT_MARK, broken ? "breaks" : "fits");
   mark.textContent = broken ? `Not for you: ${fit.breaks[0]}` : "Fits you";
-  mark.style.cssText = `display:inline-block;margin:2px 6px;padding:1px 7px;border-radius:9px;font:600 11px/1.5 system-ui,sans-serif;color:#fff;background:${broken ? "#b5392f" : "#2d7b41"};vertical-align:middle;`;
+  mark.style.cssText = `display:inline-block;margin:2px 6px;padding:2px 7px;border-radius:2px;font:600 11px/1.4 'Segoe UI',system-ui,sans-serif;color:#fff;background:${broken ? "#1f3a63" : "#3c454f"};vertical-align:middle;`;
   (read.priceNode || card).insertAdjacentElement("afterend", mark);
 }
 

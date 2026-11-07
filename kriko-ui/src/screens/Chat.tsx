@@ -9,13 +9,11 @@ import { useEngine, type Agent } from '../engine/Engine'
 import { useRecents } from '../engine/recents'
 import { usePrefs } from '../prefs'
 import { AgentMark, type AgentState } from '../ui/AgentMark'
-import { DitherMark } from '../ui/DitherMark'
 import { copyText } from '../ui/clipboard'
 import { ChatRail } from '../ui/ChatRail'
 import { Composer } from '../ui/Composer'
 import { ContextBar } from '../ui/ContextBar'
 import { Icon } from '../ui/Icon'
-import { DitherSky } from '../ui/DitherSky'
 import { ProductList } from '../ui/ProductList'
 import { Markdown } from '../ui/Markdown'
 import { Fold } from '../ui/text'
@@ -56,9 +54,7 @@ export function ChatScreen({ onOpen, onAction }: {
   return (
     <FocusProvider reduceMotion={!m.on}>
     <section className="chat" data-thread={thread}>
-      <motion.div className="sky" initial={false} animate={{ opacity: thread ? 0 : 1, y: thread ? -m.d(30) : 0 }} transition={m.tx.page} aria-hidden="true">
-        <DitherSky />
-      </motion.div>
+      <motion.div className="sky" initial={false} animate={{ opacity: thread ? 0 : 1, y: thread ? -m.d(30) : 0 }} transition={m.tx.page} aria-hidden="true" />
 
       <div className="chat-main">
       <div className="chat-col">
@@ -73,7 +69,7 @@ export function ChatScreen({ onOpen, onAction }: {
               exit={{ opacity: 0, y: -m.d(12) }}
               transition={m.tx.page}
             >
-              <DitherMark height={30} />
+              <div className="hello-index mono" aria-hidden="true">01 / check</div>
               <h1>What do you want to check?</h1>
             </motion.header>
           )}

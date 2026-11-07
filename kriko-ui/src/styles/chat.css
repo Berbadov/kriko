@@ -13,17 +13,14 @@
   right: 0;
   height: 68%;
   pointer-events: none;
+  /* The one surface texture: a 24px hairline grid at 4%, fading out. */
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--ink) 4%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--ink) 4%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
   /* A mask's colour is its alpha; the theme never changes it. */
   -webkit-mask-image: linear-gradient(to bottom, black 0, black 42%, transparent 97%);
   mask-image: linear-gradient(to bottom, black 0, black 42%, transparent 97%);
-}
-
-.sky canvas {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  image-rendering: pixelated;
 }
 
 .chat-col {
@@ -32,7 +29,7 @@
   display: flex;
   flex: 1;
   flex-direction: column;
-  width: min(740px, calc(100% - 48px));
+  width: min(880px, calc(100% - 48px));
   min-height: 0;
   margin: 0 auto;
 }
@@ -44,21 +41,43 @@
 }
 
 .chat[data-thread='false'] .chat-col {
-  justify-content: center;
+  justify-content: flex-start;
+  padding-top: 44px;
+  padding-bottom: 24px;
+  overflow-y: auto;
 }
 
-.hello .dither-mark {
-  display: block;
+.hello {
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--edge);
+}
+
+/* The check desk: an index at the left, the one question under it. */
+.hello-index {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 14px;
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+.hello-index::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--edge);
 }
 
 .hello h1 {
-  margin: 0 0 26px;
-  color: #fff;
-  font-size: 36px;
-  font-weight: 600;
-  letter-spacing: -0.025em;
-  text-align: center;
-  text-shadow: 0 2px 28px rgba(0, 0, 0, 0.4);
+  max-width: 20ch;
+  margin: 0;
+  color: var(--ink);
+  font-size: clamp(30px, 4vw, 42px);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1.02;
+  text-align: left;
 }
 
 .dock {
@@ -79,37 +98,45 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 14px 14px 10px;
-  background: var(--glass);
-  border: 1px solid var(--glass-edge);
-  border-radius: var(--r-xl);
-  box-shadow: var(--shadow-2);
-  backdrop-filter: blur(24px) saturate(1.5);
-  transition: border-color calc(160ms * var(--tm));
+  padding: 12px 12px 10px;
+  background: var(--panel);
+  border: 1px solid var(--edge-strong);
+  border-radius: var(--r-l);
+  box-shadow: none;
+  transition: border-color var(--dur-2) var(--ease-out), box-shadow var(--dur-2) var(--ease-out);
 }
 
 .composer:focus-within {
-  border-color: var(--accent-hi);
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
 }
 
 .composer-modes {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 4px;
 }
 
 /* What the pressed or pointed-at chip does, in a sentence, so a chip is never a guess. */
 .mode-hint {
-  margin: -2px 6px 0;
+  margin: -2px 2px 0;
   color: var(--ink-3);
-  font-size: 12.5px;
+  font-size: 13px;
   line-height: 1.45;
 }
 
-/* A pressed chip is the reader's choice, so it carries the accent, not just a border. */
+/* A pressed chip is the reader's choice: the accent, and a 2px marker beneath. */
+.mode-chip {
+  height: 28px;
+  padding: 0 10px;
+  border-radius: var(--r-s);
+  font-size: 13px;
+}
+
 .mode-chip[aria-pressed='true'] {
-  border-color: var(--accent-hi);
-  background: var(--panel-2);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: inset 0 -2px 0 var(--accent);
   color: var(--ink);
 }
 
@@ -119,15 +146,15 @@
 
 .composer-field {
   width: 100%;
-  min-height: 28px;
+  min-height: 30px;
   max-height: 190px;
-  padding: 4px 6px;
+  padding: 4px 2px;
   border: 0;
   background: none;
   outline: none;
   resize: none;
-  font-size: 15.5px;
-  line-height: 1.5;
+  font-size: 16px;
+  line-height: 1.55;
   field-sizing: content;
 }
 
@@ -139,6 +166,8 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--edge);
 }
 
 .agent-pick {
@@ -148,14 +177,18 @@
 .send {
   display: grid;
   place-items: center;
-  width: 38px;
-  height: 38px;
+  width: 36px;
+  height: 36px;
   border-radius: var(--r-m);
-  background: var(--ink);
-  color: var(--ground);
+  background: var(--accent-fill);
+  color: var(--accent-ink);
   transition:
-    opacity calc(160ms * var(--tm)),
-    transform calc(120ms * var(--tm));
+    opacity var(--dur-2) var(--ease-out),
+    background-color var(--dur-2) var(--ease-out);
+}
+
+.send:hover:not(:disabled) {
+  background: var(--accent-hi);
 }
 
 .send:disabled {
@@ -167,60 +200,107 @@
   transform: none;
 }
 
-/* ---- recent work ---- */
-
+/* Recent checks are ruled ledger rows, not cards. */
 .recents {
-  margin-top: 26px;
+  margin-top: 28px;
+  counter-reset: check;
 }
 
 .recents h2 {
-  margin: 0 0 10px 4px;
-  font-size: 12px;
-  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 6px;
+  padding: 0 2px;
+  color: var(--ink-2);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.recents h2::before {
+  content: '02';
   color: var(--ink-3);
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.recents h2::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--edge);
 }
 
 .recents ul {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
+  grid-template-columns: 1fr;
+  gap: 0;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
+.recents li {
+  display: flex;
+  counter-increment: check;
+}
+
 .recent {
   display: grid;
-  gap: 3px;
+  grid-template-columns: 30px minmax(0, 1fr) auto;
+  grid-template-areas:
+    'idx name meta'
+    'idx note note';
+  column-gap: 12px;
+  row-gap: 2px;
+  align-items: baseline;
   width: 100%;
-  padding: 14px 16px;
-  background: var(--panel);
-  border: 1px solid var(--edge);
-  border-radius: var(--r-l);
+  padding: 12px 2px;
+  border: 0;
+  border-top: 1px solid var(--edge);
+  border-radius: 0;
+  background: transparent;
   text-align: left;
-  transition:
-    border-color calc(160ms * var(--tm)),
-    transform calc(220ms * var(--tm)) var(--ease-out);
+  transition: background-color var(--dur-2) var(--ease-out);
+}
+
+.recent::before {
+  content: counter(check, decimal-leading-zero);
+  grid-area: idx;
+  color: var(--ink-3);
+  font-family: var(--mono);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
 }
 
 .recent:hover {
-  border-color: var(--edge-strong);
-  transform: translateY(calc(-2px * var(--dm)));
+  background: var(--accent-soft);
+}
+
+.recent:focus-visible {
+  outline-offset: -2px;
 }
 
 .recent-name {
-  font-weight: 600;
+  grid-area: name;
+  font-size: 14.5px;
+  font-weight: 550;
 }
 
 .recent-note {
+  grid-area: note;
   color: var(--ink-2);
   font-size: 13px;
 }
 
 .recent-meta {
-  margin-top: 4px;
+  grid-area: meta;
+  margin: 0;
   color: var(--ink-3);
-  font-size: 11.5px;
+  font-size: 12px;
+  white-space: nowrap;
 }
 
 /* ---- the thread ---- */
@@ -234,31 +314,33 @@
 .thread-scroll {
   flex: 1;
   min-width: 0;
-  padding: 30px 4px 14px;
+  padding: 26px 4px 14px;
   overflow: auto;
 }
 
 .thread-inner {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
+/* The question is a ruled entry in the case file, not a bubble. */
 .you {
-  align-self: flex-end;
-  max-width: 82%;
+  align-self: stretch;
+  max-width: 100%;
   margin: 0;
-  padding: 10px 15px;
-  background: var(--accent-soft);
-  border: 1px solid var(--edge);
-  border-radius: var(--r-l) 12px 4px 12px;
+  padding: 2px 0 2px 12px;
+  border-left: 2px solid var(--accent);
   overflow-wrap: anywhere;
+  color: var(--ink);
+  font-size: 15.5px;
+  font-weight: 500;
 }
 
 .answer p {
   margin: 0;
-  font-size: 15.5px;
-  line-height: 1.7;
+  font-size: 16px;
+  line-height: 1.65;
 }
 
 /* A card for a product an answer named. It is a row of a list, not a panel: the
@@ -272,16 +354,18 @@
   justify-content: space-between;
   gap: 6px 10px;
   padding: 6px 10px;
-  background: var(--panel);
-  border: 1px solid var(--edge);
-  border-radius: var(--r-l);
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--edge);
+  border-radius: 0;
 }
 
 /* More than a couple of products fold into one line the reader opens. */
 .product-list {
-  background: var(--panel);
-  border: 1px solid var(--edge);
-  border-radius: var(--r-l);
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--edge);
+  border-radius: 0;
   overflow: hidden;
 }
 
@@ -358,9 +442,9 @@
   place-items: center;
   overflow: hidden;
   color: var(--ink-3);
-  background: var(--glass);
+  background: var(--panel-2);
   border: 1px solid var(--edge);
-  border-radius: var(--r-l);
+  border-radius: var(--r-s);
 }
 
 .listing-image img {
@@ -404,19 +488,19 @@
   margin-right: auto;
   margin-left: auto;
   padding: 6px 13px;
-  background: var(--glass);
-  border: 1px solid var(--glass-edge);
+  background: var(--panel);
+  border: 1px solid var(--edge-strong);
   border-radius: var(--r-m);
-  box-shadow: var(--shadow-1);
-  backdrop-filter: blur(16px);
+  box-shadow: none;
   font-size: 12.5px;
 }
 
 /* ---- an answer in markdown ---- */
 
 .md {
-  font-size: 15.5px;
-  line-height: 1.7;
+  max-width: var(--measure);
+  font-size: 16px;
+  line-height: 1.65;
   overflow-wrap: anywhere;
 }
 
@@ -450,27 +534,29 @@
 .md h3 {
   margin: 1.2em 0 0.4em;
   font-size: 1.05em;
-  letter-spacing: -0.005em;
+  letter-spacing: -0.02em;
 }
 
 .md a {
-  color: var(--accent-hi);
+  color: var(--accent);
   text-underline-offset: 3px;
 }
 
 .md code {
-  padding: 1px 6px;
+  padding: 1px 5px;
   background: var(--panel-2);
+  border: 1px solid var(--edge);
   border-radius: var(--r-s);
   font-family: var(--mono);
-  font-size: 0.88em;
+  font-size: 0.86em;
 }
 
 .md pre {
   padding: 12px 14px;
   overflow: auto;
   background: var(--panel-2);
-  border-radius: var(--r-l);
+  border: 1px solid var(--edge);
+  border-radius: var(--r-m);
 }
 
 .md pre code {
@@ -507,10 +593,11 @@
 
 .error-note {
   margin: 0;
-  padding: 12px 14px;
-  background: color-mix(in srgb, var(--risk) 12%, transparent);
-  border: 1px solid color-mix(in srgb, var(--risk) 35%, transparent);
-  border-radius: var(--r-l);
+  padding: 8px 12px;
+  background: transparent;
+  border: 0;
+  border-left: 2px solid var(--risk);
+  border-radius: 0;
   color: var(--ink);
   font-size: 14px;
   overflow-wrap: anywhere;
@@ -537,39 +624,33 @@
 .tok {
   display: inline-block;
   white-space: pre-wrap;
-  transition: filter calc(320ms * var(--tm)) var(--ease-out);
+  transition: opacity var(--dur-2) var(--ease-out);
 }
 
 .tok[data-fresh] {
-  animation: tok-in calc(460ms * var(--tm)) var(--ease-out) both;
+  animation: tok-in var(--dur-2) var(--ease-out) both;
 }
 
 @keyframes tok-in {
   from {
     opacity: 0;
-    filter: blur(6px);
-    transform: translateY(calc(4px * var(--dm)));
   }
 }
 
-/* The last words stay soft until newer words follow them. */
+/* The last words stay quiet until newer words follow them. */
 .tok[data-tail='1'] {
-  filter: blur(2.6px);
   opacity: 0.55;
 }
 
 .tok[data-tail='2'] {
-  filter: blur(1.7px);
   opacity: 0.72;
 }
 
 .tok[data-tail='3'] {
-  filter: blur(1px);
   opacity: 0.86;
 }
 
 .tok[data-tail='4'] {
-  filter: blur(0.45px);
   opacity: 0.95;
 }
 
@@ -586,11 +667,12 @@
   display: inline-grid;
   flex: none;
   place-items: center;
+  border: 1px solid var(--edge-strong);
   border-radius: var(--r-m);
   color: var(--tone);
-  background: radial-gradient(90% 90% at 50% 0%, color-mix(in srgb, var(--tone) 10%, transparent), transparent 80%), var(--inset);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tone) 22%, var(--edge));
-  transition: box-shadow calc(180ms * var(--tm)) var(--ease-out);
+  background: var(--inset);
+  box-shadow: none;
+  transition: border-color var(--dur-3) var(--ease-out);
 }
 
 .agent-logo {
@@ -664,7 +746,7 @@
 .agent-mark[data-state='waiting'] .agent-logo { opacity: 0.75; }
 
 .agent-mark[data-state='paused'] {
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--warn) 45%, var(--edge));
+  border-color: color-mix(in srgb, var(--warn) 45%, var(--edge));
 }
 .agent-mark[data-state='paused'] .agent-track { stroke: color-mix(in srgb, var(--warn) 25%, transparent); }
 .agent-mark[data-state='paused'] .agent-rest { stroke: var(--warn); opacity: 0.9; }
@@ -672,7 +754,7 @@
 
 /* Done: the edge flashes mint once and the seal draws through the middle, then
    both hold, so a finished answer keeps its seal while the thread scrolls. */
-.agent-mark[data-state='done'] { animation: agent-seal-flash calc(0.8s * var(--tm)) var(--ease-out) 1; }
+.agent-mark[data-state='done'] { border-color: color-mix(in srgb, var(--mint) 45%, var(--edge)); }
 .agent-mark[data-state='done'] .agent-track { stroke: color-mix(in srgb, var(--mint) 35%, transparent); }
 .agent-mark[data-state='done'] .agent-rest { opacity: 0; }
 .agent-mark[data-state='done'] .agent-logo { opacity: 0.45; }
@@ -682,7 +764,7 @@
 }
 
 .agent-mark[data-state='failed'] {
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--risk) 45%, var(--edge));
+  border-color: color-mix(in srgb, var(--risk) 55%, var(--edge));
   animation: agent-shake calc(0.45s * var(--tm)) var(--ease-out) 1;
 }
 .agent-mark[data-state='failed'] .agent-track { stroke: color-mix(in srgb, var(--risk) 22%, transparent); }
@@ -702,38 +784,11 @@
   to { stroke-dashoffset: 0; }
 }
 
-@keyframes agent-seal-flash {
-  0% { box-shadow: inset 0 0 0 1.5px var(--mint), 0 0 0 0 color-mix(in srgb, var(--mint) 55%, transparent); }
-  100% { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--mint) 35%, var(--edge)), 0 0 0 7px transparent; }
-}
-
 @keyframes agent-shake {
   20%, 60% { transform: translateX(calc(-2px * var(--dm))); }
   40%, 80% { transform: translateX(calc(2px * var(--dm))); }
 }
 
-/* The empty chat's one ornament: Kriko's mark printed as a dot field, in the
-   same print texture as the sky. It prints once and holds still. */
-.dither-mark {
-  display: block;
-  margin: 0 auto 18px;
-  color: rgba(255, 255, 255, 0.96);
-  background-image: radial-gradient(circle at 1px 1px, currentColor 0.85px, transparent 1.1px);
-  background-size: 2px 2px;
-  -webkit-mask-image: var(--mark);
-  mask-image: var(--mark);
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  -webkit-mask-size: 100% 100%;
-  mask-size: 100% 100%;
-  filter: drop-shadow(0 2px 16px rgba(10, 16, 44, 0.3));
-  animation: mark-print calc(0.7s * var(--tm)) steps(8, end) both;
-}
-
-@keyframes mark-print {
-  from { clip-path: inset(0 0 100% 0); }
-  to { clip-path: inset(0 0 0 0); }
-}
 .answer-head {
   display: flex;
   align-items: center;
@@ -814,7 +869,7 @@
   padding: 0;
   overflow: hidden;
   border: 1px solid var(--edge-strong);
-  border-radius: var(--r-l);
+  border-radius: var(--r-m);
   background: var(--panel);
 }
 
@@ -913,31 +968,25 @@ button.ask-head:hover {
   justify-content: center;
 }
 
-/* They sit on the hero picture, which keeps its own dark colours in both themes,
-   so they are glass over the picture and never a white or black slab. */
+/* Buttons on the landing screen, flat on the paper. */
 .hello-actions .btn {
   height: 38px;
   padding: 0 16px 0 14px;
-  background: var(--pill-bg);
-  backdrop-filter: blur(10px) saturate(1.2);
-  border: 1px solid var(--pill-edge);
-  box-shadow: inset 0 1px 0 var(--lit);
-  color: var(--on-fill);
+  background: var(--panel);
+  border: 1px solid var(--edge-strong);
+  box-shadow: none;
+  color: var(--ink);
 }
 
 .hello-actions .btn:hover {
-  background: color-mix(in srgb, var(--pill-bg) 70%, var(--accent));
-  border-color: color-mix(in srgb, var(--on-fill) 38%, transparent);
+  background: var(--accent-soft);
+  border-color: var(--accent);
 }
 
 .hello-actions .hello-main {
-  background:
-    radial-gradient(100% 140% at 50% 0%, color-mix(in srgb, var(--accent) 55%, transparent), transparent 75%),
-    color-mix(in srgb, var(--accent) 22%, var(--pill-bg));
-  border-color: color-mix(in srgb, var(--accent-hi) 60%, transparent);
-  box-shadow:
-    inset 0 1px 0 var(--lit),
-    0 0 22px -4px color-mix(in srgb, var(--accent) 80%, transparent);
+  background: var(--accent-fill);
+  border-color: transparent;
+  color: var(--accent-ink);
 }
 
 .hello-actions .btn:focus-visible {
@@ -949,14 +998,14 @@ button.ask-head:hover {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 28px;
+  min-height: 32px;
   padding: 0 9px;
-  border-radius: var(--r-m);
+  border-radius: var(--r-s);
   color: var(--ink-3);
   font-size: 12.5px;
   transition:
-    background-color calc(140ms * var(--tm)),
-    color calc(140ms * var(--tm));
+    background-color var(--dur-2) var(--ease-out),
+    color var(--dur-2) var(--ease-out);
 }
 
 .act:hover,
@@ -968,15 +1017,18 @@ button.ask-head:hover {
 .you-row {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: flex-start;
   gap: 6px;
 }
 
 .you-row .you {
+  order: 1;
+  flex: 1;
   align-self: auto;
 }
 
 .you-edit {
+  order: 2;
   padding: 0 7px;
   opacity: 0;
 }
@@ -996,10 +1048,10 @@ button.ask-head:hover {
   height: 32px;
   margin: 0 auto;
   padding: 0 14px;
-  background: var(--panel-2);
+  background: var(--panel);
   border: 1px solid var(--edge-strong);
   border-radius: var(--r-m);
-  box-shadow: var(--shadow-2);
+  box-shadow: none;
   color: var(--ink);
   font-size: 13px;
 }
