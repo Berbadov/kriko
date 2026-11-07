@@ -3,7 +3,8 @@
   flex-wrap: wrap;
   align-items: baseline;
   gap: 10px 16px;
-  padding: 18px 24px 6px;
+  padding: 20px 28px 10px;
+  border-bottom: 1px solid var(--edge);
 }
 
 .page-head h1 {
@@ -12,9 +13,10 @@
   min-width: 0;
   margin: 0;
   overflow: hidden;
-  font-size: 28px;
-  font-weight: 620;
-  letter-spacing: -0.02em;
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1.02;
   overflow-wrap: anywhere;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -45,28 +47,32 @@
   flex: 1;
   flex-direction: column;
   min-height: 0;
+  padding-bottom: 14px;
   overflow: auto;
 }
 
+/* A severity mark is a word and a square in the gutter, not a filled pill.
+   Critical takes the accent; the rest take the plain inks in order. */
 .level {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  padding: 3px 11px 3px 9px;
-  border-radius: var(--r-m);
-  background: var(--panel-2);
+  gap: 6px;
+  padding: 0;
+  background: transparent;
   color: var(--ink-2);
-  font-size: 12px;
-  font-weight: 560;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
 }
 
 /* The severity is a tick, not the text colour: the words stay readable and
-   the hue is not the only carrier. Critical is the one solid badge. */
+   the hue is not the only carrier. */
 .level::before {
   content: '';
   width: 7px;
   height: 7px;
-  border-radius: 2px;
+  border-radius: 0;
   background: var(--tone, var(--ink-3));
 }
 
@@ -75,11 +81,11 @@
 }
 
 .level[data-level='low'] {
-  --tone: var(--warn);
+  --tone: var(--ok);
 }
 
 .level[data-level='high'] {
-  --tone: var(--risk);
+  --tone: var(--accent);
 }
 
 .is-working {
@@ -99,24 +105,34 @@
   width: 58%;
   height: 10px;
   border-radius: var(--r-s);
-  background: linear-gradient(90deg, var(--edge) 0, var(--edge-strong) 50%, var(--edge) 100%);
-  background-size: 220% 100%;
-  animation: skeleton calc(1.8s * var(--tm)) linear infinite;
+  background: var(--edge-strong);
+  animation: skeleton calc(1.8s * var(--tm)) ease-in-out infinite;
 }
 
 @keyframes skeleton {
-  from {
-    background-position: 120% 0;
-  }
-  to {
-    background-position: -120% 0;
+  50% {
+    opacity: 0.4;
   }
 }
 
 .compare-dock {
+  position: relative;
   width: min(760px, 100%);
   margin: 0 auto;
   padding: 8px 32px 24px;
+}
+
+/* The dossier scrolls under the field. Fade its last line into the page so a
+   finding is never cut in half by the composer. */
+.compare-dock::before {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 100%;
+  left: 0;
+  height: 22px;
+  background: linear-gradient(to bottom, transparent, var(--ground));
+  pointer-events: none;
 }
 
 /* ---- queue page ---- */
@@ -128,18 +144,19 @@
 .queue-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  width: min(820px, 100%);
+  gap: 0;
+  width: min(860px, 100%);
   margin: 0;
-  padding: 18px 32px 40px;
+  padding: 8px 32px 40px;
   list-style: none;
 }
 
 .queue-item {
-  padding: 16px 18px;
-  background: var(--panel);
-  border: 1px solid var(--edge);
-  border-radius: var(--r-l);
+  padding: 14px 2px;
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--edge);
+  border-radius: 0;
   cursor: grab;
   list-style: none;
 }
@@ -177,16 +194,16 @@
 }
 
 .level[data-level='critical'] {
-  background: var(--risk);
-  color: var(--on-risk);
+  background: transparent;
+  color: var(--accent);
 }
 
 .level[data-level='critical']::before {
-  content: none;
+  background: var(--accent);
 }
 
 .level[data-level='medium'] {
-  --tone: var(--warn);
+  --tone: var(--ink-2);
 }
 
 .level[data-level='unrated'] {
@@ -235,10 +252,10 @@
   flex-direction: column;
   align-items: flex-start;
   max-width: 260px;
-  padding: 8px 14px;
-  background: var(--panel);
+  padding: 8px 12px;
+  background: transparent;
   border: 1px solid var(--edge);
-  border-radius: var(--r-l);
+  border-radius: var(--r-m);
   color: var(--ink);
   cursor: pointer;
   text-align: left;
@@ -294,52 +311,90 @@
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: 18px;
-  width: min(760px, calc(100% - 64px));
+  gap: 14px;
+  width: min(820px, calc(100% - 64px));
   min-height: 0;
   margin: 0 auto;
-  padding-top: 14px;
+  padding: 16px 0 18px;
   overflow: auto;
 }
 
+/* A finding is a ruled ledger row with an evidence gutter: the severity mark
+   and the source count sit in the margin, the finding on the page. */
 .risk-list {
   display: grid;
   flex: none;
-  gap: 10px;
+  gap: 0;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .risk-list > li {
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
-  padding: 14px 16px;
-  background: var(--panel);
-  border: 1px solid var(--edge);
-  border-radius: var(--r-l);
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
+  align-items: start;
+  gap: 0 18px;
+  padding: 16px 0 26px;
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--edge);
+  border-radius: 0;
+}
+
+.risk-list > li.muted {
+  display: block;
+  border-top: 1px solid var(--edge);
+}
+
+.risk-gutter {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  padding-top: 2px;
+}
+
+.risk-count {
+  color: var(--ink-3);
+  font-size: 11px;
 }
 
 .risk-list .level {
-  flex: none;
   margin-top: 1px;
 }
 
 .risk-list p {
-  margin: 4px 0 0;
+  margin: 5px 0 0;
   color: var(--ink-2);
-  font-size: 14px;
-  line-height: 1.55;
+  font-size: 14.5px;
+  line-height: 1.6;
   overflow-wrap: anywhere;
 }
 
-.risk-list > li > div {
+.risk-list > li > div,
+.risk-body {
   min-width: 0;
 }
 
 .risk-list strong {
   overflow-wrap: anywhere;
+}
+
+/* A source under a finding is a numbered footnote: a mono index on the chip. */
+.risk-list .claim-sources {
+  counter-reset: note;
+}
+
+.risk-list .claim-chip {
+  counter-increment: note;
+}
+
+.risk-list .claim-chip::before {
+  content: counter(note);
+  color: var(--ink-3);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
 }
 
 
@@ -353,8 +408,87 @@
   margin: 10px 0 2px;
 }
 
+.product-body > .check-context,
+.check-context {
+  display: grid;
+  gap: 3px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--edge);
+}
+
+.check-context:empty {
+  display: none;
+}
+
+/* Evidence dates and part costs: a ruled section of the dossier, not a card. */
+.product-insights {
+  display: grid;
+  gap: 8px;
+  padding: 14px 0 4px;
+  border-top: 1px solid var(--edge);
+}
+
+.product-insights .head-tools {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  margin-left: 0;
+  color: var(--ink-2);
+  font-size: 13px;
+}
+
+.product-insights .head-tools strong {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  font-weight: 400;
+  color: var(--ink-3);
+}
+
+.product-insights h2 {
+  margin: 8px 0 0;
+  font-size: 16px;
+  letter-spacing: -0.02em;
+}
+
+.product-insights ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.product-insights li {
+  padding: 8px 0;
+  border-top: 1px solid var(--edge);
+}
+
+.product-insights blockquote {
+  margin: 4px 0;
+  padding-left: 10px;
+  border-left: 2px solid var(--edge-strong);
+  color: var(--ink-3);
+  font-size: 12.5px;
+}
+
 .check-context p {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 13px;
   overflow-wrap: anywhere;
+}
+
+.check-context .muted {
+  color: var(--ink-3);
+  font-family: var(--mono);
+  font-size: 11.5px;
+}
+
+.product-body details > summary {
+  padding: 6px 0;
+  color: var(--ink-2);
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: 11.5px;
 }
 
 .product-body dl > div {
@@ -366,7 +500,9 @@
 
 .product-body dt {
   color: var(--ink-3);
-  font-size: 13px;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  letter-spacing: 0;
 }
 
 .product-body dd {
@@ -378,6 +514,8 @@
 
 .product-body dd blockquote {
   margin: 4px 0 0;
+  padding-left: 10px;
+  border-left: 2px solid var(--edge-strong);
   color: var(--ink-3);
   font-size: 12.5px;
 }
@@ -409,27 +547,36 @@
 .matrix {
   display: grid;
   flex: none;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   align-items: start;
-  gap: 16px;
-  padding: 22px 32px 8px;
+  gap: 0;
+  padding: 20px 32px 8px;
 }
 
+/* Columns are ruled sections of one sheet, not a row of cards. */
 .mx-col {
   display: flex;
   flex-direction: column;
   min-width: 0;
   overflow: hidden;
-  background: var(--panel);
-  border: 1px solid var(--edge);
-  border-radius: var(--r-l);
+  padding: 0 18px;
+  background: transparent;
+  border: 0;
+  border-top: 2px solid var(--edge-strong);
+  border-left: 1px solid var(--edge);
+  border-radius: 0;
+}
+
+.mx-col:first-child {
+  border-left: 0;
 }
 
 .mx-head {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding: 12px 14px 10px;
+  padding: 12px 0 12px;
+  border-bottom: 1px solid var(--edge);
 }
 
 .mx-head .muted {
@@ -495,27 +642,42 @@
 }
 
 .mx-risk {
+  position: relative;
   border-top: 1px solid var(--edge);
 }
 
 .mx-risk-main {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 5px;
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  align-items: start;
+  gap: 0 10px;
   width: 100%;
-  padding: 10px 14px;
+  padding: 12px 0;
   background: none;
   border: 0;
   color: inherit;
   cursor: pointer;
   font: inherit;
   text-align: left;
+  transition: background-color var(--dur-2) var(--ease-out);
 }
 
 .mx-risk-main:hover,
 .mx-risk[data-open='true'] .mx-risk-main {
-  background: color-mix(in srgb, var(--ink) 4%, transparent);
+  background: var(--accent-soft);
+}
+
+.mx-risk-gutter {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  padding-top: 2px;
+}
+
+.mx-risk-content {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
 }
 
 .mx-risk-top {
@@ -531,8 +693,8 @@
 }
 
 .mx-risk-title {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 14.5px;
+  font-weight: 620;
   line-height: 1.4;
 }
 
@@ -540,7 +702,7 @@
   display: -webkit-box;
   overflow: hidden;
   color: var(--ink-2);
-  font-size: 13px;
+  font-size: 13.5px;
   line-height: 1.5;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
@@ -552,11 +714,29 @@
 }
 
 .mx-risk-meta {
-  font-size: 11.5px;
+  font-size: 11px;
+  white-space: nowrap;
 }
 
 .mx-risk-sources {
-  padding: 0 14px 10px;
+  padding: 0 0 12px 82px;
+}
+
+/* Sources under a finding are numbered footnotes here too. */
+.mx-risk-sources .claim-sources {
+  counter-reset: note;
+}
+
+.mx-risk-sources .claim-chip {
+  counter-increment: note;
+}
+
+.mx-risk-sources .claim-chip::before {
+  content: counter(note);
+  color: var(--ink-3);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
 }
 
 .mx-risk-sources .claim-sources {
@@ -565,7 +745,7 @@
 
 .mx-none {
   margin: 0;
-  padding: 14px 18px 18px;
+  padding: 12px 0 18px;
   border-top: 1px solid var(--edge);
   color: var(--ink-3);
   font-size: 13px;
@@ -576,7 +756,7 @@
   display: flex;
   align-items: center;
   height: 64px;
-  padding: 0 18px;
+  padding: 0;
   border-top: 1px solid var(--edge);
 }
 
@@ -584,7 +764,7 @@
   display: flex;
   flex: none;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   padding: 14px 32px 24px;
 }
 
@@ -596,12 +776,12 @@
   padding: 6px 2px;
   background: none;
   border: 0;
+  border-radius: 0;
   color: var(--ink-2);
   cursor: pointer;
   font: inherit;
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .specs-toggle:disabled {
@@ -611,9 +791,10 @@
 .spec-table {
   display: grid;
   overflow: hidden;
-  background: var(--panel);
-  border: 1px solid var(--edge);
-  border-radius: var(--r-l);
+  background: transparent;
+  border: 0;
+  border-top: 2px solid var(--edge-strong);
+  border-radius: 0;
 }
 
 .spec-row {
@@ -621,7 +802,7 @@
   grid-template-columns: minmax(120px, 0.8fr) repeat(var(--cols), minmax(0, 1fr));
   gap: 16px;
   align-items: baseline;
-  padding: 11px 18px;
+  padding: 10px 0;
   border-top: 1px solid var(--edge);
 }
 
@@ -645,13 +826,14 @@
 
 .spec-label {
   color: var(--ink-3);
-  font-size: 13px;
+  font-family: var(--mono);
+  font-size: 11.5px;
 }
 
 .spec-value {
   min-width: 0;
   color: var(--ink-2);
-  font-size: 13px;
+  font-size: 13.5px;
   line-height: 1.45;
   overflow-wrap: anywhere;
 }

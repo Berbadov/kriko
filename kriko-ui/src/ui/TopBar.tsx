@@ -95,7 +95,7 @@ export function TopBar({
         {ITEMS.map((item) => {
           const on = item.id === screen
           return (
-            <button key={item.id} className="topbar-tab" data-tour={`nav-${item.id}`} data-on={on} onClick={() => onNavigate(item.id)} aria-current={on ? 'page' : undefined}>
+            <button key={item.id} className="topbar-tab" data-tour={`nav-${item.id}`} data-on={on} onClick={() => onNavigate(item.id)} aria-current={on ? 'page' : undefined} aria-label={item.label}>
               {on && <motion.span layoutId="topbar-active" className="topbar-active" transition={m.tx.spring} />}
               <Icon name={item.icon} size={17} />
               <span className="topbar-label">{item.label}</span>
@@ -104,7 +104,7 @@ export function TopBar({
           )
         })}
         <div className="topbar-history" ref={box}>
-          <button className="topbar-tab" data-on={history || undefined} onClick={() => setHistory((v) => !v)} aria-expanded={history} aria-haspopup="dialog" data-tour="history">
+          <button className="topbar-tab" data-on={history || undefined} onClick={() => setHistory((v) => !v)} aria-expanded={history} aria-haspopup="dialog" data-tour="history" aria-label="History">
             <Icon name="clock" size={17} />
             <span className="topbar-label">History</span>
           </button>

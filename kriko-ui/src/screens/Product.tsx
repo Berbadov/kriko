@@ -200,10 +200,17 @@ export function ProductScreen({ lookupId, onBack, onCompare }: { lookupId: strin
             {check.risks.length > 0 && drawn.length === 0 && <li className="muted">Every finding on record is hidden at this sensitivity.</li>}
             {drawn.map((risk) => (
               <li key={risk.title} data-thin={risk.evidence?.level === 'thin' || undefined}>
-                <span className="level" data-level={risk.level}>
-                  {LEVEL_WORD[risk.level]}
+                <span className="risk-gutter">
+                  <span className="level" data-level={risk.level}>
+                    {LEVEL_WORD[risk.level]}
+                  </span>
+                  {risk.sources.length > 0 && (
+                    <span className="mono risk-count">
+                      {risk.sources.length} {risk.sources.length === 1 ? 'source' : 'sources'}
+                    </span>
+                  )}
                 </span>
-                <div>
+                <div className="risk-body">
                   <div className="risk-title">
                     <strong>{risk.title}</strong>
                     <EvidenceMark evidence={risk.evidence} />
