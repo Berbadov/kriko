@@ -22,8 +22,16 @@
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  image-rendering: pixelated;
+}
+
+/* The home's dust sits on its own dark ground in both themes, so the white
+   question over it always reads; the grains are a pale grey of light. */
+.sky {
+  background: linear-gradient(to bottom, #141416, #1c1c1f 70%, #222226);
+}
+
+.dust-sky {
+  color: #d4d4da;
 }
 
 .chat-col {

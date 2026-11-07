@@ -75,10 +75,11 @@ def test_a_raw_colour_outside_the_theme_is_one_of_the_few_that_must_not_follow_i
     """Counted, so a new one is a decision someone made and not an accident."""
     allowed_per_file = {
         "styles/tokens.css": None,  # the palette itself
-        "ui/DitherSky.tsx": None,  # the sky's own colours, which no theme changes
         "ui/AgentMark.tsx": 9,  # each agent's own brand tone, which no theme changes
         "styles/shell.css": 3,  # the switch knob and its shadow, the drawer scrim
-        "styles/chat.css": 6,  # a mask, and white text and its shadow over the hero sky
+        # a mask, white text and its shadow over the hero sky, and the sky's own
+        # dark ground and pale dust, which stay dark in both themes so that text reads
+        "styles/chat.css": 10,
         "styles/compare.css": 1,  # white on a critical fill
         "styles/activity.css": 1,  # ink on the green check
         "ui/TopBar.tsx": 1,  # the logo's own white, swapped for the text colour
