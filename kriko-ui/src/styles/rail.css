@@ -33,12 +33,11 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
-  margin: 18px 18px 20px 0;
-  background: var(--glass);
-  border: 1px solid var(--glass-edge);
+  margin: 16px 16px 16px 0;
+  background: var(--panel);
+  border: 1px solid var(--edge);
   border-radius: var(--r-l);
-  box-shadow: var(--shadow-1);
-  backdrop-filter: blur(20px) saturate(1.4);
+  box-shadow: none;
   overflow: hidden;
 }
 
@@ -47,20 +46,21 @@
   grid-template-columns: 1fr auto;
   align-items: center;
   gap: 2px 8px;
-  padding: 14px 16px 10px;
+  padding: 12px 14px 10px;
   border-bottom: 1px solid var(--edge);
 }
 
 .cr-head h2 {
   margin: 0;
-  font-size: 14px;
-  font-weight: 600;
-  letter-spacing: -0.005em;
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: -0.015em;
 }
 
 .cr-head .mono {
   grid-column: 1;
-  font-size: 11.5px;
+  color: var(--ink-3);
+  font-size: 11px;
 }
 
 .cr-close {
@@ -89,7 +89,7 @@
 }
 
 .cr-group + .cr-group {
-  margin-top: 6px;
+  margin-top: 10px;
   border-top: 1px solid var(--edge);
 }
 
@@ -97,18 +97,16 @@
   display: flex;
   align-items: baseline;
   gap: 8px;
-  margin: 0 6px 6px;
-  color: var(--ink-3);
-  font-size: 12px;
-  font-weight: 540;
+  margin: 0 4px 6px;
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 550;
 }
 
 .cr-group h3 .mono {
   flex: none;
-  padding: 0 6px;
-  background: var(--panel-2);
-  border-radius: var(--r-s);
-  color: var(--ink-2);
+  color: var(--ink-3);
+  font-size: 11px;
 }
 
 .cr-prompt {
@@ -143,20 +141,20 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 0 4px;
-  border: 1px solid transparent;
-  border-radius: var(--r-m);
+  border: 0;
+  border-top: 1px solid var(--edge);
+  border-radius: 0;
   transition:
-    background-color calc(140ms * var(--tm)),
-    border-color calc(140ms * var(--tm));
+    background-color var(--dur-2) var(--ease-out);
 }
 
 .cr-item:hover {
-  background: color-mix(in srgb, var(--ink) 4%, transparent);
+  background: var(--accent-soft);
 }
 
 .cr-item[data-lit] {
   background: var(--accent-soft);
-  border-color: color-mix(in srgb, var(--accent-hi) 55%, transparent);
+  box-shadow: inset 2px 0 0 var(--accent);
 }
 
 .cr-main {
@@ -169,7 +167,7 @@
   padding: 7px 10px;
   background: none;
   border: 0;
-  border-radius: var(--r-m);
+  border-radius: 0;
   color: inherit;
   cursor: pointer;
   font: inherit;
@@ -177,10 +175,15 @@
 }
 
 .cr-main strong {
+  display: -webkit-box;
+  overflow: hidden;
   font-size: 13.5px;
-  font-weight: 560;
+  font-weight: 550;
   line-height: 1.35;
   overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 
 /* The site's icon and the row's title on one line. The icon is the engine's
@@ -199,18 +202,43 @@
 
 .cr-meta {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 4px 8px;
-  font-size: 11.5px;
+  width: 100%;
+  overflow: hidden;
+  font-size: 11px;
+}
+
+.cr-meta > * {
+  min-width: 0;
+}
+
+.cr-meta .mono {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cr-read {
+  flex: none;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  white-space: nowrap;
 }
 
 .cr-tier {
-  padding: 1px 8px;
+  flex: none;
+  max-width: 96px;
+  overflow: hidden;
+  padding: 0 6px;
   border: 1px solid var(--edge-strong);
-  border-radius: var(--r-m);
+  border-radius: var(--r-s);
   color: var(--ink-2);
-  font-size: 11.5px;
+  font-family: var(--mono);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .cr-tier[data-standing='trusted'] {
@@ -249,16 +277,24 @@
 .cr-link {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 5px;
-  color: var(--accent-hi);
-  font-size: 12.5px;
+  min-width: 32px;
+  height: 32px;
+  color: var(--ink-2);
+  font-family: var(--mono);
+  font-size: 11px;
   text-underline-offset: 3px;
+}
+
+.cr-link:hover {
+  color: var(--accent);
 }
 
 /* A card in the thread lights up with its entry in the column. */
 .product-card[data-lit],
 .run-event[data-lit] {
-  border-color: color-mix(in srgb, var(--accent-hi) 60%, transparent);
+  border-color: var(--accent);
   background: var(--accent-soft);
 }
 
@@ -276,13 +312,12 @@
   align-items: center;
   gap: 7px;
   height: 32px;
-  padding: 0 13px;
-  background: var(--glass);
-  border: 1px solid var(--glass-edge);
+  padding: 0 12px;
+  background: var(--panel);
+  border: 1px solid var(--edge-strong);
   border-radius: var(--r-m);
   color: var(--ink);
   font-size: 13px;
-  backdrop-filter: blur(16px);
 }
 
 @container chat (max-width: 1080px) {
@@ -312,7 +347,8 @@
     width: min(340px, 92cqw);
     margin: 10px 10px 10px 0;
     background: var(--panel);
-    box-shadow: var(--shadow-2);
+    border-color: var(--edge-strong);
+    box-shadow: none;
     visibility: hidden;
     transform: translateX(calc(110% + 12px));
     transition:
@@ -359,31 +395,31 @@
 
 .ctx-track {
   min-width: 0;
-  height: 8px;
-  background: var(--inset);
-  border: 1px solid var(--edge);
-  border-radius: var(--r-m);
-  box-shadow: inset 0 1px 2px var(--sunk);
+  height: 4px;
+  background: var(--edge);
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
   overflow: hidden;
 }
 
 .ctx-track i {
   display: block;
   height: 100%;
-  background: var(--bar);
-  border-radius: var(--r-m);
-  box-shadow: inset 0 1px 0 var(--lit);
+  background: var(--accent);
+  border-radius: 0;
+  box-shadow: none;
   transition:
     width calc(320ms * var(--tm)) var(--ease-out),
     background-color calc(200ms * var(--tm));
 }
 
 .ctx[data-tone='amber'] .ctx-track i {
-  background: linear-gradient(90deg, var(--warn), var(--warm));
+  background: var(--warn);
 }
 
 .ctx[data-tone='red'] .ctx-track i {
-  background: linear-gradient(90deg, var(--warm), var(--risk));
+  background: var(--risk);
 }
 
 .ctx[data-tone='amber'] .ctx-text {
@@ -449,15 +485,15 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 22px;
-  padding: 0 9px 0 7px;
+  height: 24px;
+  padding: 0 7px;
   background: transparent;
   border: 1px solid var(--edge-strong);
-  border-radius: var(--r-m);
+  border-radius: var(--r-s);
   color: var(--ink-2);
   cursor: help;
   font: inherit;
-  font-size: 11.5px;
+  font-size: 11px;
 }
 
 .ev-dot:focus-visible {
@@ -490,7 +526,7 @@
 .ev-glyph i {
   width: 3px;
   background: color-mix(in srgb, var(--tone) 26%, transparent);
-  border-radius: 1.5px;
+  border-radius: 0;
 }
 
 .ev-glyph i:nth-child(1) {
@@ -508,7 +544,7 @@
 .ev-mark[data-level='solid'] .ev-glyph i,
 .ev-mark[data-level='partial'] .ev-glyph i:nth-child(-n + 2),
 .ev-mark[data-level='thin'] .ev-glyph i:first-child {
-  background: linear-gradient(180deg, color-mix(in srgb, var(--tone) 78%, white), var(--tone));
+  background: var(--tone);
 }
 
 .ev-mark[data-level='thin'] .ev-dot {
@@ -522,17 +558,17 @@
   z-index: 30;
   width: max-content;
   max-width: 270px;
-  padding: 8px 11px;
-  background: var(--panel-2);
+  padding: 8px 10px;
+  background: var(--panel);
   border: 1px solid var(--edge-strong);
   border-radius: var(--r-m);
-  box-shadow: var(--shadow-2);
+  box-shadow: none;
   color: var(--ink);
   font-size: 12.5px;
   line-height: 1.45;
   opacity: 0;
   pointer-events: none;
-  transition: opacity calc(120ms * var(--tm));
+  transition: opacity var(--dur-2);
 }
 
 .ev-mark:hover .ev-tip,
@@ -628,10 +664,10 @@
   gap: 6px;
   max-width: 100%;
   padding: 3px 9px 3px 6px;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--ink) 7%, var(--panel-2)), var(--panel-2));
+  background: transparent;
   border: 1px solid var(--edge);
-  border-radius: var(--r-m);
-  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--ink) 9%, transparent), var(--shadow-1);
+  border-radius: var(--r-s);
+  box-shadow: none;
   color: var(--ink-2);
   cursor: pointer;
   font: inherit;
@@ -639,9 +675,9 @@
   font-weight: 500;
   line-height: 1;
   transition:
-    border-color calc(160ms * var(--tm)),
-    color calc(160ms * var(--tm)),
-    box-shadow calc(160ms * var(--tm));
+    border-color var(--dur-2) var(--ease-out),
+    color var(--dur-2) var(--ease-out),
+    background-color var(--dur-2) var(--ease-out);
 }
 
 .claim-chip[data-compact] {
@@ -650,10 +686,8 @@
 
 .claim-chip:hover,
 .claim-chip[aria-expanded='true'] {
-  border-color: color-mix(in srgb, var(--tone) 50%, var(--edge-strong));
-  box-shadow:
-    inset 0 1px 0 color-mix(in srgb, var(--ink) 9%, transparent),
-    0 0 0 3px color-mix(in srgb, var(--tone) 12%, transparent);
+  border-color: color-mix(in srgb, var(--tone) 55%, var(--edge-strong));
+  background: var(--accent-soft);
   color: var(--ink);
 }
 
@@ -722,7 +756,7 @@
 .claim-meter i {
   width: 3px;
   background: color-mix(in srgb, var(--tone) 26%, transparent);
-  border-radius: 1.5px;
+  border-radius: 0;
 }
 
 .claim-meter i:nth-child(1) {
@@ -740,7 +774,7 @@
 .claim-meter[data-lit='3'] i,
 .claim-meter[data-lit='2'] i:nth-child(-n + 2),
 .claim-meter[data-lit='1'] i:first-child {
-  background: linear-gradient(180deg, color-mix(in srgb, var(--tone) 78%, white), var(--tone));
+  background: var(--tone);
 }
 
 /* The card behind a chip. It opens over the answer, so it is measured like one:
@@ -754,33 +788,18 @@
   overflow: hidden;
   width: min(340px, calc(100vw - 24px));
   padding: 12px 12px 10px;
-  background:
-    radial-gradient(120% 90px at 0% 0%, color-mix(in srgb, var(--tone) 14%, transparent), transparent 70%),
-    color-mix(in srgb, var(--panel) 96%, transparent);
-  backdrop-filter: blur(16px) saturate(1.2);
+  background: var(--panel);
   border: 1px solid var(--edge-strong);
+  border-top: 2px solid var(--tone);
   border-radius: var(--r-m);
-  box-shadow:
-    inset 0 1px 0 color-mix(in srgb, var(--ink) 10%, transparent),
-    var(--shadow-2);
+  box-shadow: none;
   color: var(--ink);
-  animation: claim-card-in calc(180ms * var(--tm)) var(--ease-out) both;
-}
-
-/* A hairline of the tier's own colour along the top edge, fading out to the right. */
-.claim-card::before {
-  content: '';
-  position: absolute;
-  inset: 0 0 auto;
-  height: 1.5px;
-  background: linear-gradient(90deg, var(--tone), transparent 75%);
-  opacity: 0.8;
+  animation: claim-card-in var(--dur-3) var(--ease-out) both;
 }
 
 @keyframes claim-card-in {
   from {
     opacity: 0;
-    transform: translateY(calc(5px * var(--dm)));
   }
 }
 
@@ -793,22 +812,21 @@
 
 .claim-card-word {
   margin-left: auto;
-  padding: 2px 7px;
-  background: color-mix(in srgb, var(--tone) 14%, transparent);
-  border-radius: var(--r-m);
-  color: color-mix(in srgb, var(--tone) 60%, var(--ink));
+  padding: 0 6px;
+  background: transparent;
+  border: 1px solid var(--edge);
+  border-radius: var(--r-s);
+  color: var(--ink-2);
   font-size: 10.5px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  letter-spacing: 0;
 }
 
 .claim-card blockquote {
   margin: 0;
   padding: 1px 0 1px 12px;
-  border-left: 2px solid transparent;
-  border-image: linear-gradient(180deg, var(--tone), color-mix(in srgb, var(--tone) 10%, transparent)) 1;
+  border-left: 2px solid var(--tone);
   font-size: 13.5px;
-  line-height: 1.45;
+  line-height: 1.5;
 }
 
 .claim-card-none,
@@ -826,7 +844,7 @@
 .claim-card-acts a,
 .claim-card-acts button {
   padding: 5px 10px;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--ink) 7%, var(--panel-2)), var(--panel-2));
+  background: transparent;
   border: 1px solid var(--edge-strong);
   border-radius: var(--r-s);
   color: var(--ink);
@@ -838,21 +856,17 @@
 }
 
 .claim-card-acts a {
-  background: linear-gradient(180deg, var(--accent-hi), var(--accent));
-  border-color: color-mix(in srgb, var(--accent) 70%, black);
-  box-shadow: inset 0 1px 0 var(--lit);
+  background: var(--accent-fill);
+  border-color: transparent;
   color: var(--accent-ink);
 }
 
-/* ---- card depth: a wash of the brand violet in the top-left corner and a lit top edge ----
-   The same treatment the claim card carries in its tier's colour. */
+/* ---- flat sections: no corner wash, no lit top edge ---- */
 
 .mx-col,
 .queue-item {
-  background:
-    radial-gradient(130% 130px at 0% 0%, color-mix(in srgb, var(--violet) 11%, transparent), transparent 70%),
-    var(--panel);
-  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--ink) 7%, transparent);
+  background: transparent;
+  box-shadow: none;
 }
 
 /* ---- the usage pill and its card ---- */
@@ -865,9 +879,9 @@
   display: inline-flex;
   align-items: center;
   gap: 9px;
-  height: 34px;
-  padding: 0 13px 0 11px;
-  background: var(--inset);
+  height: 30px;
+  padding: 0 10px;
+  background: transparent;
   border: 1px solid var(--edge);
   border-radius: var(--r-m);
   color: var(--ink-2);
@@ -905,7 +919,7 @@
 .usage-gauge i {
   width: 3px;
   background: color-mix(in srgb, var(--tone) 26%, transparent);
-  border-radius: 1.5px;
+  border-radius: 0;
 }
 
 .usage-gauge i:nth-child(1) {
@@ -923,12 +937,12 @@
 .usage-gauge[data-lit='3'] i,
 .usage-gauge[data-lit='2'] i:nth-child(-n + 2),
 .usage-gauge[data-lit='1'] i:first-child {
-  background: linear-gradient(180deg, color-mix(in srgb, var(--tone) 78%, white), var(--tone));
+  background: var(--tone);
 }
 
 .usage-card {
   position: absolute;
-  top: calc(100% + 10px);
+  top: calc(100% + 8px);
   right: 0;
   z-index: 60;
   display: flex;
@@ -938,15 +952,12 @@
   max-height: min(78vh, 680px);
   padding: 16px;
   overflow: auto;
-  background:
-    radial-gradient(120% 120px at 100% 0%, color-mix(in srgb, var(--violet) 12%, transparent), transparent 70%),
-    color-mix(in srgb, var(--panel) 97%, transparent);
-  backdrop-filter: blur(16px);
+  background: var(--panel);
   border: 1px solid var(--edge-strong);
   border-radius: var(--r-l);
-  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--ink) 8%, transparent), var(--shadow-2);
+  box-shadow: none;
   color: var(--ink);
-  animation: claim-card-in calc(180ms * var(--tm)) var(--ease-out) both;
+  animation: claim-card-in var(--dur-3) var(--ease-out) both;
 }
 
 .usage-demo {
@@ -1072,9 +1083,10 @@
 
 .usage-table thead th {
   color: var(--ink-3);
+  font-family: var(--mono);
   font-size: 10.5px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-weight: 400;
+  letter-spacing: 0;
 }
 
 .usage-table tbody tr + tr > * {

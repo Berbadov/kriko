@@ -1,11 +1,10 @@
 /* Every colour, size and time in the interface comes from here.
    Dark is the first theme. `data-theme` is "system", "dark" or "light".
 
-   Flat neutrals, a lifted charcoal to white with plain greys between, and one navy
-   that is the only hue that carries meaning. Severity is not a traffic light:
-   serious takes the blue, to-check the plain ink, a good sign a quieter grey,
-   and the rule under each finding says it again by shape. Radii: 4 / 6 / 10 / 10. Semantic hues get a `-text` pair that
-   passes contrast as text, and an `on-` pair that passes on their solid fill. */
+   The dossier: paper and ink. Light is drafting paper, dark is blue-black
+   graphite. One navy carries meaning; severity is never a traffic light and the
+   rule under a finding repeats it by shape. Radii are cut paper: 2 / 4 / 6.
+   Surfaces are flat: no resting shadow, no decorative gradient, no glass. */
 
 :root {
   --font: 'Inter Tight Variable', 'Geist Variable', system-ui, sans-serif;
@@ -15,10 +14,10 @@
   --tm: 1;
   --dm: 1;
 
-  --r-s: 4px;
-  --r-m: 6px;
-  --r-l: 10px;
-  --r-xl: 10px;
+  --r-s: 2px;
+  --r-m: 4px;
+  --r-l: 6px;
+  --r-xl: 6px;
 
   --gap-1: 4px;
   --gap-2: 8px;
@@ -30,154 +29,147 @@
   --rail-w: 244px;
   --rail-w-min: 68px;
 
+  /* one reading measure for prose, and the three motion lengths in use */
+  --measure: 68ch;
+  --dur-1: calc(120ms * var(--tm));
+  --dur-2: calc(160ms * var(--tm));
+  --dur-3: calc(180ms * var(--tm));
+
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-io: cubic-bezier(0.65, 0, 0.35, 1);
 
   color-scheme: dark;
 
-  /* dark: neutral charcoal, no blue cast */
-  --ground: #161618;
-  --raise: #1b1b1e;
-  --panel: #202023;
-  --panel-2: #27272b;
-  --edge: rgba(255, 255, 255, 0.08);
-  --edge-strong: rgba(255, 255, 255, 0.16);
-  --ink: #ededed;
-  --ink-2: #a8a8a8;
-  --ink-3: #8c8c8c;
-  --accent: #5268d1;
-  --accent-hi: #8a9be4;
+  /* dark: blue-black graphite */
+  --ground: #101418;
+  --raise: #222a33;
+  --panel: #1b2129;
+  --panel-2: #222a33;
+  --edge: rgba(255, 255, 255, 0.09);
+  --edge-strong: rgba(255, 255, 255, 0.18);
+  --ink: #e9ecef;
+  --ink-2: #a6b0ba;
+  --ink-3: #87929d;
+  --accent: #6e96c8;
+  --accent-hi: #8fb0d8;
+  --accent-fill: #2a4e78;
   --accent-ink: #ffffff;
-  --accent-soft: rgba(82, 104, 209, 0.18);
-  --warm: #8a9be4;
-  --ok: #bdbdbd;
-  --warn: #d6d6d6;
-  --risk: #5268d1;
-  --ok-text: #bdbdbd;
-  --warn-text: #d6d6d6;
-  --risk-text: #8a9be4;
-  --on-risk: #ffffff;
-  --on-warn: #161618;
-  /* data companions to the brand blue: one hue each, used by bars, meters and charts */
-  --violet: #8a9be4;
-  --teal: #a8a8a8;
-  --mint: #bdbdbd;
-  --sky: #d6d6d6;
-  --bar: linear-gradient(90deg, var(--accent), var(--accent-hi));
-  /* on a lit fill, in both themes: the fill is the same gradient either way */
-  --on-fill: #ffffff;
-  --lit: rgba(255, 255, 255, 0.3);
+  --accent-soft: rgba(110, 150, 200, 0.14);
+  --warm: #6e96c8;
+  --ok: #87929d;
+  --warn: #a6b0ba;
+  --risk: #6e96c8;
+  --ok-text: #87929d;
+  --warn-text: #a6b0ba;
+  --risk-text: #6e96c8;
+  --on-risk: #101418;
+  --on-warn: #101418;
+  /* data companions: the one hue, plus quieter greys */
+  --violet: #6e96c8;
+  --teal: #a6b0ba;
+  --mint: #87929d;
+  --sky: #a6b0ba;
+  --bar: var(--accent);
+  --on-fill: #101418;
+  --lit: transparent;
   --sunk: rgba(0, 0, 0, 0.18);
-  --pill-bg: rgba(22, 22, 24, 0.6);
-  --pill-edge: rgba(255, 255, 255, 0.22);
+  --pill-bg: var(--panel);
+  --pill-edge: var(--edge-strong);
   --step-0: var(--ink-3);
-  --step-1: var(--warn);
-  --step-2: var(--accent-hi);
+  --step-1: var(--ink-2);
+  --step-2: var(--accent);
   --step-3: var(--accent);
-  --bar-done: linear-gradient(90deg, var(--ok), var(--ok));
+  --bar-done: var(--ink-3);
   --inset: color-mix(in srgb, var(--ink) 5%, var(--ground));
-  --scrim: rgba(0, 0, 0, 0.66);
-  --glass: rgba(27, 27, 30, 0.62);
-  --glass-edge: rgba(255, 255, 255, 0.14);
-  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-2: 0 18px 50px -12px rgba(0, 0, 0, 0.6), 0 2px 6px rgba(0, 0, 0, 0.35);
-  /* a glass group: translucent fill, bright rim, a hairline outside it, a soft
-     shadow, and a solid fill for a platform with no backdrop blur */
-  --gl-fill: rgba(255, 255, 255, 0.06);
-  --gl-rim: rgba(255, 255, 255, 0.18);
-  --gl-line: rgba(0, 0, 0, 0.45);
-  --gl-hair: rgba(255, 255, 255, 0.08);
-  --gl-solid: #232326;
-  --gl-shadow: 0 14px 34px -16px rgba(0, 0, 0, 0.7), 0 2px 6px rgba(0, 0, 0, 0.25);
+  --scrim: rgba(0, 0, 0, 0.7);
+  /* flat where the old interface was glass: the token names stay, the effect does not */
+  --glass: var(--panel);
+  --glass-edge: var(--edge);
+  --shadow-1: none;
+  --shadow-2: none;
+  --gl-fill: var(--panel);
+  --gl-rim: var(--edge);
+  --gl-line: var(--edge);
+  --gl-hair: var(--edge);
+  --gl-solid: var(--panel);
+  --gl-shadow: none;
 }
 
-/* light: neutral paper, white surfaces, hairline grey edges */
+/* light: drafting paper */
 @media (prefers-color-scheme: light) {
   :root:not([data-theme='dark']) {
     color-scheme: light;
-    --ground: #f2f2f2;
+    --ground: #edeeef;
     --raise: #ffffff;
     --panel: #ffffff;
-    --panel-2: #f2f2f2;
-    --edge: rgba(0, 0, 0, 0.09);
-    --edge-strong: rgba(0, 0, 0, 0.18);
-    --ink: #111111;
-    --ink-2: #444444;
-    --ink-3: #666666;
-    --accent: #1d2d7f;
-    --accent-hi: #17246a;
+    --panel-2: #f7f8f9;
+    --edge: rgba(16, 20, 24, 0.1);
+    --edge-strong: rgba(16, 20, 24, 0.2);
+    --ink: #101418;
+    --ink-2: #3c454f;
+    --ink-3: #5f6a75;
+    --accent: #1f3a63;
+    --accent-hi: #16304f;
+    --accent-fill: #1f3a63;
     --accent-ink: #ffffff;
-    --accent-soft: rgba(29, 45, 127, 0.10);
-    --warm: #1d2d7f;
-    --ok: #555555;
-    --warn: #333333;
-    --risk: #1d2d7f;
-    --ok-text: #555555;
-    --warn-text: #333333;
-    --risk-text: #17246a;
+    --accent-soft: rgba(31, 58, 99, 0.1);
+    --warm: #1f3a63;
+    --ok: #5f6a75;
+    --warn: #3c454f;
+    --risk: #1f3a63;
+    --ok-text: #5f6a75;
+    --warn-text: #3c454f;
+    --risk-text: #1f3a63;
     --on-risk: #ffffff;
     --on-warn: #ffffff;
-    --violet: #1d2d7f;
-    --teal: #555555;
-    --mint: #555555;
-    --sky: #333333;
-    --bar: linear-gradient(90deg, var(--accent), var(--accent-hi));
-    --bar-done: linear-gradient(90deg, var(--ok), var(--ok));
+    --violet: #1f3a63;
+    --teal: #5f6a75;
+    --mint: #5f6a75;
+    --sky: #3c454f;
+    --bar: var(--accent);
+    --bar-done: var(--ink-3);
+    --on-fill: #ffffff;
     --inset: color-mix(in srgb, var(--ink) 5%, var(--panel));
-    --scrim: rgba(0, 0, 0, 0.45);
-    --glass: rgba(255, 255, 255, 0.72);
-    --glass-edge: rgba(255, 255, 255, 0.9);
-    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.06);
-    --shadow-2: 0 12px 28px -14px rgba(0, 0, 0, 0.14), 0 2px 6px rgba(0, 0, 0, 0.05);
-    --gl-fill: rgba(255, 255, 255, 0.7);
-    --gl-rim: rgba(255, 255, 255, 0.95);
-    --gl-line: rgba(0, 0, 0, 0.1);
-    --gl-hair: rgba(0, 0, 0, 0.09);
-    --gl-solid: #ffffff;
-    --gl-shadow: 0 14px 30px -18px rgba(0, 0, 0, 0.28), 0 2px 5px rgba(0, 0, 0, 0.06);
+    --scrim: rgba(16, 20, 24, 0.55);
+    --glass: var(--panel);
+    --glass-edge: var(--edge);
   }
 }
 
 :root[data-theme='light'] {
   color-scheme: light;
-  --ground: #f2f2f2;
+  --ground: #edeeef;
   --raise: #ffffff;
   --panel: #ffffff;
-  --panel-2: #f2f2f2;
-  --edge: rgba(0, 0, 0, 0.09);
-  --edge-strong: rgba(0, 0, 0, 0.18);
-  --ink: #111111;
-  --ink-2: #444444;
-  --ink-3: #666666;
-  --accent: #1d2d7f;
-  --accent-hi: #17246a;
+  --panel-2: #f7f8f9;
+  --edge: rgba(16, 20, 24, 0.1);
+  --edge-strong: rgba(16, 20, 24, 0.2);
+  --ink: #101418;
+  --ink-2: #3c454f;
+  --ink-3: #5f6a75;
+  --accent: #1f3a63;
+  --accent-hi: #16304f;
+  --accent-fill: #1f3a63;
   --accent-ink: #ffffff;
-  --accent-soft: rgba(29, 45, 127, 0.10);
-  --warm: #1d2d7f;
-  --ok: #555555;
-  --warn: #333333;
-  --risk: #1d2d7f;
-  --ok-text: #555555;
-  --warn-text: #333333;
-  --risk-text: #17246a;
+  --accent-soft: rgba(31, 58, 99, 0.1);
+  --warm: #1f3a63;
+  --ok: #5f6a75;
+  --warn: #3c454f;
+  --risk: #1f3a63;
+  --ok-text: #5f6a75;
+  --warn-text: #3c454f;
+  --risk-text: #1f3a63;
   --on-risk: #ffffff;
   --on-warn: #ffffff;
-  --violet: #1d2d7f;
-  --teal: #555555;
-  --mint: #555555;
-  --sky: #333333;
-  --bar: linear-gradient(90deg, var(--accent), var(--accent-hi));
-  --bar-done: linear-gradient(90deg, var(--ok), var(--ok));
+  --violet: #1f3a63;
+  --teal: #5f6a75;
+  --mint: #5f6a75;
+  --sky: #3c454f;
+  --bar: var(--accent);
+  --bar-done: var(--ink-3);
+  --on-fill: #ffffff;
   --inset: color-mix(in srgb, var(--ink) 5%, var(--panel));
-  --scrim: rgba(0, 0, 0, 0.45);
-  --glass: rgba(255, 255, 255, 0.72);
-  --glass-edge: rgba(255, 255, 255, 0.9);
-  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.06);
-  --shadow-2: 0 12px 28px -14px rgba(0, 0, 0, 0.14), 0 2px 6px rgba(0, 0, 0, 0.05);
-  --gl-fill: rgba(255, 255, 255, 0.7);
-  --gl-rim: rgba(255, 255, 255, 0.95);
-  --gl-line: rgba(0, 0, 0, 0.1);
-  --gl-hair: rgba(0, 0, 0, 0.09);
-  --gl-solid: #ffffff;
-  --gl-shadow: 0 14px 30px -18px rgba(0, 0, 0, 0.28), 0 2px 5px rgba(0, 0, 0, 0.06);
+  --scrim: rgba(16, 20, 24, 0.55);
+  --glass: var(--panel);
+  --glass-edge: var(--edge);
 }

@@ -299,22 +299,28 @@ function RiskCard({ risk, also, of }: { risk: Risk; also: number; of: number }) 
         <EvidenceMark evidence={risk.evidence} />
       </span>
       <button className="mx-risk-main" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
-        <span className="mx-risk-top">
+        <span className="mx-risk-gutter">
           <span className="level" data-level={risk.level}>
             {LEVEL_WORD[risk.level]}
           </span>
-          {risk.disputed && <span className="mx-flag">Its sources disagree</span>}
-          {also > 0 && (
-            <span className="mx-flag">
-              Also in {also} of {of - 1} other{of - 1 === 1 ? '' : 's'}
+          <span className="mono muted mx-risk-meta">{pages === 1 ? '1 source' : `${pages} sources`}</span>
+        </span>
+        <span className="mx-risk-content">
+          {(risk.disputed || also > 0) && (
+            <span className="mx-risk-top">
+              {risk.disputed && <span className="mx-flag">Its sources disagree</span>}
+              {also > 0 && (
+                <span className="mx-flag">
+                  Also in {also} of {of - 1} other{of - 1 === 1 ? '' : 's'}
+                </span>
+              )}
             </span>
           )}
+          <strong className="mx-risk-title">{risk.title}</strong>
+          {risk.body && <span className="mx-risk-body">{risk.body}</span>}
+          {risk.applicability && <span>Applies: {risk.applicability}</span>}
+          {risk.advice && <span>{risk.advice}</span>}
         </span>
-        <strong className="mx-risk-title">{risk.title}</strong>
-        {risk.body && <span className="mx-risk-body">{risk.body}</span>}
-        {risk.applicability && <span>Applies: {risk.applicability}</span>}
-        {risk.advice && <span>{risk.advice}</span>}
-        <span className="mono muted mx-risk-meta">{pages === 1 ? '1 source' : `${pages} sources`}</span>
       </button>
       {pages > 0 && (
         <div className="mx-risk-sources">
