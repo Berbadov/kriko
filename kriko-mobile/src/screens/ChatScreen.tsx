@@ -111,6 +111,8 @@ export function ChatScreen() {
   const [accessOpen, setAccessOpen] = useState(false);
   const [screenOpen, setScreenOpen] = useState(false);
   const [pastOpen, setPastOpen] = useState(false);
+  /** A press on the scan button throws the dust out from where it was pressed. */
+  const [burst, setBurst] = useState<{ key: number; x: number; y: number } | undefined>(undefined);
   const [shot, setShot] = useState<Shot | null>(null);
   const [picking, setPicking] = useState(false);
   const [notice, setNotice] = useState('');
@@ -356,7 +358,7 @@ export function ChatScreen() {
 
   return (
     <View style={styles.page}>
-      <ChatBackground />
+      <ChatBackground lively={empty && !dock.composing} reading={working} burst={burst} />
       <AppHeader
         title={!empty ? activeThread?.title || 'Conversation' : dock.composing ? tr('New chat') : undefined}
         actions={
@@ -421,6 +423,7 @@ export function ChatScreen() {
                 onPick={() => { void pick(); }}
                 recentScans={recentScans}
                 onOpenScan={openScanResult}
+                onBurst={(x, y) => setBurst({ key: Date.now(), x, y })}
               />
             )}
             contentContainerStyle={[styles.listBody, empty && styles.landingBody]}

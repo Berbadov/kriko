@@ -3,14 +3,16 @@
  * beside the product's name, its price and the site it was read from.
  *
  * The picture is the scan's own thumbnail. While the answer is still being
- * written a light sweeps down it, so the reader sees the scan is working; with
- * reduced motion the picture simply sits there. Tapping it opens it full size.
+ * written a band of light passes down through a veil of dust over it, the same
+ * dust as the home screen, so the reader sees the scan is working. With no
+ * thumbnail the dust gathers into the outline of the kind of product the scan
+ * read instead. With reduced motion either one is a still frame. Tapping the
+ * picture opens it full size.
  */
 
 import { Image } from 'expo-image';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useEffect, useState } from 'react';
-import { Animated, Easing, Linking, Modal, Pressable, StyleSheet, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { Linking, Modal, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { readingTitle } from '../engine/prompt';
@@ -19,12 +21,13 @@ import { tr } from '../i18n';
 import { gap, radius } from '../theme/tokens';
 import { makeStyles, useColors } from '../theme/theme';
 import { Txt } from '../theme/Txt';
-import { GlobeIcon, ScanIcon, XIcon } from './Icon';
-import { MotionPressable, MotionView, useReducedMotion } from './Motion';
+import { GlobeIcon, XIcon } from './Icon';
+import { MotionPressable, MotionView } from './Motion';
+import { DustCanvas } from '../dust/DustCanvas';
+import { kindFor, product, reading as readingScene } from '../dust/engine';
 
 const PICTURE_W = 68;
 const PICTURE_H = 92;
-const SWEEP_H = 26;
 
 /** "used" → "Used"; the model's `unknown` is not worth a word. */
 function conditionWord(condition: string | undefined): string {
@@ -44,28 +47,14 @@ export function ProductCard({
 }) {
   const color = useColors();
   const styles = useStyles();
-  const reduced = useReducedMotion();
   const [viewing, setViewing] = useState(false);
   const [failed, setFailed] = useState(false);
-  const [sweep] = useState(() => new Animated.Value(0));
   const picture = imageUri && !failed ? imageUri : '';
-  const animate = scanning && Boolean(picture) && reduced === false;
-
-  useEffect(() => {
-    sweep.stopAnimation();
-    sweep.setValue(0);
-    if (!animate) return;
-    const loop = Animated.loop(
-      Animated.timing(sweep, {
-        toValue: 1,
-        duration: 1500,
-        easing: Easing.inOut(Easing.quad),
-        useNativeDriver: true,
-      }),
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [animate, sweep]);
+  // Without a thumbnail, the product drawn in dust from the words the scan read.
+  const portrait = useMemo(
+    () => (scanning && !reading ? readingScene : product(kindFor(reading?.product, reading?.brand, reading?.model, reading?.detail))),
+    [scanning, reading],
+  );
 
   const title = reading ? readingTitle(reading, true) : '';
   const meta = [reading?.price, conditionWord(reading?.condition)].filter(Boolean).join(' · ');
@@ -90,30 +79,10 @@ export function ProductCard({
             onError={() => setFailed(true)}
           />
         ) : (
-          <ScanIcon size={22} color={color.ink3} />
+          <DustCanvas scene={portrait} reading={scanning} per={3} cap={1400} />
         )}
-        {animate ? (
-          <Animated.View
-            pointerEvents="none"
-            style={[
-              styles.sweep,
-              {
-                transform: [{
-                  translateY: sweep.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [-SWEEP_H, PICTURE_H],
-                  }),
-                }],
-              },
-            ]}
-          >
-            <LinearGradient
-              colors={['transparent', color.accentHi, 'transparent']}
-              locations={[0, 0.85, 1]}
-              style={StyleSheet.absoluteFill}
-            />
-            <View style={[styles.sweepLine, { backgroundColor: color.accentHi }]} />
-          </Animated.View>
+        {picture && scanning ? (
+          <DustCanvas scene={readingScene} reading color={color.accentHi} per={6} cap={900} />
         ) : null}
       </MotionPressable>
 
@@ -176,7 +145,7 @@ function ProductResult({ source, color, styles, onCheckMerchant }: {
         <View style={styles.productResultImage}>
           {source.productImageUrl && !failedImage ? (
             <Image source={{ uri: source.productImageUrl }} style={StyleSheet.absoluteFill} contentFit="contain" onError={() => setFailedImage(true)} />
-          ) : <ScanIcon size={20} color={color.ink3} />}
+          ) : <DustCanvas scene={product(kindFor(source.title))} calm per={4} cap={600} />}
         </View>
         <View style={styles.productResultInfo}>
           <Txt variant="bodyTight" tone="ink" numberOfLines={2}>{source.title}</Txt>
@@ -252,8 +221,6 @@ const useStyles = makeStyles((color) => StyleSheet.create({
     borderColor: color.edgeSoft,
   },
   pictureLive: { borderColor: color.accent },
-  sweep: { position: 'absolute', left: 0, right: 0, top: 0, height: SWEEP_H, opacity: 0.55 },
-  sweepLine: { position: 'absolute', left: 0, right: 0, bottom: 4, height: 1.5, opacity: 0.9 },
   info: { flex: 1, gap: 3 },
   siteRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   site: { flex: 1 },
