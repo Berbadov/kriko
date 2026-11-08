@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { mkdtemp, readFile, writeFile, rm } from 'node:fs/promises'
 import { join } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { tmpdir } from 'node:os'
 import ts from 'typescript'
 
@@ -18,7 +19,8 @@ async function load() {
   const file = join(dir, 'engine.mjs')
   await writeFile(file, js)
   try {
-    return await import(file)
+    // A file:// URL: a bare Windows path reads as a `c:` scheme and fails to load.
+    return await import(pathToFileURL(file).href)
   } finally {
     await rm(dir, { recursive: true, force: true })
   }
