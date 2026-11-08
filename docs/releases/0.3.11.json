@@ -1,0 +1,91 @@
+{
+  "version": "0.3.11",
+  "platform": "windows-x86_64",
+  "source_fingerprint": "6afb4a57e20a2fa7f6a92415dc14c8bcd23cfed3f7b00b24165dc907d06ea655",
+  "recorded_at": "2026-11-08",
+  "note": "The maintainer asked for this release to ship the dossier UI from 0.3.10 together with the dust and the final jack icon from main, after merging #335 (website and mobile app moved to their own repositories). The installer, setup, live research, follow-up, compare, stop, reconnect and upgrade journeys were not walked on this build; release_readiness.py is expected to refuse complete stable-readiness certification. The packaged build, the frozen sidecar's smoke check, the extracted portable copy's start and the catalogs were observed.",
+  "journeys": {
+    "fresh_install": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "The installer was built and hashed; it was not run because an earlier Kriko is installed on this machine and the install smoke refuses to replace it."
+    },
+    "portable_start": {
+      "status": "passed",
+      "observed_at": "2026-11-08",
+      "evidence": "Extracted kriko-0.3.11-win64-portable.zip; kriko.exe stayed up 22 s with its own kriko-sidecar.exe beside it and a responding window titled Kriko, then was stopped."
+    },
+    "setup": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "More -> Set up Kriko was not walked on the packaged window."
+    },
+    "sourced_answer": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "No live research was run on the packed 0.3.11 engine; the change is presentation only and the frozen sidecar's health check passed."
+    },
+    "follow_up": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Not walked on the packed engine."
+    },
+    "compare": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Compare was reviewed in the app but no live comparison was made on the packaged engine."
+    },
+    "stop": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Tray Quit was not walked; the smoke test ended the app by PID."
+    },
+    "reconnect": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Not walked on the packaged window."
+    },
+    "upgrade_retains_data": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "No installed 0.3.10 to 0.3.11 upgrade was performed."
+    }
+  },
+  "providers": {
+    "mistral-vibe": {
+      "status": "not_observed",
+      "model": "configured by the reader",
+      "version": "0.3.11",
+      "report": "src/app/tests/test_the_mistral_agent_recovers.py and src/app/tests/test_a_host_read_turn_warms_its_agent.py: hosted-session rejection, start allowance and warm start"
+    },
+    "mistral-api": {
+      "status": "not_observed",
+      "model": "mistral-small-latest by default",
+      "version": "0.3.11",
+      "report": "src/app/tests/test_a_research_request_asks_the_web.py and src/app/tests/test_host_read_uses_the_readers_search.py: explicit research routing and the hosted search chain"
+    },
+    "codex": {
+      "status": "not_observed",
+      "model": "configured by the reader",
+      "version": "0.3.11",
+      "report": "src/app/tests/test_a_research_request_asks_the_web.py: a tool-less turn asks for the search its brief included"
+    },
+    "claude-code": {
+      "status": "not_observed",
+      "model": "configured by the reader",
+      "version": "0.3.11",
+      "report": "src/app/tests/test_a_cut_off_resident_turn_keeps_its_answer.py: a cut-off resident turn keeps its streamed answer"
+    }
+  },
+  "observed_instead": [
+    "tools/gate.sh was run on this tree: node, ui and wheel passed. The Python leg had 23 failures: 5 IndexNow tests that checked a script #335 moved to the website repository (the test moved with it and passes there); 4 ledger/concurrency/trial/readiness tests that passed when re-run alone; and the agent-benchmark and failure-class tests, which fail identically on the previous main. The tauri leg failed only in kriko-harness locate_prefers_path_then_roots, which cannot create its folder under %TEMP% on this machine; that test and crate are unchanged by this release.",
+    "desktop.yml was dispatched on main and re-run; the windows job failed both times in the pre-packaging pytest step with different sets of sqlite 'database is locked' and concurrency-count failures (5 then 10 of about 5,100), so the release was built by hand with the documented recipe instead.",
+    "Version agreement is strict at 0.3.11 across pyproject.toml, kriko-ui/src-tauri/Cargo.toml, Cargo.lock and kriko-ui/package.json; the website's links are moved in its own repository.",
+    "The full build recipe (kriko-ui/package.ps1 -Version 0.3.11) completed on this machine. The frozen sidecar's smoke check (handshake, health, lookup, job failure, MCP initialize, terminal) passed on a byte-identical copy of dist/kriko-engine outside the checkout, because this machine's sandbox refuses that binary its database from inside the checkout.",
+    "The portable archive was extracted and started: kriko.exe stayed up 22 seconds, responded with a window titled Kriko, and had its own kriko-sidecar.exe beside it.",
+    "Artifacts: kriko-0.3.11-x86_64-setup.exe 37,423,172 bytes; kriko-0.3.11-win64-portable.zip 46,222,744 bytes; kriko-engine-0.3.11-win64.zip 32,279,161 bytes; kriko-extension-0.5.0.zip 316,905 bytes; SHA256SUMS.txt.",
+    "Catalogs: 32 .kpack builds, packs.json pinned to https://github.com/Berbadov/kriko/releases/download/v0.3.11, and packs-v0.3.11.zip (33 entries, 2,401,805 bytes, sha256 a3ce5993a87327127fbb7c6bd3e1171dedc4b17a0c0a2860dd3ade74305461e4).",
+    "The extension ZIP is the extension/ folder without tests/, built from this tree; manifest version 0.5.0.",
+    "The installer was not run, and no installed-version upgrade was performed, because an earlier Kriko is present on this machine."
+  ]
+}
