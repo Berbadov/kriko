@@ -1,38 +1,30 @@
 """Render the brand mark to the 1024px master PNG and extension icons.
 
-There are two marks and one design, and the split is the point.
-
-`extension/assets/logo-mark.svg` is a 16x16 grid of `<rect>` elements — pixel
-art that happens to be written as SVG. At the sizes it was drawn for it is the
-right answer and antialiasing is the wrong one: a hairline K closes into a
-smudge at 16px, so the mark is mass, and smearing the grid is how you lose it.
-
-
-`extension/assets/logo-mark-large.svg` is the same letter with room to be one.
-The 1024px master is a 16-cell grid taken that far: eight hard blocks with a
-64px cell — which is what the reader was looking at
-when they said the icon was "pixelated and very ugly". They were right, and it
-was two defects at once: the grid does not survive that scale, *and* the master
-had been left at 512 so whatever derived from it was upscaling it as well.
-
-So the large mark is rasterised properly, with a scanline routine written out
+There is one mark, `extension/assets/logo-mark-large.svg`, and every icon is a
+render of it. It is rasterised properly, with a scanline routine written out
 below. It understands convex polygons of flat colour and nothing else, which is
 exactly the vocabulary that file is allowed to use — the two facts are meant to
 move together. A `path` would mean a bezier flattener in a build script.
 
-No third-party imports, for both halves: adding Pillow to the build for one
-icon would be a strange dependency to explain, and it is the build that would
-carry the risk.
+The mark has a detail and a silhouette: the white and grey split copies of the
+jack behind it are a large-size detail, and below 64px they smear into a dark
+diamond (that was the "hideous" toolbar icon). So sizes up to 48px render the
+mark solid — plate and jack only — and everything above renders the full split.
+No size renders the old 16-cell grid: the jack's staircase arms on that grid
+read as a blob at 16px, which is how a pixel-art letter ends up uglier than the
+smooth one it was drawn to protect.
+
+No third-party imports: adding Pillow to the build for one icon would be a
+strange dependency to explain, and it is the build that would carry the risk.
 
     python packaging/render_icon.py
 
-Writes `packaging/icon-master.png`, the 1024px master, and the two copies the
-    extension toolbar icons out of the desktop icon. The desktop app's own
-`kriko-ui/src-tauri/icons/icon.ico`, the tile the exe and the installer read,
-is derived here too since the jack replaced the K: the grid at 16, 32 and 48px,
-the large mark above that. The Tauri PNGs beside it come from the same two
-sources, and so do the phone app's icon, Android foreground, splash and
-favicon, so there is one drawing of the mark and every size is a render of it.
+Writes `packaging/icon-master.png`, the 1024px master, and the desktop app's own
+`kriko-ui/src-tauri/icons/icon.ico`, the tile the exe and the installer read.
+The extension toolbar icons are copied out of that ICO, and the Tauri PNGs
+beside it, the phone app's icon, Android foreground, splash and favicon all
+come from the same source, so there is one drawing of the mark and every size
+is a render of it.
 """
 
 import re
@@ -41,20 +33,19 @@ import zlib
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-SOURCE = REPO / "extension" / "assets" / "logo-mark.svg"
 #: The 1024px master. Kept under `packaging/`, outside any directory a build
 #: writes into, so a build can never re-encode the committed file and leave the
 #: tree dirty with a PNG nobody edited (it did exactly that once, which is how
 #: this location was chosen). `test_the_committed_icon_is_what_the_mark_
 #: renders_to` fails if it ever stops being what the mark renders to.
 TARGET = REPO / "packaging" / "icon-master.png"
-#: The mark drawn for the sizes the grid cannot serve. See that file's own
-#: comment for why there are two of them.
+#: The one drawing of the mark. See the module docstring for the solid/split
+#: split by size.
 LARGE_SOURCE = REPO / "extension" / "assets" / "logo-mark-large.svg"
-#: 16 * 64. Kept because the extension icons and the role checks still scale
-#: the grid, and because `test_the_scale_keeps_the_grid_whole` is about the
-#: grid staying whole rather than about which file the master comes from.
-SCALE = 64
+#: Sizes up to this render the mark solid (plate and jack); above it the full
+#: mark with the white and grey split copies. 48 is where the split starts to
+#: read as a third colour instead of noise.
+SMALL_MAX = 48
 
 #: The master's side. 1024 because it is the largest size anything derives
 #: from it, and a smaller master means that upscales — which is exactly
@@ -73,37 +64,6 @@ RECT = re.compile(
 )
 
 POLYGON = re.compile(r'<polygon\s+points="([^"]+)"\s+fill="#([0-9A-Fa-f]{6})"')
-
-
-def grid(svg: str) -> tuple[int, list[list[tuple[int, int, int, int]]]]:
-    """The mark as rows of RGBA pixels, painted in document order.
-
-    Later rects overpaint earlier ones — the source relies on it for the
-    highlight strokes — so this is a paint, not a lookup.
-    """
-    side = int(re.search(r'viewBox="0 0 (\d+) \d+"', svg).group(1))
-    pixels = [[(0, 0, 0, 0)] * side for _ in range(side)]
-    for x, y, w, h, colour in RECT.findall(svg):
-        rgb = tuple(int(colour[i : i + 2], 16) for i in (0, 2, 4))
-        for row in range(int(y), int(y) + int(h)):
-            for col in range(int(x), int(x) + int(w)):
-                if 0 <= row < side and 0 <= col < side:
-                    pixels[row][col] = (*rgb, 255)
-    return side, pixels
-
-
-def png(pixels: list[list[tuple[int, int, int, int]]], scale: int) -> bytes:
-    side = len(pixels)
-    size = side * scale
-    raw = bytearray()
-    for row in pixels:
-        line = bytearray()
-        for pixel in row:
-            line += bytes(pixel) * scale
-        # Filter byte 0 (None) per scanline — the image is flat colour, so a
-        # cleverer filter would buy nothing but a harder file to verify.
-        raw += (b"\x00" + line) * scale
-    return _png_bytes(size, raw)
 
 
 def _png_bytes(size: int, raw: bytearray) -> bytes:
@@ -253,23 +213,30 @@ def ico_images(data: bytes) -> dict[int, bytes]:
     return images
 
 
-def offline_grid(pixels: list[list[tuple[int, int, int, int]]]) -> list[list[tuple[int, int, int, int]]]:
-    """Keep the same small mark, muted while the local app is unreachable.
+def small_shapes(shapes):
+    """The mark without the split: plate plus the jack, for sizes up to SMALL_MAX.
 
-    The plate is the commonest opaque colour, not the corner cell: the plate's
-    corners are left out to round it, so the corner is transparent and stays so.
+    The first shape is the plate; of the rest, the jack is whatever shares the
+    darkest ink, and the white/grey split copies are everything lighter. At
+    48px and below those copies smear into a dark diamond, so they are dropped
+    and the silhouette carries the icon.
     """
-    counts: dict[tuple[int, int, int, int], int] = {}
-    for row in pixels:
-        for pixel in row:
-            if pixel[3]:
-                counts[pixel] = counts.get(pixel, 0) + 1
-    ground = max(counts, key=counts.__getitem__)
+    plate, rest = shapes[0], shapes[1:]
+    ink = min(rest, key=lambda shape: sum(shape[1][:3]))[1]
+    return [plate] + [shape for shape in rest if shape[1] == ink]
+
+
+def muted(shapes):
+    """The same shapes, muted while the local app is unreachable.
+
+    Light fills (plate and split copies) go to a dark ground and the dark jack
+    goes to a light one, so the offline icon is visibly the same letter in a
+    quieter state rather than a copy of the online one.
+    """
+    ground, letter = (37, 43, 53, 255), (137, 147, 162, 255)
     return [
-        [pixel if not pixel[3]
-         else (37, 43, 53, 255) if pixel == ground else (137, 147, 162, 255)
-         for pixel in row]
-        for row in pixels
+        (points, letter if sum(colour[:3]) < 200 else ground)
+        for points, colour in shapes
     ]
 
 
@@ -323,57 +290,8 @@ def decode(data: bytes) -> tuple[int, int, bytes]:
     return width, height, bytes(out)
 
 
-#: What each pixel of the mark *is*, independent of the exact hex either file
-#: happens to use. Comparing roles rather than colours is what lets the two
-#: renderings differ in antialiasing — which they must, one being a rasterised
-#: glyph — while still being checkably the same letter.
-GROUND, LETTER, JOINT = ".", "W", "A"
-
-
-def role(red: int, green: int, blue: int) -> str:
-    if red > 180 and green > 150 and blue < 140:
-        return JOINT
-    return LETTER if (red + green + blue) / 3 > 150 else GROUND
-
-
-def roles_from_svg(svg: str) -> list[str]:
-    """The mark as one role per grid cell, row-major."""
-    _, pixels = grid(svg)
-    return [role(*pixel[:3]) for row in pixels for pixel in row]
-
-
-def roles_from_png(data: bytes, side: int) -> list[str]:
-    """The same, read back off a rendered icon and reduced to `side` cells.
-
-    Each cell is a block of the source. A block counts as part of the letter
-    when at least half of it is: at this size the glyph's antialiased fringe is
-    a minority of every block it touches, so the majority is the stroke.
-    """
-    width, height, pixels = decode(data)
-    if width % side or height % side:
-        raise ValueError(f"{width}x{height} does not divide into {side}")
-    block = width // side
-    out = []
-    for cell_y in range(side):
-        for cell_x in range(side):
-            seen = {JOINT: 0, LETTER: 0}
-            for y in range(cell_y * block, (cell_y + 1) * block):
-                for x in range(cell_x * block, (cell_x + 1) * block):
-                    offset = (y * width + x) * 4
-                    found = role(*pixels[offset : offset + 3])
-                    if found in seen:
-                        seen[found] += 1
-            half = block * block / 2
-            out.append(
-                JOINT if seen[JOINT] >= half
-                else LETTER if seen[LETTER] >= half
-                else GROUND
-            )
-    return out
-
-
-#: The ICO's sizes. The grid renders where its side divides the size (16, 32,
-#: 48); the large mark renders everything else.
+#: The ICO's sizes. Up to SMALL_MAX the mark renders solid; above it, with the
+#: split. Every size is the smooth rasteriser — no size renders pixel art.
 ICO_SIZES = (16, 24, 32, 48, 64, 128, 256)
 #: The PNGs Tauri and the Windows store tiles read, by file name.
 TAURI_PNGS = {
@@ -385,12 +303,14 @@ TAURI_PNGS = {
 }
 
 
-def at_size(pixels, shapes, units: int, size: int) -> bytes:
-    """One size of the icon: pixel art where the grid divides it, else the drawn mark."""
-    side = len(pixels)
-    if size <= 48 and size % side == 0:
-        return png(pixels, size // side)
-    return smooth_png(shapes, units, size)
+def shapes_for(shapes, size: int):
+    """The shapes one size renders: the mark solid up to SMALL_MAX, the full split above."""
+    return small_shapes(shapes) if size <= SMALL_MAX else shapes
+
+
+def at_size(shapes, units: int, size: int) -> bytes:
+    """One size of the icon, antialiased, from the shapes that size draws."""
+    return smooth_png(shapes_for(shapes, size), units, size)
 
 
 def ico(images: dict[int, bytes]) -> bytes:
@@ -443,32 +363,24 @@ def mobile_images(shapes, units: int) -> dict[str, bytes]:
 
 
 def main() -> None:
-    svg = SOURCE.read_text(encoding="utf-8")
-    side, pixels = grid(svg)
-
-    # The master comes from the large mark; everything below it still comes
-    # from the grid. That is the whole reason there are two files: the grid is
-    # right at 16px and eight hard blocks at 1024, and the master is derived
-    # every app icon from this one PNG.
+    # One drawing of the mark; every size is a render of it. The master and
+    # anything above SMALL_MAX carry the split, the small sizes are solid.
     units, shapes = outlines(LARGE_SOURCE.read_text(encoding="utf-8"))
     TARGET.parent.mkdir(parents=True, exist_ok=True)
     TARGET.write_bytes(smooth_png(shapes, units, MASTER))
     print(f"{LARGE_SOURCE.name} ({units}x{units}) -> {TARGET} ({MASTER}px)")
-    DESKTOP_ICO.write_bytes(ico({one: at_size(pixels, shapes, units, one) for one in ICO_SIZES}))
+    DESKTOP_ICO.write_bytes(ico({one: at_size(shapes, units, one) for one in ICO_SIZES}))
     for name, size in TAURI_PNGS.items():
-        (DESKTOP_ICO.parent / name).write_bytes(at_size(pixels, shapes, units, size))
+        (DESKTOP_ICO.parent / name).write_bytes(at_size(shapes, units, size))
     print(f"-> {DESKTOP_ICO} and {len(TAURI_PNGS)} Tauri PNGs")
     EXTENSION_DIR.mkdir(parents=True, exist_ok=True)
     images = ico_images(DESKTOP_ICO.read_bytes())
-    disconnected = offline_grid(pixels)
     for size in EXTENSION_ICONS:
         if size not in images:
             raise ValueError(f"{DESKTOP_ICO.name} has no {size}px PNG image")
-        if size % side:
-            raise ValueError(f"{size}px is not a whole multiple of {side} cells")
         (EXTENSION_DIR / f"icon-{size}.png").write_bytes(images[size])
         (EXTENSION_DIR / f"icon-offline-{size}.png").write_bytes(
-            png(disconnected, size // side)
+            smooth_png(muted(shapes_for(shapes, size)), units, size)
         )
     print(f"{DESKTOP_ICO.name} -> {EXTENSION_DIR}/icon-"
           f"{{{','.join(str(one) for one in EXTENSION_ICONS)}}}.png")
