@@ -5,11 +5,11 @@
 
    * A group is a ruled section of the sheet: a heading on a hairline, rows on
      hairlines. No card, no glass, no gradient, no shadow.
-   * A row is an icon, a sentence-case name and one control, never shorter than
-     52px. A state is a short mono pill; a hint is an icon whose tooltip holds the
+   * A row is an icon, a sentence-case name and one control, about 44px tall
+     (the density layer at the end of this file sets the sizes). A state is a short mono pill; a hint is an icon whose tooltip holds the
      one fact a setting must keep (data that leaves, money, keys that stay).
    * Every icon-only control has an accessible name and a tooltip on hover and on
-     keyboard focus, and a 44px hit area. A chosen icon is filled and marked, so
+     keyboard focus, and a hit area of at least 30px. A chosen icon is filled and marked, so
      the choice does not rest on colour.
    * Nothing is smaller than 14px, and figures, paths and keys are mono.
 
@@ -1260,3 +1260,81 @@
 .settings .command code {
   font-size: 13px;
 }
+
+
+/* ---- density (2026-11-08) ----
+   The sheet had 44px squares for every choice and 52px rows, so a page of six
+   settings filled the drawer and the buttons sat far apart. One compact scale
+   for every control: 30px choices, 32px icon presses, a 40x22 switch, 44px rows,
+   and page tabs that keep their names. Everything above still holds; only the
+   sizes change here. */
+
+.drawer[data-panel='settings'] {
+  width: 480px;
+  padding: 14px 18px 12px;
+  font-size: 14px;
+}
+
+.drawer[data-panel='settings'][data-wide='true'] { width: 480px; }
+
+.drawer[data-panel='settings'] .drawer-head { padding-bottom: 10px; }
+.drawer[data-panel='settings'] .drawer-head h2 { font-size: 19px; font-weight: 750; }
+.drawer[data-panel='settings'] .drawer-head .icon-btn { width: 32px; height: 32px; border-radius: var(--r-s); }
+
+.settings { gap: 12px; padding-top: 10px; }
+.settings-page { gap: 16px; }
+
+/* Page tabs: every tab says its name, in one tight row. */
+.settings-nav .iconchoice { gap: 2px; padding: 2px; }
+.settings-nav .iconchoice button { flex: 1 1 0; min-width: 0; height: 32px; padding: 0 6px; }
+.settings-nav .iconchoice .ico-word,
+.settings-nav .iconchoice button[data-on='true'] .ico-word {
+  max-width: 120px;
+  margin-left: 6px;
+  font-size: 13px;
+  opacity: 1;
+}
+.settings-nav .iconchoice button:not([data-on='true']) .ico-word { color: var(--ink-2); }
+.settings-nav .iconchoice .ico .icon { width: 15px; height: 15px; }
+.settings .iconchoice[data-tabs] [data-tip]::after { display: none; }
+
+.settings .panel-group { border-top-width: 1px; }
+.settings .group-head { min-height: 34px; padding: 2px 0; }
+.settings .group-head h3 { font-size: 14.5px; font-weight: 650; }
+
+.settings .setting { min-height: 44px; gap: 6px 12px; padding: 6px 0; }
+.settings .setting.stack,
+.settings .setting.actions { padding-top: 8px; padding-bottom: 8px; }
+.settings .setting > .row-label,
+.settings .row-label,
+.settings .row-name { font-size: 14px; gap: 4px 8px; }
+.settings .row-icon { width: 24px; height: 24px; }
+.settings .row-icon .icon { width: 14px; height: 14px; }
+.settings .setting .value,
+.settings .setting .value.path { font-size: 13px; }
+
+.settings .iconchoice { gap: 1px; padding: 2px; border-radius: var(--r-s); }
+.settings .iconchoice button { min-width: 32px; height: 28px; padding: 0 7px; }
+.settings .iconchoice button .icon { width: 16px; height: 16px; }
+.settings .iconchoice button[data-on='true']::before { bottom: 2px; width: 3px; height: 3px; margin-left: -1.5px; }
+
+.settings .icon-act { width: 32px; height: 32px; border-radius: var(--r-s); }
+.settings .icon-act .icon { width: 16px; height: 16px; }
+
+.settings .segmented { gap: 1px; padding: 2px; border-radius: var(--r-s); }
+.settings .segmented button { min-width: 32px; min-height: 28px; padding: 0 10px; font-size: 13px; }
+
+.settings .switch { width: 40px; height: 22px; border-radius: 6px; }
+.settings .switch i { left: 3px; width: 16px; height: 16px; border-radius: 4px; }
+.settings .switch[data-on='true'] i { transform: translate(18px, -50%); }
+.settings .switch i svg { width: 11px; height: 11px; }
+
+.settings .btn { min-height: 30px; padding: 0 12px; font-size: 13.5px; }
+.settings .choices { gap: 6px; }
+.settings .choice { min-height: 30px; padding: 0 10px; font-size: 13.5px; }
+
+/* Six pages: the names are the tabs, the icons would only crowd them. */
+.settings-nav .iconchoice .ico { display: none; }
+.settings-nav .iconchoice button { flex: 1 1 auto; padding: 0 8px; }
+.settings-nav .iconchoice .ico-word,
+.settings-nav .iconchoice button[data-on='true'] .ico-word { margin-left: 0; }

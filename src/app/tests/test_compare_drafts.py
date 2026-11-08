@@ -926,3 +926,45 @@ def test_a_follow_up_naming_the_local_agent_answers_when_no_search_service_answe
     assert result["sources"] == []
     assert result["model"] == "gemma4:e2b"
     assert any("no web search" in line for line in logged)
+
+
+def test_compare_researches_a_product_named_but_not_checked_yet(client, monkeypatch):
+    http, settings = client
+    from app.providers import apiagent, harness
+    from app.providers.harness import KNOWN
+    selected = next(agent for agent in KNOWN if agent.id == "codex")
+    monkeypatch.setattr(apiagent, "available", lambda *a, **k: [])
+    monkeypatch.setattr(harness, "available", lambda: [selected])
+    conn = state.connect(settings.app_state_path)
+    try:
+        draft = state.save_compare_draft(conn, "Phones", ["kept"])
+    finally:
+        conn.close()
+    submitted = []
+    monkeypatch.setattr(
+        http.app.state.jobs, "submit",
+        lambda kind, params, **kwargs: submitted.append((kind, params)) or "new-job")
+    response = http.post(f"/api/compare-drafts/{draft['draft_id']}/products",
+                         json={"product": "  Acme  Phone 4a ", "harness": selected.id})
+    assert response.status_code == 200
+    assert response.json()["job_id"] == "new-job"
+    kind, params = submitted[0]
+    assert kind == "quick_look" and params["product"] == "Acme Phone 4a"
+    assert params["compare_add"] is True and params["compare_draft_id"] == draft["draft_id"]
+    assert http.post("/api/compare-drafts/nope/products", json={"product": "Acme"}).status_code == 404
+
+
+def test_a_new_products_check_joins_the_end_of_the_draft_once(client):
+    from app.web import jobs
+
+    _, settings = client
+    conn = state.connect(settings.app_state_path)
+    try:
+        draft = state.save_compare_draft(conn, "Two", ["a", "b"])
+        with conn:
+            assert jobs._append_compare_lookup(conn, draft["draft_id"], "new")
+            assert jobs._append_compare_lookup(conn, draft["draft_id"], "new")
+            assert not jobs._append_compare_lookup(conn, "gone", "new")
+        assert state.get_compare_draft(conn, draft["draft_id"])["lookup_ids"] == ["a", "b", "new"]
+    finally:
+        conn.close()

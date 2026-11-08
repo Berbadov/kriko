@@ -96,7 +96,10 @@ def entry(executable: str, kind: str) -> dict | None:
     payload = record.get(kind)
     if payload is None:
         return None
-    return {"stamp": current, "at": float(record.get("at") or 0.0), kind: payload}
+    # Each kind's own time: a `--help` recorded today must not make a model
+    # list read a week ago look fresh (`models` keeps a TTL on this).
+    at = record.get(f"at_{kind}", record.get("at"))
+    return {"stamp": current, "at": float(at or 0.0), kind: payload}
 
 
 def record(executable: str, kind: str, payload) -> None:
@@ -120,7 +123,7 @@ def record(executable: str, kind: str, payload) -> None:
         else:
             old = dict(old)
         old[kind] = payload
-        old["at"] = time.time()
+        old["at"] = old[f"at_{kind}"] = time.time()
         probes[executable] = old
         data["version"] = STORE_VERSION
         _save(data)

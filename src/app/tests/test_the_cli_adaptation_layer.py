@@ -81,7 +81,9 @@ def test_models_survive_a_restart_only_inside_their_ttl(fake_cli):
     assert cliprobe.entry(fake_cli, "models")["models"] == ["m1"]
     store = cliprobe.store_path()
     data = __import__("json").loads(store.read_text(encoding="utf-8"))
-    data["probes"][fake_cli]["at"] = time.time() - harness.MODELS_TTL - 1
+    # Each kind keeps its own age, so a later `--help` probe cannot make an
+    # old model list look fresh.
+    data["probes"][fake_cli]["at_models"] = time.time() - harness.MODELS_TTL - 1
     store.write_text(__import__("json").dumps(data), encoding="utf-8")
     assert cliprobe.entry(fake_cli, "models") is not None
     # `entry` itself is stamp-based; the TTL is the reader's call — the age

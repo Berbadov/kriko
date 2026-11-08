@@ -162,8 +162,8 @@ export interface Turn {
   agent?: AgentRef
 }
 
-/** What the reader can ask Chat to do with a product. The engine knows the same three by name. */
-export type ChatMode = 'alternatives' | 'cheapest' | 'merchants'
+/** What the reader can ask Chat to do with a product. The engine knows the same names. */
+export type ChatMode = 'find' | 'alternatives' | 'research' | 'cheapest' | 'merchants'
 
 /** What the screens hold: the chat so far, the run now, and what the reader can do. */
 export interface RunApi {
