@@ -21,9 +21,10 @@ body {
   color: var(--ink);
   font-family: var(--font);
   font-size: 14px;
-  line-height: 1.5;
+  line-height: 1.55;
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
+  font-variant-numeric: proportional-nums;
 }
 
 button,
@@ -41,7 +42,7 @@ button {
 }
 
 :focus-visible {
-  outline: 2px solid var(--accent-hi);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
   border-radius: var(--r-s);
 }
@@ -64,9 +65,23 @@ button {
   transition-duration: 0.001ms !important;
 }
 
+/* The system setting is honoured even when the app's own motion profile is on:
+   the state stays, the movement goes. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 .mono {
   font-family: var(--mono);
   font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
 }
 
 .sr {
@@ -99,7 +114,8 @@ h1,
 h2,
 h3 {
   font-weight: 800;
-  letter-spacing: -0.035em;
+  letter-spacing: -0.04em;
+  line-height: 1.02;
 }
 
 /* A rule under a line says how much it matters: a heavy bar serious, ticks

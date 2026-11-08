@@ -1,49 +1,36 @@
-@import '@fontsource/atkinson-hyperlegible/400.css';
-@import '@fontsource/atkinson-hyperlegible/700.css';
-
-/* The settings drawer, in glass.
+/* The settings drawer, in the dossier's own hand.
 
    Everything here is under `.drawer[data-panel='settings']` or `.settings`, so
    the other drawer panels keep their own look. Four rules shape it:
 
-   * A group is one soft surface (translucent fill, a bright 1px rim, a hairline
-     outside the rim, a soft shadow). Where the platform has no backdrop blur the
-     surface is the solid `--gl-solid`, which reads the same.
-   * A row is an icon tile, a name of one or two words, and one control, never
-     shorter than 60px. What used to be a grey line is a state pill (a word or
-     two), an error, or an icon with a tooltip (`.hint`) for the one fact a
-     setting must keep: data that leaves, money, keys that stay.
+   * A group is a ruled section of the sheet: a heading on a hairline, rows on
+     hairlines. No card, no glass, no gradient, no shadow.
+   * A row is an icon, a sentence-case name and one control, never shorter than
+     52px. A state is a short mono pill; a hint is an icon whose tooltip holds the
+     one fact a setting must keep (data that leaves, money, keys that stay).
    * Every icon-only control has an accessible name and a tooltip on hover and on
-     keyboard focus, and a 44px hit area. A chosen icon is filled, drawn heavier
-     and dotted, so the choice does not rest on colour.
-   * Nothing is smaller than 14px. Atkinson Hyperlegible is bundled with the app
-     and never loaded from the network.
+     keyboard focus, and a 44px hit area. A chosen icon is filled and marked, so
+     the choice does not rest on colour.
+   * Nothing is smaller than 14px, and figures, paths and keys are mono.
 
    Every colour is a token or a `color-mix` of tokens, so both themes follow. All
-   motion is 150 to 300ms and reads `--tm`. Reduce motion sets every duration to
-   nothing (base.css), so an icon shows its final state and does not move; the one
-   thing that loops, a status dot, then draws once and rests. */
+   motion is 120 to 180ms and reads `--tm`. Reduced motion removes the movement,
+   not the state. */
 
 .drawer[data-panel='settings'] {
-  --set-font: 'Atkinson Hyperlegible', var(--font);
-  --set-field: color-mix(in srgb, var(--ink) 7%, transparent);
-  --set-field-edge: color-mix(in srgb, var(--ink) 22%, transparent);
-  --set-ok: color-mix(in srgb, var(--ok-text) 78%, var(--ink));
-  --set-warn: color-mix(in srgb, var(--warn-text) 70%, var(--ink));
-  --set-risk: color-mix(in srgb, var(--risk-text) 76%, var(--ink));
+  --set-font: var(--font);
+  --set-field: var(--panel-2);
+  --set-field-edge: var(--edge);
+  --set-ok: var(--ok-text);
+  --set-warn: var(--warn-text);
+  --set-risk: var(--risk-text);
 
   width: 520px;
-  padding: 20px 22px 14px;
-  background:
-    radial-gradient(120% 55% at 0% 0%, color-mix(in srgb, var(--accent) 26%, transparent), transparent 62%),
-    radial-gradient(90% 50% at 100% 100%, color-mix(in srgb, var(--violet) 22%, transparent), transparent 64%),
-    radial-gradient(70% 40% at 100% 0%, color-mix(in srgb, var(--teal) 14%, transparent), transparent 60%),
-    var(--panel);
-  border-color: var(--gl-rim);
-  border-radius: 28px;
-  box-shadow:
-    0 0 0 1px var(--gl-line),
-    var(--shadow-2);
+  padding: 18px 22px 14px;
+  background: var(--panel);
+  border-color: var(--edge-strong);
+  border-radius: var(--r-l);
+  box-shadow: none;
   font-family: var(--set-font);
   font-size: 15px;
   line-height: 1.5;
@@ -53,30 +40,18 @@
   width: 520px;
 }
 
-@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
-  .drawer[data-panel='settings'] {
-    background:
-      radial-gradient(120% 55% at 0% 0%, color-mix(in srgb, var(--accent) 26%, transparent), transparent 62%),
-      radial-gradient(90% 50% at 100% 100%, color-mix(in srgb, var(--violet) 22%, transparent), transparent 64%),
-      radial-gradient(70% 40% at 100% 0%, color-mix(in srgb, var(--teal) 14%, transparent), transparent 60%),
-      color-mix(in srgb, var(--panel) 90%, transparent);
-    -webkit-backdrop-filter: blur(26px) saturate(1.4);
-    backdrop-filter: blur(26px) saturate(1.4);
-  }
-}
-
 /* ---- the head ---- */
 
 .drawer[data-panel='settings'] .drawer-head {
   gap: 8px;
   padding: 0 0 12px;
-  border-bottom: 1px solid var(--gl-hair);
+  border-bottom: 1px solid var(--edge);
 }
 
 .drawer[data-panel='settings'] .drawer-head h2 {
-  font-size: 24px;
-  font-weight: 700;
-  letter-spacing: 0;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
 }
 
 .drawer[data-panel='settings'] .drawer-head .icon-btn {
@@ -91,16 +66,17 @@
 }
 
 .drawer[data-panel='settings'] .drawer-body {
-  margin: 0 -10px;
-  padding: 0 10px 10px;
+  margin: 0;
+  padding: 0 0 10px;
   overflow-x: hidden;
 }
 
 /* ---- the page list: five icons, and the chosen one says its name ---- */
 
 .settings {
+  counter-reset: setgroup;
   container-type: inline-size;
-  gap: 16px;
+  gap: 18px;
   padding-top: 14px;
 }
 
@@ -109,25 +85,13 @@
   top: 0;
   z-index: 6;
   padding-bottom: 2px;
+  background: var(--panel);
 }
 
 .settings-nav .iconchoice {
   display: flex;
   justify-content: space-between;
   width: 100%;
-  background: var(--gl-solid);
-  border-color: var(--gl-rim);
-  box-shadow:
-    0 0 0 1px var(--gl-line),
-    var(--gl-shadow);
-}
-
-@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
-  .settings-nav .iconchoice {
-    background: var(--gl-fill);
-    -webkit-backdrop-filter: blur(20px) saturate(1.5);
-    backdrop-filter: blur(20px) saturate(1.5);
-  }
 }
 
 /* ---- a page ---- */
@@ -135,40 +99,30 @@
 .settings-page {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  animation: settings-in calc(220ms * var(--tm)) var(--ease-out) both;
+  gap: 22px;
+  animation: settings-in var(--dur-3) var(--ease-out) both;
 }
 
 @keyframes settings-in {
   from {
     opacity: 0;
-    transform: translateY(calc(8px * var(--dm)));
   }
 }
 
-/* ---- a group: one glass surface ---- */
+/* ---- a group: a ruled section, never a card ---- */
 
 .settings .panel-group {
   position: relative;
-  padding: 0 0 4px;
-  background: var(--gl-solid);
-  border: 1px solid var(--gl-rim);
-  border-radius: 24px;
-  box-shadow:
-    0 0 0 1px var(--gl-line),
-    var(--gl-shadow);
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-top: 2px solid var(--edge-strong);
+  border-radius: 0;
+  box-shadow: none;
+  counter-increment: setgroup;
 }
 
-@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
-  .settings .panel-group {
-    background: var(--gl-fill);
-    -webkit-backdrop-filter: blur(20px) saturate(1.5);
-    backdrop-filter: blur(20px) saturate(1.5);
-  }
-}
-
-/* A tooltip hangs outside its group. Each group is its own layer (the blur makes
-   it one), so the group that shows a tooltip is lifted above the ones after it. */
+/* A tooltip hangs outside its group. */
 .settings .panel-group:has([data-tip]:hover, [data-tip]:focus-visible, .hint-btn:hover, .hint-btn:focus-visible, .hint[data-open]) {
   z-index: 5;
 }
@@ -177,24 +131,36 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  min-height: 56px;
-  padding: 6px 12px 2px 20px;
+  min-height: 46px;
+  padding: 4px 0 4px;
+  border-bottom: 1px solid var(--edge);
 }
 
 .settings .group-head h3 {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   margin: 0 auto 0 0;
   padding: 0;
   color: var(--ink);
-  font-size: 17px;
-  font-weight: 700;
-  letter-spacing: 0;
+  font-size: 16px;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+  line-height: 1.3;
+}
+
+.settings .group-head h3::before {
+  content: counter(setgroup, decimal-leading-zero);
+  color: var(--ink-3);
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 400;
 }
 
 .settings .group-head h3 .icon {
-  color: var(--accent-hi);
+  color: var(--ink-3);
+  width: 17px;
+  height: 17px;
 }
 
 .settings .group-head + .setting,
@@ -203,14 +169,14 @@
   border-top: 0;
 }
 
-/* ---- a row: a tile, a name of a word or two, and one control ---- */
+/* ---- a row: an icon, a name of a word or two, and one control ---- */
 
 .settings .setting {
   flex-wrap: wrap;
   gap: 8px 16px;
-  min-height: 60px;
-  padding: 8px 20px;
-  border-top: 1px solid var(--gl-hair);
+  min-height: 52px;
+  padding: 10px 0;
+  border-top: 1px solid var(--edge);
 }
 
 .settings .setting > .row-label,
@@ -219,7 +185,7 @@
   flex: 1 1 120px;
   flex-wrap: wrap;
   align-items: center;
-  gap: 4px 12px;
+  gap: 4px 10px;
   min-width: 0;
   color: var(--ink);
   font-size: 15px;
@@ -244,7 +210,7 @@
   flex-direction: column;
   flex-wrap: nowrap;
   gap: 8px;
-  padding-top: 10px;
+  padding-top: 12px;
   padding-bottom: 12px;
 }
 
@@ -258,7 +224,7 @@
 }
 
 .settings .setting.actions {
-  padding-top: 10px;
+  padding-top: 12px;
   padding-bottom: 12px;
 }
 
@@ -278,8 +244,8 @@
 
 .settings .setting .value {
   color: var(--ink-2);
-  font-family: var(--set-font);
-  font-size: 15px;
+  font-family: var(--mono);
+  font-size: 14px;
   text-align: right;
   overflow-wrap: anywhere;
 }
@@ -290,26 +256,27 @@
   font-size: 14px;
 }
 
-/* The tile. It is decoration, so the name beside it carries the meaning. */
+/* The icon. It is decoration, so the name beside it carries the meaning. */
 .settings .row-icon {
   position: relative;
   display: grid;
   flex: none;
   place-items: center;
-  width: 36px;
-  height: 36px;
-  background: color-mix(in srgb, var(--accent) 15%, transparent);
-  border-radius: 12px;
-  color: var(--accent-hi);
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: 1px solid var(--edge);
+  border-radius: var(--r-s);
+  color: var(--ink-3);
 }
 
 .settings .row-icon[data-tone='ok'] {
-  background: color-mix(in srgb, var(--ok) 15%, transparent);
+  border-color: var(--edge-strong);
   color: var(--set-ok);
 }
 
 .settings .row-icon[data-tone='warn'] {
-  background: color-mix(in srgb, var(--warn) 17%, transparent);
+  border-color: color-mix(in srgb, var(--warn) 55%, var(--edge));
   color: var(--set-warn);
 }
 
@@ -319,11 +286,12 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 1px 11px;
-  background: var(--set-field);
-  border: 1px solid transparent;
-  border-radius: var(--r-m);
-  color: color-mix(in srgb, var(--ink-2) 55%, var(--ink));
+  padding: 0 7px;
+  background: transparent;
+  border: 1px solid var(--edge);
+  border-radius: var(--r-s);
+  color: var(--ink-2);
+  font-family: var(--mono);
   font-size: 14px;
   font-weight: 400;
   line-height: 1.5;
@@ -331,17 +299,17 @@
 }
 
 .settings .state[data-tone='ok'] {
-  background: color-mix(in srgb, var(--ok) 13%, transparent);
+  border-color: color-mix(in srgb, var(--ok) 55%, var(--edge));
   color: var(--set-ok);
 }
 
 .settings .state[data-tone='warn'] {
-  background: color-mix(in srgb, var(--warn) 15%, transparent);
+  border-color: color-mix(in srgb, var(--warn) 55%, var(--edge));
   color: var(--set-warn);
 }
 
 .settings .state[data-tone='risk'] {
-  background: color-mix(in srgb, var(--risk) 13%, transparent);
+  border-color: color-mix(in srgb, var(--risk) 55%, var(--edge));
   color: var(--set-risk);
 }
 
@@ -359,11 +327,11 @@
   width: 44px;
   height: 44px;
   margin: -4px 0;
-  border-radius: 50%;
+  border-radius: var(--r-m);
   color: var(--ink-2);
   transition:
-    background-color calc(150ms * var(--tm)),
-    color calc(150ms * var(--tm));
+    background-color var(--dur-2) var(--ease-out),
+    color var(--dur-2) var(--ease-out);
 }
 
 .settings .hint-btn:hover,
@@ -378,15 +346,15 @@
 
 .settings .hint-pop {
   position: absolute;
-  top: calc(100% + 2px);
+  top: calc(100% + 4px);
   left: 0;
   z-index: 30;
   width: max-content;
-  max-width: min(260px, calc(100cqw - 48px));
-  padding: 10px 14px;
+  max-width: min(280px, calc(100cqw - 48px));
+  padding: 9px 12px;
   background: var(--ink);
-  border-radius: 14px;
-  box-shadow: var(--shadow-2);
+  border-radius: var(--r-m);
+  box-shadow: none;
   color: var(--ground);
   font-size: 14px;
   line-height: 1.45;
@@ -404,7 +372,7 @@
 .settings .hint:focus-within .hint-pop,
 .settings .hint[data-open] .hint-pop {
   display: block;
-  animation: tip-in calc(150ms * var(--tm)) var(--ease-out);
+  animation: tip-in var(--dur-2) var(--ease-out);
 }
 
 /* Shown only while wanted: a hidden tip that kept its box would widen the
@@ -412,7 +380,6 @@
 @keyframes tip-in {
   from {
     opacity: 0;
-    translate: 0 4px;
   }
 }
 
@@ -440,10 +407,10 @@
   z-index: 30;
   width: max-content;
   max-width: 230px;
-  padding: 6px 12px;
+  padding: 6px 10px;
   background: var(--ink);
-  border-radius: 12px;
-  box-shadow: var(--shadow-2);
+  border-radius: var(--r-m);
+  box-shadow: none;
   color: var(--ground);
   font-size: 14px;
   font-weight: 400;
@@ -474,7 +441,7 @@
 .settings [data-tip]:hover::after,
 .settings [data-tip]:focus-visible::after {
   display: block;
-  animation: tip-in calc(150ms * var(--tm)) var(--ease-out);
+  animation: tip-in var(--dur-2) var(--ease-out);
 }
 
 /* The chosen tab already says its name. */
@@ -487,9 +454,9 @@
 .settings .iconchoice {
   display: inline-flex;
   gap: 2px;
-  padding: 4px;
-  background: var(--set-field);
-  border: 1px solid var(--set-field-edge);
+  padding: 3px;
+  background: transparent;
+  border: 1px solid var(--edge);
   border-radius: var(--r-m);
 }
 
@@ -501,15 +468,16 @@
   justify-content: center;
   min-width: 44px;
   height: 44px;
-  padding: 0 11px;
-  border-radius: var(--r-m);
-  color: color-mix(in srgb, var(--ink-2) 60%, var(--ink));
+  padding: 0 10px;
+  border-radius: var(--r-s);
+  color: var(--ink-2);
   transition:
-    background-color calc(150ms * var(--tm)),
-    color calc(150ms * var(--tm));
+    background-color var(--dur-2) var(--ease-out),
+    color var(--dur-2) var(--ease-out);
 }
 
 .settings .iconchoice button:hover {
+  background: var(--set-field);
   color: var(--ink);
 }
 
@@ -520,18 +488,18 @@
 
 /* Chosen: filled, heavier, and a dot beneath, so it is not colour alone. */
 .settings .iconchoice button[data-on='true'] {
-  background: var(--accent);
+  background: var(--accent-fill);
   color: var(--accent-ink);
 }
 
 .settings .iconchoice button[data-on='true'] svg {
-  stroke-width: 2.2;
+  stroke-width: 2.1;
 }
 
 .settings .iconchoice button[data-on='true']::before {
   content: '';
   position: absolute;
-  bottom: 4px;
+  bottom: 3px;
   left: 50%;
   width: 4px;
   height: 4px;
@@ -552,9 +520,9 @@
   opacity: 0;
   white-space: nowrap;
   transition:
-    max-width calc(220ms * var(--tm)) var(--ease-out),
-    margin-left calc(220ms * var(--tm)) var(--ease-out),
-    opacity calc(180ms * var(--tm));
+    max-width var(--dur-3) var(--ease-out),
+    margin-left var(--dur-3) var(--ease-out),
+    opacity var(--dur-2);
 }
 
 .settings .iconchoice button[data-on='true'] .ico-word {
@@ -566,15 +534,15 @@
 /* The chosen icon does a quick pop. A sun and a moon also turn into view, and
    the bars of a level rise. It plays once, when the choice is made. */
 .settings .iconchoice button[data-on='true'] .ico {
-  animation: ico-pop calc(240ms * var(--tm)) var(--ease-out);
+  animation: ico-pop var(--dur-3) var(--ease-out);
 }
 
 .settings .iconchoice button[data-on='true'] .ico-sun {
-  animation: sun-in calc(300ms * var(--tm)) var(--ease-out);
+  animation: sun-in var(--dur-3) var(--ease-out);
 }
 
 .settings .iconchoice button[data-on='true'] .ico-moon {
-  animation: moon-in calc(300ms * var(--tm)) var(--ease-out);
+  animation: moon-in var(--dur-3) var(--ease-out);
 }
 
 .settings .ico-sun,
@@ -584,22 +552,22 @@
 
 @keyframes ico-pop {
   from {
-    transform: scale(0.65);
+    transform: scale(0.8);
   }
   60% {
-    transform: scale(1.14);
+    transform: scale(1.06);
   }
 }
 
 @keyframes sun-in {
   from {
-    transform: rotate(-90deg) scale(0.6);
+    transform: rotate(-90deg) scale(0.75);
   }
 }
 
 @keyframes moon-in {
   from {
-    transform: rotate(-50deg) scale(0.6);
+    transform: rotate(-50deg) scale(0.75);
   }
 }
 
@@ -616,11 +584,11 @@
 }
 
 .settings .iconchoice button[data-on='true'] .ico-level .bar {
-  animation: bar-rise calc(260ms * var(--tm)) var(--ease-out) both;
+  animation: bar-rise var(--dur-3) var(--ease-out) both;
 }
 
 :root[data-motion='on'] .settings .iconchoice button[data-on='true'] .ico-level .bar {
-  animation-delay: calc(var(--i) * 45ms * var(--tm));
+  animation-delay: calc(var(--i) * 40ms * var(--tm));
 }
 
 @keyframes bar-rise {
@@ -634,7 +602,7 @@
 .settings .ico-lock .shackle {
   transform-box: fill-box;
   transform-origin: left bottom;
-  transition: transform calc(240ms * var(--tm)) var(--ease-out);
+  transition: transform var(--dur-3) var(--ease-out);
 }
 
 .settings .ico-lock[data-locked='false'] .shackle {
@@ -647,10 +615,10 @@
   position: absolute;
   top: -3px;
   right: -3px;
-  width: 11px;
-  height: 11px;
+  width: 9px;
+  height: 9px;
   background: var(--ok);
-  border: 2px solid var(--gl-solid);
+  border: 2px solid var(--panel);
   border-radius: 50%;
   animation: live calc(1800ms * var(--tm)) ease-in-out infinite;
 }
@@ -658,7 +626,6 @@
 @keyframes live {
   50% {
     opacity: 0.55;
-    transform: scale(1.35);
   }
 }
 
@@ -666,29 +633,29 @@
 
 .settings .btn {
   height: 44px;
-  padding: 0 20px;
-  background: var(--set-field);
-  border: 1px solid var(--set-field-edge);
+  padding: 0 18px;
+  background: transparent;
+  border: 1px solid var(--edge-strong);
+  border-radius: var(--r-m);
   font-size: 15px;
-  font-weight: 700;
+  font-weight: 550;
   transition:
-    background-color calc(150ms * var(--tm)),
-    border-color calc(150ms * var(--tm)),
-    transform calc(150ms * var(--tm));
+    background-color var(--dur-2) var(--ease-out),
+    border-color var(--dur-2) var(--ease-out);
 }
 
 .settings .btn:hover {
-  background: color-mix(in srgb, var(--ink) 12%, transparent);
+  background: var(--set-field);
 }
 
 .settings .btn.primary {
-  background: var(--accent);
+  background: var(--accent-fill);
   border-color: transparent;
   color: var(--accent-ink);
 }
 
 .settings .btn.primary:hover {
-  background: color-mix(in srgb, var(--accent) 88%, var(--ink));
+  background: var(--accent-hi);
 }
 
 .settings .btn:disabled {
@@ -703,25 +670,26 @@
   place-items: center;
   width: 44px;
   height: 44px;
-  background: var(--set-field);
-  border: 1px solid var(--set-field-edge);
-  border-radius: 50%;
+  background: transparent;
+  border: 1px solid var(--edge);
+  border-radius: var(--r-m);
   color: var(--ink);
   transition:
-    background-color calc(150ms * var(--tm)),
-    transform calc(150ms * var(--tm));
+    background-color var(--dur-2) var(--ease-out),
+    border-color var(--dur-2) var(--ease-out);
 }
 
 .settings .icon-act:hover {
-  background: color-mix(in srgb, var(--ink) 13%, transparent);
+  background: var(--set-field);
+  border-color: var(--edge-strong);
 }
 
 .settings .icon-act:active {
-  transform: scale(0.92);
+  transform: none;
 }
 
 .settings .icon-act[data-tone='primary'] {
-  background: var(--accent);
+  background: var(--accent-fill);
   border-color: transparent;
   color: var(--accent-ink);
 }
@@ -737,39 +705,43 @@
 
 .settings .segmented {
   gap: 2px;
-  padding: 4px;
-  background: var(--set-field);
-  border: 1px solid var(--set-field-edge);
+  padding: 3px;
+  background: transparent;
+  border: 1px solid var(--edge);
+  border-radius: var(--r-m);
 }
 
 .settings .segmented button {
   min-width: 44px;
   min-height: 44px;
   padding: 0 14px;
-  color: color-mix(in srgb, var(--ink-2) 60%, var(--ink));
+  border-radius: var(--r-s);
+  color: var(--ink-2);
   font-size: 15px;
   transition:
-    background-color calc(150ms * var(--tm)),
-    color calc(150ms * var(--tm));
+    background-color var(--dur-2) var(--ease-out),
+    color var(--dur-2) var(--ease-out);
 }
 
 .settings .segmented button:hover {
   color: var(--ink);
+  background: var(--set-field);
 }
 
 .settings .segmented button[data-on='true'] {
-  background: var(--accent);
+  background: var(--accent-fill);
   box-shadow: none;
   color: var(--accent-ink);
-  font-weight: 700;
+  font-weight: 600;
 }
 
-/* The switch: a knob that draws a tick when on and a dash when off. */
+/* The switch: a square knob that draws a tick when on and a dash when off. */
 .settings .switch {
   width: 56px;
   height: 34px;
-  background: color-mix(in srgb, var(--ink) 28%, transparent);
-  transition: background-color calc(180ms * var(--tm));
+  border-radius: var(--r-m);
+  background: color-mix(in srgb, var(--ink) 24%, transparent);
+  transition: background-color var(--dur-3) var(--ease-out);
 }
 
 .settings .switch::before {
@@ -784,13 +756,14 @@
   left: 4px;
   width: 26px;
   height: 26px;
-  background: var(--on-fill);
-  box-shadow: var(--shadow-1);
-  transition: transform calc(180ms * var(--tm)) var(--ease-out);
+  border-radius: var(--r-s);
+  background: var(--panel);
+  box-shadow: none;
+  transition: transform var(--dur-3) var(--ease-out);
 }
 
 .settings .switch[data-on='true'] {
-  background: var(--accent);
+  background: var(--accent-fill);
 }
 
 .settings .switch[data-on='true'] i {
@@ -810,7 +783,7 @@
 .settings .switch i path {
   stroke-dasharray: 1;
   stroke-dashoffset: 1;
-  transition: stroke-dashoffset calc(220ms * var(--tm)) var(--ease-out);
+  transition: stroke-dashoffset var(--dur-3) var(--ease-out);
 }
 
 .settings .switch .sw-on {
@@ -818,7 +791,7 @@
 }
 
 .settings .switch .sw-off {
-  stroke: color-mix(in srgb, var(--accent) 35%, black);
+  stroke: var(--ink-3);
 }
 
 .settings .switch[data-on='true'] .sw-on,
@@ -833,13 +806,13 @@
 .settings .select select {
   height: 44px;
   min-width: 0;
-  padding: 0 42px 0 18px;
-  background: var(--set-field);
-  border: 1px solid var(--set-field-edge);
+  padding: 0 42px 0 16px;
+  background: transparent;
+  border: 1px solid var(--edge-strong);
   border-radius: var(--r-m);
   font-family: var(--set-font);
   font-size: 15px;
-  transition: border-color calc(150ms * var(--tm));
+  transition: border-color var(--dur-2) var(--ease-out);
 }
 
 .settings .select select:hover {
@@ -864,19 +837,25 @@
   align-items: center;
   gap: 8px;
   min-height: 44px;
-  padding: 0 16px 0 12px;
-  background: var(--set-field);
-  border: 1px solid var(--set-field-edge);
+  padding: 0 14px;
+  background: transparent;
+  border: 1px solid var(--edge);
   border-radius: var(--r-m);
   color: var(--ink);
   font-size: 15px;
 }
 
+.settings .choice:hover {
+  border-color: var(--edge-strong);
+  background: var(--set-field);
+}
+
 .settings .choice[data-on='true'] {
-  background: var(--accent);
-  border-color: transparent;
-  color: var(--accent-ink);
-  font-weight: 700;
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  box-shadow: inset 0 -2px 0 var(--accent);
+  color: var(--ink);
+  font-weight: 600;
 }
 
 .settings .choice[data-on='true']::after {
@@ -884,10 +863,10 @@
   width: 5px;
   height: 10px;
   margin: -3px 0 0 2px;
-  border-right: 2px solid currentcolor;
-  border-bottom: 2px solid currentcolor;
+  border-right: 2px solid var(--accent);
+  border-bottom: 2px solid var(--accent);
   transform: rotate(40deg);
-  animation: ico-pop calc(240ms * var(--tm)) var(--ease-out);
+  animation: ico-pop var(--dur-3) var(--ease-out);
 }
 
 .settings .key-field,
@@ -897,10 +876,10 @@
 .settings .setting.stack input[type='text'] {
   width: 100%;
   min-height: 44px;
-  padding: 10px 16px;
-  background: var(--set-field);
-  border: 1px solid var(--set-field-edge);
-  border-radius: 16px;
+  padding: 10px 14px;
+  background: var(--panel-2);
+  border: 1px solid var(--edge-strong);
+  border-radius: var(--r-m);
   color: var(--ink);
   font-family: var(--set-font);
   font-size: 15px;
@@ -925,11 +904,12 @@
 .settings .cap-field input {
   width: 112px;
   height: 44px;
-  padding: 0 14px;
-  background: var(--set-field);
-  border: 1px solid var(--set-field-edge);
-  border-radius: 14px;
-  font-size: 15px;
+  padding: 0 12px;
+  background: var(--panel-2);
+  border: 1px solid var(--edge-strong);
+  border-radius: var(--r-m);
+  font-family: var(--mono);
+  font-size: 14px;
 }
 
 .settings .cap-unit {
@@ -942,7 +922,7 @@
 
 .settings .tuning-setting {
   gap: 0;
-  padding-bottom: 10px;
+  padding-bottom: 12px;
 }
 
 .settings .setting > .tuning-head,
@@ -956,9 +936,10 @@
 }
 
 .settings .tuning-head b {
-  color: var(--ink);
-  font-size: 15px;
-  font-weight: 700;
+  color: var(--ink-2);
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 400;
 }
 
 .settings .tuning-range {
@@ -973,36 +954,36 @@
 }
 
 .settings .tuning-range::-webkit-slider-runnable-track {
-  height: 8px;
-  background: linear-gradient(to right, var(--accent) var(--fill, 50%), var(--set-field-edge) var(--fill, 50%));
-  border-radius: var(--r-m);
+  height: 4px;
+  background: linear-gradient(to right, var(--accent) var(--fill, 50%), var(--edge-strong) var(--fill, 50%));
+  border-radius: 0;
 }
 
 .settings .tuning-range::-moz-range-track {
-  height: 8px;
-  background: linear-gradient(to right, var(--accent) var(--fill, 50%), var(--set-field-edge) var(--fill, 50%));
-  border-radius: var(--r-m);
+  height: 4px;
+  background: linear-gradient(to right, var(--accent) var(--fill, 50%), var(--edge-strong) var(--fill, 50%));
+  border-radius: 0;
 }
 
 .settings .tuning-range::-webkit-slider-thumb {
-  width: 26px;
-  height: 26px;
-  margin-top: -9px;
-  background: var(--on-fill);
-  border: 3px solid var(--accent);
-  border-radius: 50%;
-  box-shadow: var(--shadow-1);
+  width: 18px;
+  height: 18px;
+  margin-top: -7px;
+  background: var(--panel);
+  border: 2px solid var(--accent);
+  border-radius: var(--r-s);
+  box-shadow: none;
   appearance: none;
   -webkit-appearance: none;
 }
 
 .settings .tuning-range::-moz-range-thumb {
-  width: 20px;
-  height: 20px;
-  background: var(--on-fill);
-  border: 3px solid var(--accent);
-  border-radius: 50%;
-  box-shadow: var(--shadow-1);
+  width: 16px;
+  height: 16px;
+  background: var(--panel);
+  border: 2px solid var(--accent);
+  border-radius: var(--r-s);
+  box-shadow: none;
 }
 
 /* ---- a note: a warning or the text of a disclosure ---- */
@@ -1010,8 +991,8 @@
 .settings .panel-note {
   display: block;
   margin: 0;
-  padding: 10px 20px 12px;
-  border-top: 1px solid var(--gl-hair);
+  padding: 10px 0 12px;
+  border-top: 1px solid var(--edge);
   color: var(--ink-2);
   font-size: 14px;
   line-height: 1.5;
@@ -1022,7 +1003,7 @@
 }
 
 .settings a {
-  color: var(--accent-hi);
+  color: var(--accent);
   text-decoration: underline;
   text-underline-offset: 3px;
 }
@@ -1034,9 +1015,10 @@
 }
 
 .settings .error-note {
-  margin: 8px 16px 12px;
-  padding: 12px 16px;
-  border-radius: 16px;
+  margin: 8px 0 12px;
+  padding: 8px 12px;
+  border-left: 2px solid var(--risk);
+  border-radius: 0;
   font-size: 15px;
   line-height: 1.5;
 }
@@ -1055,8 +1037,8 @@
 .settings .key {
   gap: 4px;
   min-height: 60px;
-  padding: 8px 20px;
-  border-top: 1px solid var(--gl-hair);
+  padding: 10px 0;
+  border-top: 1px solid var(--edge);
 }
 
 .settings .key-head {
@@ -1077,8 +1059,9 @@
 .settings .key strong,
 .settings .order-list strong {
   color: var(--ink);
-  font-size: 15px;
-  font-weight: 700;
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 500;
 }
 
 .settings .key-actions {
@@ -1093,6 +1076,7 @@
 
 .settings .key-result {
   color: var(--ink-2);
+  font-family: var(--mono);
   font-size: 14px;
   overflow-wrap: anywhere;
 }
@@ -1107,8 +1091,8 @@
 
 .settings .order-list li {
   min-height: 60px;
-  padding: 8px 20px;
-  border-top: 1px solid var(--gl-hair);
+  padding: 10px 0;
+  border-top: 1px solid var(--edge);
 }
 
 .settings .order-list li > span:first-child {
@@ -1121,8 +1105,8 @@
 
 .settings .order-list li > span:first-child::before {
   top: 50%;
-  color: var(--ink-2);
-  font-size: 14px;
+  color: var(--ink-3);
+  font-size: 13px;
   transform: translateY(-50%);
 }
 
@@ -1130,8 +1114,9 @@
   gap: 4px;
   margin: 0 0 4px;
   padding: 10px 14px;
-  background: var(--set-field);
-  border-radius: 16px;
+  background: var(--panel-2);
+  border: 1px solid var(--edge);
+  border-radius: var(--r-m);
   color: var(--ink-2);
   font-size: 14px;
 }
@@ -1161,20 +1146,20 @@
   justify-content: space-between;
   gap: 4px 12px;
   min-height: 52px;
-  padding: 6px 20px;
-  border-top: 1px solid var(--gl-hair);
+  padding: 8px 0;
+  border-top: 1px solid var(--edge);
 }
 
 .settings .plain-list strong {
   font-size: 15px;
-  font-weight: 700;
+  font-weight: 650;
   overflow-wrap: anywhere;
 }
 
 /* ---- a disclosure: one row that opens ---- */
 
 .settings .disclosure {
-  border-top: 1px solid var(--gl-hair);
+  border-top: 1px solid var(--edge);
 }
 
 .settings .disclosure > summary {
@@ -1182,8 +1167,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  min-height: 60px;
-  padding: 0 20px;
+  min-height: 56px;
+  padding: 0;
   color: var(--ink);
   cursor: pointer;
   font-size: 15px;
@@ -1202,7 +1187,7 @@
   border-right: 2px solid var(--ink-2);
   border-bottom: 2px solid var(--ink-2);
   transform: translateY(-2px) rotate(45deg);
-  transition: transform calc(200ms * var(--tm)) var(--ease-out);
+  transition: transform var(--dur-3) var(--ease-out);
 }
 
 .settings .disclosure[open] > summary::after {
@@ -1216,8 +1201,9 @@
 /* ---- numbers, the snippet, a command ---- */
 
 .settings .tiles {
-  gap: 10px;
-  margin: 4px 16px 14px;
+  gap: 0;
+  margin: 0;
+  border-bottom: 1px solid var(--edge);
 }
 
 .settings .tiles > div {
@@ -1225,18 +1211,25 @@
   justify-items: start;
   gap: 0;
   padding: 12px 14px;
-  background: var(--set-field);
-  border-radius: 18px;
+  background: transparent;
+  border: 0;
+  border-right: 1px solid var(--edge);
+  border-radius: 0;
+}
+
+.settings .tiles > div:last-child {
+  border-right: 0;
 }
 
 .settings .tiles > div > .icon {
   margin-bottom: 4px;
-  color: var(--accent-hi);
+  color: var(--ink-3);
 }
 
 .settings .tiles strong {
+  font-family: var(--mono);
   font-size: 22px;
-  font-weight: 700;
+  font-weight: 500;
   letter-spacing: 0;
 }
 
@@ -1247,23 +1240,23 @@
 }
 
 .settings .mcp-snippet {
-  margin: 8px 16px 12px;
+  margin: 8px 0 12px;
   padding: 14px;
   max-height: 220px;
-  background: var(--set-field);
-  border: 1px solid var(--set-field-edge);
-  border-radius: 18px;
-  font-size: 14px;
+  background: var(--panel-2);
+  border: 1px solid var(--edge);
+  border-radius: var(--r-m);
+  font-size: 13px;
 }
 
 .settings .command {
-  margin: 8px 16px 0;
-  padding: 8px 8px 8px 16px;
-  background: var(--set-field);
-  border: 1px solid var(--set-field-edge);
-  border-radius: 18px;
+  margin: 8px 0 0;
+  padding: 8px 8px 8px 14px;
+  background: var(--panel-2);
+  border: 1px solid var(--edge);
+  border-radius: var(--r-m);
 }
 
 .settings .command code {
-  font-size: 14px;
+  font-size: 13px;
 }
