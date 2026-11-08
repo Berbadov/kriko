@@ -48,7 +48,7 @@ def test_a_resident_agent_is_warmed_once_before_the_answer(monkeypatch):
 
     assert recorder.done.wait(2.0), "no worker was warmed"
     assert len(recorder.calls) == 1
-    assert recorder.calls[0][1] == harness.RESIDENT_START_SECONDS
+    assert recorder.calls[0][1] == harness.RESIDENT_WARM_SECONDS
 
 
 def test_an_agent_without_a_resident_protocol_is_not_warmed(monkeypatch):

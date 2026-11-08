@@ -854,3 +854,20 @@
 .specs-toggle[aria-expanded='true'] svg {
   transform: rotate(90deg);
 }
+
+/* Products named in Compare that are still being researched. */
+.cmp-pending { display: grid; gap: 6px; margin: 0 0 12px; padding: 0; list-style: none; }
+.cmp-pending li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px dashed var(--edge-strong);
+  border-radius: var(--r-m);
+  background: var(--panel);
+  font-size: 14px;
+}
+.cmp-pending li[data-state='failed'] { border-style: solid; border-color: color-mix(in srgb, var(--risk) 45%, var(--edge)); }
+.cmp-pending .muted { flex: 1; overflow: hidden; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.chip-new { border-style: dashed; }
+.chip-new strong { display: inline-flex; align-items: center; gap: 6px; }

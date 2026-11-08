@@ -179,6 +179,14 @@ gate_py() {
     # coverage, so the architecture is checked here too.
     step "pytest (engine + catalog + pipeline)"
     gate_pytest
+    # Advisory: has an agent CLI installed here changed since its last known
+    # good (src/app/cli_versions.json), or lost a flag Kriko passes? Offline,
+    # and never fails the gate: a vendor's release is not this branch's fault,
+    # but the person pushing should see it. A machine with no CLI prints
+    # "not installed" rows and moves on.
+    step "agent CLIs against their last known good (advisory)"
+    "$PYTHON" tools/cli_watch.py --offline \
+        || echo "cli_watch exited $? (advisory only): adapt the harness row, or run tools/cli_watch.py --accept once a run has been seen to work"
 }
 
 gate_wheel() {

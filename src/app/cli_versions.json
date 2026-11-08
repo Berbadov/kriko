@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "clis": {
+    "antigravity-cli": {
+      "version": "1.5.3",
+      "declared": [
+        "--disable-slash-commands",
+        "--effort",
+        "--model",
+        "--output-format"
+      ],
+      "checked": "2026-11-08"
+    },
+    "claude-code": {
+      "version": "2.1.319",
+      "declared": [
+        "--allowedTools",
+        "--effort",
+        "--exclude-dynamic-system-prompt-sections",
+        "--include-partial-messages",
+        "--input-format",
+        "--max-budget-usd",
+        "--mcp-config",
+        "--model",
+        "--output-format",
+        "--safe-mode",
+        "--strict-mcp-config",
+        "--tools",
+        "--verbose"
+      ],
+      "checked": "2026-11-08"
+    },
+    "codex": {
+      "version": "0.164.0",
+      "declared": [
+        "--ephemeral",
+        "--ignore-rules",
+        "--ignore-user-config",
+        "--json",
+        "--sandbox",
+        "--skip-git-repo-check"
+      ],
+      "checked": "2026-11-08"
+    },
+    "mistral-vibe": {
+      "version": "3.1.0",
+      "declared": [
+        "--agent",
+        "--enabled-tools",
+        "--max-price",
+        "--max-turns",
+        "--output",
+        "--prompt",
+        "--trust"
+      ],
+      "checked": "2026-11-08"
+    }
+  }
+}

@@ -1157,7 +1157,7 @@ SOURCES: dict[str, Source] = {s.name: s for s in (
         "Searches the public web and reads up to three result pages. Page excerpts are fetched text; search titles and snippets are leads only.",
         {"query": "words to search the public web for",
          "buying": "optional: yes when the reader wants something to buy; trusted shops are read first",
-         "mode": "optional: alternatives, cheapest or merchants; adds one search for what that mode is about"},
+         "mode": "optional: find, alternatives, research, cheapest or merchants; adds one search for what that mode is about"},
         "web pages", lambda a: f"searching the web for {_quoted(a)}", _web_search),
     Source(
         "product_match",

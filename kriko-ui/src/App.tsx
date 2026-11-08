@@ -12,6 +12,8 @@ import type { AppAction } from './activity/run'
 import { ChatScreen } from './screens/Chat'
 import { CompareScreen } from './screens/Compare'
 import { ProductScreen } from './screens/Product'
+import { PricesScreen } from './screens/Prices'
+import { Motes } from './dust/Motes'
 import { QueueScreen } from './screens/Queue'
 import { Tour } from './tour/Tour'
 import { Drawer } from './ui/Drawer'
@@ -64,7 +66,7 @@ function Shell() {
   const performAction = useCallback((action: AppAction) => {
     if (action.kind === 'open') {
       const target = String(action.params?.screen || '')
-      if (target === 'chat' || target === 'compare' || target === 'queue') {
+      if (target === 'chat' || target === 'compare' || target === 'prices' || target === 'queue') {
         go(target)
         return
       }
@@ -157,6 +159,7 @@ function Shell() {
   return (
     <MotionConfig reducedMotion={m.on ? 'never' : 'always'}>
       <div className="app">
+        <Motes />
         <TopBar screen={screen} onNavigate={go} onMore={openDrawerList} onNewChat={startChat} onOpenChat={showChat} queueCount={active} attention={attention} />
         {engine.mode === 'live' && !engine.agentAvailable && (
           <aside className="engine-notice" role="status">
@@ -190,6 +193,7 @@ function Shell() {
               {screen === 'chat' && !product && <ChatScreen onOpen={openProduct} onAction={performAction} />}
               {screen === 'chat' && product && <ProductScreen lookupId={product} onBack={() => go('chat')} onCompare={() => go('compare')} />}
               {screen === 'compare' && <CompareScreen />}
+              {screen === 'prices' && <PricesScreen />}
               {screen === 'queue' && <QueueScreen />}
             </motion.div>
           </AnimatePresence>

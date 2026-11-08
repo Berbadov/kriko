@@ -107,6 +107,8 @@ for line in sys.stdin:
     if method is None:
         continue
     if method == "initialize":
+        if mode == "slow_init":
+            time.sleep(float(os.environ.get("FAKE_INIT_SECONDS", "1")))
         if mode == "bad_init":
             send({"jsonrpc": "2.0", "id": msg["id"], "error": {"code": -32603, "message": "no"}})
         else:
@@ -348,6 +350,26 @@ def test_claude_timeout_is_uncertain_and_quarantines(claude) -> None:
     assert pool.worker_count() == 0
 
 
+def test_a_timed_out_turn_whose_agent_stops_keeps_its_worker_warm(claude) -> None:
+    """A timeout is still uncertain, but a worker that stopped is not lost.
+
+    Killing it made the next request pay a cold start inside its own short
+    budget, and that request timed out too: three in a row in the reader's
+    chat turn of 2026-11-08.
+    """
+    pool, factory, tmp_path = claude
+    profile = _profile("claude", tmp_path, "hang_then_stop")
+    with pytest.raises(DeliveryUncertain, match="worker is kept"):
+        pool.run(profile, ResidentRequest("hello", timeout=0.6))
+    assert pool.worker_count() == 1
+    with pytest.raises(DeliveryUncertain):
+        pool.run(profile, ResidentRequest("hello", timeout=0.6))
+    assert factory.starts == 1  # the second request reused it, after `/clear`
+    sent = [m["message"]["content"][0]["text"] for m in _log(tmp_path, "claude", "hang_then_stop")
+            if m.get("type") == "user"]
+    assert sent == ["hello", "/clear", "hello"]
+
+
 def test_a_missing_executable_is_unavailable_before_anything_is_sent(claude) -> None:
     pool, _, tmp_path = claude
     profile = ResidentProfile("claude", (str(tmp_path / "absent"),), str(tmp_path), {})
@@ -460,6 +482,66 @@ def test_acp_cancel_asks_the_session_to_stop(acp) -> None:
         pool.run(_profile("acp", tmp_path, "hang"),
                  ResidentRequest("hello", timeout=20, on_delivery=received), cancel_event=cancel)
     assert any(m.get("method") == "session/cancel" for m in _log(tmp_path, "acp", "hang"))
+    assert pool.worker_count() == 1  # the agent answered `cancelled`
+
+
+def test_acp_pays_its_first_session_at_the_start_so_a_warmed_worker_is_ready(acp) -> None:
+    """The first `session/new` of a process is its slow one; a warm-up covers it."""
+    pool, factory, tmp_path = acp
+    profile = _profile("acp", tmp_path)
+    assert pool.warm(profile) is True
+    first = pool.run(profile, ResidentRequest("remember PINEAPPLE"))
+    second = pool.run(profile, ResidentRequest("recall the codeword"))
+    assert first.metrics["spare_session"] is True
+    assert second.metrics["spare_session"] is False
+    assert (first.text, second.text) == ("OK", "NONE")  # still one session per request
+    assert factory.starts == 1
+
+
+def test_a_request_during_a_warm_up_waits_for_that_worker(acp) -> None:
+    """A request that arrives while its agent is warming must not start a second one.
+
+    With two child slots it used to: the request paid a whole cold start of
+    its own beside the warm-up, so the warm-up saved nothing.
+    """
+    pool, factory, tmp_path = acp
+    pool.max_workers = 2
+    base = _profile("acp", tmp_path, "slow_init")
+    profile = ResidentProfile(base.wire, base.argv, base.cwd, {**base.env, "FAKE_INIT_SECONDS": "1.0"})
+    warming = threading.Thread(target=pool.warm, args=(profile,))
+    warming.start()
+    deadline = time.monotonic() + 5
+    while factory.starts < 1 and time.monotonic() < deadline:
+        time.sleep(0.01)
+    result = pool.run(profile, ResidentRequest("hello", timeout=20, start_timeout=10))
+    warming.join(5)
+    assert result.text == "answer"
+    assert result.metrics["reused_worker"] is True
+    assert factory.starts == 1
+
+
+def test_a_request_gives_up_on_a_warm_up_at_its_own_start_bound(acp) -> None:
+    pool, factory, tmp_path = acp
+    pool.max_workers = 2
+    base = _profile("acp", tmp_path, "slow_init")
+    profile = ResidentProfile(base.wire, base.argv, base.cwd, {**base.env, "FAKE_INIT_SECONDS": "3"})
+    warming = threading.Thread(target=pool.warm, args=(profile,))
+    warming.start()
+    deadline = time.monotonic() + 5
+    while factory.starts < 1 and time.monotonic() < deadline:
+        time.sleep(0.01)
+    started = time.monotonic()
+    with pytest.raises(TransportUnavailable, match="did not initialize in time"):
+        pool.run(profile, ResidentRequest("hello", timeout=20, start_timeout=0.5))
+    assert time.monotonic() - started < 2
+    warming.join(10)
+
+
+def test_acp_timeout_of_a_session_that_stops_keeps_the_worker(acp) -> None:
+    pool, factory, tmp_path = acp
+    profile = _profile("acp", tmp_path, "hang")
+    with pytest.raises(DeliveryUncertain, match="worker is kept"):
+        pool.run(profile, ResidentRequest("hello", timeout=1.0))
     assert pool.worker_count() == 1  # the agent answered `cancelled`
 
 

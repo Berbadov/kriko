@@ -500,6 +500,37 @@ def _replace_compare_lookup(conn: sqlite3.Connection, draft_id: str, source_id: 
             return True
     return False
 
+
+def _append_compare_lookup(conn: sqlite3.Connection, draft_id: str, lookup_id: str) -> bool:
+    """Add a new product's check to the end of a draft, within the job transaction.
+
+    The door for a product the reader named in Compare without having checked it
+    first: its quick look becomes a column when it succeeds, as a replaced one does.
+    """
+    if not (draft_id and lookup_id):
+        return False
+    for _ in range(8):
+        row = conn.execute(
+            "SELECT lookup_ids FROM compare_drafts WHERE draft_id = ?", (draft_id,)).fetchone()
+        if row is None:
+            return False
+        original = str(row["lookup_ids"] or "[]")
+        try:
+            ids = [str(value) for value in json.loads(original)]
+        except (TypeError, ValueError):
+            return False
+        if lookup_id in ids:
+            return True
+        changed = conn.execute(
+            "UPDATE compare_drafts SET lookup_ids = ?, updated_at = ?"
+            " WHERE draft_id = ? AND lookup_ids = ?",
+            (json.dumps([*ids, lookup_id]), datetime.now(UTC).isoformat(timespec="seconds"),
+             draft_id, original))
+        if changed.rowcount:
+            return True
+    return False
+
+
 class JobRunner:
     def __init__(self, settings, handlers: Mapping[str, Handler],
                  on_idle: Callable[[], object] | None = None):
@@ -788,9 +819,13 @@ class JobRunner:
                 state.finish_job(conn, job_id, state.SUCCEEDED, result=result, commit=False)
                 succeeded = (state.get_job(conn, job_id) or {}).get("state") == state.SUCCEEDED
                 if succeeded and kind == "quick_look":
-                    _replace_compare_lookup(
-                        conn, str(params.get("compare_draft_id") or ""),
-                        str(params.get("compare_lookup_id") or ""), job_id)
+                    if params.get("compare_add"):
+                        _append_compare_lookup(
+                            conn, str(params.get("compare_draft_id") or ""), job_id)
+                    else:
+                        _replace_compare_lookup(
+                            conn, str(params.get("compare_draft_id") or ""),
+                            str(params.get("compare_lookup_id") or ""), job_id)
             if succeeded:
                 self._save_product_checks(kind, result)
             if run_id:

@@ -202,6 +202,20 @@ def tests_use_python_unless_they_ask_for_the_rust_helper(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def the_cli_watcher_asks_nothing_in_the_background(monkeypatch):
+    """`/api/research-planes` starts a `cliwatch` check per installed CLI.
+
+    In the suite that would run `--version` against a fake CLI that counts its
+    calls, or against the developer's real one. A test of the watcher calls
+    `cliwatch.check` itself, or restores `_spawn`.
+    """
+    from app import cliwatch
+
+    monkeypatch.setattr(cliwatch, "_spawn", lambda one, stamp: None)
+    cliwatch.forget()
+
+
+@pytest.fixture(autouse=True)
 def the_weekly_pack_update_stays_off(monkeypatch):
     """Entering a lifespan must not fetch the real pack index (B166).
 

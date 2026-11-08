@@ -14,12 +14,13 @@ import { UsagePill } from './UsagePill'
 /** The logo files are white. They take the colour of the text instead. */
 const ink = (svg: string) => svg.replaceAll('#ffffff', 'currentColor')
 
-export type Screen = 'chat' | 'compare' | 'queue'
-export const ORDER: Screen[] = ['chat', 'compare', 'queue']
+export type Screen = 'chat' | 'compare' | 'prices' | 'queue'
+export const ORDER: Screen[] = ['chat', 'compare', 'prices', 'queue']
 
 const ITEMS: { id: Screen; label: string; icon: IconName }[] = [
   { id: 'chat', label: 'Chat', icon: 'chat' },
   { id: 'compare', label: 'Compare', icon: 'compare' },
+  { id: 'prices', label: 'Prices', icon: 'coins' },
   { id: 'queue', label: 'Queue', icon: 'queue' },
 ]
 
