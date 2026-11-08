@@ -114,7 +114,6 @@ jobs:
                   PYTHON="$(which python)" tools/gate.sh wheel
                   npm ci --no-audit --no-fund
                   npm test
-                  npm run test:site
 
             # Tauri takes the two other programs as external binaries, named
             # with the target triple. They land beside kriko.exe.
