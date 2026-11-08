@@ -1,7 +1,7 @@
 /** The scan-first home screen shown before a conversation begins. */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState, type ComponentRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { plainPreview } from '../engine/preview';
@@ -12,7 +12,6 @@ import { elevation, gap, PAGE_X, radius } from '../theme/tokens';
 import { makeStyles, useColors } from '../theme/theme';
 import { Txt } from '../theme/Txt';
 import { MotionPressable, MotionView } from '../components/Motion';
-import { PulseRing } from '../components/Shock';
 import { ChevronRightIcon, ImageIcon2, InfoIcon, ScanIcon } from '../components/Icon';
 import { FirstRunGuide } from '../components/FirstRunGuide';
 
@@ -23,15 +22,20 @@ export function Landing({
   onPick,
   recentScans,
   onOpenScan,
+  onBurst,
 }: {
   onScan: () => void;
   onPick: () => void;
   recentScans: QueueJob[];
   onOpenScan: (id: string) => void;
+  /** Where on screen the scan button was pressed, so the dust can scatter from it. */
+  onBurst?: (x: number, y: number) => void;
 }) {
   const color = useColors();
   const styles = useStyles();
   const recent = recentScans.slice(-2).reverse();
+  const orbRef = useRef<ComponentRef<typeof View>>(null);
+  const scatter = () => orbRef.current?.measureInWindow((x: number, y: number, w: number, h: number) => onBurst?.(x + w / 2, y + h / 2));
   const [guideVisible, setGuideVisible] = useState(false);
 
   useEffect(() => {
@@ -63,10 +67,8 @@ export function Landing({
           <ImageIcon2 size={22} color={color.ink} />
         </MotionPressable>
 
-        <View style={styles.orbBox}>
-          <PulseRing color={color.edgeStrong} radius={ORB / 2} />
-          <PulseRing color={color.edgeStrong} radius={ORB / 2} delay={1600} />
-          <MotionPressable onPress={() => { press(); onScan(); }} accessibilityRole="button"
+        <View style={styles.orbBox} ref={orbRef}>
+          <MotionPressable onPress={() => { press(); scatter(); onScan(); }} accessibilityRole="button"
             accessibilityLabel={tr('Scan a product')} style={styles.orb}>
             <ScanIcon size={48} color={color.ink} strokeWidth={1.5} />
           </MotionPressable>
