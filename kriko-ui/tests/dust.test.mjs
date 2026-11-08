@@ -73,17 +73,6 @@ test('still moves nothing, calm moves less than full', () => {
   assert.ok(spread('calm') < spread('full'))
 })
 
-test('a cursor clears the dust around it', () => {
-  const dust = new D.Dust({ count: 3000 })
-  dust.resize(300, 300)
-  dust.show(D.reading, { settle: true })
-  const near = () => { let n = 0; for (let i = 0; i < dust.count; i++) if (Math.hypot(dust.x[i] - 150, dust.y[i] - 150) < 30) n++; return n }
-  const before = near()
-  dust.point(150, 150, 50)
-  for (let f = 0; f < 30; f++) dust.step(1, f / 60)
-  assert.ok(near() < before / 3, `${before} grains near the cursor before, ${near()} after`)
-})
-
 test('every grain is drawn exactly once', () => {
   const dust = new D.Dust({ count: 1234 })
   dust.resize(200, 120)

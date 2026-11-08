@@ -256,7 +256,6 @@ export class Dust {
   phase: Float32Array
   private random: () => number
   private scene: Scene | null = null
-  private pointer = { x: -1e9, y: -1e9, r: 0 }
 
   constructor({ count, seed = 7 }: DustOptions) {
     this.count = count
@@ -340,11 +339,6 @@ export class Dust {
     }
   }
 
-  /** A finger or a cursor: grains within `r` are pushed away. Off-field to stop. */
-  point(x: number, y: number, r = 50) {
-    this.pointer = { x, y, r }
-  }
-
   /** Throw the grains near a point outward, as when a button is pressed. */
   burst(x: number, y: number, r = 120, force = 9) {
     for (let i = 0; i < this.count; i++) {
@@ -372,21 +366,10 @@ export class Dust {
     const drift = (calm ? 0.02 : 0.06) * k
     const tempo = calm ? 0.4 : 1
     const damp = Math.pow(0.86, k)
-    const { x: px, y: py, r } = this.pointer
-    const r2 = r * r
     for (let i = 0; i < this.count; i++) {
       const s = this.phase[i]
       let vx = this.vx[i] + (this.tx[i] - this.x[i]) * pull + Math.sin(this.y[i] * 0.021 + t * 0.35 * tempo + s) * drift
       let vy = this.vy[i] + (this.ty[i] - this.y[i]) * pull + Math.cos(this.x[i] * 0.018 - t * 0.3 * tempo + s * 1.3) * drift
-      const dx = this.x[i] - px
-      const dy = this.y[i] - py
-      const d2 = dx * dx + dy * dy
-      if (d2 < r2) {
-        const d = Math.sqrt(d2) || 1
-        const f = ((r2 - d2) / r2) * 1.6 * k
-        vx += (dx / d) * f
-        vy += (dy / d) * f
-      }
       vx *= damp
       vy *= damp
       this.vx[i] = vx
