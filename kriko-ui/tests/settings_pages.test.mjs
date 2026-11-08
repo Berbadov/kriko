@@ -98,7 +98,11 @@ test('the settings drawer shows one page at a time, and a requested page is the 
     }
 
     const tabs = (document) => [...document.querySelectorAll('[role="radiogroup"][aria-label="Settings page"] button')].map((node) => node.textContent)
-    assert.deepEqual(tabs(render()), ['Look', 'Research', 'Keys', 'Connections', 'Usage'])
+    assert.deepEqual(tabs(render()), ['Look', 'Research', 'Keys', 'Connections', 'Usage', 'About'])
+
+    // Version and updates are their own page, not a group at the foot of Usage.
+    assert.ok(!headings(render('usage')).includes('Version and updates'))
+    assert.ok(headings(render('about')).includes('Version and updates'))
 
     // With nothing requested, the drawer opens on Look and holds only its own groups.
     const look = render()
@@ -117,11 +121,11 @@ test('the settings drawer shows one page at a time, and a requested page is the 
 
     assert.deepEqual(headings(render('keys')), ['Keys', 'Sharing'])
     assert.deepEqual(headings(render('connections')), ['Setup', 'Web search', 'Proxies', 'Use Kriko in another chat'])
-    assert.deepEqual(headings(render('usage')), ['Caps', 'About'])
+    assert.deepEqual(headings(render('usage')), ['Caps'])
 
     // A row is an icon, a name and one control: no grey sub-line under any
     // label, on any page, and every icon-only control carries its name.
-    for (const name of ['look', 'research', 'keys', 'connections', 'usage']) {
+    for (const name of ['look', 'research', 'keys', 'connections', 'usage', 'about']) {
       const page = render(name)
       assert.equal(page.querySelector('.setting small'), null, `${name} keeps a sub-line under a setting`)
       assert.deepEqual(unnamedButtons(page), [], `${name} has an icon-only control with no name`)

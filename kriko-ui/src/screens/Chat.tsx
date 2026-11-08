@@ -3,7 +3,8 @@ import { AnimatePresence, motion } from 'motion/react'
 import { StepPill, Timeline } from '../activity/Timeline'
 import { FocusProvider } from '../chat/focus'
 import { groupsOf, recordLine, recordNote, threadUsage, turnLine } from '../chat/view'
-import type { AgentRef, AppAction, Question, Run, Turn, Usage } from '../activity/run'
+import type { AgentRef, AppAction, ChatMode, Question, Run, Turn, Usage } from '../activity/run'
+import { compareIdea, ideasFor } from '../chat/ideas'
 import { useChat } from '../chat'
 import { useEngine, type Agent } from '../engine/Engine'
 import { useRecents } from '../engine/recents'
@@ -17,6 +18,7 @@ import { Icon } from '../ui/Icon'
 import { DustField } from '../dust/DustField'
 import { cloud } from '../dust/engine'
 import { ProductList } from '../ui/ProductList'
+import { ProductShelf } from '../ui/ProductShelf'
 import { Markdown } from '../ui/Markdown'
 import { Fold } from '../ui/text'
 import { showDrawer } from '../ui/drawerEvents'
@@ -43,6 +45,10 @@ export function ChatScreen({ onOpen, onAction }: {
   const [draft, setDraft] = useState<{ text: string; at: number } | null>(null)
   /** In a narrow window the sources column is a drawer; whether it is drawn. */
   const [railOpen, setRailOpen] = useState(false)
+  /** Find, Alt. or Research: the slider in the box, held here so the ideas under it follow. */
+  const [mode, setMode] = useState<ChatMode>('find')
+  const ideas = ideasFor(mode, recents.map((item) => item.name))
+  const ask = (text: string) => start(text, agentOf(), mode === 'find' ? undefined : mode)
   // The column and the bars read what the turns already carry: nothing is kept twice.
   const groups = groupsOf(
     turns,
@@ -62,6 +68,13 @@ export function ChatScreen({ onOpen, onAction }: {
       <motion.div className="sky" initial={false} animate={{ opacity: thread ? 0 : 1, y: thread ? -m.d(30) : 0 }} transition={m.tx.page} aria-hidden="true">
         <DustField className="dust-sky" scene={SKY} cap={12000} />
       </motion.div>
+      <AnimatePresence>
+        {!thread && (
+          <motion.div key="shelf" className="shelf-wrap" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, y: m.d(20) }} transition={m.tx.page}>
+            <ProductShelf />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="chat-main">
       <div className="chat-col">
@@ -115,8 +128,28 @@ export function ChatScreen({ onOpen, onAction }: {
             placeholder={asking ? 'Answer the question, or ask something else' : thread ? 'Ask a follow-up' : 'Ask about a product'}
             draft={draft}
             recall={asked}
+            mode={mode}
+            onMode={setMode}
           />
         </motion.div>
+
+        <AnimatePresence mode="popLayout" initial={false}>
+          {!thread && (
+            <motion.div key={`ideas-${mode}`} className="ideas" initial={{ opacity: 0, y: m.d(6) }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={m.tx.quick}>
+              <h2>Ideas for you</h2>
+              <ul>
+                {ideas.map((idea) => (
+                  <li key={idea.text}>
+                    <button className="idea" onClick={() => ask(idea.text)} disabled={running}>
+                      <span className="idea-icon" aria-hidden="true"><Icon name={idea.icon} size={16} /></span>
+                      <span>{idea.text}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <AnimatePresence mode="popLayout" initial={false}>
           {!thread && recents.length > 0 && (
@@ -341,7 +374,12 @@ function Thread({
   const stuck = useRef(true)
   const done = run.status === 'done'
   const running = run.status === 'running'
-  const followups = done ? run.followups : run.status === 'idle' ? turns.at(-1)?.followups : []
+  const shown = done ? run.products : run.status === 'idle' ? turns.at(-1)?.products : []
+  const compare = compareIdea((shown ?? []).map((product) => String((product as { label?: string }).label ?? '')))
+  const followups = [
+    ...((done ? run.followups : run.status === 'idle' ? turns.at(-1)?.followups : []) ?? []),
+    ...(compare && (done || run.status === 'idle') ? [compare] : []),
+  ]
   const idle = run.status === 'idle'
   /** The answer is complete even if the turn is still naming its follow-ups. */
   const settled = run.status !== 'running' || run.answerFinal === true

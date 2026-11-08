@@ -780,9 +780,25 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             # watchdog's, and a watchdog that can be starved by the thing it
             # watches reports a healthy process dead.
             **app.state.health_probe.snapshot(),
+            # Agent CLIs that changed since their last known good, or whose
+            # flags Kriko passes are gone (`app/cliwatch.py`). Read from the
+            # watcher's snapshot only, and only if something has loaded it:
+            # this endpoint never probes a CLI.
+            "cli_drift": _cli_drift(),
         }
 
     return app
+
+
+def _cli_drift() -> list:
+    """`cliwatch.drift()` when the watcher is loaded, else nothing to report.
+
+    Looked up rather than imported: importing it would import the harness
+    module on the watchdog's poll, and before any agent screen has asked there
+    is no check to report.
+    """
+    watcher = sys.modules.get("app.cliwatch")
+    return watcher.drift() if watcher is not None else []
 
 
 def main(argv=None) -> int:

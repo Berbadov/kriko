@@ -23,6 +23,7 @@ const PAGE_ICONS: Record<SettingsPage, IconName> = {
   keys: 'key',
   connections: 'plug',
   usage: 'chart',
+  about: 'info',
 }
 const PAGE_OPTIONS: IconOption<SettingsPage>[] = SETTINGS_PAGES.map((page) => ({ value: page.value, label: page.label, icon: <Icon name={PAGE_ICONS[page.value]} size={20} /> }))
 
@@ -80,9 +81,6 @@ export function SettingsPanel(_: { onOpen?: (lookupId: string) => void }) {
   const { theme, setTheme, profile, setProfile, reduce, setReduce } = usePrefs()
   const { doc, problem, save } = usePrefsDoc()
   const spent = useSpent()
-  const about = useAbout()
-  const { presence, reload: reloadPresence } = usePresence()
-  const update = useAppUpdate()
   const { sensitivity, choose } = useSensitivity()
   const { caps, setCap } = useCaps()
   const { meters, demo: demoMeters } = useUsage()
@@ -290,32 +288,6 @@ export function SettingsPanel(_: { onOpen?: (lookupId: string) => void }) {
             ))}
           </Group>
 
-          {presence && (
-            <Group
-              icon="bell"
-              title="Ping"
-              hint={
-                <Hint icon="cloudup" title="What the ping sends">
-                  Once a day: a random install id and the app version, nothing else. Read the <a href="https://kriko.cc/privacy/">privacy policy</a>.
-                  {!presence.endpoint && ' No endpoint is set, so nothing leaves this computer.'}
-                </Hint>
-              }
-            >
-              <Row icon="bell" label="Daily ping">
-                <Switch
-                  label="Anonymous daily ping"
-                  on={doc?.chosen.presence_enabled === '1' || presence.enabled}
-                  onChange={(on) => void save({ presence_enabled: on ? '1' : '0' }).then(() => void reloadPresence())}
-                />
-              </Row>
-              {(doc?.chosen.presence_enabled === '1' || presence.enabled) && (
-                <Row icon="clock" label="Last sent">
-                  <span className="value">{presence.last_day || 'On the next start'}</span>
-                </Row>
-              )}
-            </Group>
-          )}
-
           {spent && (
             <Group
               icon="coins"
@@ -351,8 +323,26 @@ export function SettingsPanel(_: { onOpen?: (lookupId: string) => void }) {
             </Group>
           )}
 
+        </>
+      )}
+
+      {page === 'about' && <AboutPage />}
+      </div>
+    </div>
+  )
+}
+
+/** Version, updates and what this copy sends home: its own page, apart from usage.
+ *  The Updates entry in the More menu opens the same page. */
+export function AboutPage(_: { onOpen?: (lookupId: string) => void } = {}) {
+  const { doc, save } = usePrefsDoc()
+  const about = useAbout()
+  const { presence, reload: reloadPresence } = usePresence()
+  const update = useAppUpdate()
+  return (
+    <div className="about-page">
           {about && (
-            <Group icon="info" title="About">
+            <Group icon="info" title="Version and updates">
               <Row icon="cpu" label="Engine">
                 <span className="value">{about.version || 'Not known'}</span>
               </Row>
@@ -372,9 +362,32 @@ export function SettingsPanel(_: { onOpen?: (lookupId: string) => void }) {
               </Row>
             </Group>
           )}
-        </>
-      )}
-      </div>
+          {presence && (
+            <Group
+              icon="bell"
+              title="Ping"
+              hint={
+                <Hint icon="cloudup" title="What the ping sends">
+                  Once a day: a random install id and the app version, nothing else. Read the <a href="https://kriko.cc/privacy/">privacy policy</a>.
+                  {!presence.endpoint && ' No endpoint is set, so nothing leaves this computer.'}
+                </Hint>
+              }
+            >
+              <Row icon="bell" label="Daily ping">
+                <Switch
+                  label="Anonymous daily ping"
+                  on={doc?.chosen.presence_enabled === '1' || presence.enabled}
+                  onChange={(on) => void save({ presence_enabled: on ? '1' : '0' }).then(() => void reloadPresence())}
+                />
+              </Row>
+              {(doc?.chosen.presence_enabled === '1' || presence.enabled) && (
+                <Row icon="clock" label="Last sent">
+                  <span className="value">{presence.last_day || 'On the next start'}</span>
+                </Row>
+              )}
+            </Group>
+          )}
+
     </div>
   )
 }

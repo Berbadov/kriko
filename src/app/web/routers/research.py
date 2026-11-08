@@ -194,6 +194,7 @@ def list_planes(
     Returns no key and no hint. `/api/keys` is the only surface that describes
     what is stored, and even that one returns only a masked tail.
     """
+    from app import cliwatch
     from app.providers import harness as harness_mod
     from app.providers.harness import HarnessResearcher
     from kriko.research import AgentResearcher, ApiResearcher, LocalPlane
@@ -274,6 +275,10 @@ def list_planes(
                     "efforts_pending": harness_mod.efforts_pending(h),
                     "efforts_note": harness_mod.efforts_note(h, efforts.get(h.id, [])),
                     "effort_hint": h.effort_hint,
+                    # Has this CLI changed since its last known good, and do
+                    # the flags Kriko passes still exist (`app/cliwatch.py`)?
+                    # `null` while the first check runs in the background.
+                    "cli_watch": cliwatch.status(h),
                 }
                 for h in installed
             ] + api_rows

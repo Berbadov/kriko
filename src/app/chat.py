@@ -452,6 +452,9 @@ BUYING_RULES = [
     "7. If nothing is verified, request another search with SEARCH: <better query> while budget remains;",
     "otherwise state what was tried and the exact unresolved gap. State no price,",
     "stock level, rating or fitment that no page shows.",
+    "8. Always commit. End with one line naming the product you would buy, linked as",
+    "[name](https://full-url) to its best page from the results, and the reason in a few",
+    "words. Missing evidence changes how sure the pick is, never whether there is one.",
 ]
 
 
@@ -462,23 +465,44 @@ PRODUCT_ONLY_RULES = [
     "a detailed buying answer — including identifying the parts that matter and what",
     "is reported to fail on each candidate, before you choose one. Do not skip search,",
     "page reads, or evidence checks.",
-    "Kriko renders the exact pages it found as product cards after your text, with",
-    "their page images when available and a direct link. These cards are the links:",
-    "do not repeat the product list or markdown URLs, and never invent a link. Return only:",
-    "1. One brief sentence stating the best-supported choice or that none could be verified.",
-    "2. Up to two short fitment, compatibility, or safety warnings when needed.",
+    "Kriko renders the pages it found as product cards after your text. Return only:",
+    "1. Your pick, always: the one product you recommend, by exact name, as a markdown",
+    "link to the best page for it from the web results ([name](https://full-url), the URL",
+    "copied exactly, never invented), and one line on why. When the evidence is thin, still",
+    "pick, and say in a few words what is not yet verified (for example the price). Never",
+    "answer that no product can be recommended.",
+    "2. Up to two runner-ups, one line each, linked the same way when a page exists.",
+    "3. At most one short fitment, compatibility, or safety warning when it matters.",
     "Do not expose hidden reasoning, add headings, or add a closing question.",
 ]
 
 
 #: What a buying turn can be asked to do beyond "find me one". A small closed
 #: set of things a reader does with a product, not a vocabulary of products.
-MODES = ("alternatives", "cheapest", "merchants")
+#: `find` and `research` are the Chat slider's own: find one to buy, or learn about
+#: one (a research turn is not a buying turn and owes no seller).
+MODES = ("find", "alternatives", "research", "cheapest", "merchants")
+
+#: The modes that are not shopping: they read the web, but owe no seller or price.
+INFO_MODES = ("research",)
 
 #: Added to `BUYING_RULES`, never instead of them: a mode changes what the answer
 #: is *about*, and the evidence rules on exact products, codes, prices and
 #: sellers still hold for every line it prints.
 MODE_RULES = {
+    "find": [
+        "MODE: FIND. The reader wants the one product that fits their need, and where to get it.",
+        "Ask nothing you can settle from the pages; assume the common variant and say so.",
+    ],
+    "research": [
+        "MODE: RESEARCH. The reader wants to understand a product, not to buy one now.",
+        "1. Identify it exactly (brand, model, variant, year) from the pages.",
+        "2. Then, each tied to a page you read: its key specifications, what owners and",
+        "reviewers report going wrong or wearing out, what it does well, and how it",
+        "compares with its closest rival. Keep reported faults apart from one-off complaints.",
+        "3. Close with the two or three facts worth checking on a specific unit before",
+        "buying one. Do not list sellers or prices unless the reader asked for them.",
+    ],
     "alternatives": [
         "MODE: ALTERNATIVES. The reader has a product in mind and wants other products",
         "that do the same job. Do not repeat the product they named as an answer.",
@@ -1204,6 +1228,39 @@ def products_from(trail: Sequence[dict], sources: Sequence[str] = ()) -> list[di
     return list(found.values())
 
 
+def _names_in(row: dict) -> list[str]:
+    """The words a catalogue row is known by: its recorded identity values, else its label."""
+    found = row.get("identity")
+    identity: dict = found if isinstance(found, dict) else {}
+    names = [_folded(value).strip(" .") for value in identity.values() if isinstance(value, str)]
+    names = [name for name in names if len(name.replace(".", "")) >= 3 and not name.isdigit()]
+    if names:
+        return names
+    words = re.findall(r"[^\W_]{3,}", _folded(row.get("label") or ""))
+    return [" ".join(words[:2])] if len(words) >= 2 else words
+
+
+def relevant_catalogue(catalogue: dict | None, *texts: str) -> dict | None:
+    """Only the catalogue rows the turn is actually about.
+
+    `product_match` falls back to searching each word of the query alone, so a
+    question about one product can return unrelated subjects that share a short
+    word with it. A row is kept when one of the names its own catalogue records
+    for it (identity values, from data: never a list here) appears in the
+    question or the pages the turn read. A catalogue that knows nothing of the
+    product then adds nothing, rather than flooding the answer and the cards.
+    """
+    if not catalogue or not catalogue.get("rows"):
+        return catalogue
+    def spaced(text: str) -> str:
+        return " " + " ".join(re.findall(r"[^\W_]+", text)) + " "
+
+    haystack = spaced(_folded(" ".join(texts)))
+    kept = [row for row in catalogue["rows"] if isinstance(row, dict) and any(
+        spaced(name) in haystack for name in _names_in(row) if spaced(name).strip())]
+    return {**catalogue, "rows": kept}
+
+
 def listing_cards(rows: Sequence[dict], *, limit: int = 5) -> list[dict]:
     """Turn eligible fetched shopping pages into direct-link UI cards."""
     found: dict[str, dict] = {}
@@ -1821,7 +1878,7 @@ def run_turn(message: str, *, ask: Ask, ctx: chatdata.Context,
         # without a buying verb, and an answer to it owes links the reader can
         # open. This is the same shape the router already treats as a product
         # request, so it turns on the seller checks and the links section.
-        buying = _buying_request(message) or bool(mode)
+        buying = (_buying_request(message) or bool(mode)) and mode not in INFO_MODES
         shape = {"buying": "yes"} if buying else {}
         if mode:
             shape["mode"] = mode
@@ -1871,9 +1928,13 @@ def run_turn(message: str, *, ask: Ask, ctx: chatdata.Context,
             hooks.set(0.55, "checking the catalogue")
             hooks.partial(snapshot())
             began = time.monotonic()
-            catalogue = chatdata.run("product_match", ctx, catalogue_call["args"])
+            catalogue = relevant_catalogue(
+                chatdata.run("product_match", ctx, catalogue_call["args"]),
+                message, query,
+                " ".join(str(row.get("title") or "") for row in out["rows"]
+                         if isinstance(row, dict)))
             hooks.check()
-            _finish(catalogue_step, catalogue,
+            _finish(catalogue_step, catalogue or {"rows": [], "note": ""},
                     int((time.monotonic() - began) * 1000))
             hooks.log(f"{catalogue_step['label']}"
                       + (f": {catalogue_step['detail']}" if catalogue_step["detail"] else ""))

@@ -1375,3 +1375,26 @@
 .demo-banner + .app {
   padding-top: 41px;
 }
+
+/* The More menu in sections: a small label over each, tighter rows. */
+.drawer-group + .drawer-group { margin-top: 10px; }
+
+.drawer .drawer-group-name {
+  margin: 0 0 4px;
+  padding: 0 4px;
+  color: var(--ink-3);
+  font-family: var(--mono);
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.drawer-group .drawer-list { margin: 0; }
+.drawer-group .drawer-item { min-height: 44px; padding: 6px 6px; border-top: 0; border-radius: var(--r-s); }
+.drawer-group .drawer-item strong { font-size: 14px; }
+.drawer-group .drawer-item small { font-size: 12.5px; }
+.drawer-group .drawer-icon { width: 28px; height: 28px; }
+.drawer-group .drawer-item .icon { width: 16px; height: 16px; }
+
+.about-page { display: flex; flex-direction: column; gap: 16px; }
