@@ -25,21 +25,18 @@ const BINS = 10
  * dark ground, a dark one as ink on paper.
  *
  * `scene` changes are animated: the grains fly to the new picture. `reading`
- * passes a band of light down through the cloud while work runs.
- * `follow` lets the cursor push the dust aside, read from the window so the
- * field never takes a click from what sits on top of it.
+ * passes a band of light down through the cloud while work runs. It does not
+ * react to the cursor, which kept the whole field busy for nothing.
  */
 export function DustField({
   scene,
   reading = false,
-  follow = false,
   per = 12,
   cap = 16000,
   className,
 }: {
   scene: Scene
   reading?: boolean
-  follow?: boolean
   /** Square pixels of field per grain. */
   per?: number
   /** The most grains this field may carry, whatever its size. */
@@ -119,16 +116,6 @@ export function DustField({
       ctx.globalCompositeOperation = 'source-over'
     }
 
-    const move = (event: PointerEvent) => {
-      const rect = canvas.getBoundingClientRect()
-      dust.current?.point(event.clientX - rect.left, event.clientY - rect.top, 56)
-    }
-    const leave = () => dust.current?.point(-1e9, -1e9, 0)
-    if (follow) {
-      window.addEventListener('pointermove', move)
-      document.addEventListener('pointerleave', leave)
-    }
-
     const stop = onFrame((dt, t) => {
       const s = state.current
       if (!s.visible) return
@@ -150,12 +137,8 @@ export function DustField({
       stop()
       resize.disconnect()
       seen.disconnect()
-      if (follow) {
-        window.removeEventListener('pointermove', move)
-        document.removeEventListener('pointerleave', leave)
-      }
     }
-  }, [per, cap, follow, resolved])
+  }, [per, cap, resolved])
 
   return <canvas ref={ref} className={className} aria-hidden="true" />
 }

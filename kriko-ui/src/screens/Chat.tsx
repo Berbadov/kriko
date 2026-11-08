@@ -61,7 +61,7 @@ export function ChatScreen({ onOpen, onAction }: {
     <FocusProvider reduceMotion={!m.on}>
     <section className="chat" data-thread={thread}>
       <motion.div className="sky" initial={false} animate={{ opacity: thread ? 0 : 1, y: thread ? -m.d(30) : 0 }} transition={m.tx.page} aria-hidden="true">
-        <DustField className="dust-sky" scene={SKY} follow cap={12000} />
+        <DustField className="dust-sky" scene={SKY} cap={12000} />
       </motion.div>
 
       <div className="chat-main">
