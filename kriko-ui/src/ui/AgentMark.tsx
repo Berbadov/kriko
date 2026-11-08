@@ -3,6 +3,7 @@ import claude from '../assets/agents/claude.svg?raw'
 import claudeCode from '../assets/agents/claudecode.svg?raw'
 import codex from '../assets/agents/codex.svg?raw'
 import cursor from '../assets/agents/cursor.svg?raw'
+import kriko from '../assets/agents/kriko.svg?raw'
 import mistral from '../assets/agents/mistral-color.svg?raw'
 import { Icon } from './Icon'
 
@@ -31,6 +32,8 @@ const LOOKS: Record<string, Look> = {
   'mistral-vibe': { svg: mistral, tone: 'var(--ink)', own: true },
   'mistral-api': { svg: mistral, tone: 'var(--ink)', own: true },
   cursor: { svg: cursor, tone: 'var(--ink)' },
+  // Kriko's own agent wears Kriko's own mark: the jack, in the accent.
+  'kriko-agent': { svg: kriko, tone: 'var(--accent)' },
   local: { tone: 'var(--ok)', glyph: 'chip' },
 }
 

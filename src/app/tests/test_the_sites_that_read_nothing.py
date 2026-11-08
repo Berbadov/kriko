@@ -267,9 +267,11 @@ def test_an_effort_a_cli_cannot_take_is_refused_not_dropped():
     silently got the default has been billed for a choice they did not make,
     and the run looks identical from every screen."""
     one = _one("mistral-vibe")
-    assert harness_mod.efforts_for(one) == ["high"]
+    # Vibe 2.x offers its one effective level; Vibe 3 sends levels as written
+    # and offers the two every routed model lists. Neither offers `xhigh`.
+    assert harness_mod.efforts_for(one) in (["high"], list(harness_mod.VIBE3_EFFORTS))
     with pytest.raises(harness_mod.NoHarness):
-        harness_mod.command_for(one, effort="low")
+        harness_mod.command_for(one, effort="xhigh")
 
 
 def test_claude_code_can_be_given_a_ceiling():

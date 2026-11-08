@@ -127,38 +127,46 @@
   box-shadow: inset 0 0 0 1px var(--accent);
 }
 
-.composer-modes {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
+/* Find / Alt. / Research: one segmented control, the thumb slides to the pressed one. */
+.mode-slider {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  padding: 2px;
+  border: 1px solid var(--edge);
+  border-radius: 8px;
+  background: var(--panel-2, color-mix(in oklab, var(--ink) 5%, transparent));
 }
 
-/* What the pressed or pointed-at chip does, in a sentence, so a chip is never a guess. */
-.mode-hint {
-  margin: -2px 2px 0;
+.mode-seg {
+  position: relative;
+  height: 26px;
+  padding: 0 11px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
   color: var(--ink-3);
+  font: inherit;
   font-size: 13px;
-  line-height: 1.45;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.15s ease;
 }
 
-/* A pressed chip is the reader's choice: the accent, and a 2px marker beneath. */
-.mode-chip {
-  height: 28px;
-  padding: 0 10px;
-  border-radius: var(--r-s);
-  font-size: 13px;
+.mode-seg:hover:not(:disabled) { color: var(--ink); }
+.mode-seg[aria-checked='true'] { color: var(--ink); }
+.mode-seg:disabled { opacity: 0.5; cursor: default; }
+.mode-seg:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.mode-thumb {
+  position: absolute;
+  inset: 0;
+  border-radius: 6px;
+  background: var(--panel);
+  box-shadow: 0 0 0 1px var(--edge), 0 1px 2px rgb(0 0 0 / 0.08);
 }
 
-.mode-chip[aria-pressed='true'] {
-  border-color: var(--accent);
-  background: var(--accent-soft);
-  box-shadow: inset 0 -2px 0 var(--accent);
-  color: var(--ink);
-}
-
-.mode-chip:disabled {
-  opacity: 0.5;
-}
+.mode-label { position: relative; }
 
 .composer-field {
   width: 100%;
@@ -1080,3 +1088,255 @@ button.ask-head:hover {
 
 .followup-prompts > p { flex-basis: 100%; margin: 0; }
 .followup-prompts > button { white-space: normal; text-align: start; overflow-wrap: anywhere; }
+
+/* Ideas for you: a few prompts under the box, one press asks them. */
+.ideas {
+  margin-top: 14px;
+  padding: 10px 8px 6px;
+  border: 1px solid var(--edge);
+  border-radius: var(--r-l);
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+
+.ideas h2 {
+  margin: 0 0 6px;
+  padding: 0 4px;
+  color: var(--ink-3);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+.ideas ul {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.idea {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 8px 6px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 14.5px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.idea:hover:not(:disabled) { background: color-mix(in oklab, var(--ink) 6%, transparent); }
+.idea:disabled { opacity: 0.5; cursor: default; }
+
+.idea-icon {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  flex: none;
+  border: 1px solid var(--edge);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--ink-2);
+}
+
+/* ---- Prices: the price checker on its own page ---- */
+.prices {
+  position: relative;
+  height: 100%;
+  overflow-y: auto;
+  padding: 36px max(20px, calc(50% - 400px)) 40px;
+}
+
+.prices-sky {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 220px;
+  pointer-events: none;
+  opacity: 0.55;
+  -webkit-mask-image: linear-gradient(#000, transparent);
+  mask-image: linear-gradient(#000, transparent);
+}
+
+.prices > :not(.prices-sky) { position: relative; }
+.prices-head h1 { margin: 4px 0 6px; font-size: 30px; letter-spacing: -0.03em; }
+.prices-head p { margin: 0 0 18px; font-size: 14.5px; }
+
+.prices-add {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 160px 140px auto;
+  gap: 6px;
+  padding: 8px;
+  background: var(--panel);
+  border: 1px solid var(--edge-strong);
+  border-radius: var(--r-l);
+}
+
+.prices-add input {
+  min-width: 0;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--edge);
+  border-radius: var(--r-s);
+  background: var(--panel-2);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+}
+
+.prices-add .btn { height: 34px; gap: 6px; }
+.prices-note { margin: 8px 2px 0; color: var(--ink-3); font-size: 13px; }
+
+.prices-alerts {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--ok) 45%, var(--edge));
+  border-radius: var(--r-m);
+  background: color-mix(in srgb, var(--ok) 10%, var(--panel));
+  font-size: 14px;
+}
+.prices-alerts > div { flex: 1; }
+.prices-alerts p { margin: 0 0 2px; }
+
+.prices-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 24px 0 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--edge);
+}
+.prices-bar h2 { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 15px; }
+.prices-bar h2 .mono { color: var(--ink-3); font-size: 12px; font-weight: 400; }
+.prices-fell { padding: 1px 6px; border-radius: 4px; background: color-mix(in srgb, var(--ok) 16%, transparent); color: var(--ok-text, var(--ok)) !important; }
+.prices-empty { padding: 18px 2px; font-size: 14px; }
+
+.prices-list { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+
+.price-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-areas: 'main now stop' 'meta meta stop';
+  align-items: center;
+  gap: 2px 14px;
+  padding: 10px 8px 10px 14px;
+  border: 1px solid var(--edge);
+  border-radius: var(--r-m);
+  background: var(--panel);
+}
+.price-card[data-hit] { border-color: color-mix(in srgb, var(--ok) 55%, var(--edge)); }
+
+.price-main { grid-area: main; display: grid; min-width: 0; padding: 0; border: 0; background: none; color: var(--ink); text-align: left; cursor: pointer; }
+.price-main strong { overflow: hidden; font-size: 14.5px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.price-main small { color: var(--ink-3); font-size: 12px; }
+.price-main:hover strong { text-decoration: underline; text-underline-offset: 3px; }
+.price-now { grid-area: now; display: flex; align-items: baseline; gap: 8px; }
+.price-figure { font-size: 16px; font-weight: 600; }
+.price-move { font-size: 12px; }
+.price-move[data-dir='down'] { color: var(--ok-text, var(--ok)); }
+.price-move[data-dir='up'] { color: var(--risk-text, var(--risk)); }
+.price-meta { grid-area: meta; color: var(--ink-3); font-size: 12.5px; }
+.price-card .icon-btn { grid-area: stop; }
+
+@media (max-width: 700px) {
+  .prices-add { grid-template-columns: 1fr 1fr; }
+  .prices-add .prices-url { grid-column: 1 / -1; }
+}
+
+/* ---- the shelf: product boxes stacked at the edges of the home ---- */
+.shelf-wrap { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+.chat-main { position: relative; z-index: 1; }
+.shelf {
+  --u: clamp(34px, 5.2vw, 64px);
+  --px-accent: var(--accent);
+  --card: var(--panel);
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.shelf-side {
+  position: absolute;
+  bottom: 0;
+  display: flex;
+  align-items: flex-end;
+}
+.shelf-left { left: 0; }
+.shelf-right { right: 0; flex-direction: row-reverse; }
+
+.shelf-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: var(--u);
+}
+.shelf-stack[data-wide] { width: calc(var(--u) * 1.6); }
+
+.shelf-box {
+  position: relative;
+  width: 100%;
+  height: calc(var(--u) * var(--h));
+  margin-top: 1px;
+  background: var(--accent-fill, var(--accent));
+  animation: shelf-drop 0.5s var(--ease-out) both;
+  animation-delay: calc(var(--d) * 60ms);
+}
+.shelf-stack:nth-child(2n) .shelf-box { background: color-mix(in srgb, var(--accent-fill, var(--accent)) 70%, var(--ink)); }
+.shelf-stack:nth-child(3n) .shelf-box { background: color-mix(in srgb, var(--accent) 55%, var(--ground)); }
+
+/* Parcel tape over each lid. */
+.shelf-box::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 22%;
+  height: min(40%, 14px);
+  transform: translateX(-50%);
+  background: color-mix(in srgb, var(--ground) 55%, transparent);
+}
+
+.shelf-ware {
+  width: calc(var(--u) * 0.62);
+  height: auto;
+  margin-bottom: 2px;
+  fill: var(--ink);
+  image-rendering: pixelated;
+  shape-rendering: crispEdges;
+  animation: shelf-drop 0.5s var(--ease-out) both, shelf-hop 9s ease-in-out infinite;
+  animation-delay: calc(var(--d) * 60ms + 0.3s), calc(var(--d) * 1.3s + 2s);
+}
+.shelf-stack[data-wide] .shelf-ware { width: calc(var(--u) * 1.1); }
+
+@keyframes shelf-drop {
+  from { opacity: 0; transform: translateY(-14px); }
+}
+
+@keyframes shelf-hop {
+  0%, 94%, 100% { transform: translateY(0); }
+  96% { transform: translateY(-5px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shelf-box, .shelf-ware { animation: none; }
+}
+
+/* A narrow window keeps the right stack only, smaller; a phone drops the shelf. */
+@media (max-width: 900px) {
+  .shelf { --u: 30px; }
+  .shelf-left { display: none; }
+}
+@media (max-width: 560px) {
+  .shelf { display: none; }
+}

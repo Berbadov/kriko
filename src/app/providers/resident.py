@@ -60,6 +60,9 @@ DeliveryCallback = Callable[..., None]
 _MAX_BUFFERED_MESSAGES = 8192
 _MAX_RETAINED_EVENTS = 4096
 _STOP_GRACE = 2.0
+#: The longest a protocol handshake may take when the caller set no shorter
+#: start bound. ACP's includes opening the first session (`AcpWire.handshake`).
+_HANDSHAKE_CAP = 30.0
 
 
 class ProtocolAbsent(TransportUnavailable):
@@ -270,6 +273,10 @@ class ResidentTransport:
         self._lock = threading.RLock()
         self._available = threading.Condition(self._lock)
         self._starting = 0
+        #: Warm-ups in flight, by profile identity. A request for the same
+        #: profile waits for that worker instead of paying a second cold start
+        #: beside it (`_acquire`).
+        self._warming: dict[str, int] = {}
         self._max_workers: int | None = None
         self._closed = False
         self._reaper_stop = threading.Event()
@@ -408,16 +415,29 @@ class ResidentTransport:
         wire = self._wires.get(profile.wire)
         if wire is None:
             return False
+        identity = profile.identity()
         deadline = time.monotonic() + timeout
+        with self._available:
+            self._warming[identity] = self._warming.get(identity, 0) + 1
+        worker: _Worker | None = None
         try:
-            acquisition = self._acquire(profile, wire, None, deadline)
+            acquisition = self._acquire(profile, wire, None, deadline, join_warm=False)
+            worker = acquisition.worker
         except Exception:  # noqa: BLE001 — a failed warm-up is a cold start later
             return False
-        worker = acquisition.worker
-        with self._available:
-            worker.busy = False
-            worker.last_used = time.monotonic()
-            self._available.notify_all()
+        finally:
+            # One notify for both outcomes: a request that joined this warm-up
+            # either takes the idle worker or, if there is none, starts its own.
+            with self._available:
+                left = self._warming.get(identity, 0) - 1
+                if left > 0:
+                    self._warming[identity] = left
+                else:
+                    self._warming.pop(identity, None)
+                if worker is not None:
+                    worker.busy = False
+                    worker.last_used = time.monotonic()
+                self._available.notify_all()
         return True
 
     def worker_count(self) -> int:
@@ -427,10 +447,11 @@ class ResidentTransport:
     def _acquire(
         self, profile: ResidentProfile, wire: Wire,
         check: Callable[[], None] | None, deadline: float,
-        start_deadline: float = 0.0,
+        start_deadline: float = 0.0, *, join_warm: bool = True,
     ) -> _Acquisition:
         identity = profile.identity()
         requested_at = time.monotonic()
+        start_bound = min(deadline, start_deadline) if start_deadline > 0 else deadline
         while True:
             evict: _Worker | None = None
             with self._available:
@@ -443,6 +464,18 @@ class ResidentTransport:
                             and worker.process.poll() is None):
                         worker.busy = True
                         return _Acquisition(worker, True, (time.monotonic() - requested_at) * 1000)
+                if join_warm and self._warming.get(identity):
+                    # The worker this request needs is already starting in the
+                    # background (a host-read turn warms its agent while it
+                    # reads pages). A second process beside it would pay the
+                    # whole cold start again and take another child slot;
+                    # waiting pays only what is left of the first one's.
+                    remaining = start_bound - time.monotonic()
+                    if remaining <= 0:
+                        raise TransportUnavailable(
+                            f"{wire.name} did not initialize in time")
+                    self._available.wait(min(0.05, remaining))
+                    continue
                 evict = next((w for w in self._workers if not w.busy), None)
                 if evict is not None:
                     self._workers.remove(evict)
@@ -529,7 +562,7 @@ class ResidentTransport:
             raise TransportUnavailable(f"could not start the {wire.name} protocol reader: {exc}") from exc
         handshake_started = time.monotonic()
         try:
-            wire.handshake(worker, min(20.0, max(0.0, start_bound - time.monotonic())))
+            wire.handshake(worker, min(_HANDSHAKE_CAP, max(0.0, start_bound - time.monotonic())))
             worker.handshake_ms = (time.monotonic() - handshake_started) * 1000
         except TimeoutError:
             # A worker that would not say hello in time is a slow start, not a
@@ -644,9 +677,19 @@ class ResidentTransport:
                                     else f"{what} did not stop; worker quarantined")
             remaining = deadline - time.monotonic()
             if remaining <= 0:
+                # The turn is over either way and its delivery is uncertain.
+                # The worker, though, is only lost if it will not stop: one
+                # that confirms the interrupt is clean (ACP opens a new session
+                # per request, Claude Code is `/clear`ed before the next), and
+                # killing it made every request after a timeout pay a cold
+                # start, which then ran into that request's own timeout.
                 interrupt()
-                worker.quarantined = True
-                raise DeliveryUncertain(f"{what} timed out; worker quarantined")
+                worker.quarantined = not self.wait_stopped(worker, stopped)
+                error = DeliveryUncertain(
+                    f"{what} timed out; worker quarantined" if worker.quarantined
+                    else f"{what} timed out; the agent stopped and its worker is kept")
+                error.worker_stopped = not worker.quarantined  # type: ignore[attr-defined]
+                raise error
             got = worker.next_message(timeout=min(0.1, remaining))
             if got is None:
                 continue
@@ -825,10 +868,11 @@ class ClaudeWire(Wire):
             raise exc.original
         except (TurnCancelled, TurnRejected):
             raise
-        except DeliveryUncertain:
+        except DeliveryUncertain as exc:
             if sent:
                 _delivery(delivery, "unknown", context_id, "", "delivery outcome could not be established")
-            worker.quarantined = True
+            if not getattr(exc, "worker_stopped", False):
+                worker.quarantined = True
             raise
         except TimeoutError:
             worker.quarantined = True
@@ -856,6 +900,7 @@ class AcpWire(Wire):
     protocol_version = 1
 
     def handshake(self, worker: _Worker, timeout: float) -> None:
+        deadline = time.monotonic() + timeout
         result = worker.rpc("initialize", {
             "protocolVersion": self.protocol_version,
             # Kriko lends the agent no files and no terminal.
@@ -869,6 +914,17 @@ class AcpWire(Wire):
         capabilities = result.get("agentCapabilities")
         sessions = capabilities.get("sessionCapabilities") if isinstance(capabilities, Mapping) else None
         worker.state["can_close"] = bool(isinstance(sessions, Mapping) and sessions.get("close") is not None)
+        # The first `session/new` of a process is the slow one (measured on
+        # `vibe-acp`: about 2.3 s cold against 0.3 s for the next), so it is
+        # paid here, as part of the start: a warm-up then covers it, and the
+        # first request finds a session ready. It is an unused session, so
+        # opening it early shares nothing between requests.
+        created = worker.rpc("session/new", {"cwd": str(Path(worker.profile.cwd).resolve()),
+                                             "mcpServers": []},
+                             timeout=max(0.0, deadline - time.monotonic()))
+        spare = str(created.get("sessionId") or "")
+        if spare:
+            worker.state["spare_session"] = spare
 
     def server_request(self, worker: _Worker, message: Mapping[str, Any]) -> Mapping[str, Any] | None:
         if "method" not in message or "id" not in message:
@@ -912,16 +968,23 @@ class AcpWire(Wire):
             # fallback has nothing left to answer with.
             session_deadline = (deadline if start_deadline is None
                                 else min(deadline, start_deadline))
-            try:
-                created = worker.rpc("session/new", {"cwd": str(Path(profile.cwd).resolve()), "mcpServers": []},
-                                     timeout=_remaining(session_deadline))
-            except TimeoutError:
-                # The session never opened: nothing was delivered, so `auto`
-                # can fall back to a fresh process rather than failing the run.
-                raise TransportUnavailable(
-                    f"{self.name} did not open a session in time") from None
+            # A session opened at the worker's start and never used is this
+            # request's; it is handed out once.
+            session_id = str(worker.state.pop("spare_session", "") or "")
+            metrics["spare_session"] = bool(session_id)
+            if not session_id:
+                try:
+                    created = worker.rpc("session/new", {"cwd": str(Path(profile.cwd).resolve()),
+                                                         "mcpServers": []},
+                                         timeout=_remaining(session_deadline))
+                except TimeoutError:
+                    # The session never opened: nothing was delivered, so
+                    # `auto` can fall back to a fresh process rather than
+                    # failing the run.
+                    raise TransportUnavailable(
+                        f"{self.name} did not open a session in time") from None
+                session_id = str(created.get("sessionId") or "")
             metrics["session_start_ms"] = (time.monotonic() - started) * 1000
-            session_id = str(created.get("sessionId") or "")
             if not session_id:
                 raise ResidentError("the agent returned no session id")
             if cancel.is_set():
@@ -1024,11 +1087,12 @@ class AcpWire(Wire):
             raise
         except TurnCancelled:
             raise
-        except DeliveryUncertain:
+        except DeliveryUncertain as exc:
             if sent:
                 _delivery(delivery, "unknown", session_id, str(prompt_id or ""),
                           "delivery outcome could not be established")
-            worker.quarantined = True
+            if not getattr(exc, "worker_stopped", False):
+                worker.quarantined = True
             raise
         except TimeoutError:
             worker.quarantined = True

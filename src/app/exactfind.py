@@ -219,6 +219,7 @@ def targeted_query(query: str, region: str = "global", sites: int = 4) -> str:
 #: language, not a product vocabulary: a new category needs no entry here.
 _MODE_WORDS = {
     "alternatives": {"global": "alternatives", "tr": "alternatif muadil"},
+    "research": {"global": "review specifications problems", "tr": "inceleme ozellikler sorunlar"},
     "cheapest": {"global": "price", "tr": "fiyat"},
     "merchants": {"global": "seller reviews", "tr": "satici yorumlari"},
 }

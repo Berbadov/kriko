@@ -211,7 +211,34 @@ export function useWatches() {
     }
   }, [reload, setProblem])
 
-  return { watches: value.items, alerts: value.alerts, ready, problem, stop, read, reload, live }
+  /** Watch a page from its address. The engine reads its price on the next sweep. */
+  const add = useCallback(
+    async (url: string, name: string, target: string) => {
+      try {
+        await post('/api/prices/watches', { url, name, target: target.trim() || null })
+        await post('/api/prices/sweep', {}).catch(() => null)
+        await reload()
+        return true
+      } catch (error) {
+        setProblem(reasonOf(error, 'Could not watch that page.'))
+        return false
+      }
+    },
+    [reload, setProblem],
+  )
+  /** Re-read the pages that are due now. A page is read at most every few hours. */
+  const sweep = useCallback(async () => {
+    try {
+      const out = await post<{ job_id: string; due: number }>('/api/prices/sweep', {})
+      await reload()
+      return out.due
+    } catch (error) {
+      setProblem(reasonOf(error, 'Could not check the prices.'))
+      return 0
+    }
+  }, [reload, setProblem])
+
+  return { watches: value.items, alerts: value.alerts, ready, problem, stop, read, reload, live, add, sweep }
 }
 
 export function useHoldings() {
