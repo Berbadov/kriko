@@ -117,12 +117,14 @@ def test_the_toolbar_shows_the_desktop_app_s_own_icon(size: int):
 
 @pytest.mark.parametrize("size", render_icon.EXTENSION_ICONS)
 def test_offline_toolbar_icon_keeps_the_mark_but_mutes_it(size: int):
-    side, pixels = render_icon.grid(
-        render_icon.SOURCE.read_text(encoding="utf-8")
+    units, shapes = render_icon.outlines(
+        render_icon.LARGE_SOURCE.read_text(encoding="utf-8")
     )
     icon = render_icon.EXTENSION_DIR / f"icon-offline-{size}.png"
     assert _pixels(icon.read_bytes()) == _pixels(
-        render_icon.png(render_icon.offline_grid(pixels), size // side)
+        render_icon.smooth_png(
+            render_icon.muted(render_icon.shapes_for(shapes, size)), units, size
+        )
     ), f"{icon.name} is not the muted mark; run `python packaging/render_icon.py`"
     # And it is a *muted* variant rather than a copy: a "offline" icon that is
     # the online one is a state the reader cannot see.
@@ -191,11 +193,30 @@ def test_the_master_is_large_enough():
     assert width == height == 1024
 
 
-def test_the_scale_keeps_the_grid_whole():
-    """Nearest-neighbour by an exact integer factor, or the pixel art smears."""
-    side, _ = render_icon.grid(render_icon.SOURCE.read_text(encoding="utf-8"))
-    assert render_icon.SCALE * side == 1024
-    assert 1024 % side == 0
+def test_the_small_sizes_render_the_mark_solid():
+    """Up to SMALL_MAX the icon is the plate and the jack; the split is a
+    large-size detail that smears into a dark diamond in a 16px toolbar.
+
+    The old 16-cell grid render is what made the small icons read as a blob:
+    the jack's staircase arms are one cell tall, so at 16px the mark was a
+    smudge with steps. Every size is the antialiased rasteriser now, and the
+    split copies only appear above SMALL_MAX.
+    """
+    units, shapes = render_icon.outlines(
+        render_icon.LARGE_SOURCE.read_text(encoding="utf-8")
+    )
+    images = render_icon.ico_images(render_icon.DESKTOP_ICO.read_bytes())
+    for size in render_icon.ICO_SIZES:
+        rendered = _pixels(render_icon.at_size(shapes, units, size))
+        assert rendered == _pixels(images[size]), (
+            f"the ICO's {size}px image is not what the mark renders to at that "
+            "size; run `python packaging/render_icon.py`"
+        )
+    # And the split really is gone small and present large: the solid render
+    # has no white or grey copy shapes, the full one does.
+    assert len(render_icon.small_shapes(shapes)) < len(shapes)
+    assert render_icon.shapes_for(shapes, render_icon.SMALL_MAX) == render_icon.small_shapes(shapes)
+    assert render_icon.shapes_for(shapes, render_icon.SMALL_MAX + 1) == shapes
 
 
 def test_every_brand_asset_actually_parses():
@@ -207,10 +228,7 @@ def test_every_brand_asset_actually_parses():
     import xml.etree.ElementTree as ElementTree
 
     root = Path(__file__).resolve().parents[3]
-    assets = sorted(
-        {render_icon.SOURCE}
-        | set((root / "extension" / "assets").glob("*.svg"))
-    )
+    assets = sorted((root / "extension" / "assets").glob("*.svg"))
     assert assets, "no brand SVGs found; the glob is wrong"
     for asset in assets:
         try:
