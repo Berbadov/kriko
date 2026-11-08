@@ -31,7 +31,8 @@ Writes `packaging/icon-master.png`, the 1024px master, and the two copies the
 `kriko-ui/src-tauri/icons/icon.ico`, the tile the exe and the installer read,
 is derived here too since the jack replaced the K: the grid at 16, 32 and 48px,
 the large mark above that. The Tauri PNGs beside it come from the same two
-sources, so there is one drawing of the mark and every size is a render of it.
+sources, and so do the phone app's icon, Android foreground, splash and
+favicon, so there is one drawing of the mark and every size is a render of it.
 """
 
 import re
@@ -219,7 +220,7 @@ def smooth_png(shapes, side: int, size: int) -> bytes:
 
 
 #: The extension's toolbar icons are the desktop app's own icon, not a render.
-#: Since 1.0.1 the product has one mark, the jack on the navy plate that
+#: Since 1.0.1 the product has one mark, the jack on its grey plate that
 #: `kriko-ui/src-tauri/icons/icon.ico` carries for the exe, the taskbar and the
 #: installer. That file already holds a PNG at every size the manifest asks
 #: for, so the toolbar copies those bytes out rather than drawing a second
@@ -405,6 +406,42 @@ def ico(images: dict[int, bytes]) -> bytes:
     return header + entries + data
 
 
+#: The phone app's images, read by `kriko-mobile/app.json`.
+MOBILE_DIR = REPO / "kriko-mobile" / "assets"
+#: Android shows only the middle 72 of an adaptive icon's 108dp, so its
+#: foreground carries the mark at two thirds of the size the plate does,
+#: which leaves it the same share of what the launcher actually shows.
+ADAPTIVE_SHARE = 72 / 108
+
+
+def reframed(shapes, side: int, factor: float = 1.0, ground: bool = True):
+    """The large mark for a phone: the plate (the first shape) made a full
+    square, because iOS and Android cut their own corners, or dropped for a
+    transparent foreground; the mark scaled by `factor` about the tile's middle.
+    """
+    plate, mark = shapes[0], shapes[1:]
+    middle = side / 2
+    def move(x: float, y: float) -> tuple[float, float]:
+        return middle + (x - middle) * factor, middle + (y - middle) * factor
+
+    moved = [([move(x, y) for x, y in points], colour) for points, colour in mark]
+    if not ground:
+        return moved
+    return [([(0, 0), (side, 0), (side, side), (0, side)], plate[1])] + moved
+
+
+def mobile_images(shapes, units: int) -> dict[str, bytes]:
+    """Every image the phone app ships, by file name."""
+    return {
+        "icon.png": smooth_png(reframed(shapes, units), units, MASTER),
+        "adaptive-icon.png": smooth_png(
+            reframed(shapes, units, ADAPTIVE_SHARE, ground=False), units, MASTER
+        ),
+        "splash-icon.png": smooth_png(shapes, units, MASTER),
+        "favicon.png": smooth_png(shapes, units, 64),
+    }
+
+
 def main() -> None:
     svg = SOURCE.read_text(encoding="utf-8")
     side, pixels = grid(svg)
@@ -435,6 +472,10 @@ def main() -> None:
         )
     print(f"{DESKTOP_ICO.name} -> {EXTENSION_DIR}/icon-"
           f"{{{','.join(str(one) for one in EXTENSION_ICONS)}}}.png")
+    if MOBILE_DIR.is_dir():
+        for name, blob in mobile_images(shapes, units).items():
+            (MOBILE_DIR / name).write_bytes(blob)
+        print(f"-> {MOBILE_DIR}")
 
 
 if __name__ == "__main__":
