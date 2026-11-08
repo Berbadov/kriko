@@ -68,7 +68,7 @@ class MessageRequest(BaseModel):
     backend: Literal["harness", "local"] = "harness"
     # The chip the reader pressed: what to do with the product. Empty lets the
     # words of the message decide (`chat.detect_mode`).
-    mode: Literal["", "alternatives", "cheapest", "merchants"] = ""
+    mode: Literal["", "find", "alternatives", "research", "cheapest", "merchants"] = ""
 
 
 @router.get("/sources")

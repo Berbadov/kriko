@@ -414,7 +414,8 @@ def chat_turn(message: str, mode: str = "") -> dict:
     """Ask Kriko's Chat about a product and get its answer with its sources.
 
     This is the buying turn the Chat screen runs, for a client that is not the
-    Kriko window. `mode` is what to do with the product: `alternatives` (what
+    Kriko window. `mode` is what to do with the product: `find` (the one to
+    buy), `research` (what it is and what goes wrong), `alternatives` (what
     else fits), `cheapest` (the lowest price that is the right product) or
     `merchants` (who sells it, and where). Empty lets the words of `message`
     pick a mode, or none.

@@ -154,3 +154,37 @@ h3 {
   width: auto;
   height: 100%;
 }
+
+/* Ambient dust: a few motes rising slowly behind every screen (dust/Motes.tsx). */
+.motes {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.motes i {
+  position: absolute;
+  bottom: -8px;
+  left: var(--x);
+  width: var(--s);
+  height: var(--s);
+  border-radius: 50%;
+  background: var(--ink-3);
+  opacity: 0;
+  will-change: transform, opacity;
+  animation: mote-rise var(--d) linear var(--delay) infinite;
+}
+
+@keyframes mote-rise {
+  0% { transform: translate3d(0, 0, 0); opacity: 0; }
+  12% { opacity: var(--peak); }
+  50% { transform: translate3d(var(--sway), -55vh, 0); }
+  88% { opacity: var(--peak); }
+  100% { transform: translate3d(calc(var(--sway) * -0.4), -108vh, 0); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .motes { display: none; }
+}

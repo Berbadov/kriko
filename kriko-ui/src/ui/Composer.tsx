@@ -7,16 +7,13 @@ import { AgentMark } from './AgentMark'
 import { Icon } from './Icon'
 import { PixelGlyph } from './PixelGlyph'
 
-/** What the chips offer, in the words on them. The engine acts on the name, never on the label.
- *  `hint` says what the chip makes the answer be about, in what the reader gets back. */
-const MODES: { id: ChatMode; label: string; hint: string }[] = [
-  { id: 'alternatives', label: 'Alternatives', hint: 'Other products that do the same job as the one you name, each with what it shares and the one thing that differs most.' },
-  { id: 'cheapest', label: 'Cheapest', hint: 'The lowest price for this exact product (same code, size and condition), lowest first, with the page each price came from. A low price from a seller nothing is known about is flagged, not recommended.' },
-  { id: 'merchants', label: 'Merchants', hint: 'Which sellers of this exact product to trust: where each sells, its price, and what its own pages show about it (rating, company identity, red flags).' },
+/** The slider's three ways to ask, in the words on it. The engine acts on the id, never on the label.
+ *  `find` is Chat's default: the engine still reads the words, so it is sent as no mode at all. */
+export const MODES: { id: ChatMode; label: string; hint: string; placeholder: string }[] = [
+  { id: 'find', label: 'Find', hint: 'Find the product that fits, and where to get it', placeholder: 'What are you looking for?' },
+  { id: 'alternatives', label: 'Alt.', hint: 'Other products that do the same job as the one you name', placeholder: 'Which product do you want alternatives to?' },
+  { id: 'research', label: 'Research', hint: 'What a product is, how it is rated and what goes wrong with it', placeholder: 'Which product do you want to know about?' },
 ]
-
-/** Shown while no chip is pressed or pointed at. */
-const MODES_INTRO = 'Optional: press one to say what you want done with the product. Point at one to read what it does.'
 
 /** The box where the reader asks. Frosted glass, so the sky shows through. */
 export function Composer({
@@ -29,6 +26,8 @@ export function Composer({
   modes = false,
   draft = null,
   recall = [],
+  mode: heldMode,
+  onMode,
 }: {
   onSubmit: (text: string, agent: Agent, mode?: ChatMode) => void
   running: boolean
@@ -43,6 +42,9 @@ export function Composer({
   draft?: { text: string; at: number } | null
   /** What was asked before, oldest first. The up arrow in an empty box walks back through it. */
   recall?: string[]
+  /** The slider, when the screen holds it (so the page around the box can follow it). */
+  mode?: ChatMode
+  onMode?: (mode: ChatMode) => void
 }) {
   const { motion: m } = usePrefs()
   const { agents, preferred, chooseAgent } = useEngine()
@@ -51,10 +53,9 @@ export function Composer({
   // The reader's own choice wins. Then the agent set in Settings. Then the first.
   const agent = agents.find((a) => a.id === chosen) ?? agents.find((a) => a.id === preferred) ?? agents[0]
   const [menu, setMenu] = useState(false)
-  /** A chip pressed again lets go, so "no mode" is one press away. */
-  const [mode, setMode] = useState<ChatMode | ''>('')
-  /** The chip the pointer or the keyboard is on, so its sentence can be read before it is pressed. */
-  const [near, setNear] = useState<ChatMode | ''>('')
+  const [ownMode, setOwnMode] = useState<ChatMode>('find')
+  const mode = heldMode ?? ownMode
+  const setMode = (next: ChatMode) => { setOwnMode(next); onMode?.(next) }
   const field = useRef<HTMLTextAreaElement>(null)
   const file = useRef<HTMLInputElement>(null)
   const [attachmentProblem, setAttachmentProblem] = useState('')
@@ -93,9 +94,8 @@ export function Composer({
     if (!value || running) return
     if (value.length > 16000) { setAttachmentProblem('Keep the message and attached text together under 16,000 characters.'); return }
     setAttachmentProblem('')
-    onSubmit(value, agent, modes && mode ? mode : undefined)
+    onSubmit(value, agent, modes && mode !== 'find' ? mode : undefined)
     setText('')
-    setMode('')
     back.current = 0
   }
 
@@ -137,41 +137,11 @@ export function Composer({
 
   return (
     <div className="composer">
-      {modes && (
-        <div className="composer-modes" role="group" aria-label="What to do with the product">
-          {MODES.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              className="pill mode-chip"
-              aria-pressed={mode === item.id}
-              title={item.hint}
-              aria-describedby="mode-hint"
-              onMouseEnter={() => setNear(item.id)}
-              onMouseLeave={() => setNear('')}
-              onFocus={() => setNear(item.id)}
-              onBlur={() => setNear('')}
-              onClick={() => {
-                setMode(mode === item.id ? '' : item.id)
-                field.current?.focus()
-              }}
-              disabled={running}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
-      )}
-      {modes && (
-        <p id="mode-hint" className="mode-hint" role="status">
-          {MODES.find((item) => item.id === (near || mode))?.hint ?? MODES_INTRO}
-        </p>
-      )}
       <textarea
         ref={field}
         className="composer-field"
         value={text}
-        placeholder={placeholder}
+        placeholder={modes && mode !== 'find' && placeholder === 'Ask about a product' ? MODES.find((item) => item.id === mode)?.placeholder : placeholder}
         rows={1}
         onChange={(event) => {
           setText(event.target.value)
@@ -227,6 +197,25 @@ export function Composer({
             )}
           </AnimatePresence>
         </div>
+        )}
+        {modes && (
+          <div className="mode-slider" role="radiogroup" aria-label="What to do" data-tour="mode-slider">
+            {MODES.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                role="radio"
+                aria-checked={mode === item.id}
+                className="mode-seg"
+                title={item.hint}
+                disabled={running}
+                onClick={() => { setMode(item.id); field.current?.focus() }}
+              >
+                {mode === item.id && <motion.span layoutId="mode-thumb" className="mode-thumb" transition={m.tx.quick} />}
+                <span className="mode-label">{item.label}</span>
+              </button>
+            ))}
+          </div>
         )}
         <span className="grow" />
         {running ? (

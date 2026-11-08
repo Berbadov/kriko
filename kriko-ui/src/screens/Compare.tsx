@@ -32,7 +32,7 @@ const LEVEL_ORDER: Record<Level, number> = { critical: 0, high: 1, medium: 2, lo
 export function CompareScreen() {
   const { motion: m } = usePrefs()
   const { items } = useQueue()
-  const { slots, checks, questions, remove, retry, ask, research, stop, problem, saveAgain } = useCompare()
+  const { slots, checks, questions, remove, retry, ask, research, stop, problem, saveAgain, pending, dismissPending } = useCompare()
   const [only, setOnly] = useState(false)
   const [picker, setPicker] = useState(false)
   const [specsOpen, setSpecsOpen] = useState(false)
@@ -53,7 +53,7 @@ export function CompareScreen() {
   const shared = useMemo(() => new Map(risks.map((r) => [r.key, r.cells.filter(Boolean).length])), [risks])
   const differing = useMemo(() => new Set(risks.filter((r) => r.differs).map((r) => r.key)), [risks])
   const shownSpecs = only ? specs.filter((r) => r.differs) : specs
-  const empty = slots.length === 0 && working.length === 0
+  const empty = slots.length === 0 && working.length === 0 && pending.length === 0
   // With no problems to read, the specifications are all there is: show them.
   const specsShown = specsOpen || (ready.length > 0 && risks.length === 0)
 
@@ -75,6 +75,23 @@ export function CompareScreen() {
       <AnimatePresence>{picker && <Picker onClose={() => setPicker(false)} />}</AnimatePresence>
 
       <Decide lookupIds={ready.map((one) => one.lookupId)} />
+
+      {pending.length > 0 && (
+        <ul className="cmp-pending" aria-label="Products being researched for this comparison">
+          {pending.map((one) => (
+            <li key={one.id} data-state={one.state}>
+              {one.state === 'running' ? <PixelGlyph size={16} active /> : <Icon name="alert" size={15} />}
+              <strong>{one.name}</strong>
+              <span className="muted">{one.note}</span>
+              {one.state === 'failed' && (
+                <button className="icon-btn sm" onClick={() => dismissPending(one.id)} aria-label={`Dismiss ${one.name}`}>
+                  <Icon name="x" size={13} />
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
 
       <div className="compare-body">
         {problem && <p className="error-note" role="alert">{problem} <button className="btn" onClick={saveAgain}>{problem.startsWith('Could not load') ? 'Retry loading' : 'Retry saving'}</button></p>}
@@ -372,7 +389,8 @@ function Talk({ questions }: { questions: Question[] }) {
 function Picker({ onClose }: { onClose: () => void }) {
   const { mode } = useEngine()
   const { motion: m } = usePrefs()
-  const { slots, add } = useCompare()
+  const { slots, add, researchNew } = useCompare()
+  const engine = useEngine()
   const [rows, setRows] = useState<{ id: string; name: string; note: string }[] | null>(null)
   const [query, setQuery] = useState('')
   const history = useHistory(query)
@@ -392,10 +410,26 @@ function Picker({ onClose }: { onClose: () => void }) {
   return (
     <motion.div className="picker" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} transition={m.tx.soft}>
       <div className="picker-inner">
-        <input type="search" aria-label="Search all saved checks" placeholder="Search all checks" value={query} onChange={(event) => setQuery(event.target.value)} />
+        <input type="search" aria-label="Search all saved checks" placeholder="Search your checks, or name any product" value={query} onChange={(event) => setQuery(event.target.value)} />
         {history.problem && <p className="error-note" role="alert">{history.problem}</p>}
         {(mode === 'live' ? history.items === null : rows === null) && <span className="muted">Reads your checks…</span>}
-        {(mode === 'live' ? history.items !== null : rows !== null) && choices.length === 0 && <span className="muted">No matching checks to add.</span>}
+        {(mode === 'live' ? history.items !== null : rows !== null) && choices.length === 0 && !query.trim() && <span className="muted">No checks yet. Name a product to research it.</span>}
+        {query.trim().length >= 3 && (
+          <button
+            className="chip chip-new"
+            disabled={slots.length >= MAX_SLOTS || mode !== 'live'}
+            title="Kriko searches the web for it now and adds it as a column when the research is done"
+            onClick={() => {
+              const agent = engine.agents.find((a) => a.id === engine.preferred) ?? engine.agents[0]
+              void researchNew(query.trim(), agent)
+              setQuery('')
+              onClose()
+            }}
+          >
+            <strong><Icon name="search" size={13} /> Research “{query.trim()}” and add</strong>
+            <span className="muted">Not checked yet</span>
+          </button>
+        )}
         {choices.map((r) => (
           <button key={r.id} className="chip" onClick={() => add(r.id)} disabled={slots.length >= MAX_SLOTS} title={r.name}>
             <strong>{r.name}</strong>
