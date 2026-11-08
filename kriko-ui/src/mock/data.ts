@@ -1,3 +1,4 @@
+import type { IconName } from '../ui/Icon'
 import type { SourcePage, Usage } from '../activity/run'
 
 /** Demo pages for the sources column. The words for a kind of site are the ones
@@ -63,22 +64,28 @@ export const COMPARE: CompareProduct[] = [
 
 export interface Drawer {
   id: string
-  icon: 'cpu' | 'clock' | 'globe' | 'book' | 'gear' | 'spark' | 'check'
+  icon: IconName
   title: string
   note: string
+  /** The section of the More menu it sits in. */
+  group: DrawerGroup
 }
 
+export type DrawerGroup = 'Your work' | 'Set up' | 'Keep it running' | 'Help'
+
+/** The More menu, by what the reader came to do. Each entry has its own icon. */
 export const DRAWER: Drawer[] = [
-  { id: 'foryou', icon: 'check', title: 'For you', note: 'What you need, what you bought' },
-  { id: 'chat', icon: 'spark', title: 'Chat', note: 'What it remembers, product-only answers' },
-  { id: 'setup', icon: 'spark', title: 'Set up Kriko', note: 'Verify an agent and connect your browser' },
-  { id: 'backups', icon: 'clock', title: 'Backup and restore', note: 'Keep a copy of your saved work' },
-  { id: 'agents', icon: 'spark', title: 'Agents', note: 'Choose who answers' },
-  { id: 'local', icon: 'cpu', title: 'Local model', note: 'Run on this computer' },
-  { id: 'history', icon: 'clock', title: 'History', note: 'Past research' },
-  { id: 'logs', icon: 'clock', title: 'Logs', note: 'Every step of every job, with its timing' },
-  { id: 'report', icon: 'spark', title: 'Report or suggest', note: 'Tell us what broke or what to add' },
-  { id: 'browse', icon: 'book', title: 'Catalogs', note: 'Browse what is known' },
-  { id: 'sites', icon: 'globe', title: 'Sites', note: 'Pages Kriko can read' },
-  { id: 'settings', icon: 'gear', title: 'Settings', note: 'Look, motion, keys' },
+  { id: 'history', icon: 'clock', title: 'History', note: 'Past checks and research', group: 'Your work' },
+  { id: 'foryou', icon: 'star', title: 'For you', note: 'What you need, what you bought', group: 'Your work' },
+  { id: 'browse', icon: 'book', title: 'Catalogs', note: 'Browse what is known', group: 'Your work' },
+  { id: 'sites', icon: 'globe', title: 'Sites', note: 'Pages Kriko can read', group: 'Your work' },
+  { id: 'setup', icon: 'compass', title: 'Set up Kriko', note: 'Verify an agent, connect your browser', group: 'Set up' },
+  { id: 'agents', icon: 'users', title: 'Agents', note: 'Choose who answers', group: 'Set up' },
+  { id: 'local', icon: 'cpu', title: 'Local model', note: 'Run on this computer', group: 'Set up' },
+  { id: 'chat', icon: 'chat', title: 'Chat', note: 'Memory and product-only answers', group: 'Set up' },
+  { id: 'settings', icon: 'gear', title: 'Settings', note: 'Look, research, keys, usage', group: 'Set up' },
+  { id: 'updates', icon: 'download', title: 'Updates', note: 'Version, new releases, your data', group: 'Keep it running' },
+  { id: 'backups', icon: 'cloudup', title: 'Backup and restore', note: 'Keep a copy of your saved work', group: 'Keep it running' },
+  { id: 'logs', icon: 'layers', title: 'Logs', note: 'Every step of every job, timed', group: 'Keep it running' },
+  { id: 'report', icon: 'bell', title: 'Report or suggest', note: 'Tell us what broke or what to add', group: 'Help' },
 ]

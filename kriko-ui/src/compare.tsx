@@ -34,9 +34,22 @@ interface Compare {
   research: (lookupId: string, agent: Agent, onJob: (jobId: string) => void) => Promise<void>
   /** Read a column again after it failed. */
   retry: (lookupId: string) => void
+  /** Products named in Compare without a check yet, while their quick look runs. */
+  pending: Pending[]
+  /** Research a product by name and add it as a column when it is done. */
+  researchNew: (name: string, agent: Agent) => Promise<void>
+  dismissPending: (id: string) => void
   stop: () => void
   problem: string
   saveAgain: () => void
+}
+
+/** A product the reader named in Compare, researched before it can be a column. */
+export interface Pending {
+  id: string
+  name: string
+  state: 'running' | 'failed'
+  note: string
 }
 
 const Ctx = createContext<Compare | null>(null)
@@ -393,6 +406,40 @@ export function CompareProvider({ children }: { children: ReactNode }) {
     await sync
   }, [live, save, slots])
 
+  const [pending, setPending] = useState<Pending[]>([])
+  const dismissPending = useCallback((id: string) => setPending((list) => list.filter((one) => one.id !== id)), [])
+  /** A product not yet checked: a quick look by name, which the engine adds to
+   *  the draft when it succeeds. The column appears here at the same moment. */
+  const researchNew = useCallback(async (name: string, agent: Agent) => {
+    const id = `new:${Date.now()}`
+    const patch = (fields: Partial<Pending>) => setPending((list) => list.map((one) => (one.id === id ? { ...one, ...fields } : one)))
+    setPending((list) => [...list, { id, name, state: 'running', note: 'Starting the research…' }])
+    try {
+      if (!live) throw new EngineError(0, 'Connect to Kriko before researching a product.')
+      await saving.current
+      if (!draft.current) {
+        const saved = await post<ApiDraft>('/api/compare-drafts', { name: 'Compare', lookup_ids: slots })
+        draft.current = saved.draft_id
+      }
+      const sent = await post<{ job_id: string }>(`/api/compare-drafts/${seg(draft.current)}/products`, {
+        product: name, harness: agent.id, backend: agent.backend,
+      })
+      patch({ note: 'Searching the web and reading pages…' })
+      const ended = await followJob(sent.job_id, (job) => {
+        const line = (job as { message?: string }).message
+        if (line) patch({ note: line })
+      }, () => alive.current)
+      if (!ended || ended.state !== 'succeeded') {
+        patch({ state: 'failed', note: ended?.message || 'The research did not finish.' })
+        return
+      }
+      setPending((list) => list.filter((one) => one.id !== id))
+      add(sent.job_id)
+    } catch (error) {
+      patch({ state: 'failed', note: reasonOf(error) })
+    }
+  }, [live, slots, add])
+
   const stop = useCallback(() => {
     stopRequested.current = true
     for (const [id, job] of jobOf.current) void post(`/api/jobs/${seg(job)}/cancel`, {})
@@ -401,7 +448,7 @@ export function CompareProvider({ children }: { children: ReactNode }) {
   }, [patchQuestion])
 
   const value = useMemo<Compare>(
-    () => ({ slots, checks, questions, add, remove, ask: (t, a) => void ask(t, a), research, retry, stop, problem,
+    () => ({ slots, checks, questions, add, remove, ask: (t, a) => void ask(t, a), research, retry, stop, problem, pending, researchNew, dismissPending,
       saveAgain: () => {
         if (problem.startsWith('Could not load')) {
           void get<{items: ApiDraft[]}>('/api/compare-drafts').then((reply) => {
@@ -411,7 +458,7 @@ export function CompareProvider({ children }: { children: ReactNode }) {
           }).catch((error) => setProblem(`Could not load the saved comparison. ${reasonOf(error)}`))
         } else save(slots)
       } }),
-    [slots, checks, questions, add, remove, ask, research, retry, stop, problem, save, loadQuestions],
+    [slots, checks, questions, add, remove, ask, research, retry, stop, problem, save, loadQuestions, pending, researchNew, dismissPending],
   )
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }

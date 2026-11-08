@@ -178,9 +178,21 @@ RESIDENT_COOLDOWN_SECONDS = 600.0
 #: used to spend the whole answer budget (`session/new` waited on the turn's
 #: deadline), and the fresh-process fallback then had seconds left — the
 #: 102-second Mistral turn in the 0.3.8 field log. Bounded here, the fallback
-#: inherits the rest of the turn, and the same allowance bounds a warm-up
-#: started while the host reads its pages.
-RESIDENT_START_SECONDS = 10.0
+#: inherits the rest of the turn.
+#:
+#: It was 10 s, and that was below what a healthy start costs: `vibe-acp` on
+#: Windows answered `initialize` in 3.8-6.6 s and its first `session/new` in
+#: 2.2-4.3 s inside the engine (the run facts of 2026-11-08), so a cold start
+#: of 6-11 s timed out at the edge, the agent was marked unhealthy for ten
+#: minutes, and every turn in between paid a fresh process instead. 20 s is
+#: about twice the slowest start measured and still leaves a 90-second turn
+#: seventy seconds for the fallback.
+RESIDENT_START_SECONDS = 20.0
+#: How long a background warm-up may take. It costs the reader nothing while
+#: it runs (the host is reading pages), and one killed a second before it was
+#: ready is a cold start the turn then pays in full; a request that arrives
+#: meanwhile waits for it under its own `RESIDENT_START_SECONDS`.
+RESIDENT_WARM_SECONDS = 30.0
 _RESIDENT_UNHEALTHY: dict[str, float] = {}
 _RESIDENT_HEALTH_LOCK = threading.Lock()
 
@@ -713,7 +725,10 @@ KNOWN: tuple[Harness, ...] = (
         turns_flag="",
         budget_flag="",
     ),
-    # Verified against Mistral Vibe 2.25.5. Every argument below is one the
+    # Verified against Mistral Vibe 2.25.5, and again against 3.1.0 (a Rust
+    # client over a Python app-server; same flags and the same streaming
+    # history entries, plus `--prompt-file`, `--output-dir` and
+    # `--time-limit`, which `_invoke_with` uses when declared). Every argument below is one the
     # CLI's own `--help` declares, and every value was read off the installed
     # package rather than guessed:
     #
@@ -762,8 +777,9 @@ KNOWN: tuple[Harness, ...] = (
         model_env="VIBE_ACTIVE_MODEL",
         model_source="vibe-config",
         effort_flag="vibe-thinking",
-        # This CLI's Mistral backend maps low to `none` (rejected by GLM)
-        # and medium/high/max to `high`; only expose the effective level.
+        # Vibe 2.x maps low to `none` (rejected by GLM) and medium/high/max
+        # to `high`; only expose the effective level. Vibe 3 sends the level
+        # as written and is offered `VIBE3_EFFORTS` instead (`_static_efforts`).
         effort_choices=("high",),
         # No list either: `vibe` has no `models` command and its `--help`
         # names none, so the field is free text rather than a list typed here.
@@ -1458,6 +1474,53 @@ def _from_help(text: str, flag: str) -> list[str]:
         break
     return out
 
+#: The thinking levels Vibe 3 passes to the model as written. 2.x mapped
+#: `low` to `none`, which GLM rejected, and `medium`/`max` to `high`, so the
+#: row offers only `high` there. On 3.x (`vibe/config_values.py`: "sent to the
+#: provider as written") `low` and `high` are the two levels every routed
+#: model lists, verified on 3.1.0 with the reader's GLM-5.3 Flash. `low` is
+#: what a chat-speed pass asks for (`harness_researcher(default_effort=...)`),
+#: and without it every Vibe chat turn thought at the reader's own level.
+VIBE3_EFFORTS = ("low", "high")
+#: A model refusing the reasoning level it was sent, in the provider's words.
+_EFFORT_REFUSED = re.compile(
+    r"reasoning_effort\W.{0,40}not supported|thinking level.{0,40}not supported",
+    re.IGNORECASE)
+#: `(harness id, model, effort)` triples a model has refused in this process.
+_REFUSED_EFFORTS: set[tuple[str, str, str]] = set()
+#: Options only a Vibe 3 build declares; `--output-dir` arrived with the
+#: rewrite that also changed how thinking levels are sent.
+_VIBE3_FLAGS = frozenset({"--output-dir", "--time-limit"})
+
+
+def _cached_declared(executable: str) -> frozenset[str] | None:
+    """The declared options already known for `executable`, without spawning it."""
+    stamp_now = cliprobe.stamp(executable)
+    if executable in _DECLARED and _HELP_STAMP.get(executable, stamp_now) == stamp_now:
+        return _DECLARED[executable]
+    persisted = cliprobe.entry(executable, "help")
+    if persisted is not None:
+        return frozenset(persisted["help"].get("declared") or ())
+    return None
+
+
+def _static_efforts(one: Harness, executable: str = "") -> list[str]:
+    """Effort levels for a CLI whose levels are not printed by its `--help`.
+
+    Codex and Vibe 2.x: the row's own list. Vibe 3: `VIBE3_EFFORTS`, decided
+    from what this binary declares, read from the probe cache so a screen
+    never waits on a cold CLI. A run passes its `executable`, whose `--help`
+    `command_for` has already read.
+    """
+    if one.protocol != "vibe":
+        return list(one.effort_choices)
+    executable = executable or locate(one)
+    known = _cached_declared(executable) if executable else None
+    if known is not None and _VIBE3_FLAGS <= known:
+        return list(VIBE3_EFFORTS)
+    return list(one.effort_choices)
+
+
 def efforts_for(one: Harness, *, fresh: bool = False) -> list[str]:
     """The effort levels this machine's CLI will accept, or `[]`.
 
@@ -1470,7 +1533,7 @@ def efforts_for(one: Harness, *, fresh: bool = False) -> list[str]:
     if one.unusable or not one.effort_flag:
         return []
     if one.protocol in {"vibe", "codex"}:
-        return list(one.effort_choices)
+        return _static_efforts(one)
     executable = locate(one)
     if not executable:
         return []
@@ -1508,7 +1571,7 @@ def cached_efforts_for(one: Harness) -> list[str] | None:
     if one.unusable or not one.effort_flag:
         return []
     if one.protocol in {"vibe", "codex"}:
-        return list(one.effort_choices)
+        return _static_efforts(one)
     executable = locate(one)
     if not executable:
         return []
@@ -1537,7 +1600,7 @@ def efforts_for_each(harnesses: list[Harness], *, fresh: bool = False) -> dict[s
         if one.unusable or not one.effort_flag:
             found[one.id] = []
         elif one.protocol in {"vibe", "codex"}:
-            found[one.id] = list(one.effort_choices)
+            found[one.id] = _static_efforts(one)
         else:
             executable = locate(one)
             if not executable:
@@ -2102,6 +2165,26 @@ def _sibling_executable(executable: str, name: str) -> str:
     return shutil.which(name, path=child_env().get("PATH")) or ""
 
 
+#: How long before Kriko's own kill Vibe is told to stop itself
+#: (`--time-limit`): room to write `export.json` and let its three processes
+#: (launcher, Rust client, app-server) exit, measured at about a second.
+VIBE_TIME_LIMIT_MARGIN = 8.0
+#: The line every Vibe 3 run prints on stderr when its key is in the keyring.
+#: Not a reason for anything, and it led every failure report Kriko wrote.
+VIBE_KEYRING_BANNER = "Reading API keys from the system keyring"
+
+
+def _vibe_export(folder: Path | None) -> dict:
+    """The `export.json` a Vibe 3 run wrote into `--output-dir`, or `{}`."""
+    if folder is None:
+        return {}
+    try:
+        data = json.loads((folder / "export.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
 def _vibe_config(model: str, effort: str, sessions: Path, *, log_sessions: bool = True) -> tuple[str, str]:
     """The per-run `config.toml` for Mistral Vibe, and the model it names.
 
@@ -2145,10 +2228,13 @@ def _vibe_config(model: str, effort: str, sessions: Path, *, log_sessions: bool 
             value = row.get(key)
             if key == "thinking" and (row.get("alias") == chosen or row.get("name") == chosen) and effort:
                 value = effort
+            # The loop already writes the requested effort onto the chosen row,
+            # whether or not the row had a `thinking` of its own. A second
+            # write for a row without one repeated the key, and TOML refuses a
+            # repeated key: Vibe 3 answered "Cannot overwrite a value" and the
+            # run never started, for every catalogue model with an effort.
             if isinstance(value, str):
                 text += key + " = " + json.dumps(value) + "\n"
-        if "thinking" not in row and effort and row.get("alias") == chosen:
-            text += "thinking = " + json.dumps(effort) + "\n"
     text += "\n[session_logging]\ngenerate_titles = false\n"
     text += ("save_dir = " + json.dumps(str(sessions)) + "\n") if log_sessions else "enabled = false\n"
     return text, chosen
@@ -2180,7 +2266,8 @@ def command_for(one: Harness, *, model: str = "", effort: str = "",
                 *(["--model", model] if model else []),
                 *(["-c", f'model_reasoning_effort="{effort}"'] if effort else [])]
     supported = declared(executable)
-    if effort and one.effort_choices and effort not in one.effort_choices:
+    choices = _static_efforts(one, executable) if one.protocol == "vibe" else list(one.effort_choices)
+    if effort and choices and effort not in choices:
         raise NoHarness(f"{one.label} does not support effort {effort!r}")
     args = one.args
     # `force_plain` is the run-level adaptation: a vector the CLI rejected at
@@ -2875,12 +2962,13 @@ HINTS = (
      "{label}'s account has no headroom right now. Wait for the reset "
      "the message names, or switch to another agent on the Agents screen."),
     (("not logged in", "please run /login", "unauthorized", "authentication",
-      "invalid api key", "oauth"),
+      "invalid api key", "oauth", "sign in again", "log in again",
+      "refresh token"),
      "{label} is not logged in, and only you can log it in -- no API call can "
      "do it on its behalf. Open a system terminal (PowerShell on Windows), "
      "run `{cli}`, and follow its login prompt. Then return to Agents and "
      "press Check connection."),
-    (("credit balance", "billing", "payment"),
+    (("credit balance", "billing", "payment", "budget exhausted"),
      "the account behind the CLI cannot pay for this run."),
     (("error_max_turns",),
      "the agent ran out of turns before it reported. This is Kriko's to fix, "
@@ -2917,6 +3005,37 @@ def _hint(reason: str, harness: "Harness | None" = None) -> str:
         if any(needle in low for needle in needles):
             return hint.format(label=label, cli=cli)
     return ""
+
+
+#: The `HINTS` rows that are about the reader's *account* (headroom, login,
+#: billing) rather than the run. Such a failure is the same in every process
+#: the CLI could be started as, so it is never answered with another one.
+_ACCOUNT_HINTS = HINTS[:3]
+
+
+def account_failure(reason: str) -> bool:
+    """Whether `reason` is an account failure no other transport can fix.
+
+    Measured 2026-10-31: Vibe's hosted session answered `402 ... Vibe budget
+    exhausted`, Kriko read it as "the hosted session is unavailable", marked
+    the session unhealthy for ten minutes and ran a fresh process, which hit
+    the same 402. Three spawns and two turns of the reader's budget to arrive
+    at the error the first one already had.
+    """
+    low = (reason or "").lower()
+    return any(needle in low for needles, _hint_text in _ACCOUNT_HINTS for needle in needles)
+
+
+def _account_error(one: "Harness", error: BaseException) -> RuntimeError | None:
+    """The reader-facing error for an account failure, or `None` for any other."""
+    reason = str(error)
+    if not account_failure(reason):
+        return None
+    from app.agentledger import redact
+
+    reason = redact(reason, limit=500)
+    hint = _hint(reason, one)
+    return RuntimeError(f"{one.label} reported an error: {reason}" + (f" -- {hint}" if hint else ""))
 
 
 class _Attempt:
@@ -2990,6 +3109,9 @@ class HarnessResearcher(AgentResearcher):
         self.effort_settled = ""
         self._run_env: dict[str, str] = {}
         self._run_cwd: str | None = None
+        #: Where this Vibe run writes `export.json` (`--output-dir`), while
+        #: a run is in flight. Outside the agent's working folder.
+        self._vibe_export: Path | None = None
         #: The path of this run's page-reader config while a run has one (B155).
         self._reader_config = ""
         #: Whether this run was actually granted the hosted reader. The config
@@ -3592,7 +3714,7 @@ class HarnessResearcher(AgentResearcher):
 
         try:
             profile = self._resident_profile()
-            resident.transport().warm(profile, timeout=RESIDENT_START_SECONDS)
+            resident.transport().warm(profile, timeout=RESIDENT_WARM_SECONDS)
         except Exception:  # noqa: BLE001 — a cold start later is the only cost
             pass
 
@@ -3830,6 +3952,11 @@ class HarnessResearcher(AgentResearcher):
                 # A resident session rejected the request before it ran. Codex
                 # is never replayed, because its rejection can arrive after a
                 # delivered turn and a delivered turn must not be sent twice.
+                account = _account_error(self.harness, error)
+                if account is not None:
+                    # The account, not the session: a fresh process would
+                    # meet the same refusal, and the session is healthy.
+                    raise account from error
                 if previous_mode != "auto" or self.harness.protocol == "codex":
                     raise
                 _mark_resident_unhealthy(self.harness)
@@ -3851,6 +3978,9 @@ class HarnessResearcher(AgentResearcher):
                 # still reports the failure, because then the reader asked for
                 # exactly this and replaying it behind their back would be
                 # worse than the error.
+                account = _account_error(self.harness, error)
+                if account is not None:
+                    raise account from error
                 if previous_mode != "auto":
                     raise
                 _mark_resident_unhealthy(self.harness)
@@ -3874,6 +4004,32 @@ class HarnessResearcher(AgentResearcher):
     # ── the subprocess ───────────────────────────────────────────────────────
 
     def _run(self, prompt: str, on_line: Callable[[str], None] | None = None) -> str:
+        """`_run_once`, run again at the model's own level when it refuses the effort.
+
+        Vibe 3 hands the effort to the model as written, and models differ:
+        GLM-5.3 takes `low`, `mistral-small-latest` answers 400 "reasoning_effort
+        ='low' is not supported for this model" (measured on 3.1.0). A refused
+        level is a request error, nothing was billed, and a chat-speed pass that
+        asked for `low` by default must not cost the reader the turn. The pair
+        is remembered for this process, so the next run skips straight to the
+        model's own level instead of paying the refusal again.
+        """
+        key = (self.harness.id, self.requested_model, self.requested_effort)
+        if self.requested_effort and key in _REFUSED_EFFORTS:
+            self.requested_effort = ""
+        try:
+            return self._run_once(prompt, on_line)
+        except Exception as error:  # noqa: BLE001 — re-raised unless it is the refusal
+            if not (self.requested_effort and _EFFORT_REFUSED.search(str(error))):
+                raise
+            _REFUSED_EFFORTS.add(key)
+            self._echo(
+                f"{self.harness.label} does not take effort "
+                f"{self.requested_effort!r} for this model; running at the model's own level")
+            self.requested_effort = ""
+            return self._run_once(prompt, on_line)
+
+    def _run_once(self, prompt: str, on_line: Callable[[str], None] | None = None) -> str:
         """The prompt goes in **after `--`**, and on stdin only when it is huge.
 
         Two defects, one line apart in history.
@@ -3944,6 +4100,9 @@ class HarnessResearcher(AgentResearcher):
                 # instead of failing the turn. An explicit `persistent` choice
                 # still reports it — and Codex is never replayed, because its
                 # rejection can come after a delivered turn.
+                account = _account_error(self.harness, error)
+                if account is not None:
+                    raise account from error
                 if self.transport_mode == "persistent" or self.harness.protocol == "codex":
                     raise
                 say = on_line if on_line is not None else self.on_action
@@ -3977,6 +4136,14 @@ class HarnessResearcher(AgentResearcher):
         with _CODEX_SUPPORT_LOCK:
             supported = _CODEX_SUPPORT.get(key)
         if supported is None:
+            # Persisted under the binary's stamp like `--help`: an unchanged
+            # Codex is not asked again at every engine start.
+            persisted = cliprobe.entry(executable, "app_server")
+            if persisted is not None and isinstance(persisted["app_server"], bool):
+                supported = persisted["app_server"]
+                with _CODEX_SUPPORT_LOCK:
+                    _CODEX_SUPPORT[key] = supported
+        if supported is None:
             described = _ask(executable, "app-server", "--help")
             if not described.strip():
                 # `_ask` answers "" on a timeout or a failed start. That says
@@ -3987,6 +4154,7 @@ class HarnessResearcher(AgentResearcher):
             supported = "--listen" in described
             with _CODEX_SUPPORT_LOCK:
                 _CODEX_SUPPORT[key] = supported
+            cliprobe.record(executable, "app_server", supported)
         if not supported:
             raise TransportUnavailable("the installed CLI has no verified app-server transport")
         chosen = codex_profile.profile(
@@ -4016,6 +4184,12 @@ class HarnessResearcher(AgentResearcher):
             )
         except BaseException as error:
             attempt.fail(error)
+            # A turn the server refused for the account (`unauthorized (401)`
+            # from a stale login) is a known outcome, not an uncertain one: it
+            # reaches the reader with the action that fixes it.
+            account = _account_error(self.harness, error)
+            if account is not None:
+                raise account from error
             raise
         finally:
             if self.on_text is not None and self._live_published:
@@ -4376,6 +4550,8 @@ class HarnessResearcher(AgentResearcher):
                     self.model = chosen
                 (config / "config.toml").write_text(text, encoding="utf-8")
                 self._run_env["VIBE_HOME"] = str(config)
+                # Beside the home, not in the working folder the agent sees.
+                self._vibe_export = root / "export"
                 # The CLI reads its key from the environment, and the
                 # environment this run inherits is the reader's own. Carried
                 # across explicitly because `_stream` merges `_run_env` last:
@@ -4401,7 +4577,18 @@ class HarnessResearcher(AgentResearcher):
             try:
                 yield
             finally:
-                if self.harness.protocol == "vibe":
+                exported = _vibe_export(self._vibe_export) if self.harness.protocol == "vibe" else {}
+                self._vibe_export = None
+                usage = exported.get("usage")
+                if isinstance(usage, dict) and isinstance(usage.get("total_tokens"), int):
+                    # Vibe 3's own account of the run: tokens and what they
+                    # cost at the model's price (0.0 on a plan's free model,
+                    # which is a price, not "cannot count").
+                    self.tokens_used = (self.tokens_used or 0) + usage["total_tokens"]
+                    cost = exported.get("cost_usd")
+                    if isinstance(cost, (int, float)) and not isinstance(cost, bool):
+                        self.cost_usd = (self.cost_usd or 0.0) + float(cost)
+                elif self.harness.protocol == "vibe":
                     # These files belong to this invocation's temporary home;
                     # never count another chat or read the user's session log.
                     for metadata in (config / "sessions").rglob("meta.json"):  # any-order: each file is counted once, the sum does not depend on order
@@ -4467,7 +4654,17 @@ class HarnessResearcher(AgentResearcher):
 
     def _invoke_with(self, command: list[str], prompt: str,
                      say: Callable[[str], None] | None) -> str:
-        if self.harness.protocol in ("vibe", "gemini"):
+        prompt_file = False
+        if self.harness.protocol == "vibe":
+            supported = declared(command[0])
+            command.extend(self._vibe_run_args(supported))
+            # Vibe 3 reads the prompt from a file (`--prompt-file`): no pipe
+            # to lose across the launcher, the Rust client and its app-server,
+            # which is three processes where 2.x was one.
+            prompt_file = "--prompt-file" in supported
+            if not prompt_file:
+                command.extend(["--prompt", ""])
+        elif self.harness.protocol == "gemini":
             command.extend(["--prompt", ""])
         # The page reader is mentioned only when this actual verified command
         # carries its per-run MCP config. `_place_reader` already checked the
@@ -4513,7 +4710,20 @@ class HarnessResearcher(AgentResearcher):
             else:
                 return self._finish_process(code, stdout, stderr)
 
-        if self.harness.prompt_flag:
+        if prompt_file:
+            fd, prompt_path = tempfile.mkstemp(prefix="kriko-prompt-", suffix=".txt")
+            try:
+                with os.fdopen(fd, "w", encoding="utf-8") as prompt_write:
+                    prompt_write.write(prompt)
+                code, stdout, stderr = self._stream(
+                    [*command, "--prompt-file", prompt_path], subprocess.DEVNULL, say
+                )
+            finally:
+                try:
+                    os.remove(prompt_path)
+                except OSError:
+                    pass
+        elif self.harness.prompt_flag:
             # A CLI whose prompt is a flag's value, with no `--` convention
             # and no stdin prompt to fall back on (verified: piped input is
             # ignored, and an empty `-p` eats the next flag as its value).
@@ -4545,7 +4755,48 @@ class HarnessResearcher(AgentResearcher):
             finally:
                 os.remove(stdin_path)
 
+        if self.harness.protocol == "vibe":
+            code, stderr = self._vibe_outcome(code, stderr)
         return self._finish_process(code, stdout, stderr)
+
+    def _vibe_run_args(self, supported: frozenset[str]) -> list[str]:
+        """Vibe 3's per-run export and its own clock, when this build has them.
+
+        `--output-dir` writes `export.json` on every exit: the usage, the
+        cost, the outcome and the error, in one object, where 2.x left only a
+        session folder to sum. `--time-limit` lets the CLI stop itself a few
+        seconds before Kriko's kill, so the export is written and the three
+        processes it runs as exit on their own instead of as a killed tree.
+        """
+        out: list[str] = []
+        if self._vibe_export is not None and "--output-dir" in supported:
+            out += ["--output-dir", str(self._vibe_export)]
+        if "--time-limit" in supported and self.timeout > 2 * VIBE_TIME_LIMIT_MARGIN:
+            out += ["--time-limit", str(int(self.timeout - VIBE_TIME_LIMIT_MARGIN))]
+        return out
+
+    def _vibe_outcome(self, code: int, stderr: str) -> tuple[int, str]:
+        """The exit, read against the run's `export.json` and without the banner.
+
+        A run Vibe stopped on its own `--time-limit` (exit 3, outcome
+        `deadline`) is the same event as Kriko's own timeout and is reported
+        in the same words, so callers that handle one handle both. An error
+        the export names is added to the reason when stderr did not carry it.
+        """
+        stderr = "\n".join(
+            line for line in (stderr or "").splitlines()
+            if not line.startswith(VIBE_KEYRING_BANNER)
+        )
+        export = _vibe_export(self._vibe_export)
+        if code == 3 and export.get("outcome") == "deadline":
+            raise TimeoutError(
+                f"{self.harness.label} did not finish within {int(self.timeout)}s")
+        error = export.get("error")
+        if isinstance(error, dict):
+            error = str(error.get("message") or json.dumps(error, ensure_ascii=False))
+        if code != 0 and isinstance(error, str) and error.strip() and error.strip() not in stderr:
+            stderr = (stderr + "\n" + error.strip()).strip()
+        return code, stderr
 
     def _finish(self, code: int, stdout: str, stderr: str) -> str:
         """What a completed spawn means, whichever vector produced it.

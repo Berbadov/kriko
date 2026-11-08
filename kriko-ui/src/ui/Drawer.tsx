@@ -14,7 +14,7 @@ import { HistoryPanel } from './panels/History'
 import { LocalPanel } from './panels/Local'
 import { LogsPanel } from './panels/Logs'
 import { ReportPanel } from './panels/Report'
-import { SettingsPanel } from './panels/Settings'
+import { AboutPage, SettingsPanel } from './panels/Settings'
 import { SitesPanel } from './panels/Sites'
 import { SetupPanel } from './panels/Setup'
 import { BackupsPanel } from './panels/Backups'
@@ -33,10 +33,23 @@ const PANELS: Record<string, ComponentType<{ onOpen: (lookupId: string) => void 
   local: LocalPanel,
   settings: SettingsPanel,
   sites: SitesPanel,
+  updates: UpdatesPanel,
 }
 
+/** Updates on its own: the About page of Settings, drawn in Settings' hand. */
+function UpdatesPanel() {
+  return (
+    <div className="panel-body settings">
+      <AboutPage />
+    </div>
+  )
+}
+
+/** The menu's sections, in the order they are drawn. */
+const GROUPS = [...new Set(DRAWER.map((entry) => entry.group))]
+
 /** Settings and the places that are not Chat, Compare or Queue. It opens at the
- *  left, beside the rail, and `offset` is the width the rail has now.
+ *  right, under the buttons that open it; `offset` is kept for callers.
  *
  *  The head is a sibling of the body, never over it, and the body carries the
  *  class the stylesheet scrolls (`.drawer-body`). Both are load-bearing: a head
@@ -89,15 +102,16 @@ export function Drawer({ open, panel: asked, onClose, offset, onOpen }: { open: 
             ref={panel}
             className="drawer"
             data-wide={Boolean(Body)}
-            data-panel={inside ?? undefined}
+            data-panel={inside === 'updates' ? 'settings' : inside ?? undefined}
             role="dialog"
             aria-modal="true"
             aria-label={item?.title ?? 'More'}
             tabIndex={-1}
-            style={{ left: offset + 20 }}
-            initial={{ x: m.on ? -380 : 0, opacity: m.on ? 0.4 : 1 }}
+            data-offset={offset}
+            style={{ right: 20, left: 'auto' }}
+            initial={{ x: m.on ? 380 : 0, opacity: m.on ? 0.4 : 1 }}
             animate={{ x: 0, opacity: 1 }}
-            exit={{ x: m.on ? -380 : 0, opacity: 0 }}
+            exit={{ x: m.on ? 380 : 0, opacity: 0 }}
             transition={m.tx.spring}
           >
             <header className="drawer-head">
@@ -133,30 +147,35 @@ export function Drawer({ open, panel: asked, onClose, offset, onOpen }: { open: 
                   </p>
                   {engine.problem && <p className="error-note">{engine.problem}</p>}
 
-                  <ul className="drawer-list">
-                    {DRAWER.map((entry, index) => {
-                      const ready = entry.id in PANELS
-                      return (
-                        <motion.li
-                          key={entry.id}
-                          initial={{ opacity: 0, x: -m.d(14) }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ ...(m.tx.soft as object), delay: m.on ? 0.05 + index * 0.035 : 0 }}
-                        >
-                          <button className="drawer-item" disabled={!ready} onClick={() => setInside(entry.id)}>
-                            <span className="drawer-icon">
-                              <Icon name={entry.icon} size={17} />
-                            </span>
-                            <span>
-                              <strong>{entry.title}</strong>
-                              <small>{entry.note}</small>
-                            </span>
-                            {ready ? <Icon name="expand" size={15} /> : <span className="soon">Soon</span>}
-                          </button>
-                        </motion.li>
-                      )
-                    })}
-                  </ul>
+                  {GROUPS.map((group, groupIndex) => (
+                    <section key={group} className="drawer-group" aria-label={group}>
+                      <h3 className="drawer-group-name">{group}</h3>
+                      <ul className="drawer-list">
+                        {DRAWER.filter((entry) => entry.group === group).map((entry, index) => {
+                          const ready = entry.id in PANELS
+                          return (
+                            <motion.li
+                              key={entry.id}
+                              initial={{ opacity: 0, x: m.d(14) }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ ...(m.tx.soft as object), delay: m.on ? 0.04 + (groupIndex * 3 + index) * 0.025 : 0 }}
+                            >
+                              <button className="drawer-item" disabled={!ready} onClick={() => setInside(entry.id)}>
+                                <span className="drawer-icon">
+                                  <Icon name={entry.icon} size={16} />
+                                </span>
+                                <span>
+                                  <strong>{entry.title}</strong>
+                                  <small>{entry.note}</small>
+                                </span>
+                                {ready ? <Icon name="expand" size={14} /> : <span className="soon">Soon</span>}
+                              </button>
+                            </motion.li>
+                          )
+                        })}
+                      </ul>
+                    </section>
+                  ))}
                 </motion.div>
               )}
             </AnimatePresence>

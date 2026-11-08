@@ -239,3 +239,38 @@ def research_product(
             "lookup_id": body.lookup_id, "product": product,
             "backend": body.backend, "harness": body.harness}
 
+
+
+class NewProductRequest(BaseModel):
+    #: The product as the reader named it: a make and model, a code, a size.
+    product: str = Field(min_length=2, max_length=300)
+    harness: str = Field(default="", max_length=200)
+    backend: Literal["harness", "local"] = "harness"
+
+
+@router.post("/{draft_id}/products")
+def research_new_product(
+    draft_id: str, body: NewProductRequest,
+    request: Request, conn=Depends(get_app_state),
+) -> dict:
+    """Research a product the reader has not checked yet, and add it to this comparison.
+
+    The same quick look a column's Research press runs, started from a name
+    instead of a saved check. When it succeeds the job's own id joins the draft
+    as a new column (`jobs._append_compare_lookup`), so the reader can line up a
+    product they only know by name without leaving Compare to look it up first.
+    """
+    if not state.get_compare_draft(conn, draft_id):
+        raise HTTPException(404, f"no draft {draft_id}")
+    product = " ".join(body.product.split())
+    _require_selected_agent(request, body.backend, body.harness)
+    params = {
+        "product": product, "backend": body.backend, "harness": body.harness,
+        "compare_draft_id": draft_id, "compare_add": True,
+    }
+    try:
+        job_id = request.app.state.jobs.submit("quick_look", params)
+    except KeyError as error:
+        raise HTTPException(400, str(error)) from error
+    return {"job_id": job_id, "kind": "quick_look", "draft_id": draft_id, "product": product,
+            "backend": body.backend, "harness": body.harness}

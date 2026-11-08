@@ -1,12 +1,13 @@
 /** The pages of the settings drawer, in the order the reader meets them. One
  *  page is shown at a time, so a page holds one job: looks, research, keys,
- *  connections, or usage and about. */
+ *  connections, usage, or about and updates. */
 export const SETTINGS_PAGES = [
   { value: 'look', label: 'Look' },
   { value: 'research', label: 'Research' },
   { value: 'keys', label: 'Keys' },
   { value: 'connections', label: 'Connections' },
   { value: 'usage', label: 'Usage' },
+  { value: 'about', label: 'About' },
 ] as const
 
 export type SettingsPage = (typeof SETTINGS_PAGES)[number]['value']
