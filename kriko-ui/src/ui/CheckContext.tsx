@@ -21,6 +21,6 @@ export function RiskEvidence({ risk }: { risk: Risk }) {
     {risk.applicability && <p>Applies: {risk.applicability}</p>}
     {risk.disputed && <p>Sources disagree about this finding.</p>}
     {risk.advice && <p>{risk.advice}</p>}
-    {risk.sources.length > 0 && <details><summary>Evidence · {count(risk.sources.length, 'source')}</summary><ClaimSources sources={risk.sources} /></details>}
+    {risk.sources.length > 0 && <details open><summary>Evidence · {count(risk.sources.length, 'source')}</summary><ClaimSources sources={risk.sources} /></details>}
   </>
 }

@@ -15,10 +15,10 @@
 
 .tour-spot {
   position: fixed;
-  border-radius: var(--r-l);
+  border-radius: var(--r-s);
   box-shadow:
     0 0 0 100vmax var(--scrim),
-    0 0 0 2px var(--accent-hi);
+    0 0 0 2px var(--accent);
   pointer-events: none;
 }
 
@@ -27,11 +27,11 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 18px 18px 14px;
+  padding: 18px;
   background: var(--panel);
   border: 1px solid var(--edge-strong);
   border-radius: var(--r-l);
-  box-shadow: var(--shadow-2);
+  box-shadow: none;
 }
 
 .tour-card[data-centered='true'] {
@@ -65,16 +65,14 @@
 }
 
 .tour-dots i {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
+  width: 14px;
+  height: 2px;
   background: var(--edge-strong);
-  transition: background-color calc(160ms * var(--tm)), width calc(160ms * var(--tm));
+  transition: background-color var(--dur-2), width var(--dur-2);
 }
 
 .tour-dots i[data-on='true'] {
-  width: 18px;
-  border-radius: var(--r-s);
+  width: 24px;
   background: var(--accent);
 }
 
@@ -87,7 +85,8 @@
 }
 
 .tour-actions button {
-  padding: 8px 14px;
+  min-height: 32px;
+  padding: 6px 12px;
   border-radius: var(--r-m);
   color: var(--ink-2);
 }
@@ -104,13 +103,13 @@
 }
 
 .tour-actions .tour-next {
-  background: var(--accent);
+  background: var(--accent-fill);
   color: var(--accent-ink);
-  font-weight: 540;
+  font-weight: 550;
 }
 
 .tour-actions .tour-next:hover {
-  background: var(--accent);
-  filter: brightness(1.1);
+  background: var(--accent-fill);
+  filter: none;
   color: var(--accent-ink);
 }

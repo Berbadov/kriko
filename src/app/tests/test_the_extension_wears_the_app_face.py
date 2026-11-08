@@ -46,11 +46,25 @@ def test_both_sheets_use_the_same_family_name():
         assert "Kriko Sans" in text, sheet.name
 
 
+def _palette(block: str) -> dict[str, str]:
+    return {
+        name: value.lower()
+        for name, value in re.findall(r"--([a-z0-9-]+):\s*(#[0-9a-fA-F]{6})", block)
+    }
+
+
 def test_the_panel_and_the_page_keep_one_palette_with_the_app():
-    app = (EXT.parent / "kriko-ui" / "src" / "styles" / "tokens.css").read_text(encoding="utf-8").lower()
+    app = (EXT.parent / "kriko-ui" / "src" / "styles" / "tokens.css").read_text(encoding="utf-8")
+    palettes = {
+        "dark": _palette(app[: app.index("@media (prefers-color-scheme: light)")]),
+        "light": _palette(app[app.index(":root[data-theme='light']") :]),
+    }
     for sheet in (EXT / "hover_lite" / "hover_lite.css", EXT / "options" / "options.css"):
         text = sheet.read_text(encoding="utf-8").lower()
-        # Keep the shared charcoal ground, the navy accent, the serious ink
-        # and the good-sign grey: flat neutrals and one blue.
-        for colour in ("#161618", "#5268d1", "#8a9be4", "#bdbdbd"):
-            assert colour in app and colour in text, f"{sheet.name} lacks {colour}"
+        # The ground, the ink, the one navy and the good-sign grey are the app's,
+        # in both themes, so the panel is the app's face and not a second one.
+        for theme, palette in palettes.items():
+            for token in ("ground", "ink", "accent", "ok"):
+                assert token in palette, f"the app has no {token} in its {theme} palette"
+                colour = palette[token]
+                assert colour in text, f"{sheet.name} lacks the app's {theme} {token} {colour}"

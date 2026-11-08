@@ -32,21 +32,21 @@
 .soon {
   padding: 2px 8px;
   border: 1px solid var(--edge-strong);
-  border-radius: var(--r-m);
+  border-radius: var(--r-s);
   color: var(--ink-3);
-  font-size: 11.5px;
+  font-size: 12px;
 }
 
 .panel-body {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 16px;
 }
 
 .panel-note {
   margin: 0;
   color: var(--ink-3);
-  font-size: 13px;
+  font-size: 13.5px;
 }
 
 .panel-note[data-ok='true'] {
@@ -60,7 +60,7 @@
 .panel-path {
   color: var(--ink-3);
   font-family: var(--mono);
-  font-size: 11.5px;
+  font-size: 12px;
   overflow-wrap: anywhere;
 }
 
@@ -79,7 +79,7 @@
 
 .setting > span:first-child small {
   color: var(--ink-3);
-  font-size: 12px;
+  font-size: 13px;
   overflow-wrap: anywhere;
 }
 
@@ -103,7 +103,7 @@
 .setting .value {
   color: var(--ink-2);
   font-family: var(--mono);
-  font-size: 12.5px;
+  font-size: 13px;
 }
 
 .tuning-setting {
@@ -159,12 +159,13 @@
 
 .select select {
   width: 100%;
-  padding: 6px 30px 6px 12px;
+  height: 34px;
+  padding: 6px 30px 6px 10px;
   background: var(--panel-2);
   border: 1px solid var(--edge);
   border-radius: var(--r-m);
   color: var(--ink);
-  font-size: 13px;
+  font-size: 13.5px;
   appearance: none;
   cursor: pointer;
 }
@@ -200,21 +201,23 @@
 }
 
 .choice {
+  min-height: 32px;
   padding: 5px 12px;
-  background: var(--panel-2);
+  background: transparent;
   border: 1px solid var(--edge);
   border-radius: var(--r-m);
   color: var(--ink-2);
-  font-size: 13px;
+  font-size: 13.5px;
   transition:
-    background-color calc(140ms * var(--tm)),
-    border-color calc(140ms * var(--tm)),
-    color calc(140ms * var(--tm));
+    background-color var(--dur-2) var(--ease-out),
+    border-color var(--dur-2) var(--ease-out),
+    color var(--dur-2) var(--ease-out);
 }
 
 .choice[data-on='true'] {
   background: var(--accent-soft);
   border-color: var(--accent);
+  box-shadow: inset 0 -2px 0 var(--accent);
   color: var(--ink);
 }
 
@@ -223,21 +226,23 @@
 .agent-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .agent {
-  background: var(--panel-2);
-  border: 1px solid var(--edge);
-  border-radius: var(--r-l);
-  transition: border-color calc(160ms * var(--tm));
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--edge);
+  border-radius: 0;
+  transition: background-color var(--dur-2) var(--ease-out);
 }
 
 .agent[data-default='true'] {
-  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  border-top-color: var(--edge-strong);
+  box-shadow: inset 2px 0 0 var(--accent);
 }
 
 .agent-head {
@@ -309,11 +314,11 @@
 }
 
 .tag {
-  padding: 2px 9px;
+  padding: 2px 8px;
   background: var(--accent-soft);
-  border-radius: var(--r-m);
-  color: var(--accent-hi);
-  font-size: 11.5px;
+  border-radius: var(--r-s);
+  color: var(--accent);
+  font-size: 12px;
 }
 
 .agent-set {
@@ -378,9 +383,10 @@
 
 .key-actions button,
 .key-form > button:not(.btn) {
+  min-height: 32px;
   padding: 4px 9px;
-  border-radius: var(--r-m);
-  color: var(--accent-hi);
+  border-radius: var(--r-s);
+  color: var(--accent);
   font-size: 13px;
 }
 
@@ -421,7 +427,7 @@
   padding: 9px 12px;
   background: var(--panel-2);
   border: 1px solid var(--edge-strong);
-  border-radius: var(--r-l);
+  border-radius: var(--r-m);
   color: var(--ink);
   font-family: inherit;
   font-size: 13.5px;
@@ -461,12 +467,15 @@
 .tiles > div {
   display: grid;
   padding: 12px;
-  background: var(--panel-2);
-  border-radius: var(--r-l);
+  background: transparent;
+  border: 1px solid var(--edge);
+  border-radius: var(--r-m);
 }
 
 .tiles strong {
+  font-family: var(--mono);
   font-size: 20px;
+  font-weight: 500;
   letter-spacing: -0.01em;
 }
 
@@ -485,8 +494,8 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 0 14px;
-  height: 38px;
+  padding: 0 12px;
+  height: 34px;
   background: var(--panel-2);
   border: 1px solid var(--edge);
   border-radius: var(--r-m);
@@ -506,7 +515,7 @@
 .past-list {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 0;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -516,14 +525,15 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  border-radius: var(--r-l);
-  transition: background-color calc(140ms * var(--tm));
+  border-top: 1px solid var(--edge);
+  border-radius: 0;
+  transition: background-color var(--dur-2) var(--ease-out);
 }
 
 .past:hover,
 .past:focus-within,
 .past[data-asking='true'] {
-  background: var(--panel-2);
+  background: var(--accent-soft);
 }
 
 .past-main {
@@ -589,14 +599,14 @@
   margin: 6px 0 10px;
   padding: 8px 10px;
   border-radius: var(--r-m);
-  background: var(--surface-2);
+  background: var(--panel-2);
   border: 1px solid var(--edge);
   color: var(--ink-2);
   font-size: 13px;
 }
 
 .past-undo .link {
-  color: var(--accent-hi);
+  color: var(--accent);
   text-decoration: underline;
   padding: 0;
 }
@@ -637,7 +647,8 @@
   margin-bottom: 10px;
   padding: 12px 14px;
   background: var(--panel-2);
-  border-radius: var(--r-l);
+  border: 1px solid var(--edge);
+  border-radius: var(--r-m);
 }
 
 .pull > span {
@@ -801,9 +812,11 @@
   width: 20px;
   height: 20px;
   background: var(--panel-2);
-  border-radius: 50%;
+  border: 1px solid var(--edge);
+  border-radius: var(--r-s);
   color: var(--ink-2);
-  font-size: 12px;
+  font-family: var(--mono);
+  font-size: 11px;
 }
 
 .command {
@@ -813,7 +826,7 @@
   padding: 8px 8px 8px 12px;
   background: var(--panel-2);
   border: 1px solid var(--edge);
-  border-radius: var(--r-l);
+  border-radius: var(--r-m);
 }
 
 .command code {
@@ -951,7 +964,7 @@
   padding: 7px 12px;
   background: var(--panel-2);
   border: 1px solid var(--edge-strong);
-  border-radius: var(--r-l);
+  border-radius: var(--r-m);
   color: var(--ink);
   font: inherit;
   resize: vertical;
@@ -1008,7 +1021,8 @@
   margin: 0 0 8px;
   padding: 8px 12px;
   border: 1px solid var(--accent);
-  border-radius: var(--r-l);
+  border-left-width: 2px;
+  border-radius: 0;
   background: var(--accent-soft);
 }
 
@@ -1020,10 +1034,11 @@
 
 .decide {
   margin: 0 0 16px;
-  padding: 14px 16px;
-  border: 1px solid var(--edge-strong);
-  border-radius: var(--r-l);
-  background: var(--panel);
+  padding: 14px 2px;
+  border: 0;
+  border-top: 2px solid var(--edge-strong);
+  border-radius: 0;
+  background: transparent;
 }
 
 .decide header {
@@ -1035,15 +1050,17 @@
 
 .decide h2 {
   margin: 0;
-  font-size: 15px;
+  font-size: 16px;
+  letter-spacing: -0.02em;
 }
 
 .decide h3 {
-  margin: 10px 0 2px;
+  margin: 12px 0 2px;
   color: var(--ink-3);
-  font-size: 12px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  font-weight: 400;
+  letter-spacing: 0;
 }
 
 .decide-winner {
@@ -1056,11 +1073,13 @@
 }
 
 .decide-chip {
-  padding: 1px 10px;
-  border-radius: var(--r-m);
-  background: var(--panel-2);
+  padding: 1px 8px;
+  border: 1px solid var(--edge);
+  border-radius: var(--r-s);
+  background: transparent;
   color: var(--ink-2);
-  font-size: 12px;
+  font-family: var(--mono);
+  font-size: 11px;
 }
 
 .decide-chip[data-tone='good'] {
@@ -1174,9 +1193,10 @@
 
 .press[data-state='failed'] {
   padding: 8px 10px;
-  background: color-mix(in srgb, var(--risk) 12%, transparent);
-  border: 1px solid color-mix(in srgb, var(--risk) 35%, transparent);
-  border-radius: var(--r-l);
+  background: transparent;
+  border: 0;
+  border-left: 2px solid var(--risk);
+  border-radius: 0;
   color: var(--ink);
 }
 
@@ -1192,10 +1212,10 @@
   padding: 10px 12px;
   background: var(--panel-2);
   border: 1px solid var(--edge);
-  border-radius: var(--r-l);
+  border-radius: var(--r-m);
   color: var(--ink-2);
   font-family: var(--mono);
-  font-size: 11.5px;
+  font-size: 12px;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
@@ -1240,8 +1260,9 @@
   display: grid;
   gap: 1px;
   padding: 5px 9px;
-  background: var(--panel-2);
-  border-radius: var(--r-m);
+  background: transparent;
+  border-left: 2px solid var(--edge);
+  border-radius: 0;
 }
 
 .mark-verdict {
@@ -1336,9 +1357,9 @@
   overflow: auto;
   padding: 10px 12px;
   border: 1px solid var(--edge);
-  border-radius: 6px;
+  border-radius: var(--r-m);
   font-family: var(--mono);
-  font-size: 11.5px;
+  font-size: 12px;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
