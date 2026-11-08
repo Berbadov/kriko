@@ -35,6 +35,7 @@ try {
       path.join(__dirname, 'test-appupdate.ts'),
       path.join(__dirname, 'test-updatecore.ts'),
       path.join(__dirname, 'test-price-tracking.ts'),
+      path.join(__dirname, 'test-dust.ts'),
     ],
     options: {
       target: ts.ScriptTarget.ES2022,
@@ -77,6 +78,7 @@ try {
     'tools/test-appupdate.js',
     'tools/test-updatecore.js',
     'tools/test-price-tracking.js',
+    'tools/test-dust.js',
   ]) {
     const result = spawnSync(process.execPath, [path.join(output, file)], {
       cwd: root,

@@ -587,43 +587,20 @@
   transform: translate(17px, -50%);
 }
 
-/* ---- the pixel signature ---- */
+/* ---- the working glyph ----
+   A knot of dust drawn on a canvas (PixelGlyph.tsx). The canvas takes its
+   grain colour from `color`. */
 
 .pixel-glyph {
-  --glyph: var(--accent-hi);
-  display: inline-grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: calc(var(--size) / 14);
+  display: inline-block;
   width: var(--size);
   height: var(--size);
   flex: none;
+  color: var(--accent-hi);
 }
 
 .pixel-glyph.tone-ink {
-  --glyph: var(--ground);
-}
-
-.pixel-glyph i {
-  background: var(--glyph);
-  opacity: 0.32;
-}
-
-.pixel-glyph i[data-warm] {
-  background: var(--warm);
-}
-
-.pixel-glyph.is-active i {
-  animation: twinkle calc(1.5s * var(--tm)) steps(4, end) infinite;
-}
-
-@keyframes twinkle {
-  0%,
-  100% {
-    opacity: 0.12;
-  }
-  50% {
-    opacity: 1;
-  }
+  color: var(--ground);
 }
 
 /* ---- pixel progress ----
