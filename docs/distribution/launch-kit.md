@@ -102,13 +102,13 @@ GitHub exposes aggregate download counts for published release assets.
 Record a baseline outside the repository:
 
 ```sh
-python site/tools/download-counts.py --save /tmp/kriko-downloads-before.json
+python ../kriko-website/tools/download-counts.py --save /tmp/kriko-downloads-before.json
 ```
 
 After distribution, compare the counts:
 
 ```sh
-python site/tools/download-counts.py --previous /tmp/kriko-downloads-before.json --save /tmp/kriko-downloads-after.json
+python ../kriko-website/tools/download-counts.py --previous /tmp/kriko-downloads-before.json --save /tmp/kriko-downloads-after.json
 ```
 
 Counts include repeat downloads, automated requests and app updates.
