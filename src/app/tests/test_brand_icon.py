@@ -5,7 +5,8 @@ Two files drawing the same letter is how they end up drawing different letters.
 committed PNG and the extension's toolbar icon from
 drifting apart.
 
-The mark is the jack turned on its side, white on a navy plate, and it is
+The mark is the jack turned on its side, near-black on a light grey plate
+with a white and a grey split behind it, and it is
 the same mark in three places at once: the browser toolbar the
 reader met the product in, the taskbar tile the installer creates, and the rail
 at the top-left of every screen. Until 0.3.1 the last two were a lemon, left
@@ -61,6 +62,23 @@ def test_the_committed_icon_is_what_the_mark_renders_to():
     )
 
 
+def test_the_phone_app_wears_the_same_mark():
+    """The phone's icon, Android foreground, splash and favicon are renders of
+    the large mark, so changing the mark without re-rendering fails here rather
+    than on a home screen nobody here looks at."""
+    if not render_icon.MOBILE_DIR.is_dir():
+        pytest.skip("the phone app is not in this checkout")
+    units, shapes = render_icon.outlines(
+        render_icon.LARGE_SOURCE.read_text(encoding="utf-8")
+    )
+    for name, blob in render_icon.mobile_images(shapes, units).items():
+        committed = render_icon.MOBILE_DIR / name
+        assert _pixels(committed.read_bytes()) == _pixels(blob), (
+            f"{committed.name} is not what the mark renders to; "
+            "run `python packaging/render_icon.py`"
+        )
+
+
 def test_the_app_icon_is_actually_antialiased():
     """The regression this pair of files exists to prevent.
 
@@ -84,7 +102,7 @@ def test_the_toolbar_shows_the_desktop_app_s_own_icon(size: int):
     """All four sizes, byte for byte, are the desktop icon's own images.
 
     Since 1.0.1 there is one mark: the toolbar, the exe, the taskbar and the
-    installer all show the jack on the navy plate from `icon.ico`. A
+    installer all show the jack on its grey plate from `icon.ico`. A
     toolbar icon that is not those bytes is a second drawing of the letter,
     which is how the extension kept the old mark after the app changed.
     Chrome picks a size by display density, so every size is checked.
