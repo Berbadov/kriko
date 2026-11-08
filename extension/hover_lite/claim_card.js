@@ -326,6 +326,9 @@
     );
 
     const sources = readSources(claim);
+    const sourceCount = typeof claim.source_count === "number" && claim.source_count > 0
+      ? claim.source_count
+      : sources.length;
     const evidence = evidenceOf(claim);
     // The first quote, ahead of opening the card: the claim is the headline
     // and its evidence is the line under it, so a collapsed card already says
@@ -343,7 +346,8 @@
     article.innerHTML = `
       <div class="lite-rc-head">
         <div class="lite-rc-domain" aria-hidden="true">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="miter"><path d="M12 3 1.5 21h21z"/><line x1="12" y1="10" x2="12" y2="14"/><line x1="12" y1="17.5" x2="12" y2="17.6"/></svg>
+          <span class="lite-rc-sev"></span>
+          ${sourceCount ? `<span class="lite-rc-count">${sourceCount}</span>` : ""}
         </div>
         <div class="lite-rc-titlebox">
           <div class="lite-rc-title">${renderRichText(claim.title)}</div>

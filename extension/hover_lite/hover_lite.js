@@ -2950,21 +2950,25 @@
   // be easy to dismiss, quiet in what it says, and never in the way of the pay
   // button (bottom left, away from where checkouts put theirs).
   const TOAST_STYLE = `<style>
-      .kriko-guard-card,.kriko-due-card{font:13px/1.45 system-ui,sans-serif;max-width:340px;padding:12px 14px;border-radius:10px;
-        background:#111522;color:#eef1f9;border:1px solid rgba(255,255,255,.18);box-shadow:0 12px 32px rgba(0,0,0,.45)}
-      .kriko-guard-card[data-verdict="stop"]{border-color:#ff6b7a}
-      .kriko-guard-card[data-verdict="check"]{border-color:#f5b84b}
-      .kriko-due-card{border-color:#3d6bff}
+      .kriko-guard-card,.kriko-due-card{font:13px/1.5 'Segoe UI',system-ui,sans-serif;max-width:340px;padding:10px 12px;border-radius:6px;
+        background:#1b2129;color:#e9ecef;border:1px solid rgba(255,255,255,.18);box-shadow:none}
+      .kriko-guard-card[data-verdict="stop"]{border-left:3px solid #6e96c8}
+      .kriko-guard-card[data-verdict="check"]{border-left:3px solid #87929d}
+      .kriko-due-card{border-left:3px solid #6e96c8}
       .kriko-guard-card ul{margin:6px 0 8px;padding-left:18px}
       .kriko-guard-card li{margin:2px 0}
       .kriko-due-card p{margin:0 0 6px}
-      .lite-buy-due{background:none;padding:0;margin:0;box-shadow:none}
+      .lite-buy-due{background:none;padding:0;margin:0;box-shadow:none;border:0}
       .kriko-guard-actions,.lite-buy-actions,.lite-buy-form{display:flex;flex-wrap:wrap;gap:6px 8px}
-      .kriko-guard-actions button,.lite-buy-btn{font:600 12px system-ui,sans-serif;padding:4px 10px;border-radius:6px;cursor:pointer;
-        border:1px solid rgba(255,255,255,.25);background:transparent;color:inherit}
-      .lite-buy-btn[data-primary="1"]{background:#3d6bff;border-color:#3d6bff;color:#fff}
-      .lite-buy-form input{flex:1;min-width:140px;padding:4px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.25);
-        background:#0b0e17;color:inherit;font:13px system-ui,sans-serif}
+      .kriko-guard-actions button,.lite-buy-btn{font:500 12px 'Segoe UI',system-ui,sans-serif;padding:4px 9px;border-radius:2px;cursor:pointer;
+        border:1px solid rgba(255,255,255,.24);background:transparent;color:inherit}
+      .lite-buy-btn[data-primary="1"]{background:#2a4e78;border-color:#2a4e78;color:#fff}
+      .lite-buy-form input{flex:1;min-width:140px;padding:4px 8px;border-radius:2px;border:1px solid rgba(255,255,255,.24);
+        background:#101418;color:inherit;font:13px ui-monospace,Consolas,monospace}
+      .lite-buy-note{margin:4px 0;color:#a6b0ba}
+      .lite-buy-watching{font-size:12px;color:#a6b0ba}
+      .lite-buy-title{font-size:14px;font-weight:600;margin:0 0 6px;color:#e9ecef}
+      .lite-buy-due p{margin:0 0 6px;color:#e9ecef}
       </style>`;
   // A card on the page that is not the panel, in a shadow root of its own so the
   // page's styles cannot reach it. One of each kind at a time.
@@ -3034,7 +3038,7 @@
       <div class="lite-alerts" data-open="1">
         <button type="button" class="lite-alerts-head">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="miter" style="flex:0 0 auto;color:var(--high-ink);"><path d="M12 3 1.5 21h21z"/><line x1="12" y1="10" x2="12" y2="14"/><line x1="12" y1="17.5" x2="12" y2="17.6"/></svg>
-          <span class="lite-alerts-label">CRITICAL ALERTS</span>
+          <span class="lite-alerts-label">Critical alerts</span>
           <span class="lite-alerts-toggle">–</span>
         </button>
         <div class="lite-alerts-bodywrap">

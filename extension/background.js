@@ -336,8 +336,8 @@ async function notify(tab, text) {
         box.textContent = message;
         box.style.cssText =
           "position:fixed;z-index:2147483647;right:16px;bottom:16px;max-width:320px;" +
-          "padding:12px 14px;border-radius:8px;font:13px/1.4 system-ui,sans-serif;" +
-          "background:#15171c;color:#e7e9ed;border:1px solid #2c313a;box-shadow:0 8px 24px rgba(0,0,0,.4)";
+          "padding:10px 12px;border-radius:4px;font:13px/1.45 'Segoe UI',system-ui,sans-serif;" +
+          "background:#1b2129;color:#e9ecef;border:1px solid rgba(255,255,255,.18)";
         document.documentElement.appendChild(box);
         setTimeout(() => box.remove(), 6000);
       },
