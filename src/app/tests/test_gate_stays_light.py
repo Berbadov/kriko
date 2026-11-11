@@ -72,6 +72,40 @@ def test_gate_jobs_auto_still_hands_pytest_every_core(tmp_path):
     assert "-m pytest -n auto" in calls, calls
 
 
+def _run_gate_with_failing_pytest(tmp_path: Path, stage: str) -> subprocess.CompletedProcess:
+    """Run the gate with an interpreter whose pytest exits 1.
+
+    The stages run as `"gate_$n" || rc=$?`, a context where bash suspends
+    errexit, so a stage function that relies on `set -e` would swallow the
+    failure and the gate would print a green summary over a red pytest. These
+    tests are the pin against that: a red pytest must be a red gate.
+    """
+    log = tmp_path / "python-calls.log"
+    python = _stand_in(
+        tmp_path / "fakepy",
+        f'echo "$@" >> "{log.as_posix()}"\n'
+        'if [ "$1" = "-m" ] && [ "$2" = "pytest" ]; then exit 1; fi\n'
+        "exit 0",
+    )
+    env = {k: v for k, v in os.environ.items()
+           if not k.startswith(("GATE_", "KRIKO_GATE", "CARGO_BUILD_JOBS", "PYTHON"))}
+    env["PYTHON"] = python.as_posix()
+    return subprocess.run([_bash(), "tools/gate.sh", stage], cwd=ROOT, env=env,
+                          capture_output=True, text=True, timeout=300)
+
+
+def test_a_failing_pytest_fails_the_py_stage(tmp_path):
+    result = _run_gate_with_failing_pytest(tmp_path, "py")
+    assert result.returncode != 0, result.stdout + result.stderr
+    assert "FAILED in stage: py" in result.stderr, result.stderr
+
+
+def test_a_failing_pytest_fails_the_default_all_run_at_the_first_stage(tmp_path):
+    result = _run_gate_with_failing_pytest(tmp_path, "all")
+    assert result.returncode != 0, result.stdout + result.stderr
+    assert "FAILED in stage: py" in result.stderr, result.stderr
+
+
 def test_the_cargo_stage_compiles_on_two_jobs_by_default(tmp_path):
     cargo_log = tmp_path / "cargo-calls.log"
     _stand_in(tmp_path / "bin" / "cargo",
