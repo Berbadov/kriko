@@ -952,6 +952,36 @@ CREATE TABLE IF NOT EXISTS question_requests (
   input_json TEXT NOT NULL DEFAULT '{}',
   record_id TEXT NOT NULL DEFAULT '');
 
+-- A cost estimate a reader built from installed catalogs: which equipment, how
+-- many, at what price, and the forecast assumptions (horizon, upkeep, discount
+-- rate) an accountant or capital manager would change before signing. Kept in
+-- app.sqlite because it is the reader's own decision record, not knowledge: no
+-- pack reads it and uninstalling a pack leaves it alone. The lines name
+-- subjects, but a line whose subject later disappears still exports — the
+-- label is stored on the line for exactly that reason.
+CREATE TABLE IF NOT EXISTS estimates (
+  estimate_id     TEXT PRIMARY KEY,
+  name            TEXT NOT NULL DEFAULT '',
+  currency        TEXT NOT NULL DEFAULT 'USD',
+  years           INTEGER NOT NULL DEFAULT 5,
+  maintenance_pct REAL NOT NULL DEFAULT 5.0,
+  discount_pct    REAL NOT NULL DEFAULT 8.0,
+  created_at      TEXT NOT NULL DEFAULT '',
+  updated_at      TEXT NOT NULL DEFAULT '');
+CREATE INDEX IF NOT EXISTS estimates_updated ON estimates (updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS estimate_lines (
+  line_id     TEXT PRIMARY KEY,
+  estimate_id TEXT NOT NULL,
+  subject_id  TEXT NOT NULL DEFAULT '',
+  pack_id     TEXT NOT NULL DEFAULT '',
+  label       TEXT NOT NULL DEFAULT '',
+  quantity    INTEGER NOT NULL DEFAULT 1,
+  unit_price  REAL,
+  note        TEXT NOT NULL DEFAULT '',
+  position    INTEGER NOT NULL DEFAULT 0);
+CREATE INDEX IF NOT EXISTS estimate_lines_estimate ON estimate_lines (estimate_id, position);
+
 """
 
 #: The most operations one installation keeps. A feed, not an archive: the
@@ -3614,5 +3644,130 @@ def name_chat_thread(conn: sqlite3.Connection, thread_id: str, title: str, *, fa
     cur = conn.execute(
         "UPDATE chat_threads SET title = ? WHERE thread_id = ? AND title = ?",
         (title, thread_id, " ".join(str(fallback or "").split())[:CHAT_TITLE_CHARS]))
+    conn.commit()
+    return cur.rowcount > 0
+
+
+# ── estimates: the reader's own cost forecasts, built from installed catalogs ──
+
+#: Bounds for one estimate. An estimate is a decision aid, not a database: the
+#: caps are what keeps a pasted payload from filling the reader's app.sqlite.
+ESTIMATE_MAX_LINES = 200
+ESTIMATE_NAME_CHARS = 200
+ESTIMATE_NOTE_CHARS = 2000
+
+
+def _estimate_row(row: sqlite3.Row) -> dict:
+    return {
+        "estimate_id": row["estimate_id"],
+        "name": row["name"],
+        "currency": row["currency"],
+        "years": int(row["years"]),
+        "maintenance_pct": float(row["maintenance_pct"]),
+        "discount_pct": float(row["discount_pct"]),
+        "created_at": row["created_at"],
+        "updated_at": row["updated_at"],
+    }
+
+
+def _line_row(row: sqlite3.Row) -> dict:
+    return {
+        "line_id": row["line_id"],
+        "subject_id": row["subject_id"],
+        "pack_id": row["pack_id"],
+        "label": row["label"],
+        "quantity": int(row["quantity"]),
+        "unit_price": row["unit_price"],
+        "note": row["note"],
+    }
+
+
+def list_estimates(conn: sqlite3.Connection, limit: int = 100) -> list[dict]:
+    """Every saved estimate, most recently touched first, with its line count."""
+    rows = conn.execute(
+        "SELECT e.*, COUNT(l.line_id) AS lines FROM estimates e"
+        " LEFT JOIN estimate_lines l ON l.estimate_id = e.estimate_id"
+        " GROUP BY e.estimate_id ORDER BY e.updated_at DESC LIMIT ?",
+        (max(1, min(int(limit), 500)),),
+    ).fetchall()
+    return [{**_estimate_row(row), "lines": int(row["lines"])} for row in rows]
+
+
+def get_estimate(conn: sqlite3.Connection, estimate_id: str) -> dict | None:
+    row = conn.execute(
+        "SELECT * FROM estimates WHERE estimate_id = ?", (estimate_id,)).fetchone()
+    if row is None:
+        return None
+    lines = conn.execute(
+        "SELECT * FROM estimate_lines WHERE estimate_id = ? ORDER BY position, line_id",
+        (estimate_id,),
+    ).fetchall()
+    return {**_estimate_row(row), "lines": [_line_row(one) for one in lines]}
+
+
+def save_estimate(conn: sqlite3.Connection, payload: dict) -> dict:
+    """Create or replace one estimate and its whole line set.
+
+    Lines are replaced, not merged: the window sends the board as it stands, and
+    a merge would keep rows the reader deleted. `estimate_id` in the payload
+    updates that row; without one a new id is minted.
+    """
+    estimate_id = str(payload.get("estimate_id") or "").strip()
+    name = " ".join(str(payload.get("name") or "").split())[:ESTIMATE_NAME_CHARS]
+    currency = str(payload.get("currency") or "USD").strip().upper()[:8] or "USD"
+    years = max(1, min(int(payload.get("years") or 5), 30))
+    maintenance_pct = max(0.0, min(float(payload.get("maintenance_pct") or 0.0), 100.0))
+    discount_pct = max(0.0, min(float(payload.get("discount_pct") or 0.0), 100.0))
+    lines = list(payload.get("lines") or [])[:ESTIMATE_MAX_LINES]
+
+    now = _now()
+    if estimate_id:
+        existing = conn.execute(
+            "SELECT created_at FROM estimates WHERE estimate_id = ?",
+            (estimate_id,)).fetchone()
+        if existing is None:
+            raise KeyError(f"no estimate {estimate_id!r}")
+        conn.execute(
+            "UPDATE estimates SET name = ?, currency = ?, years = ?,"
+            " maintenance_pct = ?, discount_pct = ?, updated_at = ?"
+            " WHERE estimate_id = ?",
+            (name, currency, years, maintenance_pct, discount_pct, now, estimate_id))
+        created_at = existing["created_at"]
+        conn.execute("DELETE FROM estimate_lines WHERE estimate_id = ?", (estimate_id,))
+    else:
+        estimate_id = secrets.token_hex(8)
+        created_at = now
+        conn.execute(
+            "INSERT INTO estimates (estimate_id, name, currency, years,"
+            " maintenance_pct, discount_pct, created_at, updated_at)"
+            " VALUES (?,?,?,?,?,?,?,?)",
+            (estimate_id, name, currency, years, maintenance_pct, discount_pct,
+             created_at, now))
+
+    for position, line in enumerate(lines):
+        conn.execute(
+            "INSERT INTO estimate_lines (line_id, estimate_id, subject_id, pack_id,"
+            " label, quantity, unit_price, note, position) VALUES (?,?,?,?,?,?,?,?,?)",
+            (
+                secrets.token_hex(8),
+                estimate_id,
+                str(line.get("subject_id") or "")[:200],
+                str(line.get("pack_id") or "")[:100],
+                " ".join(str(line.get("label") or "").split())[:300],
+                max(1, min(int(line.get("quantity") or 1), 1_000_000)),
+                (None if line.get("unit_price") in (None, "")
+                 else max(0.0, float(line["unit_price"]))),
+                " ".join(str(line.get("note") or "").split())[:ESTIMATE_NOTE_CHARS],
+                position,
+            ))
+    conn.commit()
+    found = get_estimate(conn, estimate_id)
+    assert found is not None  # written above, in the same transaction
+    return found
+
+
+def delete_estimate(conn: sqlite3.Connection, estimate_id: str) -> bool:
+    cur = conn.execute("DELETE FROM estimates WHERE estimate_id = ?", (estimate_id,))
+    conn.execute("DELETE FROM estimate_lines WHERE estimate_id = ?", (estimate_id,))
     conn.commit()
     return cur.rowcount > 0
