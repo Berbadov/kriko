@@ -3,6 +3,13 @@
 Reader-visible changes for each release. Newest first. Published versions are
 immutable; a correction is a newer version.
 
+### 0.3.12
+
+- **The desktop CLI is fast and consistent.** `kriko --version` went from ~0.6 s to ~0.24 s because the command parser no longer imports the benchmark stack on every invocation, and the read commands — `prefs`, `costs`, `sites list`, `verify --list`, `drafts list/show`, `operations` — read `app.sqlite` directly instead of attaching to an engine, so they answer in ~250 ms whether or not one is running. Every command takes `--json`; the human-readable output is unchanged.
+- **A new Estimate screen for equipment purchases.** Lines come from the installed catalogs, each with a quantity and a unit price (a line without a price is counted, never read as free). Per line: known issues from the catalog, and a **Research** button that runs the engine's full research job. The screen totals the subtotal, the research spend so far and the estimated cost of the next run, and forecasts capital, upkeep, straight-line depreciation, cash, discounted cash and NPV at a chosen discount rate over 1–30 years. Estimates save, load and delete by name, and export as a real Excel workbook or CSV. New `/api/estimates` endpoints.
+- **A stalled agent session no longer eats a whole chat turn (#337).** When a persistent agent session times out with nothing delivered, the harness is marked unhealthy for ten minutes and the turn's later calls run in a fresh process instead of paying the same timeout again — the failure mode that ended a 90-second turn before its answer was written.
+- The gate (`tools/gate.sh`) runs light by default: stages one after another, pytest on two workers (`GATE_JOBS=auto` restores every core, `GATE_CONCURRENT=1` restores the parallel stages), cargo capped at two jobs. A failing stage now fails the serial run — previously a red pytest could still print "all gates passed" in the serial path.
+
 ### 0.3.7
 
 - **A Quick Look finds the faults across the whole product, not three of them.** A car you checked had more known problems than the three it reported, and they were all one gearbox. Before it searches, the Kriko Agent now takes one short look at the product and works out how complex it is and which parts need their own evidence: the engine, the gearbox, the cooling, the electrics and so on. A watch keeps the usual budget; a car gets up to twelve retrievals and room for up to ten findings, most serious first. Each finding is tagged with its part, and the run log says which parts came back with a sourced finding. If that first look cannot be made, the search runs as it did before.

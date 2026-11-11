@@ -1,6 +1,6 @@
 # Kriko
 
-[![version](https://img.shields.io/badge/version-0.3.11-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
+[![version](https://img.shields.io/badge/version-0.3.12-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
 [![license](https://img.shields.io/badge/license-MIT-1F4FFF?style=flat-square&labelColor=05070F)](LICENSE)
 [![stars](https://img.shields.io/github/stars/Berbadov/kriko?style=flat-square&labelColor=05070F&color=1F4FFF)](https://github.com/Berbadov/kriko/stargazers)
 [![platforms](https://img.shields.io/badge/Windows%20%C2%B7%20macOS%20%C2%B7%20Chrome%20%C2%B7%20Android-1F4FFF?style=flat-square&labelColor=05070F)](#install)
@@ -13,7 +13,7 @@ extension — and keeps the source beside every finding.
 Installed catalog lookups work offline. Research uses the agent or model you
 choose, and a paid provider bills your own account.
 
-**[Download the Windows installer](https://github.com/Berbadov/kriko/releases/latest/download/kriko-0.3.11-x86_64-setup.exe)** ·
+**[Download the Windows installer](https://github.com/Berbadov/kriko/releases/latest/download/kriko-0.3.12-x86_64-setup.exe)** ·
 [Browser extension](https://chromewebstore.google.com/detail/kriko/bdifnaggafjokndlpjgmlfappcoehdjb) ·
 [Website](https://kriko.cc) ·
 [Known problems by product](https://kriko.cc/problems/) (no app needed)
@@ -24,11 +24,17 @@ choose, and a paid provider bills your own account.
   <sub>The real panel, from a live run: every finding names the page it came from. <a href="https://kriko.cc/#film">Watch the 28-second film</a> · <a href="https://kriko.cc/guide/">How to use it, step by step</a></sub>
 </p>
 
-0.3.7 makes the Kriko Agent size its search to the product before it goes out,
-so a car with faults in six systems is no longer reported from one. The
-companion extension is 0.5.0, a quieter panel with Compare inside it, and mobile
-is 0.10.0, with a floating scanner you can drag, open and read. See the
-[changelog](CHANGELOG.md) for the release scope.
+0.3.12 makes the desktop CLI answer in about a quarter of a second — `--version`
+no longer loads the provider stack, and the read commands (`prefs`, `costs`,
+`sites list`, `drafts list`, `operations`, `verify --list`) read the app's own
+state directly, so they answer whether or not an engine is running — and adds
+an **Estimate** screen for equipment purchases: lines from your installed
+catalogs with quantity and unit price, known issues per line, a research
+button, the cost of the next run, a depreciation and NPV forecast over 1–30
+years, and Excel or CSV export. A chat turn whose agent session stalls no
+longer spends its whole 90-second budget on the stalled session (#337). The
+companion extension stays at 0.5.0 and mobile at 0.15.x, in their own
+repositories. See the [changelog](CHANGELOG.md) for the release scope.
 
 ## See it
 
@@ -65,8 +71,8 @@ is 0.10.0, with a floating scanner you can drag, open and read. See the
 
 | Artifact | Use |
 |---|---|
-| `kriko-0.3.11-x86_64-setup.exe` | Per-user Windows installer; no administrator rights required. |
-| `kriko-0.3.11-win64-portable.zip` | Extract the whole archive and open `kriko.exe`. |
+| `kriko-0.3.12-x86_64-setup.exe` | Per-user Windows installer; no administrator rights required. |
+| `kriko-0.3.12-win64-portable.zip` | Extract the whole archive and open `kriko.exe`. |
 
 1. Open Kriko, choose an agent in **More → Agents** and press **Check connection**.
 2. Open **Catalogs → Find release catalogs** and install one, or import a

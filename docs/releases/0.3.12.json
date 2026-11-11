@@ -1,0 +1,82 @@
+{
+  "version": "0.3.12",
+  "platform": "windows-x86_64",
+  "source_fingerprint": "59fbd2e5dc0c1710aad52ed8b49cfefb4ac08f42f015e52205c47f1f1e62f7d5",
+  "recorded_at": "2026-11-11",
+  "note": "Cut from main after merging #339, #340 and #341. The full gate ran in a Linux sandbox: py (5171 passed, 0 failed), wheel, node and ui green; tauri not compilable there (no system glib, no root) and verified only by the py stage's rustc parse test. No packaged Windows/macOS build was walked here, and desktop.yml could not be dispatched from this environment (token lacks actions:write), so the installer, portable, engine ZIP and macOS dmg are not attached; the catalogs, packs.json, packs bundle, extension ZIP and SHA256SUMS.txt were built from this tree and are attached. release_readiness.py is expected to refuse complete stable-readiness certification.",
+  "journeys": {
+    "fresh_install": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "No Windows installer was built in this environment; desktop.yml could not be dispatched (403, no actions:write)."
+    },
+    "portable_start": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "No portable build exists here; the gate's wheel stage did prove the shipped wheel installs clean and runs  in an empty environment."
+    },
+    "setup": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Not walked on a packaged window."
+    },
+    "sourced_answer": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "No live research run on a packaged engine; the harness change (#341) is covered by src/app/tests/test_a_cut_off_resident_turn_keeps_its_answer.py, which fails without the fix and passes with it."
+    },
+    "follow_up": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Not walked on a packaged engine."
+    },
+    "compare": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Not walked on a packaged engine."
+    },
+    "stop": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Not walked."
+    },
+    "reconnect": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Not walked."
+    },
+    "upgrade_retains_data": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "No 0.3.11-to-0.3.12 upgrade was performed."
+    }
+  },
+  "providers": {
+    "mistral-vibe": {
+      "status": "not_observed",
+      "model": "configured by the reader",
+      "version": "0.3.12",
+      "report": "src/app/tests/test_a_cut_off_resident_turn_keeps_its_answer.py: a resident timeout with no text marks the harness unhealthy and the next auto-mode call runs a fresh process (the #337 fix)"
+    },
+    "claude-code": {
+      "status": "not_observed",
+      "model": "configured by the reader",
+      "version": "0.3.12",
+      "report": "src/app/tests/test_a_cut_off_resident_turn_keeps_its_answer.py: a cut-off resident turn still keeps its streamed answer"
+    },
+    "codex": {
+      "status": "not_observed",
+      "model": "configured by the reader",
+      "version": "0.3.12",
+      "report": "src/app/tests/test_codex_transport.py: the app-server transport's timeout and quarantine behaviour is unchanged for codex"
+    }
+  },
+  "observed_instead": [
+    "tools/gate.sh on main at the release commit, GATE_JOBS=auto: version agreement strict at 0.3.12 across pyproject.toml, kriko-ui/src-tauri/Cargo.toml, Cargo.lock, kriko-ui/package.json and the installed distribution; ruff clean; mypy clean (src/kriko, src/app, packs, server); pytest 5171 passed, 36 skipped, 0 failed; wheel smoke green; node suite green; ui build+lint+behavior tests green. tauri stage failed only at glib-sys linking (no system libglib2.0-dev, no root in this sandbox).",
+    "desktop.yml could not be dispatched from this environment (HTTP 403, token lacks actions:write), so no Windows/macOS artifacts were produced here; the release notes say so.",
+    "Version agreement re-checked after the bump with tools/bump.py --show --strict: all five places 0.3.12.",
+    "Catalogs: 32 .kpack builds, packs.json pinned to https://github.com/Berbadov/kriko/releases/download/v0.3.12, packs-v0.3.12.zip (33 entries, 2,116,347 bytes, sha256 08cf5ad7f00e42ee04137332b43ac4b761fdc70c8a7e0be79730efa137a95e0d).",
+    "The extension ZIP is the extension/ folder without tests/, built from this tree; manifest version 0.5.0.",
+    "SHA256SUMS.txt covers all 32 .kpack files, packs.json, packs-v0.3.12.zip and kriko-extension-0.5.0.zip."
+  ]
+}
