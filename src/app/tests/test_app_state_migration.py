@@ -246,4 +246,10 @@ BACK_THEN = {
     # four that carry a default are the ones a later inference would want to
     # write in place on a row that already exists.
     "site_inference.host", "site_inference.shape",
+    # 2026-11-11, the Estimate screen's saved cost forecasts, and the excuse
+    # holds: `estimate_lines` arrived whole, so a reader whose app.sqlite
+    # predates it gets every column from `CREATE TABLE IF NOT EXISTS` and no
+    # `ALTER` is ever asked for. Every other column of both tables carries a
+    # default.
+    "estimate_lines.estimate_id",
 }

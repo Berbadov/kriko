@@ -442,8 +442,15 @@ def test_no_start_without_a_running_engine_fails_cleanly_not_a_traceback(
     store_path, capsys
 ):
     """Rule: a client that cannot reach an engine gets a one-line message and
-    a non-zero exit, never a Python traceback on the reader's screen."""
-    code = main(["--store", store_path, "costs", "--no-start"])
+    a non-zero exit, never a Python traceback on the reader's screen.
+
+    This holds for the commands that still need an engine because they change
+    state and enqueue a job — `verify` without `--list` is one. The read-only
+    commands no longer need an engine at all (they read `app.sqlite` beside
+    `--store` directly), so for them `--no-start` answers instead of failing;
+    that half is pinned by the tests in test_the_cli_is_fast_and_consistent.
+    """
+    code = main(["--store", store_path, "verify", "--no-start"])
     captured = capsys.readouterr()
     assert code == 1
     assert "Traceback" not in captured.err
