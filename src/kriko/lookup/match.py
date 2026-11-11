@@ -22,8 +22,6 @@ import functools
 import json
 from dataclasses import dataclass
 
-import yaml
-
 from kriko.lookup.query import Resolution
 
 
@@ -60,6 +58,11 @@ def _match_rules(raw: str) -> dict:
 
 @functools.lru_cache(maxsize=4096)
 def _parse_match_json(raw: str) -> dict:
+    # Imported here rather than at module scope: `yaml` is half the import cost
+    # of this module, and a reader who only ever runs `kriko --version` or
+    # `kriko packs` should not pay it. The parse itself is cached either way.
+    import yaml
+
     try:
         parsed = yaml.safe_load(raw)
     except yaml.YAMLError:
