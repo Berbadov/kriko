@@ -10,6 +10,25 @@
 The reader's whole loop with no server, no account and no network: build a pack
 or fetch someone else's, install it, ask it things, remove it when it stops
 earning its place. Everything lives in ~/.kriko unless --store says otherwise.
+
+Two rules keep every invocation fast, the way the harness binary is fast — one
+short process, no server behind it:
+
+1. Nothing heavy is imported until the command that needs it has been named.
+   `--version`, `--help` and a parse error cost the interpreter and argparse
+   and nothing else; `app.agentbench`'s multi-second import tree is only built
+   when the command is actually `agent-bench` (see `_peek_command`).
+2. Read-only commands that used to attach to an engine or start one now read
+   the files directly (`app.clidirect`): `prefs`, `costs`, `sites list`,
+   `verify --list`, `drafts list/show` and `operations` answer from
+   `app.sqlite` beside `--store` in this process, so the answer never depends
+   on whether some other engine happened to be running. Commands that change
+   state (writes, jobs) still go through an engine over HTTP.
+
+Every command also takes `--json`: the same answer as one JSON document on
+stdout, so a script never has to scrape the human text. The research door
+(`agenda`, `brief`, `submit`, `loopscore`) prints JSON always, as it always
+has.
 """
 
 import argparse
@@ -17,11 +36,6 @@ import json
 import sqlite3
 import sys
 from pathlib import Path
-
-from kriko.lookup import lookup
-from kriko.lookup.query import Query
-from kriko.store import packstore
-from kriko.store.db import DEFAULT_STORE, connect
 
 
 def _kv(pairs: list[str]) -> dict:
@@ -41,41 +55,78 @@ def _kv(pairs: list[str]) -> dict:
     return out
 
 
-def cmd_packs(args, store) -> int:
-    rows = packstore.installed_packs(store)
-    if not rows:
-        print("no packs installed — try: kriko install <file.kpack>")
-        return 0
-    print(f"{'PACK':<28} {'VERSION':<10} {'STATE':<9} {'TRUST':>6}  NAME")
-    for row in rows:
-        state = "enabled" if row["enabled"] else "disabled"
-        print(f"{row['pack_id']:<28} {row['version']:<10} {state:<9} "
-              f"{row['trust_weight']:>6.2f}  {row['name']}")
+def _emit(args, payload, render) -> int:
+    """The one output door. `--json` prints the payload as JSON; without it
+    `render()` draws the human text it always drew. Every command funnels
+    through here, so machine output is stable and text output is unchanged."""
+    if getattr(args, "json", False):
+        print(json.dumps(payload, indent=2, ensure_ascii=False, default=str))
+    else:
+        render()
     return 0
 
 
+def _add_json(p: argparse.ArgumentParser) -> None:
+    # SUPPRESS so a subcommand that does not repeat the flag keeps the
+    # top-level `kriko --json <command>` answer.
+    p.add_argument("--json", action="store_true", default=argparse.SUPPRESS,
+                   help="print the answer as one JSON document")
+
+
+def cmd_packs(args, store) -> int:
+    from kriko.store import packstore
+
+    rows = packstore.installed_packs(store)
+    payload = {"packs": [{**dict(row), "enabled": bool(row["enabled"])}
+                         for row in rows]}
+
+    def render() -> None:
+        if not rows:
+            print("no packs installed — try: kriko install <file.kpack>")
+            return
+        print(f"{'PACK':<28} {'VERSION':<10} {'STATE':<9} {'TRUST':>6}  NAME")
+        for row in rows:
+            state = "enabled" if row["enabled"] else "disabled"
+            print(f"{row['pack_id']:<28} {row['version']:<10} {state:<9} "
+                  f"{row['trust_weight']:>6.2f}  {row['name']}")
+
+    return _emit(args, payload, render)
+
+
 def cmd_install(args, store) -> int:
+    from kriko.store import packstore
+
     pack_id = packstore.install(store, args.path)
     counts = {
         table: store.execute(
             f"SELECT COUNT(*) FROM {table} WHERE pack_id = ?", (pack_id,)).fetchone()[0]
         for table in ("subjects", "claims", "evidence")
     }
-    print(f"installed {pack_id}: "
-          + ", ".join(f"{v} {k}" for k, v in counts.items()))
-    return 0
+    payload = {"pack_id": pack_id, "counts": counts}
+
+    def render() -> None:
+        print(f"installed {pack_id}: "
+              + ", ".join(f"{v} {k}" for k, v in counts.items()))
+
+    return _emit(args, payload, render)
 
 
 def cmd_uninstall(args, store) -> int:
+    from kriko.store import packstore
+
     packstore.uninstall(store, args.pack_id)
-    print(f"uninstalled {args.pack_id} — every other pack is untouched")
-    return 0
+    payload = {"uninstalled": args.pack_id}
+    return _emit(args, payload,
+                 lambda: print(f"uninstalled {args.pack_id} — every other pack is untouched"))
 
 
 def cmd_enable(args, store) -> int:
+    from kriko.store import packstore
+
     packstore.set_enabled(store, args.pack_id, not args.disable)
-    print(f"{args.pack_id}: {'disabled' if args.disable else 'enabled'}")
-    return 0
+    payload = {"pack_id": args.pack_id, "enabled": not args.disable}
+    return _emit(args, payload,
+                 lambda: print(f"{args.pack_id}: {'disabled' if args.disable else 'enabled'}"))
 
 
 def cmd_build(args, store) -> int:
@@ -125,11 +176,16 @@ def cmd_build(args, store) -> int:
     finally:
         conn.close()
 
-    print(f"built {out}  digest {digest_of(out)[:16]}")
-    print("  " + ", ".join(f"{v} {k}" for k, v in counts.items()))
-    if stats:
-        for key, value in sorted(stats.items()):
-            print(f"  {key:34} {value}")
+    digest = digest_of(out)
+    payload = {"out": str(out), "digest": digest, "counts": counts,
+               "stats": stats or {}}
+
+    def render() -> None:
+        print(f"built {out}  digest {digest[:16]}")
+        print("  " + ", ".join(f"{v} {k}" for k, v in counts.items()))
+        if stats:
+            for key, value in sorted(stats.items()):
+                print(f"  {key:34} {value}")
 
     if not counts["subjects"] and not counts["claims"]:
         print(
@@ -143,10 +199,39 @@ def cmd_build(args, store) -> int:
             out.unlink(missing_ok=True)
             return 1
 
-    return 0
+    return _emit(args, payload, render)
+
+
+def _claim_json(claim) -> dict:
+    return {
+        "claim_id": claim.claim_id,
+        "pack_id": claim.pack_id,
+        "subject_id": claim.subject_id,
+        "subject_label": claim.subject_label,
+        "kind": claim.kind,
+        "domain": claim.domain,
+        "severity": claim.severity,
+        "detection": claim.detection,
+        "title": claim.title,
+        "advice": claim.advice,
+        "relevance": claim.relevance,
+        "trust": claim.trust,
+        "disputed": claim.disputed,
+        "via": claim.via,
+        "why": list(claim.why),
+        "sources": [
+            {"url": s.url, "tier": s.tier, "stance": s.stance}
+            for s in claim.sources
+        ],
+    }
 
 
 def cmd_lookup(args, store) -> int:
+    from dataclasses import asdict
+
+    from kriko.lookup import lookup
+    from kriko.lookup.query import Query
+
     result = lookup(store, Query(
         kind=args.kind,
         identity=_kv(args.identity),
@@ -156,33 +241,41 @@ def cmd_lookup(args, store) -> int:
     ))
 
     res = result.resolution
-    print(f"match: {res.method}  ({len(res.subject_ids)} subject(s))  "
-          f"coverage: {result.coverage}")
-    if res.notes:
-        print(f"  {res.notes}")
-    for flag in res.flags:
-        print(f"  flag: {flag}")
+    payload = {
+        "match": asdict(res),
+        "coverage": result.coverage,
+        "claims": [_claim_json(c) for c in result.claims],
+    }
 
-    if not result.claims:
-        print("\nno claims for this one.")
-        return 0
+    def render() -> None:
+        print(f"match: {res.method}  ({len(res.subject_ids)} subject(s))  "
+              f"coverage: {result.coverage}")
+        if res.notes:
+            print(f"  {res.notes}")
+        for flag in res.flags:
+            print(f"  flag: {flag}")
 
-    print()
-    for n, claim in enumerate(result.claims, 1):
-        mark = " [disputed]" if claim.disputed else ""
-        print(f"{n}. [{claim.severity}] {claim.title}{mark}")
-        print(f"   {claim.subject_label}  ·  {claim.domain}  ·  "
-              f"relevance {claim.relevance:.3f}")
-        if claim.advice and args.verbose:
-            print(f"   check: {claim.advice}")
-        if args.verbose:
-            for reason in claim.why:
-                print(f"   · {reason}")
-            for source in claim.sources:
-                arrow = "×" if source.stance == "refutes" else "→"
-                print(f"   {arrow} [{source.tier}] {source.url}")
+        if not result.claims:
+            print("\nno claims for this one.")
+            return
+
         print()
-    return 0
+        for n, claim in enumerate(result.claims, 1):
+            mark = " [disputed]" if claim.disputed else ""
+            print(f"{n}. [{claim.severity}] {claim.title}{mark}")
+            print(f"   {claim.subject_label}  ·  {claim.domain}  · "
+                  f"relevance {claim.relevance:.3f}")
+            if claim.advice and args.verbose:
+                print(f"   check: {claim.advice}")
+            if args.verbose:
+                for reason in claim.why:
+                    print(f"   · {reason}")
+                for source in claim.sources:
+                    arrow = "×" if source.stance == "refutes" else "→"
+                    print(f"   {arrow} [{source.tier}] {source.url}")
+            print()
+
+    return _emit(args, payload, render)
 
 
 def _siblings(args) -> tuple[Path, Path]:
@@ -194,7 +287,9 @@ def _siblings(args) -> tuple[Path, Path]:
     """
     import os
 
-    store_path = Path(args.store) if args.store else DEFAULT_STORE
+    from app import clidirect
+
+    store_path = clidirect.store_path(args.store)
     app_state = store_path.parent / "app.sqlite"
     override = os.environ.get("KRIKO_ANALYSES_LOG")
     if override:
@@ -314,6 +409,11 @@ def cmd_tui(args, store) -> int:
 
 def cmd_agent_bench(args, store) -> int:
     """Grade agents on the fixed task suite (`app/agentbench`)."""
+    if not hasattr(args, "profile"):
+        # Reached only if the parser was built without this command's own
+        # arguments, which `_peek_command` prevents; a guard, not a path.
+        print("kriko: agent-bench arguments were not built", file=sys.stderr)
+        return 1
     from app.agentbench.cli import run
 
     return run(args)
@@ -480,15 +580,11 @@ def cmd_bench(args, store) -> int:
 def _connect_engine(args):
     """Attach to whichever engine is already serving, or start one of our own.
 
-    Shared by every subcommand below that needs `app.sqlite` state (prefs,
-    costs, sites, verify, drafts, operations) rather than the store alone —
-    the same reasoning `kriko tui` documents in `app/tui/client.py`: a second
-    process opening the store directly would be a second writer fighting
-    whatever app is already running, so these go over HTTP instead, to
-    whichever engine — attached or freshly started — owns that file.
+    Only the state-*changing* subcommands come through here now (prefs writes,
+    site register/forget, verify, draft amend/build/install/discard): they
+    enqueue jobs, and a job belongs to the engine that owns the app state.
+    The read-only half reads the same files directly — see `app.clidirect`.
     """
-    from pathlib import Path
-
     from app.tui.client import connect
     from app.web.settings import Settings
 
@@ -512,7 +608,7 @@ def _connect_engine(args):
 def _with_engine(args, fn) -> int:
     """Run `fn(engine)`, turning a failed attach or a failed call into a
     one-line message on stderr rather than a traceback — this is the door
-    every command that needs a running engine goes through."""
+    every state-changing command goes through."""
     from app.tui.client import EngineError
 
     try:
@@ -527,160 +623,239 @@ def _with_engine(args, fn) -> int:
         return 1
 
 
-def cmd_prefs(args, store) -> int:
-    def run(engine) -> int:
-        if args.harness or args.model or args.search:
-            # Only the flags actually given — sending the other two as `""`
-            # would ask the engine to reset them to "whatever the machine
-            # offers", which is not what `--model x` alone should do to an
-            # already-chosen harness or search provider.
-            fields = {}
-            if args.harness:
-                fields["preferred_harness"] = args.harness
-            if args.model:
-                fields["llm_model"] = args.model
-            if args.search:
-                fields["search_provider"] = args.search
-            result = engine.write_prefs(**fields)
-        else:
-            result = engine.prefs()
-        chosen = result.get("chosen", {})
-        print("chosen now:")
-        for key, value in sorted(chosen.items()):
-            print(f"  {key:20} {value or '(default — whatever this machine offers)'}")
-        print("\navailable harnesses:")
-        for harness in result.get("harnesses", []):
-            print(f"  {harness['id']:16} {harness.get('path', '')}")
-        for harness in result.get("unusable", []):
-            print(f"  {harness['id']:16} unusable: {harness.get('why', '')}")
-        print("\nsearch providers:")
-        for provider in result.get("search_providers", []):
-            print(f"  {provider['id']:10} {'ready' if provider.get('ready') else 'no key set'}")
-        return 0
+def _render_prefs(data: dict) -> None:
+    chosen = data.get("chosen", {})
+    print("chosen now:")
+    for key, value in sorted(chosen.items()):
+        print(f"  {key:20} {value or '(default — whatever this machine offers)'}")
+    print("\navailable harnesses:")
+    for harness in data.get("harnesses", []):
+        print(f"  {harness['id']:16} {harness.get('path', '')}")
+    for harness in data.get("unusable", []):
+        print(f"  {harness['id']:16} unusable: {harness.get('why', '')}")
+    print("\nsearch providers:")
+    for provider in data.get("search_providers", []):
+        print(f"  {provider['id']:10} {'ready' if provider.get('ready') else 'no key set'}")
 
-    return _with_engine(args, run)
+
+def _app_conn(args):
+    """A read-only connection to the app state beside `--store`, or an empty
+    in-memory one when the app has never run here — a read command must not
+    create the reader's `app.sqlite` just to answer "nothing yet"."""
+    from app import clidirect
+
+    path = clidirect.app_state_path(args.store)
+    conn = clidirect.open_readonly(path)
+    if conn is None:
+        conn = clidirect.scratch()
+    return conn, path
+
+
+def cmd_prefs(args, store) -> int:
+    from app import clidirect
+
+    if args.harness or args.model or args.search:
+        # Only the flags actually given — sending the other two as `""`
+        # would ask the engine to reset them to "whatever the machine
+        # offers", which is not what `--model x` alone should do to an
+        # already-chosen harness or search provider.
+        fields = {}
+        if args.harness:
+            fields["preferred_harness"] = args.harness
+        if args.model:
+            fields["llm_model"] = args.model
+        if args.search:
+            fields["search_provider"] = args.search
+
+        def run(engine) -> int:
+            result = engine.write_prefs(**fields)
+            return _emit(args, result, lambda: _render_prefs(result))
+
+        return _with_engine(args, run)
+
+    # The read half needs no engine: the same `prefs.choices` the router
+    # serves, over a read-only connection to the file beside --store.
+    conn, path = _app_conn(args)
+    try:
+        payload = clidirect.prefs(conn, path)
+    finally:
+        conn.close()
+    return _emit(args, payload, lambda: _render_prefs(payload))
+
+
+def _render_costs(data: dict) -> None:
+    spent = data.get("spent", {})
+    print(f"spent in the last {spent.get('days', '?')} day(s): "
+          f"${spent.get('usd', 0):.2f} over {spent.get('runs', 0)} run(s)")
+    for row in spent.get("planes", []):
+        print(f"  {row.get('plane', ''):10} {row.get('llm', '') or '':20} "
+              f"{row.get('runs', 0):>4} run(s)  ${row.get('usd', 0) or 0:.2f}")
+    print("\nestimate for one more subject, by plane:")
+    for plane, est in data.get("estimates", {}).items():
+        usd = est.get("usd")
+        print(f"  {plane:10} " + (f"${usd:.2f}" if usd is not None else "not enough history yet"))
+    print("\nkeys:")
+    for key in data.get("keys", []):
+        print(f"  {key['id']:20} {'present' if key['present'] else 'missing':8} "
+              f"{key['purpose']}")
+    print(f"\n{data.get('balance', {}).get('note', '')}")
 
 
 def cmd_costs(args, store) -> int:
-    def run(engine) -> int:
-        data = engine.costs()
-        spent = data.get("spent", {})
-        print(f"spent in the last {spent.get('days', '?')} day(s): "
-              f"${spent.get('usd', 0):.2f} over {spent.get('runs', 0)} run(s)")
-        for row in spent.get("planes", []):
-            print(f"  {row.get('plane', ''):10} {row.get('llm', '') or '':20} "
-                  f"{row.get('runs', 0):>4} run(s)  ${row.get('usd', 0) or 0:.2f}")
-        print("\nestimate for one more subject, by plane:")
-        for plane, est in data.get("estimates", {}).items():
-            usd = est.get("usd")
-            print(f"  {plane:10} " + (f"${usd:.2f}" if usd is not None else "not enough history yet"))
-        print("\nkeys:")
-        for key in data.get("keys", []):
-            print(f"  {key['id']:20} {'present' if key['present'] else 'missing':8} "
-                  f"{key['purpose']}")
-        print(f"\n{data.get('balance', {}).get('note', '')}")
-        return 0
+    from app import clidirect
 
-    return _with_engine(args, run)
+    conn, _ = _app_conn(args)
+    try:
+        payload = clidirect.costs(conn)
+    finally:
+        conn.close()
+    return _emit(args, payload, lambda: _render_costs(payload))
+
+
+def _render_sites(data: dict, action: str, host: str) -> None:
+    if action == "list" or not action:
+        registered = data.get("registered", [])
+        requested = data.get("requested", [])
+        if not registered and not requested:
+            print("no sites registered or requested yet")
+            return
+        if registered:
+            print("readable now:")
+            for row in registered:
+                print(f"  {row.get('site', row.get('host', '')):32} "
+                      f"pack={row.get('pack_id', '')}")
+        if requested:
+            print("\nrequested (not yet readable):")
+            for row in requested:
+                print(f"  {row.get('host', ''):32} state={row.get('state', '')}")
+        return
+    if action == "register":
+        print(f"job {data.get('job_id', '')} started: teaching this "
+              f"installation to read {data.get('host', host)}")
+        return
+    if action == "forget":
+        print(f"{host}: "
+              + ("forgotten" if data.get("forgotten") else "was not registered"))
 
 
 def cmd_sites(args, store) -> int:
-    def run(engine) -> int:
-        if args.action == "list" or not args.action:
-            data = engine.sites()
-            registered = data.get("registered", [])
-            requested = data.get("requested", [])
-            if not registered and not requested:
-                print("no sites registered or requested yet")
-                return 0
-            if registered:
-                print("readable now:")
-                for row in registered:
-                    print(f"  {row.get('site', row.get('host', '')):32} "
-                          f"pack={row.get('pack_id', '')}")
-            if requested:
-                print("\nrequested (not yet readable):")
-                for row in requested:
-                    print(f"  {row.get('host', ''):32} state={row.get('state', '')}")
-            return 0
+    from app import clidirect
+
+    if args.action in ("register", "forget") and not args.host:
+        # Checked before any engine is attached: a missing argument is a
+        # reader error, and starting a server to report it is the slow path.
         if args.action == "register":
-            if not args.host:
-                print("kriko: sites register needs a host, e.g. "
-                      "kriko sites register example.com", file=sys.stderr)
-                return 1
+            print("kriko: sites register needs a host, e.g. "
+                  "\"kriko sites register example.com\"", file=sys.stderr)
+        else:
+            print("kriko: sites forget needs a host", file=sys.stderr)
+        return 1
+
+    if args.action == "list" or not args.action:
+        conn, _ = _app_conn(args)
+        try:
+            payload = clidirect.sites(store, conn)
+        finally:
+            conn.close()
+        return _emit(args, payload, lambda: _render_sites(payload, "list", ""))
+
+    def run(engine) -> int:
+        if args.action == "register":
             result = engine.register_site(args.host, url=args.url_for_site or "",
                                            pack_id=args.pack or "")
-            print(f"job {result.get('job_id', '')} started: teaching this "
-                  f"installation to read {result.get('host', args.host)}")
-            return 0
-        if args.action == "forget":
-            if not args.host:
-                print("kriko: sites forget needs a host", file=sys.stderr)
-                return 1
+        elif args.action == "forget":
             result = engine.forget_site(args.host)
-            print(f"{args.host}: "
-                  + ("forgotten" if result.get("forgotten") else "was not registered"))
-            return 0
-        print(f"kriko: unknown sites action {args.action!r}", file=sys.stderr)
-        return 1
+        else:
+            print(f"kriko: unknown sites action {args.action!r}", file=sys.stderr)
+            return 1
+        return _emit(args, result, lambda: _render_sites(result, args.action, args.host))
 
     return _with_engine(args, run)
 
 
 def cmd_verify(args, store) -> int:
-    def run(engine) -> int:
-        if args.list:
-            data = engine.fact_checks(verdict=args.verdict or "", limit=args.limit)
-            counts = data.get("counts", {})
+    from app import clidirect
+
+    if args.list:
+        conn, _ = _app_conn(args)
+        try:
+            payload = clidirect.fact_checks(conn, verdict=args.verdict or "",
+                                            limit=args.limit)
+        finally:
+            conn.close()
+
+        def render() -> None:
+            counts = payload.get("counts", {})
             print("counts: " + ", ".join(f"{k}={v}" for k, v in sorted(counts.items())))
-            for row in data.get("items", []):
+            for row in payload.get("items", []):
                 print(f"  [{row.get('verdict', ''):10}] {row.get('title', '') or row.get('claim_id', '')}")
-            return 0
+
+        return _emit(args, payload, render)
+
+    def run(engine) -> int:
         result = engine.verify(pack_id=args.pack or "", subject_id=args.subject or "",
-                                limit=args.limit)
-        print(f"job {result.get('job_id', '')} started: re-reading the sources "
-              "behind every claim on this screen")
-        return 0
+                               limit=args.limit)
+        return _emit(
+            args, result,
+            lambda: print(f"job {result.get('job_id', '')} started: re-reading the sources "
+                          "behind every claim on this screen"),
+        )
 
     return _with_engine(args, run)
 
 
 def cmd_drafts(args, store) -> int:
-    def run(engine) -> int:
-        if args.action == "list" or not args.action:
-            items = engine.drafts().get("items", [])
+    from app import clidirect
+
+    if args.action == "list" or not args.action:
+        payload = clidirect.drafts(args.store)
+
+        def render() -> None:
+            items = payload.get("items", [])
             if not items:
                 print("no pack drafts — an agent has not written one yet")
-                return 0
+                return
             for item in items:
                 print(f"  {item.get('slug', ''):24} "
                       f"{'built' if item.get('built') else 'unbuilt':8} "
                       f"{'installed' if item.get('installed') else ''}")
-            return 0
+
+        return _emit(args, payload, render)
+
+    if args.action == "show":
         if not args.slug:
             print("kriko: this action needs a draft slug", file=sys.stderr)
             return 1
-        if args.action == "show":
-            state = engine.draft(args.slug)
-            print(json.dumps(state, indent=2, default=str))
-            return 0
+        try:
+            payload = clidirect.draft(args.store, args.slug)
+        except KeyError as exc:
+            print(f"kriko: {exc.args[0]}", file=sys.stderr)
+            return 1
+        return _emit(args, payload,
+                     lambda: print(json.dumps(payload, indent=2, default=str)))
+
+    if not args.slug:
+        print("kriko: this action needs a draft slug", file=sys.stderr)
+        return 1
+
+    def run(engine) -> int:
         if args.action == "amend":
             result = engine.amend_draft(args.slug, note=args.note or "")
-            print(f"job {result.get('job_id', '')} started: covering what "
-                  f"{args.slug} is missing")
-            return 0
+            return _emit(args, result,
+                         lambda: print(f"job {result.get('job_id', '')} started: covering what "
+                                       f"{args.slug} is missing"))
         if args.action == "build":
             result = engine.build_draft(args.slug)
-            print(f"built {result.get('artifact', '')}")
-            return 0
+            return _emit(args, result,
+                         lambda: print(f"built {result.get('artifact', '')}"))
         if args.action == "install":
             result = engine.install_draft(args.slug)
-            print(f"installed {result.get('pack_id', '')} from draft {args.slug}")
-            return 0
+            return _emit(args, result,
+                         lambda: print(f"installed {result.get('pack_id', '')} from draft {args.slug}"))
         if args.action == "discard":
             engine.discard_draft(args.slug)
-            print(f"discarded draft {args.slug}")
-            return 0
+            result = {"discarded": args.slug}
+            return _emit(args, result, lambda: print(f"discarded draft {args.slug}"))
         print(f"kriko: unknown drafts action {args.action!r}", file=sys.stderr)
         return 1
 
@@ -688,22 +863,28 @@ def cmd_drafts(args, store) -> int:
 
 
 def cmd_operations(args, store) -> int:
-    def run(engine) -> int:
-        data = engine.operations(limit=args.limit)
-        items = data.get("items", [])
+    from app import clidirect
+
+    conn, _ = _app_conn(args)
+    try:
+        payload = clidirect.operations(conn, limit=args.limit)
+    finally:
+        conn.close()
+
+    def render() -> None:
+        items = payload.get("items", [])
         if not items:
             print("no operations recorded yet")
-            return 0
-        print(f"{data.get('running', 0)} running now")
+            return
+        print(f"{payload.get('running', 0)} running now")
         for row in items:
             cost = f"${row['usd']:.2f}" if row.get("usd") else \
                 (f"{row['tokens']}tok" if row.get("tokens") else "")
             print(f"  [{row.get('state', ''):8}] {row.get('door', ''):5} "
                   f"{row.get('kind', ''):10} {row.get('name', ''):24} {cost:>8} "
                   f"{row.get('subject_id', '')}")
-        return 0
 
-    return _with_engine(args, run)
+    return _emit(args, payload, render)
 
 
 def _version() -> str:
@@ -722,10 +903,34 @@ def _version() -> str:
         return "unknown (this install cannot report its own version)"
 
 
-def build_parser() -> argparse.ArgumentParser:
+def _peek_command(argv: list[str]) -> str | None:
+    """The subcommand being run, parsed with a throwaway parser that imports
+    nothing heavy — so `build_parser` can skip importing what it does not need.
+
+    `app.agentbench.cli` costs seconds to import (its runner reaches every
+    provider), and it used to be imported while *building* the parser, i.e. on
+    every `kriko` invocation including `--version`. The real parser is built
+    with the peeked command, and only `agent-bench` gets its own arguments
+    wired up.
+    """
+    peek = argparse.ArgumentParser(prog="kriko", add_help=False)
+    peek.add_argument("--store")
+    peek.add_argument("--json", action="store_true", default=argparse.SUPPRESS)
+    peek.add_argument("--version", action="store_true", default=argparse.SUPPRESS)
+    peek.add_argument("command", nargs="?")
+    peek.add_argument("rest", nargs=argparse.REMAINDER)
+    known, _ = peek.parse_known_args(argv)
+    return known.command
+
+
+def build_parser(command: str | None = None) -> argparse.ArgumentParser:
+    from kriko.store.db import DEFAULT_STORE
+
     parser = argparse.ArgumentParser(prog="kriko", description=__doc__.split("\n")[0])
     parser.add_argument("--store", default=None,
                         help=f"store file (default: {DEFAULT_STORE})")
+    parser.add_argument("--json", action="store_true",
+                        help="print the answer as one JSON document")
     # The cheapest possible "is this install actually working". It needs no
     # store, no packs and no network, so it is the one command a smoke check
     # can run in a clean environment — and `tools/smoke_wheel.sh` does,
@@ -737,19 +942,24 @@ def build_parser() -> argparse.ArgumentParser:
         help="print the installed version and exit")
     sub = parser.add_subparsers(dest="command", required=True)
 
-    sub.add_parser("packs", help="list installed packs").set_defaults(fn=cmd_packs)
+    p = sub.add_parser("packs", help="list installed packs")
+    _add_json(p)
+    p.set_defaults(fn=cmd_packs)
 
     p = sub.add_parser("install", help="install a .kpack file")
     p.add_argument("path")
+    _add_json(p)
     p.set_defaults(fn=cmd_install)
 
     p = sub.add_parser("uninstall", help="remove a pack completely")
     p.add_argument("pack_id")
+    _add_json(p)
     p.set_defaults(fn=cmd_uninstall)
 
     p = sub.add_parser("enable", help="enable or disable a pack without removing it")
     p.add_argument("pack_id")
     p.add_argument("--disable", action="store_true")
+    _add_json(p)
     p.set_defaults(fn=cmd_enable)
 
     p = sub.add_parser("build", help="build a pack directory into a .kpack")
@@ -757,6 +967,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--out")
     p.add_argument("--force", action="store_true",
                    help="write the pack even if it has no subjects and no claims")
+    _add_json(p)
     p.set_defaults(fn=cmd_build)
 
     p = sub.add_parser("lookup", help="ask the installed packs about a product")
@@ -768,6 +979,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--limit", type=int, default=8)
     p.add_argument("-v", "--verbose", action="store_true",
                    help="show why each claim ranked where it did, and its sources")
+    _add_json(p)
     p.set_defaults(fn=cmd_lookup)
 
     p = sub.add_parser("bench", help="measure the research planes on the same cases")
@@ -790,9 +1002,14 @@ def build_parser() -> argparse.ArgumentParser:
         "agent-bench",
         help="grade agents on fixed tasks, like Terminal-Bench but for this: "
              "resolve rate, consistency, settings obeyed")
-    from app.agentbench.cli import add_arguments as add_agent_bench_arguments
+    if command == "agent-bench":
+        # The only subcommand whose argument wiring imports the bench's runner
+        # tree; built only when this is the command being run.
+        from app.agentbench.cli import add_arguments as add_agent_bench_arguments
 
-    add_agent_bench_arguments(p)
+        add_agent_bench_arguments(p)
+    else:
+        p.add_argument("rest", nargs=argparse.REMAINDER)
     p.set_defaults(fn=cmd_agent_bench, needs_store=False)
 
     p = sub.add_parser(
@@ -820,8 +1037,7 @@ def build_parser() -> argparse.ArgumentParser:
                         "(a budgeted tree with follow-up rounds)")
     p.set_defaults(fn=cmd_brief)
 
-    p = sub.add_parser(
-        "loopscore", help="how well the research loop is running for one "
+    p = sub.add_parser("loopscore", help="how well the research loop is running for one "
                           "subject (JSON)")
     p.add_argument("subject_id")
     p.add_argument("--pack", required=True, help="the pack the subject is in")
@@ -829,8 +1045,7 @@ def build_parser() -> argparse.ArgumentParser:
                    help="how many submissions to read (default 50)")
     p.set_defaults(fn=cmd_loopscore)
 
-    p = sub.add_parser(
-        "submit", help="file findings for one subject; ungrounded ones are refused")
+    p = sub.add_parser("submit", help="file findings for one subject; ungrounded ones are refused")
     p.add_argument("subject_id")
     p.add_argument("findings",
                    help="JSON file: a list of findings, or {findings, queries}; "
@@ -852,10 +1067,13 @@ def build_parser() -> argparse.ArgumentParser:
     # attached to.
     p.set_defaults(fn=cmd_tui, needs_store=False)
 
-    # ── everything below talks HTTP to an engine, same reasoning as `tui`
-    # above: reachable app state (prefs, costs, sites, verify, drafts,
-    # operations) lives behind the app, not the store, so these attach to a
-    # running one or start their own rather than opening app.sqlite directly.
+    # ── the app-state commands. The read half (prefs read, costs, sites list,
+    # verify --list, drafts list/show, operations) reads `app.sqlite` beside
+    # `--store` directly in this process (`app.clidirect`) — no engine is
+    # started, and the answer does not depend on one running. The write half
+    # (prefs set, sites register/forget, verify, draft actions) enqueues jobs
+    # and still goes to an engine over HTTP, for the same second-writer
+    # reason `tui` documents.
 
     def _engine_args(subparser: argparse.ArgumentParser) -> None:
         subparser.add_argument(
@@ -871,54 +1089,68 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--model", default="", help="preferred LLM model")
     p.add_argument("--search", default="", help="preferred search provider")
     _engine_args(p)
+    _add_json(p)
     p.set_defaults(fn=cmd_prefs, needs_store=False)
 
     p = sub.add_parser("costs", help="what has been spent, and what the next run "
                         "would likely cost")
     _engine_args(p)
+    _add_json(p)
     p.set_defaults(fn=cmd_costs, needs_store=False)
 
     p = sub.add_parser("sites", help="which sites can be read, and teach it a new one")
     p.add_argument("action", nargs="?", default="list",
-                    choices=("list", "register", "forget"))
+                   choices=("list", "register", "forget"))
     p.add_argument("host", nargs="?", default="", help="required for register/forget")
     p.add_argument("--url-for-site", default="",
-                    help="a real page on that site, for register")
+                   help="a real page on that site, for register")
     p.add_argument("--pack", default="", help="which pack's identity keys to map into")
     _engine_args(p)
-    p.set_defaults(fn=cmd_sites, needs_store=False)
+    _add_json(p)
+    # `sites list` reads the store itself (which adapters are registered live
+    # in the store), so this command opens it like `packs` and `lookup` do.
+    p.set_defaults(fn=cmd_sites)
 
     p = sub.add_parser("verify", help="re-read the sources behind installed claims")
     p.add_argument("--list", action="store_true",
-                    help="show past checks instead of starting a new one")
+                   help="show past checks instead of starting a new one")
     p.add_argument("--verdict", default="", help="filter --list by verdict")
     p.add_argument("--pack", default="", help="only this pack")
     p.add_argument("--subject", default="", help="only this subject")
     p.add_argument("--limit", type=int, default=50)
     _engine_args(p)
+    _add_json(p)
     p.set_defaults(fn=cmd_verify, needs_store=False)
 
     p = sub.add_parser("drafts", help="pack drafts an agent wrote: list, "
                         "amend, build, install, discard")
     p.add_argument("action", nargs="?", default="list",
-                    choices=("list", "show", "amend", "build", "install", "discard"))
+                   choices=("list", "show", "amend", "build", "install", "discard"))
     p.add_argument("slug", nargs="?", default="")
     p.add_argument("--note", default="", help="what a draft is missing, for amend")
     _engine_args(p)
+    _add_json(p)
     p.set_defaults(fn=cmd_drafts, needs_store=False)
 
     p = sub.add_parser("operations", help="the live feed of agent-driven work, "
                         "whichever door it came through")
     p.add_argument("--limit", type=int, default=50)
     _engine_args(p)
+    _add_json(p)
     p.set_defaults(fn=cmd_operations, needs_store=False)
 
     return parser
 
 
 def main(argv=None) -> int:
-    args = build_parser().parse_args(argv)
-    store = connect(args.store) if getattr(args, "needs_store", True) else None
+    argv = list(sys.argv[1:] if argv is None else argv)
+    args = build_parser(_peek_command(argv)).parse_args(argv)
+    if getattr(args, "needs_store", True):
+        from kriko.store.db import connect
+
+        store = connect(args.store)
+    else:
+        store = None
     try:
         return args.fn(args, store)
     except (KeyError, ValueError, OSError, RuntimeError, sqlite3.Error) as exc:
