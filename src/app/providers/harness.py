@@ -4087,6 +4087,16 @@ class HarnessResearcher(AgentResearcher):
                         say = on_line if on_line is not None else self.on_action
                         if say is not None:
                             say("this run can be answered, so it uses its own process")
+                    elif self.transport_mode == "auto" and _resident_unhealthy(self.harness):
+                        # A resident session that just timed out with nothing
+                        # delivered is not worth another call's ceiling in
+                        # `auto` mode: run this one in a fresh process, the
+                        # same answer `ask`'s tool-less branch already gives a
+                        # recently failed session.
+                        say = on_line if on_line is not None else self.on_action
+                        if say is not None:
+                            say(f"{self.harness.label}'s hosted session failed recently; "
+                                "using a fresh process for this call")
                     else:
                         return self._run_resident(prompt, on_line)
                 else:
@@ -4342,6 +4352,12 @@ class HarnessResearcher(AgentResearcher):
             # slow answer and a lost one for every resident CLI.
             partial = "".join(self._live_parts).strip()
             if not partial:
+                # No words arrived, so the session is what failed, not the
+                # prompt. Remember that for the cooldown window
+                # (`_resident_unhealthy`): paying the same timed-out session
+                # again on every later call of the turn is what ended a
+                # 90-second turn before its answer (issue #337).
+                _mark_resident_unhealthy(self.harness)
                 raise
             self.telemetry["cut_off"] = True
             self._echo(
