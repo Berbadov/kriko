@@ -18,23 +18,26 @@
 # Run it before every push; `CLAUDE.md`'s app-first rule 1 already asked for
 # pytest, and this is the rest of what the branch used to be checked for.
 #
-#     tools/gate.sh          # all required desktop stages run concurrently
+#     tools/gate.sh          # all required desktop stages, one after another
 #     tools/gate.sh py       # just the Python suite
 #     tools/gate.sh wheel    # just: does the artifact we ship actually import
 #     tools/gate.sh node     # just the JavaScript suites
 #     tools/gate.sh ui       # desktop build, lint and behavior scenarios
 #     tools/gate.sh tauri    # just the desktop shell: cargo check and cargo test, offline
 #
-# With no argument the stages are independent — py, wheel, node, ui and tauri —
-# so they run concurrently. Each writes to its own log, and a log is printed as
-# one block when its stage finishes, so output never interleaves. A failed stage
-# does not stop the others: the gate then exits non-zero and names every stage
-# that failed. Inside the python stage the order is still cheap-first: version,
-# ruff, the three mypy runs, then pytest.
+# With no argument the stages run one after another: py, wheel, node, ui, tauri.
+# A failed stage stops the run and the gate names it. Inside the python stage the
+# order is cheap-first: version, ruff, the three mypy runs, then pytest.
 #
-# pytest runs with `-n auto` (pytest-xdist, in the `dev` extra) when xdist is
-# importable. `GATE_JOBS=1` turns that off and runs the whole gate serially, in
-# the order it always had, for debugging; `GATE_JOBS=<n>` sets the worker count.
+# The default is light on purpose. The gate used to start all five stages at
+# once with pytest on every core, which made the developer's machine unusable
+# while it ran. The knobs that bring that back are below.
+#
+#   GATE_JOBS=<n>        pytest workers. Default 2; `auto` is every core; 1 is serial.
+#   GATE_CONCURRENT=1    run the stages at once, each to its own log, as before.
+#   CARGO_BUILD_JOBS=<n> cargo's compile jobs. Default 2 here; cargo alone is every core.
+#
+# pytest runs with `-n` (pytest-xdist, in the `dev` extra) when xdist is importable.
 #
 # Nothing here needs secrets: the suite must pass without an API key, which is
 # the same rule the workflow had.
@@ -85,12 +88,16 @@ case "$only" in
     *) echo "unknown gate: $only (expected: all, py, node, ui, tauri, wheel)" >&2; exit 2 ;;
 esac
 
-# pytest workers: `auto` is every core. GATE_JOBS=1 makes the whole gate serial.
-jobs="${GATE_JOBS:-auto}"
+# pytest workers. Two by default, so a run does not take every core while the
+# developer works; `auto` is every core, and GATE_JOBS=1 makes pytest serial.
+jobs="${GATE_JOBS:-2}"
 case "$jobs" in
     auto) ;;
     *[!0-9]*|0) echo "GATE_JOBS must be a worker count of 1 or more, or unset; got '$jobs'" >&2; exit 2 ;;
 esac
+# Cargo compiles with every core unless told otherwise. The gate caps it at two
+# by default; a value already set in the environment still wins.
+export CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-2}"
 
 # `wait -n -p` (which names the job that finished) needs bash 5.1. Without it the
 # stages still run, one after another.
@@ -125,7 +132,7 @@ fmt_ms() {
 }
 
 gate_pytest() {
-    # `-n auto` is pytest-xdist. Each test runs in one of N worker processes, so
+    # `-n $jobs` is pytest-xdist. Each test runs in one of N worker processes, so
     # the suite must not share state across processes. Each test's state lives
     # under tmp_path or is monkeypatched, and src/app/tests/conftest.py fences the
     # reader's ~/.kriko, the fixed extension port and the real agent CLIs.
@@ -146,7 +153,12 @@ gate_py() {
     # contain, each caught at build time on the Windows host -- hours after the
     # commit that caused it. It costs a second here.
     step "the version strings agree"
-    "$PYTHON" tools/bump.py --show --strict
+    # `|| return 1` on every step, not `set -e`: this function runs as
+    # `"gate_py" || rc=$?`, a context where bash suspends errexit, so a bare
+    # failing command would not stop the stage and the advisory cli_watch at
+    # the end would report the whole stage as passed. That is the one shape
+    # this file exists to prevent: a green tick that was not a test result.
+    "$PYTHON" tools/bump.py --show --strict || return 1
     # B138: ruff before pytest, so a lint failure is cheap to see and does not
     # wait behind a ~80s test run. Config (the curated rule set, and every
     # per-file ignore with its reason) lives in pyproject.toml, not here.
@@ -157,7 +169,7 @@ gate_py() {
     # It found four unused imports the day it was turned on, two of them in
     # files that had never been read by a linter at all.
     step "ruff (src/kriko, src/app, packs, server, tools, packaging)"
-    "$PYTHON" -m ruff check src packs server tools packaging
+    "$PYTHON" -m ruff check src packs server tools packaging || return 1
     # Three invocations, not one `mypy src packs`: `kriko/ledger/extraction.py`
     # and `packs/cars/pipeline/ledger/extraction.py` share a module-path
     # suffix, and mypy's module resolution conflates them into one "Module
@@ -166,19 +178,19 @@ gate_py() {
     # per-module strictness tiers in pyproject.toml apply regardless of how
     # many invocations they are split across.
     step "mypy (src/kriko)"
-    "$PYTHON" -m mypy src/kriko
+    "$PYTHON" -m mypy src/kriko || return 1
     step "mypy (src/app)"
-    "$PYTHON" -m mypy src/app
+    "$PYTHON" -m mypy src/app || return 1
     step "mypy (packs)"
-    "$PYTHON" -m mypy packs
+    "$PYTHON" -m mypy packs || return 1
     step "mypy (server)"
-    MYPYPATH=server "$PYTHON" -m mypy -p kriko_cloud
+    MYPYPATH=server "$PYTHON" -m mypy -p kriko_cloud || return 1
     # No arguments: pytest.ini pins testpaths. Naming directories by hand is how
     # the suite silently shrank to 576 of 761 tests once app/pipeline/ existed.
     # test_repo_invariants.py enforces the layering rules and the testpaths
     # coverage, so the architecture is checked here too.
     step "pytest (engine + catalog + pipeline)"
-    gate_pytest
+    gate_pytest || return 1
     # Advisory: has an agent CLI installed here changed since its last known
     # good (src/app/cli_versions.json), or lost a flag Kriko passes? Offline,
     # and never fails the gate: a vendor's release is not this branch's fault,
@@ -240,7 +252,10 @@ gate_node() {
 
 gate_ui() {
     step "desktop interface build, behavior checks and lint"
-    (cd kriko-ui && npm run build && npm run lint)
+    # `|| return 1` because this function runs as `"gate_ui" || rc=$?`, where
+    # bash suspends errexit: without it a failed build would fall through to
+    # the behavior checks and the stage would read as passed.
+    (cd kriko-ui && npm run build && npm run lint) || return 1
     local ui_out ui_status=0 ui_count
     ui_out=$(cd kriko-ui && node --test --test-reporter=tap tests/*.test.mjs 2>&1) || ui_status=$?
     printf '%s\n' "$ui_out"
@@ -429,7 +444,7 @@ run_all_in_order() {
 
 case "$only" in
     all)
-        if [ "$jobs" = 1 ]; then
+        if [ "${GATE_CONCURRENT:-0}" != 1 ] || [ "$jobs" = 1 ]; then
             run_all_in_order
         elif [ "$concurrent_ok" = 1 ]; then
             run_all_concurrently
@@ -442,12 +457,15 @@ case "$only" in
         current_stage=$only
         rc=0
         "gate_$only" || rc=$?
-        current_stage=""
         if [ "$rc" = 3 ]; then
+            current_stage=""
             printf '\n\033[33m%s was SKIPPED: nothing was verified\033[0m\n' "$only"
         elif [ "$rc" != 0 ]; then
+            # current_stage stays set, so the EXIT trap names the stage that
+            # failed instead of exiting silently.
             exit "$rc"
         else
+            current_stage=""
             printf '\n\033[32mall gates passed\033[0m\n'
         fi
         ;;
