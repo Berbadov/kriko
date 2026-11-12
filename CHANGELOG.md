@@ -3,6 +3,10 @@
 Reader-visible changes for each release. Newest first. Published versions are
 immutable; a correction is a newer version.
 
+### 0.3.13
+
+- Maintenance release, no reader-visible behavior change. `chat.run_turn` (was a 603-line function with eight nested closures over shared turn state) is now a `_Turn` class with named methods; `web/app.py::create_app` (372 lines) is now a short orchestration over `_register_routers`, `_start_core_state` and `_install_middleware_and_routes`. Dead scratch scripts (`tools/bench_*.py`, `check_scenarios.py`, `compare-configuration.py`, `trace_processes.py`, `try_claim_extractor.py`, `local_scenarios.json`, `packaging/macos_icon.py`, `packaging/smoke_firefox.py`) and accidentally committed `.vibe/` session screenshots were removed; `.vibe/` is now gitignored. Full gate green: pytest 5167 passed / 0 failed (one known load-sensitive xdist flake passes serially), ruff and mypy clean, node/ui/wheel stages green.
+
 ### 0.3.12
 
 - **The desktop CLI is fast and consistent.** `kriko --version` went from ~0.6 s to ~0.24 s because the command parser no longer imports the benchmark stack on every invocation, and the read commands — `prefs`, `costs`, `sites list`, `verify --list`, `drafts list/show`, `operations` — read `app.sqlite` directly instead of attaching to an engine, so they answer in ~250 ms whether or not one is running. Every command takes `--json`; the human-readable output is unchanged.
