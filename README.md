@@ -1,6 +1,6 @@
 # Kriko
 
-[![version](https://img.shields.io/badge/version-0.3.12-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
+[![version](https://img.shields.io/badge/version-0.3.13-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
 [![license](https://img.shields.io/badge/license-MIT-1F4FFF?style=flat-square&labelColor=05070F)](LICENSE)
 [![stars](https://img.shields.io/github/stars/Berbadov/kriko?style=flat-square&labelColor=05070F&color=1F4FFF)](https://github.com/Berbadov/kriko/stargazers)
 [![platforms](https://img.shields.io/badge/Windows%20%C2%B7%20macOS%20%C2%B7%20Chrome%20%C2%B7%20Android-1F4FFF?style=flat-square&labelColor=05070F)](#install)
@@ -13,7 +13,7 @@ extension — and keeps the source beside every finding.
 Installed catalog lookups work offline. Research uses the agent or model you
 choose, and a paid provider bills your own account.
 
-**[Download the Windows installer](https://github.com/Berbadov/kriko/releases/latest/download/kriko-0.3.12-x86_64-setup.exe)** ·
+**[Download the Windows installer](https://github.com/Berbadov/kriko/releases/latest/download/kriko-0.3.13-x86_64-setup.exe)** ·
 [Browser extension](https://chromewebstore.google.com/detail/kriko/bdifnaggafjokndlpjgmlfappcoehdjb) ·
 [Website](https://kriko.cc) ·
 [Known problems by product](https://kriko.cc/problems/) (no app needed)
@@ -24,7 +24,10 @@ choose, and a paid provider bills your own account.
   <sub>The real panel, from a live run: every finding names the page it came from. <a href="https://kriko.cc/#film">Watch the 28-second film</a> · <a href="https://kriko.cc/guide/">How to use it, step by step</a></sub>
 </p>
 
-0.3.12 makes the desktop CLI answer in about a quarter of a second — `--version`
+0.3.13 is a maintenance release: the chat turn orchestrator and the API app
+factory were split into named pieces, and dead scratch scripts and accidentally
+committed session screenshots were removed — no reader-visible behavior change.
+0.3.12 made the desktop CLI answer in about a quarter of a second — `--version`
 no longer loads the provider stack, and the read commands (`prefs`, `costs`,
 `sites list`, `drafts list`, `operations`, `verify --list`) read the app's own
 state directly, so they answer whether or not an engine is running — and adds
@@ -71,8 +74,8 @@ repositories. See the [changelog](CHANGELOG.md) for the release scope.
 
 | Artifact | Use |
 |---|---|
-| `kriko-0.3.12-x86_64-setup.exe` | Per-user Windows installer; no administrator rights required. |
-| `kriko-0.3.12-win64-portable.zip` | Extract the whole archive and open `kriko.exe`. |
+| `kriko-0.3.13-x86_64-setup.exe` | Per-user Windows installer; no administrator rights required. |
+| `kriko-0.3.13-win64-portable.zip` | Extract the whole archive and open `kriko.exe`. |
 
 1. Open Kriko, choose an agent in **More → Agents** and press **Check connection**.
 2. Open **Catalogs → Find release catalogs** and install one, or import a
