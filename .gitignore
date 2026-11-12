@@ -137,6 +137,7 @@ src/app/trial_access.json
 
 # Local scratch and artifacts that are not part of the product.
 .dsh-tmp/
+.vibe/
 .vscode/
 kriko-gpui/
 logs.txt
