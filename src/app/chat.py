@@ -1634,6 +1634,603 @@ def _agent_reads(pages: dict, existing: Sequence[dict]) -> list[dict]:
     return rows
 
 
+class _Turn:
+    def __init__(self, message: str, *, ask: Ask, ctx: chatdata.Context,
+                 ask_stream: StreamAsk | None = None, ask_quick: Ask | None = None,
+                 ask_grounded: Ask | None = None,
+                 ask_grounded_stream: StreamAsk | None = None,
+                 clarify: Ask | None = None,
+                 history: Sequence[dict] = (), hooks=None,
+                 verify_answer: Callable[[str, list[dict]], dict] | None = None,
+                 preferences: str = "", product_only: bool = False,
+                 mode: str = "", agent_pages: dict | None = None) -> None:
+        self.message = message
+        self.ask = ask
+        self.ctx = ctx
+        self.ask_stream = ask_stream
+        self.ask_quick = ask_quick
+        self.ask_grounded = ask_grounded
+        self.ask_grounded_stream = ask_grounded_stream
+        self.clarify = clarify
+        self.history = history
+        self.hooks = hooks
+        self.verify_answer = verify_answer
+        self.preferences = preferences
+        self.product_only = product_only
+        self.mode = mode
+        self.agent_pages: dict = agent_pages if isinstance(agent_pages, dict) else {}
+
+    def run(self) -> dict:
+        self.hooks = self.hooks or _Silent()
+        self.message = str(self.message or "").strip()[:16000]
+        self.mode = mode_of(self.message, self.mode, self.history)
+        self.agent_pages = self.agent_pages if isinstance(self.agent_pages, dict) else {}
+        self.spent = {"calls": 0}
+
+        # ── the question before the spend ───────────────────────────────────────
+        if self.clarify is not None and asks_before_answering(self.message) and not self.spent_out():
+            self.hooks.set(0.06, "checking what is still missing")
+            self.purpose("checking what is still missing before the search")
+            self.hooks.check()
+            self.spent["calls"] += 1
+            try:
+                question = parse_clarify(self.clarify(clarify_brief(self.message, self.history, self.preferences)))
+            except Exception:  # noqa: BLE001 — a lost question never costs the answer
+                self.hooks.check()
+                question = None
+            # A chain may ask a second question; it may not ask the same one twice.
+            if question is not None and _asked_before(question, self.history):
+                question = None
+            if question is not None:
+                self.hooks.partial({"steps": [], "answer": "", "sources": [], "products": [],
+                               "activity": [], "questions": [question]})
+                self.hooks.set(1.0, "asked one question")
+                return {
+                    "answer": "", "questions": [question], "sources": [], "steps": [],
+                    "products": [], "activity": [],
+                    "agent_calls": self.spent["calls"], "search_rounds": 0,
+                    "fallback": False, "mode": self.mode, "need": {},
+                }
+
+        self.steps: list[dict] = []
+        self.trail: list[dict] = []
+
+        self.live_sources: list[str] = []
+        # The product cards, as the trail grows: a reader sees the products a turn
+        # found while it is still reading them, not only when the answer lands.
+        self.live_products: list[dict] = []
+        self.activity: list[dict] = []
+
+        self.hooks.set(0.1, "reading the question")
+        self.last_streamed_answer = ""
+        self.last_streamed_at = 0.0
+
+        self.route = "web" if self.mode else route_message(self.message, self.history)
+        if self.route == "chat":
+            self.hooks.set(0.9, "writing the answer")
+            # An ordinary question is not a research request, so this call gets no
+            # web tools: `chat_brief` asks for `SEARCH: <words>` when the answer
+            # needs the internet, and that runs the same bounded web turn as any
+            # other agent. Granting tools here made every plain question a retrieval
+            # turn, and a model that answered from memory was then failed for not
+            # having used them.
+            self.text = self.answer_call(chat_brief(self.message, self.history), grounded=True,
+                               why="answering from the conversation")
+            self.wanted = search_request(self.text)
+            if not self.wanted and _SEARCH_LINE.match(self.text.strip().splitlines()[0] if self.text.strip() else ""):
+                # It asked for a search in words that cannot be one (a sentence of
+                # explanation). The request is still not an answer: search with the
+                # reader's own message.
+                self.wanted = self.search_words(_web_query(self.message, self.history))
+            if not self.wanted and _SEARCH_TOOL_PREFIX.match(self.text):
+                # A malformed structured request is still a tool request, not a
+                # final answer. Fall back to the reader's words through the usual
+                # bounded query path.
+                self.wanted = self.search_words(_web_query(self.message, self.history))
+            if self.wanted:
+                # The agent asked for what it cannot know without the internet.
+                return self.web_turn(self.wanted)
+            answer, _ = split_sources(self.text)
+            self.hooks.partial(self.snapshot(answer))
+            self.hooks.set(1.0, "answered" if answer else "the agent printed nothing")
+            return {
+                "answer": answer, "sources": [], "steps": [], "products": [],
+                "activity": [],
+                "agent_calls": self.spent["calls"], "search_rounds": 0,
+                "fallback": False, "mode": self.mode, "need": {},
+            }
+
+        if self.route == "catalogue" and _FAILURE_QUESTION.search(self.message):
+            # "What goes wrong with this?" is Kriko's own question, but a fresh
+            # installation has no records to read. Sending it to the catalogue route
+            # would answer "nothing is recorded" as if that were a finding; read the
+            # web instead, which is where the question's evidence lives until the
+            # reader installs a catalog.
+            if not _packs_installed(self.ctx.store):
+                return self.web_turn(self.search_words(_web_query(self.message, self.history)))
+
+        if self.route == "web":
+            return self.web_turn(self.search_words(_web_query(self.message, self.history)))
+
+        self.fallback = False
+        self.plan = None
+        # The catalogue route reads records, not pages: its calls are plans and a
+        # refinement, and each one is named on the log so three of them read as
+        # three steps rather than as the same question three times.
+        self.reply = self.agent(plan_brief(self.message, self.history), why="planning which records to read")
+        self.plan = parse_plan(self.reply)
+        if self.plan is None and self.spent["calls"] < MAX_AGENT_CALLS - 1 and not self.spent_out():
+            self.plan = parse_plan(self.agent(repair_brief(self.reply), why="re-reading the plan"))
+        if self.plan is None:
+            self.plan = fallback_plan(self.message)
+            self.fallback = True
+            self.hooks.log("the agent's plan was not readable: searching with the message itself")
+        if not self.plan["calls"]:
+            self.plan = {**self.plan, "calls": fallback_plan(self.message)["calls"], "ready": True}
+            self.hooks.log("the agent asked for no records: searching the catalogue with the message")
+        self.need = self.plan["need"] or fallback_plan(self.message)["need"]
+
+        self.rounds = 0
+        while True:
+            self.rounds += 1
+            self.hooks.set(0.25 + 0.2 * (self.rounds - 1), f"searching, round {self.rounds}")
+            results = []
+            for call in self.plan["calls"]:
+                self.hooks.check()
+                step = _step(len(self.steps) + 1, call)
+                self.steps.append(step)
+                self.hooks.partial(self.snapshot())
+                started = time.monotonic()
+                out = chatdata.run(call["source"], self.ctx, call["args"])
+                self.hooks.check()
+                _finish(step, out, int((time.monotonic() - started) * 1000))
+                self.hooks.log(f"{step['label']}" + (f": {step['detail']}" if step["detail"] else ""))
+                self.hooks.partial(self.snapshot())
+                results.append(out)
+            self.trail.append({"calls": self.plan["calls"], "results": results})
+            self.live_products = products_from(self.trail)
+            self.hooks.partial(self.snapshot())
+            if (self.plan["ready"] or self.rounds >= MAX_SEARCH_ROUNDS
+                    or self.spent["calls"] >= MAX_AGENT_CALLS - 1 or self.spent_out()):
+                break
+            nxt = parse_plan(self.agent(refine_brief(self.message, self.history, self.trail),
+                                   why="refining the search with the records read"))
+            if nxt is None or not nxt["calls"]:
+                break
+            self.plan = nxt
+
+        self.record_sources = {"product_match", "catalogue_search", "subject_detail",
+                          "saved_checks", "quick_looks", "research_runs"}
+        if (_FAILURE_QUESTION.search(self.message)
+                and not any(
+                    result.get("rows")
+                    for entry in self.trail
+                    for call, result in zip(entry.get("calls") or [], entry.get("results") or [])
+                    if call.get("source") in self.record_sources
+                ) and not self.spent_out(0.0)):
+            # The catalogues were tried and had nothing for this question. That is
+            # not the same answer as "nothing goes wrong"; a reader with a product
+            # outside the installed knowledge still deserves the web.
+            self.hooks.log("no installed record matched; reading the web instead")
+            self.hooks.set(0.35, "no record matched, searching the web")
+            return self.web_turn(self.search_words(_web_query(self.message, self.history)))
+
+        self.detailed = bool(re.search(r"\b(detail|details|explain|in depth|everything)\b", self.message, re.I))
+        self.hooks.set(0.9, "writing the answer")
+
+        self.text = self.answer_call(answer_brief(self.message, self.history, self.need, self.trail, detailed=self.detailed),
+                           why="writing the answer from the records read")
+        self.wanted = search_request(self.text)
+        if self.wanted and self.spent["calls"] < MAX_AGENT_CALLS and not self.spent_out():
+            return self.web_turn(self.wanted)
+        if self.wanted and self.spent_out(0.0):
+            raise TurnOutOfTime(_out_of_time("the answer was written"))
+        if self.wanted or _SEARCH_TOOL_PREFIX.match(self.text) or _SEARCH_LINE.match(self.text.strip().splitlines()[0] if self.text.strip() else ""):
+            raise RuntimeError("The agent requested more research before completing the catalog answer; the search trail is saved.")
+        answer, named = split_sources(self.text)
+        self.ran_with_rows = [s["source"] for s in self.steps if s["state"] == "done"]
+        self.sources = named or list(dict.fromkeys(self.ran_with_rows))
+        self.activity.extend(_agent_reads(self.agent_pages, self.activity))
+        self.hooks.partial(self.snapshot(answer, self.sources))
+        self.hooks.set(1.0, "answered" if answer else "the agent printed nothing")
+        return {
+            "answer": answer,
+            "sources": self.sources,
+            "steps": self.steps,
+            "products": products_from(self.trail, self.sources),
+            "activity": [dict(one) for one in self.activity],
+            "agent_calls": self.spent["calls"],
+            "search_rounds": self.rounds,
+            "fallback": self.fallback, "mode": self.mode,
+            "need": self.need,
+        }
+
+    def spent_out(self, need: float = PHASE_FLOOR_SECONDS) -> bool:
+        """Whether the turn's clock has less than `need` seconds left."""
+        remaining = _time_left(self.hooks)
+        return remaining is not None and remaining < need
+
+    def purpose(self, said: str) -> None:
+        """Why this model call exists, once in the job's own log.
+
+        One question asked three times reads as a stuck turn; three calls whose
+        purpose is named read as work.
+        """
+        self.hooks.log(said)
+
+    def agent(self, prompt: str, *, on_text: Callable[[str], None] | None = None,
+              grounded: bool = False, why: str = "") -> str:
+        if self.spent["calls"] >= MAX_AGENT_CALLS:
+            raise RuntimeError("the chat turn has no agent call left")
+        # Out of time is a sentence on screen, not a frozen turn: the reader is
+        # told what ended and that nothing was saved, rather than watching a
+        # spinner that no call can outlive.
+        if self.spent_out(0.0):
+            raise TurnOutOfTime(_out_of_time(why))
+        self.spent["calls"] += 1
+        self.hooks.check()
+        if why:
+            self.purpose(why)
+        try:
+            if grounded:
+                if on_text is not None and self.ask_grounded_stream is not None:
+                    return self.ask_grounded_stream(prompt, on_text)
+                if self.ask_grounded is not None:
+                    return self.ask_grounded(prompt)
+            # No tools-off path was handed in: stream (or ask) through the one
+            # there is. A paid chat turn passes both hooks only where the plane
+            # can honour them (`app/web/tasks.py`,
+            # `_plane_can_answer_without_tools`); for a CLI whose protocol is
+            # not in `harness.TOOLLESS_PROTOCOLS`, for a test script, or for
+            # some other caller, this fallback is what keeps the turn alive —
+            # and the turn has already said, naming that agent, that the call
+            # runs with the tools it has rather than claiming to be grounded.
+            if on_text is not None and self.ask_stream is not None:
+                return self.ask_stream(prompt, on_text)
+            return self.ask(prompt)
+        except TurnOutOfTime:
+            raise
+        except Exception:
+            if self.spent_out(0.0):
+                raise TurnOutOfTime(_out_of_time(why)) from None
+            raise
+
+    def answer_call(self, prompt: str, *, grounded: bool = False, why: str = "") -> str:
+        self.reply = self.agent(prompt, on_text=self.stream_answer, grounded=grounded, why=why)
+        def incomplete(text: str) -> bool:
+            return empty_offer(text) or (
+                len(str(text or "").split()) <= 80
+                and _REFUSAL_ONLY.search(str(text or "")) is not None
+            )
+
+        if incomplete(self.reply) and self.spent["calls"] < MAX_AGENT_CALLS and not self.spent_out():
+            self.hooks.log("the reply did not complete the request; continuing the work")
+            # The repair reads the evidence the draft already had: a second
+            # retrieval budget is what made one turn ask the same agent three
+            # times, and what the reader paid for in minutes.
+            self.reply = self.agent(repair_prompt(prompt, self.reply), on_text=self.stream_answer,
+                          grounded=True, why="finishing the interrupted answer")
+        if incomplete(self.reply):
+            if self.spent_out(0.0):
+                raise TurnOutOfTime(_out_of_time(why))
+            raise RuntimeError("The agent did not complete the requested work after a repair attempt.")
+        return self.reply
+
+    def snapshot(self, answer: str = "", sources: Sequence[str] | None = None) -> dict:
+        return {"steps": [dict(one) for one in self.steps], "answer": answer,
+                "sources": list(self.live_sources if sources is None else sources),
+                "products": [dict(one) for one in self.live_products],
+                "activity": [dict(one) for one in self.activity]}
+
+    def record_web_activity(self, query: str, out: dict) -> None:
+        """Keep the exact web leads and per-page read outcomes for the UI."""
+        results = [row for row in out.get("search_results", [])
+                   if isinstance(row, dict)]
+        attempted = out.get("pages_attempted", 0)
+        read_count = out.get("pages_read", 0)
+        attempted = (attempted if isinstance(attempted, int)
+                     and not isinstance(attempted, bool) else 0)
+        read_count = (read_count if isinstance(read_count, int)
+                      and not isinstance(read_count, bool) else 0)
+        search_id = f"web-{len(self.activity) + 1}"
+        self.activity.append({
+            "id": search_id, "kind": "search", "query": query,
+            "state": "failed" if out.get("error") else "done",
+            "search_results": [str(row.get("url") or "") for row in results
+                               if row.get("url")],
+            "pages_attempted": attempted,
+            "pages_read": read_count,
+        })
+        for index, row in enumerate(results):
+            url = str(row.get("url") or "")
+            if not url:
+                continue
+            was_attempted = bool(row.get("read_attempted"))
+            was_read = bool(row.get("page_read"))
+            self.activity.append({
+                "id": f"{search_id}-read-{index + 1}", "kind": "read",
+                "title": str(row.get("title") or ""), "url": url,
+                "state": "done" if was_read else "failed",
+                "attempted": was_attempted,
+            })
+
+    def stream_answer(self, text: str) -> None:
+        # The answer card is transient until the call completes. Strip a
+        # streamed Sources tail just as we do for the finished reply, so the
+        # reader sees the answer rather than a half-written citation list.
+        answer, _ = split_sources(text)
+        candidate = answer.lstrip(" `*\"'")
+        upper = candidate.upper()
+        if upper.startswith("SEARCH") or (upper and "SEARCH:".startswith(upper)):
+            return  # a request for a search, not words the reader should see
+        if (candidate.startswith("{") or candidate.casefold().startswith("json")
+                or _SEARCH_TOOL_PREFIX.match(answer)):
+            return  # structured tool requests are not the reader's answer
+        now = time.monotonic()
+        if answer and answer != self.last_streamed_answer and (
+            not self.last_streamed_answer or now - self.last_streamed_at >= 0.25
+        ):
+            # A second call in the same turn — a repair after an offer, the
+            # citation revision, or the evidence review — streams its own answer
+            # from the beginning. Publishing that restart replaced everything
+            # the reader had with the first words of a near-identical draft, so
+            # the whole reply vanished and animated in again word by word. What
+            # is already on screen stays until the new draft has said at least
+            # as much.
+            if (self.last_streamed_answer and not answer.startswith(self.last_streamed_answer)
+                    and len(answer) < len(self.last_streamed_answer)):
+                return
+            self.last_streamed_answer = answer
+            self.last_streamed_at = now
+            self.hooks.partial(self.snapshot(answer))
+
+    def search_words(self, plain: str) -> str:
+        """The words to search: the agent's, else the reader's own, tidied."""
+        if (self.ask_quick is None or _URL_IN_MESSAGE.search(self.message)
+                or (_information_request(self.message) and not _DEPENDENT_QUESTION.search(self.message))):
+            return plain
+        if self.spent["calls"] >= MAX_AGENT_CALLS - 1 or self.spent_out():
+            return plain  # keep the last call, and the remaining seconds, for the answer
+        self.spent["calls"] += 1
+        self.hooks.check()
+        self.hooks.set(0.15, "choosing the search words")
+        self.purpose("choosing the search words")
+        try:
+            self.reply = self.ask_quick(query_brief(self.message, self.history)).strip()
+        except Exception:  # noqa: BLE001 — a failed helper call must not fail the turn
+            return plain
+        return _clean_query(self.reply.splitlines()[0] if self.reply else "") or plain
+
+    def web_turn(self, query: str) -> dict:
+        plain = _web_query(self.message, self.history)
+        # A bare product phrase ("Golf 5 için kış lastiği") asks what to buy even
+        # without a buying verb, and an answer to it owes links the reader can
+        # open. This is the same shape the router already treats as a product
+        # request, so it turns on the seller checks and the links section.
+        buying = (_buying_request(self.message) or bool(self.mode)) and self.mode not in INFO_MODES
+        shape = {"buying": "yes"} if buying else {}
+        if self.mode:
+            shape["mode"] = self.mode
+        web_call: dict = {"source": "web_search", "args": {"query": query, **shape}}
+        step = _step(1, web_call)
+        self.steps.append(step)
+        self.hooks.set(0.3, "searching the web")
+        self.hooks.partial(self.snapshot())
+        started = time.monotonic()
+        out = chatdata.run("web_search", self.ctx, web_call["args"])
+        self.hooks.check()
+        self.record_web_activity(query, out)
+        _finish(step, out, int((time.monotonic() - started) * 1000))
+        self.hooks.log(f"{step['label']}" + (f": {step['detail']}" if step["detail"] else ""))
+        self.trail.append({"calls": [web_call], "results": [out]})
+        if (not out["rows"] or not any(row.get("page_read") for row in out["rows"])) and not out.get("error") and plain and plain != query:
+            # The written words found nothing; the reader's own may.
+            retry_call: dict = {"source": "web_search", "args": {"query": plain, **shape}}
+            retry_step = _step(len(self.steps) + 1, retry_call)
+            self.steps.append(retry_step)
+            self.hooks.partial(self.snapshot())
+            began = time.monotonic()
+            out = chatdata.run("web_search", self.ctx, retry_call["args"])
+            self.hooks.check()
+            self.record_web_activity(plain, out)
+            _finish(retry_step, out, int((time.monotonic() - began) * 1000))
+            self.hooks.log(f"{retry_step['label']}"
+                      + (f": {retry_step['detail']}" if retry_step["detail"] else ""))
+            self.trail.append({"calls": [retry_call], "results": [out]})
+            query = plain
+        cited_urls = list(dict.fromkeys(
+            public_url for row in out["rows"]
+            if isinstance(row, dict) and row.get("page_read") and row.get("url")
+            if (public_url := chatdata._public_http_url(row["url"]))))
+        self.live_sources = ["web_search", *cited_urls] if cited_urls else []
+        self.live_products = (listing_cards(out["rows"]) if buying else []) + products_from(self.trail)
+        self.hooks.partial(self.snapshot())
+        # The other half of a buying question: what the reader's own catalogues
+        # already know about the products the web returned. Local and quick, and
+        # it runs only when there is a pack to read, so an installation with
+        # none behaves exactly as it did.
+        catalogue: dict | None = None
+        if _packs_installed(self.ctx.store):
+            catalogue_call: dict = {"source": "product_match", "args": {"query": query}}
+            catalogue_step = _step(len(self.steps) + 1, catalogue_call)
+            self.steps.append(catalogue_step)
+            self.hooks.set(0.55, "checking the catalogue")
+            self.hooks.partial(self.snapshot())
+            began = time.monotonic()
+            catalogue = relevant_catalogue(
+                chatdata.run("product_match", self.ctx, catalogue_call["args"]),
+                self.message, query,
+                " ".join(str(row.get("title") or "") for row in out["rows"]
+                         if isinstance(row, dict)))
+            self.hooks.check()
+            _finish(catalogue_step, catalogue or {"rows": [], "note": ""},
+                    int((time.monotonic() - began) * 1000))
+            self.hooks.log(f"{catalogue_step['label']}"
+                      + (f": {catalogue_step['detail']}" if catalogue_step["detail"] else ""))
+            self.hooks.partial(self.snapshot())
+            self.trail.append({"calls": [catalogue_call], "results": [catalogue]})
+            self.live_products = (listing_cards(out["rows"]) if buying else []) + products_from(self.trail)
+        self.hooks.set(0.85, "writing the answer")
+        self.rounds = 1
+        rows = list(out["rows"])
+        while True:
+            host_grounded = any(row.get("page_read") for row in rows
+                                if isinstance(row, dict))
+            brief = web_answer_brief(self.message, self.history, rows, out["note"],
+                                     catalogue=catalogue, buying=buying,
+                                     identifiers=out.get("identifiers"),
+                                     product_only=self.product_only and buying,
+                                     mode=self.mode, host_grounded=host_grounded)
+            # This is the turn's one retrieval phase. When Kriko read the pages
+            # itself the agent answers without tools; when it did not, the
+            # agent's own web tools are what research means here. Everything
+            # after this call revises, reviews or names — with no tools.
+            self.text = self.answer_call(
+                brief, grounded=host_grounded,
+                why=("writing the answer from the pages Kriko read"
+                     if host_grounded else
+                     "researching with the agent's own web tools"))
+            self.wanted = search_request(self.text)
+            protocol_reply = bool(self.wanted or _SEARCH_TOOL_PREFIX.match(self.text)
+                                  or _SEARCH_LINE.match(self.text.strip().splitlines()[0] if self.text.strip() else ""))
+            if not protocol_reply:
+                break
+            if self.spent_out(0.0):
+                raise TurnOutOfTime(_out_of_time("the answer was written"))
+            if not self.wanted or self.rounds >= MAX_SEARCH_ROUNDS or self.spent["calls"] >= MAX_AGENT_CALLS:
+                raise RuntimeError("The research budget ended before the agent delivered an answer; the search trail is saved.")
+            self.rounds += 1
+            call: dict = {"source": "web_search", "args": {"query": self.wanted, **shape}}
+            next_step = _step(len(self.steps) + 1, call)
+            self.steps.append(next_step)
+            self.hooks.set(0.85, "checking another source")
+            self.hooks.partial(self.snapshot())
+            began = time.monotonic()
+            out = chatdata.run("web_search", self.ctx, call["args"])
+            self.hooks.check()
+            self.record_web_activity(self.wanted, out)
+            _finish(next_step, out, int((time.monotonic() - began) * 1000))
+            self.trail.append({"calls": [call], "results": [out]})
+            rows = list({row["url"]: row for row in rows + out["rows"]}.values())
+            self.live_products = (listing_cards(rows) if buying else []) + products_from(self.trail)
+            self.hooks.partial(self.snapshot())
+        # The agent's tool loop can read pages after the host search failed.
+        # Keep that text in the revision and review, as well as its URLs: a
+        # reviewer handed only failed host reads would erase a grounded answer.
+        by_url = {row["url"]: row for row in rows}
+        for url, page in self.agent_pages.items():
+            excerpt = str(page.get("page_excerpt") or "")
+            if excerpt and not by_url.get(url, {}).get("page_read"):
+                by_url[url] = {**page, "url": url, "page_read": True,
+                               "page_excerpt": excerpt, "read_attempted": True}
+        rows = list(by_url.values())
+        brief = web_answer_brief(self.message, self.history, rows, out["note"],
+                                 catalogue=catalogue, buying=buying,
+                                 identifiers=out.get("identifiers"),
+                                 product_only=self.product_only and buying,
+                                 mode=self.mode, host_grounded=True)
+        cited_urls = list(dict.fromkeys(row["url"] for row in rows if row.get("page_read")))
+        # A page the agent's own tools opened is evidence this turn has read,
+        # exactly as a page Kriko fetched is: the answer may cite it without
+        # being sent back for a citation revision, and the screen draws it.
+        known_urls = list(dict.fromkeys([*cited_urls, *self.agent_pages]))
+        self.live_sources = ["web_search", *known_urls] if known_urls else []
+        answer, _ = split_sources(self.text)
+        if buying and answer and not (self.product_only and buying):
+            answer += _links_section(self.message, rows, answer)
+        answer_urls = _public_answer_urls(answer)
+        unverified = [url for url in answer_urls if url not in known_urls]
+        if unverified and self.spent["calls"] < MAX_AGENT_CALLS and not self.spent_out():
+            # A revision reads the pages and the draft it was given. It must not
+            # open a second retrieval budget: that call is what the reader's log
+            # showed as the same agent being asked all over again, minutes in.
+            self.text = self.answer_call(brief + "\n\nYour draft cited pages Kriko has no evidence for: "
+                               + json.dumps(unverified) + "\nRevise it using the fetched excerpts. "
+                               "Remove unsupported claims and links; state any remaining uncertainty.\nDRAFT:\n" + answer,
+                               grounded=True,
+                               why="revising the answer against the pages read")
+            if search_request(self.text) or _SEARCH_TOOL_PREFIX.match(self.text):
+                raise RuntimeError("The agent requested more research while checking citations; no final answer was delivered.")
+            answer, _ = split_sources(self.text)
+            answer_urls = _public_answer_urls(answer)
+            unverified = [url for url in answer_urls if url not in known_urls]
+        if unverified:
+            self.activity.append({"id": "citation-warning", "kind": "verification", "state": "failed",
+                             "text": "Some answer references could not be verified against the pages read.",
+                             "urls": unverified})
+        review: dict = {"status": "not_independently_graded"}
+        if self.verify_answer is not None and self.spent_out():
+            # The answer is written and saved either way. The review is the
+            # phase that yields to the clock, and the screen says so rather than
+            # leaving a turn that never ends.
+            review = {"status": "unverified",
+                      "reason": "The turn's time budget ended before the evidence review."}
+            self.activity.append({"id": "evidence-review-skipped", "kind": "verification",
+                             "state": "failed",
+                             "text": "The turn ran out of time before the answer was checked "
+                                     "against the pages; its claims have not been reviewed."})
+        elif self.verify_answer is not None:
+            verify = self.verify_answer
+
+            def check_support(draft: str) -> dict:
+                if self.spent["calls"] >= MAX_AGENT_CALLS:
+                    return {"status": "unverified", "reason": "The answer review budget was exhausted."}
+                self.spent["calls"] += 1
+                self.hooks.check()
+                try:
+                    verdict = verify(draft, rows)
+                    if verdict.get("supported") is not True:
+                        return {"status": "unsupported", "issues": verdict.get("issues") or ["The provided evidence does not support every consequential claim."]}
+                    documents = {row["url"]: row.get("page_excerpt", "") for row in rows if row.get("page_read")}
+                    citations = verdict.get("citations") or []
+                    if not citations or any(not isinstance(one, dict) or not one.get("quote")
+                            or not loose_span(documents.get(one.get("url"), ""), str(one.get("quote") or "")) for one in citations):
+                        return {"status": "unsupported", "issues": ["The evidence review did not supply valid source quotations."]}
+                    return {"status": "supported", "citations": citations}
+                except Exception:
+                    self.hooks.check()
+                    return {"status": "unverified", "reason": "The evidence review was unavailable."}
+            self.hooks.set(0.9, "checking the answer against its sources")
+            self.purpose("reviewing the answer against the pages read")
+            review = check_support(answer)
+            if (review["status"] == "unsupported" and self.spent["calls"] < MAX_AGENT_CALLS
+                    and not self.spent_out()):
+                self.text = self.answer_call(brief + "\n\nEvidence review found these unsupported claims: "
+                                   + json.dumps(review.get("issues"), ensure_ascii=False)
+                                   + "\nCorrect the answer using only the supplied evidence.\nDRAFT:\n" + answer,
+                                   grounded=True,
+                                   why="correcting the answer from the evidence review")
+                if search_request(self.text) or _SEARCH_TOOL_PREFIX.match(self.text):
+                    raise RuntimeError("The answer review requested further research before finishing; the evidence trail is saved.")
+                answer, _ = split_sources(self.text)
+                review = check_support(answer)
+            if review["status"] != "supported":
+                self.activity.append({"id": "evidence-warning", "kind": "verification", "state": "failed",
+                                 "text": "This answer could not be fully verified against the supplied evidence."})
+        unverified = [url for url in _public_answer_urls(answer) if url not in known_urls]
+        if unverified and not any(item["id"] == "citation-warning" for item in self.activity):
+            self.activity.append({"id": "citation-warning", "kind": "verification", "state": "failed",
+                             "text": "Some answer references could not be verified against the pages read.", "urls": unverified})
+        self.activity.extend(_agent_reads(self.agent_pages, self.activity))
+        self.sources = list(dict.fromkeys([
+            *(self.live_sources if known_urls else []), *known_urls,
+            *(["product_match"] if catalogue and catalogue.get("rows") else []),
+        ]))
+        self.hooks.partial(self.snapshot(answer, self.sources))
+        self.hooks.set(1.0, "answered" if answer else "the agent printed nothing")
+        return {
+            "answer": answer, "sources": self.sources, "steps": self.steps,
+            "products": turn_products(self.trail, rows, include_listings=buying),
+            "activity": [dict(one) for one in self.activity],
+            "agent_calls": self.spent["calls"], "search_rounds": self.rounds,
+            "fallback": False, "mode": self.mode,
+            "need": {"product": self.message, "requests": [one["text"] for one in self.history if one.get("role") == "reader"]},
+            "verification": {"status": "unverified" if unverified else "references_checked",
+                             "unverified_urls": unverified, "claim_support": review},
+        }
+
+
+
 def run_turn(message: str, *, ask: Ask, ctx: chatdata.Context,
              ask_stream: StreamAsk | None = None, ask_quick: Ask | None = None,
              ask_grounded: Ask | None = None,
@@ -1670,570 +2267,9 @@ def run_turn(message: str, *, ask: Ask, ctx: chatdata.Context,
     happens and a cancel is honoured between steps. When it also takes
     `remaining()`, that is this turn's single clock (see `TURN_SECONDS`).
     """
-    hooks = hooks or _Silent()
-    message = str(message or "").strip()[:16000]
-    mode = mode_of(message, mode, history)
-    agent_pages = agent_pages if isinstance(agent_pages, dict) else {}
-    spent = {"calls": 0}
-
-    def spent_out(need: float = PHASE_FLOOR_SECONDS) -> bool:
-        """Whether the turn's clock has less than `need` seconds left."""
-        remaining = _time_left(hooks)
-        return remaining is not None and remaining < need
-
-    def purpose(said: str) -> None:
-        """Why this model call exists, once in the job's own log.
-
-        One question asked three times reads as a stuck turn; three calls whose
-        purpose is named read as work.
-        """
-        hooks.log(said)
-
-    def agent(prompt: str, *, on_text: Callable[[str], None] | None = None,
-              grounded: bool = False, why: str = "") -> str:
-        if spent["calls"] >= MAX_AGENT_CALLS:
-            raise RuntimeError("the chat turn has no agent call left")
-        # Out of time is a sentence on screen, not a frozen turn: the reader is
-        # told what ended and that nothing was saved, rather than watching a
-        # spinner that no call can outlive.
-        if spent_out(0.0):
-            raise TurnOutOfTime(_out_of_time(why))
-        spent["calls"] += 1
-        hooks.check()
-        if why:
-            purpose(why)
-        try:
-            if grounded:
-                if on_text is not None and ask_grounded_stream is not None:
-                    return ask_grounded_stream(prompt, on_text)
-                if ask_grounded is not None:
-                    return ask_grounded(prompt)
-            # No tools-off path was handed in: stream (or ask) through the one
-            # there is. A paid chat turn passes both hooks only where the plane
-            # can honour them (`app/web/tasks.py`,
-            # `_plane_can_answer_without_tools`); for a CLI whose protocol is
-            # not in `harness.TOOLLESS_PROTOCOLS`, for a test script, or for
-            # some other caller, this fallback is what keeps the turn alive —
-            # and the turn has already said, naming that agent, that the call
-            # runs with the tools it has rather than claiming to be grounded.
-            if on_text is not None and ask_stream is not None:
-                return ask_stream(prompt, on_text)
-            return ask(prompt)
-        except TurnOutOfTime:
-            raise
-        except Exception:
-            if spent_out(0.0):
-                raise TurnOutOfTime(_out_of_time(why)) from None
-            raise
-
-    # ── the question before the spend ───────────────────────────────────────
-    if clarify is not None and asks_before_answering(message) and not spent_out():
-        hooks.set(0.06, "checking what is still missing")
-        purpose("checking what is still missing before the search")
-        hooks.check()
-        spent["calls"] += 1
-        try:
-            question = parse_clarify(clarify(clarify_brief(message, history, preferences)))
-        except Exception:  # noqa: BLE001 — a lost question never costs the answer
-            hooks.check()
-            question = None
-        # A chain may ask a second question; it may not ask the same one twice.
-        if question is not None and _asked_before(question, history):
-            question = None
-        if question is not None:
-            hooks.partial({"steps": [], "answer": "", "sources": [], "products": [],
-                           "activity": [], "questions": [question]})
-            hooks.set(1.0, "asked one question")
-            return {
-                "answer": "", "questions": [question], "sources": [], "steps": [],
-                "products": [], "activity": [],
-                "agent_calls": spent["calls"], "search_rounds": 0,
-                "fallback": False, "mode": mode, "need": {},
-            }
-
-    def answer_call(prompt: str, *, grounded: bool = False, why: str = "") -> str:
-        reply = agent(prompt, on_text=stream_answer, grounded=grounded, why=why)
-        def incomplete(text: str) -> bool:
-            return empty_offer(text) or (
-                len(str(text or "").split()) <= 80
-                and _REFUSAL_ONLY.search(str(text or "")) is not None
-            )
-
-        if incomplete(reply) and spent["calls"] < MAX_AGENT_CALLS and not spent_out():
-            hooks.log("the reply did not complete the request; continuing the work")
-            # The repair reads the evidence the draft already had: a second
-            # retrieval budget is what made one turn ask the same agent three
-            # times, and what the reader paid for in minutes.
-            reply = agent(repair_prompt(prompt, reply), on_text=stream_answer,
-                          grounded=True, why="finishing the interrupted answer")
-        if incomplete(reply):
-            if spent_out(0.0):
-                raise TurnOutOfTime(_out_of_time(why))
-            raise RuntimeError("The agent did not complete the requested work after a repair attempt.")
-        return reply
-
-    steps: list[dict] = []
-    trail: list[dict] = []
-
-    live_sources: list[str] = []
-    # The product cards, as the trail grows: a reader sees the products a turn
-    # found while it is still reading them, not only when the answer lands.
-    live_products: list[dict] = []
-    activity: list[dict] = []
-
-    def snapshot(answer: str = "", sources: Sequence[str] | None = None) -> dict:
-        return {"steps": [dict(one) for one in steps], "answer": answer,
-                "sources": list(live_sources if sources is None else sources),
-                "products": [dict(one) for one in live_products],
-                "activity": [dict(one) for one in activity]}
-
-    def record_web_activity(query: str, out: dict) -> None:
-        """Keep the exact web leads and per-page read outcomes for the UI."""
-        results = [row for row in out.get("search_results", [])
-                   if isinstance(row, dict)]
-        attempted = out.get("pages_attempted", 0)
-        read_count = out.get("pages_read", 0)
-        attempted = (attempted if isinstance(attempted, int)
-                     and not isinstance(attempted, bool) else 0)
-        read_count = (read_count if isinstance(read_count, int)
-                      and not isinstance(read_count, bool) else 0)
-        search_id = f"web-{len(activity) + 1}"
-        activity.append({
-            "id": search_id, "kind": "search", "query": query,
-            "state": "failed" if out.get("error") else "done",
-            "search_results": [str(row.get("url") or "") for row in results
-                               if row.get("url")],
-            "pages_attempted": attempted,
-            "pages_read": read_count,
-        })
-        for index, row in enumerate(results):
-            url = str(row.get("url") or "")
-            if not url:
-                continue
-            was_attempted = bool(row.get("read_attempted"))
-            was_read = bool(row.get("page_read"))
-            activity.append({
-                "id": f"{search_id}-read-{index + 1}", "kind": "read",
-                "title": str(row.get("title") or ""), "url": url,
-                "state": "done" if was_read else "failed",
-                "attempted": was_attempted,
-            })
-
-    hooks.set(0.1, "reading the question")
-    last_streamed_answer = ""
-    last_streamed_at = 0.0
-
-    def stream_answer(text: str) -> None:
-        nonlocal last_streamed_answer, last_streamed_at
-        # The answer card is transient until the call completes. Strip a
-        # streamed Sources tail just as we do for the finished reply, so the
-        # reader sees the answer rather than a half-written citation list.
-        answer, _ = split_sources(text)
-        candidate = answer.lstrip(" `*\"'")
-        upper = candidate.upper()
-        if upper.startswith("SEARCH") or (upper and "SEARCH:".startswith(upper)):
-            return  # a request for a search, not words the reader should see
-        if (candidate.startswith("{") or candidate.casefold().startswith("json")
-                or _SEARCH_TOOL_PREFIX.match(answer)):
-            return  # structured tool requests are not the reader's answer
-        now = time.monotonic()
-        if answer and answer != last_streamed_answer and (
-            not last_streamed_answer or now - last_streamed_at >= 0.25
-        ):
-            # A second call in the same turn — a repair after an offer, the
-            # citation revision, or the evidence review — streams its own answer
-            # from the beginning. Publishing that restart replaced everything
-            # the reader had with the first words of a near-identical draft, so
-            # the whole reply vanished and animated in again word by word. What
-            # is already on screen stays until the new draft has said at least
-            # as much.
-            if (last_streamed_answer and not answer.startswith(last_streamed_answer)
-                    and len(answer) < len(last_streamed_answer)):
-                return
-            last_streamed_answer = answer
-            last_streamed_at = now
-            hooks.partial(snapshot(answer))
-
-    def search_words(plain: str) -> str:
-        """The words to search: the agent's, else the reader's own, tidied."""
-        if (ask_quick is None or _URL_IN_MESSAGE.search(message)
-                or (_information_request(message) and not _DEPENDENT_QUESTION.search(message))):
-            return plain
-        if spent["calls"] >= MAX_AGENT_CALLS - 1 or spent_out():
-            return plain  # keep the last call, and the remaining seconds, for the answer
-        spent["calls"] += 1
-        hooks.check()
-        hooks.set(0.15, "choosing the search words")
-        purpose("choosing the search words")
-        try:
-            reply = ask_quick(query_brief(message, history)).strip()
-        except Exception:  # noqa: BLE001 — a failed helper call must not fail the turn
-            return plain
-        return _clean_query(reply.splitlines()[0] if reply else "") or plain
-
-    def web_turn(query: str) -> dict:
-        nonlocal live_sources, live_products
-        plain = _web_query(message, history)
-        # A bare product phrase ("Golf 5 için kış lastiği") asks what to buy even
-        # without a buying verb, and an answer to it owes links the reader can
-        # open. This is the same shape the router already treats as a product
-        # request, so it turns on the seller checks and the links section.
-        buying = (_buying_request(message) or bool(mode)) and mode not in INFO_MODES
-        shape = {"buying": "yes"} if buying else {}
-        if mode:
-            shape["mode"] = mode
-        web_call: dict = {"source": "web_search", "args": {"query": query, **shape}}
-        step = _step(1, web_call)
-        steps.append(step)
-        hooks.set(0.3, "searching the web")
-        hooks.partial(snapshot())
-        started = time.monotonic()
-        out = chatdata.run("web_search", ctx, web_call["args"])
-        hooks.check()
-        record_web_activity(query, out)
-        _finish(step, out, int((time.monotonic() - started) * 1000))
-        hooks.log(f"{step['label']}" + (f": {step['detail']}" if step["detail"] else ""))
-        trail.append({"calls": [web_call], "results": [out]})
-        if (not out["rows"] or not any(row.get("page_read") for row in out["rows"])) and not out.get("error") and plain and plain != query:
-            # The written words found nothing; the reader's own may.
-            retry_call: dict = {"source": "web_search", "args": {"query": plain, **shape}}
-            retry_step = _step(len(steps) + 1, retry_call)
-            steps.append(retry_step)
-            hooks.partial(snapshot())
-            began = time.monotonic()
-            out = chatdata.run("web_search", ctx, retry_call["args"])
-            hooks.check()
-            record_web_activity(plain, out)
-            _finish(retry_step, out, int((time.monotonic() - began) * 1000))
-            hooks.log(f"{retry_step['label']}"
-                      + (f": {retry_step['detail']}" if retry_step["detail"] else ""))
-            trail.append({"calls": [retry_call], "results": [out]})
-            query = plain
-        cited_urls = list(dict.fromkeys(
-            public_url for row in out["rows"]
-            if isinstance(row, dict) and row.get("page_read") and row.get("url")
-            if (public_url := chatdata._public_http_url(row["url"]))))
-        live_sources = ["web_search", *cited_urls] if cited_urls else []
-        live_products = (listing_cards(out["rows"]) if buying else []) + products_from(trail)
-        hooks.partial(snapshot())
-        # The other half of a buying question: what the reader's own catalogues
-        # already know about the products the web returned. Local and quick, and
-        # it runs only when there is a pack to read, so an installation with
-        # none behaves exactly as it did.
-        catalogue: dict | None = None
-        if _packs_installed(ctx.store):
-            catalogue_call: dict = {"source": "product_match", "args": {"query": query}}
-            catalogue_step = _step(len(steps) + 1, catalogue_call)
-            steps.append(catalogue_step)
-            hooks.set(0.55, "checking the catalogue")
-            hooks.partial(snapshot())
-            began = time.monotonic()
-            catalogue = relevant_catalogue(
-                chatdata.run("product_match", ctx, catalogue_call["args"]),
-                message, query,
-                " ".join(str(row.get("title") or "") for row in out["rows"]
-                         if isinstance(row, dict)))
-            hooks.check()
-            _finish(catalogue_step, catalogue or {"rows": [], "note": ""},
-                    int((time.monotonic() - began) * 1000))
-            hooks.log(f"{catalogue_step['label']}"
-                      + (f": {catalogue_step['detail']}" if catalogue_step["detail"] else ""))
-            hooks.partial(snapshot())
-            trail.append({"calls": [catalogue_call], "results": [catalogue]})
-            live_products = (listing_cards(out["rows"]) if buying else []) + products_from(trail)
-        hooks.set(0.85, "writing the answer")
-        rounds = 1
-        rows = list(out["rows"])
-        while True:
-            host_grounded = any(row.get("page_read") for row in rows
-                                if isinstance(row, dict))
-            brief = web_answer_brief(message, history, rows, out["note"],
-                                     catalogue=catalogue, buying=buying,
-                                     identifiers=out.get("identifiers"),
-                                     product_only=product_only and buying,
-                                     mode=mode, host_grounded=host_grounded)
-            # This is the turn's one retrieval phase. When Kriko read the pages
-            # itself the agent answers without tools; when it did not, the
-            # agent's own web tools are what research means here. Everything
-            # after this call revises, reviews or names — with no tools.
-            text = answer_call(
-                brief, grounded=host_grounded,
-                why=("writing the answer from the pages Kriko read"
-                     if host_grounded else
-                     "researching with the agent's own web tools"))
-            wanted = search_request(text)
-            protocol_reply = bool(wanted or _SEARCH_TOOL_PREFIX.match(text)
-                                  or _SEARCH_LINE.match(text.strip().splitlines()[0] if text.strip() else ""))
-            if not protocol_reply:
-                break
-            if spent_out(0.0):
-                raise TurnOutOfTime(_out_of_time("the answer was written"))
-            if not wanted or rounds >= MAX_SEARCH_ROUNDS or spent["calls"] >= MAX_AGENT_CALLS:
-                raise RuntimeError("The research budget ended before the agent delivered an answer; the search trail is saved.")
-            rounds += 1
-            call: dict = {"source": "web_search", "args": {"query": wanted, **shape}}
-            next_step = _step(len(steps) + 1, call)
-            steps.append(next_step)
-            hooks.set(0.85, "checking another source")
-            hooks.partial(snapshot())
-            began = time.monotonic()
-            out = chatdata.run("web_search", ctx, call["args"])
-            hooks.check()
-            record_web_activity(wanted, out)
-            _finish(next_step, out, int((time.monotonic() - began) * 1000))
-            trail.append({"calls": [call], "results": [out]})
-            rows = list({row["url"]: row for row in rows + out["rows"]}.values())
-            live_products = (listing_cards(rows) if buying else []) + products_from(trail)
-            hooks.partial(snapshot())
-        # The agent's tool loop can read pages after the host search failed.
-        # Keep that text in the revision and review, as well as its URLs: a
-        # reviewer handed only failed host reads would erase a grounded answer.
-        by_url = {row["url"]: row for row in rows}
-        for url, page in agent_pages.items():
-            excerpt = str(page.get("page_excerpt") or "")
-            if excerpt and not by_url.get(url, {}).get("page_read"):
-                by_url[url] = {**page, "url": url, "page_read": True,
-                               "page_excerpt": excerpt, "read_attempted": True}
-        rows = list(by_url.values())
-        brief = web_answer_brief(message, history, rows, out["note"],
-                                 catalogue=catalogue, buying=buying,
-                                 identifiers=out.get("identifiers"),
-                                 product_only=product_only and buying,
-                                 mode=mode, host_grounded=True)
-        cited_urls = list(dict.fromkeys(row["url"] for row in rows if row.get("page_read")))
-        # A page the agent's own tools opened is evidence this turn has read,
-        # exactly as a page Kriko fetched is: the answer may cite it without
-        # being sent back for a citation revision, and the screen draws it.
-        known_urls = list(dict.fromkeys([*cited_urls, *agent_pages]))
-        live_sources = ["web_search", *known_urls] if known_urls else []
-        answer, _ = split_sources(text)
-        if buying and answer and not (product_only and buying):
-            answer += _links_section(message, rows, answer)
-        answer_urls = _public_answer_urls(answer)
-        unverified = [url for url in answer_urls if url not in known_urls]
-        if unverified and spent["calls"] < MAX_AGENT_CALLS and not spent_out():
-            # A revision reads the pages and the draft it was given. It must not
-            # open a second retrieval budget: that call is what the reader's log
-            # showed as the same agent being asked all over again, minutes in.
-            text = answer_call(brief + "\n\nYour draft cited pages Kriko has no evidence for: "
-                               + json.dumps(unverified) + "\nRevise it using the fetched excerpts. "
-                               "Remove unsupported claims and links; state any remaining uncertainty.\nDRAFT:\n" + answer,
-                               grounded=True,
-                               why="revising the answer against the pages read")
-            if search_request(text) or _SEARCH_TOOL_PREFIX.match(text):
-                raise RuntimeError("The agent requested more research while checking citations; no final answer was delivered.")
-            answer, _ = split_sources(text)
-            answer_urls = _public_answer_urls(answer)
-            unverified = [url for url in answer_urls if url not in known_urls]
-        if unverified:
-            activity.append({"id": "citation-warning", "kind": "verification", "state": "failed",
-                             "text": "Some answer references could not be verified against the pages read.",
-                             "urls": unverified})
-        review: dict = {"status": "not_independently_graded"}
-        if verify_answer is not None and spent_out():
-            # The answer is written and saved either way. The review is the
-            # phase that yields to the clock, and the screen says so rather than
-            # leaving a turn that never ends.
-            review = {"status": "unverified",
-                      "reason": "The turn's time budget ended before the evidence review."}
-            activity.append({"id": "evidence-review-skipped", "kind": "verification",
-                             "state": "failed",
-                             "text": "The turn ran out of time before the answer was checked "
-                                     "against the pages; its claims have not been reviewed."})
-        elif verify_answer is not None:
-            def check_support(draft: str) -> dict:
-                if spent["calls"] >= MAX_AGENT_CALLS:
-                    return {"status": "unverified", "reason": "The answer review budget was exhausted."}
-                spent["calls"] += 1
-                hooks.check()
-                try:
-                    verdict = verify_answer(draft, rows)
-                    if verdict.get("supported") is not True:
-                        return {"status": "unsupported", "issues": verdict.get("issues") or ["The provided evidence does not support every consequential claim."]}
-                    documents = {row["url"]: row.get("page_excerpt", "") for row in rows if row.get("page_read")}
-                    citations = verdict.get("citations") or []
-                    if not citations or any(not isinstance(one, dict) or not one.get("quote")
-                            or not loose_span(documents.get(one.get("url"), ""), str(one.get("quote") or "")) for one in citations):
-                        return {"status": "unsupported", "issues": ["The evidence review did not supply valid source quotations."]}
-                    return {"status": "supported", "citations": citations}
-                except Exception:
-                    hooks.check()
-                    return {"status": "unverified", "reason": "The evidence review was unavailable."}
-            hooks.set(0.9, "checking the answer against its sources")
-            purpose("reviewing the answer against the pages read")
-            review = check_support(answer)
-            if (review["status"] == "unsupported" and spent["calls"] < MAX_AGENT_CALLS
-                    and not spent_out()):
-                text = answer_call(brief + "\n\nEvidence review found these unsupported claims: "
-                                   + json.dumps(review.get("issues"), ensure_ascii=False)
-                                   + "\nCorrect the answer using only the supplied evidence.\nDRAFT:\n" + answer,
-                                   grounded=True,
-                                   why="correcting the answer from the evidence review")
-                if search_request(text) or _SEARCH_TOOL_PREFIX.match(text):
-                    raise RuntimeError("The answer review requested further research before finishing; the evidence trail is saved.")
-                answer, _ = split_sources(text)
-                review = check_support(answer)
-            if review["status"] != "supported":
-                activity.append({"id": "evidence-warning", "kind": "verification", "state": "failed",
-                                 "text": "This answer could not be fully verified against the supplied evidence."})
-        unverified = [url for url in _public_answer_urls(answer) if url not in known_urls]
-        if unverified and not any(item["id"] == "citation-warning" for item in activity):
-            activity.append({"id": "citation-warning", "kind": "verification", "state": "failed",
-                             "text": "Some answer references could not be verified against the pages read.", "urls": unverified})
-        activity.extend(_agent_reads(agent_pages, activity))
-        sources = list(dict.fromkeys([
-            *(live_sources if known_urls else []), *known_urls,
-            *(["product_match"] if catalogue and catalogue.get("rows") else []),
-        ]))
-        hooks.partial(snapshot(answer, sources))
-        hooks.set(1.0, "answered" if answer else "the agent printed nothing")
-        return {
-            "answer": answer, "sources": sources, "steps": steps,
-            "products": turn_products(trail, rows, include_listings=buying),
-            "activity": [dict(one) for one in activity],
-            "agent_calls": spent["calls"], "search_rounds": rounds,
-            "fallback": False, "mode": mode,
-            "need": {"product": message, "requests": [one["text"] for one in history if one.get("role") == "reader"]},
-            "verification": {"status": "unverified" if unverified else "references_checked",
-                             "unverified_urls": unverified, "claim_support": review},
-        }
-
-    route = "web" if mode else route_message(message, history)
-    if route == "chat":
-        hooks.set(0.9, "writing the answer")
-        # An ordinary question is not a research request, so this call gets no
-        # web tools: `chat_brief` asks for `SEARCH: <words>` when the answer
-        # needs the internet, and that runs the same bounded web turn as any
-        # other agent. Granting tools here made every plain question a retrieval
-        # turn, and a model that answered from memory was then failed for not
-        # having used them.
-        text = answer_call(chat_brief(message, history), grounded=True,
-                           why="answering from the conversation")
-        wanted = search_request(text)
-        if not wanted and _SEARCH_LINE.match(text.strip().splitlines()[0] if text.strip() else ""):
-            # It asked for a search in words that cannot be one (a sentence of
-            # explanation). The request is still not an answer: search with the
-            # reader's own message.
-            wanted = search_words(_web_query(message, history))
-        if not wanted and _SEARCH_TOOL_PREFIX.match(text):
-            # A malformed structured request is still a tool request, not a
-            # final answer. Fall back to the reader's words through the usual
-            # bounded query path.
-            wanted = search_words(_web_query(message, history))
-        if wanted:
-            # The agent asked for what it cannot know without the internet.
-            return web_turn(wanted)
-        answer, _ = split_sources(text)
-        hooks.partial(snapshot(answer))
-        hooks.set(1.0, "answered" if answer else "the agent printed nothing")
-        return {
-            "answer": answer, "sources": [], "steps": [], "products": [],
-            "activity": [],
-            "agent_calls": spent["calls"], "search_rounds": 0,
-            "fallback": False, "mode": mode, "need": {},
-        }
-
-    if route == "catalogue" and _FAILURE_QUESTION.search(message):
-        # "What goes wrong with this?" is Kriko's own question, but a fresh
-        # installation has no records to read. Sending it to the catalogue route
-        # would answer "nothing is recorded" as if that were a finding; read the
-        # web instead, which is where the question's evidence lives until the
-        # reader installs a catalog.
-        if not _packs_installed(ctx.store):
-            return web_turn(search_words(_web_query(message, history)))
-
-    if route == "web":
-        return web_turn(search_words(_web_query(message, history)))
-
-    fallback = False
-    plan = None
-    # The catalogue route reads records, not pages: its calls are plans and a
-    # refinement, and each one is named on the log so three of them read as
-    # three steps rather than as the same question three times.
-    reply = agent(plan_brief(message, history), why="planning which records to read")
-    plan = parse_plan(reply)
-    if plan is None and spent["calls"] < MAX_AGENT_CALLS - 1 and not spent_out():
-        plan = parse_plan(agent(repair_brief(reply), why="re-reading the plan"))
-    if plan is None:
-        plan = fallback_plan(message)
-        fallback = True
-        hooks.log("the agent's plan was not readable: searching with the message itself")
-    if not plan["calls"]:
-        plan = {**plan, "calls": fallback_plan(message)["calls"], "ready": True}
-        hooks.log("the agent asked for no records: searching the catalogue with the message")
-    need = plan["need"] or fallback_plan(message)["need"]
-
-    rounds = 0
-    while True:
-        rounds += 1
-        hooks.set(0.25 + 0.2 * (rounds - 1), f"searching, round {rounds}")
-        results = []
-        for call in plan["calls"]:
-            hooks.check()
-            step = _step(len(steps) + 1, call)
-            steps.append(step)
-            hooks.partial(snapshot())
-            started = time.monotonic()
-            out = chatdata.run(call["source"], ctx, call["args"])
-            hooks.check()
-            _finish(step, out, int((time.monotonic() - started) * 1000))
-            hooks.log(f"{step['label']}" + (f": {step['detail']}" if step["detail"] else ""))
-            hooks.partial(snapshot())
-            results.append(out)
-        trail.append({"calls": plan["calls"], "results": results})
-        live_products = products_from(trail)
-        hooks.partial(snapshot())
-        if (plan["ready"] or rounds >= MAX_SEARCH_ROUNDS
-                or spent["calls"] >= MAX_AGENT_CALLS - 1 or spent_out()):
-            break
-        nxt = parse_plan(agent(refine_brief(message, history, trail),
-                               why="refining the search with the records read"))
-        if nxt is None or not nxt["calls"]:
-            break
-        plan = nxt
-
-    record_sources = {"product_match", "catalogue_search", "subject_detail",
-                      "saved_checks", "quick_looks", "research_runs"}
-    if (_FAILURE_QUESTION.search(message)
-            and not any(
-                result.get("rows")
-                for entry in trail
-                for call, result in zip(entry.get("calls") or [], entry.get("results") or [])
-                if call.get("source") in record_sources
-            ) and not spent_out(0.0)):
-        # The catalogues were tried and had nothing for this question. That is
-        # not the same answer as "nothing goes wrong"; a reader with a product
-        # outside the installed knowledge still deserves the web.
-        hooks.log("no installed record matched; reading the web instead")
-        hooks.set(0.35, "no record matched, searching the web")
-        return web_turn(search_words(_web_query(message, history)))
-
-    detailed = bool(re.search(r"\b(detail|details|explain|in depth|everything)\b", message, re.I))
-    hooks.set(0.9, "writing the answer")
-
-    text = answer_call(answer_brief(message, history, need, trail, detailed=detailed),
-                       why="writing the answer from the records read")
-    wanted = search_request(text)
-    if wanted and spent["calls"] < MAX_AGENT_CALLS and not spent_out():
-        return web_turn(wanted)
-    if wanted and spent_out(0.0):
-        raise TurnOutOfTime(_out_of_time("the answer was written"))
-    if wanted or _SEARCH_TOOL_PREFIX.match(text) or _SEARCH_LINE.match(text.strip().splitlines()[0] if text.strip() else ""):
-        raise RuntimeError("The agent requested more research before completing the catalog answer; the search trail is saved.")
-    answer, named = split_sources(text)
-    ran_with_rows = [s["source"] for s in steps if s["state"] == "done"]
-    sources = named or list(dict.fromkeys(ran_with_rows))
-    activity.extend(_agent_reads(agent_pages, activity))
-    hooks.partial(snapshot(answer, sources))
-    hooks.set(1.0, "answered" if answer else "the agent printed nothing")
-    return {
-        "answer": answer,
-        "sources": sources,
-        "steps": steps,
-        "products": products_from(trail, sources),
-        "activity": [dict(one) for one in activity],
-        "agent_calls": spent["calls"],
-        "search_rounds": rounds,
-        "fallback": fallback, "mode": mode,
-        "need": need,
-    }
+    return _Turn(message, ask=ask, ctx=ctx, ask_stream=ask_stream,
+                  ask_quick=ask_quick, ask_grounded=ask_grounded,
+                  ask_grounded_stream=ask_grounded_stream, clarify=clarify,
+                  history=history, hooks=hooks, verify_answer=verify_answer,
+                  preferences=preferences, product_only=product_only,
+                  mode=mode, agent_pages=agent_pages).run()
