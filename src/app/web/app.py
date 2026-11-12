@@ -417,53 +417,8 @@ async def lifespan(app: FastAPI):
                 app.state.knowledge_clock.close()
 
 
-def create_app(settings: Settings | None = None) -> FastAPI:
-    from app import backups
+def _register_routers(app: FastAPI) -> None:
     from app.web.routers import backups as backup_routes
-
-    settings = settings or Settings.from_env()
-    backups.apply_pending(settings)
-    app = FastAPI(
-        title="Kriko", docs_url="/api/docs", redoc_url=None, lifespan=lifespan
-    )
-    app.state.settings = settings
-    # What a coding agent says about its own 5-hour and weekly windows is kept
-    # beside the rest of the app's state (`app/limits.py`, `app/usage.py`). Set
-    # here and not at startup, so an app that is built is an app that keeps it.
-    from app import limits as agent_limits, usage as usage_meters
-
-    _limits_path = settings.app_state_path
-    agent_limits.set_sink(
-        lambda agent, rows: usage_meters.save_limits(_limits_path, agent, rows)
-    )
-
-    # ── the log has to be somewhere this process can actually write ───────
-    #
-    # `default_analysis_log()` prefers the checkout, which is right for a
-    # developer's data and wrong the moment that directory is owned by
-    # somebody else — which is how every analysis append on the machine this
-    # was written on failed for two months into a root-owned `logs/`, through
-    # a `log.warning` that no configured handler was listening to.
-    #
-    # So: resolve it, fall back to ~/.kriko rather than refuse to start, and
-    # carry the reason out to /api/health. Falling back is the fail-open rule
-    # the data path already follows; carrying the reason is the part that was
-    # missing.
-    logs.configure()
-    resolved, why = logs.resolve_writable(
-        app.state.settings.analysis_log_path,
-        logs.KRIKO_HOME / "logs" / "analyses.jsonl",
-    )
-    if why is not None:
-        log.warning(
-            "analysis log %s is not writable, using %s (%s)",
-            app.state.settings.analysis_log_path,
-            resolved,
-            why,
-        )
-        app.state.settings = replace(app.state.settings, analysis_log_path=resolved)
-    app.state.analysis_log_problem = why
-
     for router in (
         backup_routes.router,
         agent_actions.router,
@@ -514,6 +469,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     ):
         app.include_router(router)
 
+
+def _start_core_state(app: FastAPI) -> None:
     # One runner per app, built here so a test app gets its own pool pointed at
     # its own temporary app.sqlite.
     # Idle, it hands the local model's memory back to the host: a finished run
@@ -541,6 +498,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # runner's scheduler lock (see HealthProbe).
     app.state.health_probe = HealthProbe(app.state.settings.store_path, app.state.jobs)
 
+
+def _install_middleware_and_routes(app: FastAPI) -> None:
     # ── the extension announces itself by calling ────────────────────────
     #
     # There is no registration handshake and there should not be one: the
@@ -789,9 +748,61 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "cli_drift": _cli_drift(),
         }
 
+
+
+def create_app(settings: Settings | None = None) -> FastAPI:
+    from app import backups
+
+    settings = settings or Settings.from_env()
+    backups.apply_pending(settings)
+    app = FastAPI(
+        title="Kriko", docs_url="/api/docs", redoc_url=None, lifespan=lifespan
+    )
+    app.state.settings = settings
+    # What a coding agent says about its own 5-hour and weekly windows is kept
+    # beside the rest of the app's state (`app/limits.py`, `app/usage.py`). Set
+    # here and not at startup, so an app that is built is an app that keeps it.
+    from app import limits as agent_limits, usage as usage_meters
+
+    _limits_path = settings.app_state_path
+    agent_limits.set_sink(
+        lambda agent, rows: usage_meters.save_limits(_limits_path, agent, rows)
+    )
+
+    # ── the log has to be somewhere this process can actually write ───────
+    #
+    # `default_analysis_log()` prefers the checkout, which is right for a
+    # developer's data and wrong the moment that directory is owned by
+    # somebody else — which is how every analysis append on the machine this
+    # was written on failed for two months into a root-owned `logs/`, through
+    # a `log.warning` that no configured handler was listening to.
+    #
+    # So: resolve it, fall back to ~/.kriko rather than refuse to start, and
+    # carry the reason out to /api/health. Falling back is the fail-open rule
+    # the data path already follows; carrying the reason is the part that was
+    # missing.
+    logs.configure()
+    resolved, why = logs.resolve_writable(
+        app.state.settings.analysis_log_path,
+        logs.KRIKO_HOME / "logs" / "analyses.jsonl",
+    )
+    if why is not None:
+        log.warning(
+            "analysis log %s is not writable, using %s (%s)",
+            app.state.settings.analysis_log_path,
+            resolved,
+            why,
+        )
+        app.state.settings = replace(app.state.settings, analysis_log_path=resolved)
+    app.state.analysis_log_problem = why
+
+    _register_routers(app)
+
+    _start_core_state(app)
+
+    _install_middleware_and_routes(app)
+
     return app
-
-
 def _cli_drift() -> list:
     """`cliwatch.drift()` when the watcher is loaded, else nothing to report.
 
