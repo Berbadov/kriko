@@ -98,6 +98,18 @@ and the app version, and nothing else — no question, no product, no page, no k
 With no endpoint configured, nothing is ever sent. See the
 [privacy policy](https://kriko.cc/privacy/).
 
+On the **About** page, **Share my product queries** is off by default. When you
+tick it, a lookup that resolved a brand and a model sends that model, lowercased
+(for example `samsung galaxy s24 256gb`), whether the installed catalogs had it
+(`hit` or `miss`), and — for a hit — the id of the report you opened and the
+kind of product it is. Nothing else is sent: not the listing link, not the page
+title, not the time, not an install or device id, and no login. A lookup that
+resolved no brand and model sends nothing at all. Batches go to
+`https://kriko-gateway.fly.dev/v1/queries` at most once a minute, twenty at a
+time (`app/queryshare.py`); the queue lives in memory, holds no timestamps, and
+is emptied the moment you untick the box. A machine with no network sends
+nothing and waits for nothing.
+
 **More → Logs** shows every job's steps in order with their timing: the words
 searched, each page and whether it was read, every agent call (prompt and reply
 size, tokens, cost, which agent and model), each retry and why, each verdict and
