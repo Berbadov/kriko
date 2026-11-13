@@ -18,7 +18,6 @@
    not the state. */
 
 .drawer[data-panel='settings'] {
-  --set-font: var(--font);
   --set-field: var(--panel-2);
   --set-field-edge: var(--edge);
   --set-ok: var(--ok-text);
@@ -50,7 +49,7 @@
 
 .drawer[data-panel='settings'] .drawer-head h2 {
   font-size: 22px;
-  font-weight: 800;
+  font-weight: var(--w-bold);
   letter-spacing: -0.03em;
 }
 
@@ -1278,7 +1277,7 @@
 .drawer[data-panel='settings'][data-wide='true'] { width: 480px; }
 
 .drawer[data-panel='settings'] .drawer-head { padding-bottom: 10px; }
-.drawer[data-panel='settings'] .drawer-head h2 { font-size: 19px; font-weight: 750; }
+.drawer[data-panel='settings'] .drawer-head h2 { font-size: 19px; font-weight: var(--w-bold); }
 .drawer[data-panel='settings'] .drawer-head .icon-btn { width: 32px; height: 32px; border-radius: var(--r-s); }
 
 .settings { gap: 12px; padding-top: 10px; }
@@ -1300,7 +1299,7 @@
 
 .settings .panel-group { border-top-width: 1px; }
 .settings .group-head { min-height: 34px; padding: 2px 0; }
-.settings .group-head h3 { font-size: 14.5px; font-weight: 650; }
+.settings .group-head h3 { font-size: 14.5px; font-weight: var(--w-semibold); }
 
 .settings .setting { min-height: 44px; gap: 6px 12px; padding: 6px 0; }
 .settings .setting.stack,

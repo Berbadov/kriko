@@ -53,7 +53,7 @@
 .cr-head h2 {
   margin: 0;
   font-size: 15px;
-  font-weight: 650;
+  font-weight: var(--w-semibold);
   letter-spacing: -0.015em;
 }
 

@@ -7,8 +7,19 @@
    Surfaces are flat: no resting shadow, no decorative gradient, no glass. */
 
 :root {
-  --font: 'Inter Tight Variable', 'Geist Variable', system-ui, sans-serif;
+  --font: 'Inter Variable', system-ui, sans-serif;
+  --display: 'Chivo Mono Variable', 'Inter Variable', ui-monospace, monospace;
   --mono: 'Geist Mono Variable', ui-monospace, monospace;
+
+  /* One step up from the old scale, so the weight lives here and not in a
+     hundred rules: regular 500, medium 600, semibold 700. */
+  --w-regular: 500;
+  --w-medium: 600;
+  --w-semibold: 700;
+  --w-bold: 800;
+
+  /* The font the reader chose in Settings; the default is Inter. */
+  --set-font: var(--font);
 
   /* time multiplier and distance multiplier from the motion profile */
   --tm: 1;
