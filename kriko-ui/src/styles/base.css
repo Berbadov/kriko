@@ -1,5 +1,5 @@
-@import '@fontsource-variable/inter-tight';
-@import '@fontsource-variable/geist';
+@import '@fontsource-variable/inter';
+@import '@fontsource-variable/chivo-mono';
 @import '@fontsource-variable/geist-mono';
 @import './tokens.css';
 
@@ -21,6 +21,7 @@ body {
   color: var(--ink);
   font-family: var(--font);
   font-size: 14px;
+  font-weight: var(--w-regular);
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
@@ -109,13 +110,26 @@ button {
   stroke: none;
 }
 
-/* Type: a tight grotesk, set heavy and close for anything that is a title. */
+/* Type: Inter for reading, a mono set heavy for anything that is a title. */
 h1,
 h2,
 h3 {
-  font-weight: 800;
+  font-family: var(--display);
+  font-weight: var(--w-semibold);
   letter-spacing: -0.04em;
   line-height: 1.02;
+}
+
+/* The accessibility font is one choice for the whole window, so it overrides
+   the display face too: `--set-font` is the reader's font and the display
+   stack falls back to it. */
+:root[data-font='atkinson'] {
+  --font: 'Atkinson Hyperlegible', system-ui, sans-serif;
+  --display: var(--set-font);
+  --w-regular: 400;
+  --w-medium: 400;
+  --w-semibold: 700;
+  --w-bold: 700;
 }
 
 /* A rule under a line says how much it matters: a heavy bar serious, ticks
