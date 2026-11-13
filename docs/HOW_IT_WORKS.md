@@ -98,6 +98,53 @@ refuses a figure with no source. Every refusal names the correction.
 The refusals matter. Without them, a check that keeps nothing looks the same as
 a check that keeps everything.
 
+### The evidence gate: does the page say what the claim says?
+
+The quote check proves a sentence is on a page. It cannot prove the claim is
+what the sentence says, and the failure that matters sounds perfectly sourced:
+the page says the part is available, the report says it is not, and the real
+sentence is quoted under it. Every mechanical check passes.
+
+So a claim that has a quote on its page is also read against that page by a
+small entailment model — a cross-encoder trained for natural language
+inference, premise = the quote widened to its passage in the page text,
+hypothesis = the claim's title and body. It is asked in exactly one place,
+`app.categorypack.ground`, which both an agent's "Add to a pack" and a job's
+harvest reach, and again in `app.findings.accept_findings` for a research run's
+findings. It decides three ways:
+
+| Verdict | Decision | What happens |
+|---|---|---|
+| entailment, score at or above the threshold | **accept** | The claim enters the catalog, with the verdict and score kept on its evidence. |
+| contradiction | **drop** | The claim does not enter, and the run says its source says the opposite. |
+| neutral, or a weak entailment | **flag** | The claim is held out of the catalog and named in the run's log, the submit verdicts and the coverage report, so an automated retry or the agent can find a source that says it plainly. |
+
+A held claim is not a claim waiting for a person. It is a gap with a reason,
+and the submit answer tells the agent to re-source it — the same shape as a
+quote that is not on its page.
+
+The gate is **off** unless it is configured, and off is the ordinary case: the
+desktop installer carries no model. With no `nli` extra, with
+`KRIKO_NLI_MODEL=off`, or with a checkpoint that will not load, every claim
+passes through unchanged and is marked `nli: unchecked`. Extraction never waits
+on it.
+
+| Variable | Meaning |
+|---|---|
+| `KRIKO_NLI_MODEL` | The checkpoint to load, or `off`. Empty means `cross-encoder/nli-deberta-v3-small`. |
+| `KRIKO_NLI_ACCEPT` | The entailment probability a claim needs to enter. Default `0.70`. |
+
+To turn it on, install the optional extra and set the variable:
+
+```bash
+pip install "kriko[nli]"
+set KRIKO_NLI_MODEL=cross-encoder/nli-deberta-v3-small
+```
+
+The model's own label order is read from its config, never assumed: a
+checkpoint that names its head in another order, or is not three-way NLI, is
+refused rather than guessed at.
+
 A check stops at its cost limit and keeps the work that it finished. A stopped
 check is not a failure.
 
@@ -121,3 +168,14 @@ route `/api/health` reports both files.
 - [Install Kriko on Windows](INSTALL_WINDOWS.md)
 - [Use Kriko](USAGE.md)
 - [The architecture](ARCHITECTURE.md)
+
+## Later: AMIPS retrieval
+
+*Not built, and not to be built yet. A note for whoever revisits lookup.*
+
+A catalog holds a few thousand keys, and exact search over them is already
+faster and more explainable than any index. AMIPS (Apple's approximate
+nearest-neighbour work, `github.com/apple/ml-amips`) is worth revisiting at
+roughly 100k+ keys and not before. The shape it would take then: a small net
+as a query rewriter in front of FAISS IVF, or a SupportNet router over
+clusters; retrained offline on each catalog refresh, never a fine-tuned LLM.

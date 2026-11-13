@@ -80,3 +80,45 @@ def test_excluded_developer_packages_are_not_imported_by_runtime_source():
                 elif isinstance(node, ast.ImportFrom) and node.module:
                     used.add(node.module.split(".", 1)[0])
     assert not (used & blocked), sorted(used & blocked)
+
+
+def test_the_evidence_gate_never_reaches_the_installer():
+    """The NLI gate is the optional `nli` extra; the desktop build carries none.
+
+    `app/nli_gate.py` imports `transformers` and `torch` inside
+    `TransformersNliVerifier.__init__` only, so the frozen import walk cannot
+    follow them — but an eager import anywhere would put two gigabytes into
+    every reader's installer, and the exclusion below is what makes that a
+    build failure rather than a surprise. The frozen sidecar's gate is off, and
+    claims pass through marked `unchecked`: the designed fail-open.
+    """
+    root = Path(__file__).resolve().parents[3]
+    for name in ("torch", "transformers"):
+        assert name in freeze_imports.FROZEN_EXCLUDES, name
+
+    pyproject = (root / "pyproject.toml").read_text(encoding="utf-8")
+    extra = pyproject.split("nli = [", 1)[1].split("]", 1)[0]
+    assert "torch" in extra and "transformers" in extra
+    runtime = pyproject.split("dependencies = [", 1)[1].split("]", 1)[0]
+    for name in ("torch", "transformers"):
+        assert name not in runtime, f"{name} is a runtime dependency again"
+    lock = root / "requirements.lock"
+    if lock.is_file():
+        text = lock.read_text(encoding="utf-8").lower()
+        for name in ("torch", "transformers"):
+            assert f"\n{name}" not in text, f"{name} reached requirements.lock"
+
+    # The one module that may name them imports them inside its own class.
+    for source in (root / "src" / "app").rglob("*.py"):
+        if "tests" in source.parts:
+            continue
+        tree = ast.parse(source.read_text(encoding="utf-8"), filename=str(source))
+        for node in tree.body:
+            imported = (
+                [alias.name.split(".", 1)[0] for alias in node.names]
+                if isinstance(node, ast.Import)
+                else [node.module.split(".", 1)[0]] if isinstance(node, ast.ImportFrom)
+                and node.module else [])
+            assert not ({"torch", "transformers"} & set(imported)), (
+                f"{source} imports torch/transformers at module level — the "
+                "frozen sidecar would carry them")

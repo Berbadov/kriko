@@ -1130,7 +1130,8 @@ def _research(settings, params: dict, progress: Progress, emit, provenance=None)
             emit.open_stage("ingestion", f"checking {len(findings)} finding(s)")
             progress.set(0.85, f"checking {len(findings)} finding(s)")
             verdicts = accept_findings(
-                conn, subject_id, pack_id, findings, retain=retained
+                conn, subject_id, pack_id, findings, retain=retained,
+                nli=_nli_gate(),
             )
             # One more attempt, on the failures only, for the failures a second
             # attempt can honestly fix. See `_repair`.
@@ -1149,6 +1150,11 @@ def _research(settings, params: dict, progress: Progress, emit, provenance=None)
                 accepted=len(verdicts.get("accepted", [])),
                 refused=len(verdicts.get("rejected", [])),
             )
+            held_nli = verdicts.get("nli_held") or []
+            if held_nli:
+                emit.event(
+                    f"{len(held_nli)} finding(s) held: the page quoted does not "
+                    "clearly support the claim", level="warn", stage="ingestion")
             emit.close_stage(
                 detail=f"{len(verdicts.get('accepted', []))} kept, "
                 f"{len(verdicts.get('rejected', []))} refused"
@@ -2693,6 +2699,23 @@ def _page_reader():
     return fetch.reader(15.0)
 
 
+def _nli_gate():
+    """This machine's evidence gate, or None for off.
+
+    Read once per job, never per claim: loading a checkpoint is the expensive
+    part. A machine without the `nli` extra, or with `KRIKO_NLI_MODEL=off`, gets
+    None and every claim passes through unchanged and marked unchecked. A
+    checkpoint that will not load is a gate that is off too — and it says so in
+    the job's own log, once, rather than failing the run.
+    """
+    from app.nli_gate import gate_from_env
+
+    gate = gate_from_env()
+    if gate is not None and gate.name == "unavailable":
+        return None
+    return gate
+
+
 def _sourced_items(quick: dict, proposed) -> tuple[list[dict], int]:
     """Claims that name a page, from the quick look and from the agent's reply.
 
@@ -2786,7 +2809,7 @@ def _file_quick_look(settings, quick: dict, product: str, progress: Progress,
         return None
     progress.log(f"{product} is in {held['name']}; filing the quick look without an agent")
     items, _ = _sourced_items(quick, None)
-    kept, dropped = categorypack.ground(items, _page_reader())
+    kept, dropped = categorypack.ground(items, _page_reader(), nli=_nli_gate())
     for one in dropped:
         progress.log(f"left out {one['title']!r}: {one['reason']}")
     store = connect(settings.store_path)
@@ -3100,7 +3123,7 @@ def _product_check(settings, researcher, params: dict, progress: Progress,
     if bare:
         progress.log(f"{bare} claim(s) named no page and were left out")
     progress.set(0.8, f"checking {len(items)} quote(s) against their pages")
-    kept, dropped = categorypack.ground(items, _page_reader())
+    kept, dropped = categorypack.ground(items, _page_reader(), nli=_nli_gate())
     progress.check()
     for one in dropped:
         progress.log(f"left out {one['title']!r}: {one['reason']}")
@@ -3294,7 +3317,8 @@ def _repair(conn, subject_id, pack_id, verdicts, findings, *, researcher, task,
                    level="warn", stage="ingestion")
         return verdicts
 
-    second = accept_findings(conn, subject_id, pack_id, kept, retain=retain)
+    second = accept_findings(conn, subject_id, pack_id, kept, retain=retain,
+                             nli=_nli_gate())
     emit.event(
         f"{len(second.get('accepted', []))} of {len(again)} kept on the "
         f"second attempt", stage="ingestion")
@@ -3312,8 +3336,16 @@ def _repair(conn, subject_id, pack_id, verdicts, findings, *, researcher, task,
                 and not any(one["title"] == two["title"]
                             for two in second.get("rejected", []))]
     rejected += second.get("rejected", [])
+    # A second attempt that the evidence gate held is held, not refused: the
+    # merge has to carry both lists or the summary would count it as one of
+    # "did not survive the evidence check".
+    held_nli = [*(verdicts.get("nli_held") or []),
+                *(second.get("nli_held") or [])]
     return {**verdicts, "accepted": accepted, "rejected": rejected,
-            "summary": summarise(accepted, rejected)}
+            "nli_dropped": [*(verdicts.get("nli_dropped") or []),
+                            *(second.get("nli_dropped") or [])],
+            "nli_held": held_nli,
+            "summary": summarise(accepted, rejected, nli_held=held_nli)}
 
 
 def _ask_author(researcher, prompt: str, product: str, page) -> str:

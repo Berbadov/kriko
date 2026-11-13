@@ -138,6 +138,7 @@ def submit(
     pack_id: str,
     findings: list[dict],
     queries: Sequence[str] | None = None,
+    nli=None,
 ) -> dict:
     """Store what the agent read; ungrounded and low-value findings are refused.
 
@@ -145,9 +146,20 @@ def submit(
     to `app.sqlite` under `door` after acceptance has decided — the log is
     bookkeeping, never a condition of a finding being kept. The store is
     committed first, so the log can never describe a batch the store lost.
+
+    `nli` is the evidence gate; None asks `gate_from_env()` for this machine's,
+    which is off unless the `nli` extra and a checkpoint are both there. A test
+    hands it a fake so no model is downloaded.
     """
     kept: list[dict] = []
-    verdicts = accept_findings(conn, subject_id, pack_id, findings, retain=kept)
+    if nli is None:
+        from app.nli_gate import gate_from_env
+
+        nli = gate_from_env()
+        if nli is not None and nli.name == "unavailable":
+            nli = None
+    verdicts = accept_findings(conn, subject_id, pack_id, findings, retain=kept,
+                               nli=nli)
     conn.commit()
     log_submission(
         app_state_path,

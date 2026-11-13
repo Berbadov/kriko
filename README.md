@@ -24,9 +24,11 @@ choose, and a paid provider bills your own account.
   <sub>The real panel, from a live run: every finding names the page it came from. <a href="https://kriko.cc/#film">Watch the 28-second film</a> · <a href="https://kriko.cc/guide/">How to use it, step by step</a></sub>
 </p>
 
-0.3.13 is a maintenance release: the chat turn orchestrator and the API app
-factory were split into named pieces, and dead scratch scripts and accidentally
-committed session screenshots were removed — no reader-visible behavior change.
+0.3.13 sets the app in Inter with Chivo Mono titles, adds an off-by-default
+**Share my product queries** checkbox (only the product model you looked up and
+whether the catalog had it), and checks each claim against its own source
+before it enters a catalog. The chat turn orchestrator and the API app factory
+were also split into named pieces.
 0.3.12 made the desktop CLI answer in about a quarter of a second — `--version`
 no longer loads the provider stack, and the read commands (`prefs`, `costs`,
 `sites list`, `drafts list`, `operations`, `verify --list`) read the app's own
