@@ -3,10 +3,10 @@
 import json
 
 import yaml
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, Field
 
-from app import evidence
+from app import evidence, queryshare
 from app.web import state
 from app.web.deps import get_app_state, get_store
 from app.web.routers.analyze import _context_units
@@ -97,6 +97,7 @@ def answer(store, body: LookupRequest):
 @router.post("/lookup")
 def run_lookup(
     body: LookupRequest,
+    request: Request,
     store=Depends(get_store),
     app_state=Depends(get_app_state),
 ):
@@ -111,6 +112,7 @@ def run_lookup(
         request=body.model_dump(),
         response=payload,
     )
+    queryshare.record(request, body.identity, "hit" if result.resolution.subject_ids else "miss")
     return payload
 
 

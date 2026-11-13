@@ -1,4 +1,5 @@
 import { useEffect, useState, type CSSProperties } from 'react'
+import { Checkbox } from '../../arc/checkbox/checkbox'
 import { CAP_ORDER, CAP_WORDS, usedToday, useCaps, type CapResource } from '../../engine/caps'
 import { useAppUpdate } from '../../engine/appupdate'
 import { useSensitivity } from '../../engine/sensitivity'
@@ -385,6 +386,26 @@ export function AboutPage(_: { onOpen?: (lookupId: string) => void } = {}) {
                   <span className="value">{presence.last_day || 'On the next start'}</span>
                 </Row>
               )}
+            </Group>
+          )}
+          {doc && (
+            <Group
+              icon="shieldcheck"
+              title="Product queries"
+              hint={
+                <Hint icon="cloudup" title="What is shared">
+                  Only the product model you looked up and whether our catalog had it. Read the <a href="https://kriko.cc/privacy/">privacy policy</a>.
+                </Hint>
+              }
+            >
+              <Row icon="search" label="Share" stack>
+                <Checkbox
+                  checked={doc.chosen.share_queries === '1'}
+                  onCheckedChange={(on) => void save({ share_queries: on === true ? '1' : '0' })}
+                  label="Share my product queries"
+                  description={'When on, Kriko sends the product model you looked up (for example "Brand Model 128GB") and whether our catalog had it, so we know which products to cover next. It never sends the listing link, the page title, the time, or anything that identifies you or your device. Off by default.'}
+                />
+              </Row>
             </Group>
           )}
 

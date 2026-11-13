@@ -52,6 +52,9 @@ test('the settings drawer shows one page at a time, and a requested page is the 
 
     const stubs = {
       ...(await realSettingsParts(directory)),
+      '../../arc/checkbox/checkbox': {
+        Checkbox: ({ checked, label }) => h('button', { role: 'checkbox', 'aria-checked': checked, 'aria-label': label }),
+      },
       '../../prefs': { usePrefs: () => ({ theme: 'system', setTheme() {}, profile: 'standard', setProfile() {}, reduce: false, setReduce() {} }) },
       '../../engine/caps': {
         CAP_ORDER: ['llm_api'],

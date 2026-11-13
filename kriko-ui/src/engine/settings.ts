@@ -77,7 +77,7 @@ const DEMO_SEARCHES = [
 ]
 
 const DEMO_PREFS: PrefsDoc = {
-  chosen: { preferred_harness: 'coding', run_concurrency: '2', research_sources: '0', research_source_kinds: 'forums,reviews', search_provider: '', chat_product_only: '0', presence_enabled: '0' },
+  chosen: { preferred_harness: 'coding', run_concurrency: '2', research_sources: '0', research_source_kinds: 'forums,reviews', search_provider: '', chat_product_only: '0', presence_enabled: '0', share_queries: '0' },
   effective: { ready: true, reason: '', harness: 'coding', harness_ready: true, harness_note: '' },
   harnesses: [
     { id: 'coding', label: 'Coding agent', path: 'demo', llm: 'sonnet', llms: ['haiku', 'sonnet', 'opus'], effort: 'low', efforts: ['low', 'medium', 'high'], search: 'own', search_choices: DEMO_SEARCHES },

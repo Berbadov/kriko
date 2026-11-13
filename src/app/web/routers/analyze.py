@@ -13,7 +13,7 @@ from urllib.parse import urlparse
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, Field
 
-from app import evidence, matching, operations, productscope, siteinfer, sites
+from app import evidence, matching, operations, productscope, queryshare, siteinfer, sites
 from app.web import state
 from app.web.deps import get_app_state, get_store
 from app.web.routers.history import label_for
@@ -493,6 +493,10 @@ def analyze(
     # empty-state screen (extension-16). Counted after this lookup was
     # recorded, so the very check that makes two is the one that unlocks it.
     payload["compare_ready"] = state.lookup_count(app_state) >= 2
+    queryshare.record(request, mapped.identity,
+                      "hit" if result.resolution.subject_ids else "miss",
+                      report=result.resolution.subject_ids[0] if result.resolution.subject_ids else None,
+                      category=mapped.kind)
     return payload
 
 
