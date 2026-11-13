@@ -63,6 +63,12 @@ pipeline = [
 ]
 dev = ["pytest>=8.0.0", "pytest-xdist>=3.5", "ruff>=0.16", "mypy>=2.3"]
 searchbench = ["httpx[http2]>=0.27.0", "matplotlib>=3.9"]
+# The evidence gate at catalog authoring time (`app/nli_gate.py`):
+# a small NLI cross-encoder that asks whether a claim's own source says what
+# the claim says. Optional on purpose, and never in the desktop installer —
+# `packaging/freeze_imports.py` excludes both. Without it the gate is off and
+# claims pass through marked `nli: unchecked`.
+nli = ["torch>=2.2", "transformers>=4.40"]
 
 [tool.setuptools.package-data]
 # The store's DDL is read from disk at every `connect()`, not imported. Without

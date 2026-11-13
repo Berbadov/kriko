@@ -43,6 +43,14 @@ FROZEN_EXCLUDES = (
     "mypy",
     "numpy",
     "PIL",
+    # The NLI evidence gate (`app.nli_gate`) is the optional `nli`
+    # extra: a cross-encoder and torch are about 2 GB the reader's install has
+    # no use for. The module imports them inside `TransformersNliVerifier`
+    # alone, and with them excluded the frozen sidecar's gate is off — claims
+    # pass through marked `unchecked`, which is the designed fail-open.
+    "torch",
+    "transformers",
+    "sentence_transformers",
 )
 
 CONSOLE_MODULES = (

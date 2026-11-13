@@ -222,7 +222,7 @@ def pick_subject(rows: list[dict], product: str, *, floor: float = 0.0) -> dict 
 # ── sources: a quote must be on its page ─────────────────────────────────
 
 
-def ground(items: list[dict], fetch) -> tuple[list[dict], list[dict]]:
+def ground(items: list[dict], fetch, nli=None) -> tuple[list[dict], list[dict]]:
     """Keep the claims whose quotes are on their pages. Returns (kept, dropped).
 
     Each item has a `title` and an `evidence` list of `{url, quote}`. A quote
@@ -234,6 +234,13 @@ def ground(items: list[dict], fetch) -> tuple[list[dict], list[dict]]:
     A claim keeps only its grounded evidence, and a claim with none is dropped
     and named. There is no third outcome: nothing here keeps a claim without a
     source, and nothing waits for a person to decide.
+
+    `nli` is the evidence gate (`app.nli_gate.NliGate`), asked once a
+    claim has a quote on its page: does the page say what the claim says? It is
+    off when None, and a claim it cannot answer for passes with
+    `nli: unchecked`. A contradiction drops the claim; a neutral or uncertain
+    verdict holds it out as `held` — the same "no claim, and say why" the quote
+    check gives, so nothing above has to learn a second shape.
     """
     pages: dict[str, str] = {}
 
@@ -245,7 +252,7 @@ def ground(items: list[dict], fetch) -> tuple[list[dict], list[dict]]:
                 pages[url] = ""
         return pages[url]
 
-    kept, dropped = [], []
+    kept, dropped, held = [], [], []
     for item in items:
         good = []
         why = "no page and quote"
@@ -263,11 +270,24 @@ def ground(items: list[dict], fetch) -> tuple[list[dict], list[dict]]:
             else:
                 why = ("the page could not be read" if not page(url)
                        else "the quote is not on the page")
-        if good:
-            kept.append({**item, "evidence": good})
-        else:
+        if not good:
             dropped.append({"title": item.get("title", ""), "reason": why})
-    return kept, dropped
+            continue
+        if nli is not None:
+            verdict = nli.check({
+                "title": item.get("title", ""), "body": item.get("body", ""),
+                "quote": good[0]["quote"], "premise": page(good[0]["url"])})
+            if verdict.decision == "drop":
+                dropped.append({"title": item.get("title", ""),
+                                "reason": f"nli: {verdict.reason}"})
+                continue
+            if verdict.decision == "flag":
+                held.append({**item, "evidence": good, "nli": verdict.provenance(),
+                             "reason": f"nli: {verdict.reason}"})
+                continue
+            item = {**item, "nli": verdict.provenance()}
+        kept.append({**item, "evidence": good})
+    return kept, dropped + held
 
 
 def admit(payload: dict, product: str) -> None:
@@ -363,7 +383,11 @@ def _claim_row(ref: dict, item: dict, domain: str) -> dict:
         "evidence": [
             {"url": ev["url"], "quote": ev["quote"], "stance": "supports",
              "independent": True, "source_type": "page",
-             "retrieved_at": datetime.now(UTC).isoformat(timespec="seconds")}
+             "retrieved_at": datetime.now(UTC).isoformat(timespec="seconds"),
+             # The NLI evidence gate's answer for this quote, when one ran.
+             # Free-form on purpose: the engine's schema has no column for it
+             # and `content_digest` must not move because a model was installed.
+             **({"nli": item["nli"]} if item.get("nli") else {})}
             for ev in item.get("evidence") or []
         ],
     }

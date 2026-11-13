@@ -5,7 +5,10 @@ immutable; a correction is a newer version.
 
 ### 0.3.13
 
-- Maintenance release, no reader-visible behavior change. `chat.run_turn` (was a 603-line function with eight nested closures over shared turn state) is now a `_Turn` class with named methods; `web/app.py::create_app` (372 lines) is now a short orchestration over `_register_routers`, `_start_core_state` and `_install_middleware_and_routes`. Dead scratch scripts (`tools/bench_*.py`, `check_scenarios.py`, `compare-configuration.py`, `trace_processes.py`, `try_claim_extractor.py`, `local_scenarios.json`, `packaging/macos_icon.py`, `packaging/smoke_firefox.py`) and accidentally committed `.vibe/` session screenshots were removed; `.vibe/` is now gitignored. Full gate green: pytest 5167 passed / 0 failed (one known load-sensitive xdist flake passes serially), ruff and mypy clean, node/ui/wheel stages green.
+- **A new type system.** Text is set in Inter, one weight step heavier than before, and titles are set in Chivo Mono (a heavy, narrow monospace with full Turkish and currency coverage). Inter and Chivo Mono ship inside the app; nothing is fetched.
+- **An opt-in to share which products you look up.** Settings, About, **Share my product queries** - off by default, one checkbox. When on, Kriko sends the product model you looked up (brand and model, lowercase) and whether the catalog had it, so the catalogs can grow where readers are asking. It never sends the listing link, the page title, a time, or anything that identifies you or your machine, and turning it off empties the queue at once. See `docs/USAGE.md`.
+- **Claims are checked against their own source before they enter a catalog.** A new evidence gate (`app/nli_gate.py`) asks a small entailment model whether a claim's quoted source actually supports it: entailment enters the catalog, contradiction is dropped, and anything the source does not clearly support is held out and named. It runs where catalogs are authored, only when the optional `nli` extra is installed; the installer carries no model and the gate is off for readers.
+- Internal: `chat.run_turn` is now a `_Turn` class with named methods and `web/app.py::create_app` a short orchestration; dead scratch scripts and accidentally committed `.vibe/` screenshots were removed.
 
 ### 0.3.12
 

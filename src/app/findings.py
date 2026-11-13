@@ -67,6 +67,7 @@ def accept_findings(
     findings: list[dict],
     *,
     retain: list | None = None,
+    nli=None,
 ) -> dict:
     """Store the findings that survive; report every one that does not.
 
@@ -88,6 +89,13 @@ def accept_findings(
     what turns a reported claim into a corroborated one — and `corroborated`
     says whether this submission added evidence the claim did not have.
 
+    `nli` is the evidence gate (`app.nli_gate.NliGate`), asked once a
+    finding's quote is proved on its page: does that page say what the finding
+    says? Off when None. A contradiction is refused as `nli_dropped`; a neutral
+    or uncertain verdict is `nli_held` — not stored, named in the verdicts and
+    the summary, and in the gaps for a retry or a re-source. Neither is ever a
+    reason to ask a person.
+
     `retain` is where the *documents* go (B120): pass a list and it is filled
     with `{source_id, pack_id, url, text}` for every finding that was accepted,
     for `log_submission` to keep in `app.sqlite`. A collecting list rather than
@@ -98,6 +106,8 @@ def accept_findings(
     be a protocol change nobody asked for.
     """
     accepted, rejected, already = [], [], []
+    nli_dropped: list[dict] = []
+    nli_held: list[dict] = []
 
     subject = conn.execute(
         "SELECT 1 FROM subjects WHERE subject_id = ? AND pack_id = ?",
@@ -165,6 +175,18 @@ def accept_findings(
                 # required.
                 "fix": _repairable(structural),
             })
+            continue
+
+        # The quote is on the page. Does the page say what the claim says?
+        # The gate is off when `nli` is None, and a claim it cannot answer for
+        # passes unchecked — extraction never stalls on it.
+        gate = (nli.check({"title": title, "body": rationale, "quote": quote,
+                           "premise": document}) if nli is not None else None)
+        if gate is not None and gate.decision in ("drop", "flag"):
+            one = {"title": title, "reason": f"nli: {gate.reason}",
+                   "nli": gate.provenance()}
+            (nli_dropped if gate.decision == "drop" else nli_held).append(one)
+            rejected.append(one)
             continue
 
         url = item.get("source_url") or ""
@@ -287,7 +309,8 @@ def accept_findings(
                 1,
             ),
         )
-        accepted.append({"title": title, "claim_id": claim_id})
+        accepted.append({"title": title, "claim_id": claim_id,
+                         **({"nli": gate.provenance()} if gate is not None else {})})
         if retain is not None:
             retain.append(
                 {
@@ -305,13 +328,20 @@ def accept_findings(
         "accepted": accepted,
         "rejected": rejected,
         "already_known": already,
+        # The evidence gate's two other outcomes, kept apart from `rejected`
+        # because they are not the same correction: a contradiction is a claim
+        # the source refutes, a held one is a claim the source does not yet
+        # support. Both are in `rejected` as well, so a caller that reads only
+        # that list still sees every finding that did not enter.
+        "nli_dropped": nli_dropped,
+        "nli_held": nli_held,
         "gaps": gaps,
-        "next": next_step(gaps["domains_empty"], rejected),
+        "next": next_step(gaps["domains_empty"], rejected, nli_held),
         # Two audiences, two sentences. `rejected[].reason` is written at the
         # model — "rationale is 0 chars" is an instruction it can act on. The
         # reader got that same string in their face, which is debug output
         # leaking through an interface, so they get this instead.
-        "summary": summarise(accepted, rejected, already),
+        "summary": summarise(accepted, rejected, already, nli_held),
         "note": f"author_confidence is {AGENT_CONFIDENCE} — agent-written "
         "claims rank as reported, not confirmed, until corroborated",
     }
@@ -382,7 +412,8 @@ def gap_map(conn, subject_id: str, pack_id: str) -> dict:
     }
 
 
-def next_step(domains_empty: Sequence[str], rejected: Sequence) -> str:
+def next_step(domains_empty: Sequence[str], rejected: Sequence,
+              nli_held: Sequence = ()) -> str:
     """The instruction the submit answer carries, written at the model.
 
     One sentence per thing worth doing next, and "" when there is nothing —
@@ -390,6 +421,10 @@ def next_step(domains_empty: Sequence[str], rejected: Sequence) -> str:
     to interpret. Follow-ups are named for the empty domains specifically,
     because "search more" is exactly the instruction that produces seed
     re-rolls: the documented failure of every budget-less research loop.
+
+    A finding the evidence gate held is its own instruction: the page it quoted
+    does not say what it claimed, so the fix is a better source, never the same
+    source restated.
     """
     parts = []
     if domains_empty:
@@ -398,6 +433,12 @@ def next_step(domains_empty: Sequence[str], rejected: Sequence) -> str:
             + ", ".join(domains_empty)
             + ". Write the next queries for them, not re-runs of the brief's "
             "seeds."
+        )
+    if nli_held:
+        parts.append(
+            f"{len(nli_held)} finding(s) were held because the page quoted does "
+            "not clearly support the claim: find a source that says it plainly, "
+            "or state what the source does say."
         )
     held = [one for one in rejected if one.get("fix")]
     if held:
@@ -410,7 +451,8 @@ def next_step(domains_empty: Sequence[str], rejected: Sequence) -> str:
 
 
 def summarise(accepted: Sequence, rejected: Sequence,
-              already: Sequence | None = None) -> str:
+              already: Sequence | None = None,
+              nli_held: Sequence = ()) -> str:
     """What happened, for somebody who is not going to read a verdict list.
 
     `already` is the third verdict a batch can carry: findings whose claim
@@ -426,6 +468,7 @@ def summarise(accepted: Sequence, rejected: Sequence,
     """
     kept = len(accepted)
     known = list(already or [])
+    held_nli = len(nli_held or ())
     if not rejected:
         if kept:
             return f"{kept} finding(s) kept."
@@ -438,7 +481,7 @@ def summarise(accepted: Sequence, rejected: Sequence,
         return "Nothing was submitted."
 
     held = [one for one in rejected if one.get("fix")]
-    refused = len(rejected) - len(held)
+    refused = len(rejected) - len(held) - held_nli
     parts = [f"{kept} finding(s) kept" if kept else "Nothing was kept"]
     if known:
         second = sum(1 for one in known if one.get("corroborated"))
@@ -450,6 +493,11 @@ def summarise(accepted: Sequence, rejected: Sequence,
         parts.append(
             f"{len(held)} could not be explained well enough to be useful and "
             f"{'was' if len(held) == 1 else 'were'} held back"
+        )
+    if held_nli:
+        parts.append(
+            f"{held_nli} {'was' if held_nli == 1 else 'were'} held because the "
+            "page quoted does not clearly support the claim"
         )
     if refused:
         parts.append(
