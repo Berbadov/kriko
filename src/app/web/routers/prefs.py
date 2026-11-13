@@ -14,7 +14,7 @@ from urllib.parse import urlsplit
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict
 
-from app import costs, evidence, prefs
+from app import costs, evidence, prefs, queryshare
 from app.providers import local_runtimes, proxypool, websearch
 from app.web.deps import get_app_state
 
@@ -158,6 +158,10 @@ def write_prefs(body: PrefsWrite, conn=Depends(get_app_state)) -> dict:
         if written[prefs.PROXY_ENABLED] not in {"", "0", "1"}:
             raise HTTPException(422, detail="proxy_enabled must be 0 or 1")
         written[prefs.PROXY_ENABLED] = "1" if written[prefs.PROXY_ENABLED] == "1" else "0"
+    if prefs.SHARE_QUERIES in written:
+        if written[prefs.SHARE_QUERIES] not in {"", "0", "1"}:
+            raise HTTPException(422, detail="share_queries must be 0 or 1")
+        written[prefs.SHARE_QUERIES] = "1" if written[prefs.SHARE_QUERIES] == "1" else "0"
     if prefs.PROXY_POOL in written:
         lines = [one for one in written[prefs.PROXY_POOL].replace(",", "\n").split() if one]
         pool = proxypool.parse_pool(written[prefs.PROXY_POOL])
@@ -232,6 +236,8 @@ def write_prefs(body: PrefsWrite, conn=Depends(get_app_state)) -> dict:
     prefs.write(conn, written)
     if prefs.PROXY_ENABLED in written or prefs.PROXY_POOL in written:
         proxypool.forget()
+    if prefs.SHARE_QUERIES in written and written[prefs.SHARE_QUERIES] != "1":
+        queryshare.clear()
     return prefs.choices(conn)
 
 

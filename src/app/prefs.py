@@ -43,6 +43,9 @@ PROXY_POOL = "proxy_pool"
 #: The reader's opt-in to the anonymous daily ping (`app/presence.py`): "1" is
 #: on, unset or empty is off, which is how every installation starts.
 PRESENCE_ENABLED = "presence_enabled"
+#: The reader's opt-in to share which products they looked up
+#: (`app/queryshare.py`): "1" is on, unset or empty is off.
+SHARE_QUERIES = "share_queries"
 #: How an agent is run: `auto` (a resident worker where the agent has a
 #: persistent protocol, else a process), `persistent` (require it) or `exec`.
 #: It applies to every agent. `codex_transport` is the name it had while only
@@ -330,7 +333,7 @@ KEYS = (HARNESS, MODEL, SEARCH, SEARCH_FALLBACK, AGENT_ORDER, *ROLE_KEYS,
         RUN_CONCURRENCY, CHAT_PRODUCT_ONLY, *KRIKO_AGENT_TUNING_KEYS,
         INFO_SENSITIVITY, AGENT_TRANSPORT, CODEX_TRANSPORT,
         CLASSIFICATION_PROVIDER, PROXY_ENABLED, PROXY_POOL,
-        PRESENCE_ENABLED)
+        PRESENCE_ENABLED, SHARE_QUERIES)
 
 
 def chat_product_only(conn) -> bool:
