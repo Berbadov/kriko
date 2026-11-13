@@ -14,7 +14,7 @@
   margin: 0;
   overflow: hidden;
   font-size: 30px;
-  font-weight: 800;
+  font-weight: var(--w-bold);
   letter-spacing: -0.04em;
   line-height: 1.02;
   overflow-wrap: anywhere;
@@ -627,7 +627,9 @@
 .mx-title strong {
   display: -webkit-box;
   overflow: hidden;
+  font-family: var(--display);
   font-size: 15px;
+  font-weight: var(--w-semibold);
   line-height: 1.35;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;

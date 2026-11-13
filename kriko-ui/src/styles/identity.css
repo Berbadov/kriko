@@ -59,21 +59,21 @@
   letter-spacing: -0.02em;
 }
 
-/* Big titles: heavier and closer, as on the phone. */
+/* Big titles: the display face at its heaviest, close, as on the phone. */
 .hello h1 {
-  font-weight: 800;
+  font-weight: var(--w-bold);
   letter-spacing: -0.04em;
   line-height: 1.02;
 }
 
 .page-head h1 {
-  font-weight: 800;
+  font-weight: var(--w-bold);
   letter-spacing: -0.04em;
   line-height: 1.02;
 }
 
 .drawer[data-panel='settings'] .drawer-head h2 {
-  font-weight: 800;
+  font-weight: var(--w-bold);
   letter-spacing: -0.035em;
 }
 

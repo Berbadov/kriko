@@ -89,8 +89,9 @@
   max-width: 20ch;
   margin: 0;
   color: var(--ink);
+  font-family: var(--display);
   font-size: clamp(30px, 4vw, 42px);
-  font-weight: 800;
+  font-weight: var(--w-bold);
   letter-spacing: -0.04em;
   line-height: 1.02;
   text-align: left;
@@ -404,7 +405,7 @@
 
 .pl-title {
   flex: none;
-  font-weight: 620;
+  font-weight: var(--w-medium);
 }
 
 .pl-names {
