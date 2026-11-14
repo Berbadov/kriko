@@ -1,12 +1,12 @@
 {
   "version": "0.3.13",
   "platform": "windows-x86_64",
-  "source_fingerprint": "720105598c5fad8c394fd7513570def90d1370507e79bdb8287847045074a1d7",
-  "recorded_at": "2026-11-11",
-  "note": "Maintenance release cut from main after #342 and #343 (no reader-visible change). Full gate in a Linux sandbox: py 5167 passed / 0 failed (one known load-flake passes serially), wheel/node/ui green; tauri not compilable here (no system glib, no root). desktop.yml could not be dispatched from this environment (token lacks actions:write), so installer/portable/engine/macOS artifacts are pending; catalogs, packs.json, packs bundle, extension ZIP and SHA256SUMS.txt were built from this tree. release_readiness.py refuses complete stable certification, as for 0.3.10-0.3.12.",
+  "source_fingerprint": "1b94888d1e3a5b4b267b709f6359c1d5a064b4e28a6f8198f793d938d4a6547d",
+  "recorded_at": "2026-11-14",
+  "note": "Cut from main after #342 and #343, plus the Inter/Chivo Mono type, the opt-in query sharing and the NLI evidence gate. The Windows installer, portable ZIP and engine ZIP were built on a Windows host with kriko-ui/package.ps1 from a clean worktree of this source; the build's own checks passed (frozen engine handshake and a served request, the app staying up 25 s with its engine spawned, the portable ZIP). The installer was not installed and no journey below was walked on a packaged window, so release_readiness.py still refuses complete stable certification, as for 0.3.10-0.3.12. No macOS build was made.",
   "journeys": {
-    "fresh_install": {"status": "not_observed", "observed_at": null, "evidence": "No Windows installer built here; desktop.yml not dispatchable from this environment (403)."},
-    "portable_start": {"status": "not_observed", "observed_at": null, "evidence": "No portable build here; the gate's wheel stage proved the shipped wheel installs clean and runs kriko --version in an empty environment."},
+    "fresh_install": {"status": "not_observed", "observed_at": null, "evidence": "The installer was built (kriko-0.3.13-x86_64-setup.exe) but not installed: the install check writes per-user entries and refuses where a Kriko is already installed."},
+    "portable_start": {"status": "not_observed", "observed_at": null, "evidence": "The build's own start-up check opened the staged kriko.exe, which stayed up for 25 s and spawned its engine; the unzipped portable archive was not separately walked."},
     "setup": {"status": "not_observed", "observed_at": null, "evidence": "Not walked on a packaged window."},
     "sourced_answer": {"status": "not_observed", "observed_at": null, "evidence": "No live research on a packaged engine; the #343 refactor is covered by the full suite (5167 passed) incl. the 210 chat tests driving run_turn."},
     "follow_up": {"status": "not_observed", "observed_at": null, "evidence": "Not walked on a packaged engine."},
@@ -19,10 +19,10 @@
     "mistral-vibe": {"status": "not_observed", "model": "configured by the reader", "version": "0.3.13", "report": "src/app/tests/test_a_cut_off_resident_turn_keeps_its_answer.py: resident-timeout health marking (#341) and cut-off text keeping, unchanged by #343"}
   },
   "observed_instead": [
-    "tools/gate.sh on main at 5f5efd85, GATE_JOBS=auto: version agreement strict at 0.3.13 across pyproject.toml, kriko-ui/src-tauri/Cargo.toml, Cargo.lock, kriko-ui/package.json and the installed distribution; ruff clean; mypy clean (src/kriko, src/app, packs, server); pytest 5167 passed, 35 skipped, 1 known load-flake (passes serially); wheel smoke green; node and ui stages green. tauri failed only at glib-sys linking (no system libglib2.0-dev, no root).",
-    "desktop.yml could not be dispatched from this environment (HTTP 403, token lacks actions:write); no Windows/macOS artifacts produced here.",
-    "Catalogs: 32 .kpack builds, packs.json pinned to https://github.com/Berbadov/kriko/releases/download/v0.3.13, packs-v0.3.13.zip (33 entries, 2,116,379 bytes, sha256 5cbee07128edb7446e499fa0f24fc421411e3647bd67a076978b51105314393c).",
-    "The extension ZIP is the extension/ folder without tests/, built from this tree; manifest version 0.5.0.",
-    "SHA256SUMS.txt covers all 32 .kpack files, packs.json, packs-v0.3.13.zip and kriko-extension-0.5.0.zip."
+    "Python on the final tree: ruff clean; mypy clean (src/kriko 40 files, src/app 272, packs 53); the whole src and packs suite ran with xdist and ended with 17 failures, none from this release: 15 fail identically on a clean origin/main (the network-dependent agent bench and failure-class tests, and a version test that reads stale installed metadata) and 2 are load flakes that pass when run alone. kriko-ui: oxlint exit 0, vite build ok, 123/123 node tests.",
+    "kriko-ui/package.ps1 -Version 0.3.13 from a clean git worktree of this source built kriko-0.3.13-x86_64-setup.exe, kriko-0.3.13-win64-portable.zip and kriko-engine-0.3.13-win64.zip, with the sidecar handshake, the app start-up check and the portable zip checks passing. The sidecar's smoke test fails when run from inside the repository folder in the build sandbox used here (a sandbox rule on executables in that tree: the identical engine runs when copied elsewhere, and the 0.3.11 engine runs); it passes from a worktree outside it.",
+    "Catalogs: 32 .kpack builds from unchanged packs, packs.json pinned to https://github.com/Berbadov/kriko/releases/download/v0.3.13, packs-v0.3.13.zip (33 entries, 2,401,754 bytes, sha256 ebf5812f3677125c1bc2f9d12b3c8ee8463b2212a3460aca201f1a9ec337ed5f).",
+    "The extension ZIP is unchanged since v0.3.11 (no diff under extension/); manifest version 0.5.0.",
+    "SHA256SUMS.txt is the installer build's, covering the installer, the portable ZIP and the engine ZIP."
   ]
 }
