@@ -1,0 +1,72 @@
+lineup:
+- Vaillant ecoTEC Intro
+- Vaillant turboTEC pro/plus
+- Vaillant ecoTEC plus
+- Vaillant ecoTEC pro
+- Bosch Condens 2200i W
+- Bosch Condens 2300i W
+- Bosch Condens 1200 W
+- Baymak Lambert
+- Baymak Duotec
+- Demirdöküm Nitromix
+- Demirdöküm Atron Condense
+- ECA Citius Premix
+- ECA Proteus Premix
+- ECA Confeo Premix
+- Buderus Logamax plus GB062
+- Buderus Logamax plus GB172i
+- Viessmann Vitodens
+- Ariston Genus One
+- Ariston Cares X
+- Immergas Victrix
+- Protherm Puma Condens
+- Protherm Gepard Condens
+- Protherm Lynx
+covered:
+- ariston genus one
+- bosch condens 2200i w
+- buderus logamax plus gb062
+- demirdokum nitromix
+- eca citius premix
+- immergas victrix
+- protherm gepard condens
+- protherm puma condens
+- vaillant ecotec intro
+- vaillant turbotec
+- viessmann vitodens
+- baymak lambert
+- product brand ariston series genus one
+- product brand baymak series lambert
+- product brand bosch series condens 2200i w
+- product brand buderus series logamax plus gb062
+- product brand demirdokum series nitromix
+- product brand eca series citius premix
+- product brand immergas series victrix
+- product brand protherm series gepard condens
+- product brand protherm series puma condens
+- product brand vaillant series ecotec intro
+- product brand vaillant series turbotec
+- product brand viessmann series vitodens
+uncovered:
+- Vaillant ecoTEC plus
+- Vaillant ecoTEC pro
+- Bosch Condens 2300i W
+- Bosch Condens 1200 W
+- Baymak Duotec
+- Demirdöküm Atron Condense
+- ECA Proteus Premix
+- ECA Confeo Premix
+- Buderus Logamax plus GB172i
+- Ariston Cares X
+- Protherm Lynx
+note: The lineup lists the popular series this run looked for in Turkey and Europe. The
+  uncovered entries either returned only single owner reports or only service-delay
+  complaints, so no subject was filed for them. Vaillant ecoTEC plus and pro share the
+  F.28 and F.75 evidence recorded on the turboTEC and ecoTEC Intro subjects, but the
+  complaint pages that named those exact series did not show a repeated pattern.
+out_of_scope:
+- Electric combi boilers (ECA Arceus and similar are a different appliance type)
+- Heat pumps and hybrid systems
+- Service quality, appointment delays and prices when no appliance fault is described
+- Commercial boilers and central plant
+quarantined: []
