@@ -1,0 +1,111 @@
+# Subjects — the things this pack knows about.
+#
+# `identity` carries exactly the keys `pack.toml` declares for the
+# kind: that dictionary is hashed to the subject id.
+- kind: product
+  label: Vaillant ecoTEC Intro
+  identity:
+    brand: vaillant
+    series: ecotec intro
+  aliases:
+  - ecoTEC Intro 24/28
+  - VUW 18/24 AS/1-1
+- kind: product
+  label: Vaillant turboTEC pro/plus
+  identity:
+    brand: vaillant
+    series: turbotec
+  aliases:
+  - turboTEC Pro VUW 202/3-3
+  - turboTEC Plus VUW TR 202/5
+  - VUW 242/3-3
+- kind: product
+  label: Bosch Condens 2200i W
+  identity:
+    brand: bosch
+    series: condens 2200i w
+  aliases:
+  - GC2200iW 24 C 23
+  - Condens 2201i
+- kind: product
+  label: Baymak Lambert
+  identity:
+    brand: baymak
+    series: lambert
+  aliases:
+  - Lambert LX 24 Fi
+  - Lambert Attivo 24
+  - LPY Compact 24
+- kind: product
+  label: Demirdöküm Nitromix
+  identity:
+    brand: demirdokum
+    series: nitromix
+  aliases:
+  - Nitromix P24
+  - Nitromix P28
+  - Nitromix P35
+  - Nitromix İoni
+- kind: product
+  label: ECA Citius Premix
+  identity:
+    brand: eca
+    series: citius premix
+  aliases:
+  - Citius Premix 24
+  - Citius Premix 24 HM
+  - Citius Premix 28
+- kind: product
+  label: Buderus Logamax plus GB062
+  identity:
+    brand: buderus
+    series: logamax plus gb062
+  aliases:
+  - GB062-24 KD V2
+  - GB062-20
+- kind: product
+  label: Viessmann Vitodens
+  identity:
+    brand: viessmann
+    series: vitodens
+  aliases:
+  - Vitodens 100-W
+  - Vitodens 200-W
+  - Vitodens 050-W
+  - Vitodens Trend
+  - Vitodens Connect
+  - Vitodens Classic
+- kind: product
+  label: Ariston Genus One
+  identity:
+    brand: ariston
+    series: genus one
+  aliases:
+  - Genus One 24
+  - GENUS ONE 24
+- kind: product
+  label: Immergas Victrix
+  identity:
+    brand: immergas
+    series: victrix
+  aliases:
+  - Victrix TT
+  - Victrix Tera
+  - Victrix Zeus
+  - Victrix Omnia
+  - Victrix Maior TT
+- kind: product
+  label: Protherm Puma Condens
+  identity:
+    brand: protherm
+    series: puma condens
+  aliases:
+  - Puma Condens 18/24
+- kind: product
+  label: Protherm Gepard Condens
+  identity:
+    brand: protherm
+    series: gepard condens
+  aliases:
+  - Gepard Condens 20
+  - Gepard Condens 24
