@@ -1,0 +1,2122 @@
+# Claims - what is known to go wrong, each with the page it came from and the quote
+# that was read there. A claim without both is not in this file.
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      model: odyssey-g7-c32g75t
+  kind: known_issue
+  domain: motion
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: VA panel / adaptive-sync backlight control
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Odyssey G7 flickers in dark scenes when the frame rate changes
+      body: RTINGS measured distracting VRR flicker on the 32-inch Odyssey G7 in dark scenes with changing
+        frame rates, and calls it the monitor's biggest downside. Owners in Samsung's community thread
+        separately report flickering with Adaptive Sync enabled, including after a firmware update that
+        was meant to reduce it.
+      advice: Test a dark game scene with VRR on and the frame rate fluctuating, not a fixed 240 fps benchmark.
+        If you are sensitive to brightness flicker, the G7 has no reliable fix.
+    tr:
+      title: Odyssey G7, kare hızı değişirken karanlık sahnelerde titriyor
+      body: RTINGS, 32 inç Odyssey G7'de kare hızı değişen karanlık sahnelerde rahatsız edici VRR titremesi
+        ölçtü ve bunu monitörün en büyük dezavantajı olarak adlandırıyor. Samsung topluluk başlığındaki
+        sahipler de Adaptive Sync açıkken, titremeyi azaltması beklenen firmware güncellemesinden sonra
+        bile titreme bildiriyor.
+      advice: Sabit 240 fps testi yerine VRR açıkken kare hızının dalgalandığı karanlık bir oyun sahnesini
+        deneyin. Parlaklık titremesine duyarlıysanız G7'nin güvenilir bir çözümü yok.
+  evidence:
+  - url: https://eu.community.samsung.com/t5/gaming-club/samsung-odyssey-g7-major-issues/td-p/4654931
+    quote: 1) Flickering when Adaptive Sync on
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+  - url: https://www.rtings.com/monitor/reviews/samsung/odyssey-g7-c32g75t
+    quote: The biggest downside is that it has distracting VRR flicker in dark scenes with changing frame
+      rates.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      model: odyssey-g7-c32g75t
+  kind: known_issue
+  domain: display
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: panel at 240 Hz
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Odyssey G7 shows horizontal scanlines at 240 Hz
+      body: A Samsung Community thread collecting reports on the G7 and G9 quotes Samsung HQ's answer
+        that scanlines are a limitation of the screen. A separate G7 owner thread reports horizontal scanlines
+        on blue-orange wallpapers, and owners tie the lines to the 240 Hz mode.
+      advice: Run a scanline or inversion test pattern at 240 Hz before the return window closes. Dropping
+        to 120 Hz reduces the artifact but gives up the monitor's main selling point.
+    tr:
+      title: Odyssey G7 240 Hz'de yatay tarama çizgileri gösteriyor
+      body: G7 ve G9 bildirimlerini toplayan bir Samsung Topluluk başlığı, Samsung merkezinin tarama çizgilerinin
+        ekranın sınırlaması olduğu yanıtını aktarıyor. Ayrı bir G7 sahibi başlığı mavi-turuncu duvar kağıtlarında
+        yatay tarama çizgileri bildiriyor ve sahipler çizgileri 240 Hz moduna bağlıyor.
+      advice: İade süresi dolmadan 240 Hz'de bir tarama veya inversion test deseni çalıştırın. 120 Hz'e
+        düşmek artefaktı azaltır ama monitörün ana satış özelliğinden vazgeçmek demektir.
+  evidence:
+  - url: https://eu.community.samsung.com/t5/computers-it/answer-from-samsung-hq-about-scanlines-with-g7-g9-neo-g9/td-p/3884794/page/4
+    quote: Scanlines are because of the limitations of the screen
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+  - url: https://eu.community.samsung.com/t5/gaming-club/samsung-odyssey-g7-major-issues/td-p/4654931
+    quote: 2) Horizontal scanlines on blue-orange wallpapers and especially in this site my monitor is
+      full with scanlines
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      model: odyssey-g7-c32g75t
+  kind: known_issue
+  domain: display
+  severity: low
+  consequence: ''
+  detection: ''
+  component: edge-lit local dimming
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Odyssey G7 edge-lit local dimming blooms around bright objects
+      body: RTINGS found the 32-inch G7's local dimming produces visible blooming around bright objects
+        and calls the feature terrible. The monitor has only edge-lit zones, so it cannot match a Mini
+        LED display.
+      advice: Do not buy the G7 for HDR; use it with local dimming off in SDR. If HDR highlights matter,
+        budget for a Mini LED or OLED model instead.
+    tr:
+      title: Odyssey G7'nin kenar aydınlatmalı yerel karartması parlak nesnelerin çevresinde ışık taşması
+        yapıyor
+      body: RTINGS, 32 inç G7'nin yerel karartmasının parlak nesnelerin çevresinde görünür ışık taşması
+        ürettiğini ve özelliğin kötü olduğunu buldu. Monitörde yalnızca kenar aydınlatmalı bölgeler var;
+        bu yüzden Mini LED bir ekranla boy ölçüşemiyor.
+      advice: G7'yi HDR için almayın; SDR'de yerel karartma kapalı kullanın. HDR parlaklıkları önemliyse
+        bunun yerine Mini LED veya OLED bir model bütçeleyin.
+  evidence:
+  - url: https://www.rtings.com/monitor/reviews/samsung/odyssey-g7-c32g75t
+    quote: On the plus side, it delivers good picture quality with deep blacks, but it has a terrible
+      local dimming feature that causes blooming around bright objects.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      model: odyssey-g9-c49g95t
+  kind: known_issue
+  domain: connectivity
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: DisplayPort 1.4 / DSC
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Odyssey G9 reaches 240 Hz only with a DSC-capable graphics card
+      body: RTINGS notes the 240 Hz refresh rate is only achievable with certain graphics cards that support
+        display stream compression. A card without DSC is limited to a lower refresh rate even though
+        the monitor is advertised at 240 Hz.
+      advice: Check that your GPU supports DSC over DisplayPort before buying, and use a certified DP
+        1.4 cable. On a laptop or an older card, treat the G9 as a 120 Hz monitor.
+    tr:
+      title: Odyssey G9, 240 Hz'ye yalnızca DSC destekli bir ekran kartıyla ulaşıyor
+      body: RTINGS, 240 Hz yenileme hızına yalnızca görüntü akışı sıkıştırmasını (DSC) destekleyen belirli
+        ekran kartlarıyla ulaşılabildiğini belirtiyor. DSC olmayan bir kart, monitör 240 Hz olarak satılsa
+        da daha düşük yenileme hızıyla sınırlı kalıyor.
+      advice: Satın almadan önce ekran kartınızın DisplayPort üzerinden DSC desteklediğini doğrulayın
+        ve sertifikalı bir DP 1.4 kablo kullanın. Dizüstü veya eski bir kartta G9'u 120 Hz monitör olarak
+        düşünün.
+  evidence:
+  - url: https://www.rtings.com/monitor/reviews/samsung/odyssey-g9-c49g95t
+    quote: However, there are limitations regarding its 240Hz refresh rate, as it's only achievable with
+      certain graphics cards that support compression.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      model: odyssey-g9-c49g95t
+  kind: known_issue
+  domain: noise_thermal
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: panel housing / power supply
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Odyssey G9 pops and clicks during use and after standby
+      body: A Samsung Community thread with multiple owners describes a widely reported popping and clicking
+        sound from the G9, including units replaced for other panel faults. One owner found the noise
+        stops at 120 Hz but returns at 240 Hz; another reports the monitor cut out after a crackle.
+      advice: Listen to the unit at 240 Hz in a quiet room before the return window closes, and keep the
+        packaging. Owners report the noise is treated as normal by support, so a return may be easier
+        than a repair.
+    tr:
+      title: Odyssey G9 kullanım sırasında ve bekleme sonrasında çıtırdıyor
+      body: Birden fazla sahibin yazdığı bir Samsung Topluluk başlığı, G9'da yaygın olarak bildirilen
+        çıtırdama ve tıklama sesini, başka panel arızaları için değiştirilen birimler dahil anlatıyor.
+        Bir sahip sesin 120 Hz'de durduğunu ama 240 Hz'de geri geldiğini buldu; bir diğeri monitörün bir
+        çıtırtıdan sonra kapandığını bildiriyor.
+      advice: İade süresi dolmadan sessiz bir odada 240 Hz'de dinleyin ve ambalajı saklayın. Sahipler
+        sesin destek tarafından normal karşılandığını bildiriyor; bu yüzden iade, onarımdan daha kolay
+        olabilir.
+  evidence:
+  - url: https://eu.community.samsung.com/t5/computers-it/odyssey-g9-popping-noises/td-p/4098914
+    quote: 'It suffers with the widely reported popping/clicking sound, examples of which can be seen
+      in these videos from other users:'
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+  - url: https://eu.community.samsung.com/t5/computers-it/odyssey-g9-popping-noises/td-p/4098914
+    quote: if when I switch to 120 htz rrefresh rate, the popping noise stops.
+    locator: ''
+    stance: supports
+    independent: false
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      model: odyssey-g9-c49g95t
+  kind: known_issue
+  domain: display
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: panel at 240 Hz
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Odyssey G9 draws scanlines at its maximum refresh rate
+      body: The Samsung Community thread that records Samsung HQ's scanline answer contains G9 owners
+        who received replacements that still showed scanlines, and a G9 owner who returned three units
+        with the defect. The lines are reported as most visible at 240 Hz.
+      advice: Test at 240 Hz with a scanline or inversion pattern on arrival. If the lines are visible
+        in normal desktop content, return the unit rather than accepting a firmware promise.
+    tr:
+      title: Odyssey G9 en yüksek yenileme hızında tarama çizgileri çiziyor
+      body: Samsung merkezinin tarama çizgisi yanıtını kaydeden Samsung Topluluk başlığında, değiştirilen
+        birimlerinde hâlâ tarama çizgileri gören G9 sahipleri ve kusur nedeniyle üç birim iade eden bir
+        G9 sahibi var. Çizgilerin en çok 240 Hz'de görüldüğü bildiriliyor.
+      advice: Geldiğinde 240 Hz'de bir tarama veya inversion deseniyle test edin. Çizgiler normal masaüstü
+        içeriğinde görünüyorsa firmware sözüne güvenmek yerine birimi iade edin.
+  evidence:
+  - url: https://eu.community.samsung.com/t5/computers-it/answer-from-samsung-hq-about-scanlines-with-g7-g9-neo-g9/td-p/3884794/page/4
+    quote: Scanlines are because of the limitations of the screen
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+  - url: https://eu.community.samsung.com/t5/computers-it/answer-from-samsung-hq-about-scanlines-with-g7-g9-neo-g9/td-p/3884794/page/4
+    quote: Last year I got the G9. It had scanlines. I got a replacement from Amazon twice. Both had scanlines.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      model: odyssey-g9-c49g95t
+  kind: known_issue
+  domain: panel_uniformity
+  severity: low
+  consequence: ''
+  detection: ''
+  component: VA panel backlight
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Odyssey G9 has poor black uniformity in dark scenes
+      body: RTINGS measured bad black uniformity on the G9 and says it is not the best option for gaming
+        in the dark. The 49-inch edge-lit VA panel shows brighter patches across what should be black.
+      advice: Judge the unit in a dark room with a black full-screen image, not in a bright showroom.
+        If you mostly play dark games, an OLED or Mini LED panel is the safer choice.
+    tr:
+      title: Odyssey G9 karanlık sahnelerde zayıf siyah homojenliğine sahip
+      body: RTINGS, G9'da kötü siyah homojenliği ölçtü ve monitörün karanlıkta oyun için en iyi seçenek
+        olmadığını söylüyor. 49 inç kenar aydınlatmalı VA panel, siyah olması gereken alanlarda daha parlak
+        lekeler gösteriyor.
+      advice: Birimi parlak bir mağazada değil, karanlık bir odada tam ekran siyah görüntüyle değerlendirin.
+        Çoğunlukla karanlık oyunlar oynuyorsanız OLED veya Mini LED panel daha güvenli bir seçim.
+  evidence:
+  - url: https://www.rtings.com/monitor/reviews/samsung/odyssey-g9-c49g95t
+    quote: Also, it has bad black uniformity, so it isn't the best option for gaming in the dark.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      model: odyssey-oled-g8-g85sb
+  kind: known_issue
+  domain: display
+  severity: low
+  consequence: ''
+  detection: ''
+  component: QD-OLED panel
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Odyssey OLED G8 blacks turn purple in a bright room
+      body: RTINGS found that ambient light gives blacks a purple tint on the 34-inch QD-OLED G8, even
+        though the panel is perfect in a dark room. The effect comes from the QD-OLED structure reflecting
+        room light.
+      advice: If the monitor faces a window or a bright lamp, plan for curtains or bias lighting; the
+        black-level advantage only holds in a dim room.
+    tr:
+      title: Odyssey OLED G8'in siyahları parlak odada morarıyor
+      body: RTINGS, 34 inç QD-OLED G8'de karanlık odada kusursuz olan panelin ortam ışığında siyahlara
+        mor bir ton verdiğini buldu. Etki, QD-OLED yapısının oda ışığını yansıtmasından kaynaklanıyor.
+      advice: Monitör bir pencereye veya parlak bir lambaya bakıyorsa perde ya da bias aydınlatma planlayın;
+        siyah seviyesi avantajı yalnızca loş odada geçerli.
+  evidence:
+  - url: https://www.rtings.com/monitor/reviews/samsung/odyssey-oled-g8-g85sb-s34bg85
+    quote: On the other hand, blacks look purple in bright environments.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      model: odyssey-oled-g8-g85sb
+  kind: known_issue
+  domain: motion
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: OLED panel / VRR
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Odyssey OLED G8 flickers with changing frame rates
+      body: RTINGS lists noticeable VRR flicker with changing frame rates as a con of the G8. OLED brightness
+        control makes the flicker visible in dark scenes when the frame rate moves.
+      advice: Test dark scenes with an uncapped frame rate. Capping the frame rate or disabling VRR reduces
+        the flicker but gives up tear-free sync.
+    tr:
+      title: Odyssey OLED G8 değişen kare hızlarında titriyor
+      body: RTINGS, değişen kare hızlarında belirgin VRR titremesini G8'in bir dezavantajı olarak listeliyor.
+        OLED parlaklık kontrolü, kare hızı değiştiğinde titremeyi karanlık sahnelerde görünür kılıyor.
+      advice: Karanlık sahneleri sınırsız kare hızıyla test edin. Kare hızını sınırlamak veya VRR'yi kapatmak
+        titremeyi azaltır ama yırtılmasız senkronizasyondan vazgeçmek demektir.
+  evidence:
+  - url: https://www.rtings.com/monitor/reviews/samsung/odyssey-oled-g8-g85sb-s34bg85
+    quote: Noticeable VRR flicker with changing frame rates.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      model: odyssey-oled-g8-g85sb
+  kind: known_issue
+  domain: burn_in
+  severity: high
+  consequence: ''
+  detection: ''
+  component: QD-OLED panel
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Samsung's one-year G8 warranty does not cover burn-in in North America
+      body: RTINGS notes that Samsung's one-year warranty does not cover burn-in in North America, unlike
+        some competitors, though coverage varies by region. The panel can retain static HUDs, taskbars
+        and logos after long exposure.
+      advice: Ask the seller for the local burn-in policy in writing. If the price depends on a multi-year
+        panel warranty, Samsung's North American terms do not provide one.
+    tr:
+      title: Samsung'un bir yıllık G8 garantisi Kuzey Amerika'da yanma izini kapsamıyor
+      body: RTINGS, bazı rakiplerin aksine Samsung'un bir yıllık garantisinin Kuzey Amerika'da yanma izini
+        kapsamadığını, kapsamın bölgeye göre değişebileceğini belirtiyor. Panel, uzun süre maruz kaldığında
+        sabit HUD'ları, görev çubuklarını ve logoları tutabilir.
+      advice: Satıcıdan yerel yanma izi politikasını yazılı olarak isteyin. Fiyat çok yıllı bir panel
+        garantisine bağlıysa Samsung'un Kuzey Amerika koşulları bunu sağlamıyor.
+  evidence:
+  - url: https://www.rtings.com/monitor/reviews/samsung/odyssey-oled-g8-g85sb-s34bg85
+    quote: It's worth noting that, unlike some competitors, Samsung's one-year warranty doesn't cover
+      burn-in in North America, though this may vary from region to region.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      model: odyssey-oled-g8-g80sd
+  kind: known_issue
+  domain: firmware
+  severity: high
+  consequence: ''
+  detection: ''
+  component: Tizen firmware / VRR Control
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: G80SD firmware 2115 broke VRR Control and caused random disconnects
+      body: A Samsung Community thread reports that the Tizen 2115 update introduced flicker in dark scenes,
+        random disconnects and reconnects, and VRR Control that does not re-enable after sleep. Owners
+        confirm the problem on later firmware 2123 and 2131, on both NVIDIA and AMD GPUs.
+      advice: Check the installed firmware before buying a used unit and test sleep/wake with VRR on.
+        A manual VRR Control toggle is the only reported workaround, and it does not survive a power cycle.
+    tr:
+      title: G80SD firmware 2115, VRR Control'ü bozdu ve rastgele bağlantı kopmalarına yol açtı
+      body: Bir Samsung Topluluk başlığı, Tizen 2115 güncellemesinin karanlık sahnelerde titreme, rastgele
+        bağlantı kopması ve yeniden bağlanma ile uykudan sonra yeniden etkinleşmeyen VRR Control getirdiğini
+        bildiriyor. Sahipler sorunun hem NVIDIA hem AMD GPU'larda sonraki firmware 2123 ve 2131'de sürdüğünü
+        doğruluyor.
+      advice: İkinci el bir birim almadan önce yüklü firmware'i kontrol edin ve VRR açıkken uyku/uyanma
+        testi yapın. Bildirilen tek geçici çözüm VRR Control'ü elle açıp kapatmak ve bu, güç döngüsünden
+        sonra kalıcı olmuyor.
+  evidence:
+  - url: https://eu.community.samsung.com/t5/tv/samsung-g80sd-oled-monitor-flicker-issues-since-firmware-2115/td-p/14533236
+    quote: Since the newest Tizen Update there has been issues with VRR Control and flickering in dark
+      scenes and the monitor just randomly disconnecting and reconnecting out of the blue.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+  - url: https://eu.community.samsung.com/t5/tv/samsung-g80sd-oled-monitor-flicker-issues-since-firmware-2115/td-p/14533236
+    quote: The only workaround seems to be, that you manually turn off VRR Control in the settings and
+      re-enable it.
+    locator: ''
+    stance: supports
+    independent: false
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      model: odyssey-oled-g8-g80sd
+  kind: known_issue
+  domain: motion
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: VRR Control
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: G80SD's VRR Control removes flicker by adding significant input lag
+      body: RTINGS found that the G80SD does not show noticeable VRR flicker when VRR Control is on, but
+        the feature significantly increases input lag. Turning it off restores responsiveness and brings
+        the flicker back.
+      advice: 'Decide which matters more before you buy: competitive input lag or a stable dark scene.
+        There is no setting that gives both on this model.'
+    tr:
+      title: G80SD'nin VRR Control'ü titremeyi belirgin giriş gecikmesi ekleyerek kaldırıyor
+      body: RTINGS, VRR Control açıkken G80SD'de belirgin VRR titremesi görülmediğini ancak özelliğin
+        giriş gecikmesini belirgin şekilde artırdığını buldu. Kapatmak tepkiselliği geri getiriyor ve
+        titremeyi de geri getiriyor.
+      advice: 'Satın almadan önce hangisinin daha önemli olduğuna karar verin: rekabetçi giriş gecikmesi
+        mi, kararlı karanlık sahne mi. Bu modelde ikisini birden veren bir ayar yok.'
+  evidence:
+  - url: https://www.rtings.com/monitor/reviews/samsung/odyssey-oled-g8-g80sd-s32dg80
+    quote: Though it doesn't exhibit noticeable VRR flicker when using VRR Control, this feature significantly
+      increases input lag.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: samsung
+      model: odyssey-oled-g8-g80sd
+  kind: known_issue
+  domain: display
+  severity: low
+  consequence: ''
+  detection: ''
+  component: QD-OLED panel
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: G80SD black levels rise in a bright room
+      body: RTINGS measured deep blacks in a dark room but says the black levels rise in bright rooms,
+        reducing the contrast advantage of the QD-OLED panel.
+      advice: Use the monitor in a dim room or control reflections; do not buy it for a sunlit desk and
+        expect OLED blacks.
+    tr:
+      title: G80SD'nin siyah seviyeleri parlak odada yükseliyor
+      body: RTINGS karanlık odada derin siyahlar ölçtü ancak parlak odalarda siyah seviyelerinin yükseldiğini
+        ve QD-OLED panelin kontrast avantajının azaldığını söylüyor.
+      advice: Monitörü loş bir odada kullanın veya yansımaları kontrol edin; güneş alan bir masada OLED
+        siyahları bekleyerek almayın.
+  evidence:
+  - url: https://www.rtings.com/monitor/reviews/samsung/odyssey-oled-g8-g80sd-s32dg80
+    quote: Its near-infinite contrast ratio and perfect black uniformity are ideal for dark room gaming,
+      as blacks look deep and inky in dark rooms, but the black levels rise in bright rooms.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: lg
+      model: 27gr95qe-b
+  kind: known_issue
+  domain: motion
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: OLED panel / overdrive
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 27GR95QE shows inverse ghosting around fast-moving objects
+      body: RTINGS measured inverse ghosting due to overshoot on the 27GR95QE, despite its near-instantaneous
+        OLED response time. The artifact appears as a bright halo or trail behind moving objects.
+      advice: Test a fast panning game at 240 Hz before buying. Adjusting the overdrive setting can reduce
+        the halo but may add blur.
+    tr:
+      title: 27GR95QE hızlı hareket eden nesnelerin çevresinde ters hayalet görüntü gösteriyor
+      body: RTINGS, neredeyse anlık OLED tepki süresine rağmen 27GR95QE'de aşırı sürüşten kaynaklanan
+        ters hayalet görüntü ölçtü. Artefakt, hareket eden nesnelerin arkasında parlak bir hale veya iz
+        olarak görünüyor.
+      advice: Satın almadan önce 240 Hz'de hızlı kayan bir oyunu test edin. Overdrive ayarını değiştirmek
+        haleyi azaltabilir ama bulanıklık ekleyebilir.
+  evidence:
+  - url: https://www.rtings.com/monitor/reviews/lg/27gr95qe-b
+    quote: It also has low input lag for a responsive feel, and motion looks incredible thanks to its
+      near-instantaneous response time, but it has inverse ghosting due to overshoot.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: lg
+      model: 27gr95qe-b
+  kind: known_issue
+  domain: motion
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: OLED panel / VRR
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 27GR95QE flickers in dark scenes with changing frame rates
+      body: RTINGS lists distracting VRR flicker with changing frame rates as a con. The flicker is most
+        visible in dark content when the frame rate moves rather than staying locked.
+      advice: Cap the frame rate or disable VRR for dark single-player games. Competitive shooters at
+        a stable high frame rate are less affected.
+    tr:
+      title: 27GR95QE değişen kare hızlarında karanlık sahnelerde titriyor
+      body: RTINGS, değişen kare hızlarında rahatsız edici VRR titremesini bir dezavantaj olarak listeliyor.
+        Titreme, kare hızı sabit kalmak yerine değiştiğinde karanlık içerikte en çok görülüyor.
+      advice: Karanlık tek oyunculu oyunlarda kare hızını sınırlayın veya VRR'yi kapatın. Kararlı yüksek
+        kare hızındaki rekabetçi nişancı oyunları daha az etkileniyor.
+  evidence:
+  - url: https://www.rtings.com/monitor/reviews/lg/27gr95qe-b
+    quote: Distracting VRR flicker with changing frame rates.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: lg
+      model: 27gr95qe-b
+  kind: known_issue
+  domain: display
+  severity: low
+  consequence: ''
+  detection: ''
+  component: matte anti-glare coating
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 27GR95QE's matte coating hazes the image
+      body: RTINGS notes the matte screen coating reduces direct reflections but introduces some haziness
+        to images. Fine text and bright highlights lose some crispness compared with a glossy OLED.
+      advice: If you work with text or want maximum contrast, compare a glossy QD-OLED beside it before
+        buying; the coating is not removable.
+    tr:
+      title: 27GR95QE'nin mat kaplaması görüntüyü puslandırıyor
+      body: RTINGS, mat ekran kaplamasının doğrudan yansımaları azalttığını ancak görüntülere bir miktar
+        pus kattığını belirtiyor. İnce metinler ve parlak vurgular, parlak bir OLED'e göre keskinliğini
+        bir miktar kaybediyor.
+      advice: Metinle çalışıyorsanız veya maksimum kontrast istiyorsanız, satın almadan önce yanına parlak
+        bir QD-OLED koyup karşılaştırın; kaplama çıkarılamıyor.
+  evidence:
+  - url: https://www.rtings.com/monitor/reviews/lg/27gr95qe-b
+    quote: Unlike other larger OLEDs from LG, this monitor has a matte screen coating to reduce direct
+      reflections, but it introduces some haziness to images.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: lg
+      model: 27gr95qe-b
+  kind: known_issue
+  domain: burn_in
+  severity: high
+  consequence: ''
+  detection: ''
+  component: OLED panel
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 27GR95QE is prone to burn-in with static elements
+      body: RTINGS states the OLED panel is prone to burn-in with constant exposure to static elements,
+        although LG provides pixel cleaning and screen move settings to reduce the risk. Burn-in is permanent
+        and not always covered after the warranty period.
+      advice: Hide the taskbar, use a screen saver, and avoid leaving a static HUD or spreadsheet on screen
+        for hours. Check the local warranty's burn-in terms before buying.
+    tr:
+      title: 27GR95QE sabit öğelerle yanma izine yatkın
+      body: RTINGS, OLED panelin sabit öğelere sürekli maruz kalma durumunda yanma izine yatkın olduğunu,
+        LG'nin riski azaltmak için piksel temizleme ve ekran kaydırma ayarları sunduğunu belirtiyor. Yanma
+        izi kalıcıdır ve garanti süresinden sonra her zaman kapsanmaz.
+      advice: Görev çubuğunu gizleyin, ekran koruyucu kullanın ve sabit bir HUD veya elektronik tabloyu
+        saatlerce ekranda bırakmayın. Satın almadan önce yerel garantinin yanma izi koşullarını kontrol
+        edin.
+  evidence:
+  - url: https://www.rtings.com/monitor/reviews/lg/27gr95qe-b
+    quote: Like any OLED, it's prone to burn-in with constant exposure to static elements, but it has
+      a few settings to try to reduce the risk of burn-in.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: lg
+      model: 27gp850-b
+  kind: known_issue
+  domain: display
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: panel / backlight
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 27GP850 can develop an intermittent one-inch flickering bar
+      body: An owner thread reports a one-inch vertical band of flicker on a second 27GP850 unit while
+        the first was fine; the faulty unit was replaced under RMA after a fault was found. This is a
+        hardware defect, not a settings issue.
+      advice: Run a uniform grey background for several minutes on arrival and return the unit if a band
+        flickers. Keep the box until the return window closes.
+    tr:
+      title: 27GP850'de aralıklı bir inçlik titreyen şerit oluşabiliyor
+      body: Bir sahip başlığı, ilk birim sorunsuzken ikinci 27GP850 biriminde bir inçlik dikey titreme
+        şeridi bildiriyor; arızalı birim, arıza bulunduktan sonra RMA kapsamında değiştirildi. Bu bir
+        ayar sorunu değil, donanım kusuru.
+      advice: Geldiğinde tek renk gri arka planı birkaç dakika çalıştırın ve bir şerit titriyorsa birimi
+        iade edin. İade süresi dolana kadar kutuyu saklayın.
+  evidence:
+  - url: https://www.reddit.com/r/Monitors/comments/qz27qn/lg_27gp850b_backlight_flicker_issue/
+    quote: With the second monitor I get intermittent bar of flickering, its not the whole screen just
+      a 1 inch line will flicker on the screen.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+  - url: https://www.reddit.com/r/Monitors/comments/qz27qn/lg_27gp850b_backlight_flicker_issue/
+    quote: Sent it back for RMA a fault was found and it got replaced.
+    locator: ''
+    stance: supports
+    independent: false
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: lg
+      model: 27gp850-b
+  kind: known_issue
+  domain: panel_uniformity
+  severity: low
+  consequence: ''
+  detection: ''
+  component: Nano IPS panel
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 27GP850 looks cloudy and shows grey blacks in a dark room
+      body: RTINGS says deep blacks appear grey and the screen looks cloudy on the 27GP850, which limits
+        its performance in darker environments. The Nano IPS panel has no local dimming.
+      advice: Judge it with lights off and a dark scene; if you mostly play at night, an OLED or VA model
+        is a better fit.
+    tr:
+      title: 27GP850 karanlık odada puslu görünüyor ve siyahları gri gösteriyor
+      body: RTINGS, 27GP850'de derin siyahların gri göründüğünü ve ekranın puslu olduğunu, bunun da karanlık
+        ortamlardaki performansını sınırladığını söylüyor. Nano IPS panelde yerel karartma yok.
+      advice: Işıklar kapalıyken ve karanlık bir sahnede değerlendirin; çoğunlukla geceleri oynuyorsanız
+        OLED veya VA bir model daha uygun.
+  evidence:
+  - url: https://www.rtings.com/monitor/reviews/lg/27gp850-b-27gp83b-b
+    quote: However, it doesn't perform well in darker environments and has limited picture quality, as
+      deep blacks appear gray and the screen looks cloudy.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: lg
+      model: 27gp850-b
+  kind: known_issue
+  domain: display
+  severity: low
+  consequence: ''
+  detection: ''
+  component: edge-lit backlight
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 27GP850 has no local dimming, so HDR highlights do not stand out
+      body: RTINGS lists no local dimming as a con of the 27GP850. The monitor accepts an HDR signal but
+        cannot dim dark areas independently, so bright highlights do not pop.
+      advice: Treat HDR as a compatibility feature, not a reason to buy. Use SDR for desktop work and
+        calibrate the picture mode you prefer.
+    tr:
+      title: 27GP850'de yerel karartma yok; bu yüzden HDR vurguları öne çıkmıyor
+      body: RTINGS, yerel karartma olmamasını 27GP850'nin bir dezavantajı olarak listeliyor. Monitör HDR
+        sinyali kabul ediyor ama karanlık alanları bağımsız olarak karartamadığı için parlak vurgular
+        öne çıkmıyor.
+      advice: HDR'yi satın alma nedeni değil, uyumluluk özelliği olarak görün. Masaüstü çalışmaları için
+        SDR kullanın ve tercih ettiğiniz görüntü modunu kalibre edin.
+  evidence:
+  - url: https://www.rtings.com/monitor/reviews/lg/27gp850-b-27gp83b-b
+    quote: No local dimming.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: lg
+      model: 27gn950-b
+  kind: known_issue
+  domain: connectivity
+  severity: high
+  consequence: ''
+  detection: ''
+  component: HDMI 2.0 inputs
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 27GN950 has no HDMI 2.1 and runs 4K at 60 Hz over HDMI
+      body: RTINGS states the 27GN950 lacks HDMI 2.1 and can only achieve 4K at 60 Hz over an HDMI connection.
+        The 160 Hz mode requires DisplayPort.
+      advice: If you plan to use a PS5, Xbox Series X or a laptop with HDMI only, this monitor cannot
+        give you high-refresh 4K. Budget for DisplayPort.
+    tr:
+      title: 27GN950'de HDMI 2.1 yok ve HDMI üzerinden 4K'yı 60 Hz'de çalıştırıyor
+      body: RTINGS, 27GN950'de HDMI 2.1 bulunmadığını ve HDMI bağlantısıyla yalnızca 4K 60 Hz'e ulaşılabildiğini
+        belirtiyor. 160 Hz modu DisplayPort gerektiriyor.
+      advice: PS5, Xbox Series X veya yalnızca HDMI'lı bir dizüstü kullanmayı planlıyorsanız bu monitör
+        size yüksek yenileme hızlı 4K veremez. DisplayPort için bütçe ayırın.
+  evidence:
+  - url: https://www.rtings.com/monitor/reviews/lg/27gn950-b
+    quote: It lacks HDMI 2.1 support and can only achieve 4k @ 60Hz over an HDMI connection.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: lg
+      model: 27gn950-b
+  kind: known_issue
+  domain: connectivity
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: DisplayPort 1.4 / DSC
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 27GN950 needs DisplayPort and a high-end GPU for 160 Hz
+      body: RTINGS notes the 160 Hz refresh rate is only available over DisplayPort and requires a high-end
+        graphics card to take full advantage. A weaker GPU or an HDMI connection drops the refresh rate.
+      advice: Check your GPU and cable before buying, and confirm the GPU can drive 4K at 160 Hz with
+        DSC. Otherwise you are paying for a mode you cannot use.
+    tr:
+      title: 27GN950'de 160 Hz için DisplayPort ve üst seviye bir GPU gerekiyor
+      body: RTINGS, 160 Hz yenileme hızının yalnızca DisplayPort üzerinden kullanılabildiğini ve tam avantaj
+        için üst seviye bir ekran kartı gerektiğini belirtiyor. Daha zayıf bir GPU veya HDMI bağlantısı
+        yenileme hızını düşürüyor.
+      advice: Satın almadan önce GPU'nuzu ve kablonuzu kontrol edin, GPU'nun DSC ile 4K 160 Hz sürüp süremeyeceğini
+        doğrulayın. Aksi halde kullanamayacağınız bir mod için ödeme yaparsınız.
+  evidence:
+  - url: https://www.rtings.com/monitor/reviews/lg/27gn950-b
+    quote: It has a high 160Hz refresh rate, but you can only achieve that refresh rate over a DisplayPort
+      connection and you need a high-end graphics card to take full advantage of this monitor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: lg
+      model: 27gn950-b
+  kind: known_issue
+  domain: ergonomics
+  severity: low
+  consequence: ''
+  detection: ''
+  component: stand
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 27GN950 stand cannot swivel
+      body: RTINGS says the monitor is fairly well built but offers little ergonomic adjustment because
+        the stand cannot swivel. Users who share a desk or switch seating positions must move the whole
+        monitor.
+      advice: Plan for a VESA arm or a monitor stand if you need to angle the screen; the included stand
+        only tilts and adjusts height.
+    tr:
+      title: 27GN950 standı dönmüyor
+      body: RTINGS, monitörün oldukça iyi yapıldığını ancak stand dönmediği için ergonomik ayarın az olduğunu
+        söylüyor. Masayı paylaşan veya oturma konumunu değiştiren kullanıcılar monitörün tamamını taşımak
+        zorunda.
+      advice: Ekranı açılandırmanız gerekiyorsa VESA kolu veya monitör standı planlayın; kutudaki stand
+        yalnızca eğilir ve yükseklik ayarlar.
+  evidence:
+  - url: https://www.rtings.com/monitor/reviews/lg/27gn950-b
+    quote: It's fairly well-built, but it doesn't offer much in terms of ergonomics as you can't swivel
+      it.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: lg
+      model: 27gn950-b
+  kind: known_issue
+  domain: panel_uniformity
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: IPS panel
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 27GN950 has terrible black uniformity
+      body: RTINGS calls the 27GN950 a poor choice for dark-room gaming because of its low contrast ratio
+        and terrible black uniformity. Bright patches show across dark scenes even after calibration.
+      advice: Check a black full-screen image in a dark room on arrival; panel uniformity varies between
+        units and is not fixed by firmware.
+    tr:
+      title: 27GN950'nin siyah homojenliği çok kötü
+      body: RTINGS, 27GN950'yi düşük kontrast oranı ve çok kötü siyah homojenliği nedeniyle karanlık odada
+        oyun için kötü bir seçim olarak nitelendiriyor. Kalibrasyondan sonra bile karanlık sahnelerde
+        parlak lekeler görünüyor.
+      advice: Geldiğinde karanlık bir odada tam ekran siyah görüntüyü kontrol edin; panel homojenliği
+        birimden birime değişir ve firmware ile düzelmez.
+  evidence:
+  - url: https://www.rtings.com/monitor/reviews/lg/27gn950-b
+    quote: Sadly, it's not a good choice for dark-room gaming due to its low contrast ratio and terrible
+      black uniformity.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: asus
+      model: rog-swift-pg279qm
+  kind: known_issue
+  domain: connectivity
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: HDMI 2.0 inputs
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: PG279QM's three HDMI ports are only HDMI 2.0
+      body: RTINGS notes the PG279QM has three HDMI ports but none support HDMI 2.1 bandwidth, so the
+        240 Hz refresh rate is only available over DisplayPort. Consoles and HDMI-only laptops cannot
+        use the full refresh rate.
+      advice: Connect a PC over DisplayPort and treat the HDMI ports as 60 Hz inputs for consoles or secondary
+        devices.
+    tr:
+      title: PG279QM'nin üç HDMI portu yalnızca HDMI 2.0
+      body: RTINGS, PG279QM'de üç HDMI portu olduğunu ancak hiçbirinin HDMI 2.1 bant genişliğini desteklemediğini,
+        bu yüzden 240 Hz yenileme hızının yalnızca DisplayPort üzerinden kullanılabildiğini belirtiyor.
+        Konsollar ve yalnızca HDMI'lı dizüstüler tam yenileme hızını kullanamıyor.
+      advice: PC'yi DisplayPort ile bağlayın ve HDMI portlarını konsol veya ikincil cihazlar için 60 Hz
+        giriş olarak düşünün.
+  evidence:
+  - url: https://www.rtings.com/monitor/reviews/asus/rog-swift-pg279qm
+    quote: Unlike most monitors, it has three HDMI ports, but none of them support HDMI 2.1 bandwidth,
+      so you can only take advantage of the monitor's refresh rate with a DisplayPort connection.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: asus
+      model: rog-swift-pg279qm
+  kind: known_issue
+  domain: display
+  severity: low
+  consequence: ''
+  detection: ''
+  component: edge-lit local dimming
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: PG279QM's edge-lit local dimming fails to improve contrast
+      body: RTINGS found the PG279QM has a low native contrast ratio and a bad edge-lit local dimming
+        feature that fails to improve it. HDR highlights do not stand out.
+      advice: Do not pay a premium for HDR on this model; use SDR and local dimming off. A Mini LED or
+        OLED monitor is the better HDR purchase.
+    tr:
+      title: PG279QM'nin kenar aydınlatmalı yerel karartması kontrastı iyileştirmiyor
+      body: RTINGS, PG279QM'de düşük doğal kontrast oranı ve bunu iyileştirmeyen kötü bir kenar aydınlatmalı
+        yerel karartma özelliği buldu. HDR vurguları öne çıkmıyor.
+      advice: Bu modelde HDR için fazladan ödeme yapmayın; SDR kullanın ve yerel karartmayı kapatın. Mini
+        LED veya OLED monitör HDR için daha iyi bir satın alma.
+  evidence:
+  - url: https://www.rtings.com/monitor/reviews/asus/rog-swift-pg279qm
+    quote: Unfortunately, though, it has limited picture quality as it has a low contrast ratio and a
+      bad local dimming feature that fails to improve it.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: asus
+      model: rog-swift-oled-pg27aqdm
+  kind: known_issue
+  domain: firmware
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: ASUS firmware installer
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: PG27AQDM firmware installer fails on some PCs
+      body: RTINGS could not update the PG27AQDM with ASUS's installer on four different Windows 10 and
+        11 PCs, and found other owners reporting the same failure. A fifth basic desktop eventually worked,
+        and ASUS later provided a USB update path.
+      advice: If the installer fails, do not assume the monitor is faulty; try the USB firmware update
+        method. Check the installed firmware before judging input lag or HDR behaviour.
+    tr:
+      title: PG27AQDM firmware yükleyicisi bazı PC'lerde başarısız oluyor
+      body: RTINGS, PG27AQDM'yi ASUS'un yükleyicisiyle dört farklı Windows 10 ve 11 PC'sinde güncelleyemedi
+        ve aynı hatayı bildiren başka sahipler buldu. Sonunda beşinci, temel bir masaüstü PC işe yaradı
+        ve ASUS daha sonra USB ile güncelleme yolu sundu.
+      advice: Yükleyici başarısız olursa monitörün arızalı olduğunu düşünmeyin; USB firmware güncelleme
+        yöntemini deneyin. Giriş gecikmesini veya HDR davranışını değerlendirmeden önce yüklü firmware'i
+        kontrol edin.
+  evidence:
+  - url: https://www.rtings.com/monitor/reviews/asus/rog-swift-oled-pg27aqdm
+    quote: We tried four different PCs, with Windows 10 and 11, and couldn't update the firmware using
+      the ASUS installer.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: asus
+      model: rog-swift-oled-pg27aqdm
+  kind: known_issue
+  domain: connectivity
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: HDMI 2.0 inputs
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: PG27AQDM is limited to HDMI 2.0 bandwidth
+      body: RTINGS notes the monitor's HDMI 2.0 ports cannot give HDMI 2.1 sources, including current
+        consoles, the full feature set. The 240 Hz mode needs DisplayPort.
+      advice: Use DisplayPort for a PC. For a PS5 or Xbox Series X, accept the console's 120 Hz limit
+        and check which features work over HDMI 2.0.
+    tr:
+      title: PG27AQDM HDMI 2.0 bant genişliğiyle sınırlı
+      body: RTINGS, monitörün HDMI 2.0 portlarının güncel konsollar dahil HDMI 2.1 kaynaklarına tam özellik
+        setini veremediğini belirtiyor. 240 Hz modu DisplayPort gerektiriyor.
+      advice: PC için DisplayPort kullanın. PS5 veya Xbox Series X için konsolun 120 Hz sınırını kabul
+        edin ve HDMI 2.0 üzerinden hangi özelliklerin çalıştığını kontrol edin.
+  evidence:
+  - url: https://www.rtings.com/monitor/reviews/asus/rog-swift-oled-pg27aqdm
+    quote: However, because it's limited to HDMI 2.0 bandwidth, HDMI 2.1 sources, like current-gen gaming
+      consoles, can't make full use of the monitor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: asus
+      model: rog-swift-oled-pg27aqdm
+  kind: known_issue
+  domain: motion
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: OLED panel / VRR
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: PG27AQDM flickers in dark scenes with changing frame rates
+      body: RTINGS measured noticeable VRR flicker on the PG27AQDM with changing frame rates, which it
+        calls distracting in dark scenes. The OLED panel's brightness control makes the flicker visible.
+      advice: Test a dark game with VRR on and an uncapped frame rate. Capping the frame rate reduces
+        the flicker but does not remove it entirely.
+    tr:
+      title: PG27AQDM değişen kare hızlarında karanlık sahnelerde titriyor
+      body: RTINGS, PG27AQDM'de değişen kare hızlarıyla belirgin VRR titremesi ölçtü ve bunu karanlık
+        sahnelerde rahatsız edici olarak nitelendiriyor. OLED panelin parlaklık kontrolü titremeyi görünür
+        kılıyor.
+      advice: Karanlık bir oyunu VRR açık ve sınırsız kare hızıyla test edin. Kare hızını sınırlamak titremeyi
+        azaltır ama tamamen ortadan kaldırmaz.
+  evidence:
+  - url: https://www.rtings.com/monitor/reviews/asus/rog-swift-oled-pg27aqdm
+    quote: Unfortunately, it has noticeable VRR flicker with changing frame rates, which is distracting
+      in dark scenes.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: asus
+      model: tuf-gaming-vg27aq
+  kind: known_issue
+  domain: motion
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: IPS panel
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: VG27AQ motion is blurry at every refresh rate
+      body: RTINGS says motion is blurry on the VG27AQ because of its slow response time, and lists blurry
+        motion at any refresh rate as a con. The 165 Hz overclock does not fix the panel's transition
+        speed.
+      advice: If you play fast shooters, compare a faster IPS or OLED model; the VG27AQ's low price comes
+        with visible smearing in motion.
+    tr:
+      title: VG27AQ hareketi her yenileme hızında bulanık
+      body: RTINGS, yavaş tepki süresi nedeniyle VG27AQ'de hareketin bulanık olduğunu söylüyor ve her
+        yenileme hızında bulanık hareketi bir dezavantaj olarak listeliyor. 165 Hz overclock panelin geçiş
+        hızını düzeltmiyor.
+      advice: Hızlı nişancı oyunları oynuyorsanız daha hızlı bir IPS veya OLED modelle karşılaştırın;
+        VG27AQ'nin düşük fiyatı hareket halinde görünür izlerle geliyor.
+  evidence:
+  - url: https://www.rtings.com/monitor/reviews/asus/tuf-vg27aq
+    quote: While it has VRR support to reduce screen tearing and low input lag for a responsive feel,
+      motion is blurry as it has a slow response time.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: asus
+      model: tuf-gaming-vg27aq
+  kind: known_issue
+  domain: display
+  severity: low
+  consequence: ''
+  detection: ''
+  component: IPS panel
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: VG27AQ blacks look grey and it has no local dimming
+      body: RTINGS found a low native contrast ratio that makes blacks look grey, with no local dimming
+        feature to improve it. Dark scenes lose detail in a lit room.
+      advice: Use it in a brighter room or for daytime work; for dark-room gaming, a VA or OLED panel
+        is the better choice.
+    tr:
+      title: VG27AQ'de siyahlar gri görünüyor ve yerel karartma yok
+      body: RTINGS, siyahları gri gösteren düşük bir doğal kontrast oranı ve bunu iyileştirecek yerel
+        karartma özelliği olmadığını buldu. Aydınlık bir odada karanlık sahneler ayrıntı kaybediyor.
+      advice: Aydınlık bir odada veya gündüz çalışması için kullanın; karanlık odada oyun için VA veya
+        OLED panel daha iyi bir seçim.
+  evidence:
+  - url: https://www.rtings.com/monitor/reviews/asus/tuf-vg27aq
+    quote: It also has limited quality with a low contrast ratio that makes blacks look gray, and no local
+      dimming feature to improve it.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: msi
+      model: optix-mag274qrf-qd
+  kind: known_issue
+  domain: motion
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: IPS panel / overdrive
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: MAG274QRF-QD shows more inverse ghosting at lower refresh rates
+      body: RTINGS measured more inverse ghosting at lower refresh rates on the MAG274QRF-QD, even though
+        response time is fast at high refresh rates. The artifact appears as a bright trail behind moving
+        objects when the frame rate drops.
+      advice: Test a game at 60-100 Hz, not only at 165 Hz. Adjust the overdrive setting to the refresh
+        rate you actually use.
+    tr:
+      title: MAG274QRF-QD düşük yenileme hızlarında daha fazla ters hayalet görüntü gösteriyor
+      body: RTINGS, yüksek yenileme hızlarında tepki süresi hızlı olsa da MAG274QRF-QD'de düşük yenileme
+        hızlarında daha fazla ters hayalet görüntü ölçtü. Artefakt, kare hızı düştüğünde hareket eden
+        nesnelerin arkasında parlak bir iz olarak görünüyor.
+      advice: Bir oyunu yalnızca 165 Hz'de değil, 60-100 Hz'de de test edin. Overdrive ayarını gerçekten
+        kullandığınız yenileme hızına göre ayarlayın.
+  evidence:
+  - url: https://www.rtings.com/monitor/reviews/msi/optix-mag274qrf-qd
+    quote: It has low input lag for a responsive feel and a fast enough response time for sharp motion,
+      but there's more inverse ghosting at lower refresh rates.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: msi
+      model: optix-mag274qrf-qd
+  kind: known_issue
+  domain: firmware
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: firmware colour mode
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: MAG274QRF-QD sRGB and aRGB modes render red as orange after firmware update
+      body: An MSI forum thread reports that after a firmware update, red appears as a shade of orange
+        in both sRGB and aRGB modes regardless of RGB adjustments. The reporter found a workaround by
+        creating a new OSD profile based on sRGB/aRGB.
+      advice: Check reds in sRGB mode before keeping the unit, and try a fresh OSD profile if the tint
+        appears. If colour accuracy matters, calibrate the monitor or return it.
+    tr:
+      title: MAG274QRF-QD sRGB ve aRGB modları firmware güncellemesinden sonra kırmızıyı turuncu gösteriyor
+      body: Bir MSI forum başlığı, firmware güncellemesinden sonra hem sRGB hem aRGB modlarında RGB ayarlarından
+        bağımsız olarak kırmızının turuncu tonunda göründüğünü bildiriyor. Bildiren kişi sRGB/aRGB tabanlı
+        yeni bir OSD profili oluşturarak geçici bir çözüm buldu.
+      advice: Birimi tutmadan önce sRGB modunda kırmızıları kontrol edin ve ton görünürse yeni bir OSD
+        profili deneyin. Renk doğruluğu önemliyse monitörü kalibre edin veya iade edin.
+  evidence:
+  - url: https://forum-en.msi.com/index.php?threads/mag-274qrf-qd-firmware-srgb-argb-red-is-orange.369626/
+    quote: aRGB and sRGB no matter what I do to RGB settings red is some shade of orange.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: msi
+      model: optix-mag274qrf-qd
+  kind: known_issue
+  domain: display
+  severity: low
+  consequence: ''
+  detection: ''
+  component: edge-lit backlight
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: MAG274QRF-QD HDR highlights do not stand out
+      body: RTINGS says the monitor fails to make highlights stand out in HDR and has limited picture
+        quality, with blacks looking grey. The edge-lit panel has no meaningful local dimming.
+      advice: Use SDR for colour-critical work; do not buy this model for HDR.
+    tr:
+      title: MAG274QRF-QD HDR vurguları öne çıkmıyor
+      body: RTINGS, monitörün HDR'de vurguları öne çıkaramadığını ve siyahların gri görünmesiyle sınırlı
+        görüntü kalitesi sunduğunu söylüyor. Kenar aydınlatmalı panelde anlamlı bir yerel karartma yok.
+      advice: Renk açısından kritik işler için SDR kullanın; bu modeli HDR için almayın.
+  evidence:
+  - url: https://www.rtings.com/monitor/reviews/msi/optix-mag274qrf-qd
+    quote: Unfortunately, it has limited picture quality as blacks look gray, and it fails to make highlights
+      stand out in HDR.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: msi
+      model: g274qpf-qd
+  kind: known_issue
+  domain: panel_uniformity
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: IPS panel
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: G274QPF-QD has bad black uniformity
+      body: RTINGS lists bad black uniformity as a con of the G274QPF-QD. Dark scenes show brighter patches
+        across the panel, which is visible in a dim room.
+      advice: Check a black screen in a dark room on arrival; uniformity varies between units and is not
+        corrected by calibration.
+    tr:
+      title: G274QPF-QD'nin siyah homojenliği kötü
+      body: RTINGS, kötü siyah homojenliğini G274QPF-QD'nin bir dezavantajı olarak listeliyor. Karanlık
+        sahnelerde panel boyunca daha parlak lekeler görünüyor ve bu loş bir odada fark ediliyor.
+      advice: Geldiğinde karanlık bir odada siyah ekranı kontrol edin; homojenlik birimden birime değişir
+        ve kalibrasyonla düzelmez.
+  evidence:
+  - url: https://www.rtings.com/monitor/reviews/msi/g274qpf-qd
+    quote: Bad black uniformity.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: msi
+      model: g274qpf-qd
+  kind: known_issue
+  domain: display
+  severity: low
+  consequence: ''
+  detection: ''
+  component: IPS panel
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: G274QPF-QD colours are not vivid, especially in HDR
+      body: RTINGS found limited picture quality on the G274QPF-QD, with colours that are not vivid, especially
+        in HDR, and low contrast that makes deep blacks look grey.
+      advice: Treat the quantum-dot layer as a colour-gamut feature, not an HDR feature; use SDR and a
+        calibrated picture mode.
+    tr:
+      title: G274QPF-QD renkleri özellikle HDR'de canlı değil
+      body: RTINGS, G274QPF-QD'de özellikle HDR'de canlı olmayan renkler ve derin siyahları gri gösteren
+        düşük kontrastla sınırlı görüntü kalitesi buldu.
+      advice: Kuantum nokta katmanını HDR özelliği değil, renk gamı özelliği olarak görün; SDR ve kalibre
+        edilmiş bir görüntü modu kullanın.
+  evidence:
+  - url: https://www.rtings.com/monitor/reviews/msi/g274qpf-qd
+    quote: However, it has low contrast, so deep blacks appear gray in a dark room, and it has limited
+      picture quality as colors aren't vivid, especially in HDR.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: msi
+      model: g274qpf-qd
+  kind: known_issue
+  domain: motion
+  severity: low
+  consequence: ''
+  detection: ''
+  component: IPS panel
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: G274QPF-QD still blurs fast-moving objects
+      body: RTINGS notes that despite consistent motion handling across the VRR range, there is still
+        motion blur with fast-moving objects on the G274QPF-QD.
+      advice: Test a fast panning game at the refresh rate you will use. If blur bothers you, a faster
+        panel or OLED is the upgrade.
+    tr:
+      title: G274QPF-QD hızlı hareket eden nesneleri hâlâ bulanıklaştırıyor
+      body: RTINGS, VRR aralığı boyunca tutarlı hareket işlemesine rağmen G274QPF-QD'de hızlı hareket
+        eden nesnelerde hâlâ hareket bulanıklığı olduğunu belirtiyor.
+      advice: Kullanacağınız yenileme hızında hızlı kayan bir oyunu test edin. Bulanıklık rahatsız ediyorsa
+        daha hızlı bir panel veya OLED yükseltmedir.
+  evidence:
+  - url: https://www.rtings.com/monitor/reviews/msi/g274qpf-qd
+    quote: Still some motion blur with fast-moving objects.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: dell
+      model: alienware-aw3423dw
+  kind: known_issue
+  domain: noise_thermal
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: G-Sync module cooling fans
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: AW3423DW runs two cooling fans that can be heard after standby
+      body: Dell's own support article says fan noise may be heard from Dell OLED monitors and that the
+        fan can still be heard briefly after the monitor is turned off or put to sleep. It notes the AW3423DW
+        uses a G-Sync module and has two fans, and calls the noise normal rather than a defect.
+      advice: Listen for the fan in a quiet room before the return window closes. Dell treats it as expected
+        behaviour, so a quiet-room complaint may not qualify for replacement.
+    tr:
+      title: AW3423DW, bekleme sonrasında da duyulabilen iki soğutma fanı çalıştırıyor
+      body: Dell'in kendi destek makalesi, Dell OLED monitörlerden fan sesi duyulabileceğini ve fanın
+        monitör kapatıldıktan veya uykuya alındıktan sonra kısa süre daha duyulabildiğini söylüyor. Makale,
+        AW3423DW'nin bir G-Sync modülü kullandığını ve iki fanı olduğunu belirtiyor; sesi kusur değil
+        normal olarak nitelendiriyor.
+      advice: İade süresi dolmadan sessiz bir odada fanı dinleyin. Dell bunu beklenen davranış olarak
+        görüyor; bu yüzden sessiz oda şikayeti değişim için yeterli olmayabilir.
+  evidence:
+  - url: https://www.dell.com/support/kbdoc/en-us/000198740/alienware-aw3423dw-monitor-fan-noise
+    quote: Fan noise may be heard from Dell OLED monitors. The fan can still be heard briefly after the
+      monitors are turned off or put to sleep.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+  - url: https://www.dell.com/support/kbdoc/en-us/000198740/alienware-aw3423dw-monitor-fan-noise
+    quote: 'Note: The Alienware 34 Curved OLED Gaming Monitor AW3423DW uses a G-Sync module and has two
+      fans.'
+    locator: ''
+    stance: supports
+    independent: false
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: dell
+      model: alienware-aw3423dw
+  kind: known_issue
+  domain: burn_in
+  severity: high
+  consequence: ''
+  detection: ''
+  component: QD-OLED panel
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: AW3423DW OLED panel can burn in, though Dell covers it for three years
+      body: RTINGS notes OLEDs risk permanent burn-in with static elements, and that Dell offers a three-year
+        replacement warranty against burn-in. After that period, a burned panel is a full replacement
+        cost.
+      advice: 'Hide static taskbars and HUDs, and keep the purchase invoice: the burn-in warranty is the
+        main protection and it is time-limited.'
+    tr:
+      title: AW3423DW OLED paneli yanma izi tutabilir; Dell bunu üç yıl kapsıyor
+      body: RTINGS, OLED'lerin sabit öğelerle kalıcı yanma izi riski taşıdığını ve Dell'in yanma izine
+        karşı üç yıllık değişim garantisi sunduğunu belirtiyor. Bu süreden sonra yanmış bir panel tam
+        değişim maliyeti demek.
+      advice: 'Sabit görev çubuklarını ve HUD''ları gizleyin, faturayı saklayın: yanma izi garantisi ana
+        korumadır ve sürelidir.'
+  evidence:
+  - url: https://www.rtings.com/monitor/reviews/dell/alienware-aw3423dw
+    quote: Although OLEDs risk permanent burn-in when exposed to the same static elements over time, the
+      monitor has a few settings to reduce the issue, and Dell also offers a three-year replacement warranty
+      against burn-in.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: dell
+      model: alienware-aw3423dw
+  kind: known_issue
+  domain: display
+  severity: low
+  consequence: ''
+  detection: ''
+  component: QD-OLED panel
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: AW3423DW blacks rise in a bright room
+      body: RTINGS says the monitor's black levels are raised in bright rooms, worsening the contrast
+        that makes QD-OLED attractive in the dark.
+      advice: Control window light or use bias lighting; the deep-black advantage only holds in a dim
+        room.
+    tr:
+      title: AW3423DW'nin siyahları parlak odada yükseliyor
+      body: RTINGS, monitörün siyah seviyelerinin parlak odalarda yükseldiğini ve QD-OLED'i karanlıkta
+        çekici kılan kontrastı kötüleştirdiğini söylüyor.
+      advice: Pencere ışığını kontrol edin veya bias aydınlatma kullanın; derin siyah avantajı yalnızca
+        loş odada geçerli.
+  evidence:
+  - url: https://www.rtings.com/monitor/reviews/dell/alienware-aw3423dw
+    quote: However, the black levels are raised in bright rooms, worsening the contrast.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: dell
+      model: alienware-aw3423dw
+  kind: known_issue
+  domain: firmware
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: firmware updater
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: AW3423DW firmware updates require an NVIDIA graphics card
+      body: RTINGS states the AW3423DW firmware can only be updated with an NVIDIA graphics card. An AMD
+        or Intel GPU owner cannot install Dell's firmware fixes without access to an NVIDIA system.
+      advice: If you do not have an NVIDIA GPU, ask the seller which firmware is installed and whether
+        a friend or service centre can update it.
+    tr:
+      title: AW3423DW firmware güncellemeleri NVIDIA ekran kartı gerektiriyor
+      body: RTINGS, AW3423DW firmware'inin yalnızca NVIDIA ekran kartıyla güncellenebildiğini belirtiyor.
+        AMD veya Intel GPU sahibi, NVIDIA sistemine erişimi olmadan Dell'in firmware düzeltmelerini yükleyemiyor.
+      advice: NVIDIA GPU'nuz yoksa satıcıya hangi firmware'in yüklü olduğunu ve bir arkadaşınızın veya
+        servis merkezinin güncelleyip güncelleyemeyeceğini sorun.
+  evidence:
+  - url: https://www.rtings.com/monitor/reviews/dell/alienware-aw3423dw
+    quote: You can only update it with an NVIDIA graphics card.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: dell
+      model: alienware-aw2725df
+  kind: known_issue
+  domain: noise_thermal
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: cooling fan
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: AW2725DF cooling fan can be heard after the monitor sleeps
+      body: Dell's support article lists the AW2725DF among Dell OLED monitors whose fan may be heard
+        during use and briefly after the monitor is turned off or put to sleep. Dell says the fan prevents
+        overheating and the noise is not a defect.
+      advice: Audition the monitor in a quiet room and decide whether the fan is acceptable; Dell's position
+        is that the noise is normal.
+    tr:
+      title: AW2725DF soğutma fanı monitör uyuduktan sonra da duyulabiliyor
+      body: Dell'in destek makalesi, AW2725DF'yi fanı kullanım sırasında ve monitör kapatıldıktan veya
+        uykuya alındıktan sonra kısa süre duyulabilen Dell OLED monitörler arasında listeliyor. Dell,
+        fanın aşırı ısınmayı önlediğini ve sesin kusur olmadığını söylüyor.
+      advice: Monitörü sessiz bir odada dinleyin ve fanın kabul edilebilir olup olmadığına karar verin;
+        Dell'in görüşü sesin normal olduğu yönünde.
+  evidence:
+  - url: https://www.dell.com/support/kbdoc/en-us/000198740/alienware-aw3423dw-monitor-fan-noise
+    quote: Fan noise may be heard from Dell OLED monitors. The fan can still be heard briefly after the
+      monitors are turned off or put to sleep.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+  - url: https://www.dell.com/support/kbdoc/en-us/000198740/alienware-aw3423dw-monitor-fan-noise
+    quote: Alienware 27 360 Hz QD OLED Gaming Monitor AW2725DF
+    locator: ''
+    stance: supports
+    independent: false
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: dell
+      model: alienware-aw2725df
+  kind: known_issue
+  domain: motion
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: QD-OLED panel / VRR
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: AW2725DF flickers with changing frame rates
+      body: RTINGS measured noticeable VRR flicker on the AW2725DF with changing frame rates. The flicker
+        is visible in dark scenes when the frame rate moves rather than staying locked.
+      advice: Test dark content with VRR on. Capping the frame rate reduces the flicker but gives up some
+        of the 360 Hz advantage.
+    tr:
+      title: AW2725DF değişen kare hızlarında titriyor
+      body: RTINGS, AW2725DF'de değişen kare hızlarıyla belirgin VRR titremesi ölçtü. Titreme, kare hızı
+        sabit kalmak yerine değiştiğinde karanlık sahnelerde görülüyor.
+      advice: Karanlık içeriği VRR açıkken test edin. Kare hızını sınırlamak titremeyi azaltır ama 360
+        Hz avantajının bir kısmından vazgeçmek demektir.
+  evidence:
+  - url: https://www.rtings.com/monitor/reviews/dell/alienware-aw2725df
+    quote: It also has noticeable VRR flicker with changing frame rates.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: dell
+      model: alienware-aw2725df
+  kind: known_issue
+  domain: connectivity
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: HDMI 2.0 inputs
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: AW2725DF is limited to HDMI 2.0 bandwidth
+      body: RTINGS notes that without HDMI 2.1 bandwidth, the AW2725DF can only be used to its full advantage
+        over DisplayPort. An HDMI 2.1 console or laptop cannot drive the panel's full refresh rate over
+        HDMI.
+      advice: Use DisplayPort for a PC. For consoles, check the HDMI 2.0 refresh-rate limit before buying.
+    tr:
+      title: AW2725DF HDMI 2.0 bant genişliğiyle sınırlı
+      body: RTINGS, HDMI 2.1 bant genişliği olmadığı için AW2725DF'nin tam avantajının yalnızca DisplayPort
+        üzerinden kullanılabildiğini belirtiyor. HDMI 2.1'li bir konsol veya dizüstü, panelin tam yenileme
+        hızını HDMI üzerinden süremez.
+      advice: PC için DisplayPort kullanın. Konsollar için satın almadan önce HDMI 2.0 yenileme hızı sınırını
+        kontrol edin.
+  evidence:
+  - url: https://www.rtings.com/monitor/reviews/dell/alienware-aw2725df
+    quote: However, without HDMI 2.1 bandwidth, you can only take full advantage of the monitor over DisplayPort.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: aoc
+      model: q27g3xmn
+  kind: known_issue
+  domain: motion
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: VA panel
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Q27G3XMN smears dark objects on its VA panel
+      body: RTINGS measured some black smearing on the Q27G3XMN, a VA-panel trade-off that remains visible
+        with fast-moving objects despite the monitor's excellent response time. Dark objects leave a trailing
+        smear in motion.
+      advice: Test a dark game with fast camera movement before buying. If you play competitive shooters,
+        an IPS or OLED panel avoids the smearing.
+    tr:
+      title: Q27G3XMN VA panelinde karanlık nesnelerde iz bırakıyor
+      body: RTINGS, Q27G3XMN'de bir miktar siyah izlenme (black smearing) ölçtü; bu, monitörün mükemmel
+        tepki süresine rağmen hızlı hareket eden nesnelerde görülen bir VA panel ödünü. Karanlık nesneler
+        hareket halinde geride iz bırakıyor.
+      advice: Satın almadan önce hızlı kamera hareketi olan karanlık bir oyunu test edin. Rekabetçi nişancı
+        oyunları oynuyorsanız IPS veya OLED panel bu izlenmeyi önler.
+  evidence:
+  - url: https://www.rtings.com/monitor/reviews/aoc/q27g3xmn
+    quote: It has a max refresh rate of 180Hz with an excellent response time, resulting in minimal motion
+      blur, but there's still a bit of smearing with fast-moving objects.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+  - url: https://www.rtings.com/monitor/reviews/aoc/q27g3xmn
+    quote: Some black smearing.
+    locator: ''
+    stance: supports
+    independent: false
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: aoc
+      model: q27g3xmn
+  kind: known_issue
+  domain: motion
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: Mini LED backlight / VRR
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Q27G3XMN flickers when the frame rate changes
+      body: RTINGS calls the Q27G3XMN's VRR flicker distracting with changing frame rates, especially
+        if the PC cannot hold a consistent frame rate. The Mini LED backlight makes brightness steps visible
+        in dark scenes.
+      advice: Cap the frame rate to a stable value or disable VRR if flicker bothers you; the monitor
+        is happiest with a locked frame rate.
+    tr:
+      title: Q27G3XMN kare hızı değiştiğinde titriyor
+      body: RTINGS, Q27G3XMN'nin VRR titremesini değişen kare hızlarında rahatsız edici olarak nitelendiriyor,
+        özellikle PC tutarlı bir kare hızı tutamıyorsa. Mini LED arka aydınlatma, karanlık sahnelerde
+        parlaklık adımlarını görünür kılıyor.
+      advice: Titreme rahatsız ediyorsa kare hızını kararlı bir değere sınırlayın veya VRR'yi kapatın;
+        monitör kilitli kare hızında en iyi çalışıyor.
+  evidence:
+  - url: https://www.rtings.com/monitor/reviews/aoc/q27g3xmn
+    quote: Unfortunately, it has distracting VRR flicker with changing frame rates, which is disappointing
+      if your PC can't maintain a consistent frame rate.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: gigabyte
+      model: m27q-rev-1-0
+  kind: known_issue
+  domain: text_clarity
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: BGR subpixel layout
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: M27Q rev. 1.0's BGR subpixel layout makes text look blurry
+      body: An owner thread documents that the rev. 1.0 M27Q uses a BGR subpixel layout instead of the
+        usual RGB, which makes text look blurry or colour-fringed in Windows and many applications. RTINGS
+        confirms the original version uses BGR and the rev. 2.0 uses RGB. ClearType can reduce but not
+        remove the problem.
+      advice: 'If you will read text or work in Office all day, buy the rev. 2.0 or a different monitor.
+        Check the box label: rev. 1.0 is marked 170 Hz and rev. 2.0 is marked 165 Hz.'
+    tr:
+      title: M27Q rev. 1.0'in BGR alt piksel düzeni metni bulanık gösteriyor
+      body: Bir sahip başlığı, rev. 1.0 M27Q'nun alışılmış RGB yerine BGR alt piksel düzeni kullandığını,
+        bunun da Windows'ta ve birçok uygulamada metni bulanık veya renk saçaklı gösterdiğini belgeliyor.
+        RTINGS orijinal sürümün BGR, rev. 2.0'ın RGB kullandığını doğruluyor. ClearType sorunu azaltabilir
+        ama ortadan kaldıramaz.
+      advice: 'Gün boyu metin okuyacak veya Office''te çalışacaksanız rev. 2.0''ı ya da başka bir monitörü
+        alın. Kutu etiketini kontrol edin: rev. 1.0 170 Hz, rev. 2.0 165 Hz olarak işaretli.'
+  evidence:
+  - url: https://www.reddit.com/r/Monitors/comments/k9gund/m27q_and_its_bgr_subpixel_layout_causes_blurry/
+    quote: 'TL;DR: The monitor has BGR subpixel layout. This affects very negatively to text clarity.
+      No complete fixes for this yet.'
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+  - url: https://www.rtings.com/monitor/reviews/gigabyte/m27q-rev-1-0
+    quote: This monitor is the original version of the M27Q, which has a BGR subpixel layout and is different
+      than the newer Gigabyte M27Q (rev. 2.0), which has an RGB subpixel layout.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: gigabyte
+      model: m27q-rev-1-0
+  kind: known_issue
+  domain: text_clarity
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: retail model revision
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Buying an M27Q does not tell you whether you get rev. 1.0 or rev. 2.0
+      body: RTINGS says it is unclear which version retailers will ship because listings do not specify
+        Rev. 1.0 or Rev. 2.0. The two versions use different panels, with BGR on rev. 1.0 and RGB on rev.
+        2.0.
+      advice: Ask the seller for the box label or a photo of it before ordering, and confirm the return
+        policy. If text clarity matters, assume the worst unless the revision is confirmed.
+    tr:
+      title: M27Q satın almak rev. 1.0 mu rev. 2.0 mı alacağınızı söylemiyor
+      body: 'RTINGS, listeler Rev. 1.0 veya Rev. 2.0 belirtmediği için perakendecilerin hangi sürümü göndereceğinin
+        belirsiz olduğunu söylüyor. İki sürüm farklı paneller kullanıyor: rev. 1.0''da BGR, rev. 2.0''da
+        RGB.'
+      advice: Sipariş vermeden önce satıcıdan kutu etiketini veya fotoğrafını isteyin ve iade politikasını
+        doğrulayın. Metin netliği önemliyse sürüm doğrulanmadıkça en kötü ihtimali varsayın.
+  evidence:
+  - url: https://www.rtings.com/monitor/reviews/gigabyte/m27q-rev-1-0
+    quote: It's unclear which version you'll get when buying from retailers, as they don't specify if
+      it's Rev. 1.0 or Rev. 2.0.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: gigabyte
+      model: m32u
+  kind: known_issue
+  domain: motion
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: IPS panel / overdrive
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: M32U blurs and shows inverse ghosting at lower refresh rates
+      body: RTINGS says the M32U is worse at lower refresh rates because of more blur and inverse ghosting,
+        despite good motion handling at high refresh rates. A game running at 60-100 fps shows the artifact
+        more than a 144 fps one.
+      advice: Test at the frame rate your GPU actually delivers, not only at 144 Hz. Adjust overdrive
+        per refresh rate if the OSD allows it.
+    tr:
+      title: M32U düşük yenileme hızlarında bulanıklaşıyor ve ters hayalet görüntü gösteriyor
+      body: RTINGS, yüksek yenileme hızlarında iyi hareket işlemesine rağmen M32U'nun düşük yenileme hızlarında
+        daha fazla bulanıklık ve ters hayalet görüntü nedeniyle daha kötü olduğunu söylüyor. 60-100 fps
+        çalışan bir oyun, 144 fps'lik bir oyundan daha fazla artefakt gösteriyor.
+      advice: Yalnızca 144 Hz'de değil, GPU'nuzun gerçekten verdiği kare hızında test edin. OSD izin veriyorsa
+        overdrive'ı yenileme hızına göre ayarlayın.
+  evidence:
+  - url: https://www.rtings.com/monitor/reviews/gigabyte/m32u
+    quote: However, it's worse with lower refresh rates due to more blur and inverse ghosting.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: gigabyte
+      model: m32u
+  kind: known_issue
+  domain: display
+  severity: low
+  consequence: ''
+  detection: ''
+  component: edge-lit local dimming
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: M32U local dimming is terrible and blacks look grey
+      body: RTINGS calls the M32U's local dimming terrible and says blacks look grey in dark rooms, limiting
+        its picture quality. The edge-lit backlight cannot produce deep blacks or clean HDR highlights.
+      advice: Use SDR and leave local dimming off; if you need HDR, choose a Mini LED or OLED monitor.
+    tr:
+      title: M32U yerel karartması kötü ve siyahlar gri görünüyor
+      body: RTINGS, M32U'nun yerel karartmasını kötü olarak nitelendiriyor ve karanlık odalarda siyahların
+        gri göründüğünü, bunun görüntü kalitesini sınırladığını söylüyor. Kenar aydınlatmalı arka ışık
+        derin siyahlar veya temiz HDR vurguları üretemiyor.
+      advice: SDR kullanın ve yerel karartmayı kapalı bırakın; HDR gerekiyorsa Mini LED veya OLED bir
+        monitör seçin.
+  evidence:
+  - url: https://www.rtings.com/monitor/reviews/gigabyte/m32u
+    quote: Unfortunately, it has limited picture quality, as it has a terrible local dimming feature,
+      and blacks look gray in dark rooms.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T10:55:00+00:00'

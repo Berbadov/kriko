@@ -1,0 +1,46 @@
+lineup:
+- Samsung Odyssey G7 32 (C32G75T)
+- Samsung Odyssey G9 (C49G95T)
+- Samsung Odyssey OLED G8 34 (G85SB)
+- Samsung Odyssey OLED G8 32 (G80SD)
+- LG UltraGear 27GR95QE-B
+- LG UltraGear 27GP850-B
+- LG UltraGear 27GN950-B
+- ASUS ROG Swift PG279QM
+- ASUS ROG Swift OLED PG27AQDM
+- ASUS TUF Gaming VG27AQ
+- MSI Optix MAG274QRF-QD
+- MSI G274QPF-QD
+- Dell Alienware AW3423DW
+- Dell Alienware AW2725DF
+- AOC Q27G3XMN
+- Gigabyte M27Q (rev. 1.0)
+- Gigabyte M32U
+covered:
+- odyssey-g7-c32g75t
+- odyssey-g9-c49g95t
+- odyssey-oled-g8-g85sb
+- odyssey-oled-g8-g80sd
+- 27gr95qe-b
+- 27gp850-b
+- 27gn950-b
+- rog-swift-pg279qm
+- rog-swift-oled-pg27aqdm
+- tuf-gaming-vg27aq
+- optix-mag274qrf-qd
+- g274qpf-qd
+- alienware-aw3423dw
+- alienware-aw2725df
+- q27g3xmn
+- m27q-rev-1-0
+- m32u
+uncovered: []
+note: Seventeen models had at least one well-sourced, model-specific problem. No recall or safety notice
+  for a gaming monitor was found; the claims are measured review findings and owner reports, not regulatory
+  actions. Models with only generic panel-type praise or complaint were left out rather than given a claim
+  invented to fill a row.
+out_of_scope:
+- Televisions and projector screens - separate category, covered by the televisions pack
+- Portable USB-C monitors - different power and connectivity constraints
+- Professional colour-grading monitors - different calibration and warranty expectations
+quarantined: []
