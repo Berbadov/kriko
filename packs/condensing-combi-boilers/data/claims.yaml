@@ -1,0 +1,2002 @@
+# Claims — what is known to go wrong, each with the page it came from and the quote
+# that was read there. A claim without both is not in this file.
+- subject:
+    kind: product
+    identity:
+      brand: vaillant
+      series: ecotec intro
+  kind: known_issue
+  domain: combustion
+  severity: high
+  consequence: ''
+  detection: ''
+  component: gas valve and combustion setup
+  subsystem: domestic hot water
+  confidence: 0.6
+  text:
+    en:
+      title: Loud banging ignition every time hot water is drawn
+      body: Owners of the ecoTEC Intro report a violent bang each time the boiler fires for hot
+        water, from the first days of use. Two separate owners describe the same noise and treat
+        it as a safety concern rather than normal operation.
+      advice: Do not accept the noise as normal. Ask for gas pressure and combustion setup to be
+        checked under warranty before the unit is used unattended.
+    tr:
+      title: Her sıcak su açılışında yüksek patlama sesiyle ateşleme
+      body: ecoTEC Intro sahipleri, ilk günlerden itibaren sıcak su için her ateşlemede şiddetli
+        bir patlama sesi bildiriyor. İki ayrı sahip aynı sesi tarif ediyor ve bunu normal çalışma
+        değil güvenlik endişesi olarak görüyor.
+      advice: Sesi normal kabul etmeyin. Cihaz gözetimsiz kullanılmadan önce garanti kapsamında
+        gaz basıncı ve yanma ayarının kontrol edilmesini isteyin.
+  evidence:
+  - url: https://www.sikayetvar.com/vaillant/vaillant-kombide-surekli-patlama-sesi-ve-guvenlik-endisesi-garanti-kapsaminda-cozum-talebi
+    quote: |-
+      Kombi ilk günden beri sıcak suyu her açtığımızda ve her ateşleme yaptığında şiddetli bir patlama sesi çıkarıyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T12:10:00+00:00'
+  - url: https://www.sikayetvar.com/vaillant/vaillant-kombimde-patlamali-atesleme-ve-guvenlik-riski
+    quote: |-
+      Vaillant marka kombimi satın aldığım günden beri özellikle sıcak su kullanımında ve yanma sırasında “patlamalı” diyebileceğim şekilde, yüksek ve ani bir sesle ateşleme yaparak çalışıyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T12:11:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: vaillant
+      series: ecotec intro
+  kind: known_issue
+  domain: ignition
+  severity: high
+  consequence: ''
+  detection: ''
+  component: ignition electrode and flame detection
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: F.28 ignition lockout returns at intervals
+      body: Two owners report repeated F.28 lockouts that shut the boiler down; one sees the fault
+        up to eight or ten times a day. Vaillant's own help page defines F28 as the flame signal
+        not being detected during ignition and lists gas supply, ignition and PCB causes.
+      advice: Repeated resets do not fix an F28. If it returns, have gas pressure, ignition
+        electrodes and the PCB checked, and keep the service records as evidence of a recurring
+        fault.
+    tr:
+      title: F.28 ateşleme kilidi aralıklarla tekrarlıyor
+      body: İki sahip, kombiyi kapatan tekrarlayan F.28 kilitlenmeleri bildiriyor; birinde arıza
+        günde sekiz-on kez görülüyor. Vaillant'ın kendi yardım sayfası F28'i ateşleme sırasında
+        alev sinyalinin algılanmaması olarak tanımlıyor ve gaz beslemesi, ateşleme ile kart
+        nedenlerini sıralıyor.
+      advice: Tekrarlanan resetler F28'i çözmez. Arıza geri gelirse gaz basıncı, ateşleme
+        elektrotları ve kart kontrol edilmeli; tekrarlayan arıza kanıtı için servis kayıtları
+        saklanmalı.
+  evidence:
+  - url: https://www.sikayetvar.com/vaillant/f28-hatasi-ve-sicaklik-sorunu-nedeniyle-orta-kat-kombisinin-degisimini-talep-ediyorum
+    quote: |-
+      Orta kattaki kombi, aldığımız günden beri belirli aralıklarla f 28 hatası veriyor ve kombi devre dışı kalıyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T12:12:00+00:00'
+  - url: https://www.sikayetvar.com/vaillant/tekrarlayan-f28-hatasi-isinma-ve-sicak-su-kesintisi-ve-garanti-disi-servis-ucretleriyle-magduriyet
+    quote: |-
+      Vaillant marka ecotec İntrö model kombim yaklaşık 4 aydır düzenli aralıklarla f28 hata kodu veriyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T12:13:00+00:00'
+  - url: https://www.vaillant.com/en/advice/help-center/f28-fault-code/
+    quote: |-
+      "The flame signal was not detected during the ignition phase."
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T12:14:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: vaillant
+      series: ecotec intro
+  kind: known_issue
+  domain: water
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: hydraulic block and pipe joints
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Water escapes from the lower part of the unit
+      body: A landlord reports two of ten new ecoTEC Intro boilers leaking from the bottom within
+        six months. A second owner reports water from two points under the boiler immediately
+        after a service visit.
+      advice: Check under the boiler and around pipe joints during the first heating season.
+        Photograph any leak before the engineer arrives, because a leak that follows a service
+        can be attributed to the visit rather than the appliance.
+    tr:
+      title: Cihazın alt kısmından su kaçıyor
+      body: Bir apartman sahibi, yeni alınan on ecoTEC Intro kombiden ikisinin altı ay dolmadan
+        alt kısmından su kaçırdığını bildiriyor. İkinci bir sahip, servis ziyaretinin hemen
+        ardından kombinin altından iki ayrı noktadan su geldiğini bildiriyor.
+      advice: İlk ısıtma sezonunda kombinin altını ve boru bağlantılarını kontrol edin. Servis
+        gelmeden önce kaçağın fotoğrafını çekin; çünkü servis sonrası kaçak, cihazdan çok ziyarete
+        bağlanabilir.
+  evidence:
+  - url: https://www.sikayetvar.com/vaillant/vaillant-kombilerde-su-kacagi-ve-servis-gecikmesi
+    quote: |-
+      Ancak kombilerden ikisi daha 6 ay dolmadan alt kısmından su kaçırmaya başladı.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T12:15:00+00:00'
+  - url: https://www.sikayetvar.com/vaillant/bakim-sonrasi-su-kacagi-ve-6500-tl-iadesi-talebi
+    quote: |-
+      Servis geldikten sonra “bakımını yaptık” diyerek ayrıldı ancak ekip gittikten kısa süre sonra kombinin altından iki ayrı yerden su akmaya başladı.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T12:16:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: vaillant
+      series: ecotec intro
+  kind: known_issue
+  domain: electronics
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: main control board
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Main board burned within six months
+      body: An owner reports the boiler failed after six months and the engineer found the main
+        board burned. The service attributed it to high voltage, which moves the cost dispute to
+        the electrical supply.
+      advice: Keep the board and ask for a written diagnosis. If high voltage is blamed, have the
+        supply and any regulator checked before paying for a second board.
+    tr:
+      title: Ana kart altı ay içinde yandı
+      body: Bir sahip, kombinin altı ay sonra arızalandığını ve servisin ana kartın yandığını
+        tespit ettiğini bildiriyor. Servis bunu yüksek gerilime bağlamış; bu da masraf tartışmasını
+        elektrik beslemesine taşıyor.
+      advice: Kartı saklayın ve yazılı teşhis isteyin. Yüksek gerilim suçlanıyorsa ikinci kart
+        için ödeme yapmadan önce besleme ve varsa regülatör kontrol edilmeli.
+  evidence:
+  - url: https://www.sikayetvar.com/vaillant/vaillant-kombi-arizasi
+    quote: |-
+      Ancak 13’ünde kombi arızalandı ve gelen Vaillant yetkili servis teknisyeni ana kartın yandığını söyledi.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T12:17:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: vaillant
+      series: turbotec
+  kind: known_issue
+  domain: water
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: water pressure sensor, pump and expansion vessel
+  subsystem: central heating
+  confidence: 0.6
+  text:
+    en:
+      title: F.75 pressure fault recurs until the boiler stops
+      body: An owner reports F.75 appearing intermittently for about a year before the boiler
+        stopped working completely. Vaillant's help page defines F75 as too small a pressure
+        change when the heating pump starts and lists the pressure sensor, pump, expansion vessel
+        and wiring as causes.
+      advice: Treat a repeating F75 as a component fault, not a water top-up problem. Ask for the
+        pressure sensor, pump and expansion vessel to be tested, not just refilled.
+    tr:
+      title: F.75 basınç arızası kombi durana kadar tekrarlıyor
+      body: Bir sahip, yaklaşık bir yıl boyunca aralıklarla F.75 gördüğünü ve sonunda kombinin
+        tamamen çalışmaz hale geldiğini bildiriyor. Vaillant'ın yardım sayfası F75'i ısıtma
+        pompası çalışırken basınç değişiminin çok düşük olması olarak tanımlıyor ve basınç
+        sensörü, pompa, genleşme tankı ile kabloları neden olarak sıralıyor.
+      advice: Tekrarlayan F75'i su tamamlama sorunu değil, parça arızası olarak görün. Sadece su
+        basmak yerine basınç sensörü, pompa ve genleşme tankının test edilmesini isteyin.
+  evidence:
+  - url: https://www.sikayetvar.com/vaillant/vaillant-kombimde-f75-hata-kodu-ve-724-musteri-hizmetlerine-erisilemiyor
+    quote: |-
+      Vaillant marka kombim yaklaşık bir yıldır ara ara f. 75 hata kodunu veriyordu ve son olarak tamamen çalışmaz hale geldi.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T12:18:00+00:00'
+  - url: https://www.vaillant.com/en/advice/help-center/f75-fault-code/
+    quote: |-
+      The official explanation for a F75 fault is "The pressure change is too low when the heating pump is started up."
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T12:19:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: vaillant
+      series: turbotec
+  kind: known_issue
+  domain: water
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: expansion vessel
+  subsystem: central heating
+  confidence: 0.6
+  text:
+    en:
+      title: F.22 low pressure traced to a perforated expansion vessel
+      body: An owner reports F.22 low-water-pressure faults on a turboTEC and a service diagnosis
+        of a perforated expansion vessel. The boiler kept firing at times but lost pressure
+        repeatedly.
+      advice: If pressure falls repeatedly, insist the expansion vessel is tested rather than only
+        topping the system up. A perforated vessel will keep dropping pressure.
+    tr:
+      title: F.22 düşük basınç, delinmiş genleşme tankına bağlandı
+      body: Bir sahip, turboTEC kombide F.22 düşük su basıncı arızası ve servisin delinmiş genleşme
+        tankı teşhisini bildiriyor. Kombi zaman zaman çalışmaya devam etse de basınç tekrar tekrar
+        düşüyordu.
+      advice: Basınç tekrar tekrar düşüyorsa sadece su basmakla yetinmeyin, genleşme tankının test
+        edilmesini isteyin. Delinmiş tank basıncı düşürmeye devam eder.
+  evidence:
+  - url: https://www.sikayetvar.com/vaillant/garanti-kombi-onariminda-servis-parca-degisimi-icin-guvenli-olmayan-sokme-isini-musteriye-birakiyor
+    quote: |-
+      Vaillant marka kombim 31.07.2026 tarihinden bu yana f22 düşük su basıncı arızası verdiği için arızanın ciddiyeti ve riskine rağmen kombi şimdilik çalışıyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T12:20:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: vaillant
+      series: turbotec
+  kind: known_issue
+  domain: water
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: heat exchanger
+  subsystem: domestic hot water
+  confidence: 0.6
+  text:
+    en:
+      title: Heat-exchanger leak returns after a paid repair
+      body: An owner reports the turboTEC Pro began dripping, paid for a heat-exchanger
+        replacement, and the same leak returned. The complaint records the service attributing
+        the leak to the exchanger.
+      advice: Ask for the exchanger and its seals to be pressure-tested, and get the repair
+        warranty in writing before paying for a second replacement.
+    tr:
+      title: Eşanjör kaçağı ücretli onarımdan sonra tekrar ortaya çıktı
+      body: Bir sahip, turboTEC Pro'nun su damlatmaya başladığını, eşanjör değişimi için ödeme
+        yaptığını ve aynı kaçağın geri döndüğünü bildiriyor. Şikayette servisin kaçağı eşanjöre
+        bağladığı yer alıyor.
+      advice: İkinci değişim için ödeme yapmadan önce eşanjör ve contalarının basınç testinden
+        geçirilmesini isteyin ve onarım garantisini yazılı alın.
+  evidence:
+  - url: https://www.sikayetvar.com/vaillant/ayni-ariza-icin-tekrar-8000-tl-ucret-talebi
+    quote: |-
+      Vaillant turbotec Pro kombimiz Ağustos ayında su damlatmaya başladı, bunun üzerine yetkili servisi çağırdık.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T12:21:00+00:00'
+  - url: https://www.sikayetvar.com/vaillant/ayni-ariza-icin-tekrar-8000-tl-ucret-talebi
+    quote: |-
+      Servis gelen arızanın eşanjör kaynaklı olduğunu, parçanın değişmesi gerektiğini söyleyerek 8.000 TL ücret talep etti, kabul edip ödememizi yaptık ve parça değişimi gerçekleştirildi.
+    locator: ''
+    stance: supports
+    independent: false
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T12:22:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: bosch
+      series: condens 2200i w
+  kind: known_issue
+  domain: hydraulics
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: domestic hot water control and plate exchanger
+  subsystem: domestic hot water
+  confidence: 0.6
+  text:
+    en:
+      title: Hot water alternates between hot and lukewarm
+      body: Several Condens 2200i owners report domestic hot water that turns hot, then lukewarm,
+        then hot again during a shower. One owner has lived with the cycle for a year and another
+        for two months while the boiler was under warranty.
+      advice: Measure the outlet temperature over a full minute before accepting a no-fault
+        answer. A repeating cycle points to the hot-water control or plate exchanger, not to user
+        error.
+    tr:
+      title: Sıcak su sıcak ve ılık arasında gidip geliyor
+      body: Birden fazla Condens 2200i sahibi, duş sırasında sıcak suyun önce sıcak, sonra ılık,
+        sonra tekrar sıcak hale geldiğini bildiriyor. Bir sahip bu döngüyle bir yıl, bir diğeri
+        garanti kapsamındayken iki ay yaşamış.
+      advice: Arıza yok cevabını kabul etmeden önce çıkış sıcaklığını bir dakika boyunca ölçün.
+        Tekrarlayan döngü kullanıcı hatasına değil, sıcak su kontrolüne veya plakalı eşanjöre
+        işaret eder.
+  evidence:
+  - url: https://www.sikayetvar.com/bosch-termoteknoloji/kombide-surekli-sicak-su-dalgalanmasi-ve-cozum-bulunamamasi
+    quote: |-
+      Condens 2200i W 24 KW kombide 1 yıldır sıcak suyun sürekli soğuyup tekrar ısınması problemini yaşıyoruz.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T12:23:00+00:00'
+  - url: https://www.sikayetvar.com/bosch-termoteknoloji/garanti-altindaki-kombiye-servis-ucreti-alinmasi-ve-sorunun-cozulmemesi
+    quote: |-
+      Bosch marka Condens 2200i, kombi garanti kapsamındayken yaklaşık iki aydır banyoda suyu açtığımda önce sıcak, kısa bir süre sonra ise ılık gelmesi sorununu yaşıyorum.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T12:24:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: bosch
+      series: condens 2200i w
+  kind: known_issue
+  domain: general
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: pump, diverter valve and heating circuit
+  subsystem: central heating
+  confidence: 0.6
+  text:
+    en:
+      title: Radiators stay cold after repeated service visits
+      body: Owners report the boiler running but not heating the radiators, with the fault
+        unresolved after several visits. One owner says the house was not heated for about a
+        year; another reports three years of intermittent no-heat or no-hot-water faults.
+      advice: Record flow and return temperatures at the boiler and at the radiators. If the
+        boiler fires but the circuit stays cold, ask for the pump, diverter and a blockage test
+        rather than accepting that the installation is at fault.
+    tr:
+      title: Tekrarlanan servis ziyaretlerine rağmen petekler ısınmıyor
+      body: Sahipler, kombinin çalıştığını ancak petekleri ısıtmadığını ve arızanın birçok ziyarete
+        rağmen çözülmediğini bildiriyor. Bir sahip evin yaklaşık bir yıl ısıtılamadığını, bir
+        diğeri üç yıl boyunca aralıklarla ısıtma veya sıcak su arızası yaşadığını belirtiyor.
+      advice: Kombi ve peteklerdeki gidiş dönüş sıcaklıklarını kaydedin. Kombi yanıyor ama devre
+        soğuk kalıyorsa tesisatı suçlamak yerine pompa, üç yollu vana ve tıkanıklık testi isteyin.
+  evidence:
+  - url: https://www.sikayetvar.com/bosch-termoteknoloji/bosch-kombi-isinma-sorunu-bir-yillik-cozum-eksikligi-ve-ek-masraflar
+    quote: |-
+      Garanti süresi devam eden Bosch Condens 2200i-W 24 KW kombimizle, kurulumundan bu yana yaklaşık bir yıldır sorun yaşıyoruz ve evimizi yeterli şekilde ısıtamıyoruz.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T12:25:00+00:00'
+  - url: https://www.sikayetvar.com/bosch-termoteknoloji/bosch-condense-2200-kombi-surekli-arizasi-ve-degisim-talebi
+    quote: |-
+      Bosch Condense 2200 kombimizi aldığımız günden bu yana yaklaşık 3 yıldır bir türlü bitmeyen sorunlar yaşıyoruz. Ya petekler ısınmıyor ya da sıcak su gelmiyor, evde konforlu bir şekilde ısınamaz hale geldik.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T12:26:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: bosch
+      series: condens 2200i w
+  kind: known_issue
+  domain: electronics
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: main board and three-way valve motor
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Main board and three-way valve fail within weeks
+      body: One owner reports the display dead about 20 days after installation; another reports
+        a three-way valve motor failure on a new Condens 2200i. Both repairs were disputed as
+        warranty claims.
+      advice: Photograph the installation date and the first fault. A board or valve failure
+        inside the first month is a warranty matter, not normal wear.
+    tr:
+      title: Ana kart ve üç yollu vana haftalar içinde arızalanıyor
+      body: Bir sahip, kurulumdan yaklaşık 20 gün sonra ekranın tamamen gittiğini; bir diğeri yeni
+        Condens 2200i'de üç yollu vana motorunun arızalandığını bildiriyor. İki onarımda da garanti
+        kapsamı tartışılmış.
+      advice: Kurulum tarihini ve ilk arızayı fotoğraflayın. İlk ay içindeki kart veya vana arızası
+        normal aşınma değil, garanti konusudur.
+  evidence:
+  - url: https://www.sikayetvar.com/bosch-termoteknoloji/bosch-kombi-karti-arizasi-garanti-kapsami-disi-ucretlendirme-ve-sicak-su-eksikligi-sikayeti
+    quote: |-
+      Bosch 2200i 24 kW kombi satın aldım ve kombi kurulduktan sonra daha 20 gün bile olmadan, 23 Ekim 2026 tarihinde kombinin ekranı tamamen gitti.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T12:27:00+00:00'
+  - url: https://www.sikayetvar.com/bosch-termoteknoloji/bosch-kombi-degisim-talebi-reddedildi-ayipli-urun-magduriyeti
+    quote: |-
+      Condens 2200i w kombi aldım, ürünün üç yollu motor arızası çıktı.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T12:28:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: baymak
+      series: lambert
+  kind: known_issue
+  domain: ignition
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: heat exchanger and limit thermostat
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: E03 lockout recurs and is blamed on a blocked exchanger
+      body: Two owners report E03 lockouts on Lambert boilers; one service attributed it to a
+        blocked exchanger and only cleaned it. The other owner paid for a board repair and the
+        fault returned.
+      advice: Ask what E03 was diagnosed as and whether the exchanger was cleaned or replaced. A
+        clean-only repair on a recurring E03 is likely to return.
+    tr:
+      title: E03 kilidi tekrarlıyor ve tıkalı eşanjöre bağlanıyor
+      body: İki sahip Lambert kombilerde E03 kilidi bildiriyor; bir servis arızayı tıkalı eşanjöre
+        bağlayıp yalnızca temizlik yapmış. Diğer sahip kart onarımı için ödeme yapmış ve arıza
+        geri dönmüş.
+      advice: E03 için ne teşhis konulduğunu ve eşanjörün temizlenip mi değiştirildiğini sorun.
+        Tekrarlayan E03'te sadece temizlik kalıcı çözüm olmayabilir.
+  evidence:
+  - url: https://www.sikayetvar.com/lambert/garanti-kapsamindaki-kombi-tamirinde-alinan-servis-ucretinin-iadesi-talebi
+    quote: |-
+      2029 yılına kadar garantisi devam eden Baymak üretimi Lambert marka kombim 14.11.2026 tarihinde e03 arızası verdi.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T12:29:00+00:00'
+  - url: https://www.sikayetvar.com/lambert/marmara-bolge-servis-bursadan-4600-tl-iade-talebi
+    quote: |-
+      Baymak Attive kombim e03 arızası verdiği için Marmara Bölge Servis Bursa’ya başvurdum.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T12:30:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: baymak
+      series: lambert
+  kind: known_issue
+  domain: water
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: hydraulic block, joints and seals
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Boiler loses water daily and leaks inside the casing
+      body: One owner reports the Lambert Premix loses water continuously and needs refilling
+        every day; another reports water leaking from inside the casing while still under
+        warranty. Both faults affect hot water and heating.
+      advice: Find the leak before accepting repeated top-ups. A daily pressure loss usually means
+        a joint, exchanger or vessel fault, not a boiler that needs water.
+    tr:
+      title: Kombi her gün su eksiltiyor ve gövde içinden kaçırıyor
+      body: Bir sahip Lambert Premix'in sürekli su eksilttiğini ve her gün su basmak gerektiğini;
+        bir diğeri garanti kapsamındayken gövde içinden su sızdığını bildiriyor. İki arıza da
+        sıcak su ve ısıtmayı etkiliyor.
+      advice: Tekrar tekrar su basmayı kabul etmeden önce kaçağı buldurun. Günlük basınç kaybı
+        genellikle bağlantı, eşanjör veya tank arızasıdır; kombinin suya ihtiyacı olduğu anlamına
+        gelmez.
+  evidence:
+  - url: https://www.sikayetvar.com/lambert/lambert-kombide-surekli-su-eksiltme-ve-atesleme-arizasi-servis-gecikmesi-ve-ucret-iadesi-talebi
+    quote: |-
+      Lambert Premix kombimiz yaklaşık bir yıldır ateşleme sorunu yaşıyor, sürekli su eksiltiyor; bu nedenle ne sıcak suyu ne de ısınmayı her zaman sağlayamıyoruz ve her gün kombiye su basmak zorunda kalıyoruz.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T12:31:00+00:00'
+  - url: https://www.sikayetvar.com/lambert/garanti-kapsamindaki-kombimde-su-kacagi-ve-servisin-musteri-hatasi-iddiasi
+    quote: |-
+      Baymak Lambert model kombim halen garanti kapsamındayken cihazın iç kısmından su akıntısı oluştu.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T12:32:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: baymak
+      series: lambert
+  kind: known_issue
+  domain: general
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: multiple components
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Repeated breakdowns within the warranty period
+      body: Owners describe Lambert boilers breaking down repeatedly within months, with parts
+        replaced but the same or a new fault returning. Two reports describe the unit as unusable
+        for months while waiting for repairs.
+      advice: Keep every service report. A repeat fault inside warranty supports a replacement
+        request more than another paid repair.
+    tr:
+      title: Garanti süresi içinde tekrarlayan arızalar
+      body: Sahipler Lambert kombilerin aylar içinde tekrar tekrar arızalandığını, parça
+        değiştirilse de aynı veya yeni bir arızanın geri döndüğünü anlatıyor. İki şikayet, onarım
+        beklenirken cihazın aylarca kullanılamadığını bildiriyor.
+      advice: Her servis raporunu saklayın. Garanti içindeki tekrarlayan arıza, yeni bir ücretli
+        onarımdan çok değişim talebini destekler.
+  evidence:
+  - url: https://www.sikayetvar.com/lambert/garanti-kapsaminda-olmasina-ragmen-baymak-lambert-kombi-surekli-ariza-veriyor
+    quote: |-
+      Baymak Lambert kombiyi sıfır olarak aldım ve cihazı ilk günden beri yaklaşık 6 aydır sorunsuz kullanamıyorum. Daha 3 ay olmadan cihaz hata vermeye başladı.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T12:33:00+00:00'
+  - url: https://www.sikayetvar.com/lambert/surekli-arizalanan-baymak-kombi-icin-kalici-cozum-ve-degisim-talebi
+    quote: |-
+      2024 yılından beri kullandığım Baymak Lambert kombi ile aylardır ciddi sorunlar yaşıyorum.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T12:34:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: demirdokum
+      series: nitromix
+  kind: known_issue
+  domain: ignition
+  severity: high
+  consequence: ''
+  detection: ''
+  component: gas valve, ignition electrode and flue
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: F.28 lockout persists for months and is misdiagnosed
+      body: Two owners report F.28 on Nitromix boilers that stayed unresolved for weeks or
+        months. In one case the external gas valve was replaced three times before the fault was
+        still present.
+      advice: Ask for combustion and gas-pressure readings, not another external valve. Document
+        every reset and visit.
+    tr:
+      title: F.28 kilidi aylarca sürüyor ve yanlış teşhis ediliyor
+      body: İki sahip, Nitromix kombilerde haftalar veya aylar boyunca çözülmeyen F.28
+        bildiriyor. Bir olayda dış gaz valfi üç kez değiştirilmiş, arıza yine de sürmüş.
+      advice: Bir dış vana daha değiştirmek yerine yanma ve gaz basıncı ölçümleri isteyin. Her
+        reset ve ziyareti kaydedin.
+  evidence:
+  - url: https://www.sikayetvar.com/demirdokum/demirdokum-nitromix-kombimde-f28-arizasi-7-aydir-cozulmedi
+    quote: |-
+      DemirDöküm Nitromix kombimizde uzun süredir F28 arızası veriyor ve bu nedenle ciddi mağduriyet yaşıyoruz.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T12:40:00+00:00'
+  - url: https://www.sikayetvar.com/demirdokum/demirdokum-kombi-servisi-sorununu-cozmeden-4500-tl-ucret-aldi-f28-arizasi-hala-devam-ediyor
+    quote: |-
+      DemirDöküm Nitromix kombim f28 arıza kodu verdiği için Biga DemirDöküm servisini çağırdım.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T12:41:00+00:00'
+  - url: https://www.sikayetvar.com/demirdokum/demirdokum-nitromix-kombimde-f28-arizasi-7-aydir-cozulmedi
+    quote: |-
+      Yetkili servisin yönlendirmesiyle sorunun dış kapıdaki valften kaynaklandığı söylendi; bunun üzerine tesisatçı çağırarak dışarıdaki valfi tam üç kez değiştirdik. Buna rağmen arıza devam etti.
+    locator: ''
+    stance: supports
+    independent: false
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T12:42:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: demirdokum
+      series: nitromix
+  kind: known_issue
+  domain: water
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: drain valve, casing joints and copper pipe
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Internal water leaks from the drain valve and body
+      body: Owners of Nitromix P24 and P28 boilers report water from the drain valve and from the
+        casing, including a near-new unit leaking after two months. A separate report describes a
+        pinhole in an internal copper pipe.
+      advice: Inspect under the boiler and around the drain valve during the first year. A leak
+        inside the casing is not a condensate nuisance and should be repaired under warranty.
+    tr:
+      title: Tahliye valfinden ve gövdeden iç su kaçağı
+      body: Nitromix P24 ve P28 sahipleri tahliye valfinden ve gövdeden su geldiğini, iki aylık
+        neredeyse yeni bir cihazın bile kaçırdığını bildiriyor. Ayrı bir şikayet iç bakır boruda
+        delinme olduğunu anlatıyor.
+      advice: İlk yıl kombinin altını ve tahliye valfini kontrol edin. Gövde içindeki kaçak
+        yoğuşma suyu değildir ve garanti kapsamında onarılmalıdır.
+  evidence:
+  - url: https://www.sikayetvar.com/demirdokum/garanti-uzatilmis-demirdokum-nitromix-kombide-su-sizintisi-ve-bakim-eksikligi
+    quote: |-
+      DemirDöküm Nitromix p28 kombim yaklaşık 5 gündür tahliye valfinden su akıtıyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T12:43:00+00:00'
+  - url: https://www.sikayetvar.com/demirdokum/demirdokum-nitromix-p24-kombide-su-kacirma-isitma-ve-asiri-vibrasyon-sorunlari-garanti-kapsaminda
+    quote: |-
+      DemirDöküm Nitromix p24 model kombimi yaklaşık 2 ay önce sıfır olarak taktırdım, sadece 2 gündür gövdesinden su kaçırma, aşırı vibrasyon ve ısıtma yapmama sorunu yaşamaya başladım.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T12:44:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: demirdokum
+      series: nitromix
+  kind: known_issue
+  domain: electronics
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: electronic control boards
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Electronic board faults in the first months
+      body: One owner reports two electronic boards faulty on a Nitromix P35; another reports an
+        F.347 fault at two months. Both units were still under warranty.
+      advice: Ask which board failed and why. Repeated board faults point to supply or earth
+        problems that a board swap alone will not fix.
+    tr:
+      title: İlk aylarda elektronik kart arızaları
+      body: Bir sahip Nitromix P35'te iki elektronik kartın arızalı olduğunu, bir diğeri iki
+        aylıkken F.347 arızası verdiğini bildiriyor. İki cihaz da garantisi devam ederken arıza
+        yapmış.
+      advice: Hangi kartın ve neden arızalandığını sorun. Tekrarlayan kart arızaları, sadece kart
+        değişimiyle çözülmeyecek besleme veya topraklama sorunlarına işaret eder.
+  evidence:
+  - url: https://www.sikayetvar.com/demirdokum/garanti-disi-birakilan-ekran-karti-onarim-ucreti-iadesi-talebi
+    quote: |-
+      Servis incelemesi sonucunda iki elektronik kartta sorun olduğu belirtildi.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T12:45:00+00:00'
+  - url: https://www.sikayetvar.com/demirdokum/demirdokum-kombim-2-ayda-ariza-verdi-musteri-hizmetleri-garanti-satmaya-odaklandi
+    quote: |-
+      Cihaz daha yalnızca iki aylıkken bugün F. 347 hata kodu vererek arıza yaptı.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T12:46:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: eca
+      series: citius premix
+  kind: known_issue
+  domain: water
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: expansion vessel, pressure sensor and filling circuit
+  subsystem: domestic hot water
+  confidence: 0.6
+  text:
+    en:
+      title: A03 fault with a pressure spike on hot water
+      body: An owner reports that opening hot water sends the Citius Premix into A03 while the
+        pressure gauge spikes and then falls sharply. The fault has recurred for about five
+        months.
+      advice: Do not keep resetting an A03 with a pressure spike. Ask for the expansion vessel and
+        pressure sensor to be tested.
+    tr:
+      title: Sıcak suda basınç sıçramasıyla A03 arızası
+      body: Bir sahip, sıcak suyu açınca Citius Premix'in A03 hatasına geçtiğini, bu sırada bar
+        göstergesinin zirve yapıp hemen ardından hızla düştüğünü bildiriyor. Arıza yaklaşık beş
+        aydır tekrarlıyor.
+      advice: Basınç sıçramasıyla gelen A03'ü sürekli resetlemeyin. Genleşme tankı ve basınç
+        sensörünün test edilmesini isteyin.
+  evidence:
+  - url: https://www.sikayetvar.com/eca/eca-citius-premix-kombi-hatalari-icin-yetkili-servis-ucreti-iadesi-talebi
+    quote: |-
+      Özellikle banyoda sıcak suyu ilk açtığımda kombi A03 hatasına geçiyor; bu sırada bar basıncı bir anda zirve yapıp hemen ardından hızlıca düşüyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T12:47:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: eca
+      series: citius premix
+  kind: known_issue
+  domain: electronics
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: main board and fan
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Main board and fan burn in the first month
+      body: One Citius Premix 24 owner reports the main board burned three weeks after purchase;
+        another reports a burned fan on the same range. Both services attributed the damage to
+        voltage.
+      advice: If voltage is blamed, get the supply measured in writing. A board or fan that burns
+        in the first month should be a warranty repair.
+    tr:
+      title: Ana kart ve fan ilk ay içinde yanıyor
+      body: Bir Citius Premix 24 sahibi, satın alımdan üç hafta sonra ana kartın yandığını; bir
+        diğeri aynı seride fanın yandığını bildiriyor. İki servis de hasarı gerilime bağlamış.
+      advice: Gerilim suçlanıyorsa beslemenin ölçüldüğüne dair yazılı belge isteyin. İlk ay içinde
+        yanan kart veya fan garanti kapsamında onarılmalıdır.
+  evidence:
+  - url: https://www.sikayetvar.com/eca/eca-citius-premix-24-kombisinde-bir-ay-icinde-iki-buyuk-ariza-degisim-ve-iade-talebi
+    quote: |-
+      10.10.2026 tarihinde ECA Citius Premix 24 model kombi satın aldım. 31.10.2026 tarihinde kombinin ana kartı yandı
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T12:48:00+00:00'
+  - url: https://www.sikayetvar.com/eca/eca-kombi-servisi-yuksek-ucret-talep-ediyor-ve-voltaj-sorunu-iddiasi-celiskili
+    quote: |-
+      Servis, fanın yandığını ve voltajdan kaynaklı bir sorun olduğunu söyleyerek benden yaklaşık 8 bin tl ödeme talep etti.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T12:49:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: eca
+      series: citius premix
+  kind: known_issue
+  domain: general
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: complete unit
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Dead on arrival and unusable from the first day
+      body: One owner reports a new Citius Premix that never ran because of a memory-card fault;
+        another reports a new-build flat where the ECA combi was faulty from the first day.
+        Neither unit worked when it was handed over.
+      advice: Record the first start-up and refuse to sign the commissioning sheet if the boiler
+        does not run.
+    tr:
+      title: Kutudan arızalı çıkıyor ve ilk günden kullanılamıyor
+      body: Bir sahip, hafıza kartı arızası nedeniyle hiç çalışmayan yeni bir Citius Premix
+        bildiriyor; bir diğeri yeni binada ECA kombinin ilk günden arızalı olduğunu anlatıyor. İki
+        cihaz da teslim edildiğinde çalışmıyordu.
+      advice: İlk çalıştırmayı kaydedin ve kombi çalışmıyorsa devreye alma formunu imzalamayın.
+  evidence:
+  - url: https://www.sikayetvar.com/eca/zeytinburnundaki-eca-kombide-surekli-ariza-ve-cozum-eksikligi
+    quote: |-
+      Kentsel dönüşüm sonrasında yeni taşındığımız Zeytinburnu/İstanbul’daki evimizde bulunan sıfır ECA Premix kombi, ilk günden beri arızalı olduğu için hiç çalıştırılamadı.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T12:50:00+00:00'
+  - url: https://www.sikayetvar.com/eca/eca-kombinin-hafiza-karti-arizasi-ve-bayi-ilgisizligi
+    quote: |-
+      Ürünün montajı için gelen ECA. Yetkili servisi kombiyi kontrol ettiğinde cihazın hafıza kartı arızası olduğunu
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T12:51:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: buderus
+      series: logamax plus gb062
+  kind: known_issue
+  domain: ignition
+  severity: high
+  consequence: ''
+  detection: ''
+  component: ignition electrode, ionisation probe and flue
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 6A lockout within hours or days of commissioning
+      body: Multiple GB062 owners report 6A within hours of commissioning, within the first week,
+        or from the first start. The fault stops heating and hot water and is not resolved by a
+        single reset.
+      advice: Do not accept the boiler as commissioned if 6A appears in the first days. Ask for
+        flue, gas and electrode checks and a written report.
+    tr:
+      title: Devreye almadan saatler veya günler sonra 6A kilidi
+      body: Birden fazla GB062 sahibi, devreye almadan saatler sonra, ilk hafta içinde veya ilk
+        çalıştırmadan itibaren 6A bildiriyor. Arıza ısıtma ve sıcak suyu durduruyor, tek resetle
+        geçmiyor.
+      advice: İlk günlerde 6A çıkarsa kombiyi devreye alınmış kabul etmeyin. Baca, gaz ve elektrot
+        kontrolleri ile yazılı rapor isteyin.
+  evidence:
+  - url: https://www.sikayetvar.com/buderus/buderus-kombi-degisiminde-yasanan-sorunlar
+    quote: |-
+      Çalıştırıldıktan birkaç saat sonra 6A arızası verdi ve kombi çalışmamaya başladı.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T12:52:00+00:00'
+  - url: https://www.sikayetvar.com/buderus/buderus-gb-062-bas-agrisi
+    quote: |-
+      Kurulum yapıldıktan hemen sonra '6A' arızası verdi.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T12:53:00+00:00'
+  - url: https://www.sikayetvar.com/buderus/buderus-kombide-6a-hatasi-ve-degisim-talebine-ret
+    quote: |-
+      1 haftadır kullanmaya başladığım Buderus GB062 kombi 6A hatası verdi.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T12:54:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: buderus
+      series: logamax plus gb062
+  kind: known_issue
+  domain: electronics
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: control board and ignition parts
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 6A returns after electrodes, board or flue work
+      body: Owners report 6A coming back after electrodes, a board or flue adjustments; one unit
+        had all parts replaced without the fault being found. Another owner reports the same fault
+        about a month after the first repair.
+      advice: Ask for the 6A diagnosis to name the measured cause. Repeated parts swapping without
+        readings is a sign the fault is not understood.
+    tr:
+      title: Elektrot, kart veya baca işleminden sonra 6A geri dönüyor
+      body: Sahipler, elektrot, kart veya baca ayarı sonrası 6A'nın geri geldiğini; bir cihazda
+        tüm parçaların değiştirilmesine rağmen arızanın bulunamadığını bildiriyor. Bir sahip ilk
+        onarımdan yaklaşık bir ay sonra aynı arızayı yaşamış.
+      advice: 6A teşhisinde ölçülen nedeni yazmalarını isteyin. Ölçüm olmadan tekrar tekrar parça
+        değişimi, arızanın anlaşılmadığını gösterir.
+  evidence:
+  - url: https://www.sikayetvar.com/buderus/buderus-gb062-kombi-6a-arizasi
+    quote: |-
+      Buderus GB062 kombim 6A arızası verdi. Servis 3 defa geldi tüm parçaları değiştirdi söktü taktı yine çalışmadı.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T12:55:00+00:00'
+  - url: https://www.sikayetvar.com/buderus/buderus-servisinin-yetersizligi-ve-tekrarlayan-ariza-sorunu
+    quote: |-
+      Yaklaşık 1 ay sonra aynı arıza tekrarlandı ve yine servis çağırdım.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T12:56:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: buderus
+      series: logamax plus gb062
+  kind: known_issue
+  domain: hydraulics
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: plate heat exchanger
+  subsystem: domestic hot water
+  confidence: 0.6
+  text:
+    en:
+      title: Hot water swings hot and cold; exchanger called chronic
+      body: GB062 owners report hot water that heats and cools repeatedly during a shower, and one
+        service described the exchanger as chronically faulty. A second owner reports the same
+        swing on a one-year-old unit.
+      advice: Time the hot-water temperature at the tap for two minutes. A repeating swing on a
+        new boiler should be diagnosed before the exchanger is replaced at your cost.
+    tr:
+      title: Sıcak su sıcak-soğuk salınıyor; eşanjör kronik deniyor
+      body: GB062 sahipleri duş sırasında sıcak suyun tekrar tekrar ısınıp soğuduğunu, bir servisin
+        eşanjörü kronik arızalı olarak tanımladığını bildiriyor. İkinci bir sahip aynı salınımı
+        bir yaşındaki cihazda yaşıyor.
+      advice: Musluktaki sıcak su sıcaklığını iki dakika boyunca ölçün. Yeni kombide tekrarlayan
+        salınım, eşanjörü sizin masrafınızla değiştirmeden önce teşhis edilmelidir.
+  evidence:
+  - url: https://www.sikayetvar.com/buderus/garanti-kapsamindaki-esanjor-arizasi-15000-tl-ucret-itirazi
+    quote: |-
+      Buderus GB062-24 KD h v2 g20 TR kombimle uzun süredir sıcak su dalgalanması sorunu yaşıyorum. Sıcak su kullanımında su bir ısınıp bir soğuyor, sorun sürekli tekrar ediyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T12:57:00+00:00'
+  - url: https://www.sikayetvar.com/buderus/buderus-kombi-garanti-kapsaminda-olmasina-ragmen-yetkili-servisin-asiri-ucret-talepleri
+    quote: |-
+      Buderus marka kombim henüz 1 yıllık olmasına rağmen sıcak su dalgalanması yaşadığımız için yetkili servisi çağırdık.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T12:58:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: viessmann
+      series: vitodens
+  kind: known_issue
+  domain: water
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: internal rubber hoses and pipes
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Internal rubber hoses crack and burst within about three years
+      body: Vitodens owners report internal rubber hoses and pipes cracking or bursting, sometimes
+        at the first service and sometimes after three years. One owner reports a pipe burst in
+        one year and another part burning the next.
+      advice: Have hoses and internal pipework inspected at every service, especially after year
+        two. A burst internal hose can leak inside the casing and damage the board.
+    tr:
+      title: İç kauçuk hortumlar yaklaşık üç yıl içinde çatlıyor ve patlıyor
+      body: Vitodens sahipleri, iç kauçuk hortum ve boruların bazen ilk bakımda bazen üç yıl sonra
+        çatladığını veya patladığını bildiriyor. Bir sahip ilk yıl borunun patladığını, ertesi yıl
+        başka bir parçanın yandığını anlatıyor.
+      advice: Her bakımda, özellikle ikinci yıldan sonra hortum ve iç boruları kontrol ettirin.
+        Patlayan iç hortum gövde içine su kaçırıp karta zarar verebilir.
+  evidence:
+  - url: https://www.sikayetvar.com/viessmann-isi/kombide-hortumlarin-catlamasi-guvenlik-endisesi-ve-beklenmedik-masraf-yaratiyor
+    quote: |-
+      Kombinin içindeki kauçuk hortumlar bu süre zarfında aşınarak çatladı.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T12:59:00+00:00'
+  - url: https://www.sikayetvar.com/viessmann-isi/garanti-bitiminden-hemen-sonra-7000-tl-motor-arizasi-ucreti-haksiz
+    quote: |-
+      Cihazın ilk bakımında borunun çatladığı tespit edildi ve garanti kapsamında ücretsiz olarak değişim yapıldı.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T13:00:00+00:00'
+  - url: https://www.sikayetvar.com/viessmann-isi/garanti-kontrolu-yapilmadan-parca-degisimi-ve-ucret-talebi
+    quote: |-
+      2025 yılında kombinin boruları patladı, 2026 yılında ise başka bir parçası yandı ve 10.03.2026 tarihinde teknik servis eve geldi.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T13:01:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: viessmann
+      series: vitodens
+  kind: known_issue
+  domain: ignition
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: ignition and flame detection
+  subsystem: domestic hot water
+  confidence: 0.6
+  text:
+    en:
+      title: F04 and F06 lockouts when hot water is drawn
+      body: Owners report F04 and F06 appearing when a hot tap is opened, leaving the boiler
+        locked out until reset. One unit produced the fault from the first days of use.
+      advice: Record which code appears and when. Repeated F04 and F06 need flue and electrode
+        checks, not repeated resets.
+    tr:
+      title: Sıcak su açılınca F04 ve F06 kilitlenmeleri
+      body: Sahipler, sıcak musluk açıldığında F04 ve F06 çıktığını ve kombinin resetlenene kadar
+        kilitlendiğini bildiriyor. Bir cihazda arıza ilk günlerden itibaren görülmüş.
+      advice: Hangi kodun ne zaman çıktığını kaydedin. Tekrarlayan F04 ve F06 reset değil, baca ve
+        elektrot kontrolü gerektirir.
+  evidence:
+  - url: https://www.sikayetvar.com/viessmann-isi/viessmann-kombi-surekli-arizali-ve-servis-destegi-yetersiz
+    quote: |-
+      Şubat 2025’te satın aldığım Viessmann Vitodens Classic BPKB-25 kombim, ilk günden bu yana sürekli olarak F04 ve F06 hatası veriyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T13:02:00+00:00'
+  - url: https://www.sikayetvar.com/viessmann-isi/garanti-kapsamindaki-viessmann-kombimde-fo6-hatasi-ve-servis-ilgisizligi
+    quote: |-
+      Vitodens Classic 25/29 kombim, sıcak suyu uzun süre kullandığımızda fo6 hata kodu vermeye başladı.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T13:03:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: viessmann
+      series: vitodens
+  kind: known_issue
+  domain: electronics
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: main board and fan motor
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Recurring board and fan faults every few months
+      body: One owner reports a different fault every three months, including main-board and
+        fan-motor replacement; another reports a board replacement five months after purchase and
+        repeated faults for two years.
+      advice: Ask for the full fault history from the boiler. Replacing one board after another
+        without finding the cause is a warning sign.
+    tr:
+      title: Birkaç ayda bir tekrarlayan kart ve fan arızaları
+      body: Bir sahip her üç ayda bir farklı bir arıza yaşadığını, ana kart ve fan motoru
+        değiştiğini; bir diğeri satın alımdan beş ay sonra kart değişimi ve iki yıl boyunca
+        tekrarlayan arızalar bildiriyor.
+      advice: Kombinin tüm arıza geçmişini isteyin. Nedeni bulunmadan kart üstüne kart değişimi
+        uyarı işaretidir.
+  evidence:
+  - url: https://www.sikayetvar.com/viessmann-isi/viessmann-vitodens-100-kombide-surekli-ariza-ve-garanti-sorunu
+    quote: |-
+      Ancak kombi, aldıktan yaklaşık 3 ay sonra arızalanmaya başladı ve o günden bu yana her 3 ayda bir farklı bir arıza verdi.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T13:04:00+00:00'
+  - url: https://www.sikayetvar.com/viessmann-isi/viessmann-vitodens-kombi-arizasi-ve-yetersiz-servis-cozumu-talebi
+    quote: |-
+      Cihaz daha 5 aylıkken arıza verdi ve yetkili servis parça değişimi yaptı.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T13:05:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: viessmann
+      series: vitodens
+  kind: known_issue
+  domain: general
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: diverter valve and pump
+  subsystem: central heating
+  confidence: 0.6
+  text:
+    en:
+      title: Heating does not restart after the summer shutdown
+      body: Two owners report the boiler running but not heating the radiators when the heating
+        season starts, after the unit was off for the summer. One had the same fault in the
+        previous year.
+      advice: Test heating mode before the first cold week. If it repeats each autumn, ask for the
+        diverter valve and pump to be checked, not just bled.
+    tr:
+      title: Yaz kapatmasından sonra ısıtma yeniden başlamıyor
+      body: İki sahip, yaz boyunca kapalı kalan kombinin ısıtma sezonu başladığında çalıştığını
+        ancak petekleri ısıtmadığını bildiriyor. Biri aynı arızayı önceki yıl da yaşamış.
+      advice: İlk soğuk haftadan önce ısıtma modunu test edin. Her sonbahar tekrarlıyorsa sadece
+        hava almakla yetinmeyin, üç yollu vana ve pompayı kontrol ettirin.
+  evidence:
+  - url: https://www.sikayetvar.com/viessmann-isi/viessmann-kombi-arizasi-garanti-ve-cagri-merkezi-yanit-vermemesi
+    quote: |-
+      Yaz döneminde kapattığımız kombiyi bu hafta yeniden açtık, termostatı ayarladık, petekler açık olmasına rağmen kaloriferler ısınmadı.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T13:06:00+00:00'
+  - url: https://www.sikayetvar.com/viessmann-isi/viessmann-kombi-isitma-sorunu-ve-servis-yaniti-eksikligi
+    quote: |-
+      Viessmann marka kombim yaklaşık 5 gündür çalışmasına rağmen evdeki petekleri ısıtmıyor ve bu nedenle 4 gündür soğukta oturmak zorunda kalıyoruz.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T13:07:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: ariston
+      series: genus one
+  kind: known_issue
+  domain: ignition
+  severity: high
+  consequence: ''
+  detection: ''
+  component: ignition electrode, flame detection and gas valve
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: 501 no-flame lockout after about three years
+      body: An owner reports a Genus One that began showing 501 after three years, leaving the
+        boiler unusable. Ariston's 501 code means no flame was detected and can involve the
+        electrodes, gas valve, wiring or PCB.
+      advice: One reset is reasonable; a returning 501 needs ignition and gas tests. Do not pay
+        for a board without electrode and gas-pressure readings.
+    tr:
+      title: Yaklaşık üç yıl sonra 501 alev yok kilidi
+      body: Bir sahip, üç yıl sonra 501 göstermeye başlayan ve kullanılamaz hale gelen bir Genus
+        One bildiriyor. Ariston'un 501 kodu alev algılanmadığı anlamına gelir ve elektrotlar, gaz
+        valfi, kablolar veya kartla ilgili olabilir.
+      advice: Bir reset makuldür; tekrarlayan 501 ateşleme ve gaz testleri gerektirir. Elektrot ve
+        gaz basıncı ölçümü olmadan kart için ödeme yapmayın.
+  evidence:
+  - url: https://www.sikayetvar.com/ariston-kombi/ariston-genus-one-kombide-501-alev-arizasi-ve-45-bin-tllik-maddi-zarar
+    quote: |-
+      Aradan sadece üç yıl geçmesine rağmen kombide 501 alev arızası vermeye başladı ve cihazı sağlıklı şekilde kullanamaz hale geldim.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T13:10:00+00:00'
+  - url: https://www.heatingandcateringparts.com/ariston-501-error-code/
+    quote: |-
+      Ariston fault code 501 means “no flame detected”. The boiler has failed to establish or confirm a burner flame during its ignition sequence.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T13:11:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: ariston
+      series: genus one
+  kind: known_issue
+  domain: electronics
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: touchscreen and main board
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Touchscreen then main board fail just outside warranty
+      body: An owner reports the touchscreen failed as soon as the warranty ended, followed about
+        three months later by the main board. The repairs cost a large share of a new boiler.
+      advice: Ask for a goodwill claim if failures cluster at the warranty boundary. Keep the
+        serial number and service dates.
+    tr:
+      title: Garanti biter bitmez dokunmatik ekran, ardından ana kart arızası
+      body: Bir sahip, garanti biter bitmez dokunmatik ekranın bozulduğunu ve yaklaşık üç ay sonra
+        ana kartın arızalandığını bildiriyor. Onarım masrafı yeni kombi fiyatının önemli bir
+        kısmına ulaşmış.
+      advice: Arızalar garanti sınırında yoğunlaşıyorsa iyi niyet talebi açın. Seri numarasını ve
+        servis tarihlerini saklayın.
+  evidence:
+  - url: https://www.sikayetvar.com/ariston-kombi/ariston-kombimde-tekrar-eden-arizalar-ve-agir-tamir-masraflari
+    quote: |-
+      Garantisi biter bitmez, yaklaşık 1 sene önce önce dokunmatik ekranı bozuldu ve yeni kombi fiyatlarının geldiği noktada sadece ekrana ciddi bir ücret ödemek zorunda kaldım.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T13:12:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: ariston
+      series: genus one
+  kind: known_issue
+  domain: general
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: board, hydraulic block and casing seals
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Board, block and leak faults on two units after warranty
+      body: An owner of two Genus One boilers reports board faults, block faults and water
+        dripping under the casing, with one repair after another. The faults began as soon as the
+        warranty expired on both units.
+      advice: Treat a cluster of unrelated faults on two units as a replacement case, not a series
+        of repairs. Keep every report and photograph the leak.
+    tr:
+      title: Garanti sonrası iki cihazda kart, blok ve kaçak arızaları
+      body: İki Genus One kombisi olan bir sahip, kart arızası, blok arızası ve gövde altında su
+        damlaması bildiriyor; onarımlar birbirini izliyor. İki cihazda da arızalar garanti bitince
+        başlamış.
+      advice: İki cihazdaki ilgisiz arıza kümesini onarım dizisi değil değişim dosyası olarak
+        ele alın. Her raporu saklayın ve kaçağı fotoğraflayın.
+  evidence:
+  - url: https://www.sikayetvar.com/ariston-kombi/ariston-kombilerinde-surekli-ariza-ve-yuksek-tamir-ucretlerinden-sikayet
+    quote: |-
+      Garanti süresi biter bitmez her iki kombide de sürekli arızalar yaşamaya başladım. Kart arızası, blok arızası, kombi altında su damlatma gibi sorunlar bir türlü bitmiyor
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T13:13:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: immergas
+      series: victrix
+  kind: known_issue
+  domain: ignition
+  severity: high
+  consequence: ''
+  detection: ''
+  component: flame detection electrode and burner
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: E01 and E43 flame lockouts recur after resets and board swaps
+      body: Owners report E01 and E43 on Victrix TT units, with the boiler working for a day after
+        a reset and then locking out again. One owner reports the fault unresolved for a year
+        despite a board replacement. Immergas lists 43 as a block after repeated loss of flame
+        signal.
+      advice: Ask for flame-signal and ionisation readings, not another reset. Repeated E43 after
+        a board swap points to the burner, electrode or flue, not the board.
+    tr:
+      title: E01 ve E43 alev kilitleri reset ve kart değişiminden sonra tekrarlıyor
+      body: Sahipler Victrix TT cihazlarında E01 ve E43 bildiriyor; kombi resetten sonra bir gün
+        çalışıp yeniden kilitleniyor. Bir sahip kart değişimine rağmen arızanın bir yıl
+        çözülmediğini anlatıyor. Immergas 43 kodunu tekrarlayan alev sinyali kaybı sonrası blok
+        olarak tanımlıyor.
+      advice: Bir reset daha değil, alev sinyali ve iyonizasyon ölçümleri isteyin. Kart
+        değişiminden sonra tekrarlayan E43 kartı değil brülör, elektrot veya bacayı işaret eder.
+  evidence:
+  - url: https://www.sikayetvar.com/immergas/immergas-vitrix-tt-24kv-sikayeti
+    quote: |-
+      Vitrix TT 24kv kombim e01 ve e43 hatası veriyor. Resetledikten sonra 1 gün çalışıyor tekrar e1 hatası veriyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T13:14:00+00:00'
+  - url: https://www.sikayetvar.com/immergas/kombinin-e43-arizasi-bir-yildir-cozulemiyor-magduriyet-devam-ediyor
+    quote: |-
+      1 senedir kombinin e:43 arızası yapılamadı servis kartına kadar değiştirdi.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T13:15:00+00:00'
+  - url: https://www.tradeassistiq.co.uk/fault-codes/immergas/victrix/43
+    quote: |-
+      This occurs if the 'Flame signal loss' error (code 38) occurs many times in a row within a preset period.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T13:16:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: immergas
+      series: victrix
+  kind: known_issue
+  domain: water
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: expansion vessel and filling circuit
+  subsystem: central heating
+  confidence: 0.6
+  text:
+    en:
+      title: System pressure rises when the heating circuit is opened
+      body: A Victrix Tera 38 owner reports the pressure gauge climbing whenever the radiators are
+        opened, for about a year, with repeated service visits unresolved.
+      advice: Do not keep draining the system. A pressure rise on heating points to the filling
+        loop, expansion vessel or a blocked connection and needs a proper test.
+    tr:
+      title: Isıtma devresi açılınca sistem basıncı yükseliyor
+      body: Bir Victrix Tera 38 sahibi, petekler açıldığında bar göstergesinin yükseldiğini ve bu
+        sorunun yaklaşık bir yıldır tekrarlanan servis ziyaretlerine rağmen sürdüğünü bildiriyor.
+      advice: Sistemi sürekli boşaltmayın. Isıtmada basınç yükselmesi dolum hattı, genleşme tankı
+        veya tıkalı bir bağlantıya işaret eder ve düzgün test gerektirir.
+  evidence:
+  - url: https://www.sikayetvar.com/immergas/garanti-kapsamindaki-arizaya-cozum-yok-yuksek-ucret-talebiyle-magduriyet
+    quote: |-
+      Immergaz Vitrix Tera 38 model kombiyi yaklaşık bir yıldır kullanıyorum. Ancak kombimde petekleri açınca bar sürekli yükseliyor ve bu sorun bir yıldır devam ediyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T13:17:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: immergas
+      series: victrix
+  kind: known_issue
+  domain: electronics
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: main board and flue sensing
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Boiler vibrates and cuts out in wind after a board replacement
+      body: An owner reports the Victrix boiler vibrating continuously after a board replacement
+        and shutting down in the slightest wind while the heating circuit is running.
+      advice: After a board swap, ask for combustion setup and flue checks. A boiler that shuts
+        down in wind has a flue or air-supply fault, not a user problem.
+    tr:
+      title: Kart değişiminden sonra titreşim ve rüzgarda sönme
+      body: Bir sahip, Victrix kombinin kart değişiminden sonra sürekli titreştiğini ve ısıtma
+        devresi çalışırken en ufak rüzgarda kapandığını bildiriyor.
+      advice: Kart değişiminden sonra yanma ayarı ve baca kontrolü isteyin. Rüzgarda kapanan kombi
+        kullanıcı sorunu değil, baca veya hava beslemesi arızasıdır.
+  evidence:
+  - url: https://www.sikayetvar.com/immergas/ana-kart-degisiminden-sonra-kombide-titreme-ve-ruzgarda-sonme-sorunu
+    quote: |-
+      İmmergas Victrix boylerli kombimin ana kart değişiminden sonra cihazda ciddi sorunlar yaşamaya başladım. Ana kart değişimi yapıldıktan sonra kombi çalışırken sürekli titreme oluşuyor ve en ufak rüzgarda kombi kendini kapatıp sönüyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T13:18:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: protherm
+      series: puma condens
+  kind: known_issue
+  domain: combustion
+  severity: high
+  consequence: ''
+  detection: ''
+  component: gas valve and combustion setup
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Explosive ignition from the first days
+      body: Several Puma Condens owners report a bang or explosion-like noise on every ignition,
+        from the first day or within two months. One owner says the unit was replaced after the
+        service could not stop it.
+      advice: Do not accept a bang as normal. Ask for gas pressure and combustion setup before the
+        unit is used overnight.
+    tr:
+      title: İlk günlerden itibaren patlamalı ateşleme
+      body: Birden fazla Puma Condens sahibi, ilk günden veya iki ay içinde her ateşlemede patlama
+        benzeri bir ses bildiriyor. Bir sahip, servisin sesi kesememesi üzerine cihazın
+        değiştirildiğini söylüyor.
+      advice: Patlama sesini normal kabul etmeyin. Cihaz gece boyunca kullanılmadan önce gaz
+        basıncı ve yanma ayarı kontrol edilmeli.
+  evidence:
+  - url: https://www.sikayetvar.com/protherm/guvenlik-riski-tasiyan-patlamali-kombi-icin-acil-degisim-talebi
+    quote: |-
+      2024 Haziran ayında Hepsiburada üzerinden Protherm Puma Condes 18/24 KW kombi satın aldım. Kombi ilk günden beri patlamalı ve yüksek sesli yanıyor, bu da hem güvenlik açısından hem de Konfor açısından beni ciddi şekilde endişelendiriyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T13:19:00+00:00'
+  - url: https://www.sikayetvar.com/protherm/yeni-alinan-kombinin-patlamali-ve-gurultulu-calismasi-ailemizi-tedirgin-ediyor
+    quote: |-
+      Protherm Puma Condens kombiyi 2024 Eylül ayında aldığımızdan beri, kombi patlamalı şekilde çalışıyor ve her çalıştığında çok rahatsız edici, gümbür gümbür bir ses çıkarıyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T13:20:00+00:00'
+  - url: https://www.sikayetvar.com/protherm/yeni-aldigim-kombide-patlamali-atesleme-sesi-ve-servisten-cozum-alamama
+    quote: |-
+      Kombi, hem sıcak su hem de petekler çalışırken her seferinde patlamalı bir şekilde ateşleme yapıyor ve bu ses evde büyük tedirginlik yaratıyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T13:21:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: protherm
+      series: puma condens
+  kind: known_issue
+  domain: electronics
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: main control board
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Main board burns within 10 to 20 days
+      body: Two owners report the Puma Condens main board burning within 10 and 20 days of
+        purchase, one with no board in stock in Turkey. Both units were new.
+      advice: Report a dead board immediately and ask for the replacement date in writing. A board
+        failure this early is a warranty repair.
+    tr:
+      title: Ana kart 10-20 gün içinde yanıyor
+      body: İki sahip, Puma Condens ana kartının satın alımdan 10 ve 20 gün sonra yandığını, birinde
+        Türkiye'de kart stoğu olmadığını bildiriyor. İki cihaz da yeni.
+      advice: Arızayı hemen bildirin ve değişim tarihini yazılı isteyin. Bu kadar erken kart
+        arızası garanti onarımıdır.
+  evidence:
+  - url: https://www.sikayetvar.com/protherm/protherm-kombinin-ana-karti-arizalandi-yetkili-servis-garanti-disi-7000-tl-ucret-talep-ediyor
+    quote: |-
+      Yaklaşık 20 gün önce aldığımız Protherm Puma Condens kombi, 3 gün önce arıza verdi ve yetkili servis kontrolünde cihazın anakartının yandığı tespit edildi.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T13:22:00+00:00'
+  - url: https://www.sikayetvar.com/protherm/protherm-puma-condens-kombide-anakart-arizasi-ve-uzun-yedek-parca-bekleyisi
+    quote: |-
+      Protherm Puma Condens model kombiyi aldıktan sadece 10 gün sonra arızalandı. Gelen yetkili servis kombinin anakartının yandığını, Türkiye’de ana kart stokta olmadığını ve Fransa’dan geleceğini söyledi.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T13:23:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: protherm
+      series: puma condens
+  kind: known_issue
+  domain: ignition
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: ignition and flue
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: F28, F29 and F33 lockouts recur after reset
+      body: One owner reports the Puma Condens showing F28, F29 and F33 when hot water is opened,
+        clearing on reset and returning shortly after. Another reports F29 leaving the boiler
+        completely dead.
+      advice: Record the sequence of codes. Three ignition-related codes in one unit need a
+        combustion and flue diagnosis, not repeated resets.
+    tr:
+      title: F28, F29 ve F33 kilitleri resetten sonra tekrarlıyor
+      body: Bir sahip, sıcak su açılınca Puma Condens'in F28, F29 ve F33 verdiğini, resetle
+        geçtiğini ve kısa süre sonra geri döndüğünü bildiriyor. Bir diğeri F29'un kombiyi tamamen
+        çalışmaz bıraktığını anlatıyor.
+      advice: Kodların sırasını kaydedin. Tek cihazda üç ateşleme kodu tekrar tekrar reset değil,
+        yanma ve baca teşhisi gerektirir.
+  evidence:
+  - url: https://www.sikayetvar.com/protherm/kombide-surekli-tekrarlayan-ariza-kodlari-ve-kalici-cozum-talebi
+    quote: |-
+      Proterm Puma Condens model kombim yaklaşık 3-5 gündür sıcak suyu açınca F28, F29 ve F33 hata kodlarını veriyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T13:24:00+00:00'
+  - url: https://www.sikayetvar.com/protherm/vaillant-kombimde-f29-hatasi-uzun-servis-suresi-ve-sogukta-magduriyet
+    quote: |-
+      Vaillant – Protherm Puma Condens kombim 01.01.2026 tarihinde f29 hatası vererek tamamen çalışmaz hale geldi.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T13:25:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: protherm
+      series: gepard condens
+  kind: known_issue
+  domain: electronics
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: main control board
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: Main-board failures across several units
+      body: A landlord reports main-board faults on six Gepard Condens boilers about a year to 18
+        months after installation, with repairs failing. Another owner reports ten part
+        replacements without a lasting fix.
+      advice: Ask for the board part number and repair date on every visit. Repeated board
+        failures across several units point to a supply or batch problem.
+    tr:
+      title: Birden fazla cihazda ana kart arızaları
+      body: Bir bina sahibi, altı Gepard Condens kombide kurulumdan yaklaşık 1-1,5 yıl sonra ana
+        kart arızası çıktığını ve onarımların kalıcı olmadığını bildiriyor. Bir diğeri on parça
+        değişimine rağmen kalıcı çözüm olmadığını anlatıyor.
+      advice: Her ziyarette kart parça numarasını ve onarım tarihini isteyin. Birden fazla cihazda
+        tekrarlayan kart arızası besleme veya parti sorununa işaret eder.
+  evidence:
+  - url: https://www.sikayetvar.com/protherm/protherm-gepard-condens-kombilerinde-tekrarlayan-ana-kart-arizasi-ve-garanti-sorunu
+    quote: |-
+      Eskişehir Odunpazarı’ndaki binam için 6 adet Protherm Gepard Condens kombi satın aldım. Kiracılarım, kombileri taktıktan yaklaşık 1–1,5 yıl sonra arıza verdiklerini ve ana kart sorunu yaşadıklarını ilettiler.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T13:26:00+00:00'
+  - url: https://www.sikayetvar.com/protherm/protherm-gepard-kombi-sorunlariyla-basim-dertte
+    quote: |-
+      Sürekli F04 hatası veriyor, o çözülüyor bu sefer de F09 hatası veriyor. 10 defa parça değiştirdiler, olmuyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T13:27:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: protherm
+      series: gepard condens
+  kind: known_issue
+  domain: ignition
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: ignition and combustion controls
+  subsystem: ''
+  confidence: 0.6
+  text:
+    en:
+      title: F04, F05 and F09 fault codes keep returning
+      body: Owners report recurring F04, F05 and F09 codes, often a different code after each
+        repair. One owner reports the boiler failing again within days of each service.
+      advice: Keep a log of each code and repair. A rotating set of codes usually means the
+        underlying cause has not been found.
+    tr:
+      title: F04, F05 ve F09 arıza kodları geri dönüyor
+      body: Sahipler tekrarlayan F04, F05 ve F09 kodları bildiriyor; her onarımdan sonra genellikle
+        başka bir kod çıkıyor. Bir sahip her servisten günler sonra kombinin yeniden arızalandığını
+        anlatıyor.
+      advice: Her kod ve onarımı not edin. Değişen kod dizisi genellikle asıl nedenin bulunmadığını
+        gösterir.
+  evidence:
+  - url: https://www.sikayetvar.com/protherm/protherm-gepard-kombi-sorunlariyla-basim-dertte
+    quote: |-
+      Sürekli F04 hatası veriyor, o çözülüyor bu sefer de F09 hatası veriyor.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T13:28:00+00:00'
+  - url: https://www.sikayetvar.com/protherm/kombi-bakiminda-seffaf-hortum-krizi-ve-fahis-fiyatlar
+    quote: |-
+      Protherm Gepard marka kombi bakım yaptırdıktan sonra F05 arızası vermeye başladı.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T13:29:00+00:00'
+- subject:
+    kind: product
+    identity:
+      brand: protherm
+      series: gepard condens
+  kind: known_issue
+  domain: hydraulics
+  severity: medium
+  consequence: ''
+  detection: ''
+  component: plate heat exchanger and diverter valve
+  subsystem: domestic hot water
+  confidence: 0.6
+  text:
+    en:
+      title: Hot water fails when the heating circuit runs
+      body: Owners report hot water alternating or disappearing when the heating is on, with
+        plate-exchanger cleaning or replacement not lasting. One owner reports the fault returning
+        within months.
+      advice: Ask for the plate exchanger to be tested for blockage, not only cleaned. If the
+        fault only appears with heating on, the diverter valve should also be checked.
+    tr:
+      title: Isıtma devresi çalışırken sıcak su kesiliyor
+      body: Sahipler, ısıtma açıkken sıcak suyun gidip geldiğini veya tamamen kesildiğini, plakalı
+        eşanjör temizliği veya değişiminin kalıcı olmadığını bildiriyor. Bir sahip arızanın aylar
+        içinde geri döndüğünü anlatıyor.
+      advice: Plakalı eşanjörün sadece temizlenmesini değil tıkanıklık açısından test edilmesini
+        isteyin. Arıza yalnızca ısıtma açıkken çıkıyorsa üç yollu vana da kontrol edilmeli.
+  evidence:
+  - url: https://www.sikayetvar.com/protherm/kombide-kronik-sicak-su-sorunu-ve-yetersiz-servis-cozumu
+    quote: |-
+      Sıcak su bir geliyor, bir gidiyor; duş almak mümkün değil.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T13:30:00+00:00'
+  - url: https://www.sikayetvar.com/protherm/demirdokum-kombi-sicak-su-ve-isinma-sorunlari-tekrarlayan-arizalar
+    quote: |-
+      yaklaşık son 3 aydır sık sık sıcak su ve ısınma problemleri yaşamaya başladım.
+    locator: ''
+    stance: supports
+    independent: true
+    site: ''
+    source_title: ''
+    lang: ''
+    source_type: page
+    published_at: ''
+    retrieved_at: '2026-11-16T13:31:00+00:00'
