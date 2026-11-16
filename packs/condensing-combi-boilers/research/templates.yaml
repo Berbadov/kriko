@@ -1,0 +1,10 @@
+# Search templates for this pack. One query per line.
+#
+# Written by the agent that authored the pack, in the words
+# and the language its sources use.
+- '{label} arıza kodu'
+- '{label} şikayet'
+- '{label} su kaçağı'
+- '{label} ateşleme sorunu'
+- '{label} fault code'
+- '{label} common problems forum'
