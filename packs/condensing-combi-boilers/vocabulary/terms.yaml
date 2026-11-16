@@ -1,0 +1,48 @@
+# Vocabulary — every kind, key, domain and attribute this pack uses.
+#
+# Written from the pack an agent proposed. Declared before use: the
+# builder refuses a row naming a term that is not here, which is also
+# why a domain used by a claim and never declared is added above.
+- term_id: product
+  role: subject_kind
+  label:
+    en: product
+- term_id: brand
+  role: attribute
+  datatype: text
+  label:
+    en: brand
+- term_id: series
+  role: attribute
+  datatype: text
+  label:
+    en: series
+- term_id: type
+  role: attribute
+  datatype: text
+  label:
+    en: Boiler type
+- term_id: ignition
+  role: domain
+  label:
+    en: Ignition and flame failure
+- term_id: combustion
+  role: domain
+  label:
+    en: Combustion and flue safety
+- term_id: water
+  role: domain
+  label:
+    en: Water leaks and pressure
+- term_id: electronics
+  role: domain
+  label:
+    en: Control electronics
+- term_id: hydraulics
+  role: domain
+  label:
+    en: Pumps, fans and hydraulics
+- term_id: general
+  role: domain
+  label:
+    en: General reliability
