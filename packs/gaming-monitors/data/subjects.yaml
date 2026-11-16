@@ -1,0 +1,364 @@
+# Subjects - the things this pack knows about.
+#
+# `identity` carries exactly the keys `pack.toml` declares for the
+# kind: that dictionary is hashed to the subject id.
+- kind: product
+  label: Samsung Odyssey G7 32 (C32G75T)
+  identity:
+    brand: samsung
+    model: odyssey-g7-c32g75t
+  attributes:
+    screen_size_inch:
+      value: '32'
+      source: https://www.rtings.com/monitor/reviews/samsung/odyssey-g7-c32g75t
+    resolution:
+      value: 2560 x 1440
+      source: https://www.rtings.com/monitor/reviews/samsung/odyssey-g7-c32g75t
+    refresh_rate_hz:
+      value: '240'
+      source: https://www.rtings.com/monitor/reviews/samsung/odyssey-g7-c32g75t
+    panel_type:
+      value: VA
+      source: https://www.rtings.com/monitor/reviews/samsung/odyssey-g7-c32g75t
+  aliases:
+  - Odyssey G7
+  - C32G75T
+  - LC32G75TQSNXZA
+- kind: product
+  label: Samsung Odyssey G9 (C49G95T)
+  identity:
+    brand: samsung
+    model: odyssey-g9-c49g95t
+  attributes:
+    screen_size_inch:
+      value: '49'
+      source: https://www.rtings.com/monitor/reviews/samsung/odyssey-g9-c49g95t
+    resolution:
+      value: 5120 x 1440
+      source: https://www.rtings.com/monitor/reviews/samsung/odyssey-g9-c49g95t
+    refresh_rate_hz:
+      value: '240'
+      source: https://www.rtings.com/monitor/reviews/samsung/odyssey-g9-c49g95t
+    panel_type:
+      value: VA
+      source: https://www.rtings.com/monitor/reviews/samsung/odyssey-g9-c49g95t
+  aliases:
+  - Odyssey G9
+  - C49G95T
+  - LC49G95TSSNXZA
+- kind: product
+  label: Samsung Odyssey OLED G8 34 (G85SB)
+  identity:
+    brand: samsung
+    model: odyssey-oled-g8-g85sb
+  attributes:
+    screen_size_inch:
+      value: '34'
+      source: https://www.rtings.com/monitor/reviews/samsung/odyssey-oled-g8-g85sb-s34bg85
+    resolution:
+      value: 3440 x 1440
+      source: https://www.rtings.com/monitor/reviews/samsung/odyssey-oled-g8-g85sb-s34bg85
+    refresh_rate_hz:
+      value: '175'
+      source: https://www.rtings.com/monitor/reviews/samsung/odyssey-oled-g8-g85sb-s34bg85
+    panel_type:
+      value: QD-OLED
+      source: https://www.rtings.com/monitor/reviews/samsung/odyssey-oled-g8-g85sb-s34bg85
+  aliases:
+  - Odyssey OLED G8 34
+  - G85SB
+  - S34BG85
+- kind: product
+  label: Samsung Odyssey OLED G8 32 (G80SD)
+  identity:
+    brand: samsung
+    model: odyssey-oled-g8-g80sd
+  attributes:
+    screen_size_inch:
+      value: '32'
+      source: https://www.rtings.com/monitor/reviews/samsung/odyssey-oled-g8-g80sd-s32dg80
+    resolution:
+      value: 3840 x 2160
+      source: https://www.rtings.com/monitor/reviews/samsung/odyssey-oled-g8-g80sd-s32dg80
+    refresh_rate_hz:
+      value: '240'
+      source: https://www.rtings.com/monitor/reviews/samsung/odyssey-oled-g8-g80sd-s32dg80
+    panel_type:
+      value: QD-OLED
+      source: https://www.rtings.com/monitor/reviews/samsung/odyssey-oled-g8-g80sd-s32dg80
+  aliases:
+  - Odyssey OLED G8 32
+  - G80SD
+  - S32DG80
+- kind: product
+  label: LG UltraGear 27GR95QE-B
+  identity:
+    brand: lg
+    model: 27gr95qe-b
+  attributes:
+    screen_size_inch:
+      value: '27'
+      source: https://www.rtings.com/monitor/reviews/lg/27gr95qe-b
+    resolution:
+      value: 2560 x 1440
+      source: https://www.rtings.com/monitor/reviews/lg/27gr95qe-b
+    refresh_rate_hz:
+      value: '240'
+      source: https://www.rtings.com/monitor/reviews/lg/27gr95qe-b
+    panel_type:
+      value: OLED
+      source: https://www.rtings.com/monitor/reviews/lg/27gr95qe-b
+  aliases:
+  - 27GR95QE
+  - 27GR95QE-B
+- kind: product
+  label: LG UltraGear 27GP850-B
+  identity:
+    brand: lg
+    model: 27gp850-b
+  attributes:
+    screen_size_inch:
+      value: '27'
+      source: https://www.rtings.com/monitor/reviews/lg/27gp850-b-27gp83b-b
+    resolution:
+      value: 2560 x 1440
+      source: https://www.rtings.com/monitor/reviews/lg/27gp850-b-27gp83b-b
+    refresh_rate_hz:
+      value: '180'
+      source: https://www.rtings.com/monitor/reviews/lg/27gp850-b-27gp83b-b
+    panel_type:
+      value: IPS (Nano IPS)
+      source: https://www.rtings.com/monitor/reviews/lg/27gp850-b-27gp83b-b
+  aliases:
+  - 27GP850
+  - 27GP850-B
+  - 27GP83B-B
+- kind: product
+  label: LG UltraGear 27GN950-B
+  identity:
+    brand: lg
+    model: 27gn950-b
+  attributes:
+    screen_size_inch:
+      value: '27'
+      source: https://www.rtings.com/monitor/reviews/lg/27gn950-b
+    resolution:
+      value: 3840 x 2160
+      source: https://www.rtings.com/monitor/reviews/lg/27gn950-b
+    refresh_rate_hz:
+      value: '160'
+      source: https://www.rtings.com/monitor/reviews/lg/27gn950-b
+    panel_type:
+      value: IPS
+      source: https://www.rtings.com/monitor/reviews/lg/27gn950-b
+  aliases:
+  - 27GN950
+  - 27GN950-B
+- kind: product
+  label: ASUS ROG Swift PG279QM
+  identity:
+    brand: asus
+    model: rog-swift-pg279qm
+  attributes:
+    screen_size_inch:
+      value: '27'
+      source: https://www.rtings.com/monitor/reviews/asus/rog-swift-pg279qm
+    resolution:
+      value: 2560 x 1440
+      source: https://www.rtings.com/monitor/reviews/asus/rog-swift-pg279qm
+    refresh_rate_hz:
+      value: '240'
+      source: https://www.rtings.com/monitor/reviews/asus/rog-swift-pg279qm
+    panel_type:
+      value: IPS
+      source: https://www.rtings.com/monitor/reviews/asus/rog-swift-pg279qm
+  aliases:
+  - PG279QM
+  - ROG Swift PG279QM
+- kind: product
+  label: ASUS ROG Swift OLED PG27AQDM
+  identity:
+    brand: asus
+    model: rog-swift-oled-pg27aqdm
+  attributes:
+    screen_size_inch:
+      value: '27'
+      source: https://www.rtings.com/monitor/reviews/asus/rog-swift-oled-pg27aqdm
+    resolution:
+      value: 2560 x 1440
+      source: https://www.rtings.com/monitor/reviews/asus/rog-swift-oled-pg27aqdm
+    refresh_rate_hz:
+      value: '240'
+      source: https://www.rtings.com/monitor/reviews/asus/rog-swift-oled-pg27aqdm
+    panel_type:
+      value: OLED
+      source: https://www.rtings.com/monitor/reviews/asus/rog-swift-oled-pg27aqdm
+  aliases:
+  - PG27AQDM
+  - ROG Swift OLED PG27AQDM
+- kind: product
+  label: ASUS TUF Gaming VG27AQ
+  identity:
+    brand: asus
+    model: tuf-gaming-vg27aq
+  attributes:
+    screen_size_inch:
+      value: '27'
+      source: https://www.rtings.com/monitor/reviews/asus/tuf-vg27aq
+    resolution:
+      value: 2560 x 1440
+      source: https://www.rtings.com/monitor/reviews/asus/tuf-vg27aq
+    refresh_rate_hz:
+      value: '165'
+      source: https://www.rtings.com/monitor/reviews/asus/tuf-vg27aq
+    panel_type:
+      value: IPS
+      source: https://www.rtings.com/monitor/reviews/asus/tuf-vg27aq
+  aliases:
+  - VG27AQ
+  - TUF VG27AQ
+- kind: product
+  label: MSI Optix MAG274QRF-QD
+  identity:
+    brand: msi
+    model: optix-mag274qrf-qd
+  attributes:
+    screen_size_inch:
+      value: '27'
+      source: https://www.rtings.com/monitor/reviews/msi/optix-mag274qrf-qd
+    resolution:
+      value: 2560 x 1440
+      source: https://www.rtings.com/monitor/reviews/msi/optix-mag274qrf-qd
+    refresh_rate_hz:
+      value: '165'
+      source: https://www.rtings.com/monitor/reviews/msi/optix-mag274qrf-qd
+    panel_type:
+      value: IPS (Quantum Dot)
+      source: https://www.rtings.com/monitor/reviews/msi/optix-mag274qrf-qd
+  aliases:
+  - MAG274QRF-QD
+  - MAG274QRF QD
+- kind: product
+  label: MSI G274QPF-QD
+  identity:
+    brand: msi
+    model: g274qpf-qd
+  attributes:
+    screen_size_inch:
+      value: '27'
+      source: https://www.rtings.com/monitor/reviews/msi/g274qpf-qd
+    resolution:
+      value: 2560 x 1440
+      source: https://www.rtings.com/monitor/reviews/msi/g274qpf-qd
+    refresh_rate_hz:
+      value: '170'
+      source: https://www.rtings.com/monitor/reviews/msi/g274qpf-qd
+    panel_type:
+      value: IPS (Quantum Dot)
+      source: https://www.rtings.com/monitor/reviews/msi/g274qpf-qd
+  aliases:
+  - G274QPF-QD
+  - G274QPF QD
+- kind: product
+  label: Dell Alienware AW3423DW
+  identity:
+    brand: dell
+    model: alienware-aw3423dw
+  attributes:
+    screen_size_inch:
+      value: '34'
+      source: https://www.rtings.com/monitor/reviews/dell/alienware-aw3423dw
+    resolution:
+      value: 3440 x 1440
+      source: https://www.rtings.com/monitor/reviews/dell/alienware-aw3423dw
+    refresh_rate_hz:
+      value: '175'
+      source: https://www.rtings.com/monitor/reviews/dell/alienware-aw3423dw
+    panel_type:
+      value: QD-OLED
+      source: https://www.rtings.com/monitor/reviews/dell/alienware-aw3423dw
+  aliases:
+  - AW3423DW
+  - Alienware 34 Curved OLED
+- kind: product
+  label: Dell Alienware AW2725DF
+  identity:
+    brand: dell
+    model: alienware-aw2725df
+  attributes:
+    screen_size_inch:
+      value: '27'
+      source: https://www.rtings.com/monitor/reviews/dell/alienware-aw2725df
+    resolution:
+      value: 2560 x 1440
+      source: https://www.rtings.com/monitor/reviews/dell/alienware-aw2725df
+    refresh_rate_hz:
+      value: '360'
+      source: https://www.rtings.com/monitor/reviews/dell/alienware-aw2725df
+    panel_type:
+      value: QD-OLED
+      source: https://www.rtings.com/monitor/reviews/dell/alienware-aw2725df
+  aliases:
+  - AW2725DF
+  - Alienware 27 360 Hz QD-OLED
+- kind: product
+  label: AOC Q27G3XMN
+  identity:
+    brand: aoc
+    model: q27g3xmn
+  attributes:
+    screen_size_inch:
+      value: '27'
+      source: https://www.rtings.com/monitor/reviews/aoc/q27g3xmn
+    resolution:
+      value: 2560 x 1440
+      source: https://www.rtings.com/monitor/reviews/aoc/q27g3xmn
+    refresh_rate_hz:
+      value: '180'
+      source: https://www.rtings.com/monitor/reviews/aoc/q27g3xmn
+    panel_type:
+      value: VA (Mini LED)
+      source: https://www.rtings.com/monitor/reviews/aoc/q27g3xmn
+  aliases:
+  - Q27G3XMN
+- kind: product
+  label: Gigabyte M27Q (rev. 1.0)
+  identity:
+    brand: gigabyte
+    model: m27q-rev-1-0
+  attributes:
+    screen_size_inch:
+      value: '27'
+      source: https://www.rtings.com/monitor/reviews/gigabyte/m27q-rev-1-0
+    resolution:
+      value: 2560 x 1440
+      source: https://www.rtings.com/monitor/reviews/gigabyte/m27q-rev-1-0
+    refresh_rate_hz:
+      value: '170'
+      source: https://www.rtings.com/monitor/reviews/gigabyte/m27q-rev-1-0
+    panel_type:
+      value: IPS
+      source: https://www.rtings.com/monitor/reviews/gigabyte/m27q-rev-1-0
+  aliases:
+  - M27Q
+  - M27Q rev 1.0
+- kind: product
+  label: Gigabyte M32U
+  identity:
+    brand: gigabyte
+    model: m32u
+  attributes:
+    screen_size_inch:
+      value: '32'
+      source: https://www.rtings.com/monitor/reviews/gigabyte/m32u
+    resolution:
+      value: 3840 x 2160
+      source: https://www.rtings.com/monitor/reviews/gigabyte/m32u
+    refresh_rate_hz:
+      value: '144'
+      source: https://www.rtings.com/monitor/reviews/gigabyte/m32u
+    panel_type:
+      value: IPS
+      source: https://www.rtings.com/monitor/reviews/gigabyte/m32u
+  aliases:
+  - M32U
