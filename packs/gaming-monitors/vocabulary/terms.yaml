@@ -1,0 +1,75 @@
+# Vocabulary - every kind, key, domain and attribute this pack uses.
+#
+# Written from the pack an agent proposed. Declared before use: the
+# builder refuses a row naming a term that is not here, which is also
+# why a domain used by a claim and never declared is added above.
+- term_id: product
+  role: subject_kind
+  label:
+    en: product
+- term_id: brand
+  role: attribute
+  datatype: text
+  label:
+    en: brand
+- term_id: model
+  role: attribute
+  datatype: text
+  label:
+    en: model
+- term_id: screen_size_inch
+  role: attribute
+  datatype: number
+  label:
+    en: Screen size (inch)
+- term_id: resolution
+  role: attribute
+  datatype: text
+  label:
+    en: Resolution
+- term_id: refresh_rate_hz
+  role: attribute
+  datatype: number
+  label:
+    en: Max refresh rate (Hz)
+- term_id: panel_type
+  role: attribute
+  datatype: text
+  label:
+    en: Panel type
+- term_id: display
+  role: domain
+  label:
+    en: Display and panel
+- term_id: panel_uniformity
+  role: domain
+  label:
+    en: Panel uniformity
+- term_id: motion
+  role: domain
+  label:
+    en: Motion and VRR
+- term_id: connectivity
+  role: domain
+  label:
+    en: Connectivity and ports
+- term_id: firmware
+  role: domain
+  label:
+    en: Firmware and software
+- term_id: noise_thermal
+  role: domain
+  label:
+    en: Noise and cooling
+- term_id: burn_in
+  role: domain
+  label:
+    en: OLED burn-in
+- term_id: text_clarity
+  role: domain
+  label:
+    en: Text clarity
+- term_id: ergonomics
+  role: domain
+  label:
+    en: Ergonomics
