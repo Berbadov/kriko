@@ -1,0 +1,12 @@
+# Search templates for this pack. One query per line.
+#
+# Written by the agent that authored the pack, in the words
+# and the language its sources use.
+- '{label} problems'
+- '{label} flicker'
+- '{label} review rtings'
+- '{label} firmware bug'
+- '{label} burn-in'
+- '{label} forum'
+- {query: '{label} sorunları', lang: tr}
+- {query: '{label} titreme', lang: tr}
