@@ -9,7 +9,9 @@ import re
 from pathlib import Path
 
 import pytest
+import yaml
 
+from kriko.pack import credibility
 from kriko.pack.manifest import load
 
 REPO = Path(__file__).resolve().parents[3]
@@ -150,3 +152,63 @@ def test_no_query_is_written_in_a_language_the_manifest_does_not_name(root):
             f"language on the entry (`- {{query: ..., lang: tr}}`) or add it "
             f"to [pack] languages"
         )
+
+
+# ── where the evidence comes from (credibility) ─────────────────────────────
+#
+# The owner's rule: AI-written prose is fine, but a claim must come from a
+# source that stands behind it. `kriko/pack/credibility.py` decides a tier per
+# source and records the findings in the built pack. The rules are measured
+# against the catalog, not enforced at merge time yet — 440 high-severity
+# claims in this repository have no official source today — so what the
+# contract holds here is that every pack can be *judged*, not that it passes.
+
+
+def _claims(root: Path) -> list[dict]:
+    path = root / "data" / "claims.yaml"
+    if not path.is_file():
+        return []
+    return yaml.safe_load(path.read_text(encoding="utf-8")) or []
+
+
+@pytest.mark.parametrize("root", PACKS, ids=lambda p: p.name)
+def test_every_pack_can_say_where_each_claim_came_from(root):
+    """Every evidence row gets a tier, and the report accounts for all of them.
+
+    A pack whose claim file grew an evidence shape this module cannot read
+    would otherwise ship sources with no tier at all — invisible until a page
+    showed a blank badge.
+    """
+    claims = _claims(root)
+    report = credibility.judge(
+        root.name, claims, identity_keys=load(root).identity_keys)
+    evidence = sum(len(claim.get("evidence") or []) for claim in claims)
+    assert report.claims == len(claims)
+    assert sum(report.tiers.values()) == evidence
+    assert set(report.tiers) <= set(credibility.TIERS)
+
+
+@pytest.mark.parametrize("root", PACKS, ids=lambda p: p.name)
+def test_a_pack_does_not_cite_itself_or_a_placeholder_as_evidence(root):
+    """A claim whose only evidence is a placeholder cites nothing at all.
+
+    Not the same as an unrecognised domain — `unknown` is an absence of a rule
+    and stays legal. This is the reserved-for-documentation case and the
+    content farms this module has already named, which no amount of rereading
+    will turn into a source. A synthetic pack is the exception by declaration:
+    it exists to falsify the format, and its URLs say so.
+    """
+    if load(root).raw.get("pack", {}).get("synthetic"):
+        return
+    claims = _claims(root)
+    report = credibility.judge(root.name, claims,
+                               identity_keys=load(root).identity_keys)
+    placeholders = [issue for issue in report.issues
+                    if issue.rule == "no-credible-source"
+                    and any(d in issue.detail for d in
+                            ("example.com", "example.org", "example.net",
+                             "example.invalid"))]
+    assert not placeholders, (
+        f"{root.name} ships claims whose only evidence is a placeholder:\n  "
+        + "\n  ".join(issue.line() for issue in placeholders)
+    )

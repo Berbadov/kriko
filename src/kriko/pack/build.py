@@ -25,6 +25,7 @@ from urllib.parse import urlsplit
 
 import yaml
 
+from kriko.pack import credibility
 from kriko.pack.manifest import load as load_manifest
 from kriko.store import ids
 from kriko.store.db import SCHEMA_VERSION, connect
@@ -470,11 +471,12 @@ def _emit_trust_and_gates(conn, pack_id, root, row_ids: list[str]) -> None:
         row_ids.append(f"tier_trust:{tier}")
 
 
-def _write_manifest_row(conn, pack_id, man, row_ids: list[str]) -> None:
+def _write_manifest_row(conn, pack_id, man, row_ids: list[str],
+                        credibility_json: str = "{}") -> None:
     conn.execute(
         "INSERT OR REPLACE INTO packs (pack_id, name, version, schema_version,"
         " built_at, publisher, license, origin_url, content_digest,"
-        " manifest_json) VALUES (?,?,?,?,?,?,?,?,?,?)",
+        " manifest_json, credibility_json) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
         (
             pack_id,
             man.name,
@@ -486,12 +488,32 @@ def _write_manifest_row(conn, pack_id, man, row_ids: list[str]) -> None:
             man.origin_url,
             ids.content_digest(row_ids, man.raw),
             yaml.safe_dump(man.raw, allow_unicode=True),
+            credibility_json,
         ),
     )
 
 
-def build(root, out_path) -> Path:
-    """Build `root` into a pack file at `out_path`. Returns the path."""
+def _record_credibility(conn, man, policy, on_report):
+    """Audit what was just written, tier every source, and hand the report back."""
+    report = credibility.audit_built(conn, man.identity_keys, man.name, policy)
+    if on_report is not None:
+        on_report(report)
+    return report
+
+
+def build(root, out_path, *, strict: bool = False, on_report=None) -> Path:
+    """Build `root` into a pack file at `out_path`. Returns the path.
+
+    Every source is tiered as it is written and the pack's `credibility_json`
+    records what the check found. `strict` turns the recorded findings into a
+    failed build; it is off by default because most of the catalogs in this
+    repository would not survive it yet — the numbers are in
+    `kriko/pack/credibility.py`.
+
+    `on_report(report)` is called with the credibility report before sealing,
+    so a CLI can print the per-pack summary without this module printing into
+    a caller's JSON output.
+    """
     root = Path(root)
     out_path = Path(out_path)
     man = load_manifest(root)
@@ -515,10 +537,39 @@ def build(root, out_path) -> Path:
         _emit_claims(conn, pack_id, claims, man, known, row_ids)
         _emit_pack_assets(conn, pack_id, root, row_ids)
         _emit_trust_and_gates(conn, pack_id, root, row_ids)
-        _write_manifest_row(conn, pack_id, man, row_ids)
+        report = _record_credibility(conn, man, credibility.Policy(strict=strict), on_report)
+        _write_manifest_row(conn, pack_id, man, row_ids, report.to_json())
+
+    if strict and report.errors:
+        conn.close()
+        out_path.unlink(missing_ok=True)
+        raise credibility.CredibilityError(report)
 
     seal(conn)
     return out_path
+
+
+def annotate(root, out_path, *, strict: bool = False, on_report=None):
+    """Tier the sources of an already built pack, in place.
+
+    A pack that ships its own `build.py` writes its rows without going through
+    this module's `_emit_claims`, so the check has to run over the finished
+    file. Reading the rows rather than the authoring YAML is also why the
+    custom builder gets the same answer as the generic one.
+    """
+    root = Path(root)
+    out_path = Path(out_path)
+    man = load_manifest(root)
+    conn = connect(out_path)
+    with conn:
+        report = _record_credibility(
+            conn, man, credibility.Policy(strict=strict), on_report)
+        conn.execute("UPDATE packs SET credibility_json = ?", (report.to_json(),))
+    seal(conn)
+    if strict and report.errors:
+        out_path.unlink(missing_ok=True)
+        raise credibility.CredibilityError(report)
+    return report
 
 
 def seal(conn) -> None:

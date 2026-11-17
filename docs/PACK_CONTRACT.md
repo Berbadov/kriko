@@ -109,6 +109,33 @@ is still a valid pack.
   is the largest part of a pack that has one.
 - **`coverage.py`** — the pack's own coverage report.
 
+## Where do the claims come from, and is that good enough?
+
+AI-written prose is fine; a claim still has to come from a source that stands
+behind it. `src/kriko/pack/credibility.py` decides a tier per source URL —
+`official`, `press`, `community`, `commercial`, `weak` or `unknown` — writes it
+to `sources.source_tier` in the built pack, and records what the check found in
+`packs.credibility_json`.
+
+Three rules run over every claim that ships evidence:
+
+- a `high` severity claim needs at least one official source;
+- a claim whose sources are all weak or unknown has nothing to check its words
+  against;
+- a claim backed only by community sources needs two distinct domains, because
+  one thread is an anecdote.
+
+The check is *recorded* by default, not enforced: measured against the packs
+that already ship, 440 high-severity claims have no official source and 251
+claims have nothing but weak or unknown ones. `kriko build --strict-credibility`
+turns both into a failed build, and an empty pack file is left behind. The
+numbers are in the module's docstring and in each pack's `credibility_json`.
+
+A pack's own `trust/source_tiers.yaml` fills in domains the shared lists do not
+recognise, mapped authoritative/manufacturer→official, specialist→press,
+enthusiast/forum_ugc→community, seo_blog→weak. The shared lists win where they
+have an opinion.
+
 ## Where do I start?
 
 Copy `packs/drill/` for the minimum, then read a pack that has grown up for the
