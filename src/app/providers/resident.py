@@ -30,6 +30,7 @@ import hashlib
 import json
 import os
 import queue
+import shutil
 import subprocess
 import tempfile
 import threading
@@ -62,7 +63,7 @@ _MAX_RETAINED_EVENTS = 4096
 _STOP_GRACE = 2.0
 #: The longest a protocol handshake may take when the caller set no shorter
 #: start bound. ACP's includes opening the first session (`AcpWire.handshake`).
-_HANDSHAKE_CAP = 30.0
+_HANDSHAKE_CAP = 45.0
 
 
 class ProtocolAbsent(TransportUnavailable):
@@ -97,6 +98,11 @@ class ResidentProfile:
     model: str = ""
     effort: str = ""
     fingerprint: str = ""
+    #: Whether the handshake should open a spare session. It hides the first
+    #: `session/new` cost for a warm worker, and for a CLI whose session build
+    #: is itself tens of seconds it spends the whole start budget before the
+    #: request exists. Slow starts open their session on the request instead.
+    warm_session: bool = True
 
     def identity(self) -> str:
         exe = Path(self.argv[0]) if self.argv else Path("")
@@ -919,6 +925,8 @@ class AcpWire(Wire):
         # paid here, as part of the start: a warm-up then covers it, and the
         # first request finds a session ready. It is an unused session, so
         # opening it early shares nothing between requests.
+        if not worker.profile.warm_session:
+            return
         created = worker.rpc("session/new", {"cwd": str(Path(worker.profile.cwd).resolve()),
                                              "mcpServers": []},
                              timeout=max(0.0, deadline - time.monotonic()))
@@ -1165,7 +1173,7 @@ def _release(worker: _Worker) -> None:
 
 _LOCK = threading.RLock()
 _TRANSPORT: ResidentTransport | None = None
-_FOLDERS: dict[str, tempfile.TemporaryDirectory] = {}
+_FOLDERS: dict[str, Path] = {}
 
 
 def owned_folder(key: str, prefix: str = "kriko-agent-") -> Path:
@@ -1175,15 +1183,25 @@ def owned_folder(key: str, prefix: str = "kriko-agent-") -> Path:
     home) must outlive one request, so it cannot be the per-request temporary
     folder the process adapter uses. The same key gets the same folder, which
     is what lets an identical profile find its worker again.
+
+    `mkdtemp` rather than `TemporaryDirectory`: on Windows a worker that is
+    still holding its working folder makes the object's finalizer raise
+    `PermissionError` from the interpreter's exit hook, which is a traceback on
+    every shutdown and leaves the folder behind anyway. Here the cleanup is
+    explicit, bounded, and allowed to fail — the reaper in `harness` collects
+    what a live process could not release.
     """
     digest = hashlib.sha256(key.encode()).hexdigest()
     with _LOCK:
         folder = _FOLDERS.get(digest)
         if folder is None:
-            folder = tempfile.TemporaryDirectory(prefix=prefix)
-            os.chmod(folder.name, 0o700)
+            folder = Path(tempfile.mkdtemp(prefix=prefix))
+            try:
+                os.chmod(folder, 0o700)
+            except OSError:
+                pass
             _FOLDERS[digest] = folder
-        return Path(folder.name)
+        return folder
 
 
 def transport() -> ResidentTransport:
@@ -1213,8 +1231,11 @@ def shutdown() -> None:
         _FOLDERS.clear()
     for folder in folders:
         try:
-            folder.cleanup()
+            shutil.rmtree(folder)
         except OSError:
+            # A surviving child may still hold its working folder. The startup
+            # reaper deletes it a day later; failing shutdown over it is worse
+            # than the folder.
             pass
 
 

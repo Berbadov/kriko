@@ -659,6 +659,28 @@ def _empty_run_note(researcher) -> str:
     )
 
 
+def _no_evidence_run(researcher) -> str:
+    """The refusal for a run with no evidence, or `""` for a legitimate empty.
+
+    The harness plane can say, from its own coverage record, that it read no
+    page and kept no finding. That is not `succeeded / 0 claim(s) kept`; it is
+    a run that has nothing to stand on, and the status the plane already
+    records is what makes the sentence exact.
+    """
+    coverage = getattr(researcher, "coverage", None)
+    if not isinstance(coverage, dict):
+        return ""
+    if getattr(researcher, "name", "") != "harness":
+        return ""
+    if str(coverage.get("status") or "") != "no_supported_findings":
+        return ""
+    return (
+        "No supported findings (no_supported_findings): this run read no pages "
+        "and kept no finding, so there is nothing to save. Check the agent's "
+        "account and the search service, then run it again."
+    )
+
+
 def _queries_run(researcher, task) -> list[str]:
     """What was actually searched for, preferring the researcher's own account.
 
@@ -1003,6 +1025,9 @@ def _research(settings, params: dict, progress: Progress, emit, provenance=None)
             # Said in the log, not only in the stage list: the log is what the
             # reader expands, and on 0.5.3 it ended at this line.
             progress.log(_empty_run_note(researcher))
+            refused = _no_evidence_run(researcher)
+            if refused:
+                raise Refused(refused)
         emit.count(sources=len(documents))
         for document in documents:
             emit.event(
