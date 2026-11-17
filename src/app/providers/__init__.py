@@ -327,6 +327,11 @@ def harness_researcher(*, preferred: str = "", timeout: float = 0.0,
             effort = default_effort
     picked = (model.strip(), effort.strip())
     model, effort = harness.settle_effort(found, *picked)
+    # A model id this CLI does not offer is the run-start failure the profile
+    # caught late: validate against the same 600-second listing the picker
+    # reads, and fall back to the CLI's own default rather than spend a run on
+    # "Model unavailable".
+    model, model_note = harness.validated_model(found, model)
     # Which web search this run uses: the agent's own tools, or Kriko's
     # host-side search handed to it in the brief. Read here, beside the model
     # and the effort, for the same reason — a call site that forgot it would
@@ -361,7 +366,9 @@ def harness_researcher(*, preferred: str = "", timeout: float = 0.0,
                 saved.get(prefs.AGENT_TRANSPORT) or saved.get(prefs.CODEX_TRANSPORT) or "auto")
         finally:
             conn.close()
-    if (model, effort) != picked:
+    if model_note:
+        researcher.effort_settled = model_note
+    elif (model, effort) != picked:
         # `found.label` spells the effort in its model ids, and a flag beside
         # one is refused. Said in the run's log, since the run is now on a
         # model or a level the reader did not literally pick.

@@ -58,6 +58,7 @@ for `tasks.py` to read duck-typed, exactly as `api_researcher` stamps `model`.
 
 import hashlib
 import json
+import logging
 import os
 import re
 import shutil
@@ -100,7 +101,7 @@ HOST_READ_HARNESSES = frozenset({"codex", "antigravity-cli", "mistral-vibe", "cl
 #: of their row. Codex keeps one app-server (`codex_transport`); the rest share
 #: `resident`: Claude Code over `stream-json` stdin, Mistral Vibe over ACP.
 #: Antigravity's `agy` has only a print mode and so appears in neither.
-RESIDENT_PROTOCOLS = frozenset({"claude", "vibe"})
+RESIDENT_PROTOCOLS = frozenset({"claude", "vibe", "opencode", "hermes"})
 
 
 def transport_env() -> str:
@@ -188,6 +189,17 @@ RESIDENT_COOLDOWN_SECONDS = 600.0
 #: about twice the slowest start measured and still leaves a 90-second turn
 #: seventy seconds for the fallback.
 RESIDENT_START_SECONDS = 20.0
+#: A resident CLI whose own cold start is slower than that. Hermes' first
+#: Python bootstrap measured 18-28 s on this machine before it answered
+#: `initialize`; a 20 s bound called a healthy start a failure and paid for it
+#: on every run.
+SLOW_RESIDENT_START_SECONDS = 45.0
+SLOW_RESIDENT_STARTS = frozenset({"hermes"})
+
+
+def resident_start_seconds(one: "Harness") -> float:
+    return (SLOW_RESIDENT_START_SECONDS if one.id in SLOW_RESIDENT_STARTS
+            else RESIDENT_START_SECONDS)
 #: How long a background warm-up may take. It costs the reader nothing while
 #: it runs (the host is reading pages), and one killed a second before it was
 #: ready is a cold start the turn then pays in full; a request that arrives
@@ -261,6 +273,102 @@ HELP_TIMEOUT_SECONDS = 12.0
 #: ("surrogates not allowed") — every case of the reader's bench on
 #: 2026-09-26. Harmless to a CLI that is not Python.
 CHILD_ENCODING_ENV = {"PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8"}
+
+log = logging.getLogger(__name__)
+
+#: A CLI whose *first* start is genuinely slow, and how long a probe of it may
+#: take. Measured cold on the owner's machine: `hermes --help` 18.6 s and
+#: `hermes status` 14.5 s, `agy --version` 19.5 s. The 12 s ceiling that is
+#: right for every other CLI was silently cutting both off, and a probe that
+#: times out reads as "declares nothing", which is how a row gets downgraded
+#: for being slow rather than for being broken. Probed in the background where
+#: a screen can wait, and given room where it must answer.
+SLOW_PROBE_SECONDS = {
+    "agy": 30.0,
+    "hermes": 30.0,
+}
+#: The most any probe may take, whatever a row asks for.
+PROBE_CEILING_SECONDS = 45.0
+#: How long an account verdict — from a probe or from a failed run — is
+#: trusted. Long enough that a 90-second turn does not pay the same sign-in
+#: check twice, short enough that a reader who logs in gets a working plane
+#: without restarting the app.
+ACCOUNT_COOLDOWN_SECONDS = 600.0
+#: `harness id -> (monotonic stamp, verdict)`. Kept behind one lock because a
+#: job worker and the Agents screen both read it.
+_ACCOUNT_VERDICTS: dict[str, tuple[float, str, str]] = {}
+_ACCOUNT_LOCK = threading.Lock()
+
+
+def probe_seconds(executable: str) -> float:
+    """How long a question to this executable's own CLI may take."""
+    stem = Path(executable).stem.lower()
+    for ident, seconds in SLOW_PROBE_SECONDS.items():
+        if stem == ident or stem.startswith(ident):
+            return min(seconds, PROBE_CEILING_SECONDS)
+    return HELP_TIMEOUT_SECONDS
+
+
+def _safe_rmtree(path: Path) -> bool:
+    """Remove `path` if this process can; say whether it did.
+
+    Windows refuses to delete a folder a surviving child still holds open. The
+    old `TemporaryDirectory` finalizer raised that `PermissionError` from the
+    interpreter's exit hook — a traceback on every shutdown, on top of the
+    folder that was left behind anyway. A failed cleanup is not a failed run.
+    """
+    try:
+        shutil.rmtree(path)
+        return True
+    except PermissionError:
+        log.warning("could not remove %s yet; the startup reaper will", path)
+    except OSError as error:
+        log.warning("could not remove %s (%s); the startup reaper will", path, error)
+    return False
+
+
+@contextmanager
+def run_directory(prefix: str = "kriko-research-"):
+    """A per-run folder whose teardown never masks the run's own error.
+
+    `TemporaryDirectory.__exit__` raises when Windows will not let go, and
+    that exception replaces whatever the run was already raising — the reason
+    a failed opencode run surfaced as `PermissionError` with no model error in
+    it at all. The run's outcome must survive its housekeeping.
+    """
+    directory = Path(tempfile.mkdtemp(prefix=prefix))
+    try:
+        yield directory
+    finally:
+        _safe_rmtree(directory)
+
+
+def reap_stale_run_dirs(*, root: Path | None = None, older_than: float = 86400.0,
+                        now: float | None = None) -> int:
+    """Delete run folders a killed process left behind.
+
+    Only the two prefixes this plane owns (`kriko-agent-` for resident workers,
+    `kriko-research-` for per-run workspaces), and only ones older than a day:
+    a second Kriko, or a run still in flight, must not have its working folder
+    deleted from under it.
+    """
+    base = Path(root) if root is not None else Path(tempfile.gettempdir())
+    cutoff = (time.time() if now is None else now) - older_than
+    removed = 0
+    for pattern in ("kriko-agent-*", "kriko-research-*"):
+        try:
+            candidates = list(base.glob(pattern))
+        except OSError:
+            continue
+        for path in candidates:
+            try:
+                if not path.is_dir() or path.stat().st_mtime > cutoff:
+                    continue
+            except OSError:
+                continue
+            if _safe_rmtree(path):
+                removed += 1
+    return removed
 
 
 def _minutes(seconds: float) -> str:
@@ -634,14 +742,23 @@ KNOWN: tuple[Harness, ...] = (
         "opencode",
         "opencode",
         "opencode",
-        ("run", "--agent", "kriko-harness"),
+        ("run", "--format", "json"),
         download_url="https://opencode.ai/download",
         needs_account="a model account or API key of your own (or a free/local model)",
+        protocol="opencode",
         structured=False,
         model_flag="--model",
         model_unlisted=True,
         model_source="models",
         model_hint="provider/name, as `opencode models` lists them",
+        capabilities=("headless", "streaming", "web-search", "web-fetch",
+                      "model-selection"),
+        # `run --help` describes `--format json`; the top-level `--help` that
+        # `command_for` reads does not, so the flag is a documented fact of the
+        # subcommand rather than something this roaster can probe there. A
+        # build without it answers with an argument error, and `_invoke`
+        # retries once on `plain_args`.
+        plain_args=("run",),
         # The bash installer is the right line on macOS and Linux and is not
         # runnable on the reader's machine, which is Windows. A hint nobody
         # can paste is a hint that teaches the reader the screen is decorative.
@@ -870,42 +987,140 @@ KNOWN: tuple[Harness, ...] = (
         ),
     ),
     Harness(
-        "gemini-cli", "Gemini CLI", "gemini",
-        ("--output-format", "stream-json", "--approval-mode", "default",
-         "--allowed-tools", "google_web_search,web_fetch"),
-        download_url="https://geminicli.com/docs/get-started/installation",
-        install_hint="npm install -g @google/gemini-cli",
-        needs_account="a Google account (free-tier quotas) or a Gemini API key; sign in once with an interactive `gemini` session first",
-        protocol="gemini", model_flag="--model", prompt_argument=False,
-        sandbox_home=True,
-        required=("--output-format", "--approval-mode", "--allowed-tools", "--prompt"),
-        capabilities=("headless", "streaming", "web-search", "web-fetch", "model-selection"),
-        unusable=("not yet verified against the real CLI — `--allowed-tools` "
-                  "is deprecated upstream and the sandbox file it would run "
-                  "under is untested, so Kriko will not drive it until they are"),
+        "codex", "Codex", "codex",
+        ("exec", "--json", "--ephemeral", "--skip-git-repo-check",
+         "--sandbox", "read-only"),
+        protocol="codex", model_flag="--model", model_unlisted=True,
+        effort_flag="codex-thinking", effort_choices=("low", "medium", "high", "xhigh"),
+        model_source="codex-cache", download_url="https://developers.openai.com/codex/cli",
+        install_hint="npm install -g @openai/codex",
+        install_command=(
+            "if (-not (Get-Command npm -ErrorAction SilentlyContinue)) {"
+            " Write-Output 'Node.js is needed first; installing it.';"
+            " winget install --id OpenJS.NodeJS.LTS -e --silent --accept-package-agreements --accept-source-agreements;"
+            " $env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User') };"
+            " npm install -g @openai/codex"),
+        needs_account="your ChatGPT account; sign in with codex login",
+        capabilities=("headless", "streaming", "web-search", "model-selection"),
+    ),
+    Harness(
+        "hermes", "Hermes", "hermes",
+        # The process fallback, verified against Hermes v0.22.5: `-z` is its
+        # one-shot mode (final text only), `--toolsets safe` is the shipped
+        # toolset without terminal access, and the two ignore flags keep the
+        # reader's own skills, rules and config out of the run. The prompt is
+        # `-z`'s value, so it is named as `prompt_flag` rather than put in
+        # `args`.
+        ("--toolsets", "safe", "--ignore-rules", "--ignore-user-config"),
+        protocol="hermes", prompt_argument=False, prompt_flag="-z",
+        structured=False,
+        model_flag="-m", model_unlisted=True,
+        model_source="", model_hint="a provider/model id Hermes accepts",
+        capabilities=("headless", "web-search", "web-fetch", "model-selection"),
+        download_url="https://hermes.nousresearch.com/",
+        install_hint="see the Hermes install page for this platform",
+        needs_account="a Hermes account or an inference provider key; run `hermes setup` once first",
+        homes=("AppData/Local/hermes/bin", ".hermes/bin", ".local/bin"),
     ),
 )
 
-_OPENCODE_AGENT_PATH = Path.home() / ".opencode" / "agents" / "kriko-harness.md"
+#: The per-run OpenCode configuration file. It lives in the run's own working
+#: folder — never in the reader's `~/.opencode` — and turns OpenCode's default
+#: coding agent into a read-only researcher: no shell, no edits, and (when the
+#: reader supplied a page-reader key) exactly one MCP server, the reader.
+OPENCODE_CONFIG_FILE = "opencode.jsonc"
 
-_OPENCODE_AGENT_BODY = """---
-description: Kriko harness research: search and fetch only
-mode: subagent
-permission:
-  bash: deny
-  edit: deny
-  webfetch: allow
-  websearch: allow
----
+_OPENCODE_CONFIG = {
+    "$schema": "https://opencode.ai/config.json",
+    # A primary agent that only reads. `explore` is the built-in read-only
+    # agent the survey named; `build` remains available if a build names a
+    # different default and the reader overrides it.
+    "default_agent": "explore",
+    # The deprecated-but-accepted spelling: OpenCode normalises this map into
+    # its `permissions` ruleset (`shell`/`edit`/`webfetch`/`websearch`), and
+    # keeps reading it. Refusing edit and shell is the whole sandbox.
+    "permission": {
+        "bash": "deny",
+        "edit": "deny",
+        "webfetch": "allow",
+        "websearch": "allow",
+    },
+}
 
-Research the subject in the prompt below and report findings as instructed.
-"""
+
+def _opencode_reader_server(config_path: str) -> dict:
+    """The reader's MCP server, in OpenCode's own config shape."""
+    if not config_path:
+        return {}
+    try:
+        reader = json.loads(Path(config_path).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    servers = reader.get("mcpServers") if isinstance(reader, dict) else None
+    if not isinstance(servers, dict):
+        return {}
+    out: dict[str, dict] = {}
+    for name, server in servers.items():
+        if not isinstance(server, dict) or not server.get("url"):
+            continue
+        out[str(name)] = {
+            "type": "remote",
+            "url": str(server["url"]),
+            **({"headers": dict(server["headers"])}
+               if isinstance(server.get("headers"), dict) else {}),
+        }
+    return out
 
 
-def _ensure_opencode_agent() -> None:
-    if not _OPENCODE_AGENT_PATH.exists():
-        _OPENCODE_AGENT_PATH.parent.mkdir(parents=True, exist_ok=True)
-        _OPENCODE_AGENT_PATH.write_text(_OPENCODE_AGENT_BODY, encoding="utf-8")
+def _write_opencode_config(folder: Path, reader_config_path: str = "") -> Path:
+    """Write this run's `opencode.jsonc` and return its path.
+
+    The job folder is the project directory OpenCode loads its project config
+    from (`PWD` is set to it as well), so a run never reads the reader's
+    `opencode.jsonc` permissions as its own. It does still inherit the reader's
+    provider credentials from `~/.config/opencode`, which is what makes the
+    run bill the account the reader chose.
+    """
+    folder.mkdir(parents=True, exist_ok=True)
+    config = json.loads(json.dumps(_OPENCODE_CONFIG))
+    servers = _opencode_reader_server(reader_config_path)
+    if servers:
+        config["mcp"] = {"servers": servers}
+    path = folder / OPENCODE_CONFIG_FILE
+    path.write_text(json.dumps(config, indent=2), encoding="utf-8")
+    return path
+
+
+#: The ACP toolset a research run may hold. `platform_toolsets.acp` is the one
+#: resolver the adapter uses (`acp_adapter/session.py`), and `web` is the
+#: shipped toolset with search and fetch and no terminal; the default
+#: `hermes-acp` toolset is the *coding* posture, which is exactly what a
+#: research plane must not hand an agent.
+_HERMES_ACP_TOOLSETS = ("web",)
+
+
+def _write_hermes_policy(folder: Path) -> Path:
+    """Write the run's Hermes *managed scope* and return its directory.
+
+    A private `HERMES_HOME` is the obvious sandbox and the wrong one: Hermes
+    treats a new data root as a separate runtime and starts preparing a second
+    virtualenv before it answers `initialize` (measured: it never got there).
+    The managed scope is the seam Hermes itself provides for a policy pushed on
+    top of the reader's config — `HERMES_MANAGED_DIR` — so the run keeps the
+    reader's credentials and the toolset is still narrowed by Kriko.
+    """
+    import yaml  # deferred: the harness plane does not need YAML otherwise
+
+    folder.mkdir(parents=True, exist_ok=True)
+    policy = {
+        "platform_toolsets": {"acp": list(_HERMES_ACP_TOOLSETS)},
+        # A runaway stop, not a budget: the ACP session otherwise inherits the
+        # CLI's 500-turn default, and a loop spends the reader's subscription.
+        "agent": {"max_turns": 40},
+    }
+    path = folder / "config.yaml"
+    path.write_text(yaml.safe_dump(policy, sort_keys=False), encoding="utf-8")
+    return folder
 
 
 #: Extra directories to search, `os.pathsep`-separated. The escape hatch for a
@@ -1075,22 +1290,6 @@ def _roots(one: Harness) -> list[str]:
     return [str(root) for root in roots]
 
 
-# The desktop roster requested by the reader. Each invocation starts a new chat.
-KNOWN = tuple(h for h in KNOWN if h.id in {"claude-code", "antigravity-cli", "mistral-vibe"}) + (
-    Harness("codex", "Codex", "codex", ("exec", "--json", "--ephemeral", "--skip-git-repo-check", "--sandbox", "read-only"),
-            protocol="codex", model_flag="--model", model_unlisted=True,
-            effort_flag="codex-thinking", effort_choices=("low", "medium", "high", "xhigh"),
-            model_source="codex-cache", download_url="https://developers.openai.com/codex/cli",
-            install_hint="npm install -g @openai/codex",
-            install_command=(
-                "if (-not (Get-Command npm -ErrorAction SilentlyContinue)) {"
-                " Write-Output 'Node.js is needed first; installing it.';"
-                " winget install --id OpenJS.NodeJS.LTS -e --silent --accept-package-agreements --accept-source-agreements;"
-                " $env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User') };"
-                " npm install -g @openai/codex"),
-            needs_account="your ChatGPT account; sign in with codex login"),
-)
-
 def available() -> list[Harness]:
     """Which harness CLIs this machine can actually start *and* sandbox."""
     _locate_cold(KNOWN)
@@ -1143,23 +1342,26 @@ _ARG_ERROR = re.compile(
 )
 
 
-def _ask(executable: str, *argv: str, keep_lines: int = 400) -> str:
+def _ask(executable: str, *argv: str, keep_lines: int = 400,
+         seconds: float | None = None) -> str:
     from app.agentresources import slot
 
+    budget = seconds or probe_seconds(executable)
     asked = hostbin.probe(
         [{"key": "q", "argv": [executable, *argv], "keep": keep_lines}],
-        env={"PATH": login_path(), **CHILD_ENCODING_ENV}, seconds=HELP_TIMEOUT_SECONDS,
+        env={"PATH": login_path(), **CHILD_ENCODING_ENV}, seconds=budget,
     )
     if asked is not None:
         return asked["q"].get("text", "")
     try:
-        with slot("probe", key=executable, timeout=HELP_TIMEOUT_SECONDS):
-            return _ask_owned(executable, *argv, keep_lines=keep_lines)
+        with slot("probe", key=executable, timeout=budget):
+            return _ask_owned(executable, *argv, keep_lines=keep_lines, seconds=budget)
     except TimeoutError:
         return ""
 
 
-def _ask_owned(executable: str, *argv: str, keep_lines: int = 400) -> str:
+def _ask_owned(executable: str, *argv: str, keep_lines: int = 400,
+               seconds: float | None = None) -> str:
     """Run a CLI's own self-description and come back, whatever it does.
 
     **`subprocess.run(timeout=…)` is not enough on Windows**, and that is not
@@ -1203,14 +1405,14 @@ def _ask_owned(executable: str, *argv: str, keep_lines: int = 400) -> str:
         killed.set()
         HarnessResearcher._kill_tree(proc)
 
-    timer = threading.Timer(HELP_TIMEOUT_SECONDS, _give_up)
+    timer = threading.Timer(seconds or probe_seconds(executable), _give_up)
     timer.start()
     reader = threading.Thread(
         target=HarnessResearcher._drain, args=(proc.stdout, out, keep_lines), daemon=True
     )
     reader.start()
     try:
-        proc.wait(timeout=HELP_TIMEOUT_SECONDS * 2)
+        proc.wait(timeout=(seconds or probe_seconds(executable)) * 2)
     except Exception:  # noqa: BLE001
         HarnessResearcher._kill_tree(proc)
     finally:
@@ -1349,6 +1551,11 @@ _MODELS: dict[tuple[str, str, tuple[int, int]], tuple[float, list[str]]] = {}
 _MODELS_LOCK = threading.Lock()
 _ASKING: dict[str, threading.Lock] = {}
 _MODELS_PENDING: set[tuple[str, str, tuple[int, int]]] = set()
+#: Harness ids whose last listing probe said nothing (a slow start, not an
+#: empty catalogue). The row stays offered; the picker says "unknown" rather
+#: than "lists none", which is the difference between a broken CLI and a slow
+#: first launch.
+_MODELS_UNKNOWN: dict[str, float] = {}
 _EFFORTS: dict[tuple[str, str, tuple[int, int]], list[str]] = {}
 _EFFORTS_LOCK = threading.Lock()
 _EFFORT_PENDING: set[tuple[str, str, tuple[int, int]]] = set()
@@ -1898,6 +2105,13 @@ def _read_models(one: Harness, executable: str, key: tuple,
         names = _from_models_command(one, executable)
     with _MODELS_LOCK:
         _MODELS[key] = (time.monotonic(), names)
+    if not names and probe_seconds(executable) > HELP_TIMEOUT_SECONDS:
+        # A slow CLI that printed nothing was not asked successfully. Remember
+        # that it is *unknown* rather than remembering "no models", and keep
+        # the row: a probe timeout must never downgrade a plane.
+        _MODELS_UNKNOWN[one.id] = time.monotonic()
+    else:
+        _MODELS_UNKNOWN.pop(one.id, None)
     cliprobe.record(executable, "models", list(names))
     return list(names)
 
@@ -2019,6 +2233,33 @@ def models_for(one: Harness, *, fresh: bool = False, behind: bool = False) -> li
         asking.release()
 
 
+def validated_model(one: Harness, model: str) -> tuple[str, str]:
+    """`(model, note)`: the model if this CLI offers it, else `("", why)`.
+
+    Asked at run start against the same cached listing the picker shows
+    (`models_for`, 600 s TTL). A model that is not on this machine's list is
+    the profile's `Model unavailable: opencode/muse-spark-...` failure, paid
+    for with a process start and reported as `PermissionError` by an unrelated
+    teardown. Falling back to the CLI's own default — and saying so in the
+    run's log — is one line instead of a dead job.
+
+    An empty list means "not known", never "none exist": a CLI whose listing
+    probe has not answered keeps the reader's choice.
+    """
+    chosen = str(model or "").strip()
+    if not chosen or not one.model_source or one.unusable:
+        return chosen, ""
+    listed = models_for(one)
+    if not listed:
+        return chosen, ""
+    offered = set(listed)
+    offered.update(name.split("#", 1)[0] for name in listed)
+    if chosen in offered or chosen.split("#", 1)[0] in offered:
+        return chosen, ""
+    return "", (f"{chosen!r} is not a model this {one.label} offers; "
+                "running the CLI's own default instead")
+
+
 def models_note(one: Harness, names: list[str]) -> str:
     """One line for a pick that has no list to show, or `""` (B158).
 
@@ -2030,6 +2271,11 @@ def models_note(one: Harness, names: list[str]) -> str:
     """
     if names or one.unusable:
         return ""
+    with _MODELS_LOCK:
+        unknown = _MODELS_UNKNOWN.get(one.id)
+    if unknown is not None and time.monotonic() - unknown < MODELS_TTL:
+        return ("This CLI's model list could not be read in time; its row is "
+                "still usable and the CLI will use its own default")
     if not one.model_source:
         return "This CLI does not list its models"
     executable = locate(one)
@@ -2071,7 +2317,7 @@ def _warm_one(one: Harness) -> None:
     if one.model_source == "models":
         questions["models"] = ["models"]
     answered = cliprobe.ask_many(
-        executable, questions, keep=_LISTING_LINES, seconds=HELP_TIMEOUT_SECONDS,
+        executable, questions, keep=_LISTING_LINES, seconds=probe_seconds(executable),
     )
     if answered is None:
         models_for(one)
@@ -2877,6 +3123,20 @@ def narrate(event: dict, *, reader_granted: bool = False) -> str:
     """
     if not isinstance(event, dict):
         return ""
+    # Agent Client Protocol: the resident worker's `on_action` already narrates
+    # tool calls, but `narrate` is also the public reader for a captured
+    # session, and an ACP tool call must not be invisible there.
+    if event.get("method") == "session/update":
+        params = event.get("params")
+        update = params.get("update") if isinstance(params, dict) else None
+        if isinstance(update, dict):
+            kind = update.get("sessionUpdate")
+            if kind in {"tool_call", "tool_call_update"}:
+                return _tool_line(
+                    str(update.get("title") or update.get("kind") or ""),
+                    update.get("rawInput") or update.get("input"),
+                    reader_granted=reader_granted)
+        return ""
     if event.get("event") is not None:
         return _narrate_agy(event)
     # Vibe's entries are the only ones carrying a session id and a generation
@@ -3026,11 +3286,100 @@ def account_failure(reason: str) -> bool:
     return any(needle in low for needles, _hint_text in _ACCOUNT_HINTS for needle in needles)
 
 
+#: The cheapest question each CLI answers about the reader's account. All four
+#: were timed on the owner's machine: `claude auth status --json` 1.1 s,
+#: `codex login status` 0.42 s, `opencode auth list` 0.36 s, and
+#: `hermes auth list` 5.3 s (hence the longer probe budget). A CLI with no
+#: cheap check is simply not preflighted; an absence of evidence is not a
+#: verdict.
+_PREFLIGHT_COMMANDS: dict[str, tuple[str, ...]] = {
+    "claude-code": ("auth", "status", "--json"),
+    "codex": ("login", "status"),
+    "opencode": ("auth", "list"),
+    "hermes": ("auth", "list"),
+}
+
+
+def _preflight_verdict(one: "Harness", said: str) -> tuple[str, str]:
+    """`(verdict, reason)` from the CLI's own account answer."""
+    low = (said or "").lower()
+    if one.id == "claude-code":
+        try:
+            payload = json.loads(said)
+        except (TypeError, ValueError):
+            return "unknown", ""
+        if isinstance(payload, dict) and payload.get("loggedIn") is False:
+            return "signed_out", "Claude Code is not signed in"
+        if isinstance(payload, dict) and payload.get("loggedIn") is True:
+            return "ok", ""
+        return "unknown", ""
+    if "not logged in" in low or "no credentials" in low or "not signed in" in low:
+        return "signed_out", f"{one.label} is not signed in"
+    if one.id == "codex" and "logged in" in low:
+        return "ok", ""
+    if one.id == "opencode" and said.strip() and "stored" not in low and "environment" not in low:
+        return "unknown", ""
+    if one.id in {"opencode", "hermes"}:
+        if any(marker in low for marker in ("stored", "environment", "credentials", "oauth", "api_key")):
+            return "ok", ""
+        return "unknown", ""
+    return "unknown", ""
+
+
+def preflight(one: "Harness", *, fresh: bool = False) -> tuple[str, str]:
+    """`(verdict, reason)` for this CLI's account, cached for the cooldown.
+
+    Verdicts are `ok`, `signed_out`, `exhausted` (a run already met a quota or
+    billing wall) or `unknown` (no cheap check, or the probe said nothing). An
+    account failure is the same in every transport, so it is never replayed:
+    caching it here is what stops a 90-second turn paying for the same 402 on
+    each of its three model calls.
+    """
+    hit = _ACCOUNT_VERDICTS.get(one.id)
+    if hit is not None and not fresh and time.monotonic() - hit[0] < ACCOUNT_COOLDOWN_SECONDS:
+        return hit[1], hit[2]
+    command = _PREFLIGHT_COMMANDS.get(one.id)
+    if command is None:
+        return "unknown", ""
+    executable = locate(one)
+    if not executable:
+        return "unknown", ""
+    said = _ask(executable, *command, seconds=probe_seconds(executable))
+    verdict, reason = _preflight_verdict(one, said)
+    if verdict != "unknown":
+        with _ACCOUNT_LOCK:
+            _ACCOUNT_VERDICTS[one.id] = (time.monotonic(), verdict, reason)
+    return verdict, reason
+
+
+def remember_account_failure(one: "Harness", reason: str) -> None:
+    """Cache an account wall the CLI actually reported."""
+    with _ACCOUNT_LOCK:
+        _ACCOUNT_VERDICTS[one.id] = (time.monotonic(), "exhausted", reason)
+
+
+def require_account(one: "Harness") -> None:
+    """Refuse before spending when this CLI's account is known to be closed.
+
+    A probe that says nothing is not a refusal: the row keeps working and the
+    run reports whatever the CLI itself says, which is this plane's rule
+    everywhere else.
+    """
+    verdict, reason = preflight(one)
+    if verdict not in {"signed_out", "exhausted"}:
+        return
+    said = reason or ("the account's quota is exhausted"
+                      if verdict == "exhausted" else f"{one.label} is not signed in")
+    hint = _hint(said, one)
+    raise RuntimeError(f"{one.label} cannot run: {said}" + (f" -- {hint}" if hint else ""))
+
+
 def _account_error(one: "Harness", error: BaseException) -> RuntimeError | None:
     """The reader-facing error for an account failure, or `None` for any other."""
     reason = str(error)
     if not account_failure(reason):
         return None
+    remember_account_failure(one, reason)
     from app.agentledger import redact
 
     reason = redact(reason, limit=500)
@@ -3114,6 +3463,10 @@ class HarnessResearcher(AgentResearcher):
         self._vibe_export: Path | None = None
         #: The path of this run's page-reader config while a run has one (B155).
         self._reader_config = ""
+        #: Pages already fetched by this job, keyed by the queries and budget
+        #: that produced them. The answer, revision and review phases reuse
+        #: them instead of paying the host-read stage again.
+        self._page_cache: dict[tuple, tuple] = {}
         #: Whether this run was actually granted the hosted reader. The config
         #: path is cleared before the stream in `_run_resident`, so narration
         #: reads this instead (C8): a call is only named as the page reader when
@@ -3317,6 +3670,10 @@ class HarnessResearcher(AgentResearcher):
                 "every quote verbatim from the page it came from.\n")
 
     def gather(self, task: ResearchTask) -> list[Document]:
+        # Before the host reads a page, not after the second failed model
+        # call: a closed account is the same in every transport, and paying
+        # 10-19 s of page fetching ahead of it is the cost this check removes.
+        require_account(self.harness)
         # The scale reaches the agent as a sentence and the CLI as a flag,
         # and it has to be both. Truncating the reply afterwards — which is
         # all `raw[: max_documents * 8]` below ever did — saves the reader
@@ -3416,6 +3773,22 @@ class HarnessResearcher(AgentResearcher):
         ]
         if not documents:
             self.note = self.note or "the harness reported no usable findings"
+            pages_read = int((self.coverage or {}).get("pages_read") or 0)
+            if self.sources:
+                pages_read = max(pages_read, len(self.sources))
+            if pages_read == 0:
+                # Nothing was read and nothing was kept. A job that reports
+                # `succeeded / 0` here is indistinguishable from a dead
+                # button; the status is what `tasks._research` turns into a
+                # refusal rather than a success.
+                self.coverage = {
+                    **(self.coverage or {}),
+                    "status": "no_supported_findings",
+                    "pages_read": 0,
+                    "pages_selected": 0,
+                    "pages_relevant": 0,
+                    "answer_passes": 0,
+                }
         return documents
 
     def _contract(self) -> str:
@@ -3525,7 +3898,8 @@ class HarnessResearcher(AgentResearcher):
             model="", search_provider=provider, given_queries=queries,
             search_language=search_language,
         )
-        reader.max_pages = max(1, min(8, max_pages or self.max_documents or 3))
+        reader.max_pages = min(self._page_budget(),
+                               max(1, min(8, max_pages or self.max_documents or 3)))
         self._host_search_url = search_url
         reader.on_action = self.on_action
         reader.check_cancelled = self.check_cancelled
@@ -3596,6 +3970,7 @@ class HarnessResearcher(AgentResearcher):
                   packs: str = "", attributes: str = "") -> str:
         from app import quicklook
 
+        require_account(self.harness)
         source_note = getattr(self, "source_instructions", "")
         language = str(getattr(self, "output_language", "") or "auto")
         if self.harness.id not in HOST_READ_HARNESSES or self._own_search():
@@ -3627,7 +4002,9 @@ class HarnessResearcher(AgentResearcher):
         asked anything. Any other agent is asked as before.
         """
         if self.harness.id not in HOST_READ_HARNESSES or self._own_search():
+            require_account(self.harness)
             return self.ask(prompt + self._own_search_note())
+        require_account(self.harness)
         source_note = getattr(self, "source_instructions", "")
         _url, search_language = self._search_settings()
         queries = self._planned_queries(product, search_language)
@@ -3639,7 +4016,9 @@ class HarnessResearcher(AgentResearcher):
     def ask_followup(self, prompt: str, *, product: str = "", question: str = "") -> str:
         """Answer a web follow-up from host-read pages in one CLI session."""
         if self.harness.id not in HOST_READ_HARNESSES or self._own_search():
+            require_account(self.harness)
             return self.ask(prompt + self._own_search_note())
+        require_account(self.harness)
         product = product.strip()
         question = question.strip()
         if not product:
@@ -3699,7 +4078,7 @@ class HarnessResearcher(AgentResearcher):
         if self._warm_started:
             return
         self._warm_started = True
-        if self.harness.protocol not in {"claude", "vibe"}:
+        if self.harness.protocol not in {"claude", "vibe", "opencode", "hermes"}:
             return
         if self.transport_mode not in {"auto", "persistent"}:
             return
@@ -3714,9 +4093,20 @@ class HarnessResearcher(AgentResearcher):
 
         try:
             profile = self._resident_profile()
-            resident.transport().warm(profile, timeout=RESIDENT_WARM_SECONDS)
+            resident.transport().warm(
+                profile, timeout=max(RESIDENT_WARM_SECONDS,
+                                     resident_start_seconds(self.harness)))
         except Exception:  # noqa: BLE001 — a cold start later is the only cost
             pass
+
+    def _page_budget(self, default: int = 3) -> int:
+        """The most pages this run may fetch.
+
+        The reader's document budget when one was set, and never more than it:
+        "two sources" that reads five has already spent three pages the reader
+        said no to. `default` applies only where nobody set a budget at all.
+        """
+        return max(1, min(8, int(self.max_documents or default)))
 
     def _ask_with_pages(self, queries: list[str], prompt: str, *, product: str = "",
                         page=None, prefer_issues: bool = False,
@@ -3725,15 +4115,31 @@ class HarnessResearcher(AgentResearcher):
                         source_line: bool = False,
                         pages_note: str = "") -> str:
         from app import quicklook
+        budget = self._page_budget()
+        if max_pages is None:
+            max_pages = budget
+        else:
+            max_pages = min(budget, max_pages)
+        key = (tuple(queries), str(product or ""), bool(prefer_issues), int(max_pages),
+               bool(quicklook_answer))
         started = time.perf_counter()
         reader = None
         answer_stage = {"stage": "answer", "ms": 0.0, "failed": False,
                         "tokens_in": None, "tokens_out": None, "tokens_used": None}
         self._start_warm()
         try:
-            reader, pages, identity = self._read_web_pages(
-                queries, product=product, page=page, prefer_issues=prefer_issues,
-                max_pages=max_pages)
+            reused = self._page_cache.get(key)
+            if reused is not None:
+                reader, pages, identity = reused
+                self._echo(
+                    f"reusing {len(pages)} page(s) read earlier in this job")
+            else:
+                reader, pages, identity = self._read_web_pages(
+                    queries, product=product, page=page, prefer_issues=prefer_issues,
+                    max_pages=max_pages)
+                # One job's phases (read, answer, revise) must not re-read the
+                # same pages: the host paid 10-19 s for them the first time.
+                self._page_cache[key] = (reader, pages, identity)
             # The same excerpts are both shown to the CLI and retained for
             # quote grounding. A citation cannot point into text it never saw.
             page_limit = 6000 if quicklook_answer else 8000
@@ -3906,6 +4312,7 @@ class HarnessResearcher(AgentResearcher):
         """
         if self.transport_mode not in {"auto", "persistent", "exec"}:
             raise ValueError("the agent transport must be auto, persistent, or exec")
+        require_account(self.harness)
         if self.harness.protocol in TOOLLESS_PROTOCOLS:
             from app.providers.codex_transport import TransportUnavailable, TurnRejected
 
@@ -4071,6 +4478,7 @@ class HarnessResearcher(AgentResearcher):
         prompt = with_refused_page(prompt)
         if self.transport_mode not in {"auto", "persistent", "exec"}:
             raise ValueError("the agent transport must be auto, persistent, or exec")
+        require_account(self.harness)
         if self.transport_mode != "exec":
             from app.providers.codex_transport import TransportUnavailable, TurnRejected
             from app.providers.resident import ProtocolAbsent
@@ -4337,7 +4745,8 @@ class HarnessResearcher(AgentResearcher):
         try:
             result = resident.transport().run(profile, resident.ResidentRequest(
                 prompt, timeout=self.timeout,
-                start_timeout=(RESIDENT_START_SECONDS if profile.wire == "acp" else 0.0),
+                start_timeout=(resident_start_seconds(self.harness)
+                               if profile.wire == "acp" else 0.0),
                 on_line=line if profile.wire == "claude" else None,
                 on_action=action if profile.wire == "acp" else None,
                 on_text=self._append_live_text if profile.wire == "acp" else None,
@@ -4427,6 +4836,38 @@ class HarnessResearcher(AgentResearcher):
                    **CHILD_ENCODING_ENV, **self.harness.env, "PWD": str(folder)}
             work = folder
             wire = "claude"
+        elif self.harness.protocol == "opencode":
+            root = resident.owned_folder(
+                f"opencode:{self.requested_model}:{self.requested_effort}")
+            work = root / "work"
+            work.mkdir(parents=True, exist_ok=True)
+            self._place_reader(work)
+            _write_opencode_config(work, self._reader_config)
+            command = [executable, "acp"]
+            env = {**child_env(extra_dirs=(str(Path(executable).parent),)),
+                   **CHILD_ENCODING_ENV, **self.harness.env, "PWD": str(work),
+                   # No update checks or Claude-config imports during a research
+                   # run; the project config above is the only policy.
+                   "OPENCODE_DISABLE_AUTOUPDATE": "1",
+                   "OPENCODE_DISABLE_CLAUDE_CODE": "1"}
+            wire = "acp"
+        elif self.harness.protocol == "hermes":
+            root = resident.owned_folder(f"hermes:{self.requested_model}")
+            work = root / "work"
+            work.mkdir(parents=True, exist_ok=True)
+            policy = _write_hermes_policy(root / "policy")
+            command = [executable, "acp"]
+            env = {**child_env(extra_dirs=(str(Path(executable).parent),)),
+                   **CHILD_ENCODING_ENV, **self.harness.env,
+                   # A managed scope pins the ACP toolset on top of the
+                   # reader's config; `ignore_rules` keeps their AGENTS.md,
+                   # SOUL.md and skills out of a research prompt. Together
+                   # these are `--ignore-user-config --ignore-rules` in the
+                   # only form ACP offers.
+                   "HERMES_MANAGED_DIR": str(policy),
+                   "HERMES_IGNORE_RULES": "1",
+                   "PWD": str(work)}
+            wire = "acp"
         else:
             acp = _sibling_executable(executable, "vibe-acp")
             if not acp:
@@ -4451,11 +4892,13 @@ class HarnessResearcher(AgentResearcher):
                 if os.environ.get(name):
                     env[name] = os.environ[name]
             wire = "acp"
+        command = unshim(command)
         if self._needs_shell(command):
             raise ProtocolAbsent("a .cmd launcher needs a shell, which a resident worker does not use")
         return resident.ResidentProfile(
-            wire, tuple(unshim(command)), str(work), env,
+            wire, tuple(command), str(work), env,
             model=self.requested_model, effort=self.requested_effort,
+            warm_session=self.harness.id not in SLOW_RESIDENT_STARTS,
         )
 
     def _place_reader(self, folder: Path) -> None:
@@ -4498,14 +4941,14 @@ class HarnessResearcher(AgentResearcher):
             # its first model call, so every run spent its budget hashing a
             # home folder and printed nothing. A research run reads the web,
             # never the disk it happens to start on.
-            with tempfile.TemporaryDirectory(prefix="kriko-research-") as directory:
-                self._run_cwd = directory
+            with run_directory("kriko-research-") as directory:
+                self._run_cwd = str(directory)
                 # The folder said twice, because a CLI may believe either.
                 # opencode takes its project from `PWD` when one is set, and
                 # a Kriko started from a shell hands down that shell's `PWD`:
                 # the run then read the shell's folder (its `AGENTS.md`, its
                 # `opencode.json`) and not the one it was started in (B154).
-                self._run_env = {"PWD": directory}
+                self._run_env = {"PWD": str(directory)}
                 self._place_reader(Path(directory))
                 try:
                     yield
@@ -4514,7 +4957,7 @@ class HarnessResearcher(AgentResearcher):
                     self._run_cwd = None
                     self._reader_config = ""
             return
-        with tempfile.TemporaryDirectory(prefix="kriko-research-") as directory:
+        with run_directory("kriko-research-") as directory:
             root = Path(directory)
             home = root / "home"
             work = root / "work"
@@ -4627,8 +5070,11 @@ class HarnessResearcher(AgentResearcher):
                 self._reader_config = ""
 
     def _invoke(self, prompt: str, on_line: Callable[[str], None] | None) -> str:
-        if self.harness.id == "opencode":
-            _ensure_opencode_agent()
+        if self.harness.protocol == "opencode" and self._run_cwd:
+            # The project config is what denies shell/edit for this process
+            # run, exactly as it does for the resident one. Written into the
+            # run's own folder — never the reader's `~/.opencode`.
+            _write_opencode_config(Path(self._run_cwd), self._reader_config)
         say = on_line if on_line is not None else self.on_action
         command = command_for(
             self.harness,
