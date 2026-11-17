@@ -83,7 +83,18 @@ FETCHED = {
     "copilot": {"type": "assistant.message", "data": {
         "content": "", "toolRequests": [
             {"name": "web_fetch", "arguments": {"url": "https://example.com"}}]}},
+    # ACP is one wire for Mistral Vibe, opencode and Hermes. The sample is the
+    # protocol's own tool-call update, which `AcpWire` turns into `on_action`.
+    "acp": {"jsonrpc": "2.0", "method": "session/update", "params": {
+        "sessionId": "s1", "update": {
+            "sessionUpdate": "tool_call", "title": "WebFetch",
+            "rawInput": {"url": "https://example.com"}}}},
 }
+
+
+def _sample_for(one: harness.Harness) -> dict:
+    """The captured event that proves this protocol is readable."""
+    return FETCHED["acp"] if one.protocol in {"opencode", "hermes"} else FETCHED[one.protocol]
 
 
 def _copilot() -> harness.Harness:
@@ -139,10 +150,11 @@ def test_every_protocol_a_row_names_has_a_parser(one):
     and the failure it would otherwise produce is the expensive one — an
     empty reply at the end of a real run, on the reader's own subscription.
     """
-    assert one.protocol in FETCHED, (
+    assert one.protocol in FETCHED or one.protocol in {"opencode", "hermes"}, (
         f"{one.id} names protocol {one.protocol!r}, which has no sample "
         f"event in FETCHED and therefore no evidence anything can read it")
-    assert "example.com" in harness.narrate(FETCHED[one.protocol]), (
+    sample = _sample_for(one)
+    assert "example.com" in harness.narrate(sample), (
         f"a {one.protocol!r} agent's page reads are invisible in the job log")
 
 

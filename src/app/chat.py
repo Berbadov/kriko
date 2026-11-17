@@ -37,6 +37,17 @@ TURN_SECONDS = 90.0
 PHASE_FLOOR_SECONDS = 8.0
 
 
+def _phase_floor() -> float:
+    """The least time worth starting one more model call with.
+
+    A fixed eight seconds is right for the 90-second turn it was measured on,
+    and wrong for a test (or a caller) that deliberately runs a shorter clock.
+    Half the budget, never below 1.5 s and capped at the measured floor, keeps
+    the production number exact while a short turn still gets one real call.
+    """
+    return min(PHASE_FLOOR_SECONDS, max(1.5, TURN_SECONDS * 0.5))
+
+
 class TurnOutOfTime(RuntimeError):
     """The turn's own clock ran out. The sentence is what the reader reads."""
 #: Search rounds one turn may run. With the budget above, the plan and one
@@ -1818,8 +1829,15 @@ class _Turn:
         self.detailed = bool(re.search(r"\b(detail|details|explain|in depth|everything)\b", self.message, re.I))
         self.hooks.set(0.9, "writing the answer")
 
-        self.text = self.answer_call(answer_brief(self.message, self.history, self.need, self.trail, detailed=self.detailed),
-                           why="writing the answer from the records read")
+        try:
+            self.text = self.answer_call(
+                answer_brief(self.message, self.history, self.need, self.trail,
+                             detailed=self.detailed),
+                why="writing the answer from the records read")
+        except TurnOutOfTime:
+            if self.steps:
+                return self.cut_short("writing the answer from the records read")
+            raise
         self.wanted = search_request(self.text)
         if self.wanted and self.spent["calls"] < MAX_AGENT_CALLS and not self.spent_out():
             return self.web_turn(self.wanted)
@@ -1845,10 +1863,52 @@ class _Turn:
             "need": self.need,
         }
 
-    def spent_out(self, need: float = PHASE_FLOOR_SECONDS) -> bool:
+    def spent_out(self, need: float | None = None) -> bool:
         """Whether the turn's clock has less than `need` seconds left."""
         remaining = _time_left(self.hooks)
-        return remaining is not None and remaining < need
+        floor = _phase_floor() if need is None else need
+        return remaining is not None and remaining < floor
+
+    def cut_short(self, why: str, *, rows: Sequence[dict] = ()) -> dict:
+        """Keep the evidence a turn paid for when the next call cannot start.
+
+        The old shape raised `TurnOutOfTime`, and the exception carried a
+        sentence but not the pages: search and reads were already bought and
+        thrown away with the stack frame. When the host read something, the
+        turn now returns it with an explicit `out_of_time` status; when it read
+        nothing there is nothing to keep, and the caller re-raises.
+        """
+        kept = [row for row in rows if isinstance(row, dict)]
+        read = [row for row in kept if row.get("page_read") and row.get("url")]
+        urls = list(dict.fromkeys(str(row["url"]) for row in read))
+        self.live_sources = list(dict.fromkeys([*self.live_sources, *urls]))
+        self.activity.append({
+            "id": "turn-out-of-time", "kind": "verification", "state": "failed",
+            "text": (f"The turn's {TURN_SECONDS:.0f} s budget ended before {why}; "
+                     "the pages already read were kept, but no answer was written."),
+            "urls": urls,
+        })
+        self.hooks.log(
+            f"the turn ran out of time before {why}; kept {len(urls)} page(s) "
+            "and did not write an answer")
+        self.hooks.partial(self.snapshot("", self.live_sources))
+        self.hooks.set(1.0, "out of time; kept what was read")
+        return {
+            "answer": "", "sources": list(self.live_sources),
+            "steps": [dict(one) for one in self.steps],
+            "products": (listing_cards(kept) if self.mode else []) + products_from(self.trail),
+            "activity": [dict(one) for one in self.activity],
+            "agent_calls": self.spent.get("calls", 0),
+            "search_rounds": getattr(self, "rounds", 1),
+            "fallback": False, "mode": self.mode,
+            "need": {"product": self.message},
+            "status": "out_of_time",
+            "verification": {
+                "status": "unverified", "unverified_urls": [],
+                "claim_support": {"status": "unverified",
+                                  "reason": f"The turn's time budget ended before {why}."},
+            },
+        }
 
     def purpose(self, said: str) -> None:
         """Why this model call exists, once in the job's own log.
@@ -1864,8 +1924,11 @@ class _Turn:
             raise RuntimeError("the chat turn has no agent call left")
         # Out of time is a sentence on screen, not a frozen turn: the reader is
         # told what ended and that nothing was saved, rather than watching a
-        # spinner that no call can outlive.
-        if self.spent_out(0.0):
+        # spinner that no call can outlive. Checked against the phase floor,
+        # not against zero: a call started with three seconds left cannot
+        # finish, and starting it is the way the turn's whole budget used to
+        # disappear inside one more request.
+        if self.spent_out():
             raise TurnOutOfTime(_out_of_time(why))
         self.spent["calls"] += 1
         self.hooks.check()
@@ -2085,11 +2148,18 @@ class _Turn:
             # itself the agent answers without tools; when it did not, the
             # agent's own web tools are what research means here. Everything
             # after this call revises, reviews or names — with no tools.
-            self.text = self.answer_call(
-                brief, grounded=host_grounded,
-                why=("writing the answer from the pages Kriko read"
-                     if host_grounded else
-                     "researching with the agent's own web tools"))
+            try:
+                self.text = self.answer_call(
+                    brief, grounded=host_grounded,
+                    why=("writing the answer from the pages Kriko read"
+                         if host_grounded else
+                         "researching with the agent's own web tools"))
+            except TurnOutOfTime:
+                if any(row.get("page_read") for row in rows if isinstance(row, dict)):
+                    return self.cut_short(
+                        "writing the answer from the pages Kriko read",
+                        rows=rows)
+                raise
             self.wanted = search_request(self.text)
             protocol_reply = bool(self.wanted or _SEARCH_TOOL_PREFIX.match(self.text)
                                   or _SEARCH_LINE.match(self.text.strip().splitlines()[0] if self.text.strip() else ""))

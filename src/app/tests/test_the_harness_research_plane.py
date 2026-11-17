@@ -269,7 +269,9 @@ def test_every_offered_harness_has_a_tool_grant():
             or "--allowed-tools" in one.args
             or "--agent" in one.args
             or "--available-tools" in one.args
+            or "--toolsets" in one.args
             or one.protocol == "agy"
+            or (one.protocol == "opencode" and harness_mod.OPENCODE_CONFIG_FILE)
             or (one.protocol == "codex" and "--sandbox" in one.args and "read-only" in one.args)
         )
         assert has_grant or one.unusable, (
@@ -278,15 +280,28 @@ def test_every_offered_harness_has_a_tool_grant():
     assert all(one.unusable == "" for one in harness_mod.available())
 
 
-def test_the_opencode_agent_profile_denies_bash_and_edit(tmp_path, monkeypatch):
-    target = tmp_path / "kriko-harness.md"
-    monkeypatch.setattr(harness_mod, "_OPENCODE_AGENT_PATH", target)
-    harness_mod._ensure_opencode_agent()
-    body = target.read_text(encoding="utf-8")
-    assert "bash: deny" in body
-    assert "edit: deny" in body
-    assert "webfetch: allow" in body
-    assert "websearch: allow" in body
+def test_the_opencode_job_config_denies_bash_and_edit(tmp_path):
+    target = harness_mod._write_opencode_config(tmp_path)
+    config = json.loads(target.read_text(encoding="utf-8"))
+    assert config["default_agent"] == "explore"
+    assert config["permission"]["bash"] == "deny"
+    assert config["permission"]["edit"] == "deny"
+    assert config["permission"]["webfetch"] == "allow"
+    assert config["permission"]["websearch"] == "allow"
+
+
+def test_the_opencode_job_config_carries_only_the_page_reader(tmp_path):
+    reader = tmp_path / "reader.json"
+    reader.write_text(json.dumps({
+        "mcpServers": {"parallel": {
+            "type": "http", "url": "https://reader.example/mcp",
+            "headers": {"Authorization": "Bearer test"}}}
+    }), encoding="utf-8")
+    target = harness_mod._write_opencode_config(tmp_path, str(reader))
+    config = json.loads(target.read_text(encoding="utf-8"))
+    assert list(config["mcp"]["servers"]) == ["parallel"]
+    assert config["mcp"]["servers"]["parallel"]["type"] == "remote"
+    assert "grep" not in json.dumps(config)
 
 
 def test_the_spawned_agent_is_handed_no_krikos_tools_only_a_page_reader(monkeypatch):
