@@ -134,7 +134,8 @@ def cmd_build(args, store) -> int:
     # only ever installs packs should not pay for on every command.
     import importlib
 
-    from kriko.pack.build import build as generic_build, digest_of
+    from kriko.pack.build import annotate, build as generic_build, digest_of
+    from kriko.pack.credibility import CredibilityError
 
     root = Path(args.root)
     out = Path(args.out) if args.out else Path("dist") / f"{root.name}.kpack"
@@ -147,23 +148,37 @@ def cmd_build(args, store) -> int:
     # test_every_pack_in_the_repo_builds_and_is_not_empty.
     own_builder = (root / "build.py").exists()
     stats = None
-    if own_builder:
-        # The builder is `packs.<name>.build`, imported from the directory
-        # that holds `packs/`, so `kriko build packs/<name>` works from the
-        # checkout without PYTHONPATH.
-        holder = str(root.resolve().parent.parent)
-        if holder not in sys.path:
-            sys.path.insert(0, holder)
-        module = importlib.import_module(f"packs.{root.name}.build")
-        result = module.build(out)
-        if isinstance(result, tuple):
-            out, report = result
-            if isinstance(report, dict):
-                stats = report.get("stats", report)
+    reports = []
+    try:
+        if own_builder:
+            # The builder is `packs.<name>.build`, imported from the directory
+            # that holds `packs/`, so `kriko build packs/<name>` works from the
+            # checkout without PYTHONPATH.
+            holder = str(root.resolve().parent.parent)
+            if holder not in sys.path:
+                sys.path.insert(0, holder)
+            module = importlib.import_module(f"packs.{root.name}.build")
+            result = module.build(out)
+            if isinstance(result, tuple):
+                out, report = result
+                if isinstance(report, dict):
+                    stats = report.get("stats", report)
+            else:
+                out = result
+            out = Path(out)
+            annotate(root, out, strict=args.strict_credibility,
+                     on_report=reports.append)
         else:
-            out = result
-    else:
-        generic_build(root, out)
+            generic_build(root, out, strict=args.strict_credibility,
+                          on_report=reports.append)
+    except CredibilityError as error:
+        print(f"kriko: {error.report.pack}: evidence does not meet the "
+              "credibility rules", file=sys.stderr)
+        for issue in error.report.errors:
+            print("  " + issue.line(), file=sys.stderr)
+        return 1
+
+    credibility = reports[-1] if reports else None
 
     # Read-only and plain: the store's connector would switch the finished
     # file to WAL and leave -wal/-shm beside the .kpack that gets shared.
@@ -178,7 +193,8 @@ def cmd_build(args, store) -> int:
 
     digest = digest_of(out)
     payload = {"out": str(out), "digest": digest, "counts": counts,
-               "stats": stats or {}}
+               "stats": stats or {},
+               "credibility": credibility.as_dict() if credibility else {}}
 
     def render() -> None:
         print(f"built {out}  digest {digest[:16]}")
@@ -186,6 +202,10 @@ def cmd_build(args, store) -> int:
         if stats:
             for key, value in sorted(stats.items()):
                 print(f"  {key:34} {value}")
+        if credibility:
+            print(f"  credibility: {credibility.summary()}")
+            for issue in credibility.issues:
+                print("    " + issue.line())
 
     if not counts["subjects"] and not counts["claims"]:
         print(
@@ -967,6 +987,9 @@ def build_parser(command: str | None = None) -> argparse.ArgumentParser:
     p.add_argument("--out")
     p.add_argument("--force", action="store_true",
                    help="write the pack even if it has no subjects and no claims")
+    p.add_argument("--strict-credibility", action="store_true",
+                   help="fail the build on a high-severity claim with no official "
+                        "source, or a claim with no credible source")
     _add_json(p)
     p.set_defaults(fn=cmd_build)
 

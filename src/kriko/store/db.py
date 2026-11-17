@@ -184,6 +184,14 @@ def _add_missing_columns(conn: sqlite3.Connection) -> None:
     if "source_url" not in have:
         conn.execute(
             "ALTER TABLE attributes ADD COLUMN source_url TEXT NOT NULL DEFAULT ''")
+    have = {row[1] for row in conn.execute("PRAGMA table_info(sources)")}
+    if "source_tier" not in have:
+        conn.execute(
+            "ALTER TABLE sources ADD COLUMN source_tier TEXT NOT NULL DEFAULT 'unknown'")
+    have = {row[1] for row in conn.execute("PRAGMA table_info(packs)")}
+    if "credibility_json" not in have:
+        conn.execute(
+            "ALTER TABLE packs ADD COLUMN credibility_json TEXT NOT NULL DEFAULT '{}'")
 
 
 def _set_wal(conn: sqlite3.Connection) -> None:
