@@ -38,6 +38,9 @@ CREATE TABLE IF NOT EXISTS packs (
   content_digest TEXT NOT NULL,      -- sha256 over sorted row ids — NEVER over zip
                                      -- bytes, which vary with mtime and entry order
   manifest_json  TEXT NOT NULL DEFAULT '{}',
+  -- What the credibility check found at build time: counts per tier, and every
+  -- rule finding with the claim it names. Additive: an older reader ignores it.
+  credibility_json TEXT NOT NULL DEFAULT '{}',
   -- LOCAL-ONLY: a distributed pack file leaves these at their defaults.
   enabled        INTEGER NOT NULL DEFAULT 1,
   installed_at   TEXT NOT NULL DEFAULT ''
@@ -229,6 +232,15 @@ CREATE TABLE IF NOT EXISTS sources (
   source_type     TEXT NOT NULL DEFAULT 'page',  -- page|video|structured|manual|dataset
   published_at    TEXT NOT NULL DEFAULT '',
   retrieved_at    TEXT NOT NULL DEFAULT '',
+  -- What kind of source this is, decided once at build time so a reader never
+  -- has to re-derive it: official|press|community|commercial|weak|unknown.
+  -- See kriko/pack/credibility.py. Additive; old rows read as 'unknown'.
+  --
+  -- Deliberately NOT the trust tier below. That one is the pack's opinion
+  -- (authoritative/specialist/forum_ugc) and is read at query time so a reader
+  -- can revise it; this one is the kind of page the words were read on, which
+  -- is a property of the page and not of the pack's ranking.
+  source_tier     TEXT NOT NULL DEFAULT 'unknown',
   PRIMARY KEY (source_id, pack_id)
 );
 
