@@ -310,6 +310,16 @@ async def lifespan(app: FastAPI):
             log.warning("marked %d stranded pipeline run(s) interrupted", stranded)
     except Exception:
         log.warning("could not reconcile pipeline runs at startup", exc_info=True)
+    # A run folder a killed process left behind has no worker coming back for
+    # it. Reaping it at startup — background, never in the window's path — is
+    # what stops `%TEMP%` growing one `kriko-agent-*` per interrupted run.
+    try:
+        from app.providers import harness as _harness
+
+        threading.Thread(target=_harness.reap_stale_run_dirs,
+                         name="kriko-run-reaper", daemon=True).start()
+    except Exception:
+        log.warning("could not start the run-folder reaper", exc_info=True)
     # The protocol an agent reads has to follow the code and the packs.
     #
     # The skill is generated from both and was written exactly once — when the
