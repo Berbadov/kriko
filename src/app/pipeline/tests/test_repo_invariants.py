@@ -220,8 +220,9 @@ def test_every_pack_in_the_repo_builds_and_is_not_empty(tmp_path):
         own_builder = (root / "build.py").exists()
         if own_builder:
             module = importlib.import_module(f"packs.{root.name}.build")
-            out = module.build(out_path)
-            out = out[0] if isinstance(out, tuple) else out
+            result = module.build(out_path)
+            out = Path(result[0] if isinstance(result, tuple) else result)
+            build.annotate(root, out)
         else:
             out = build.build(root, out_path)
 
@@ -233,8 +234,19 @@ def test_every_pack_in_the_repo_builds_and_is_not_empty(tmp_path):
         # subjects; two alike are two buttons nobody can tell apart.
         twins = [tuple(row) for row in conn.execute(
             "SELECT kind, label, COUNT(*) FROM subjects GROUP BY kind, label HAVING COUNT(*) > 1")]
+        # Every source carries the tier the credibility check decided, and the
+        # pack records what that check found. Without this the site's badge
+        # would silently read "unverified" for a source nobody ever judged.
+        untiered = conn.execute(
+            "SELECT COUNT(*) AS n FROM sources WHERE source_tier IS NULL"
+            " OR source_tier NOT IN ('official','press','community',"
+            "'commercial','weak','unknown')").fetchone()["n"]
+        summary = conn.execute(
+            "SELECT credibility_json FROM packs").fetchone()["credibility_json"]
         conn.close()
         assert not twins, f"{root} gives several subjects the same label: {twins}"
+        assert untiered == 0, f"{root} has {untiered} source(s) with no credibility tier"
+        assert summary not in ("", "{}"), f"{root} records no credibility summary"
         assert subjects and claims, (
             f"{root} built empty ({subjects} subjects, {claims} claims)"
             + (
