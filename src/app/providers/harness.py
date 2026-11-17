@@ -3218,7 +3218,8 @@ def narrate(event: dict, *, reader_granted: bool = False) -> str:
 #: `KNOWN` itself, and nothing that grows with pack coverage. Matched against
 #: the reason `_why` extracted, lowercased, first hit wins.
 HINTS = (
-    (("usage limit", "rate limit", "limit reached", "quota"),
+    (("usage limit", "rate limit", "limit reached", "quota", "5-hour limit",
+      "weekly limit", "hit your"),
      "{label}'s account has no headroom right now. Wait for the reset "
      "the message names, or switch to another agent on the Agents screen."),
     (("not logged in", "please run /login", "unauthorized", "authentication",

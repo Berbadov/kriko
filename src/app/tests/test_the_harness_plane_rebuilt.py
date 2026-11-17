@@ -192,6 +192,12 @@ def test_a_signed_out_account_is_found_before_anything_is_spent(monkeypatch):
     assert len(probes) == 1
 
 
+def test_the_five_hour_limit_is_recognised_as_an_account_wall():
+    """The profile saw this exact sentence and Kriko tried the run again."""
+    assert harness_mod.account_failure(
+        "You've hit your 5-hour limit \u00b7 resets 1:10pm (Europe/Istanbul)")
+
+
 def test_a_quota_wall_is_remembered_and_never_replayed(monkeypatch):
     harness_mod._ACCOUNT_VERDICTS.clear()
     vibe = _row("mistral-vibe")
