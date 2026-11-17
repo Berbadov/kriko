@@ -132,6 +132,12 @@ HARNESS_SEARCH_LABELS = {
 #: *screen* offers is `models_for`/`efforts_for`'s answer and depends on the
 #: machine; which keys are storable is a fixed shape, and gating storage on a
 #: probe would mean a preference that vanishes when a CLI is uninstalled.
+#: Rows the roster once offered and no longer drives. Their per-harness keys
+#: stay in `KEYS` so an upgraded app keeps reading a choice the reader made,
+#: and a row that comes back finds it again. Nothing else reads them.
+RETIRED_HARNESS_IDS = ("gemini-cli",)
+
+
 def _harness_ids() -> tuple[str, ...]:
     # Deferred: `app.providers.harness` is a heavier import than this module
     # wants at definition time, and nothing here needs it before first use.
@@ -139,7 +145,8 @@ def _harness_ids() -> tuple[str, ...]:
     from app.providers import harness as harness_mod
 
     # The API agents take a model too (B153), and are picked in the same row.
-    return (*(one.id for one in harness_mod.KNOWN), *(one.id for one in apiagent.KNOWN))
+    return (*(one.id for one in harness_mod.KNOWN), *(one.id for one in apiagent.KNOWN),
+            *RETIRED_HARNESS_IDS)
 
 
 HARNESS_MODEL_KEYS = tuple(harness_model_key(one) for one in _harness_ids())
