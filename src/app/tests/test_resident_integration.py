@@ -60,10 +60,10 @@ def _attempts(tmp_path):
 def test_the_desktop_roster_is_covered_by_a_persistent_protocol_or_an_honest_gap():
     roster = {h.id: h.protocol for h in harness.KNOWN}
     covered = {"codex"} | {i for i, p in roster.items() if p in harness.RESIDENT_PROTOCOLS}
-    assert covered == {"codex", "claude-code", "mistral-vibe"}
-    # The one agent with no persistent protocol is named, so a new row cannot be
+    assert covered == {"codex", "claude-code", "mistral-vibe", "opencode", "hermes"}
+    # The agents with no persistent protocol are named, so a new row cannot be
     # added without deciding which of the two it is.
-    assert set(roster) - covered == {"antigravity-cli"}
+    assert set(roster) - covered == {"antigravity-cli", "github-copilot"}
 
 
 def test_an_agent_with_only_a_print_mode_uses_a_process_in_auto_and_refuses_in_persistent(monkeypatch, tmp_path):
