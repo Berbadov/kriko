@@ -603,6 +603,15 @@
   left: auto;
 }
 
+/* A tip beside a finding opens to the left of its mark. Opening it to the
+   right made the scroll container 19px wider than the window at compact
+   widths, and the next scrollIntoView moved every line half a word off the
+   left edge. */
+.risk-title .ev-tip {
+  right: 0;
+  left: auto;
+}
+
 .mx-risk[data-thin] {
   background: color-mix(in srgb, var(--risk) 4%, transparent);
 }
