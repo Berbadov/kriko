@@ -38,7 +38,7 @@ and the app shows demo data when no engine answers.
 | `src/engine/` | The engine from the side of the window: the API client, the boot state, and the typed products and jobs. |
 | `src/chat.tsx`, `src/compare.tsx`, `src/queue.tsx` | The state of the three pillars. Each lives above the screens, so a run survives a change of screen. |
 | `src/handoff.ts` | The route that the extension hands over: `check`, `result/<id>`, `questions/<id>`, `compare/<id>`, `queue`. |
-| `src/styles/tokens.css` | Every colour, size and time. The dark palette is the default and the light palette redefines each colour. |
+| `src/styles/tokens.css` | Every colour, size and time. The dark palette is the default and the light palette redefines each colour. Newsreader sets the titles and Inter the reading; the system monospace is for code and logs. Amber is a status and attention mark only, navy or sky is the main colour, and the radius scale is 8/10/12/16/pill. |
 | `src-tauri/src/engine.rs` | The engine supervisor. |
 | `src-tauri/src/shell.rs` | The tray, the hide-on-close behaviour, and the window. |
 | `src-tauri/src/lib.rs` | The commands the window calls, and the start of the app. |
@@ -164,6 +164,15 @@ the release job's evidence (`tools/release_readiness.py`) records a Windows
 platform only.
 
 ## The look and the motion
+
+The interface follows the approved system in `kriko-brand/DESIGN.md`. Newsreader
+sets the titles, upright; Inter sets the body and labels; the system monospace is
+for code and logs. The main colour is navy on light and sky on dark: primary
+presses, active marks, links, sources, the main chart series and the pixel ramp.
+Amber is a status mark only: Recalled, Serious, "Known issues", a price that
+rose, an unread count and focus. Green is only a price that fell or "No
+reports". Selected rows are a neutral grey tint. Radii are 8/10/12/16/pill, and
+pixel art stays square.
 
 Colours come from `src/styles/tokens.css`, and a test fails if a screen names a
 colour that the light theme cannot change. **Reduce motion** in Settings stops

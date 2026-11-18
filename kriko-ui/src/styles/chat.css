@@ -29,14 +29,14 @@
   height: 100%;
 }
 
-/* The home's dust sits on its own dark ground in both themes, so the white
-   question over it always reads; the grains are a pale grey of light. */
+/* The home's dust sits on the page's own ground, so the question reads in both
+   themes and the grains take the page's ink. */
 .sky {
-  background: linear-gradient(to bottom, #141416, #1c1c1f 70%, #222226);
+  background: linear-gradient(to bottom, var(--ground), var(--sheet) 70%, var(--raise));
 }
 
 .dust-sky {
-  color: #d4d4da;
+  color: color-mix(in srgb, var(--ink) 24%, transparent);
 }
 
 .chat-col {
@@ -90,10 +90,11 @@
   margin: 0;
   color: var(--ink);
   font-family: var(--display);
-  font-size: clamp(30px, 4vw, 42px);
-  font-weight: var(--w-bold);
-  letter-spacing: -0.04em;
-  line-height: 1.02;
+  font-optical-sizing: auto;
+  font-size: clamp(32px, 4.4vw, 48px);
+  font-weight: var(--w-display);
+  letter-spacing: -0.02em;
+  line-height: 1.03;
   text-align: left;
 }
 
@@ -135,7 +136,7 @@
   gap: 0;
   padding: 2px;
   border: 1px solid var(--edge);
-  border-radius: 8px;
+  border-radius: var(--r-s);
   background: var(--panel-2, color-mix(in oklab, var(--ink) 5%, transparent));
 }
 
@@ -144,7 +145,7 @@
   height: 26px;
   padding: 0 11px;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--r-s);
   background: none;
   color: var(--ink-3);
   font: inherit;
@@ -157,12 +158,12 @@
 .mode-seg:hover:not(:disabled) { color: var(--ink); }
 .mode-seg[aria-checked='true'] { color: var(--ink); }
 .mode-seg:disabled { opacity: 0.5; cursor: default; }
-.mode-seg:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.mode-seg:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
 
 .mode-thumb {
   position: absolute;
   inset: 0;
-  border-radius: 6px;
+  border-radius: var(--r-s);
   background: var(--panel);
   box-shadow: 0 0 0 1px var(--edge), 0 1px 2px rgb(0 0 0 / 0.08);
 }
@@ -246,9 +247,10 @@
 .recents h2::before {
   content: '02';
   color: var(--ink-3);
-  font-family: var(--mono);
+  font-family: var(--font);
   font-size: 12px;
-  font-weight: 400;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 .recents h2::after {
@@ -295,8 +297,9 @@
   content: counter(check, decimal-leading-zero);
   grid-area: idx;
   color: var(--ink-3);
-  font-family: var(--mono);
+  font-family: var(--font);
   font-size: 12px;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
@@ -1015,7 +1018,7 @@ button.ask-head:hover {
 }
 
 .hello-actions .btn:focus-visible {
-  outline: 2px solid var(--accent-hi);
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 
@@ -1124,7 +1127,7 @@ button.ask-head:hover {
   width: 100%;
   padding: 8px 6px;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--r-s);
   background: none;
   color: var(--ink);
   font: inherit;
@@ -1144,7 +1147,7 @@ button.ask-head:hover {
   height: 28px;
   flex: none;
   border: 1px solid var(--edge);
-  border-radius: 6px;
+  border-radius: var(--r-s);
   background: var(--panel);
   color: var(--ink-2);
 }
@@ -1168,8 +1171,8 @@ button.ask-head:hover {
 }
 
 .prices > :not(.prices-sky) { position: relative; }
-.prices-head h1 { margin: 4px 0 6px; font-size: 30px; letter-spacing: -0.03em; }
-.prices-head p { margin: 0 0 18px; font-size: 14.5px; }
+.prices-head h1 { margin: 4px 0 6px; font-optical-sizing: auto; font-size: 32px; font-weight: var(--w-display); letter-spacing: -0.02em; line-height: 1.08; }
+.prices-head p { margin: 0 0 18px; font-size: 15px; color: var(--ink-2); }
 
 .prices-add {
   display: grid;
@@ -1202,9 +1205,9 @@ button.ask-head:hover {
   gap: 10px;
   margin-top: 14px;
   padding: 10px 12px;
-  border: 1px solid color-mix(in srgb, var(--ok) 45%, var(--edge));
-  border-radius: var(--r-m);
-  background: color-mix(in srgb, var(--ok) 10%, var(--panel));
+  border: 1px solid color-mix(in srgb, var(--positive) 45%, var(--edge));
+  border-radius: var(--r-l);
+  background: color-mix(in srgb, var(--positive) 10%, var(--panel));
   font-size: 14px;
 }
 .prices-alerts > div { flex: 1; }
@@ -1220,7 +1223,7 @@ button.ask-head:hover {
 }
 .prices-bar h2 { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 15px; }
 .prices-bar h2 .mono { color: var(--ink-3); font-size: 12px; font-weight: 400; }
-.prices-fell { padding: 1px 6px; border-radius: 4px; background: color-mix(in srgb, var(--ok) 16%, transparent); color: var(--ok-text, var(--ok)) !important; }
+.prices-fell { padding: 1px 8px; border-radius: var(--r-pill); background: var(--positive-soft); color: var(--price-down) !important; font-weight: 600; }
 .prices-empty { padding: 18px 2px; font-size: 14px; }
 
 .prices-list { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
@@ -1236,7 +1239,7 @@ button.ask-head:hover {
   border-radius: var(--r-m);
   background: var(--panel);
 }
-.price-card[data-hit] { border-color: color-mix(in srgb, var(--ok) 55%, var(--edge)); }
+.price-card[data-hit] { border-color: color-mix(in srgb, var(--positive) 55%, var(--edge)); }
 
 .price-main { grid-area: main; display: grid; min-width: 0; padding: 0; border: 0; background: none; color: var(--ink); text-align: left; cursor: pointer; }
 .price-main strong { overflow: hidden; font-size: 14.5px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
@@ -1245,8 +1248,8 @@ button.ask-head:hover {
 .price-now { grid-area: now; display: flex; align-items: baseline; gap: 8px; }
 .price-figure { font-size: 16px; font-weight: 600; }
 .price-move { font-size: 12px; }
-.price-move[data-dir='down'] { color: var(--ok-text, var(--ok)); }
-.price-move[data-dir='up'] { color: var(--risk-text, var(--risk)); }
+.price-move[data-dir='down'] { color: var(--price-down); font-weight: 600; }
+.price-move[data-dir='up'] { color: var(--price-up); font-weight: 600; }
 .price-meta { grid-area: meta; color: var(--ink-3); font-size: 12.5px; }
 .price-card .icon-btn { grid-area: stop; }
 
@@ -1289,12 +1292,12 @@ button.ask-head:hover {
   width: 100%;
   height: calc(var(--u) * var(--h));
   margin-top: 1px;
-  background: var(--accent-fill, var(--accent));
+  background: var(--px-1);
   animation: shelf-drop 0.5s var(--ease-out) both;
   animation-delay: calc(var(--d) * 60ms);
 }
-.shelf-stack:nth-child(2n) .shelf-box { background: color-mix(in srgb, var(--accent-fill, var(--accent)) 70%, var(--ink)); }
-.shelf-stack:nth-child(3n) .shelf-box { background: color-mix(in srgb, var(--accent) 55%, var(--ground)); }
+.shelf-stack:nth-child(2n) .shelf-box { background: var(--px-2); }
+.shelf-stack:nth-child(3n) .shelf-box { background: var(--px-3); }
 
 /* Parcel tape over each lid. */
 .shelf-box::before {
