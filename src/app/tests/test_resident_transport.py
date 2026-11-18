@@ -108,7 +108,8 @@ for line in sys.stdin:
         continue
     if method == "initialize":
         if mode == "slow_init":
-            time.sleep(float(os.environ.get("FAKE_INIT_SECONDS", "1")))
+            while not os.path.exists(os.environ["FAKE_GATE"]):
+                time.sleep(0.02)
         if mode == "bad_init":
             send({"jsonrpc": "2.0", "id": msg["id"], "error": {"code": -32603, "message": "no"}})
         else:
@@ -506,13 +507,15 @@ def test_a_request_during_a_warm_up_waits_for_that_worker(acp) -> None:
     """
     pool, factory, tmp_path = acp
     pool.max_workers = 2
+    gate = tmp_path / "init-open"
     base = _profile("acp", tmp_path, "slow_init")
-    profile = ResidentProfile(base.wire, base.argv, base.cwd, {**base.env, "FAKE_INIT_SECONDS": "1.0"})
+    profile = ResidentProfile(base.wire, base.argv, base.cwd, {**base.env, "FAKE_GATE": str(gate)})
     warming = threading.Thread(target=pool.warm, args=(profile,))
     warming.start()
     deadline = time.monotonic() + 5
     while factory.starts < 1 and time.monotonic() < deadline:
         time.sleep(0.01)
+    threading.Timer(0.3, gate.write_text, args=("open",), kwargs={"encoding": "utf-8"}).start()
     result = pool.run(profile, ResidentRequest("hello", timeout=20, start_timeout=10))
     warming.join(5)
     assert result.text == "answer"
@@ -523,18 +526,22 @@ def test_a_request_during_a_warm_up_waits_for_that_worker(acp) -> None:
 def test_a_request_gives_up_on_a_warm_up_at_its_own_start_bound(acp) -> None:
     pool, factory, tmp_path = acp
     pool.max_workers = 2
+    gate = tmp_path / "init-open"
     base = _profile("acp", tmp_path, "slow_init")
-    profile = ResidentProfile(base.wire, base.argv, base.cwd, {**base.env, "FAKE_INIT_SECONDS": "3"})
+    profile = ResidentProfile(base.wire, base.argv, base.cwd, {**base.env, "FAKE_GATE": str(gate)})
     warming = threading.Thread(target=pool.warm, args=(profile,))
     warming.start()
     deadline = time.monotonic() + 5
     while factory.starts < 1 and time.monotonic() < deadline:
         time.sleep(0.01)
     started = time.monotonic()
-    with pytest.raises(TransportUnavailable, match="did not initialize in time"):
-        pool.run(profile, ResidentRequest("hello", timeout=20, start_timeout=0.5))
-    assert time.monotonic() - started < 2
-    warming.join(10)
+    try:
+        with pytest.raises(TransportUnavailable, match="did not initialize in time"):
+            pool.run(profile, ResidentRequest("hello", timeout=20, start_timeout=0.5))
+        assert time.monotonic() - started < 2
+    finally:
+        gate.write_text("open", encoding="utf-8")
+        warming.join(10)
 
 
 def test_acp_timeout_of_a_session_that_stops_keeps_the_worker(acp) -> None:
