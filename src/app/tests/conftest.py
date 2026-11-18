@@ -276,3 +276,51 @@ def no_test_finds_the_readers_hosted_search(monkeypatch):
     from app import localplane
 
     monkeypatch.setattr(localplane, "hosted_search", lambda app_state_path=None: False)
+
+
+@pytest.fixture(autouse=True)
+def no_test_reads_a_provider_key_from_the_shell(monkeypatch):
+    """A test's result may not depend on a key exported in the shell.
+
+    A key in the environment turns on a hosted provider everywhere the app
+    looks for one, so a suite that passes on a clean machine could search the
+    live web, or fail, on the developer's. Keys a test needs are set with
+    `monkeypatch.setenv` in that test.
+    """
+    from app import keys
+
+    for item in keys.PROVIDERS:
+        monkeypatch.delenv(item.env, raising=False)
+
+
+@pytest.fixture(autouse=True)
+def every_test_has_its_own_host_permits(monkeypatch):
+    """A test's host permits may not be taken by another test's background work.
+
+    The agent-child and probe slots are one process-wide limiter. A thread a
+    previous test left running can hold a slot, and then a test that counts on
+    the whole budget gets less (four agent starts become three, or a probe of
+    a local server reports "busy"). Each test gets a limiter of its own.
+    """
+    from app import agentresources
+
+    monkeypatch.setattr(agentresources, "_LIMITER", agentresources._Limiter())
+
+
+@pytest.fixture(autouse=True)
+def no_test_inherits_a_shared_agent_worker():
+    """A test may not inherit another test's agent workers.
+
+    The shared resident pools are process-wide, and their idle workers hold
+    the host's agent-child permits. Left running, one test's warm workers take
+    slots a later test counts on, so a test that asks for four concurrent
+    agents can get three, depending on which tests shared its worker process.
+    Each test starts and ends with no shared pool running.
+    """
+    from app.providers import codex_profile, resident
+
+    resident.shutdown()
+    codex_profile.shutdown()
+    yield
+    resident.shutdown()
+    codex_profile.shutdown()
