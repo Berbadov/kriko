@@ -108,7 +108,7 @@ def run_trial(task: dict, agent: str, *, rep: int = 1, profile: str = "reader",
     """One agent on one task once: the observation, the graded checks, the cost."""
     from app.providers import harness as harness_mod
     from app.web import state, tasks
-    from app import bench
+    from app import bench, prefs
 
     info = classify(agent)
     root = Path(tempfile.mkdtemp(prefix="kriko-agentbench-"))
@@ -130,7 +130,8 @@ def run_trial(task: dict, agent: str, *, rep: int = 1, profile: str = "reader",
         progress = bench._Silent()
         progress.job_id = job_id
 
-        web = FakeWeb(task.get("pages") or [])
+        web = FakeWeb(task.get("pages") or [],
+                      language=str(effective.get(prefs.LOCAL_SEARCH_LANGUAGE) or "en"))
         captured: dict = {"prompts": []}
         result: dict = {}
         error = ""
