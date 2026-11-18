@@ -1,10 +1,10 @@
 # Kriko
 
-[![version](https://img.shields.io/badge/version-0.3.14-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
-[![license](https://img.shields.io/badge/license-MIT-1F4FFF?style=flat-square&labelColor=05070F)](LICENSE)
-[![stars](https://img.shields.io/github/stars/Berbadov/kriko?style=flat-square&labelColor=05070F&color=1F4FFF)](https://github.com/Berbadov/kriko/stargazers)
-[![platforms](https://img.shields.io/badge/Windows%20%C2%B7%20macOS%20%C2%B7%20Chrome%20%C2%B7%20Android-1F4FFF?style=flat-square&labelColor=05070F)](#install)
-[![website](https://img.shields.io/badge/kriko.cc-known%20problems-1F4FFF?style=flat-square&labelColor=05070F)](https://kriko.cc/problems/)
+[![version](https://img.shields.io/badge/version-0.3.14-1F3A63?style=flat-square&labelColor=0B1020)](https://github.com/Berbadov/kriko/releases/latest)
+[![license](https://img.shields.io/badge/license-MIT-1F3A63?style=flat-square&labelColor=0B1020)](LICENSE)
+[![stars](https://img.shields.io/github/stars/Berbadov/kriko?style=flat-square&labelColor=0B1020&color=1F3A63)](https://github.com/Berbadov/kriko/stargazers)
+[![platforms](https://img.shields.io/badge/Windows%20%C2%B7%20macOS%20%C2%B7%20Chrome%20%C2%B7%20Android-1F3A63?style=flat-square&labelColor=0B1020)](#install)
+[![website](https://img.shields.io/badge/kriko.cc-known%20problems-1F3A63?style=flat-square&labelColor=0B1020)](https://kriko.cc/problems/)
 
 Kriko answers one question about the product you are looking at: *what is known
 to go wrong with this exact one*. It runs on your computer — a desktop app for
