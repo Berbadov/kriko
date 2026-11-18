@@ -294,17 +294,21 @@ def no_test_reads_a_provider_key_from_the_shell(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
-def every_test_has_its_own_host_permits(monkeypatch):
-    """A test's host permits may not be taken by another test's background work.
+def no_test_leaves_an_effort_scan_running():
+    """A test may not leave a CLI effort scan holding a host permit.
 
-    The agent-child and probe slots are one process-wide limiter. A thread a
-    previous test left running can hold a slot, and then a test that counts on
-    the whole budget gets less (four agent starts become three, or a probe of
-    a local server reports "busy"). Each test gets a limiter of its own.
+    Reading a CLI's effort levels runs its `--help` on a background thread named
+    `kriko-effort-<id>`, and that run takes an agent-child slot. The slots are
+    one process-wide budget, so a scan a previous test left running takes a slot
+    from a later test that counts on all of them (four agent starts become
+    three). Each test waits for its own scans before it ends.
     """
-    from app import agentresources
+    import threading
 
-    monkeypatch.setattr(agentresources, "_LIMITER", agentresources._Limiter())
+    yield
+    for thread in threading.enumerate():
+        if thread.name.startswith("kriko-effort-"):
+            thread.join(timeout=60)
 
 
 @pytest.fixture(autouse=True)
