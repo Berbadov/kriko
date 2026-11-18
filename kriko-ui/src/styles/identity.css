@@ -2,8 +2,9 @@
    never where they sit. Newsreader sets the titles, Inter the reading. Corners
    are soft, 8/10/12/16, and a press is a pill; the pixel art stays square.
    A finding is a ruled ledger row, not a card: the status badge sits in the
-   evidence gutter, and the rule under the row repeats the status by weight.
-   The rule draws once as the row enters, in 180ms. */
+   evidence gutter and carries the severity. The divider under every row is the
+   same quiet hairline, so a page of findings never turns amber. It draws once
+   as the row enters, in 180ms. */
 
 .risk-list > li {
   position: relative;
@@ -22,29 +23,6 @@
   background: linear-gradient(currentColor, currentColor) 0 100% / 100% 1px no-repeat;
   transform-origin: left center;
   animation: rule-draw var(--dur-3) var(--ease-out) both;
-}
-
-/* serious: amber, drawn heavy. The one status allowed a solid amber mark. */
-.risk-list > li:has(.level[data-level='critical'])::after,
-.risk-list > li:has(.level[data-level='high'])::after {
-  color: var(--attention);
-  background: linear-gradient(currentColor, currentColor) 0 100% / 100% 3px no-repeat;
-}
-
-/* Known issues: the badge carries the amber outline; the row keeps a quiet
-   tick rule. */
-.risk-list > li:has(.level[data-level='medium'])::after {
-  color: var(--ink-2);
-  background:
-    linear-gradient(currentColor, currentColor) 0 100% / 100% 1px no-repeat,
-    repeating-linear-gradient(90deg, currentColor 0 1px, transparent 1px 7px) 0 100% / 100% 5px no-repeat,
-    repeating-linear-gradient(90deg, currentColor 0 1px, transparent 1px 35px) 0 100% / 100% 8px no-repeat;
-}
-
-/* a good sign: quieter, broken */
-.risk-list > li:has(.level[data-level='low'])::after {
-  color: var(--ink-3);
-  background: repeating-linear-gradient(90deg, currentColor 0 12px, transparent 12px 20px) 0 100% / 100% 1px no-repeat;
 }
 
 @keyframes rule-draw {
