@@ -1,6 +1,6 @@
 # Kriko
 
-[![version](https://img.shields.io/badge/version-0.3.13-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
+[![version](https://img.shields.io/badge/version-0.3.14-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
 [![license](https://img.shields.io/badge/license-MIT-1F4FFF?style=flat-square&labelColor=05070F)](LICENSE)
 [![stars](https://img.shields.io/github/stars/Berbadov/kriko?style=flat-square&labelColor=05070F&color=1F4FFF)](https://github.com/Berbadov/kriko/stargazers)
 [![platforms](https://img.shields.io/badge/Windows%20%C2%B7%20macOS%20%C2%B7%20Chrome%20%C2%B7%20Android-1F4FFF?style=flat-square&labelColor=05070F)](#install)
@@ -13,7 +13,7 @@ extension — and keeps the source beside every finding.
 Installed catalog lookups work offline. Research uses the agent or model you
 choose, and a paid provider bills your own account.
 
-**[Download the Windows installer](https://github.com/Berbadov/kriko/releases/latest/download/kriko-0.3.13-x86_64-setup.exe)** ·
+**[Download the Windows installer](https://github.com/Berbadov/kriko/releases/latest/download/kriko-0.3.14-x86_64-setup.exe)** ·
 [Browser extension](https://chromewebstore.google.com/detail/kriko/bdifnaggafjokndlpjgmlfappcoehdjb) ·
 [Website](https://kriko.cc) ·
 [Known problems by product](https://kriko.cc/problems/) (no app needed)
@@ -24,7 +24,14 @@ choose, and a paid provider bills your own account.
   <sub>The real panel, from a live run: every finding names the page it came from. <a href="https://kriko.cc/#film">Watch the 28-second film</a> · <a href="https://kriko.cc/guide/">How to use it, step by step</a></sub>
 </p>
 
-0.3.13 sets the app in Inter with Chivo Mono titles, adds an off-by-default
+0.3.14 adds two catalogs — **gaming monitors** (17 models, 50 sourced claims)
+and **condensing combi boilers** (12 series, 38) — grades every source a claim
+came from and records how well each catalog's claims are backed, and rebuilds
+the agent plane: OpenCode and Hermes run as resident workers, a signed-out or
+used-up account is reported once instead of paid for on every call, page reads
+respect the budget you set and are reused within a job, and a turn that runs
+out of time keeps the pages it read.
+0.3.13 set the app in Inter with Chivo Mono titles, added an off-by-default
 **Share my product queries** checkbox (only the product model you looked up and
 whether the catalog had it), and checks each claim against its own source
 before it enters a catalog. The chat turn orchestrator and the API app factory
@@ -76,8 +83,8 @@ repositories. See the [changelog](CHANGELOG.md) for the release scope.
 
 | Artifact | Use |
 |---|---|
-| `kriko-0.3.13-x86_64-setup.exe` | Per-user Windows installer; no administrator rights required. |
-| `kriko-0.3.13-win64-portable.zip` | Extract the whole archive and open `kriko.exe`. |
+| `kriko-0.3.14-x86_64-setup.exe` | Per-user Windows installer; no administrator rights required. |
+| `kriko-0.3.14-win64-portable.zip` | Extract the whole archive and open `kriko.exe`. |
 
 1. Open Kriko, choose an agent in **More → Agents** and press **Check connection**.
 2. Open **Catalogs → Find release catalogs** and install one, or import a

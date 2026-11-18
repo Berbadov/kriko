@@ -135,7 +135,7 @@ def cmd_build(args, store) -> int:
     import importlib
 
     from kriko.pack.build import annotate, build as generic_build, digest_of
-    from kriko.pack.credibility import CredibilityError
+    from kriko.pack.credibility import CredibilityError, Report as CredibilityReport
 
     root = Path(args.root)
     out = Path(args.out) if args.out else Path("dist") / f"{root.name}.kpack"
@@ -148,7 +148,7 @@ def cmd_build(args, store) -> int:
     # test_every_pack_in_the_repo_builds_and_is_not_empty.
     own_builder = (root / "build.py").exists()
     stats = None
-    reports = []
+    reports: list[CredibilityReport] = []
     try:
         if own_builder:
             # The builder is `packs.<name>.build`, imported from the directory
