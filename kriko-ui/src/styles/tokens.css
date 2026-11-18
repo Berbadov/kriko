@@ -103,8 +103,8 @@
   --serious-fill: var(--amber-500);
   /* The outline badge: "Known issues". */
   --caution: #ffc27a;
-  --caution-fill: rgba(255, 161, 68, 0.16);
-  --caution-edge: rgba(255, 194, 122, 0.45);
+  --caution-fill: rgba(255, 161, 68, 0.08);
+  --caution-edge: rgba(255, 194, 122, 0.60);
   --price-up: #ffc27a;
 
   /* One green, for a price that fell and for "No reports". Never decoration. */

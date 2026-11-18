@@ -37,8 +37,8 @@
   --high-surface: #ff8a1f;
   --high-border:  #c85a06;
   --high-ink:     #1a1206;
-  --med-surface:  rgba(255, 161, 68, 0.16);
-  --med-border:   rgba(255, 194, 122, 0.45);
+  --med-surface:  rgba(255, 161, 68, 0.10);
+  --med-border:   rgba(255, 194, 122, 0.60);
   --med-ink:      #ffc27a;
   --low-surface:  rgba(237, 237, 234, 0.06);
   --low-border:   rgba(237, 237, 234, 0.16);
