@@ -1026,7 +1026,7 @@ function markResultCard(card, read, fit) {
   const mark = document.createElement("span");
   mark.setAttribute(FIT_MARK, broken ? "breaks" : "fits");
   mark.textContent = broken ? `Not for you: ${fit.breaks[0]}` : "Fits you";
-  mark.style.cssText = `display:inline-block;margin:2px 6px;padding:2px 7px;border-radius:2px;font:600 11px/1.4 'Segoe UI',system-ui,sans-serif;color:#fff;background:${broken ? "#1f3a63" : "#3c454f"};vertical-align:middle;`;
+  mark.style.cssText = `display:inline-block;margin:2px 6px;padding:2px 7px;border-radius:8px;font:600 11px/1.4 system-ui,'Segoe UI',sans-serif;color:#fff;background:${broken ? "#0b1020" : "#1f3a63"};vertical-align:middle;`;
   (read.priceNode || card).insertAdjacentElement("afterend", mark);
 }
 
@@ -1067,7 +1067,7 @@ function annotateResults() {
 
 // ── product checks in the page ──────────────────────────────────────────
 
-const KRIKO_MARK_STYLE = "display:inline-block;margin:3px 6px;padding:3px 8px;border:1px solid #748d80;border-radius:7px;font:600 12px/1.5 system-ui;color:#163b2b;background:#e5f3ea;cursor:pointer;";
+const KRIKO_MARK_STYLE = "display:inline-block;margin:3px 6px;padding:3px 8px;border:1px solid #7e838b;border-radius:10px;font:600 12px/1.5 system-ui;color:#0b1020;background:#f5f5f3;cursor:pointer;";
 let _resultScanGeneration = 0;
 
 function scanMessage(items, callback) {
@@ -1082,7 +1082,7 @@ function drawQuickSummary(parent, result, error, anchor = null) {
   const box = document.createElement("div");
   box.setAttribute("data-kriko-summary", "");
   box.setAttribute("role", "status");
-  box.style.cssText = "padding:12px;margin:8px 0;border:1px solid #748d80;border-radius:8px;background:#f1f7f3;color:#173c2c;font:14px/1.5 system-ui;max-width:620px;";
+  box.style.cssText = "padding:12px;margin:8px 0;border:1px solid #7e838b;border-radius:12px;background:#ffffff;color:#101418;font:14px/1.5 system-ui;max-width:620px;";
   const line = (text) => { const p = document.createElement("p"); p.textContent = text; box.appendChild(p); };
   if (error) line(error);
   else {
@@ -1151,9 +1151,9 @@ function scanResultCards(reads) {
         const known = ["critical", "high", "medium", "low"].includes(result.level);
         badge.textContent = known ? `Kriko · ${result.level} risk` : result.level === "uncertain" ? "Kriko · Confirm product" : "Kriko · No rating";
         badge.title = (result.claims || []).map((one) => `${one.severity}: ${one.title}`).join("\n") || "No sourced findings.";
-        badge.style.cssText = KRIKO_MARK_STYLE + (!known ? "background:#f1f2f3;color:#555d63;"
-          : result.level === "high" || result.level === "critical" ? "background:#fff0e8;color:#842f17;"
-          : result.level === "medium" ? "background:#fff4cf;color:#765a15;" : "");
+        badge.style.cssText = KRIKO_MARK_STYLE + (!known ? "background:#f0f0ec;color:#5f6a75;"
+          : result.level === "high" || result.level === "critical" ? "background:#ff8a1f;border-color:#c85a06;color:#1a1206;"
+          : result.level === "medium" ? "background:#ffeed3;border-color:#f0740d;color:#9a3d00;" : "");
         (read.priceNode || card).appendChild(badge);
         addQuickButton(card, null, read, result);
       });
@@ -1218,7 +1218,7 @@ function annotateListing(audit) {
       const hit = text.splitText(range[0]); hit.splitText(range[1] - range[0]);
       const mark = document.createElement("mark"); mark.setAttribute("data-kriko-claim", ""); mark.tabIndex = 0;
       mark.title = `Kriko · ${task.why}`; mark.setAttribute("aria-label", `${hit.textContent}. Kriko: ${task.why}`);
-      mark.style.cssText = "background:#fff0bd;color:inherit;text-decoration:underline dotted #946100;text-underline-offset:3px;cursor:help;";
+      mark.style.cssText = "background:rgba(31,58,99,.10);color:inherit;text-decoration:underline dotted #1f3a63;text-underline-offset:3px;cursor:help;";
       hit.replaceWith(mark); mark.appendChild(hit); count++;
     }
   }
