@@ -17,8 +17,10 @@ from urllib.parse import urlparse
 
 
 class FakeWeb:
-    def __init__(self, pages: list[dict]):
+    def __init__(self, pages: list[dict], language: str = "en"):
         self.pages = {page["url"]: page for page in pages}
+        #: The search language the run was set to; a hosted provider answers in it.
+        self.language = language
         #: (query, language) for every search, in order.
         self.searches: list[tuple[str, str]] = []
         #: Every page open, in order, repeats kept: a page opened twice cost
@@ -52,14 +54,23 @@ class FakeWeb:
             return fetch.Fetched(page["text"] if page else "")
         return read
 
+    def _hosted(self, provider: str, app_state_path, *, trial_reservation_id: str = ""):
+        return lambda: self._searcher(language=self.language)
+
     @contextmanager
     def installed(self):
-        """The fixed web in place of the real one, put back afterwards."""
-        from app.providers import fetch, openserp
+        """The fixed web in place of the real one, put back afterwards.
 
-        before = (openserp.searcher, fetch.reader)
+        Every search provider the chain can build is the fake, hosted ones
+        included: a DeepSeek key in the shell must not turn a trial into a
+        live search.
+        """
+        from app.providers import fetch, openserp, websearch
+
+        before = (openserp.searcher, fetch.reader, websearch._hosted_factory)
         openserp.searcher, fetch.reader = self._searcher, self._reader
+        websearch._hosted_factory = self._hosted
         try:
             yield self
         finally:
-            openserp.searcher, fetch.reader = before
+            openserp.searcher, fetch.reader, websearch._hosted_factory = before
