@@ -357,7 +357,7 @@ def reap_stale_run_dirs(*, root: Path | None = None, older_than: float = 86400.0
     removed = 0
     for pattern in ("kriko-agent-*", "kriko-research-*"):
         try:
-            candidates = list(base.glob(pattern))
+            candidates = sorted(base.glob(pattern))
         except OSError:
             continue
         for path in candidates:
