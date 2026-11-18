@@ -1,0 +1,28 @@
+{
+  "version": "0.3.14",
+  "platform": "windows-x86_64",
+  "source_fingerprint": "d084f06c031dbd1e6d02ed16689a480b6c7a6e06578c5bfc3a93c22005f42da9",
+  "recorded_at": "2026-11-17",
+  "note": "Cut from main after #344 (gaming monitors and condensing combi boilers), #345 (the agent harness plane rebuilt) and #346 (source credibility tiers). The Windows installer, portable ZIP and engine ZIP were built on a Windows host with kriko-ui/package.ps1 from a worktree of this source; the build's own checks passed (frozen engine handshake and a served /api/health at 0.3.14, an MCP initialize, the app staying up 25 s with its engine spawned, the portable ZIP). The installer was not installed and no journey below was walked on a packaged window, so release_readiness.py still refuses complete stable certification, as for 0.3.10-0.3.13. No macOS build was made.",
+  "journeys": {
+    "fresh_install": {"status": "not_observed", "observed_at": null, "evidence": "The installer was built (kriko-0.3.14-x86_64-setup.exe) but not installed: the install check writes per-user entries and refuses where a Kriko is already installed."},
+    "portable_start": {"status": "not_observed", "observed_at": null, "evidence": "The build's own start-up check opened the staged kriko.exe, which stayed up and spawned its engine; the unzipped portable archive was not separately walked."},
+    "setup": {"status": "not_observed", "observed_at": null, "evidence": "Not walked on a packaged window."},
+    "sourced_answer": {"status": "not_observed", "observed_at": null, "evidence": "No live research on a packaged engine; the harness rebuild (#345) is covered by src/app/tests/test_the_harness_plane_rebuilt.py (20 tests) and the full suite."},
+    "follow_up": {"status": "not_observed", "observed_at": null, "evidence": "Not walked on a packaged engine."},
+    "compare": {"status": "not_observed", "observed_at": null, "evidence": "Not walked on a packaged engine."},
+    "stop": {"status": "not_observed", "observed_at": null, "evidence": "Not walked."},
+    "reconnect": {"status": "not_observed", "observed_at": null, "evidence": "Not walked."},
+    "upgrade_retains_data": {"status": "not_observed", "observed_at": null, "evidence": "No 0.3.13-to-0.3.14 upgrade performed."}
+  },
+  "providers": {
+    "mistral-vibe": {"status": "not_observed", "model": "configured by the reader", "version": "0.3.14", "report": "src/app/tests/test_a_cut_off_resident_turn_keeps_its_answer.py: resident-timeout health marking and cut-off text keeping, plus the rebuilt resident plane in test_the_harness_plane_rebuilt.py"}
+  },
+  "observed_instead": [
+    "tools/gate.sh on this tree, Windows host: version agreement strict at 0.3.14 (pyproject.toml, kriko-ui/src-tauri/Cargo.toml, Cargo.lock, kriko-ui/package.json, README.md and the installed distribution); ruff clean; mypy clean (src/kriko 41 files, src/app 271, packs 53, server 8); pytest 5318 passed, 29 skipped, 18 failed in 21m54s. Sixteen of the failures fail identically on a clean origin/main worktree (test_agent_bench.py 11, test_failure_classes.py 3, test_codex_integration.py::test_an_unanswered_help_probe_is_asked_again_not_remembered, and test_repo_invariants.py::test_the_catalog_is_never_scanned_in_directory_order on src/app/providers/harness.py:360). The other two (test_agentledger.py::test_ledger_constructor_explicitly_closes_schema_connection, test_resident_transport.py::test_four_reader_runs_each_get_their_own_agent_process_at_once) pass when run alone and are load flakes. wheel green (kriko 0.3.14 installed from the built wheel); node 539/539; ui build, oxlint (warnings only) and 123/123 behaviour tests; tauri cargo check with 13 shell tests and 2 kriko-harness tests.",
+    "kriko-ui/package.ps1 -Version 0.3.14 from this worktree built kriko-0.3.14-x86_64-setup.exe (33508010 bytes, sha256 a8d75591e221bf1c073d8b3753211009196e99eb3b6d537a202d4aad964a4a75), kriko-0.3.14-win64-portable.zip (41880570 bytes, sha256 2afe51c6f8436c25dc18a35f9e6754c23d8804f519bcf02ce93160386ed1f9f4) and kriko-engine-0.3.14-win64.zip (27938363 bytes, sha256 9e88134e99b6586a9afba64bad44a7a9a871b2cbd388b2d2e010e79a6a425eb6), with KRIKO_SHARE_PEPPER supplied from the main checkout's local build pepper. The build's own checks passed: frozen sidecar handshake and /api/health at 0.3.14, an MCP initialize answered, a job failed cleanly, the app stayed up 25 s with its engine spawned, and the portable zip. The installer's first makensis run failed while the full pytest run was saturating the machine; a verbose tauri rebuild then bundled Kriko_0.3.14_x64-setup.exe, and the complete recipe rerun passed through makensis, the app start-up check and the portable zip.",
+    "Catalogs: 34 .kpack builds (32 unchanged plus gaming-monitors and condensing-combi-boilers), packs.json pinned to https://github.com/Berbadov/kriko/releases/download/v0.3.14 naming exactly those 34 files, packs-0.3.14.zip (35 entries, 2602433 bytes, sha256 1cf5ef4a9e7182ae45e054af25e847bf520e83fcac76bda7aeac49394a7b2ce0).",
+    "The extension ZIP is the extension/ folder without tests/, built from this tree; manifest version 0.5.0, 25 entries, 317583 bytes. Nothing under extension/ changed since v0.3.13.",
+    "SHA256SUMS.txt is the installer build's, covering the installer, the portable ZIP and the engine ZIP, checked against the files with Get-FileHash. SHA256SUMS-ALL.txt covers all 37 attached files."
+  ]
+}
