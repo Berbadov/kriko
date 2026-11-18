@@ -263,7 +263,8 @@ def test_claude_profiles_that_differ_get_their_own_workers(claude) -> None:
     assert factory.starts == 2
 
 
-def test_four_reader_runs_each_get_their_own_agent_process_at_once(tmp_path: Path) -> None:
+def test_four_reader_runs_each_get_their_own_agent_process_at_once(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("KRIKO_MAX_AGENT_CHILDREN", "4")
     """Reproduction: with the reader's choice of four, four runs must be four processes.
 
     The agent-child budget was the profile's two, so the third and fourth run
