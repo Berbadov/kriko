@@ -2,6 +2,7 @@
 
 from concurrent.futures import ThreadPoolExecutor
 import sqlite3
+import threading
 
 import pytest
 
@@ -19,10 +20,12 @@ from kriko.store.packstore import write_pack_row
 def test_ledger_constructor_explicitly_closes_schema_connection(tmp_path, monkeypatch):
     closed = []
     original_connect = sqlite3.connect
+    this_thread = threading.get_ident()
 
     class TrackedConnection(sqlite3.Connection):
         def close(self):
-            closed.append(True)
+            if threading.get_ident() == this_thread:
+                closed.append(True)
             super().close()
 
     def tracked_connect(*args, **kwargs):
