@@ -252,6 +252,25 @@
   padding: 4px 8px 4px 6px;
 }
 
+.agent-order {
+  display: flex;
+  flex-direction: column;
+}
+
+.agent-order button {
+  line-height: 1;
+  padding: 0 6px;
+}
+
+.agent-state {
+  display: block;
+}
+
+.agent-state[data-state='cooling'],
+.agent-state[data-state='signed_out'] {
+  color: var(--warn, inherit);
+}
+
 .radio {
   display: grid;
   place-items: center;

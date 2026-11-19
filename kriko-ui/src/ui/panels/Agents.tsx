@@ -198,14 +198,17 @@ export function AgentsPanel(_: { onOpen?: (lookupId: string) => void }) {
           </p>
 
           <ul className="agent-list" role="radiogroup" aria-label="Default agent">
-            {doc.harnesses.map((agent) => (
+            {orderedAgents(doc.harnesses, doc.agent_order ?? []).map((agent, index, rows) => (
               <AgentItem
                 key={agent.id}
                 agent={agent}
                 isDefault={agent.id === (doc.chosen.preferred_harness || doc.effective.harness)}
                 open={open === agent.id}
+                canUp={index > 0}
+                canDown={index < rows.length - 1}
                 onToggle={() => setOpen(open === agent.id ? null : agent.id)}
-                onDefault={() => void save({ preferred_harness: agent.id })}
+                onDefault={() => void save(reordered(rows, agent.id, 0))}
+                onMove={(step) => void save(reordered(rows, agent.id, index + step))}
                 onChange={(patch) => void save(patch)}
                 enter={m.tx.soft}
               />
@@ -483,20 +486,54 @@ function standingWords(state: string): string {
   return 'The engine reported no state'
 }
 
+/** The rows in the reader's order: the agents they listed, in that order, then the rest. */
+function orderedAgents(rows: AgentRow[], order: string[]): AgentRow[] {
+  const rank = (row: AgentRow) => {
+    const at = order.indexOf(row.id)
+    return at < 0 ? order.length : at
+  }
+  return [...rows].sort((a, b) => rank(a) - rank(b))
+}
+
+/** The saved order with `id` moved to position `to`. The first agent is the default, so it is saved too. */
+function reordered(rows: AgentRow[], id: string, to: number): Record<string, string> {
+  const ids = rows.map((row) => row.id)
+  ids.splice(ids.indexOf(id), 1)
+  ids.splice(Math.max(0, Math.min(to, ids.length)), 0, id)
+  return { agent_order: ids.join(','), preferred_harness: ids[0] }
+}
+
+function agentStanding(agent: AgentRow): string {
+  const state = agent.state
+  if (!state) return ''
+  if (state.state === 'signed_out') return 'Signed out'
+  if (state.state === 'cooling') {
+    const until = new Date(state.cooling_until * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    return `Cooling down until ${until}${state.reason ? `: ${state.reason}` : ''}`
+  }
+  return 'Ready'
+}
+
 function AgentItem({
   agent,
   isDefault,
   open,
+  canUp,
+  canDown,
   onToggle,
   onDefault,
+  onMove,
   onChange,
   enter,
 }: {
   agent: AgentRow
   isDefault: boolean
   open: boolean
+  canUp: boolean
+  canDown: boolean
   onToggle: () => void
   onDefault: () => void
+  onMove: (step: -1 | 1) => void
   onChange: (patch: Record<string, string>) => void
   enter: object
 }) {
@@ -504,6 +541,7 @@ function AgentItem({
   const models = withCurrent(agent.llms, agent.llm)
   const efforts = withCurrent(agent.efforts, agent.effort)
   const summary = [agent.llm || 'Own default', agent.effort, agent.search === 'kriko' ? "Kriko's search" : ''].filter(Boolean).join(' · ')
+  const standing = agentStanding(agent)
 
   return (
     <li className="agent" data-open={open} data-default={isDefault}>
@@ -515,10 +553,15 @@ function AgentItem({
           <span>
             <strong>{agent.label}</strong>
             <small>{summary}</small>
+            {standing && <small className="agent-state" data-state={agent.state?.state}>{standing}</small>}
           </span>
           {isDefault && <span className="tag">Default</span>}
           <Icon name="chevron" size={15} />
         </button>
+        <span className="agent-order">
+          <button aria-label={`Move ${agent.label} up`} disabled={!canUp} onClick={() => onMove(-1)}>↑</button>
+          <button aria-label={`Move ${agent.label} down`} disabled={!canDown} onClick={() => onMove(1)}>↓</button>
+        </span>
       </div>
       <AnimatePresence initial={false}>
         {open && (
