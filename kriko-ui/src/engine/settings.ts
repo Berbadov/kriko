@@ -22,12 +22,16 @@ export interface AgentRow {
   /** Which web search this agent uses: 'own' or 'kriko'. */
   search?: string
   search_choices?: { id: string; label: string }[]
+  /** Whether a run may use this agent now: ready, cooling down, or signed out. */
+  state?: { state: 'ready' | 'cooling' | 'signed_out'; cooling_until: number; reason: string }
 }
 
 export interface PrefsDoc {
   chosen: Record<string, string>
   effective: { ready: boolean; reason: string; harness: string; harness_ready: boolean; harness_note: string }
   harnesses: AgentRow[]
+  /** The reader's order: the first is the default, the rest are fallbacks in turn. */
+  agent_order?: string[]
   unusable: { id: string; label: string; why: string }[]
   missing: { id: string; label: string; install_hint?: string }[]
   source_kinds: { id: string; label: string }[]

@@ -79,7 +79,7 @@ def completer_for(model: str, *, max_tokens: int | None = None,
 __all__ = [
     "exa", "fetch", "harness", "llm",
     "agent_ready", "agents_available", "api_researcher", "bills_per_token",
-    "harness_researcher", "local_asker", "local_researcher", "resolve_agent",
+    "agent_chain", "harness_researcher", "local_asker", "local_researcher", "resolve_agent",
     "MissingKey", "NoHarness",
 ]
 
@@ -236,8 +236,12 @@ def _preferred_model(app_state_path) -> str:
 def harness_researcher(*, preferred: str = "", timeout: float = 0.0,
                        app_state_path=None, model: str = "", effort: str = "",
                        default_effort: str = "", api: bool = True,
-                       trial_reservation_id: str = "", max_tokens: int | None = None):
+                       trial_reservation_id: str = "", max_tokens: int | None = None,
+                       agent=None):
     """The $0 plane that actually runs, wired to whichever CLI is installed.
+
+    `agent` is one already chosen from `agent_chain`: it runs as given, without
+    the order being asked again.
 
     `effort` is the run's own choice and wins; then the level the reader set
     for this CLI on the Agents tab; then `default_effort`, the job's own
@@ -255,11 +259,14 @@ def harness_researcher(*, preferred: str = "", timeout: float = 0.0,
     lacks: registering a site means reading the page's markup, and a search
     result's text has none.
     """
-    if not preferred and app_state_path is not None:
-        preferred = _stored_pick(app_state_path)
-    found, note = resolve_agent(preferred, api=api,
-                                app_state_path=app_state_path,
-                                trial_reservation_id=trial_reservation_id)
+    if agent is not None:
+        found, note = agent, ""
+    else:
+        if not preferred and app_state_path is not None:
+            preferred = _stored_pick(app_state_path)
+        found, note = resolve_agent(preferred, api=api,
+                                    app_state_path=app_state_path,
+                                    trial_reservation_id=trial_reservation_id)
     if found is None:
         names = ", ".join(h.executable for h in harness.KNOWN)
         raise harness.NoHarness(
@@ -429,30 +436,73 @@ def resolve_agent(preferred: str = "", *, api: bool = True,
     key happened to be saved is the surprise `default_backend` refuses for
     the paid plane, and this plane must not bring it back.
     """
-    from app.providers import apiagent
-    available = _api_agents_for_home(app_state_path, trial_reservation_id)
-    picked = apiagent.BY_ID.get(preferred)
-    if picked is not None and api:
-        if picked in available:
-            return picked, ""
-        found = harness.chosen("")
-        if found is not None:
-            return found, f"{picked.label} has no key here — used {found.id} instead"
+    chain = agent_chain(preferred, api=api, app_state_path=app_state_path,
+                        trial_reservation_id=trial_reservation_id)
+    if not chain:
         return None, ""
-    found = harness.chosen("" if picked is not None else preferred)
-    note = ""
-    if found is None and preferred:
-        # The reader's preference names a CLI that is not installed here —
-        # `harness.chosen(preferred)` says so by returning `None` rather than
-        # silently substituting anything, which is correct for *it*. But a
-        # run failing outright when a different, perfectly usable CLI is
-        # sitting right there is the crash this function exists to avoid: an
-        # unknown or uninstalled choice must fall back visibly, not refuse.
-        found = harness.chosen("")
-        if found is not None:
-            note = (f"preferred harness {preferred!r} is not installed here — "
-                    f"used {found.id} instead")
-    return found, note
+    found = chain[0]
+    if not preferred or found.id == preferred:
+        return found, ""
+    return found, _skipped_pick(preferred, found, api)
+
+
+def agent_chain(preferred: str = "", *, api: bool = True, app_state_path=None,
+                trial_reservation_id: str = "") -> list:
+    """The agents a run may use, in the order it tries them.
+
+    The reader's pick first, then the stored `agent_order`, then every other
+    installed CLI in the default order. An API agent is in the chain only when
+    the reader listed it: a saved key alone never makes one run. An agent that
+    is cooling down (`fallback.BREAKERS`) is left out until its cooldown ends.
+    """
+    from app.providers.fallback import BREAKERS
+
+    if not preferred and app_state_path is not None:
+        preferred = _stored_pick(app_state_path)
+    listed = ([preferred] if preferred else []) + _stored_order(app_state_path)
+    keyed = _api_agents_for_home(app_state_path, trial_reservation_id) if api else []
+    installed = harness.available()
+    chain: list = []
+    for ident in listed + [one.id for one in installed]:
+        agent = (next((one for one in keyed if one.id == ident), None)
+                 or next((one for one in installed if one.id == ident), None))
+        if agent is None or agent in chain or not BREAKERS.available(agent.id):
+            continue
+        chain.append(agent)
+    return chain
+
+
+def _stored_order(app_state_path) -> list[str]:
+    from app import prefs
+    from app.web import state
+
+    if not app_state_path:
+        return []
+    try:
+        conn = state.connect(app_state_path)
+    except Exception:  # noqa: BLE001 — an unreadable preference is no preference
+        return []
+    try:
+        return prefs.parse_agent_order(prefs.read(conn).get(prefs.AGENT_ORDER, ""))
+    finally:
+        conn.close()
+
+
+def _skipped_pick(preferred: str, found, api: bool) -> str:
+    from app.providers import apiagent
+    from app.providers.fallback import BREAKERS
+
+    status = BREAKERS.status(preferred)
+    if status["state"] != "ready":
+        return (f"{preferred} is {status['state'].replace('_', ' ')} ({status['reason']}) "
+                f"— used {found.id} instead")
+    picked = apiagent.BY_ID.get(preferred)
+    if picked is not None and not api:
+        return f"{picked.label} does not run this job — used {found.id} instead"
+    if picked is not None:
+        return f"{picked.label} has no key here — used {found.id} instead"
+    return (f"preferred harness {preferred!r} is not installed here — "
+            f"used {found.id} instead")
 
 
 def _api_hint(api: bool, app_state_path=None,

@@ -28,7 +28,20 @@ HARNESS = "preferred_harness"
 #: reader's choice is one setting, but it is never an agent id, and a door
 #: that checks a pick against the installed CLIs must let it through.
 LOCAL_PICK = "local"
+#: The agents in the reader's order, as comma-separated ids: the fallback chain
+#: after the pick (`providers/__init__.py::agent_chain`).
 AGENT_ORDER = "agent_order"
+
+
+def parse_agent_order(raw) -> list[str]:
+    out: list[str] = []
+    for part in str(raw or "").split(","):
+        one = part.strip()
+        if one and one not in out:
+            out.append(one)
+    return out
+
+
 MODEL = "llm_model"
 SEARCH = "search_provider"
 #: The providers asked when the first choice fails or finds nothing, in order,
@@ -691,8 +704,13 @@ def choices(conn, app_state_path=None, *, fresh: bool = False) -> dict:
     installed += local_ready
     unusable += local_unusable
     missing += local_missing
+    from app.providers.fallback import BREAKERS
+
+    for one in installed + api_rows:
+        one["state"] = BREAKERS.status(one.get("id", ""))
     return {
         "chosen": chosen,
+        "agent_order": parse_agent_order(chosen.get(AGENT_ORDER, "")),
         "effective": effective(conn),
         "harnesses": installed + api_rows,
         "unusable": unusable,
