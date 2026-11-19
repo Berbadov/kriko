@@ -380,18 +380,29 @@ def _researcher(params: dict):
         # Same reason as the paid plane below, one layer out: this one spawns a
         # process, and `kriko/` owns no subprocesses any more than it owns
         # sockets. So it is not a `get_researcher` backend and never will be.
-        from app.providers import harness_researcher
+        from app.providers import agent_chain, harness_researcher
 
-        return harness_researcher(
-            preferred=str(params.get("harness") or ""),
-            timeout=float(params.get("timeout_seconds") or 0.0),
-            # So "which agent" is the reader's standing choice rather than
-            # whichever CLI happened to be found first (B117).
-            app_state_path=params.get("app_state_path"),
-            # And "which model" rides the same params: a per-run choice wins,
-            # a stored per-harness choice applies, otherwise the CLI default.
-            model=str(params.get("model") or ""),
-        )
+        app_state_path = params.get("app_state_path")
+        timeout = float(params.get("timeout_seconds") or 0.0)
+        named = str(params.get("harness") or "")
+        chain = [] if named else agent_chain(app_state_path=app_state_path)
+        if not chain:
+            return harness_researcher(
+                preferred=named, timeout=timeout, app_state_path=app_state_path,
+                model=str(params.get("model") or ""),
+            )
+        from app.providers.fallback import ChainResearcher
+
+        # A run's model names one agent's models; handed to the next agent it
+        # would be a name from another namespace, so only the first agent gets
+        # it and the rest keep their stored choice.
+        def build(agent):
+            return harness_researcher(
+                timeout=timeout, app_state_path=app_state_path, agent=agent,
+                model=str(params.get("model") or "") if agent is chain[0] else "",
+            )
+
+        return ChainResearcher(chain, build)
     if backend == "local":
         # Sockets and pacing are interface decisions, which is why this
         # branch lives here rather than being a `get_researcher` backend:
@@ -969,6 +980,12 @@ def _research(settings, params: dict, progress: Progress, emit, provenance=None)
         # The interface's own database, so the plane can read what this
         # installation has measured about the model it is about to use.
         researcher = _researcher({**params, "app_state_path": settings.app_state_path})
+        if hasattr(researcher, "report_switches"):
+            def switched(line: str) -> None:
+                progress.log(line)
+                emit.event(line)
+
+            researcher.report_switches(switched)
         _require_requested_agent(researcher, params)
         # Which plane and why (B172): a reader who expected one plane and got
         # another should be able to read the fact that decided it.
