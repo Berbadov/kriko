@@ -22,7 +22,7 @@ import { Markdown } from '../ui/Markdown'
 import { PixelGlyph } from '../ui/PixelGlyph'
 import { CheckContext } from '../ui/CheckContext'
 
-const LEVEL_WORD: Record<Level, string> = { critical: 'Critical', high: 'High', medium: 'Medium', low: 'Low', unrated: 'Unrated' }
+const LEVEL_WORD: Record<Level, string> = { critical: 'Serious', high: 'Serious', medium: 'Known issues', low: 'Minor', unrated: 'To check' }
 const LEVEL_ORDER: Record<Level, number> = { critical: 0, high: 1, medium: 2, low: 3, unrated: 4 }
 
 /** Products are columns. Each column leads with what the agents found that can

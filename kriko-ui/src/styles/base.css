@@ -1,6 +1,5 @@
 @import '@fontsource-variable/inter';
-@import '@fontsource-variable/chivo-mono';
-@import '@fontsource-variable/geist-mono';
+@import '@fontsource-variable/newsreader/opsz.css';
 @import './tokens.css';
 
 *,
@@ -43,13 +42,14 @@ button {
 }
 
 :focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
-  border-radius: var(--r-s);
+  border-radius: 4px;
 }
 
 ::selection {
-  background: var(--accent-soft);
+  background: var(--selection);
+  color: var(--ink);
 }
 
 * {
@@ -79,10 +79,22 @@ button {
   }
 }
 
+/* Metadata and prices are set in the body face with tabular figures. Mono is
+   reserved for code and logs, so `.mono` no longer changes the family. */
 .mono {
-  font-family: var(--mono);
+  font-family: inherit;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0;
+}
+
+/* Values that must line up in a column: prices, counts, years. */
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+.code {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
 }
 
 .sr {
@@ -110,14 +122,16 @@ button {
   stroke: none;
 }
 
-/* Type: Inter for reading, a mono set heavy for anything that is a title. */
+/* Type: Newsreader for titles, Inter for reading. Titles are upright: the
+   italic belongs to the website, not the app. */
 h1,
 h2,
 h3 {
   font-family: var(--display);
-  font-weight: var(--w-semibold);
-  letter-spacing: -0.04em;
-  line-height: 1.02;
+  font-optical-sizing: auto;
+  font-weight: var(--w-display);
+  letter-spacing: -0.02em;
+  line-height: 1.1;
 }
 
 /* The accessibility font is one choice for the whole window, so it overrides
