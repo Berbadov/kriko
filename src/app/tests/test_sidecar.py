@@ -46,6 +46,19 @@ def test_an_explicit_port_is_honoured():
         again.close()
 
 
+def _stderr(tmp_path):
+    """Where a sidecar's stderr goes: a file, never a pipe nobody reads.
+
+    The sidecar logs to stderr at startup, and on this host that is tens of
+    lines (every stale `kriko-agent-*` folder it cannot yet remove). A Windows
+    pipe holds about 4 KB, so the child blocked on its own log write, the first
+    request hung, and at exit the interpreter could not flush stderr. The desktop
+    shell drains its pipe; a test that never reads one is the test's bug, not the
+    sidecar's. A file also keeps what the sidecar said when a test fails.
+    """
+    return open(tmp_path / "sidecar-stderr.txt", "w", encoding="utf-8")
+
+
 def _env(tmp_path):
     """A deliberately bare environment, plus whatever the platform insists on.
 
@@ -85,7 +98,7 @@ def sidecar(tmp_path):
         # depend on what else is running on this machine.
         [sys.executable, "-m", "app.sidecar", "--extension-port", "0"],
         stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stderr=_stderr(tmp_path),
         text=True,
         env=env,
     )
@@ -163,7 +176,7 @@ def test_the_sidecar_exits_when_its_parent_goes_away(tmp_path):
         ],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stderr=_stderr(tmp_path),
         text=True,
         env=_env(tmp_path),
     )
@@ -194,7 +207,7 @@ def test_the_watchdog_is_off_unless_asked(tmp_path):
         [sys.executable, "-m", "app.sidecar", "--extension-port", "0"],
         stdin=subprocess.DEVNULL,
         stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stderr=_stderr(tmp_path),
         text=True,
         env=_env(tmp_path),
     )
@@ -238,7 +251,7 @@ def test_the_extension_port_is_served_as_well_as_the_announced_one(tmp_path):
     process = subprocess.Popen(
         [sys.executable, "-m", "app.sidecar", "--extension-port", str(free)],
         stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stderr=_stderr(tmp_path),
         text=True,
         env=_env(tmp_path),
     )
@@ -270,7 +283,7 @@ def test_a_taken_extension_port_is_not_fatal(tmp_path):
     process = subprocess.Popen(
         [sys.executable, "-m", "app.sidecar", "--extension-port", str(taken)],
         stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stderr=_stderr(tmp_path),
         text=True,
         env=_env(tmp_path),
     )
@@ -326,7 +339,7 @@ def test_the_same_binary_serves_mcp_over_stdio(tmp_path):
         ],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stderr=_stderr(tmp_path),
         text=True,
         env=_env(tmp_path),
     )
@@ -402,7 +415,7 @@ def test_an_unhandled_exception_in_a_route_reaches_the_app_log(tmp_path):
     process = subprocess.Popen(
         [sys.executable, "-m", "app.sidecar", "--extension-port", "0"],
         stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stderr=_stderr(tmp_path),
         text=True,
         env=env,
     )

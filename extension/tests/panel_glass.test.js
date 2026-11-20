@@ -60,11 +60,11 @@ const THEMES = {
 };
 const PAGES = { white: [255, 255, 255], black: [0, 0, 0], grey: [128, 128, 128], "listing yellow": [241, 214, 138] };
 
-test("the light surface is flat white and grey, with ink and one navy", () => {
-  assert.equal(token("--light-bg-base"), "#edeeef");
+test("the light surface is paper and white, with ink and one navy", () => {
+  assert.equal(token("--light-bg-base"), "#f5f5f3");
   assert.equal(token("--light-bg-panel"), "#ffffff");
   assert.equal(token("--light-fg"), "#101418");
-  assert.equal(token("--light-brand"), "#1f3a63");
+  assert.equal(token("--light-brand"), "#0b1020");
   assert.equal(token("--light-border"), "rgba(16,20,24,0.10)");
 });
 
