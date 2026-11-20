@@ -627,3 +627,98 @@ const GLASS_KEY = "kriko.glass";
     });
   }
 })();
+
+
+// ── offline catalogs ───────────────────────────────────────────────────────
+//
+// The panel asks the app first; these catalogs are the fallback when it is not
+// running. The page lists what the worker stored, starts a refresh on a press,
+// and never reads a catalog itself: the worker owns the bytes and the match.
+(function offlineCatalogs() {
+  const enabled = document.getElementById("offline-enabled");
+  const list = document.getElementById("offline-packs");
+  const refresh = document.getElementById("offline-refresh");
+  const status = document.getElementById("offline-status");
+  const quota = document.getElementById("offline-quota");
+  if (!enabled || !list || !refresh || !status) return;
+
+  const say = (text, state) => {
+    status.textContent = text;
+    if (state) status.dataset.state = state; else delete status.dataset.state;
+  };
+  const bytes = (size) => {
+    if (!size) return "";
+    if (size > 1024 * 1024) return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+    return `${Math.max(1, Math.round(size / 1024))} KB`;
+  };
+
+  function render(packs) {
+    list.textContent = "";
+    if (!packs || !packs.length) {
+      const empty = document.createElement("li");
+      empty.className = "status";
+      empty.textContent = "No catalog stored yet.";
+      list.append(empty);
+      return;
+    }
+    for (const pack of packs) {
+      const row = document.createElement("li");
+      const name = document.createElement("span");
+      name.textContent = `${pack.name || pack.pack_id} · ${pack.version || ""}`;
+      const size = document.createElement("span");
+      size.className = "status";
+      size.textContent = bytes(pack.size);
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "quiet";
+      remove.textContent = "Remove";
+      remove.addEventListener("click", () => {
+        remove.disabled = true;
+        ask({ type: "OFFLINE_REMOVE", payload: { packId: pack.pack_id } }).then((reply) => {
+          if (!reply.ok) { remove.disabled = false; say(reply.error, "error"); return; }
+          render(reply.packs);
+          say("Removed.", "ok");
+        });
+      });
+      row.append(name, size, remove);
+      list.append(row);
+    }
+  }
+
+  function load() {
+    ask({ type: "OFFLINE_CATALOGS" }).then((reply) => {
+      if (!reply.ok) {
+        say(reply.error || "The offline catalog is not available here.", "warn");
+        enabled.disabled = true;
+        refresh.disabled = true;
+        return;
+      }
+      enabled.checked = reply.enabled !== false;
+      render(reply.packs);
+      if (reply.quota && reply.quota.quota) {
+        quota.textContent = `${bytes(reply.quota.usage)} of ${bytes(reply.quota.quota)} used by the extension.`;
+      }
+    });
+  }
+
+  enabled.addEventListener("change", () => {
+    ask({ type: "OFFLINE_SET_ENABLED", payload: { enabled: enabled.checked } }).then((reply) => {
+      if (!reply.ok) { say(reply.error, "error"); return; }
+      say(enabled.checked ? "Offline answers are on." : "Offline answers are off.", "ok");
+    });
+  });
+
+  refresh.addEventListener("click", () => {
+    refresh.disabled = true;
+    say("Reading the release index…");
+    ask({ type: "OFFLINE_REFRESH" }).then((reply) => {
+      refresh.disabled = false;
+      if (!reply.ok) { say(reply.error, "error"); return; }
+      const installed = (reply.results || []).filter((row) => row.state === "installed").length;
+      say(installed ? `Updated ${installed} catalog${installed === 1 ? "" : "s"}.` : "Catalogs are current.", "ok");
+      load();
+    });
+  });
+
+  load();
+})();
