@@ -3,9 +3,28 @@ import { del, get, post, seg } from './api'
 import { useEngine } from './Engine'
 
 /** Saved cost estimates (`/api/estimates`): the Estimate screen's persistence.
- *  An estimate is the reader's own decision record — which equipment, how
- *  many, at what price, over how many years — kept in the app's state file and
+ *  An estimate is the reader's own decision record - which equipment, how
+ *  many, at what price, over how many years - kept in the app's state file and
  *  exported to Excel/CSV from exactly this payload. */
+
+export interface EstimateQuote {
+  quote_id?: string
+  vendor: string
+  seller: string
+  url: string
+  unit_price: number | null
+  currency: string
+  vat_rate: number
+  vat_included: boolean
+  delivery_days: number | null
+  warranty_months: number | null
+  quote_date: string
+  valid_until: string
+  note: string
+  selected: boolean
+  /** Computed on read by the engine; never sent on save. */
+  risk?: { level: 'red' | 'amber' | 'green' | 'unknown'; reasons: string[] }
+}
 
 export interface EstimateLine {
   line_id?: string
@@ -15,6 +34,25 @@ export interface EstimateLine {
   quantity: number
   unit_price: number | null
   note: string
+  depreciation: string
+  life_years: number | null
+  salvage: number | null
+  vuk_rate: number | null
+  quotes: EstimateQuote[]
+  /** Computed on read: the quotes in landed-cost order, with reasons. */
+  ranking?: EstimateRanking[]
+}
+
+export function selectedQuote(line: EstimateLine): EstimateQuote | null {
+  const quotes = line.quotes ?? []
+  return quotes.find((quote) => quote.selected) ?? quotes[0] ?? null
+}
+
+export interface EstimateRanking {
+  quote_id: string
+  rank: number | null
+  landed: number | null
+  reasons: string[]
 }
 
 export interface Estimate {
@@ -24,6 +62,8 @@ export interface Estimate {
   years: number
   maintenance_pct: number
   discount_pct: number
+  vat_rate: number
+  fx: Record<string, number | string>
   created_at: string
   updated_at: string
   lines: EstimateLine[]
@@ -45,6 +85,23 @@ export async function loadEstimate(id: string): Promise<Estimate> {
   return data.estimate
 }
 
+const quotePayload = (quote: EstimateQuote) => ({
+  quote_id: quote.quote_id ?? '',
+  vendor: quote.vendor,
+  seller: quote.seller,
+  url: quote.url,
+  unit_price: quote.unit_price,
+  currency: quote.currency,
+  vat_rate: quote.vat_rate,
+  vat_included: quote.vat_included,
+  delivery_days: quote.delivery_days,
+  warranty_months: quote.warranty_months,
+  quote_date: quote.quote_date,
+  valid_until: quote.valid_until,
+  note: quote.note,
+  selected: quote.selected,
+})
+
 export async function saveEstimate(estimate: Partial<Estimate> & { lines: EstimateLine[] }): Promise<Estimate> {
   const data = await post<{ estimate: Estimate }>('/api/estimates', {
     estimate_id: estimate.estimate_id ?? '',
@@ -53,6 +110,8 @@ export async function saveEstimate(estimate: Partial<Estimate> & { lines: Estima
     years: estimate.years ?? 5,
     maintenance_pct: estimate.maintenance_pct ?? 5,
     discount_pct: estimate.discount_pct ?? 8,
+    vat_rate: estimate.vat_rate ?? 20,
+    fx: estimate.fx ?? {},
     lines: estimate.lines.map((line) => ({
       subject_id: line.subject_id,
       pack_id: line.pack_id,
@@ -60,6 +119,11 @@ export async function saveEstimate(estimate: Partial<Estimate> & { lines: Estima
       quantity: line.quantity,
       unit_price: line.unit_price,
       note: line.note,
+      depreciation: line.depreciation,
+      life_years: line.life_years,
+      salvage: line.salvage,
+      vuk_rate: line.vuk_rate,
+      quotes: (line.quotes ?? []).map(quotePayload),
     })),
   })
   return data.estimate
@@ -67,6 +131,11 @@ export async function saveEstimate(estimate: Partial<Estimate> & { lines: Estima
 
 export async function deleteEstimate(id: string): Promise<void> {
   await del(`/api/estimates/${seg(id)}`)
+}
+
+/** Today's reference rates from TCMB, on the reader's press only. */
+export async function fetchTcmbRates(): Promise<{ base: string; date: string; rates: Record<string, number>; source: string }> {
+  return get('/api/fx/tcmb')
 }
 
 /** The saved estimates list, for the screen's load menu. */

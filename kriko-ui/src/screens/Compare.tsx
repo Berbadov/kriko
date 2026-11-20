@@ -12,6 +12,7 @@ import { usePrefs } from '../prefs'
 import { useQueue } from '../queue'
 import { post, seg } from '../engine/api'
 import { Composer } from '../ui/Composer'
+import { ProductGlyph } from '../ui/ProductGlyph'
 import { Decide } from '../ui/Decide'
 import { ClaimSources } from '../ui/ClaimChip'
 import { EvidenceMark } from '../ui/EvidenceMark'
@@ -285,6 +286,7 @@ function Column({ check, onRemove, onResearch, children, transition }: { check: 
     <motion.div layout className="mx-col" initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.97 }} transition={transition}>
       <div className="mx-head">
         <div className="mx-title">
+          <ProductGlyph name={check.name} size={22} />
           <strong title={check.name}>{check.name}</strong>
           <button className="icon-btn sm" onClick={onRemove} aria-label={`Remove ${check.name}`}>
             <Icon name="x" size={14} />

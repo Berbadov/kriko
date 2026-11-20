@@ -16,16 +16,17 @@ import { pathToFileURL } from 'node:url'
  * open a file whose checksums lie.
  */
 
-let directory, forecast, sheet
+let directory, forecast, sheet, money
 before(async () => {
   directory = await mkdtemp(join(tmpdir(), 'kriko-estimate-'))
-  for (const [source, name] of [['src/engine/forecast.ts', 'forecast.mjs'], ['src/engine/sheet.ts', 'sheet.mjs']]) {
+  for (const [source, name] of [['src/engine/forecast.ts', 'forecast.mjs'], ['src/engine/sheet.ts', 'sheet.mjs'], ['src/engine/money.ts', 'money.mjs']]) {
     const code = await readFile(source, 'utf8')
     const built = ts.transpileModule(code, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText
     await writeFile(join(directory, name), built)
   }
   forecast = await import(pathToFileURL(join(directory, 'forecast.mjs')))
   sheet = await import(pathToFileURL(join(directory, 'sheet.mjs')))
+  money = await import(pathToFileURL(join(directory, 'money.mjs')))
 })
 after(async () => { if (directory) await rm(directory, { recursive: true, force: true }) })
 
@@ -183,4 +184,110 @@ test('the Estimate screen reads the catalogs, researches, saves and exports both
   assert.ok(topbar.includes("'estimate'"), 'the top bar does not offer the Estimate screen')
   const app = await read('src/App.tsx')
   assert.ok(app.includes("screen === 'estimate' && <EstimateScreen />"), 'App does not render the Estimate screen')
+})
+
+
+// ── VAT, currencies and depreciation ──
+
+test('a net price and a gross price of the same rate read to the same gross', () => {
+  const net = forecast.lineVat({ quantity: 1, unit_price: 100, vat_rate: 20, vat_included: false })
+  const gross = forecast.lineVat({ quantity: 1, unit_price: 120, vat_rate: 20, vat_included: true })
+  assert.ok(Math.abs(net.net - 100) < 1e-9)
+  assert.ok(Math.abs(net.vat - 20) < 1e-9)
+  assert.ok(Math.abs(net.gross - 120) < 1e-9)
+  assert.ok(Math.abs(gross.net - 100) < 1e-9)
+  assert.ok(Math.abs(gross.vat - 20) < 1e-9)
+  assert.ok(Math.abs(gross.gross - 120) < 1e-9)
+})
+
+test('a line with no VAT stated is not charged a rate by the forecast', () => {
+  const total = forecast.vatTotals([{ quantity: 2, unit_price: 50 }])
+  assert.deepEqual(total, { net: 100, vat: 0, gross: 100 })
+})
+
+test('an unpriced line contributes no VAT and is still counted', () => {
+  const result = forecast.forecast(
+    [{ quantity: 1, unit_price: 100, vat_rate: 20 }, { quantity: 2, unit_price: null }],
+    { years: 2, maintenance_pct: 0, discount_pct: 0 })
+  assert.equal(result.capital, 120)
+  assert.equal(result.unpriced, 1)
+  assert.ok(Math.abs(result.vat.vat - 20) < 1e-9)
+})
+
+test('VAT totals add the net and the tax of every line', () => {
+  const total = forecast.vatTotals([
+    { quantity: 1, unit_price: 100, vat_rate: 20 },
+    { quantity: 1, unit_price: 240, vat_rate: 20, vat_included: true },
+  ])
+  assert.ok(Math.abs(total.net - 300) < 1e-9)
+  assert.ok(Math.abs(total.vat - 60) < 1e-9)
+  assert.ok(Math.abs(total.gross - 360) < 1e-9)
+})
+
+test('straight line spreads cost less salvage over the life and stops there', () => {
+  const asset = forecast.depreciationOf(
+    { quantity: 1, unit_price: 1000, depreciation: 'straight_line', life_years: 4, salvage: 200 }, 6)
+  assert.deepEqual(asset.yearly, [200, 200, 200, 200, 0, 0])
+  assert.equal(asset.total, 800)
+})
+
+test('the last straight-line year absorbs the rounding, so the column sums to the depreciable', () => {
+  const asset = forecast.depreciationOf(
+    { quantity: 1, unit_price: 100, depreciation: 'straight_line', life_years: 3 }, 3)
+  assert.ok(Math.abs(asset.total - 100) < 1e-9)
+})
+
+test('declining balance charges twice the straight-line rate and never falls through salvage', () => {
+  const asset = forecast.depreciationOf(
+    { quantity: 1, unit_price: 1000, depreciation: 'declining_balance', life_years: 4, salvage: 100 }, 6)
+  assert.ok(Math.abs(asset.yearly[0] - 500) < 1e-9)
+  assert.ok(Math.abs(asset.yearly[1] - 250) < 1e-9)
+  assert.ok(asset.total <= 900 + 1e-9)
+  const book = 1000 - asset.total
+  assert.ok(book >= 100 - 1e-9, 'book value fell below salvage')
+})
+
+test('the VUK method uses the rate the reader entered, not a shipped table', () => {
+  const asset = forecast.depreciationOf(
+    { quantity: 1, unit_price: 1000, depreciation: 'vuk', vuk_rate: 20, life_years: 5 }, 3)
+  assert.ok(Math.abs(asset.yearly[0] - 200) < 1e-9)
+  assert.ok(Math.abs(asset.yearly[1] - 160) < 1e-9)
+})
+
+test('a horizon shorter than the life shows the years it has, and no more', () => {
+  const asset = forecast.depreciationOf(
+    { quantity: 1, unit_price: 1000, depreciation: 'straight_line', life_years: 10 }, 3)
+  assert.equal(asset.yearly.length, 3)
+  assert.equal(asset.yearly[2], 100)
+})
+
+test('rates are TRY per one unit, and a missing rate is null rather than one', () => {
+  const rates = { TRY: 1, EUR: 50, USD: 40 }
+  assert.equal(money.convert(100, 'EUR', 'TRY', rates), 5000)
+  assert.equal(money.convert(5000, 'TRY', 'EUR', rates), 100)
+  assert.equal(money.convert(100, 'GBP', 'TRY', rates), null)
+})
+
+test('a quote reads net, VAT and gross and lands in the estimate currency', () => {
+  const read = money.quoteMoney(
+    { unit_price: 100, currency: 'EUR', vat_rate: 20, vat_included: false },
+    'TRY', { TRY: 1, EUR: 50 })
+  assert.equal(read.net, 100)
+  assert.equal(read.vat, 20)
+  assert.equal(read.gross, 120)
+  assert.equal(read.landed, 6000)
+})
+
+test('the screen knows the quotes, the rates and the accounting columns', async () => {
+  const screen = await read('src/screens/Estimate.tsx')
+  for (const needle of ['ACCOUNTING_COLUMNS', 'QuoteRows', 'fetchTcmbRates', 'quoteMoney']) {
+    assert.ok(screen.includes(needle), `Estimate.tsx does not carry ${needle}`)
+  }
+  // The accounting sheet's headers are a contract a bookkeeper maps once.
+  const block = screen.slice(screen.indexOf('const ACCOUNTING_COLUMNS'), screen.indexOf(']', screen.indexOf('const ACCOUNTING_COLUMNS')))
+  for (const column of ['Item', 'Cost (net)', 'VAT', 'Cost (gross)', 'Salvage', 'Useful life (years)', 'Document']) {
+    assert.ok(block.includes(`'${column}'`), `the accounting sheet lost ${column}`)
+  }
+  const api = await read('src/engine/estimates.ts')
+  assert.ok(api.includes('quotes: (line.quotes ?? [])'), 'a quote is never sent on save')
 })
