@@ -213,3 +213,5 @@
 @media (max-width: 700px) {
   .estimate-lines input { width: 64px; }
 }
+
+.estimate-line-actions { display: flex; justify-content: flex-end; align-items: center; gap: 2px; }
