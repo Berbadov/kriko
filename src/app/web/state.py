@@ -967,7 +967,15 @@ CREATE TABLE IF NOT EXISTS estimates (
   maintenance_pct REAL NOT NULL DEFAULT 5.0,
   discount_pct    REAL NOT NULL DEFAULT 8.0,
   created_at      TEXT NOT NULL DEFAULT '',
-  updated_at      TEXT NOT NULL DEFAULT '');
+  updated_at      TEXT NOT NULL DEFAULT '',
+  -- The default VAT rate for a line that does not state one. Turkey's standard
+  -- rate is 20%; it is a starting value the reader can change, never a fact the
+  -- app asserts about a purchase.
+  vat_rate        REAL NOT NULL DEFAULT 20.0,
+  -- The rates the screen converts with, as JSON: {"TRY":1,"EUR":..,"USD":..,
+  -- "source":"manual"|"TCMB","date":"YYYY-MM-DD"}. Every value is TRY per one
+  -- unit, which is TCMB's own direction, so one table serves every currency.
+  fx_json         TEXT NOT NULL DEFAULT '{}');
 CREATE INDEX IF NOT EXISTS estimates_updated ON estimates (updated_at DESC);
 
 CREATE TABLE IF NOT EXISTS estimate_lines (
@@ -979,8 +987,39 @@ CREATE TABLE IF NOT EXISTS estimate_lines (
   quantity    INTEGER NOT NULL DEFAULT 1,
   unit_price  REAL,
   note        TEXT NOT NULL DEFAULT '',
-  position    INTEGER NOT NULL DEFAULT 0);
+  position    INTEGER NOT NULL DEFAULT 0,
+  -- Per-line depreciation. `method` is straight_line | declining_balance |
+  -- vuk; the VUK method takes the rate the reader read off GİB's published
+  -- list, because this app does not ship a tax table it cannot verify.
+  depreciation TEXT NOT NULL DEFAULT 'straight_line',
+  life_years  INTEGER,
+  salvage     REAL,
+  vuk_rate    REAL);
 CREATE INDEX IF NOT EXISTS estimate_lines_estimate ON estimate_lines (estimate_id, position);
+
+-- The vendor quotes behind one line. A line holds as many as the buyer
+-- gathered; exactly one is selected and only its price drives the totals.
+-- `vat_included` says what the reader typed: a gross price is divided by
+-- 1 + rate for the net column, never the other way round.
+CREATE TABLE IF NOT EXISTS estimate_quotes (
+  quote_id       TEXT PRIMARY KEY,
+  estimate_id    TEXT NOT NULL,
+  line_id        TEXT NOT NULL,
+  vendor         TEXT NOT NULL DEFAULT '',
+  seller         TEXT NOT NULL DEFAULT '',
+  url            TEXT NOT NULL DEFAULT '',
+  unit_price     REAL,
+  currency       TEXT NOT NULL DEFAULT '',
+  vat_rate       REAL NOT NULL DEFAULT 20.0,
+  vat_included   INTEGER NOT NULL DEFAULT 0,
+  delivery_days  INTEGER,
+  warranty_months INTEGER,
+  quote_date     TEXT NOT NULL DEFAULT '',
+  valid_until    TEXT NOT NULL DEFAULT '',
+  note           TEXT NOT NULL DEFAULT '',
+  selected       INTEGER NOT NULL DEFAULT 0,
+  position       INTEGER NOT NULL DEFAULT 0);
+CREATE INDEX IF NOT EXISTS estimate_quotes_line ON estimate_quotes (estimate_id, line_id, position);
 
 """
 
@@ -3655,6 +3694,9 @@ def name_chat_thread(conn: sqlite3.Connection, thread_id: str, title: str, *, fa
 ESTIMATE_MAX_LINES = 200
 ESTIMATE_NAME_CHARS = 200
 ESTIMATE_NOTE_CHARS = 2000
+#: Vendor quotes one line may hold. Three vendors is the ordinary case; the cap
+#: keeps a pasted payload from turning one line into a spreadsheet.
+ESTIMATE_MAX_QUOTES = 20
 
 
 def _estimate_row(row: sqlite3.Row) -> dict:
@@ -3665,9 +3707,19 @@ def _estimate_row(row: sqlite3.Row) -> dict:
         "years": int(row["years"]),
         "maintenance_pct": float(row["maintenance_pct"]),
         "discount_pct": float(row["discount_pct"]),
+        "vat_rate": float(row["vat_rate"]),
+        "fx": _fx_of(row["fx_json"]),
         "created_at": row["created_at"],
         "updated_at": row["updated_at"],
     }
+
+
+def _fx_of(text: str) -> dict:
+    try:
+        found = json.loads(text or "{}")
+    except (TypeError, ValueError):
+        return {}
+    return found if isinstance(found, dict) else {}
 
 
 def _line_row(row: sqlite3.Row) -> dict:
@@ -3679,6 +3731,30 @@ def _line_row(row: sqlite3.Row) -> dict:
         "quantity": int(row["quantity"]),
         "unit_price": row["unit_price"],
         "note": row["note"],
+        "depreciation": row["depreciation"] or "straight_line",
+        "life_years": row["life_years"],
+        "salvage": row["salvage"],
+        "vuk_rate": row["vuk_rate"],
+    }
+
+
+def _quote_row(row: sqlite3.Row) -> dict:
+    return {
+        "quote_id": row["quote_id"],
+        "vendor": row["vendor"],
+        "seller": row["seller"],
+        "url": row["url"],
+        "unit_price": row["unit_price"],
+        "currency": row["currency"],
+        "vat_rate": float(row["vat_rate"]),
+        "vat_included": bool(row["vat_included"]),
+        "delivery_days": row["delivery_days"],
+        "warranty_months": row["warranty_months"],
+        "quote_date": row["quote_date"],
+        "valid_until": row["valid_until"],
+        "note": row["note"],
+        "selected": bool(row["selected"]),
+        "position": int(row["position"]) if row["position"] is not None else 0,
     }
 
 
@@ -3702,7 +3778,47 @@ def get_estimate(conn: sqlite3.Connection, estimate_id: str) -> dict | None:
         "SELECT * FROM estimate_lines WHERE estimate_id = ? ORDER BY position, line_id",
         (estimate_id,),
     ).fetchall()
-    return {**_estimate_row(row), "lines": [_line_row(one) for one in lines]}
+    quotes: dict[str, list[dict]] = {}
+    for quote in conn.execute(
+        "SELECT * FROM estimate_quotes WHERE estimate_id = ? ORDER BY position, quote_id",
+        (estimate_id,),
+    ).fetchall():
+        quotes.setdefault(quote["line_id"], []).append(_quote_row(quote))
+    estimate = _estimate_row(row)
+    out_lines = []
+    for one in lines:
+        line = _line_row(one)
+        found = quotes.get(line["line_id"], [])
+        if not found and line["unit_price"] is not None:
+            # A price saved before quotes existed is still a price. It becomes
+            # one quote labelled "migrated", selected, in the estimate's own
+            # currency with the estimate's default VAT: the closest honest
+            # reading of a row that never said more.
+            found = [{
+                "quote_id": f"migrated-{line['line_id']}",
+                "vendor": "Migrated price",
+                "seller": "",
+                "url": "",
+                "unit_price": line["unit_price"],
+                "currency": estimate["currency"],
+                # An old row never said whether its price was net or gross, so
+                # it is read at no VAT: the file it exports does not silently
+                # grow a tax that was never part of the number typed.
+                "vat_rate": 0.0,
+                "vat_included": False,
+                "delivery_days": None,
+                "warranty_months": None,
+                "quote_date": "",
+                "valid_until": "",
+                "note": "Saved before vendor quotes existed.",
+                "selected": True,
+                "position": 0,
+            }]
+        if found and not any(q["selected"] for q in found):
+            found[0]["selected"] = True
+        line["quotes"] = found
+        out_lines.append(line)
+    return {**estimate, "lines": out_lines}
 
 
 def save_estimate(conn: sqlite3.Connection, payload: dict) -> dict:
@@ -3718,7 +3834,10 @@ def save_estimate(conn: sqlite3.Connection, payload: dict) -> dict:
     years = max(1, min(int(payload.get("years") or 5), 30))
     maintenance_pct = max(0.0, min(float(payload.get("maintenance_pct") or 0.0), 100.0))
     discount_pct = max(0.0, min(float(payload.get("discount_pct") or 0.0), 100.0))
+    vat_rate = max(0.0, min(float(payload.get("vat_rate", 20.0) or 0.0), 100.0))
+    fx = _clean_fx(payload.get("fx"))
     lines = list(payload.get("lines") or [])[:ESTIMATE_MAX_LINES]
+
 
     now = _now()
     if estimate_id:
@@ -3729,37 +3848,78 @@ def save_estimate(conn: sqlite3.Connection, payload: dict) -> dict:
             raise KeyError(f"no estimate {estimate_id!r}")
         conn.execute(
             "UPDATE estimates SET name = ?, currency = ?, years = ?,"
-            " maintenance_pct = ?, discount_pct = ?, updated_at = ?"
-            " WHERE estimate_id = ?",
-            (name, currency, years, maintenance_pct, discount_pct, now, estimate_id))
+            " maintenance_pct = ?, discount_pct = ?, vat_rate = ?, fx_json = ?,"
+            " updated_at = ? WHERE estimate_id = ?",
+            (name, currency, years, maintenance_pct, discount_pct, vat_rate,
+             json.dumps(fx, ensure_ascii=False), now, estimate_id))
         created_at = existing["created_at"]
         conn.execute("DELETE FROM estimate_lines WHERE estimate_id = ?", (estimate_id,))
+        conn.execute("DELETE FROM estimate_quotes WHERE estimate_id = ?", (estimate_id,))
     else:
         estimate_id = secrets.token_hex(8)
         created_at = now
         conn.execute(
             "INSERT INTO estimates (estimate_id, name, currency, years,"
-            " maintenance_pct, discount_pct, created_at, updated_at)"
-            " VALUES (?,?,?,?,?,?,?,?)",
+            " maintenance_pct, discount_pct, vat_rate, fx_json, created_at, updated_at)"
+            " VALUES (?,?,?,?,?,?,?,?,?,?)",
             (estimate_id, name, currency, years, maintenance_pct, discount_pct,
-             created_at, now))
+             vat_rate, json.dumps(fx, ensure_ascii=False), created_at, now))
 
     for position, line in enumerate(lines):
+        line_id = secrets.token_hex(8)
+        quote_rows = _clean_quotes(line.get("quotes"), line.get("unit_price"))
+        for row in quote_rows:
+            row["currency"] = row["currency"] or currency
+        selected_price = next(
+            (q["unit_price"] for q in quote_rows if q["selected"]), None)
         conn.execute(
             "INSERT INTO estimate_lines (line_id, estimate_id, subject_id, pack_id,"
-            " label, quantity, unit_price, note, position) VALUES (?,?,?,?,?,?,?,?,?)",
+            " label, quantity, unit_price, note, position, depreciation,"
+            " life_years, salvage, vuk_rate) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (
-                secrets.token_hex(8),
+                line_id,
                 estimate_id,
                 str(line.get("subject_id") or "")[:200],
                 str(line.get("pack_id") or "")[:100],
                 " ".join(str(line.get("label") or "").split())[:300],
                 max(1, min(int(line.get("quantity") or 1), 1_000_000)),
-                (None if line.get("unit_price") in (None, "")
-                 else max(0.0, float(line["unit_price"]))),
+                # The selected quote is what an older reader of this row sees;
+                # a line with quotes and no selection keeps the saved price.
+                (selected_price if selected_price is not None else
+                 (None if line.get("unit_price") in (None, "")
+                  else max(0.0, float(line["unit_price"])))),
                 " ".join(str(line.get("note") or "").split())[:ESTIMATE_NOTE_CHARS],
                 position,
+                str(line.get("depreciation") or "straight_line")[:24],
+                _optional_int(line.get("life_years"), 1, 50),
+                _optional_number(line.get("salvage"), 0.0, None),
+                _optional_number(line.get("vuk_rate"), 0.0, 100.0),
             ))
+        for quote_position, quote in enumerate(quote_rows):
+            conn.execute(
+                "INSERT INTO estimate_quotes (quote_id, estimate_id, line_id, vendor,"
+                " seller, url, unit_price, currency, vat_rate, vat_included,"
+                " delivery_days, warranty_months, quote_date, valid_until, note,"
+                " selected, position) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                (
+                    secrets.token_hex(8),
+                    estimate_id,
+                    line_id,
+                    quote["vendor"],
+                    quote["seller"],
+                    quote["url"],
+                    quote["unit_price"],
+                    quote["currency"],
+                    quote["vat_rate"],
+                    1 if quote["vat_included"] else 0,
+                    quote["delivery_days"],
+                    quote["warranty_months"],
+                    quote["quote_date"],
+                    quote["valid_until"],
+                    quote["note"],
+                    1 if quote["selected"] else 0,
+                    quote_position,
+                ))
     conn.commit()
     found = get_estimate(conn, estimate_id)
     assert found is not None  # written above, in the same transaction
@@ -3769,5 +3929,89 @@ def save_estimate(conn: sqlite3.Connection, payload: dict) -> dict:
 def delete_estimate(conn: sqlite3.Connection, estimate_id: str) -> bool:
     cur = conn.execute("DELETE FROM estimates WHERE estimate_id = ?", (estimate_id,))
     conn.execute("DELETE FROM estimate_lines WHERE estimate_id = ?", (estimate_id,))
+    conn.execute("DELETE FROM estimate_quotes WHERE estimate_id = ?", (estimate_id,))
     conn.commit()
     return cur.rowcount > 0
+
+
+def _optional_number(value, low: float, high: float | None) -> float | None:
+    if value in (None, ""):
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    if number != number:
+        return None
+    number = max(low, number)
+    if high is not None:
+        number = min(high, number)
+    return number
+
+
+def _optional_int(value, low: int, high: int) -> int | None:
+    number = _optional_number(value, low, high)
+    return None if number is None else int(number)
+
+
+def _clean_fx(value) -> dict:
+    """The reader's rate table, bounded and stripped to what it means."""
+    if not isinstance(value, dict):
+        return {}
+    out: dict[str, object] = {}
+    for code, rate in value.items():
+        if code in ("source", "date", "url", "base", "bulletin", "fetched_at"):
+            out[code] = " ".join(str(rate).split())[:80]
+            continue
+        code = str(code).strip().upper()[:8]
+        if not code:
+            continue
+        number = _optional_number(rate, 0.0, 1_000_000.0)
+        if number is not None and number > 0:
+            out[code] = number
+    out.setdefault("TRY", 1.0)
+    return out
+
+
+def _clean_quotes(value, fallback_price) -> list[dict]:
+    """Quote rows from a payload, with exactly one selected per line.
+
+    Nothing is invented: a quote without a price stays unpriced. A line with no
+    quotes keeps its legacy `unit_price` as a single selected quote, so old
+    boards and old callers read the same on the screen and in the file.
+    """
+    rows = [q for q in (value or []) if isinstance(q, dict)][:ESTIMATE_MAX_QUOTES]
+    out: list[dict] = []
+    for quote in rows:
+        unit_price = _optional_number(quote.get("unit_price"), 0.0, None)
+        out.append({
+            "vendor": " ".join(str(quote.get("vendor") or "").split())[:200],
+            "seller": " ".join(str(quote.get("seller") or "").split())[:200],
+            "url": " ".join(str(quote.get("url") or "").split())[:1000],
+            "unit_price": unit_price,
+            "currency": str(quote.get("currency") or "").strip().upper()[:8],
+            "vat_rate": _optional_number(quote.get("vat_rate", 20.0), 0.0, 100.0) or 0.0,
+            "vat_included": bool(quote.get("vat_included")),
+            "delivery_days": _optional_int(quote.get("delivery_days"), 0, 3650),
+            "warranty_months": _optional_int(quote.get("warranty_months"), 0, 600),
+            "quote_date": str(quote.get("quote_date") or "").strip()[:10],
+            "valid_until": str(quote.get("valid_until") or "").strip()[:10],
+            "note": " ".join(str(quote.get("note") or "").split())[:ESTIMATE_NOTE_CHARS],
+            "selected": bool(quote.get("selected")),
+        })
+    if not out and fallback_price not in (None, ""):
+        out.append({
+            "vendor": "Migrated price", "seller": "", "url": "",
+            "unit_price": max(0.0, float(fallback_price)), "currency": "",
+            "vat_rate": 0.0, "vat_included": False, "delivery_days": None,
+            "warranty_months": None, "quote_date": "", "valid_until": "",
+            "note": "Saved before vendor quotes existed.", "selected": True,
+        })
+    selected = [row for row in out if row["selected"]]
+    if len(selected) > 1:
+        for row in selected[1:]:
+            row["selected"] = False
+    elif out and not selected:
+        out[0]["selected"] = True
+    return out
+
