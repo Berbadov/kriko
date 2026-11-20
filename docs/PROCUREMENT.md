@@ -14,8 +14,11 @@ reader can argue with them.
   (1 + rate)`; a gross quote as `net = gross ÷ (1 + rate)`. The totals row
   shows net, VAT and gross for the whole estimate. `capital` in the forecast is
   the gross amount actually paid.
-- **The default VAT rate is 20%**, Turkey's standard rate, and every line can
-  change it. It is a starting value, not a claim about the purchase.
+- **A new quote's default VAT rate is 20%**, Turkey's standard rate, and every
+  line can change it. It is a starting value, not a claim about the purchase.
+  A price saved before quotes existed is read at 0%, because that row never
+  said whether it was net or gross; its exported total does not grow a tax
+  nobody typed.
 - **Rates are TRY per one unit**, the direction the Central Bank publishes, so
   one table serves every currency pair: `A → B` is `amount × rate[A] ÷
   rate[B]`. A currency with no rate is shown as uncomparable and is not
