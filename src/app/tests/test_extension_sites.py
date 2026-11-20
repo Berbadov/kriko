@@ -212,7 +212,13 @@ def _collect_keys(node, keys=None):
 #: Hosts the extension is allowed to name. Two loopback spellings and the
 #: sites its own adapters cover — everything else is an outbound request from
 #: inside a page the reader is shopping on.
-ALLOWED_HOSTS = ("127.0.0.1", "localhost", "[::1]")
+#:
+#: The exception is the offline catalogs' one release channel: the index and
+#: the `.kpack` files are GitHub release assets, and the options page asks for
+#: those two hosts once, on the reader's press, before anything is downloaded.
+#: Nothing runs at page-load time and no catalog is fetched without that press.
+ALLOWED_HOSTS = ("127.0.0.1", "localhost", "[::1]",
+                 "github.com", "objects.githubusercontent.com")
 
 #: A URL in a comment paints nothing and fetches nothing. Stripped first, for
 #: the same reason `tokens.test.ts` strips comments before hunting colours:

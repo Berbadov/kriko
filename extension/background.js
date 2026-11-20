@@ -2032,7 +2032,19 @@ async function _runAnalysisForTab(tabId, url, storageKey, { fresh = false, auto 
 
   try {
     await _stage(url, "adapters", "");
-    const adapters = await fetchAdapters();
+    // The app not running is the ordinary state of a browser, and its adapter
+    // list is the app's: a closed app used to fail the run here, before the
+    // page was ever scraped and before `/api/analyze` could fail, so the
+    // offline catalog was never asked. An app that is up and refusing still
+    // speaks for itself; only a dead connection falls through to no adapters.
+    let adapters = [];
+    let appDown = null;
+    try {
+      adapters = await fetchAdapters();
+    } catch (error) {
+      if (error.code !== "APP_NOT_RUNNING" && error.code !== "APP_NOT_RESPONDING") throw error;
+      appDown = error;
+    }
     const adapter = adapterFor(url, adapters);
     // Not an error the reader can act on — most pages are not listings —
     // but not something to answer with an empty result either, which would
@@ -2048,6 +2060,10 @@ async function _runAnalysisForTab(tabId, url, storageKey, { fresh = false, auto 
       quiet.learnable = !quiet.hostKnown && _looksLearnable(scrape);
       return quiet;
     };
+    // With the app down there is no adapter list to judge the page by, so
+    // "nothing installed can read this page" would be a claim about a list we
+    // never received. The offline catalog gets the scrape instead.
+    const unreadable = () => appDown || noAdapter();
 
     // Named after the pack that will read it, not after the mechanism: the
     // reader knows which site they are on, and "reading this page" is the
@@ -2070,7 +2086,7 @@ async function _runAnalysisForTab(tabId, url, storageKey, { fresh = false, auto 
     );
     timings.scrape_ms = _elapsed(scrapeStartedAt);
     if (!reply || !reply.ok) {
-      if (!adapter) throw noAdapter();
+      if (!adapter) throw unreadable();
       // A site Kriko has an adapter for, and a page it cannot read: the adapter
       // is out of date for it, or the page is not what it was written for. That
       // is exactly what Learn this page is for, so it is offered, with the
@@ -2089,7 +2105,7 @@ async function _runAnalysisForTab(tabId, url, storageKey, { fresh = false, auto 
       // A page load on a site nobody reads is quiet unless the page itself
       // says it is a product; the reader pressing the button is asking, so
       // a named page is worth asking about.
-      if (!product.name || (auto && !product.typed)) throw noAdapter();
+      if (!product.name || (auto && !product.typed)) throw unreadable();
     }
     // The page is a product: remember its price and judge the listing, beside
     // the analysis and not behind it.
@@ -2125,7 +2141,10 @@ async function _runAnalysisForTab(tabId, url, storageKey, { fresh = false, auto 
       const fallback = hasOffline() && error.code === "APP_UNREACHABLE"
         ? await KrikoOffline.lookup(extensionApi, scrape).catch(() => null)
         : null;
-      if (!fallback) throw error;
+      // The adapter list already told us the app was down. Saying that is
+      // truer than the analyze failure's generic "unreachable", and it keeps
+      // the code the panel keys its start-the-app hint on.
+      if (!fallback) throw appDown || error;
       await _stage(url, "offline", "");
       raw = fallback;
     }
