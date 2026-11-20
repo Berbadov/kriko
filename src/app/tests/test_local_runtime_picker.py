@@ -21,6 +21,11 @@ from app.web.app import create_app
 from app.web.settings import Settings
 
 
+class _Backlog(ThreadingHTTPServer):
+    #: Discovery connects within 0.2 s; the default backlog of 5 overflows under load.
+    request_queue_size = 64
+
+
 @pytest.fixture
 def server():
     """An OpenAI-compatible server; `ollama` turns on the `/api/version` answer."""
@@ -45,7 +50,7 @@ def server():
         def log_message(self, *_):
             pass
 
-    httpd = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    httpd = _Backlog(("127.0.0.1", 0), Handler)
     threading.Thread(target=httpd.serve_forever, kwargs={"poll_interval": 0.02}, daemon=True).start()
     local_discovery.forget_discovery()
     yield type("Server", (), {"url": f"http://127.0.0.1:{httpd.server_address[1]}", "mode": mode})
