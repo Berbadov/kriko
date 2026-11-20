@@ -4489,6 +4489,7 @@
     }
     const packs = Array.isArray(state.result.packs) ? state.result.packs : [];
     footerEl.textContent = packs.map((p) => `${p.pack_id} · ${p.version}`).join("  |  ");
+    if (state.result.offline) footerEl.textContent = `${footerEl.textContent ? `${footerEl.textContent}  ·  ` : ""}offline catalog`;
 
     // The app stored this same answer and can show the whole of it. Offered
     // only when the app said so: a link to a report that was never written is
