@@ -36,12 +36,7 @@ export function ProxiesGroup() {
         control={<Toggle label="Use proxies for blocked pages" on={doc.enabled} onChange={(on) => void save({ proxy_enabled: on ? '1' : '0' })} />}
       />
 
-      {doc.pool.length === 0 && (
-        <div className="k-empty">
-          <strong>No addresses yet</strong>
-          <span>Add one below. Use the address your proxy gives you.</span>
-        </div>
-      )}
+      {doc.pool.length === 0 && <Setting label="No addresses yet" note="Add one below. Use the address your proxy gives you." />}
       {doc.pool.map((one) => {
         const state = addressState(one, checked)
         const answer = answers.find((row) => row.address === one)
@@ -71,7 +66,7 @@ export function ProxiesGroup() {
               <label htmlFor={addressId}>Proxy address</label>
               <input id={addressId} className="k-input" type="text" autoComplete="off" spellCheck={false} placeholder="http://host:port" value={address} onChange={(event) => setAddress(event.target.value)} />
             </div>
-            <button type="submit" className="k-btn" data-kind="primary" disabled={!address.trim()}>
+            <button type="submit" className="k-btn" disabled={!address.trim()}>
               Add the address
             </button>
           </form>

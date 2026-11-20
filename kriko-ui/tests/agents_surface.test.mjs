@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import React from 'react'
-import { domOf, h, loadSource, mount, unnamedButtons } from './settings_support.mjs'
+import { h, loadSource, mount, unnamedButtons } from './settings_support.mjs'
 
 /**
  * The agent surface, drawn inside Research's first section.

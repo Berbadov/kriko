@@ -867,6 +867,16 @@ button.switch[data-on='true'] .switch-track i {
   overflow-wrap: anywhere;
 }
 
+/* A press drawn as a link (the Chrome store) keeps the press look, not the link's. */
+.settings-screen a.k-btn {
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.settings-screen a.k-btn[data-kind='primary'] {
+  color: var(--on-brand);
+}
+
 /* A row with several presses lets them wrap at its end. */
 .settings-setting .k-row-control {
   flex-wrap: wrap;
@@ -895,4 +905,20 @@ button.switch[data-on='true'] .switch-track i {
   min-height: 28px;
   padding: 0 10px;
   font-size: 13px;
+}
+
+/* Under the breakpoint, a row's presses drop under its label, at the start, instead of squeezing it. */
+@container settings (max-width: 759px) {
+  .settings-body .settings-setting {
+    flex-wrap: wrap;
+  }
+
+  .settings-body .settings-setting-main {
+    flex: 1 1 100%;
+  }
+
+  .settings-body .settings-setting .k-row-control {
+    width: 100%;
+    justify-content: flex-start;
+  }
 }

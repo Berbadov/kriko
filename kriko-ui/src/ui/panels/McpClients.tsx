@@ -44,7 +44,7 @@ export function McpClientsGroup() {
                     </button>
                   )}
                   {row.writable && row.state !== 'connected' && row.state !== 'unreadable' && (
-                    <button type="button" className="k-btn" data-size="sm" data-kind="primary" disabled={busy} onClick={() => void write(row.id)}>
+                    <button type="button" className="k-btn" data-size="sm" disabled={busy} onClick={() => void write(row.id)}>
                       {busy ? 'Connecting…' : row.state === 'stale' ? 'Point it here' : 'Connect'}
                     </button>
                   )}

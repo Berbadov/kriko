@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from 'react'
+import { useState, type CSSProperties } from 'react'
 import { usePrefsDoc } from '../../engine/settings'
 import { AgentsSection } from '../panels/Agents'
 import { ChatSettings } from '../panels/Chat'
@@ -218,7 +218,11 @@ export function RangeSetting({
   onSave: (value: number) => void
 }) {
   const [draft, setDraft] = useState(value)
-  useEffect(() => setDraft(value), [value])
+  const [seen, setSeen] = useState(value)
+  if (value !== seen) {
+    setSeen(value)
+    setDraft(value)
+  }
   const commit = () => {
     if (draft !== value) onSave(draft)
   }

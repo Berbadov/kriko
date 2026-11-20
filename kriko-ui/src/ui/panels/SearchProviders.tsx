@@ -147,8 +147,12 @@ function ProviderRow({
     <div className="settings-item">
       <Setting
         label={row.label}
-        value={position}
-        state={<State tone={state.tone}>{state.text}</State>}
+        state={
+          <>
+            <State tone={state.tone}>{state.text}</State>
+            {position && <State>{position}</State>}
+          </>
+        }
         note={
           <>
             {row.note}

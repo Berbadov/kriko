@@ -418,7 +418,11 @@ function AgentLineRow({
 /** A model name typed by hand, for an endpoint that takes any name. */
 function FreeformModel({ agent, onSave }: { agent: AgentRow; onSave: (patch: Record<string, string>) => void }) {
   const [draft, setDraft] = useState(agent.llm)
-  useEffect(() => setDraft(agent.llm), [agent.llm])
+  const [seen, setSeen] = useState(agent.llm)
+  if (agent.llm !== seen) {
+    setSeen(agent.llm)
+    setDraft(agent.llm)
+  }
   return (
     <Setting
       label="Model"
