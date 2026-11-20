@@ -53,6 +53,7 @@ SHIPPED = (
     "manifest.json",
     "background.js",
     "content.js",
+    "offline",
     "hover_lite",
     "options",
     "assets",
@@ -207,7 +208,7 @@ def content_files(source: Path) -> list[str]:
 def firefox_manifest(content: bytes) -> bytes:
     """Derive the Firefox event-page manifest from the shared extension."""
     manifest = json.loads(content)
-    manifest["background"] = {"scripts": ["background.js"]}
+    manifest["background"] = {"scripts": ["offline/sqlite.js", "offline/catalog.js", "background.js"]}
     manifest["browser_specific_settings"] = {"gecko": {
         "id": "kriko@kriko.local",
         "strict_min_version": "140.0",
