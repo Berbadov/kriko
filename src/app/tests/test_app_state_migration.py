@@ -252,4 +252,9 @@ BACK_THEN = {
     # `ALTER` is ever asked for. Every other column of both tables carries a
     # default.
     "estimate_lines.estimate_id",
+    # 2026-11-20, the Estimate's vendor quotes, and the excuse holds once more:
+    # `estimate_quotes` arrived whole, so a reader whose file predates it gets
+    # both key columns from `CREATE TABLE IF NOT EXISTS`. Every other column of
+    # the table carries a default.
+    "estimate_quotes.estimate_id", "estimate_quotes.line_id",
 }

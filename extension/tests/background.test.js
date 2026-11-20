@@ -399,6 +399,48 @@ test("an app that is not running says so, rather than naming a status code", asy
   assert.match(entry.error, /not running|Kriko/i);
 });
 
+// app-closed (2026-11-20): the adapter list comes from the app, and asking for
+// it first made a closed app fail the whole run — the page was never scraped
+// and `/api/analyze` was never reached, so the offline catalog that PR #353
+// added was never asked. This is the reader's demo: app down, catalog stored
+// in the browser, a listing on screen. The page must still be read, and its
+// answer must come from the browser.
+test("with the app closed the page is read and the offline catalog answers", async () => {
+  const h = loadBackground({
+    offline: true,
+    tabResponses: withTab({ ...SCRAPE, product: { name: "Volkswagen Golf", typed: true } }),
+  });
+  const asked = [];
+  h.sandbox.KrikoSqlite = {};
+  h.sandbox.KrikoOffline = {
+    lookup: async (api, scrape) => {
+      asked.push(scrape.url);
+      return {
+        readable: true, offline: true, method: "offline_catalog",
+        coverage: "RISKS_FOUND", identity: { model: "golf" }, claims: [CLAIM],
+        packs: [{ pack_id: "org.kriko.cars", version: "0.4.0" }],
+      };
+    },
+  };
+  const result = await h.sandbox.runAnalysisForTab(1, SCRAPE.url);
+  assert.equal(result.offline, true);
+  assert.equal(result.method, "offline_catalog");
+  assert.deepEqual(asked, [SCRAPE.url], "the scrape reached the catalog lookup");
+  assert.ok(h.state.tabMessages.some((m) => m.message.type === "GET_SCRAPE"),
+    "the page was read before the app was asked");
+  assert.equal(h.state.session["kriko_result_" + SCRAPE.url].ok, true);
+});
+
+test("an app that is up and refuses its adapter list still fails the run", async () => {
+  const h = loadBackground({
+    routes: routes(), statuses: { "/api/adapters": 500 }, tabResponses: withTab(),
+  });
+  h.sandbox.KrikoSqlite = {};
+  h.sandbox.KrikoOffline = { lookup: async () => { throw new Error("must not be asked"); } };
+  await assert.rejects(() => h.sandbox.runAnalysisForTab(1, SCRAPE.url), /not reachable \(500\)/);
+  assert.ok(!h.state.tabMessages.some((m) => m.message.type === "GET_SCRAPE"));
+});
+
 // ── the two doors into the panel ────────────────────────────────────────
 //
 // A keyboard shortcut is worth having only if it does the same thing as the
