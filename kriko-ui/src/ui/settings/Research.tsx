@@ -37,6 +37,7 @@ const KIND_NOTES: Record<string, string> = {
   video: 'Video reviews and tests, on video sites.',
   news: 'News articles and press coverage.',
 }
+
 /** The tour's "Where to look" step points at this section. */
 const WHERE_TO_LOOK_TOUR = 'source-kinds'
 
@@ -125,7 +126,7 @@ export function Research() {
               value={doc.chosen.local_output_language || 'auto'}
               options={[
                 { value: 'auto', label: 'Automatic' },
-                ...(doc.chosen.local_output_language && !LANGUAGES.some((one) => one.value === doc.chosen.local_output_language)
+                ...(doc.chosen.local_output_language && doc.chosen.local_output_language !== 'auto' && !LANGUAGES.some((one) => one.value === doc.chosen.local_output_language)
                   ? [{ value: doc.chosen.local_output_language, label: doc.chosen.local_output_language }]
                   : []),
                 ...LANGUAGES,

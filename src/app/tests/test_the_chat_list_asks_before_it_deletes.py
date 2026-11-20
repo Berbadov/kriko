@@ -12,7 +12,7 @@ import re
 from pathlib import Path
 
 UI = Path(__file__).resolve().parents[3] / "kriko-ui" / "src"
-RAIL = (UI / "ui" / "RailChats.tsx").read_text(encoding="utf-8")
+CHATS = (UI / "ui" / "ChatsList.tsx").read_text(encoding="utf-8")
 THREADS = (UI / "engine" / "threads.ts").read_text(encoding="utf-8")
 LIVE = (UI / "engine" / "live.ts").read_text(encoding="utf-8")
 ROUTES = (
@@ -21,15 +21,15 @@ ROUTES = (
 
 
 def test_a_delete_is_wired_after_the_question():
-    assert RAIL.count("void remove(row.id)") == 1
-    assert RAIL.index("Delete?") < RAIL.index("void remove(row.id)")
+    assert CHATS.count("void remove(row.id)") == 1
+    assert CHATS.index("Delete this chat?") < CHATS.index("void remove(row.id)")
     # The row's trash button only opens the question; the delete is the second press.
-    assert "setDoing({ id: row.id, what: 'delete' })" in RAIL
+    assert "setDoing({ id: row.id, what: 'delete' })" in CHATS
 
 
 def test_a_failed_delete_is_shown_not_swallowed():
     assert "setProblem(error instanceof Error" in THREADS
-    assert "{(problem || note) &&" in RAIL
+    assert "{(problem || note) &&" in CHATS
 
 
 def test_opening_a_chat_only_reads():

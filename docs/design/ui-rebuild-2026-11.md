@@ -125,6 +125,11 @@ movement, not the state.
 
 ### Desktop (`kriko-ui`)
 
+*Superseded on 2026-11-20 for the desktop: the app now follows the phone app's
+four palettes and grouped lists, with a labelled left rail and a plain Settings
+screen (see `docs/DESIGN.md`, Navigation). The brief below is kept as the
+record of the dossier idea.*
+
 - The rail is an index: destinations with a count or state, a 2px brand
   marker on the active row, hairline dividers instead of group headings.
 - The top bar is a 44px instrument strip, not a floating chrome bar.

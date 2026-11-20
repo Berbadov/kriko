@@ -396,3 +396,113 @@
     transition: none;
   }
 }
+
+/* Chats: the saved conversations, listed above the checks on History. ------ */
+
+.chats {
+  gap: 10px;
+}
+
+.chats-find {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chats-find .k-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.chats-note {
+  margin: 0 4px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.chats-empty {
+  margin: 4px;
+  font-size: 14px;
+  color: var(--ink-3);
+}
+
+.chats-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.chats-group + .chats-group {
+  margin-top: 4px;
+}
+
+.chats-row {
+  flex-wrap: wrap;
+  row-gap: 6px;
+  min-height: 56px;
+  padding: 8px 12px 8px 14px;
+}
+
+.chats-row[data-on='true'] {
+  background: var(--select-strong);
+}
+
+.chats-row[data-open='true'] {
+  background: var(--select);
+}
+
+.chats-open {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 0;
+  background: transparent;
+  border: 0;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.chats-open .k-row-title {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chats-open[aria-current='true'] .k-row-title {
+  color: var(--link);
+}
+
+.chats-name {
+  flex: 1;
+  min-width: 0;
+}
+
+.chats-row > .k-row-value {
+  white-space: nowrap;
+}
+
+/* The actions take the whole line under the title, so each word can be read. */
+.chats-acts {
+  flex: 0 0 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 0 0 4px 46px;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+
+.chats-ask > span {
+  flex: 1 1 100%;
+  color: var(--ink-2);
+}
+
+@media (max-width: 760px) {
+  .chats-acts {
+    padding-left: 0;
+  }
+}

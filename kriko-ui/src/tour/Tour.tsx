@@ -22,7 +22,7 @@ interface Step {
 const STEPS: Step[] = [
   { title: 'Welcome to Kriko', text: 'Kriko tells you what can go wrong with a product before you buy it. This tour takes one minute.' },
   { target: 'composer', title: 'Ask here', text: 'Type a product or a question. Kriko reads your catalogs and the web, and shows its work.' },
-  { target: 'agent-pill', title: 'Pick an agent', text: 'The agent does the reading. Choose one for each question. Settings sets the one you use most.' },
+  { target: 'agent-pick', title: 'Pick an agent', text: 'The agent does the reading. Choose one for each question. Settings sets the one you use most.' },
   { target: 'new-chat', title: 'Chats', text: 'Start a new chat here. Your old chats are in History, on the rail.' },
   { target: 'nav-compare', title: 'Compare', text: 'Put up to four products side by side. Products are columns. Risks are rows.' },
   { target: 'nav-queue', title: 'Queue', text: 'Send products from your browser. Kriko checks them one by one, when you press Start.' },

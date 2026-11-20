@@ -33,12 +33,12 @@ and the app shows demo data when no engine answers.
 
 | File | Function |
 |---|---|
-| `src/App.tsx`, `src/ui/` | The shell of the window: the rail, the drawer, and the shared pieces (composer, markdown, product card, queue card). |
+| `src/App.tsx`, `src/ui/` | The shell of the window: the left rail and its strip, and the shared pieces (composer, markdown, product card, queue card). |
 | `src/screens/` | One file for each screen: Chat, Compare, Product, Queue, and the rest. |
 | `src/engine/` | The engine from the side of the window: the API client, the boot state, and the typed products and jobs. |
 | `src/chat.tsx`, `src/compare.tsx`, `src/queue.tsx` | The state of the three pillars. Each lives above the screens, so a run survives a change of screen. |
 | `src/handoff.ts` | The route that the extension hands over: `check`, `result/<id>`, `questions/<id>`, `compare/<id>`, `queue`. |
-| `src/styles/tokens.css` | Every colour, size and time. The dark palette is the default and the light palette redefines each colour. Newsreader sets the titles and Inter the reading; the system monospace is for code and logs. Amber is a status and attention mark only, navy or sky is the main colour, and the radius scale is 8/10/12/16/pill. |
+| `src/styles/tokens.css` | Every colour, size and time. The dark palette is the default and the light palette redefines each colour. Newsreader sets the titles and Inter the reading; the system monospace is for code and logs. Four palettes (dark, gray, paper, white) and system, shared with the phone app: blue is the main colour, green a price that fell or no reports, amber a status that needs the eye, red a serious finding or a procurement risk, and the radius scale is 10/12/16/24/pill. `src/styles/system.css` is the shared list, row and figure vocabulary the screens are drawn from. |
 | `src-tauri/src/engine.rs` | The engine supervisor. |
 | `src-tauri/src/shell.rs` | The tray, the hide-on-close behaviour, and the window. |
 | `src-tauri/src/lib.rs` | The commands the window calls, and the start of the app. |

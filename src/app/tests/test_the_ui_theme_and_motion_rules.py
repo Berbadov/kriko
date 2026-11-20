@@ -53,13 +53,36 @@ def test_the_default_palette_names_every_colour():
     assert len(default) >= 15, f"only {sorted(default)} are named in the default palette"
 
 
+#: The explicit palettes, each a block that must redefine every raw colour.
+#: `paper` is the warm light; `light` is its alias, in the same selector list.
+EXPLICIT_PALETTES = {
+    "gray": ":root[data-theme='gray']",
+    "paper": ":root[data-theme='light']",
+    "white": ":root[data-theme='white']",
+}
+
+
+def _raw_colours() -> set[str]:
+    """The raw colours: the palette's own values, not the roles that read them.
+
+    A role (`--panel`, `--accent`, `--ok`) is an alias defined once in `:root`
+    and resolves through a raw colour, so a palette has only to redefine the raw
+    ones. The raw section of the default block is where those are named.
+    """
+    default = _block(":root {")
+    raw = default[default.index("---- raw colours") :]
+    return set(re.findall(r"(--[\w-]+)\s*:", raw))
+
+
 def test_the_explicit_light_theme_redefines_every_colour_the_default_names():
-    default = _colours(_declared(_block(":root {")))
-    light = _colours(_declared(_block(":root[data-theme='light']")))
-    assert default - light == set(), (
-        f"{sorted(default - light)} are dark in the light theme: the screens that "
-        "use them stay dark islands"
-    )
+    raw = _raw_colours()
+    assert len(raw) >= 30, f"only {len(raw)} raw colours found: the parse has lost the palette"
+    for theme, opener in EXPLICIT_PALETTES.items():
+        missing = raw - _declared(_block(opener))
+        assert missing == set(), (
+            f"{sorted(missing)} are the dark default in the {theme} theme: the screens "
+            "that use them stay dark islands"
+        )
 
 
 def test_the_system_light_setting_redefines_the_same_colours():
@@ -84,6 +107,10 @@ def test_a_raw_colour_outside_the_theme_is_one_of_the_few_that_must_not_follow_i
         "styles/activity.css": 1,  # ink on the green check
         "ui/TopBar.tsx": 1,  # the logo's own white, swapped for the text colour
         "ui/Starting.tsx": 1,  # the same logo white, swapped the same way
+        "ui/Rail.tsx": 1,  # an icon's own white, swapped for the current text colour
+        # the theme picker's swatches: each palette's own ground, sheet, ink and
+        # brand, which must show whichever theme is active
+        "ui/panels/settingsParts.tsx": 22,
     }
     pattern = re.compile(r"#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\(")
     seen: dict[str, int] = {}

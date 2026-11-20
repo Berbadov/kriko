@@ -72,10 +72,13 @@ export function HistoryPanel({ onOpen }: { onOpen: (id: string) => void }) {
 
   return (
     <>
-      <label className="work-search">
-        <Icon name="search" size={16} />
-        <input type="search" className="k-input" placeholder="Search your checks" aria-label="Search your checks" value={query} onChange={(event) => setQuery(event.target.value)} />
-      </label>
+      <div className="k-group">
+        <h2 className="k-caption">Checks</h2>
+        <label className="work-search">
+          <Icon name="search" size={16} />
+          <input type="search" className="k-input" placeholder="Search your checks" aria-label="Search your checks" value={query} onChange={(event) => setQuery(event.target.value)} />
+        </label>
+      </div>
       {problem && (
         <p className="error-note">
           {problem} <button className="k-btn" data-size="sm" onClick={retry}>Try again</button>

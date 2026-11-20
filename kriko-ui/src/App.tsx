@@ -25,6 +25,7 @@ import { PanelPage } from './ui/PanelPage'
 import { CatalogsPanel } from './ui/panels/Catalogs'
 import { ForYouPanel } from './ui/panels/ForYou'
 import { HistoryPanel } from './ui/panels/History'
+import { ChatsList } from './ui/ChatsList'
 import { SitesPanel } from './ui/panels/Sites'
 
 /** Named places the agent or a link can ask for, by the screen they are. */
@@ -225,6 +226,7 @@ function Shell() {
                 {screen === 'queue' && <QueueScreen onOpen={openProduct} />}
                 {screen === 'history' && (
                   <PanelPage title="History">
+                    <ChatsList onOpen={() => go('chat')} />
                     <HistoryPanel onOpen={openProduct} />
                   </PanelPage>
                 )}

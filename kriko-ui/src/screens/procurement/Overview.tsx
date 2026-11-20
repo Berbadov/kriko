@@ -13,7 +13,8 @@ const daysWord = (days: number | null) => {
   return `${days} ${days === 1 ? 'day' : 'days'} left`
 }
 
-const reasonsOf = (item: ProcurementLine) => item.reasons.filter(Boolean)
+/** An unrated quote has the same reason on every line; only a rated risk is worth repeating here. */
+const reasonsOf = (item: ProcurementLine) => (item.risk === 'red' || item.risk === 'amber' ? item.reasons.filter(Boolean) : [])
 
 export function ProcurementOverview({ onOpen }: { onOpen: (estimateId: string) => void }) {
   const { loading, problem, summary } = useProcurement()
