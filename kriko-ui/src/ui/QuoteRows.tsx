@@ -88,37 +88,41 @@ export function QuoteRows({ line, index, currency, rates, onChange, onRemoveLine
               <input type="radio" name={`pick-${line.line_id || index}`} checked={quote.selected} onChange={() => select(quoteIndex)} aria-label={`Use ${quote.vendor || `quote ${quoteIndex + 1}`} for this line`} />
             </label>
             <div className="quote-fields">
-              <input value={quote.vendor} onChange={(event) => patchQuote(quoteIndex, { vendor: event.target.value })} placeholder="Vendor" aria-label="Vendor" />
-              <input value={quote.seller} onChange={(event) => patchQuote(quoteIndex, { seller: event.target.value })} placeholder="Seller on the page" aria-label="Seller" />
-              <input value={quote.url} onChange={(event) => patchQuote(quoteIndex, { url: event.target.value })} placeholder="Quote URL" aria-label="Quote URL" />
-              <span className="quote-money">
-                <input inputMode="decimal" value={quote.unit_price == null ? '' : String(quote.unit_price)} onChange={(event) => {
-                  const parsed = Number.parseFloat(event.target.value)
-                  patchQuote(quoteIndex, { unit_price: event.target.value.trim() === '' || !Number.isFinite(parsed) ? null : parsed })
-                }} placeholder="—" aria-label="Quoted unit price" />
-                <select value={quote.currency || currency} onChange={(event) => patchQuote(quoteIndex, { currency: event.target.value })} aria-label="Quote currency">
-                  {CURRENCIES.map((code) => <option key={code} value={code}>{code}</option>)}
-                </select>
-              </span>
-              <label className="quote-check">
-                <input type="checkbox" checked={quote.vat_included} onChange={(event) => patchQuote(quoteIndex, { vat_included: event.target.checked })} />
-                gross
-              </label>
-              <label className="quote-vat">
-                VAT <input inputMode="decimal" value={String(quote.vat_rate)} onChange={(event) => {
-                  const parsed = Number.parseFloat(event.target.value)
-                  patchQuote(quoteIndex, { vat_rate: Number.isFinite(parsed) ? parsed : 0 })
-                }} aria-label="VAT rate" />%
-              </label>
-              <label className="quote-small">Delivery <input inputMode="numeric" value={quote.delivery_days ?? ''} onChange={(event) => {
-                const parsed = Number.parseInt(event.target.value, 10)
-                patchQuote(quoteIndex, { delivery_days: Number.isFinite(parsed) ? parsed : null })
-              }} aria-label="Delivery days" />d</label>
-              <label className="quote-small">Warranty <input inputMode="numeric" value={quote.warranty_months ?? ''} onChange={(event) => {
-                const parsed = Number.parseInt(event.target.value, 10)
-                patchQuote(quoteIndex, { warranty_months: Number.isFinite(parsed) ? parsed : null })
-              }} aria-label="Warranty months" />mo</label>
-              <label className="quote-small">Valid until <input type="date" value={quote.valid_until} onChange={(event) => patchQuote(quoteIndex, { valid_until: event.target.value })} aria-label="Valid until" /></label>
+              <div className="quote-who">
+                <input value={quote.vendor} onChange={(event) => patchQuote(quoteIndex, { vendor: event.target.value })} placeholder="Vendor" aria-label="Vendor" />
+                <input value={quote.seller} onChange={(event) => patchQuote(quoteIndex, { seller: event.target.value })} placeholder="Seller on the page" aria-label="Seller" />
+                <input value={quote.url} onChange={(event) => patchQuote(quoteIndex, { url: event.target.value })} placeholder="Quote URL" aria-label="Quote URL" />
+                <span className="quote-money">
+                  <input inputMode="decimal" value={quote.unit_price == null ? '' : String(quote.unit_price)} onChange={(event) => {
+                    const parsed = Number.parseFloat(event.target.value)
+                    patchQuote(quoteIndex, { unit_price: event.target.value.trim() === '' || !Number.isFinite(parsed) ? null : parsed })
+                  }} placeholder="—" aria-label="Quoted unit price" />
+                  <select value={quote.currency || currency} onChange={(event) => patchQuote(quoteIndex, { currency: event.target.value })} aria-label="Quote currency">
+                    {CURRENCIES.map((code) => <option key={code} value={code}>{code}</option>)}
+                  </select>
+                </span>
+              </div>
+              <div className="quote-terms">
+                <label className="quote-check">
+                  <input type="checkbox" checked={quote.vat_included} onChange={(event) => patchQuote(quoteIndex, { vat_included: event.target.checked })} />
+                  gross
+                </label>
+                <label className="quote-vat">
+                  VAT <input inputMode="decimal" value={String(quote.vat_rate)} onChange={(event) => {
+                    const parsed = Number.parseFloat(event.target.value)
+                    patchQuote(quoteIndex, { vat_rate: Number.isFinite(parsed) ? parsed : 0 })
+                  }} aria-label="VAT rate" />%
+                </label>
+                <label className="quote-small">Delivery <input inputMode="numeric" value={quote.delivery_days ?? ''} onChange={(event) => {
+                  const parsed = Number.parseInt(event.target.value, 10)
+                  patchQuote(quoteIndex, { delivery_days: Number.isFinite(parsed) ? parsed : null })
+                }} aria-label="Delivery days" />d</label>
+                <label className="quote-small">Warranty <input inputMode="numeric" value={quote.warranty_months ?? ''} onChange={(event) => {
+                  const parsed = Number.parseInt(event.target.value, 10)
+                  patchQuote(quoteIndex, { warranty_months: Number.isFinite(parsed) ? parsed : null })
+                }} aria-label="Warranty months" />mo</label>
+                <label className="quote-small">Valid until <input type="date" value={quote.valid_until} onChange={(event) => patchQuote(quoteIndex, { valid_until: event.target.value })} aria-label="Valid until" /></label>
+              </div>
             </div>
             <div className="quote-figures">
               <span title="Before VAT">Net {money(read.net, read.currency)}</span>

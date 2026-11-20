@@ -277,3 +277,17 @@ test('a quote reads net, VAT and gross and lands in the estimate currency', () =
   assert.equal(read.gross, 120)
   assert.equal(read.landed, 6000)
 })
+
+test('the screen knows the quotes, the rates and the accounting columns', async () => {
+  const screen = await read('src/screens/Estimate.tsx')
+  for (const needle of ['ACCOUNTING_COLUMNS', 'QuoteRows', 'fetchTcmbRates', 'quoteMoney']) {
+    assert.ok(screen.includes(needle), `Estimate.tsx does not carry ${needle}`)
+  }
+  // The accounting sheet's headers are a contract a bookkeeper maps once.
+  const block = screen.slice(screen.indexOf('const ACCOUNTING_COLUMNS'), screen.indexOf(']', screen.indexOf('const ACCOUNTING_COLUMNS')))
+  for (const column of ['Item', 'Cost (net)', 'VAT', 'Cost (gross)', 'Salvage', 'Useful life (years)', 'Document']) {
+    assert.ok(block.includes(`'${column}'`), `the accounting sheet lost ${column}`)
+  }
+  const api = await read('src/engine/estimates.ts')
+  assert.ok(api.includes('quotes: (line.quotes ?? [])'), 'a quote is never sent on save')
+})
