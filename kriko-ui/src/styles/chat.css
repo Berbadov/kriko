@@ -1344,3 +1344,25 @@ button.ask-head:hover {
 @media (max-width: 560px) {
   .shelf { display: none; }
 }
+
+/* The product pixel library leads a row or a column. Decorative: the name
+   beside it carries the meaning, so it is hidden from assistive tech. */
+.product-glyph { flex: none; align-self: center; image-rendering: pixelated; }
+
+/* The number, the picture, the name and its meta: the picture is a column of
+   the row, not an inset inside the name, so every row's text starts at one x. */
+.recent {
+  grid-template-columns: 30px 26px minmax(0, 1fr) auto;
+  grid-template-areas:
+    'idx glyph name meta'
+    'idx glyph note note';
+}
+.recent .product-glyph { grid-area: glyph; }
+
+.qc-title { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.qc-title .qc-name { min-width: 0; }
+
+.mx-title > strong { flex: 1; }
+.mx-risk-content > * { min-width: 0; }
+.mx-risk-title { display: block; overflow-wrap: anywhere; }
+.mx-risk-top { align-self: start; }

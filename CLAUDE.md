@@ -273,6 +273,7 @@ A need from the wrong layer means moving the module (drivers to
 | `docs/INSTALL_WINDOWS.md` | Windows install including the extension permission | current |
 | `docs/INSTALL_MACOS.md` | macOS install on Apple Silicon: the disk image, Gatekeeper, building it | current |
 | `docs/PACK_CONTRACT.md` | what a catalog contains, must and may | current |
+| `docs/PROCUREMENT.md` | the Estimate's quotes, VAT, currencies, depreciation and accounting columns | current |
 | `docs/KRIKO_AGENT.md` | the built-in research stack: its bounds, its search dial, what a buying answer owes | current |
 | `docs/security/shared-access.md` | the password-and-code protocol, the trial, and what neither protects | current |
 | `docs/design/kriko-agent-first.md` | the app arranged around the Kriko Agent: what exists, what changes | a proposal, dated 2026-10-23 |

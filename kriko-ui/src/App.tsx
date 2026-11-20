@@ -15,6 +15,7 @@ import { EstimateScreen } from './screens/Estimate'
 import { ProductScreen } from './screens/Product'
 import { PricesScreen } from './screens/Prices'
 import { Motes } from './dust/Motes'
+import { PixelSprites } from './ui/ProductGlyph'
 import { QueueScreen } from './screens/Queue'
 import { Tour } from './tour/Tour'
 import { Drawer } from './ui/Drawer'
@@ -160,6 +161,7 @@ function Shell() {
   return (
     <MotionConfig reducedMotion={m.on ? 'never' : 'always'}>
       <div className="app">
+        <PixelSprites />
         <Motes />
         <TopBar screen={screen} onNavigate={go} onMore={openDrawerList} onNewChat={startChat} onOpenChat={showChat} queueCount={active} attention={attention} />
         {engine.mode === 'live' && !engine.agentAvailable && (
