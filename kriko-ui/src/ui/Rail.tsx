@@ -13,7 +13,7 @@ import { UsagePill } from './UsagePill'
 const ink = (svg: string) => svg.replaceAll('#ffffff', 'currentColor')
 
 /** The rail, top to bottom. Each group is ruled off from the next by a hairline. */
-const GROUPS: { name: string; items: { id: Screen; label: string; icon: IconName; tour?: string }[] }[] = [
+const GROUPS: { name: string; tour?: string; items: { id: Screen; label: string; icon: IconName; tour?: string }[] }[] = [
   {
     name: 'Check',
     items: [
@@ -32,6 +32,7 @@ const GROUPS: { name: string; items: { id: Screen; label: string; icon: IconName
   },
   {
     name: 'Library',
+    tour: 'library',
     items: [
       { id: 'catalogs', label: 'Catalogs', icon: 'book' },
       { id: 'sites', label: 'Sites', icon: 'globe' },
@@ -74,7 +75,7 @@ export function Rail({
 
       <nav className="lrail-nav" aria-label="Main">
         {GROUPS.map((group) => (
-          <div key={group.name} className="lrail-group" role="group" aria-label={group.name} data-tour={group.name === 'Library' ? 'library' : undefined}>
+          <div key={group.name} className="lrail-group" role="group" aria-label={group.name} data-tour={group.tour}>
             {group.items.map((item) => {
               const on = item.id === screen
               const count = counts[item.id] ?? 0

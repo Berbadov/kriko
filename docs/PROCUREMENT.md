@@ -86,3 +86,26 @@ New columns go at the end. There is no vendor-specific import format: one needs
 a real sample file from the bookkeeper it is for, and inventing a template would
 be a guess dressed as compatibility. "Asset category" and "Acquisition year" are
 blank because the app does not know them; they are for the reader to fill.
+
+## Where procurement shows
+
+The Estimate screen is the Procurement desk, and the same figures reach the
+other screens through `src/engine/procurement.ts`, so no screen computes its own.
+
+- **Procurement** opens on figures from every estimate: gross committed per
+  currency (never summed across currencies), quotes expiring within 14 days,
+  lines at risk, lines without a price and lines quoted in a currency with no
+  rate, then a Needs attention list.
+- **Ask** shows a strip of the same counts when any is non-zero.
+- **Product** shows the best landed cost, the saving against the next quote, the
+  quote risk, delivery, warranty and validity for each estimate line holding the
+  product, or "Not in an estimate yet" with Add to estimate.
+- **Compare** adds the same rows per product and a one-sentence read that says
+  so when the products are quoted in different currencies instead of converting.
+- A quote in the estimate's own currency needs no rate: it converts at 1 by
+  definition. Another currency with no rate stays uncomparable.
+- The accounting sheet converts net, VAT and gross to the estimate currency and
+  leaves a cell blank where there is no rate, rather than writing a quote's
+  amount under the estimate's currency.
+- A watched price has no link to a catalog product in the API, so Prices does not
+  offer "Add as a quote" yet.

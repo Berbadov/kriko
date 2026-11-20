@@ -14,6 +14,7 @@ its own lifetime rather than the app keeping a trash table nobody empties.
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 UI = Path(__file__).resolve().parents[3] / "kriko-ui" / "src"
@@ -33,13 +34,15 @@ def test_the_x_button_asks_and_only_the_second_button_deletes():
     confirm = PANEL[PANEL.index("onDelete={() => {") :]
     assert "setAsking(null)" in confirm.split("}}")[0]
     assert "void forget(row)" in confirm.split("}}")[0]
-    assert "<button onClick={onDelete}>Delete</button>" in row
-    assert "<button onClick={onKeep}>Keep</button>" in row
+    # The buttons carry the k-btn classes now; the words and the handlers are what count.
+    assert re.search(r"<button[^>]*onClick=\{onDelete\}[^>]*>\s*Delete\s*</button>", row)
+    assert re.search(r"<button[^>]*onClick=\{onKeep\}[^>]*>\s*Keep\s*</button>", row)
 
 
 def test_the_delete_offers_an_undo_beside_it():
     """The confirm dialog asks; this is the part that lets the reader say no."""
-    assert "undoLast" in PANEL and "past-undo" in PANEL
+    assert "undoLast" in PANEL and "k-notice" in PANEL
+    assert re.search(r"onClick=\{[^}]*undoLast[^}]*\}[^>]*>\s*Undo\s*<", PANEL), "the undo notice has no Undo button"
     assert "Undo" in PANEL
     # The hook hands the removed record back rather than only a boolean, which
     # is what makes the undo possible without a second fetch.

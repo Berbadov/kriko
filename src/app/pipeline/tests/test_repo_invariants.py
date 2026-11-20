@@ -401,8 +401,11 @@ def test_the_boot_screen_can_render_a_failure():
     )
     page = (REPO / "kriko-ui" / "src" / "engine" / "Engine.tsx").read_text(encoding="utf-8")
     assert "engine_status" in page and "setProblem" in page, "the page never reads the failure"
-    drawer = (REPO / "kriko-ui" / "src" / "ui" / "Drawer.tsx").read_text(encoding="utf-8")
-    assert "engine.problem" in drawer, "the page never draws the failure"
+    # The boot gate draws the failure while the engine is down (the drawer it used to sit in is gone).
+    gate = (REPO / "kriko-ui" / "src" / "Gate.tsx").read_text(encoding="utf-8")
+    assert "problem" in gate and 'mode === \'offline\'' in gate and "{problem ||" in gate, (
+        "the page never draws the failure"
+    )
     assert "kill_tree" in _fn_body(engine, "stop"), (
         "nothing kills the sidecar's tree: an orphaned engine holds the "
         "store's WAL lock and breaks the next launch"

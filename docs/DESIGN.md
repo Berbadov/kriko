@@ -132,18 +132,25 @@ prose of the answer.
 
 ## Navigation and icons
 
-Navigation is a bar across the top, so the window below has the whole width.
-On the left are the logo, a slash and a pill with the agent that does the
-research; pressing the pill opens the agents panel. In the middle, a recessed
-pill holds the places: Chat, Compare, Queue and History, then New chat, which
-carries the brand outline because it is the one tab that starts something. The
-active place has a raised surface that slides to the next one. History opens a
-searchable list of chats under the bar. On the right are the queue's state, as a
-pixel glyph and a count, and More, which opens the drawer.
+Navigation is a labelled rail on the left, grouped by hairlines instead of
+headings. Under the wordmark is New chat, the one filled button in the window.
+Check holds Ask, Compare, Queue and History; Procure holds Procurement and
+Prices; Library holds Catalogs, Sites and For you; Settings sits at the foot,
+with a dot when an app update waits. The active place has a 2px brand marker and
+a neutral tint. A 40px strip over the page holds the agent pill (it opens
+Settings, Research), the usage pill and the queue's state, and on Windows the
+window buttons. Ctrl+1 to Ctrl+4 reach Ask, Compare, Prices and Procurement,
+Ctrl+, opens Settings and Ctrl+K puts the cursor in the composer. Below 900px the
+rail keeps its icons and loses its words.
 
-Chat is the first place. Chat is also the screen that opens at start. Below
-1000px the tabs keep their icons and lose their words, and below 760px the agent
-pill and the queue state fold away.
+There is no More menu. `showDrawer(panel)` still exists as a name for a place and
+routes (`routeFor` in `src/ui/drawerEvents.ts`): the tour, the agent's Open
+buttons and the engine notices keep working.
+
+Ask is the first place and opens at start. Screens share one vocabulary
+(`src/styles/system.css`): a caption over a rounded card, rows that show their
+current value, figures, chips and a risk mark that is said by shape and word as
+well as colour.
 
 Working page heads share a 104px sky band. The breadcrumb sits above a compact
 title and a single-line description, below the window controls. A short fade at
@@ -243,7 +250,7 @@ floating card, so it opens the quote under the row, on press only.
 
 ## Usage
 
-The top bar carries a usage pill. It says the two things worth a glance: how much
+The strip over the page carries a usage pill. It says the two things worth a glance: how much
 of the tightest coding-agent window is left, as three rising bars and a percent,
 and what the last day cost. Pressing it opens a card that keeps every resource
 apart: the coding agent, the LLM API, the web search API and the local model.

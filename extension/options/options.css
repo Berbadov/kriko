@@ -15,18 +15,18 @@
   /* BEGIN shared palette tokens */
 
   /* Dark - paper after dark. */
-  --bg-base:     #0e0f11;
-  --bg-panel:    #15171a;
-  --bg-header:   #15171a;
-  --bg-surface:  #15171a;
-  --bg-item:     #1c1f23;
-  --border:      rgba(237, 237, 234, 0.10);
-  --border-soft: rgba(237, 237, 234, 0.06);
-  --border-control: #666a70;
+  --bg-base:     #08090d;
+  --bg-panel:    #10131a;
+  --bg-header:   #10131a;
+  --bg-surface:  #10131a;
+  --bg-item:     #171b24;
+  --border:      rgba(255, 255, 255, 0.09);
+  --border-soft: rgba(255, 255, 255, 0.06);
+  --border-control: #5f6779;
 
-  --fg:          #ededea;
-  --fg-body:     #a8abb1;
-  --fg-muted:    #9a9da4;
+  --fg:          #f6f7fa;
+  --fg-body:     #cdd2dc;
+  --fg-muted:    #a8afbd;
 
   --high-surface: #ff8a1f;
   --high-border:  #c85a06;
@@ -38,13 +38,13 @@
   --low-border:   rgba(237, 237, 234, 0.16);
   --low-ink:      #9a9da4;
 
-  --accent:       #5aa9f7;
-  --brand:        #5aa9f7;
-  --brand-hover:  #8cc6ff;
+  --accent:       #a3b8ff;
+  --brand:        #3562e9;
+  --brand-hover:  #a3b8ff;
   --brand-low:    #25618f;
-  --brand-bright: #8cc6ff;
-  --on-brand:     #0b1020;
-  --ice:          #5aa9f7;
+  --brand-bright: #a3b8ff;
+  --on-brand:     #ffffff;
+  --ice:          #a3b8ff;
   --focus:        #ffc27a;
 
   --led-off:      rgba(237, 237, 234, 0.14);
@@ -55,15 +55,15 @@
   --glass-1:      rgba(237, 237, 234, 0.02);
   --glass-2:      rgba(237, 237, 234, 0.04);
   --glass-3:      rgba(237, 237, 234, 0.06);
-  --well:         #1c1f23;
-  --hover-face:   #1c1f23;
+  --well:         #171b24;
+  --hover-face:   #171b24;
   --hover-edge:   rgba(237, 237, 234, 0.22);
-  --row-face:     #15171a;
-  --scroll-track: #15171a;
+  --row-face:     #10131a;
+  --scroll-track: #10131a;
   --alert-ink:    #ffc27a;
-  --ok-ink:       #5fd3a0;
-  --ok-surface:   rgba(95, 211, 160, 0.12);
-  --ok-border:    rgba(95, 211, 160, 0.40);
+  --ok-ink:       #3ddc97;
+  --ok-surface:   rgba(61, 220, 151, 0.12);
+  --ok-border:    rgba(61, 220, 151, 0.4);
   --warn-ink:     #ffc27a;
   --warn-surface: rgba(255, 161, 68, 0.12);
   --warn-border:  rgba(255, 194, 122, 0.40);
@@ -75,18 +75,18 @@
   --well-shadow:  none;
   --shadow-lift:  none;
   --shadow-key:   none;
-  --light-bg-base:     #f5f5f3;
-  --light-bg-panel:    #ffffff;
-  --light-bg-header:   #ffffff;
-  --light-bg-surface:  #ffffff;
-  --light-bg-item:     #f0f0ec;
-  --light-border:      rgba(16,20,24,0.10);
-  --light-border-soft: rgba(16,20,24,0.06);
-  --light-border-control: #7e838b;
+  --light-bg-base:     #f4f0e6;
+  --light-bg-panel:    #fffdf7;
+  --light-bg-header:   #fffdf7;
+  --light-bg-surface:  #fffdf7;
+  --light-bg-item:     #faf7ef;
+  --light-border:      #ded8cc;
+  --light-border-soft: #eae4d8;
+  --light-border-control: #8a8374;
 
-  --light-fg:          #101418;
-  --light-fg-body:     #3c454f;
-  --light-fg-muted:    #5f6a75;
+  --light-fg:          #24231f;
+  --light-fg-body:     #4a4740;
+  --light-fg-muted:    #66625a;
 
   --light-high-surface: #ff8a1f;
   --light-high-border:  #c85a06;
@@ -98,13 +98,13 @@
   --light-low-border:   rgba(16,20,24,0.14);
   --light-low-ink:      #5f6a75;
 
-  --light-accent:       #1f3a63;
-  --light-brand:        #0b1020;
-  --light-brand-hover:  #1f3a63;
+  --light-accent:       #2449ca;
+  --light-brand:        #2e5bef;
+  --light-brand-hover:  #2449ca;
   --light-brand-low:    #16304f;
-  --light-brand-bright: #1f3a63;
+  --light-brand-bright: #2449ca;
   --light-on-brand:     #ffffff;
-  --light-ice:          #1f3a63;
+  --light-ice:          #2449ca;
   --light-focus:        #b45309;
 
   --light-led-off:      rgba(16,20,24,0.16);
@@ -115,15 +115,15 @@
   --light-glass-1:      rgba(16,20,24,0.02);
   --light-glass-2:      rgba(16,20,24,0.04);
   --light-glass-3:      rgba(16,20,24,0.06);
-  --light-well:         #f0f0ec;
-  --light-hover-face:   #f0f0ec;
+  --light-well:         #faf7ef;
+  --light-hover-face:   #faf7ef;
   --light-hover-edge:   rgba(16,20,24,0.22);
-  --light-row-face:     #ffffff;
-  --light-scroll-track: #f5f5f3;
+  --light-row-face:     #fffdf7;
+  --light-scroll-track: #f4f0e6;
   --light-alert-ink:    #9a3d00;
-  --light-ok-ink:       #0b6b4f;
-  --light-ok-surface:   #eaf7f0;
-  --light-ok-border:    #6fcca6;
+  --light-ok-ink:       #2f6a52;
+  --light-ok-surface:   #e6f1ea;
+  --light-ok-border:    #7fb59b;
   --light-warn-ink:     #9a3d00;
   --light-warn-surface: #ffeed3;
   --light-warn-border:  #f0740d;
