@@ -124,3 +124,101 @@ def test_a_line_keeps_its_label_even_when_the_subject_is_not_installed(tmp_path)
     line = _line(subject="gone-1", label="Discontinued thing")
     estimate = client.post("/api/estimates", json={"name": "X", "lines": [line]}).json()["estimate"]
     assert estimate["lines"][0]["label"] == "Discontinued thing"
+
+def _quote(quote_id="q1", vendor="Vendor A", price=100.0, currency="TRY", **extra):
+    return {"quote_id": quote_id, "vendor": vendor, "seller": vendor, "url": "",
+            "unit_price": price, "currency": currency, "vat_rate": 20.0,
+            "vat_included": False, "delivery_days": 7, "warranty_months": 24,
+            "quote_date": "2026-11-01", "valid_until": "2026-12-01",
+            "note": "", "selected": False, **extra}
+
+
+def test_quotes_round_trip_and_exactly_one_is_selected(tmp_path):
+    client = _client(tmp_path)
+    line = _line()
+    line["quotes"] = [
+        _quote("a", "Alpha", 100.0, selected=True),
+        _quote("b", "Beta", 90.0, selected=True),
+        _quote("c", "Gamma", 110.0, selected=False, vat_included=True),
+    ]
+    saved = client.post("/api/estimates", json={
+        "name": "Quotes", "currency": "TRY", "vat_rate": 20,
+        "lines": [line],
+    }).json()["estimate"]
+    quotes = saved["lines"][0]["quotes"]
+    assert [q["vendor"] for q in quotes] == ["Alpha", "Beta", "Gamma"]
+    assert [q["selected"] for q in quotes] == [True, False, False]
+    assert quotes[2]["vat_included"] is True
+    # the selected quote is what a reader without quote support sees
+    assert saved["lines"][0]["unit_price"] == 100.0
+    # the response carries a reason for every quote, none of them invented
+    for quote in quotes:
+        assert quote["risk"]["level"] in ("red", "amber", "green", "unknown")
+        assert quote["risk"]["reasons"]
+    assert [row["rank"] for row in saved["lines"][0]["ranking"]][0] == 1
+
+
+def test_a_legacy_price_reads_as_one_migrated_quote(tmp_path):
+    client = _client(tmp_path)
+    estimate = client.post("/api/estimates", json={
+        "name": "Old", "currency": "EUR", "lines": [_line()],
+    }).json()["estimate"]
+    quotes = estimate["lines"][0]["quotes"]
+    assert len(quotes) == 1
+    assert quotes[0]["vendor"] == "Migrated price"
+    assert quotes[0]["unit_price"] == 249.0
+    assert quotes[0]["currency"] == "EUR"
+    assert quotes[0]["selected"] is True
+
+
+def test_a_line_with_no_price_and_no_quote_stays_unpriced(tmp_path):
+    client = _client(tmp_path)
+    line = _line()
+    line["unit_price"] = None
+    estimate = client.post("/api/estimates", json={"name": "X", "lines": [line]}).json()["estimate"]
+    assert estimate["lines"][0]["quotes"] == []
+    assert estimate["lines"][0]["unit_price"] is None
+
+
+def test_deleting_an_estimate_deletes_its_quotes(tmp_path):
+    client = _client(tmp_path)
+    line = _line()
+    line["quotes"] = [_quote()]
+    estimate = client.post("/api/estimates", json={"name": "X", "lines": [line]}).json()["estimate"]
+    client.delete(f"/api/estimates/{estimate['estimate_id']}")
+
+    from app.web import state
+    conn = state.connect(tmp_path / "app.sqlite")
+    try:
+        assert conn.execute("SELECT COUNT(*) FROM estimate_quotes").fetchone()[0] == 0
+        assert conn.execute("SELECT COUNT(*) FROM estimate_lines").fetchone()[0] == 0
+    finally:
+        conn.close()
+
+
+def test_fx_and_vat_defaults_are_kept_and_bounded(tmp_path):
+    client = _client(tmp_path)
+    saved = client.post("/api/estimates", json={
+        "name": "Rates", "currency": "TRY", "vat_rate": 10,
+        "fx": {"TRY": 1, "EUR": 58.2, "USD": 50.4694, "source": "TCMB",
+               "date": "2026-11-19"},
+        "lines": [],
+    }).json()["estimate"]
+    assert saved["vat_rate"] == 10.0
+    assert saved["fx"]["EUR"] == 58.2
+    assert saved["fx"]["source"] == "TCMB"
+    read = client.get(f"/api/estimates/{saved['estimate_id']}").json()["estimate"]
+    assert read["fx"] == saved["fx"]
+
+
+def test_depreciation_fields_survive_a_round_trip(tmp_path):
+    client = _client(tmp_path)
+    line = _line()
+    line.update({"depreciation": "declining_balance", "life_years": 7,
+                 "salvage": 500.0, "vuk_rate": 20.0})
+    saved = client.post("/api/estimates", json={"name": "Asset", "lines": [line]}).json()["estimate"]
+    stored = saved["lines"][0]
+    assert stored["depreciation"] == "declining_balance"
+    assert stored["life_years"] == 7
+    assert stored["salvage"] == 500.0
+    assert stored["vuk_rate"] == 20.0
