@@ -18,6 +18,14 @@ import './styles/rail.css'
 import './styles/tour.css'
 import './styles/identity.css'
 import './styles/system.css'
+import './styles/settings-data.css'
+import './styles/settings-keys.css'
+import './styles/settings-research.css'
+import './styles/prices.css'
+import './styles/product.css'
+import './styles/library.css'
+import './styles/work.css'
+import './styles/procurement.css'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

@@ -1,636 +1,492 @@
-/* The settings drawer, in the dossier's own hand.
+/* The Settings screen. Its rows, cards, captions, pills, segmented choices and
+   figures come from system.css; this file draws only what is Settings' own: the
+   two panes, the search, the palette swatches, the on and off switch, the dial,
+   the cap field and the key list. Everything reads the roles in tokens.css, so
+   all four palettes work without a rule of their own. */
 
-   Everything here is under `.drawer[data-panel='settings']` or `.settings`, so
-   the other drawer panels keep their own look. Four rules shape it:
-
-   * A group is a ruled section of the sheet: a heading on a hairline, rows on
-     hairlines. No card, no glass, no gradient, no shadow.
-   * A row is an icon, a sentence-case name and one control, about 44px tall
-     (the density layer at the end of this file sets the sizes). A state is a short mono pill; a hint is an icon whose tooltip holds the
-     one fact a setting must keep (data that leaves, money, keys that stay).
-   * Every icon-only control has an accessible name and a tooltip on hover and on
-     keyboard focus, and a hit area of at least 30px. A chosen icon is filled and marked, so
-     the choice does not rest on colour.
-   * Nothing is smaller than 14px, and figures, paths and keys are mono.
-
-   Every colour is a token or a `color-mix` of tokens, so both themes follow. All
-   motion is 120 to 180ms and reads `--tm`. Reduced motion removes the movement,
-   not the state. */
-
-.drawer[data-panel='settings'] {
-  --set-field: var(--panel-2);
-  --set-field-edge: var(--edge);
-  --set-ok: var(--ok-text);
-  --set-warn: var(--warn-text);
-  --set-risk: var(--risk-text);
-
-  width: 520px;
-  padding: 18px 22px 14px;
-  background: var(--panel);
-  border-color: var(--edge-strong);
-  border-radius: var(--r-l);
-  box-shadow: none;
-  font-family: var(--set-font);
-  font-size: 15px;
-  line-height: 1.5;
+/* The page: a title with the search at its right. */
+.settings-screen .k-head {
+  align-items: center;
 }
 
-.drawer[data-panel='settings'][data-wide='true'] {
-  width: 520px;
+.settings-search {
+  width: min(340px, 100%);
 }
 
-/* ---- the head ---- */
-
-.drawer[data-panel='settings'] .drawer-head {
-  gap: 8px;
-  padding: 0 0 12px;
-  border-bottom: 1px solid var(--edge);
-}
-
-.drawer[data-panel='settings'] .drawer-head h2 {
-  font-size: 22px;
-  font-weight: var(--w-bold);
-  letter-spacing: -0.03em;
-}
-
-.drawer[data-panel='settings'] .drawer-head .icon-btn {
-  width: 44px;
-  height: 44px;
-  border-radius: var(--r-m);
-  color: var(--ink);
-}
-
-.drawer[data-panel='settings'] .drawer-head .icon-btn:hover {
-  background: var(--set-field);
-}
-
-.drawer[data-panel='settings'] .drawer-body {
-  margin: 0;
-  padding: 0 0 10px;
-  overflow-x: hidden;
-}
-
-/* ---- the page list: five icons, and the chosen one says its name ---- */
-
-.settings {
-  counter-reset: setgroup;
-  container-type: inline-size;
-  gap: 18px;
-  padding-top: 14px;
+/* Two panes: the sections on the left, the open one on the right. */
+.settings-body {
+  display: grid;
+  grid-template-columns: 232px minmax(0, 1fr);
+  gap: 28px;
+  align-items: start;
 }
 
 .settings-nav {
   position: sticky;
   top: 0;
-  z-index: 6;
-  padding-bottom: 2px;
-  background: var(--panel);
+  min-width: 0;
 }
 
-.settings-nav .iconchoice {
-  display: flex;
-  justify-content: space-between;
-  width: 100%;
+.settings-nav .k-row {
+  min-height: 48px;
+  padding: 8px 14px;
 }
 
-/* ---- a page ---- */
+.settings-nav .k-row-icon {
+  width: 30px;
+  height: 30px;
+}
 
-.settings-page {
+.settings-nav .k-row[aria-current='true'] {
+  background: var(--select-strong);
+}
+
+.settings-nav .k-row[aria-current='true'] .k-row-title {
+  font-weight: var(--w-semibold);
+}
+
+/* Under 900px the list gives way to a select at the top of the content. */
+.settings-jump {
+  display: none;
+}
+
+.settings-main {
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 22px;
-  animation: settings-in var(--dur-3) var(--ease-out) both;
+  gap: 24px;
+}
+
+.settings-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
+  animation: settings-in calc(0.42s * var(--tm, 1)) var(--ease-out, ease-out) both;
+}
+
+.settings-pane-title {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 26px;
+  font-weight: var(--w-display);
+  letter-spacing: -0.02em;
+  line-height: 1.1;
 }
 
 @keyframes settings-in {
   from {
     opacity: 0;
+    transform: translateY(calc(6px * var(--dm, 1)));
+  }
+  to {
+    opacity: 1;
+    transform: none;
   }
 }
 
-/* ---- a group: a ruled section, never a card ---- */
-
-.settings .panel-group {
-  position: relative;
-  padding: 0;
-  background: transparent;
-  border: 0;
-  border-top: 2px solid var(--edge-strong);
-  border-radius: 0;
-  box-shadow: none;
-  counter-increment: setgroup;
-}
-
-/* A tooltip hangs outside its group. */
-.settings .panel-group:has([data-tip]:hover, [data-tip]:focus-visible, .hint-btn:hover, .hint-btn:focus-visible, .hint[data-open]) {
-  z-index: 5;
-}
-
-.settings .group-head {
+/* A section: its caption (and an aside), its card, and its note under the card. */
+.settings-section {
   display: flex;
-  align-items: center;
-  gap: 4px;
-  min-height: 46px;
-  padding: 4px 0 4px;
-  border-bottom: 1px solid var(--edge);
-}
-
-.settings .group-head h3 {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 auto 0 0;
-  padding: 0;
-  color: var(--ink);
-  font-size: 16px;
-  font-weight: 650;
-  letter-spacing: -0.015em;
-  line-height: 1.3;
-}
-
-.settings .group-head h3::before {
-  content: counter(setgroup, decimal-leading-zero);
-  color: var(--ink-3);
-  font-family: var(--mono);
-  font-size: 12px;
-  font-weight: 400;
-}
-
-.settings .group-head h3 .icon {
-  color: var(--ink-3);
-  width: 17px;
-  height: 17px;
-}
-
-.settings .group-head + .setting,
-.settings .group-head + .key-list > .key:first-child,
-.settings .group-head + .tiles {
-  border-top: 0;
-}
-
-/* ---- a row: an icon, a name of a word or two, and one control ---- */
-
-.settings .setting {
-  flex-wrap: wrap;
-  gap: 8px 16px;
-  min-height: 52px;
-  padding: 10px 0;
-  border-top: 1px solid var(--edge);
-}
-
-.settings .setting > .row-label,
-.settings .row-label {
-  display: flex;
-  flex: 1 1 120px;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 10px;
-  min-width: 0;
-  color: var(--ink);
-  font-size: 15px;
-}
-
-.settings .row-name {
-  color: var(--ink);
-  font-size: 15px;
-}
-
-.settings .row-control {
-  display: flex;
-  flex: none;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-  max-width: 100%;
-}
-
-.settings .setting.stack {
-  align-items: stretch;
   flex-direction: column;
-  flex-wrap: nowrap;
   gap: 8px;
-  padding-top: 12px;
-  padding-bottom: 12px;
+  min-width: 0;
 }
 
-.settings .setting.stack > .row-control {
-  display: block;
+.settings-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 4px;
+}
+
+.settings-section-head .k-caption {
+  margin: 0;
+}
+
+.settings-note {
+  margin: 0 4px;
+  max-width: 68ch;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--ink-3);
+}
+
+/* Words that carry a fact: a warning reads in the warn tone, never by colour alone. */
+.settings-hint {
+  color: var(--ink-3);
+}
+
+.settings-hint[data-tone='warn'] {
+  color: var(--warn);
+}
+
+.settings-hint a,
+.settings-setting a,
+.settings-section a {
+  color: var(--link);
+}
+
+.settings-hint code {
+  font-size: 12px;
+}
+
+/* A setting row: the label and note take the room, the control sits at the end. */
+.settings-setting .k-row-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.settings-setting-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.settings-setting[data-stack] .settings-setting-main {
   width: 100%;
 }
 
-.settings .setting.stack > .row-label {
-  flex: none;
+.settings-setting .k-row-main {
+  min-width: 0;
 }
 
-.settings .setting.actions {
-  padding-top: 12px;
-  padding-bottom: 12px;
+.settings-setting .k-row-note {
+  max-width: 62ch;
 }
 
-.settings .setting.actions > .row-control {
-  flex: 1 1 auto;
-  flex-wrap: wrap;
-  gap: 10px;
+.settings-setting[data-stack] .k-row-control {
+  width: 100%;
 }
 
-.settings .setting-end {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+.settings-setting[data-stack] .k-input {
+  width: 100%;
+}
+
+.settings-setting .k-row-control > .k-input {
+  width: 220px;
+  max-width: 100%;
+}
+
+.settings-actions {
   justify-content: flex-end;
-  gap: 8px;
+  min-height: 56px;
 }
 
-.settings .setting .value {
+.settings-actions .k-row-control {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.settings-choice {
+  max-width: 100%;
+  flex-wrap: wrap;
+}
+
+/* The on and off switch: a word, then a track with a knob that moves. */
+.settings-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 0;
+  background: none;
+  border: 0;
   color: var(--ink-2);
-  font-family: var(--mono);
   font-size: 14px;
+  font-weight: var(--w-medium);
+  cursor: pointer;
+}
+
+.settings-toggle-word {
+  min-width: 2.4em;
   text-align: right;
-  overflow-wrap: anywhere;
 }
 
-.settings .setting .value.path {
-  max-width: 70%;
-  font-family: var(--mono);
-  font-size: 14px;
-}
-
-/* The icon. It is decoration, so the name beside it carries the meaning. */
-.settings .row-icon {
+.settings-toggle-track {
   position: relative;
-  display: grid;
-  flex: none;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  background: transparent;
-  border: 1px solid var(--edge);
-  border-radius: var(--r-s);
-  color: var(--ink-3);
-}
-
-.settings .row-icon[data-tone='ok'] {
-  border-color: var(--edge-strong);
-  color: var(--set-ok);
-}
-
-.settings .row-icon[data-tone='warn'] {
-  border-color: color-mix(in srgb, var(--warn) 55%, var(--edge));
-  color: var(--set-warn);
-}
-
-/* ---- a state: what a thing is now, in a word or two ---- */
-
-.settings .state {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0 7px;
-  background: transparent;
-  border: 1px solid var(--edge);
-  border-radius: var(--r-s);
-  color: var(--ink-2);
-  font-family: var(--mono);
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 1.5;
-  overflow-wrap: anywhere;
-}
-
-.settings .state[data-tone='ok'] {
-  border-color: color-mix(in srgb, var(--ok) 55%, var(--edge));
-  color: var(--set-ok);
-}
-
-.settings .state[data-tone='warn'] {
-  border-color: color-mix(in srgb, var(--warn) 55%, var(--edge));
-  color: var(--set-warn);
-}
-
-.settings .state[data-tone='risk'] {
-  border-color: color-mix(in srgb, var(--risk) 55%, var(--edge));
-  color: var(--set-risk);
-}
-
-/* ---- a hint: the one fact a setting must keep, behind an icon ---- */
-
-.settings .hint {
-  position: relative;
-  display: inline-flex;
-  flex: none;
-}
-
-.settings .hint-btn {
-  display: grid;
-  place-items: center;
   width: 44px;
-  height: 44px;
-  margin: -4px 0;
-  border-radius: var(--r-m);
-  color: var(--ink-2);
-  transition:
-    background-color var(--dur-2) var(--ease-out),
-    color var(--dur-2) var(--ease-out);
+  height: 26px;
+  border-radius: var(--r-pill);
+  background: var(--inset);
+  border: 1px solid var(--edge-strong);
+  transition: background var(--dur-1) var(--ease-out);
 }
 
-.settings .hint-btn:hover,
-.settings .hint[data-open] .hint-btn {
-  background: var(--set-field);
-  color: var(--ink);
-}
-
-.settings .hint[data-tone='warn'] .hint-btn {
-  color: var(--set-warn);
-}
-
-.settings .hint-pop {
+.settings-toggle-track i {
   position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  z-index: 30;
-  width: max-content;
-  max-width: min(280px, calc(100cqw - 48px));
-  padding: 9px 12px;
-  background: var(--ink);
-  border-radius: var(--r-m);
-  box-shadow: none;
-  color: var(--ground);
-  font-size: 14px;
-  line-height: 1.45;
-  text-align: left;
-  pointer-events: none;
-  display: none;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--sheet);
+  box-shadow: var(--shadow-1);
+  transition: transform var(--dur-1) var(--ease-out);
 }
 
-.settings .group-head .hint-pop {
-  right: 0;
-  left: auto;
+.settings-toggle[aria-checked='true'] .settings-toggle-track {
+  background: var(--ink-2);
+  border-color: var(--ink-2);
 }
 
-.settings .hint:hover .hint-pop,
-.settings .hint:focus-within .hint-pop,
-.settings .hint[data-open] .hint-pop {
-  display: block;
-  animation: tip-in var(--dur-2) var(--ease-out);
+.settings-toggle[aria-checked='true'] .settings-toggle-track i {
+  transform: translateX(18px);
+  background: var(--ground);
 }
 
-/* Shown only while wanted: a hidden tip that kept its box would widen the
-   drawer's scroll area. */
-@keyframes tip-in {
-  from {
-    opacity: 0;
-  }
+.settings-toggle:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
-.settings .hint-pop a {
-  color: inherit;
-  text-decoration: underline;
+.settings-toggle:focus-visible,
+.settings-theme:focus-visible,
+.settings-screen button:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
 
-.settings .hint-pop code {
-  color: inherit;
-  font-size: 14px;
-}
-
-/* ---- a tooltip on an icon-only control ---- */
-
-.settings [data-tip] {
-  position: relative;
-}
-
-.settings [data-tip]::after {
-  content: attr(data-tip);
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 50%;
-  z-index: 30;
-  width: max-content;
-  max-width: 230px;
-  padding: 6px 10px;
-  background: var(--ink);
-  border-radius: var(--r-m);
-  box-shadow: none;
-  color: var(--ground);
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 1.4;
-  pointer-events: none;
-  text-align: left;
-  transform: translate(-50%, 0);
-  white-space: normal;
-  display: none;
-}
-
-.settings [data-tip][data-side='bottom']::after {
-  top: calc(100% + 8px);
-  bottom: auto;
-}
-
-.settings [data-tip]:last-child::after {
-  right: 0;
-  left: auto;
-  transform: none;
-}
-
-.settings [data-tip]:first-child:not(:last-child)::after {
-  left: 0;
-  transform: none;
-}
-
-.settings [data-tip]:hover::after,
-.settings [data-tip]:focus-visible::after {
-  display: block;
-  animation: tip-in var(--dur-2) var(--ease-out);
-}
-
-/* The chosen tab already says its name. */
-.settings .iconchoice[data-tabs] [data-on='true']::after {
-  display: none;
-}
-
-/* ---- an icon choice ---- */
-
-.settings .iconchoice {
-  display: inline-flex;
-  gap: 2px;
-  padding: 3px;
-  background: transparent;
-  border: 1px solid var(--edge);
-  border-radius: var(--r-m);
-}
-
-.settings .iconchoice button {
-  position: relative;
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  min-width: 44px;
-  height: 44px;
-  padding: 0 10px;
-  border-radius: var(--r-s);
-  color: var(--ink-2);
-  transition:
-    background-color var(--dur-2) var(--ease-out),
-    color var(--dur-2) var(--ease-out);
-}
-
-.settings .iconchoice button:hover {
-  background: var(--set-field);
-  color: var(--ink);
-}
-
-.settings .iconchoice .ico {
+/* The palette swatches: each draws its own ground, card, ink and brand. */
+.settings-themes {
   display: grid;
-  place-items: center;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
 }
 
-/* Chosen: filled, heavier, and a dot beneath, so it is not colour alone. */
-.settings .iconchoice button[data-on='true'] {
-  background: var(--accent-fill);
-  color: var(--accent-ink);
+.settings-theme {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 6px;
+  min-width: 0;
+  background: transparent;
+  border: 0;
+  border-radius: var(--r-m);
+  color: var(--ink-2);
+  font-size: 14px;
+  font-weight: var(--w-medium);
+  cursor: pointer;
 }
 
-.settings .iconchoice button[data-on='true'] svg {
-  stroke-width: 2.1;
+.settings-theme:hover {
+  background: var(--select);
 }
 
-.settings .iconchoice button[data-on='true']::before {
+.settings-theme[aria-pressed='true'] {
+  color: var(--ink);
+  background: var(--select-strong);
+}
+
+.settings-swatch {
+  position: relative;
+  display: block;
+  width: 100%;
+  max-width: 104px;
+  aspect-ratio: 4 / 3;
+  border-radius: 10px;
+  border: 1px solid var(--edge-strong);
+  background: var(--sw-ground);
+  overflow: hidden;
+}
+
+.settings-swatch i {
+  position: absolute;
+  left: 14%;
+  right: 14%;
+  top: 18%;
+  bottom: 18%;
+  border-radius: 6px;
+  background: var(--sw-sheet);
+}
+
+.settings-swatch i::before,
+.settings-swatch i::after {
   content: '';
   position: absolute;
-  bottom: 3px;
-  left: 50%;
-  width: 4px;
-  height: 4px;
-  margin-left: -2px;
-  background: currentcolor;
-  border-radius: 50%;
+  border-radius: 3px;
 }
 
-.settings .iconchoice[data-tabs] button[data-on='true']::before {
+.settings-swatch i::before {
+  left: 14%;
+  top: 22%;
+  width: 58%;
+  height: 10%;
+  background: var(--sw-ink);
+}
+
+.settings-swatch i::after {
+  left: 14%;
+  bottom: 18%;
+  width: 34%;
+  height: 26%;
+  border-radius: 4px;
+  background: var(--sw-brand);
+}
+
+.settings-theme[aria-pressed='true'] .settings-swatch {
+  box-shadow: 0 0 0 2px var(--sheet), 0 0 0 4px var(--ink-2);
+}
+
+.settings-theme-word {
+  line-height: 1.2;
+}
+
+/* A dial from 0 to 100: the slider takes the room, the value sits at its end. */
+.settings-range {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.settings-range-input {
+  flex: 1;
+  min-width: 0;
+  accent-color: var(--ink-2);
+}
+
+.settings-range-value {
+  min-width: 3.2em;
+  text-align: right;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* A daily cap: one number field with its unit beside it. */
+.cap-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: 200px;
+  max-width: 100%;
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: var(--r-m);
+  border: 1px solid var(--edge-control);
+  background: var(--inset);
+}
+
+.cap-field:focus-within {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.cap-field input {
+  width: 96px;
+  min-width: 0;
+  background: transparent;
+  border: 0;
+  color: var(--ink);
+  font: inherit;
+  font-size: 15px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  outline: none;
+}
+
+.cap-unit {
+  font-size: 13px;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+/* Fields that take a whole row. */
+.settings-field {
+  width: 100%;
+}
+
+textarea.settings-field {
+  min-height: 88px;
+  resize: vertical;
+}
+
+/* A fold: a quiet line that opens a group, with its rows inside the card. */
+.settings-fold {
+  border-top: 1px solid var(--edge);
+}
+
+.settings-fold > summary {
+  display: flex;
+  align-items: center;
+  min-height: 52px;
+  padding: 10px 16px;
+  color: var(--link);
+  font-weight: var(--w-medium);
+  cursor: pointer;
+  list-style: none;
+}
+
+.settings-fold > summary::-webkit-details-marker {
   display: none;
 }
 
-.settings .iconchoice .ico-word {
-  max-width: 0;
-  margin-left: 0;
-  overflow: hidden;
-  font-size: 15px;
-  opacity: 0;
-  white-space: nowrap;
-  transition:
-    max-width var(--dur-3) var(--ease-out),
-    margin-left var(--dur-3) var(--ease-out),
-    opacity var(--dur-2);
+.settings-fold[open] > summary {
+  border-bottom: 1px solid var(--edge);
 }
 
-.settings .iconchoice button[data-on='true'] .ico-word {
-  max-width: 120px;
-  margin-left: 8px;
-  opacity: 1;
+.settings-fold .k-row + .k-row {
+  border-top: 1px solid var(--edge);
 }
 
-/* The chosen icon does a quick pop. A sun and a moon also turn into view, and
-   the bars of a level rise. It plays once, when the choice is made. */
-.settings .iconchoice button[data-on='true'] .ico {
-  animation: ico-pop var(--dur-3) var(--ease-out);
+/* Figures for the Spent group keep their numbers in the same weight as the rest. */
+.settings-screen .k-kpi-value {
+  font-size: 28px;
 }
 
-.settings .iconchoice button[data-on='true'] .ico-sun {
-  animation: sun-in var(--dur-3) var(--ease-out);
+/* Search results: the same rows, grouped by the section they live in. */
+.settings-results {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
 }
 
-.settings .iconchoice button[data-on='true'] .ico-moon {
-  animation: moon-in var(--dur-3) var(--ease-out);
+.settings-results .k-row {
+  cursor: pointer;
 }
 
-.settings .ico-sun,
-.settings .ico-moon {
-  display: grid;
+/* The screen's own width decides, not the window's: with the rail beside it, the
+   two panes need about 760px of content. Narrower, the sections become a select. */
+.settings-screen {
+  container-type: inline-size;
+  container-name: settings;
 }
 
-@keyframes ico-pop {
-  from {
-    transform: scale(0.8);
+@container settings (max-width: 759px) {
+  .settings-body {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
   }
-  60% {
-    transform: scale(1.06);
+
+  .settings-nav {
+    display: none;
   }
-}
 
-@keyframes sun-in {
-  from {
-    transform: rotate(-90deg) scale(0.75);
+  .settings-jump {
+    display: block;
+    width: 100%;
   }
-}
 
-@keyframes moon-in {
-  from {
-    transform: rotate(-50deg) scale(0.75);
+  .settings-themes {
+    gap: 6px;
   }
-}
 
-.settings .ico-level .bar {
-  fill: currentcolor;
-  opacity: 0.38;
-  stroke: none;
-  transform-box: fill-box;
-  transform-origin: bottom;
-}
-
-.settings .ico-level .bar[data-lit] {
-  opacity: 1;
-}
-
-.settings .iconchoice button[data-on='true'] .ico-level .bar {
-  animation: bar-rise var(--dur-3) var(--ease-out) both;
-}
-
-:root[data-motion='on'] .settings .iconchoice button[data-on='true'] .ico-level .bar {
-  animation-delay: calc(var(--i) * 40ms * var(--tm));
-}
-
-@keyframes bar-rise {
-  from {
-    transform: scaleY(0.25);
-  }
-}
-
-/* ---- a padlock: open until a key is set, then it shuts ---- */
-
-.settings .ico-lock .shackle {
-  transform-box: fill-box;
-  transform-origin: left bottom;
-  transition: transform var(--dur-3) var(--ease-out);
-}
-
-.settings .ico-lock[data-locked='false'] .shackle {
-  transform: translate(1px, -2px) rotate(-24deg);
-}
-
-/* ---- a provider that is answering ---- */
-
-.settings .live-dot {
-  position: absolute;
-  top: -3px;
-  right: -3px;
-  width: 9px;
-  height: 9px;
-  background: var(--ok);
-  border: 2px solid var(--panel);
-  border-radius: 50%;
-  animation: live calc(1800ms * var(--tm)) ease-in-out infinite;
-}
-
-@keyframes live {
-  50% {
-    opacity: 0.55;
+  .settings-setting .k-row-control > .k-input {
+    width: 100%;
   }
 }
 
 /* ---- controls ---- */
 
-.settings .btn {
+.settings-screen .btn {
   height: 44px;
   padding: 0 18px;
   background: transparent;
@@ -643,166 +499,99 @@
     border-color var(--dur-2) var(--ease-out);
 }
 
-.settings .btn:hover {
+.settings-screen .btn:hover {
   background: var(--set-field);
 }
 
-.settings .btn.primary {
+.settings-screen .btn.primary {
   background: var(--accent-fill);
   border-color: transparent;
   color: var(--accent-ink);
 }
 
-.settings .btn.primary:hover {
+.settings-screen .btn.primary:hover {
   background: var(--accent-hi);
 }
 
-.settings .btn:disabled {
+.settings-screen .btn:disabled {
   opacity: 0.55;
   cursor: default;
 }
 
-/* A press that is only an icon: 44px, the name in its tooltip. */
-.settings .icon-act {
-  display: inline-grid;
-  flex: none;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  background: transparent;
-  border: 1px solid var(--edge);
-  border-radius: var(--r-m);
-  color: var(--ink);
-  transition:
-    background-color var(--dur-2) var(--ease-out),
-    border-color var(--dur-2) var(--ease-out);
-}
-
-.settings .icon-act:hover {
-  background: var(--set-field);
-  border-color: var(--edge-strong);
-}
-
-.settings .icon-act:active {
-  transform: none;
-}
-
-.settings .icon-act[data-tone='primary'] {
-  background: var(--accent-fill);
-  border-color: transparent;
-  color: var(--accent-ink);
-}
-
-.settings .icon-act[data-tone='danger'] {
-  color: var(--set-risk);
-}
-
-.settings .icon-act:disabled {
-  opacity: 0.45;
-  cursor: default;
-}
-
-.settings .segmented {
-  gap: 2px;
-  padding: 3px;
-  background: transparent;
-  border: 1px solid var(--edge);
-  border-radius: var(--r-m);
-}
-
-.settings .segmented button {
-  min-width: 44px;
-  min-height: 44px;
-  padding: 0 14px;
-  border-radius: var(--r-s);
+/* The on and off switch of controls.tsx, used across the app: the word, then a track
+   whose knob moves. The button is the press, so the word and the track both take it. */
+button.switch {
+  width: auto;
+  height: auto;
+  min-height: 40px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: none;
+  border: 0;
+  border-radius: 0;
   color: var(--ink-2);
-  font-size: 15px;
-  transition:
-    background-color var(--dur-2) var(--ease-out),
-    color var(--dur-2) var(--ease-out);
+  font-size: 14px;
+  font-weight: var(--w-medium);
+  cursor: pointer;
 }
 
-.settings .segmented button:hover {
-  color: var(--ink);
-  background: var(--set-field);
+button.switch[data-on='true'] {
+  background: none;
 }
 
-.settings .segmented button[data-on='true'] {
-  background: var(--accent-fill);
-  box-shadow: none;
-  color: var(--accent-ink);
-  font-weight: 600;
+button.switch:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
 
-/* The switch: a square knob that draws a tick when on and a dash when off. */
-.settings .switch {
-  width: 56px;
-  height: 34px;
-  border-radius: var(--r-m);
-  background: color-mix(in srgb, var(--ink) 24%, transparent);
-  transition: background-color var(--dur-3) var(--ease-out);
+button.switch .switch-word {
+  min-width: 2.4em;
+  text-align: right;
 }
 
-.settings .switch::before {
-  content: '';
-  position: absolute;
-  inset: -5px -4px;
-}
-
-.settings .switch i {
-  display: grid;
-  place-items: center;
-  left: 4px;
-  width: 26px;
-  height: 26px;
-  border-radius: var(--r-s);
-  background: var(--panel);
-  box-shadow: none;
-  transition: transform var(--dur-3) var(--ease-out);
-}
-
-.settings .switch[data-on='true'] {
-  background: var(--accent-fill);
-}
-
-.settings .switch[data-on='true'] i {
-  transform: translate(22px, -50%);
-}
-
-.settings .switch i svg {
+button.switch .switch-track {
+  position: relative;
   display: block;
-  width: 16px;
-  height: 16px;
-  fill: none;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 3;
+  flex: none;
+  width: 42px;
+  height: 25px;
+  border-radius: var(--r-pill);
+  background: var(--inset);
+  border: 1px solid var(--edge-strong);
+  transition: background var(--dur-1) var(--ease-out);
 }
 
-.settings .switch i path {
-  stroke-dasharray: 1;
-  stroke-dashoffset: 1;
-  transition: stroke-dashoffset var(--dur-3) var(--ease-out);
+button.switch .switch-track i {
+  position: absolute;
+  top: 50%;
+  left: 2px;
+  width: 19px;
+  height: 19px;
+  border-radius: 50%;
+  background: var(--sheet);
+  box-shadow: var(--shadow-1);
+  transform: translateY(-50%);
+  transition: transform var(--dur-1) var(--ease-out);
 }
 
-.settings .switch .sw-on {
-  stroke: var(--accent);
+button.switch[data-on='true'] .switch-track {
+  background: var(--ink-2);
+  border-color: var(--ink-2);
 }
 
-.settings .switch .sw-off {
-  stroke: var(--ink-3);
+button.switch[data-on='true'] .switch-track i {
+  background: var(--ground);
+  transform: translate(17px, -50%);
 }
 
-.settings .switch[data-on='true'] .sw-on,
-.settings .switch:not([data-on='true']) .sw-off {
-  stroke-dashoffset: 0;
-}
 
-.settings .select {
+.settings-screen .select {
   max-width: 100%;
 }
 
-.settings .select select {
+.settings-screen .select select {
   height: 44px;
   min-width: 0;
   padding: 0 42px 0 16px;
@@ -814,24 +603,24 @@
   transition: border-color var(--dur-2) var(--ease-out);
 }
 
-.settings .select select:hover {
+.settings-screen .select select:hover {
   border-color: var(--ink-3);
 }
 
-.settings .select::after {
+.settings-screen .select::after {
   right: 18px;
   width: 8px;
   height: 8px;
   border-color: var(--ink-2);
 }
 
-.settings .choices {
+.settings-screen .choices {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
 
-.settings .choice {
+.settings-screen .choice {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -844,12 +633,12 @@
   font-size: 15px;
 }
 
-.settings .choice:hover {
+.settings-screen .choice:hover {
   border-color: var(--edge-strong);
   background: var(--set-field);
 }
 
-.settings .choice[data-on='true'] {
+.settings-screen .choice[data-on='true'] {
   background: var(--accent-soft);
   border-color: var(--accent);
   box-shadow: inset 0 -2px 0 var(--accent);
@@ -857,7 +646,7 @@
   font-weight: 600;
 }
 
-.settings .choice[data-on='true']::after {
+.settings-screen .choice[data-on='true']::after {
   content: '';
   width: 5px;
   height: 10px;
@@ -868,11 +657,7 @@
   animation: ico-pop var(--dur-3) var(--ease-out);
 }
 
-.settings .key-field,
-.settings .field,
-.settings .key-form input,
-.settings .setting.stack input[type='url'],
-.settings .setting.stack input[type='text'] {
+.settings-screen .field {
   width: 100%;
   min-height: 44px;
   padding: 10px 14px;
@@ -884,110 +669,17 @@
   font-size: 15px;
 }
 
-.settings .field {
+.settings-screen .field {
   font-family: var(--mono);
   font-size: 14px;
 }
 
-.settings .key-field::placeholder,
-.settings .field::placeholder,
-.settings input::placeholder {
+.settings-screen .field::placeholder {
   color: var(--ink-2);
   opacity: 0.85;
 }
 
-.settings .cap-field {
-  gap: 8px;
-}
-
-.settings .cap-field input {
-  width: 112px;
-  height: 44px;
-  padding: 0 12px;
-  background: var(--panel-2);
-  border: 1px solid var(--edge-strong);
-  border-radius: var(--r-m);
-  font-family: var(--mono);
-  font-size: 14px;
-}
-
-.settings .cap-unit {
-  min-width: 64px;
-  color: var(--ink-2);
-  font-size: 14px;
-}
-
-/* ---- a dial ---- */
-
-.settings .tuning-setting {
-  gap: 0;
-  padding-bottom: 12px;
-}
-
-.settings .setting > .tuning-head,
-.settings .tuning-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  color: var(--ink);
-  font-size: 15px;
-}
-
-.settings .tuning-head b {
-  color: var(--ink-2);
-  font-family: var(--mono);
-  font-size: 14px;
-  font-weight: 400;
-}
-
-.settings .tuning-range {
-  width: 100%;
-  height: 40px;
-  margin: 0;
-  background: transparent;
-  accent-color: var(--accent);
-  appearance: none;
-  -webkit-appearance: none;
-  cursor: pointer;
-}
-
-.settings .tuning-range::-webkit-slider-runnable-track {
-  height: 4px;
-  background: linear-gradient(to right, var(--accent) var(--fill, 50%), var(--edge-strong) var(--fill, 50%));
-  border-radius: 0;
-}
-
-.settings .tuning-range::-moz-range-track {
-  height: 4px;
-  background: linear-gradient(to right, var(--accent) var(--fill, 50%), var(--edge-strong) var(--fill, 50%));
-  border-radius: 0;
-}
-
-.settings .tuning-range::-webkit-slider-thumb {
-  width: 18px;
-  height: 18px;
-  margin-top: -7px;
-  background: var(--panel);
-  border: 2px solid var(--accent);
-  border-radius: var(--r-s);
-  box-shadow: none;
-  appearance: none;
-  -webkit-appearance: none;
-}
-
-.settings .tuning-range::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
-  background: var(--panel);
-  border: 2px solid var(--accent);
-  border-radius: var(--r-s);
-  box-shadow: none;
-}
-
-/* ---- a note: a warning or the text of a disclosure ---- */
-
-.settings .panel-note {
+.settings-screen .panel-note {
   display: block;
   margin: 0;
   padding: 10px 0 12px;
@@ -997,23 +689,23 @@
   line-height: 1.5;
 }
 
-.settings .panel-note[data-kind='warn'] {
+.settings-screen .panel-note[data-kind='warn'] {
   color: var(--set-warn);
 }
 
-.settings a {
+.settings-screen a {
   color: var(--accent);
   text-decoration: underline;
   text-underline-offset: 3px;
 }
 
-.settings code {
+.settings-screen code {
   font-family: var(--mono);
   font-size: 14px;
   overflow-wrap: anywhere;
 }
 
-.settings .error-note {
+.settings-screen .error-note {
   margin: 8px 0 12px;
   padding: 8px 12px;
   border-left: 2px solid var(--risk);
@@ -1022,123 +714,17 @@
   line-height: 1.5;
 }
 
-.settings > .error-note,
-.settings .settings-page > .error-note {
+.settings-screen > .error-note {
   margin: 0;
 }
 
-/* ---- keys and providers ---- */
-
-.settings .key-list {
-  margin: 0;
-}
-
-.settings .key {
-  gap: 4px;
-  min-height: 60px;
-  padding: 10px 0;
-  border-top: 1px solid var(--edge);
-}
-
-.settings .key-head {
-  flex-wrap: wrap;
-  gap: 4px 12px;
-}
-
-.settings .key-head > span:first-child,
-.settings .key-name {
-  display: flex;
-  flex: 1 1 150px;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 10px;
-  min-width: 0;
-}
-
-.settings .key strong,
-.settings .order-list strong {
-  color: var(--ink);
-  font-family: var(--mono);
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.settings .key-actions {
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.settings .key-form {
-  gap: 8px;
-  padding-bottom: 6px;
-}
-
-.settings .key-result {
-  color: var(--ink-2);
-  font-family: var(--mono);
-  font-size: 14px;
-  overflow-wrap: anywhere;
-}
-
-.settings .key-result[data-tone='risk'] {
-  color: var(--set-risk);
-}
-
-.settings .order-list {
-  padding: 0;
-}
-
-.settings .order-list li {
-  min-height: 60px;
-  padding: 10px 0;
-  border-top: 1px solid var(--edge);
-}
-
-.settings .order-list li > span:first-child {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 10px;
-  padding-left: 24px;
-}
-
-.settings .order-list li > span:first-child::before {
-  top: 50%;
-  color: var(--ink-3);
-  font-size: 13px;
-  transform: translateY(-50%);
-}
-
-.settings .test-result {
-  gap: 4px;
-  margin: 0 0 4px;
-  padding: 10px 14px;
-  background: var(--panel-2);
-  border: 1px solid var(--edge);
-  border-radius: var(--r-m);
-  color: var(--ink-2);
-  font-size: 14px;
-}
-
-.settings .test-result[data-ok='true'] > small:first-child {
-  color: var(--set-ok);
-}
-
-.settings .test-result[data-ok='false'] {
-  color: var(--set-risk);
-}
-
-.settings .test-result small {
-  font-size: 14px;
-}
-
-.settings .plain-list {
+.settings-screen .plain-list {
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.settings .plain-list li {
+.settings-screen .plain-list li {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -1149,96 +735,15 @@
   border-top: 1px solid var(--edge);
 }
 
-.settings .plain-list strong {
+.settings-screen .plain-list strong {
   font-size: 15px;
   font-weight: 650;
   overflow-wrap: anywhere;
 }
 
-/* ---- a disclosure: one row that opens ---- */
+/* ---- the snippet ---- */
 
-.settings .disclosure {
-  border-top: 1px solid var(--edge);
-}
-
-.settings .disclosure > summary {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  min-height: 56px;
-  padding: 0;
-  color: var(--ink);
-  cursor: pointer;
-  font-size: 15px;
-  list-style: none;
-}
-
-.settings .disclosure > summary::-webkit-details-marker {
-  display: none;
-}
-
-.settings .disclosure > summary::after {
-  content: '';
-  flex: none;
-  width: 9px;
-  height: 9px;
-  border-right: 2px solid var(--ink-2);
-  border-bottom: 2px solid var(--ink-2);
-  transform: translateY(-2px) rotate(45deg);
-  transition: transform var(--dur-3) var(--ease-out);
-}
-
-.settings .disclosure[open] > summary::after {
-  transform: translateY(2px) rotate(-135deg);
-}
-
-.settings .disclosure > .setting {
-  border-top: 0;
-}
-
-/* ---- numbers, the snippet, a command ---- */
-
-.settings .tiles {
-  gap: 0;
-  margin: 0;
-  border-bottom: 1px solid var(--edge);
-}
-
-.settings .tiles > div {
-  display: grid;
-  justify-items: start;
-  gap: 0;
-  padding: 12px 14px;
-  background: transparent;
-  border: 0;
-  border-right: 1px solid var(--edge);
-  border-radius: 0;
-}
-
-.settings .tiles > div:last-child {
-  border-right: 0;
-}
-
-.settings .tiles > div > .icon {
-  margin-bottom: 4px;
-  color: var(--ink-3);
-}
-
-.settings .tiles strong {
-  font-family: var(--mono);
-  font-size: 22px;
-  font-weight: 500;
-  letter-spacing: 0;
-}
-
-.settings .tiles small {
-  color: var(--ink-2);
-  font-size: 14px;
-  line-height: 1.35;
-}
-
-.settings .mcp-snippet {
+.settings-screen .mcp-snippet {
   margin: 8px 0 12px;
   padding: 14px;
   max-height: 220px;
@@ -1248,92 +753,146 @@
   font-size: 13px;
 }
 
-.settings .command {
-  margin: 8px 0 0;
-  padding: 8px 8px 8px 14px;
-  background: var(--panel-2);
+/* ---- the connections: a second line, a trouble, a test result, a form ---- */
+
+.settings-sub {
+  display: block;
+  margin-top: 4px;
+  color: var(--ink-3);
+}
+
+.settings-trouble {
+  margin: -4px 16px 12px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--risk);
+}
+
+.settings-test {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0 16px 12px;
+  padding: 10px 14px;
+  background: var(--inset);
   border: 1px solid var(--edge);
   border-radius: var(--r-m);
-}
-
-.settings .command code {
-  font-size: 13px;
-}
-
-
-/* ---- density (2026-11-08) ----
-   The sheet had 44px squares for every choice and 52px rows, so a page of six
-   settings filled the drawer and the buttons sat far apart. One compact scale
-   for every control: 30px choices, 32px icon presses, a 40x22 switch, 44px rows,
-   and page tabs that keep their names. Everything above still holds; only the
-   sizes change here. */
-
-.drawer[data-panel='settings'] {
-  width: 480px;
-  padding: 14px 18px 12px;
   font-size: 14px;
+  color: var(--ink-2);
 }
 
-.drawer[data-panel='settings'][data-wide='true'] { width: 480px; }
+.settings-test p {
+  margin: 0;
+}
 
-.drawer[data-panel='settings'] .drawer-head { padding-bottom: 10px; }
-.drawer[data-panel='settings'] .drawer-head h2 { font-size: 19px; font-weight: var(--w-bold); }
-.drawer[data-panel='settings'] .drawer-head .icon-btn { width: 32px; height: 32px; border-radius: var(--r-s); }
+.settings-test[data-ok='false'] {
+  color: var(--risk);
+}
 
-.settings { gap: 12px; padding-top: 10px; }
-.settings-page { gap: 16px; }
+.settings-test ul {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
 
-/* Page tabs: every tab says its name, in one tight row. */
-.settings-nav .iconchoice { gap: 2px; padding: 2px; }
-.settings-nav .iconchoice button { flex: 1 1 0; min-width: 0; height: 32px; padding: 0 6px; }
-.settings-nav .iconchoice .ico-word,
-.settings-nav .iconchoice button[data-on='true'] .ico-word {
-  max-width: 120px;
-  margin-left: 6px;
+.settings-test li {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.settings-test li small {
   font-size: 13px;
-  opacity: 1;
+  color: var(--ink-3);
+  overflow-wrap: anywhere;
 }
-.settings-nav .iconchoice button:not([data-on='true']) .ico-word { color: var(--ink-2); }
-.settings-nav .iconchoice .ico .icon { width: 15px; height: 15px; }
-.settings .iconchoice[data-tabs] [data-tip]::after { display: none; }
 
-.settings .panel-group { border-top-width: 1px; }
-.settings .group-head { min-height: 34px; padding: 2px 0; }
-.settings .group-head h3 { font-size: 14.5px; font-weight: var(--w-semibold); }
+/* What a fold holds: a note, its presses, its path. */
+.settings-fold-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 4px 16px 14px;
+}
 
-.settings .setting { min-height: 44px; gap: 6px 12px; padding: 6px 0; }
-.settings .setting.stack,
-.settings .setting.actions { padding-top: 8px; padding-bottom: 8px; }
-.settings .setting > .row-label,
-.settings .row-label,
-.settings .row-name { font-size: 14px; gap: 4px 8px; }
-.settings .row-icon { width: 24px; height: 24px; }
-.settings .row-icon .icon { width: 14px; height: 14px; }
-.settings .setting .value,
-.settings .setting .value.path { font-size: 13px; }
+.settings-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
 
-.settings .iconchoice { gap: 1px; padding: 2px; border-radius: var(--r-s); }
-.settings .iconchoice button { min-width: 32px; height: 28px; padding: 0 7px; }
-.settings .iconchoice button .icon { width: 16px; height: 16px; }
-.settings .iconchoice button[data-on='true']::before { bottom: 2px; width: 3px; height: 3px; margin-left: -1.5px; }
+.settings-path {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
 
-.settings .icon-act { width: 32px; height: 32px; border-radius: var(--r-s); }
-.settings .icon-act .icon { width: 16px; height: 16px; }
+.settings-status {
+  margin: 0 4px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
 
-.settings .segmented { gap: 1px; padding: 2px; border-radius: var(--r-s); }
-.settings .segmented button { min-width: 32px; min-height: 28px; padding: 0 10px; font-size: 13px; }
+/* An add form: a labelled field and its press side by side, wrapping when narrow. */
+.settings-add {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+  width: 100%;
+}
 
-.settings .switch { width: 40px; height: 22px; border-radius: var(--r-pill); }
-.settings .switch i { left: 3px; width: 16px; height: 16px; border-radius: var(--r-pill); }
-.settings .switch[data-on='true'] i { transform: translate(18px, -50%); }
-.settings .switch i svg { width: 11px; height: 11px; }
+.settings-add .k-field {
+  flex: 1 1 240px;
+  min-width: 0;
+}
 
-.settings .btn { min-height: 30px; padding: 0 12px; font-size: 13.5px; }
-.settings .choices { gap: 6px; }
-.settings .choice { min-height: 30px; padding: 0 10px; font-size: 13.5px; }
+/* A config line: the command or the path, and its copy press. */
+.settings-copy {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
 
-/* Six pages: the names are the tabs, the icons would only crowd them. */
-.settings-nav .iconchoice .ico { display: none; }
-.settings-nav .iconchoice button { flex: 1 1 auto; padding: 0 8px; }
-.settings-nav .iconchoice .ico-word,
-.settings-nav .iconchoice button[data-on='true'] .ico-word { margin-left: 0; }
+.settings-copy code {
+  font-family: var(--mono);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+/* A row with several presses lets them wrap at its end. */
+.settings-setting .k-row-control {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+/* The screen's own spacing, and the two old look-alikes the panels still draw. */
+.settings-screen {
+  gap: 12px;
+  padding-top: 10px;
+}
+
+.settings-screen .value {
+  font-size: 13px;
+}
+
+.settings-screen .segmented {
+  gap: 1px;
+  padding: 2px;
+  border-radius: var(--r-s);
+}
+
+.settings-screen .segmented button {
+  min-width: 32px;
+  min-height: 28px;
+  padding: 0 10px;
+  font-size: 13px;
+}

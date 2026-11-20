@@ -42,3 +42,6 @@ export const askBody = (kind: ReportKind, jobId: string, note: string) => ({
 /** A suggestion needs words. A problem needs words or a run to read. */
 export const canDraft = (kind: ReportKind, jobId: string, note: string): boolean =>
   note.trim() !== '' || (kind === 'error' && jobId !== '')
+
+/** Whether a report was asked for and not yet taken, so the section opens on it. Reads, never takes. */
+export const hasRequestedReport = (): boolean => pending !== null

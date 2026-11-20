@@ -1,20 +1,23 @@
-/* The log section: jobs on the left, their steps in order on the right. */
-
-/* Wide enough to read a timeline; the width the rail leaves is the limit. */
-.drawer[data-panel='logs'] {
-  width: min(1040px, calc(100vw - var(--rail-w) - 60px));
-}
+/* The job log, drawn inside the Data and updates section of Settings. Jobs sit
+   beside their steps; inside the block the two stack when it is narrow. The
+   block scrolls itself (settings-data.css), so the filter row stays in reach. */
 
 .logs {
   display: grid;
-  grid-template-columns: 230px minmax(0, 1fr);
+  grid-template-columns: 200px minmax(0, 1fr);
   gap: var(--gap-4);
   align-items: start;
 }
 
-@media (max-width: 900px) {
+/* A narrow block stacks the jobs above their steps. */
+@container (max-width: 760px) {
   .logs {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .logs-jobs {
+    position: static;
+    max-height: 190px;
   }
 }
 
@@ -24,7 +27,7 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  max-height: calc(100vh - 150px);
+  max-height: 60vh;
   overflow: auto;
 }
 
@@ -32,10 +35,9 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 9px 2px;
-  border: 1px solid transparent;
-  border-top-color: var(--edge);
-  border-radius: 0;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: var(--r-s);
   background: transparent;
   color: var(--ink);
   text-align: left;
@@ -43,27 +45,25 @@
 }
 
 .logs-job:hover {
-  background: var(--accent-soft);
+  background: var(--select);
 }
 
+.logs-job[aria-pressed='true'],
 .logs-job[data-on='true'] {
-  border-top-color: var(--edge);
-  border-left: 2px solid var(--accent);
-  border-right-color: transparent;
-  border-bottom-color: transparent;
-  background: var(--accent-soft);
+  background: var(--select-strong);
 }
 
 .logs-job strong {
   overflow: hidden;
-  font-size: 13.5px;
+  font-size: 14px;
+  font-weight: var(--w-medium);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .logs-job small {
   color: var(--ink-3);
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .logs-job[data-state='failed'] strong::before,
@@ -100,27 +100,27 @@
 .logs-summary > div {
   min-width: 82px;
   padding: 7px 12px;
-  border: 1px solid var(--edge);
   border-radius: var(--r-m);
-  background: var(--raise);
+  background: var(--inset);
 }
 
 .logs-summary dt {
   color: var(--ink-3);
-  font-size: 11.5px;
+  font-size: 13px;
 }
 
 .logs-summary dd {
   margin: 1px 0 0;
-  font-size: 14px;
-  font-weight: 560;
+  font-size: 15px;
+  font-weight: var(--w-semibold);
+  font-variant-numeric: tabular-nums;
 }
 
 .logs-summary > div[data-bad='true'] dd {
   color: var(--risk-text);
 }
 
-/* ---- filters ---- */
+/* ---- filters: the row stays at the top of the block while its steps scroll ---- */
 
 .logs-filters {
   display: flex;
@@ -129,7 +129,7 @@
   align-items: center;
 }
 
-.logs-filters .search-field {
+.logs-filters .settings-data-search {
   flex: 1 1 200px;
 }
 
@@ -140,35 +140,33 @@
 }
 
 .logs-chip {
-  height: 28px;
-  padding: 0 11px;
-  border: 1px solid var(--edge);
-  border-radius: var(--r-m);
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--edge-strong);
+  border-radius: var(--r-pill);
   background: transparent;
   color: var(--ink-2);
-  font-size: 12.5px;
+  font-size: 13px;
   cursor: pointer;
 }
 
 .logs-chip:hover {
-  background: var(--panel-2);
+  background: var(--select);
 }
 
 .logs-chip[aria-pressed='true'] {
-  border-color: var(--accent);
-  background: var(--accent-soft);
-  color: var(--accent-hi);
+  border-color: var(--ink-2);
+  background: var(--select-strong);
+  color: var(--ink);
 }
 
 .logs-chip[data-level='error'][aria-pressed='true'] {
-  border-color: var(--risk);
-  background: transparent;
+  border-color: var(--risk-edge);
   color: var(--risk-text);
 }
 
 .logs-chip[data-level='warn'][aria-pressed='true'] {
-  border-color: var(--warn);
-  background: transparent;
+  border-color: var(--warn-edge);
   color: var(--warn-text);
 }
 
@@ -180,30 +178,22 @@
   margin-left: auto;
 }
 
-.logs-check {
-  display: inline-flex;
-  gap: 6px;
-  align-items: center;
-  color: var(--ink-2);
-  font-size: 12.5px;
-}
-
 /* ---- steps ---- */
 
 .logs-steps {
   margin: 0;
   padding: 0;
   list-style: none;
-  border: 1px solid var(--edge);
   border-radius: var(--r-m);
+  background: var(--inset);
   overflow: hidden;
 }
 
 .logs-jobhead {
   padding: 6px 12px;
-  background: var(--panel-2);
+  background: var(--sunk);
   color: var(--ink-3);
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .logs-step {
@@ -221,11 +211,12 @@
   gap: 7px;
   align-items: baseline;
   width: 100%;
-  padding: 5px 10px 5px calc(10px + var(--depth, 0) * 16px);
+  min-height: 40px;
+  padding: 6px 12px 6px calc(12px + var(--depth, 0) * 16px);
   border: 0;
   background: transparent;
   color: var(--ink);
-  font-size: 13px;
+  font-size: 14px;
   text-align: left;
   cursor: pointer;
 }
@@ -235,12 +226,12 @@
 }
 
 .logs-line:not(:disabled):hover {
-  background: var(--panel-2);
+  background: var(--select);
 }
 
 .logs-at {
   color: var(--ink-3);
-  font-size: 12px;
+  font-size: 13px;
   text-align: right;
 }
 
@@ -261,14 +252,13 @@
 }
 
 .logs-step[data-state='running'] .logs-dot {
-  background: var(--accent);
+  background: var(--brand);
 }
 
 .logs-source {
   color: var(--ink-3);
   font-family: var(--mono);
-  font-size: 10.5px;
-  letter-spacing: 0;
+  font-size: 12px;
 }
 
 .logs-title {
@@ -283,18 +273,18 @@
   display: flex;
   gap: 10px;
   color: var(--ink-3);
-  font-size: 12px;
+  font-size: 13px;
   white-space: nowrap;
 }
 
 .logs-open {
   display: flex;
   flex-direction: column;
-  gap: 7px;
-  padding: 4px 10px 10px calc(98px + var(--depth, 0) * 16px);
+  gap: 8px;
+  padding: 4px 12px 12px calc(98px + var(--depth, 0) * 16px);
 }
 
-@media (max-width: 900px) {
+@container (max-width: 560px) {
   .logs-line {
     grid-template-columns: 60px 10px minmax(0, 1fr);
   }
@@ -312,9 +302,9 @@
 .logs-facts {
   display: grid;
   grid-template-columns: max-content minmax(0, 1fr);
-  gap: 3px 14px;
+  gap: 4px 14px;
   margin: 0;
-  font-size: 12.5px;
+  font-size: 14px;
 }
 
 .logs-facts > div {
@@ -334,13 +324,14 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
   margin: 0 0 4px;
 }
 
 .logs-body h4 {
   margin: 0;
-  font-size: 12.5px;
-  font-weight: 560;
+  font-size: 14px;
+  font-weight: var(--w-semibold);
 }
 
 .logs-body pre {
@@ -348,17 +339,16 @@
   margin: 0;
   padding: 10px 12px;
   overflow: auto;
-  border: 1px solid var(--edge);
   border-radius: var(--r-s);
   background: var(--ground);
   color: var(--ink-2);
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.5;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 
 .logs-redacted {
-  font-size: 12px;
+  font-size: 13px;
 }

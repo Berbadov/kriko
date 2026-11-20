@@ -1,0 +1,69 @@
+/* The Research section of Settings: the agent rows and the words pressed on them. */
+
+.research-agent-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.research-agent {
+  flex-wrap: wrap;
+}
+
+.research-agent .k-row-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.research-agent .k-row-control {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.research-agent[data-chosen='true'] {
+  background: var(--select);
+}
+
+.research-agent .press {
+  margin: 6px 0 0;
+}
+
+.research-agent-note {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--ink-2);
+}
+
+.research-agent-foot .k-row-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.research-agent-extra {
+  display: grid;
+  gap: 8px;
+  padding: 0 16px 12px;
+}
+
+.research-memory {
+  width: 100%;
+  min-height: 96px;
+  resize: vertical;
+}
+
+.research-memory-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.research-memory-actions .press {
+  margin: 0;
+}

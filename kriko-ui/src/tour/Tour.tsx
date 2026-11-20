@@ -13,7 +13,7 @@ interface Step {
   target?: string
   title: string
   text: string
-  /** A drawer panel to open first, because the target is inside it. */
+  /** A place to open first, because the target is inside it. */
   panel?: string
   /** The settings page the target is on, when the panel has pages. */
   page?: SettingsPage
@@ -22,12 +22,12 @@ interface Step {
 const STEPS: Step[] = [
   { title: 'Welcome to Kriko', text: 'Kriko tells you what can go wrong with a product before you buy it. This tour takes one minute.' },
   { target: 'composer', title: 'Ask here', text: 'Type a product or a question. Kriko reads your catalogs and the web, and shows its work.' },
-  { target: 'agent-pick', title: 'Pick an agent', text: 'The agent does the reading. Choose one for each question. Settings sets the one you use most.' },
-  { target: 'new-chat', title: 'Chats', text: 'Start a new chat here. Your old chats stay in the list below.' },
+  { target: 'agent-pill', title: 'Pick an agent', text: 'The agent does the reading. Choose one for each question. Settings sets the one you use most.' },
+  { target: 'new-chat', title: 'Chats', text: 'Start a new chat here. Your old chats are in History, on the rail.' },
   { target: 'nav-compare', title: 'Compare', text: 'Put up to four products side by side. Products are columns. Risks are rows.' },
   { target: 'nav-queue', title: 'Queue', text: 'Send products from your browser. Kriko checks them one by one, when you press Start.' },
-  { target: 'source-kinds', panel: 'settings', page: 'research', title: 'Where to look', text: 'Choose the kinds of page Kriko reads for each product: forums, reviews, recalls and more. At least one stays on.' },
-  { target: 'more', title: 'More', text: 'Settings, agents, local models, catalogs and sites are here. You can take this tour again from Settings.' },
+  { target: 'source-kinds', panel: 'agents', page: 'research', title: 'Where to look', text: 'Choose the kinds of page Kriko reads for each product: forums, reviews, recalls and more. At least one stays on.' },
+  { target: 'library', title: 'Library', text: 'Catalogs, sites and For you are in the Library. Settings, at the foot of the rail, holds agents, keys, search and look.' },
   { title: 'Verify your setup', panel: 'setup', text: 'Check the selected agent, get a catalog, connect the extension, and complete a real sourced check.' },
 ]
 

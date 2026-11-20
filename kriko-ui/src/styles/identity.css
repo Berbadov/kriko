@@ -1,43 +1,6 @@
 /* The identity layer, last in the cascade: it changes how things look and
    never where they sit. Newsreader sets the titles, Inter the reading. Corners
-   are soft, 8/10/12/16, and a press is a pill; the pixel art stays square.
-   A finding is a ruled ledger row, not a card: the status badge sits in the
-   evidence gutter and carries the severity. The divider under every row is the
-   same quiet hairline, so a page of findings never turns amber. It draws once
-   as the row enters, in 180ms. */
-
-.risk-list > li {
-  position: relative;
-  padding-bottom: 26px;
-  border-radius: 0;
-}
-
-.risk-list > li::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 8px;
-  color: var(--ink-3);
-  background: linear-gradient(currentColor, currentColor) 0 100% / 100% 1px no-repeat;
-  transform-origin: left center;
-  animation: rule-draw var(--dur-3) var(--ease-out) both;
-}
-
-@keyframes rule-draw {
-  from {
-    transform: scaleX(0);
-  }
-  to {
-    transform: scaleX(1);
-  }
-}
-
-.risk-list strong {
-  font-weight: 650;
-  letter-spacing: -0.02em;
-}
+   are soft, 8/10/12/16, and a press is a pill; the pixel art stays square. */
 
 /* Big titles: Newsreader, one step lighter than the body's bold, close. */
 .hello h1 {
@@ -80,30 +43,4 @@ input:not([type='checkbox']):not([type='radio']):not([type='range']),
 select,
 textarea {
   border-color: var(--edge-control);
-}
-
-/* The product rebuilt in dust, above the check: a strip of the page's own
-   ground with the grains in the page's ink. */
-.product-dust {
-  flex: none;
-  height: 200px;
-  border-radius: var(--r-l);
-  background: var(--panel);
-  border: 1px solid var(--edge);
-  overflow: hidden;
-  color: var(--ink);
-}
-
-.product-dust canvas {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-
-/* Motion and the page grid are the only textures. Nothing glows. */
-@media (prefers-reduced-motion: reduce) {
-  .risk-list > li::after {
-    animation: none;
-    transform: none;
-  }
 }

@@ -1,5 +1,5 @@
 import { Checkbox } from '../../arc/checkbox/checkbox'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { NO_FILTERS, useHfStore, type HfFilters, type HfModel, type HfQuant, type HfSort } from '../../engine/hfstore'
 import { Icon } from '../Icon'
 import { Select } from '../controls'
@@ -31,14 +31,13 @@ const count = (n: number) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ?
 /** A model needs its file in memory and room for the context. */
 const OVERHEAD = 1.15
 
-/** Hugging Face models that Ollama can pull, found with filters.
- *  It reads the web when the reader presses a button, and downloads only from a Get button. */
+/** Hugging Face models that Ollama can pull, found with filters. It is drawn only
+ *  when the reader opens the block, and downloads only from a Get button. */
 export function HfStore({ vramMb, installed, pulling, onGet }: { vramMb: number | null; installed: string[]; pulling: boolean; onGet: (name: string) => void }) {
   const hf = useHfStore()
   const [filters, setFilters] = useState<HfFilters>(NO_FILTERS)
   const [fits, setFits] = useState(false)
   const [open, setOpen] = useState('')
-  const [begun, setBegun] = useState(false)
 
   /** What the card can hold at 4 bits: about 0.6 GB per billion parameters, and room to run. */
   const vramB = vramMb ? Math.floor(vramMb / 1024 / (0.6 * OVERHEAD)) : null
@@ -51,19 +50,11 @@ export function HfStore({ vramMb, installed, pulling, onGet }: { vramMb: number 
     void hf.search(effective(next, onlyFits))
   }
 
-  if (!begun) {
-    return (
-      <button
-        className="btn ghost"
-        onClick={() => {
-          setBegun(true)
-          void hf.search(NO_FILTERS)
-        }}
-      >
-        Browse Hugging Face
-      </button>
-    )
-  }
+  // The block is opened by the reader's press; the first search runs then, once.
+  useEffect(() => {
+    void hf.search(NO_FILTERS)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const size = SIZES.findIndex((one) => one.min === filters.min && one.max === filters.max)
 

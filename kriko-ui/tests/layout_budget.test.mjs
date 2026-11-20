@@ -45,74 +45,84 @@ const num = (value) => {
 /** `padding: 3px` and `border: 1px solid x` are held in the same property. */
 const lead = (value) => px(value.trim().split(/\s+/)[0])
 
-test('the window buttons ride in the top bar, so no band is spent above it', async () => {
+test('the strip is the only band above the page, and the window buttons ride in it', async () => {
   const css = await read('src/styles/shell.css')
-  const pad = px(declaration(css, ':root', '--app-pad'))
-  const bar = px(declaration(css, ':root', '--topbar-h'))
-  const caption = px(declaration(css, ':root', '--caption-w'))
+  const strip = px(declaration(css, ':root', '--strip-h'))
   const button = px(declaration(css, '.titlebar-btn', 'width'))
 
-  // The reserve is exactly the three window buttons: change one width and this
-  // fails rather than letting a control sit under the closing X.
-  assert.equal(caption, button * 3, 'the caption reserve is not the three window buttons')
+  // The strip is the slim row across the column: 40px, the same height as the
+  // window buttons that ride in it, so no band is spent above the page.
+  assert.equal(strip, 40, 'the strip is not the 40px row the shell was drawn for')
+  assert.equal(declaration(css, '.strip', 'height'), 'var(--strip-h)')
+  assert.equal(declaration(css, '.titlebar', 'height'), 'var(--strip-h)')
+  assert.equal(button, 46, 'a window button is no longer the 46px the caption was measured for')
 
-  // The strip is inside the bar's row, not a band above it.
-  assert.equal(declaration(css, '.titlebar', 'top'), 'var(--app-pad)')
-  assert.equal(declaration(css, '.titlebar', 'height'), 'var(--topbar-h)')
-  assert.equal(declaration(css, '.topbar', 'height'), 'var(--topbar-h)')
+  // The buttons are in flow at the strip's right end, not fixed over the page,
+  // so they can never sit on a control or take a press from it.
+  assert.ok(!/position:\s*fixed/.test(rule(css, '.titlebar')), 'the window buttons are fixed over the page')
+  assert.equal(declaration(css, '.strip', 'border-bottom').split(/\s+/).pop(), 'var(--edge)')
 
-  // One gutter and one row. Measured on the reader's screen: the title bar (28)
-  // plus the frame (6) plus the bar (42) came to 76px, and 93 device pixels at
-  // 125% scaling.
-  assert.ok(pad + bar <= 48, `the top chrome is ${pad + bar}px; the reader saw 76px`)
+  // The row gives up its end padding when the system bar is not drawn, so the
+  // closing X is flush with the window's edge and nothing sits under it.
+  assert.match(css, /:root\[data-titlebar\] \.strip \{\s*padding-right: 0;/)
 
-  // The page gives up no band, and the drawer opens below the row rather than
-  // under the window's own strip.
-  assert.ok(!/\[data-titlebar\][^{]*#root/.test(css), 'the page still reserves a title-bar band')
-  assert.match(declaration(css, ':root', '--drawer-top'), /--topbar-h/)
-  assert.match(declaration(css, '.drawer', 'top'), /--drawer-top/)
+  // The page is the stage: no inset border, no radius, filling the column.
+  const stage = rule(css, '.stage')
+  assert.ok(!/border:/.test(stage), 'the stage still draws its own inset border')
+  assert.ok(!/border-radius/.test(stage), 'the stage still rounds its own corners')
+  assert.match(rule(css, '.shell-main'), /background:\s*var\(--ground\)/)
 })
 
-test('the pill of places is the bar it sits in, and leaves the window buttons clear', async () => {
-  const css = await read('src/styles/shell.css')
-  const bar = px(declaration(css, ':root', '--topbar-h'))
-  const tab = px(declaration(css, '.topbar-tab', 'height'))
-  const navPad = px(declaration(css, '.topbar-nav', 'padding'))
-  const navEdge = lead(declaration(css, '.topbar-nav', 'border'))
+test('the rail is a labelled column of 232px that collapses to icons under 900px', async () => {
+  const css = await read('src/styles/rail.css')
+  const shell = await read('src/styles/shell.css')
 
-  // Before: a 48px pill centred in a 42px row, with its lower 6px outside it.
-  assert.equal(tab + (navPad + navEdge) * 2, bar, 'the pill of places overflows its row')
+  assert.equal(px(declaration(shell, ':root', '--rail-open')), 232, 'the rail is not the 232px it was drawn at')
+  assert.equal(declaration(css, '.lrail', 'width'), 'var(--rail-open)')
+  assert.equal(declaration(css, '.lrail', 'background'), 'var(--sheet)')
+  assert.match(rule(css, '.lrail'), /border-right:\s*1px solid var\(--edge\)/)
 
-  // The room for the window buttons comes out of the right column's padding, so
-  // the tabs stay centred on the window.
-  assert.match(
-    declaration(css, ':root[data-titlebar] .topbar-right', 'padding-right'),
-    /--caption-w/,
-    'the window buttons are not kept clear of the status cluster',
-  )
+  // Under 900px of window the rail is the icon column and the words leave the
+  // sight line, but stay in the page for the screen reader.
+  const collapsed = /@media \(max-width: 899px\) \{([\s\S]*?)\n\}\n/.exec(css)
+  assert.ok(collapsed, 'the rail has no collapse under 900px')
+  assert.match(collapsed[1], /width:\s*var\(--rail-shut\)/)
+  assert.match(collapsed[1], /\.lrail-label \{[\s\S]*?clip: rect\(0 0 0 0\)/, 'the words are removed from the accessible name when collapsed')
 })
 
-test('the drawer scrolls a named body, and its head is never over that body', async () => {
+test('a rail row is 40px, the active row is marked, and New chat is the only brand fill', async () => {
+  const css = await read('src/styles/rail.css')
+  const rail = await read('src/ui/Rail.tsx')
+
+  assert.equal(px(declaration(css, '.lrail-item', 'height')), 40)
+  assert.equal(declaration(css, '.lrail-item[data-on=\'true\']', 'background'), 'var(--select-strong)')
+  assert.match(rule(css, '.lrail-item[data-on=\'true\']::before'), /width:\s*2px/)
+  assert.equal(declaration(css, '.lrail-item[data-on=\'true\']::before', 'background'), 'var(--brand)')
+
+  // The one filled brand control in the rail is New chat; the update dot is not a fill.
+  assert.equal(declaration(css, '.lrail-new', 'background'), 'var(--brand)')
+  assert.notEqual(declaration(css, '.lrail-dot', 'background'), 'var(--brand)')
+
+  // Every row says a word, not an icon alone.
+  for (const label of ['Ask', 'Compare', 'Queue', 'History', 'Procurement', 'Prices', 'Catalogs', 'Sites', 'For you', 'Settings']) {
+    assert.ok(rail.includes(`>${label}<`) || rail.includes(`label: '${label}'`), `the rail has no word for ${label}`)
+  }
+})
+
+test('a panel page scrolls in the page, and nothing is left to clip it', async () => {
   const css = await read('src/styles/shell.css')
-  const drawer = await read('src/ui/Drawer.tsx')
+  const panel = await read('src/ui/PanelPage.tsx')
 
-  // Before: `.drawer > div:last-child` — one extra element in the drawer and the
-  // scroll was gone, leaving `.drawer { overflow: hidden }` to clip the last card.
-  assert.ok(!/\.drawer > div:last-child/.test(css), 'the scroll region is still found by position')
-  const body = rule(css, '.drawer-body')
-  assert.match(body, /overflow-y:\s*auto/)
-  assert.match(body, /min-height:\s*0/)
-  assert.match(body, /flex:\s*1;/)
-  assert.match(drawer, /className="drawer-body"/, 'the scroll region carries no name')
+  // The page scrolls; the stage only holds it. No drawer or scrim remains to cut a card.
+  assert.match(rule(css, '.page'), /overflow:\s*auto/)
+  assert.match(rule(css, '.stage'), /overflow:\s*hidden/)
+  assert.ok(!/\.drawer\b/.test(css), 'a drawer rule is still in the shell')
+  assert.ok(!/\.scrim\b/.test(css), 'a scrim rule is still in the shell')
 
-  // The drawer is a column, so the body's `flex: 1` is a height it can scroll in.
-  assert.match(rule(css, '.drawer'), /display:\s*flex/)
-  assert.match(rule(css, '.drawer'), /flex-direction:\s*column/)
-
-  // The head ends above the body: a sticky head over a scroller is what hides the
-  // first card of a panel, and the drawer does not scroll for it to stick to.
-  assert.ok(!/position:\s*sticky/.test(rule(css, '.drawer-head')), 'the head lies over the body')
-  assert.equal(declaration(css, '.drawer-head', 'flex'), 'none')
+  // The title is a screen title, in the screen's own heading.
+  assert.match(panel, /className="k-screen panel-page"/)
+  assert.match(panel, /className="k-head"/)
+  assert.match(panel, /className="k-title"/)
 })
 
 test('a long note wraps inside its card and never squeezes the control beside it', async () => {
@@ -137,25 +147,16 @@ test('a long note wraps inside its card and never squeezes the control beside it
   assert.match(setting, /align-items:\s*flex-start/)
 })
 
-test('the settings gear is a square, at a size the reader can find', async () => {
-  const css = await read('src/styles/shell.css')
-  const base = rule(await read('src/styles/base.css'), '.icon')
-  const topbar = await read('src/ui/TopBar.tsx')
+test('the settings row is a labelled rail item, a word beside its icon', async () => {
+  const rail = await read('src/ui/Rail.tsx')
+  const css = await read('src/styles/rail.css')
 
-  const w = px(declaration(css, '.topbar-settings .icon', 'width'))
-  const h = px(declaration(css, '.topbar-settings .icon', 'height'))
-  assert.equal(w, h, 'a gear with two sizes is the squash the reader saw')
-  assert.ok(w >= 20, `the gear is ${w}px; the base icon's 18px is where it was unreadable`)
-  assert.equal(declaration(css, '.topbar-settings .icon', 'stroke-width'), '1.75')
-
-  // The base icon is square too, so losing the override cannot squash the gear —
-  // only shrink it, which this number would catch.
-  assert.match(base, /width:\s*18px/)
-  assert.match(base, /height:\s*18px/)
-
-  // It is a labelled button, so the icon and the word sit on one line.
-  assert.match(topbar, /<Icon name="gear" size=\{21\} \/>/)
-  assert.match(topbar, /<span className="topbar-label">Settings<\/span>/)
+  // Settings sits at the foot of the rail with its word, and its icon is the
+  // rail's standard size, so the two read as one line.
+  assert.match(rail, /<Icon name="gear" size=\{18\} \/>/)
+  assert.match(rail, /<span className="lrail-label">Settings<\/span>/)
+  assert.match(rule(css, '.lrail-foot'), /border-top:\s*1px solid var\(--edge\)/)
+  assert.equal(px(declaration(css, '.lrail-item', 'height')), 40)
 })
 
 test('the tour card is kept inside the window, whatever its size', async () => {
