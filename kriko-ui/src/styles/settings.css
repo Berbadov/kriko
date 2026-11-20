@@ -1323,8 +1323,8 @@
 .settings .segmented { gap: 1px; padding: 2px; border-radius: var(--r-s); }
 .settings .segmented button { min-width: 32px; min-height: 28px; padding: 0 10px; font-size: 13px; }
 
-.settings .switch { width: 40px; height: 22px; border-radius: 6px; }
-.settings .switch i { left: 3px; width: 16px; height: 16px; border-radius: 4px; }
+.settings .switch { width: 40px; height: 22px; border-radius: var(--r-pill); }
+.settings .switch i { left: 3px; width: 16px; height: 16px; border-radius: var(--r-pill); }
 .settings .switch[data-on='true'] i { transform: translate(18px, -50%); }
 .settings .switch i svg { width: 11px; height: 11px; }
 

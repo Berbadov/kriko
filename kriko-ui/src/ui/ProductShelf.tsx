@@ -29,7 +29,7 @@ export function ProductShelf() {
       {stacks.map((stack, i) => (
         <span key={i} className="shelf-stack" data-wide={stack.wide || undefined}>
           {stack.ware && (
-            <svg className="shelf-ware" viewBox={stack.ware === 'car' ? '0 0 16 9' : '0 0 10 10'} style={{ '--d': order++ } as CSSProperties}>
+            <svg className="shelf-ware" viewBox="0 0 24 24" style={{ '--d': order++ } as CSSProperties}>
               <use href={`#px-${stack.ware}`} />
             </svg>
           )}

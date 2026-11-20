@@ -171,6 +171,22 @@ test('the tour card is kept inside the window, whatever its size', async () => {
   assert.ok(!/(?:top|left): Math\.min\(/.test(place), 'a placement can still land past the window edge')
 })
 
+test('a finding keeps one neutral divider and its evidence tip cannot widen the page', async () => {
+  const identity = await read('src/styles/identity.css')
+  const rail = await read('src/styles/rail.css')
+
+  // The badge carries the severity. A per-severity rule turned a product page
+  // into a ruler of dashes, and a full-width amber bar spent the attention
+  // budget on the row it had already marked.
+  assert.ok(!/\.risk-list > li:has\(\.level/.test(identity), 'a finding divider still varies with severity')
+
+  // The evidence tip used to open to the right and extend the scroll box by
+  // 19px at 760; the next scrollIntoView moved every line half a word off the
+  // left edge. It opens left from its mark instead.
+  assert.match(rule(rail, '.risk-title .ev-tip'), /right:\s*0/)
+  assert.match(rule(rail, '.risk-title .ev-tip'), /left:\s*auto/)
+})
+
 test('a product card and a source row each give a line back', async () => {
   const chat = await read('src/styles/chat.css')
   const rail = await read('src/styles/rail.css')
