@@ -268,33 +268,38 @@
   //   * It mutated the host document's `<head>`, from a content script, on a
   //     page we do not own.
   //
-  // The Kriko face is Inter Tight, one variable file per script, and it ships
-  // *inside* the extension (assets/fonts, SIL OFL, licence beside it). It is
-  // registered from there: the URL is the extension's own, so nothing leaves
-  // the machine and it loads offline. `@font-face` inside a shadow root is
-  // ignored by the browser, so the faces go to `document.fonts` through the
-  // FontFace API, which adds no element to the page's `<head>`. The family
-  // name is Kriko's own, so a page that happens to load Inter Tight is never
+  // The Kriko faces are Inter Tight for the reading and Newsreader for the
+  // titles: one variable file per script, shipped *inside* the extension
+  // (assets/fonts, SIL OFL, licence beside it). They are registered from
+  // there: the URL is the extension's own, so nothing leaves the machine and
+  // it loads offline. `@font-face` inside a shadow root is ignored by the
+  // browser, so the faces go to `document.fonts` through the FontFace API,
+  // which adds no element to the page's `<head>`. The family names are
+  // Kriko's own, so a page that happens to load either face is never
   // restyled by ours, nor ours by it. The Turkish letters sit in the second
   // file. Guarded by a test that fails on a remote URL anywhere in the
   // extension.
   const FACES = [
     ["Kriko Sans", "InterTight-latin.woff2",
-      "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"],
+      "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD", "100 900"],
     ["Kriko Sans", "InterTight-latin-ext.woff2",
-      "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"],
+      "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF", "100 900"],
+    ["Kriko Serif", "Newsreader-latin.woff2",
+      "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD", "200 800"],
+    ["Kriko Serif", "Newsreader-latin-ext.woff2",
+      "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF", "200 800"],
   ];
   let facesLoaded = false;
   function loadFaces() {
     if (facesLoaded) return;
     facesLoaded = true;
     if (typeof FontFace !== "function" || !document.fonts) return;
-    for (const [family, file, unicodeRange] of FACES) {
+    for (const [family, file, unicodeRange, weight] of FACES) {
       try {
         const face = new FontFace(
           family,
           `url(${chrome.runtime.getURL("assets/fonts/" + file)})`,
-          { weight: "100 900", display: "swap", unicodeRange },
+          { weight, display: "swap", unicodeRange },
         );
         face.load().then((loaded) => document.fonts.add(loaded)).catch(() => {});
       } catch (_) {
@@ -2950,25 +2955,25 @@
   // be easy to dismiss, quiet in what it says, and never in the way of the pay
   // button (bottom left, away from where checkouts put theirs).
   const TOAST_STYLE = `<style>
-      .kriko-guard-card,.kriko-due-card{font:13px/1.5 'Segoe UI',system-ui,sans-serif;max-width:340px;padding:10px 12px;border-radius:6px;
-        background:#1b2129;color:#e9ecef;border:1px solid rgba(255,255,255,.18);box-shadow:none}
-      .kriko-guard-card[data-verdict="stop"]{border-left:3px solid #6e96c8}
-      .kriko-guard-card[data-verdict="check"]{border-left:3px solid #87929d}
-      .kriko-due-card{border-left:3px solid #6e96c8}
+      .kriko-guard-card,.kriko-due-card{font:13px/1.5 'Kriko Sans','Segoe UI',system-ui,sans-serif;max-width:340px;padding:10px 12px;border-radius:12px;
+        background:#15171a;color:#ededea;border:1px solid rgba(237,237,234,.18);box-shadow:none}
+      .kriko-guard-card[data-verdict="stop"]{border-left:3px solid #ff8a1f}
+      .kriko-guard-card[data-verdict="check"]{border-left:3px solid #9a9da4}
+      .kriko-due-card{border-left:3px solid #5aa9f7}
       .kriko-guard-card ul{margin:6px 0 8px;padding-left:18px}
       .kriko-guard-card li{margin:2px 0}
       .kriko-due-card p{margin:0 0 6px}
       .lite-buy-due{background:none;padding:0;margin:0;box-shadow:none;border:0}
       .kriko-guard-actions,.lite-buy-actions,.lite-buy-form{display:flex;flex-wrap:wrap;gap:6px 8px}
-      .kriko-guard-actions button,.lite-buy-btn{font:500 12px 'Segoe UI',system-ui,sans-serif;padding:4px 9px;border-radius:2px;cursor:pointer;
-        border:1px solid rgba(255,255,255,.24);background:transparent;color:inherit}
-      .lite-buy-btn[data-primary="1"]{background:#2a4e78;border-color:#2a4e78;color:#fff}
-      .lite-buy-form input{flex:1;min-width:140px;padding:4px 8px;border-radius:2px;border:1px solid rgba(255,255,255,.24);
-        background:#101418;color:inherit;font:13px ui-monospace,Consolas,monospace}
-      .lite-buy-note{margin:4px 0;color:#a6b0ba}
-      .lite-buy-watching{font-size:12px;color:#a6b0ba}
-      .lite-buy-title{font-size:14px;font-weight:600;margin:0 0 6px;color:#e9ecef}
-      .lite-buy-due p{margin:0 0 6px;color:#e9ecef}
+      .kriko-guard-actions button,.lite-buy-btn{font:500 12px 'Kriko Sans','Segoe UI',system-ui,sans-serif;padding:4px 9px;border-radius:8px;cursor:pointer;
+        border:1px solid #666a70;background:transparent;color:inherit}
+      .lite-buy-btn[data-primary="1"]{background:#5aa9f7;border-color:#5aa9f7;color:#0b1020}
+      .lite-buy-form input{flex:1;min-width:140px;padding:4px 8px;border-radius:10px;border:1px solid #666a70;
+        background:#111316;color:inherit;font:13px 'Kriko Sans','Segoe UI',system-ui,sans-serif}
+      .lite-buy-note{margin:4px 0;color:#a8abb1}
+      .lite-buy-watching{font-size:12px;color:#a8abb1}
+      .lite-buy-title{font-family:'Kriko Serif',Georgia,serif;font-size:16px;font-weight:600;margin:0 0 6px;color:#ededea}
+      .lite-buy-due p{margin:0 0 6px;color:#ededea}
       </style>`;
   // A card on the page that is not the panel, in a shadow root of its own so the
   // page's styles cannot reach it. One of each kind at a time.
