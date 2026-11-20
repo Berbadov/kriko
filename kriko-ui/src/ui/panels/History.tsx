@@ -5,6 +5,8 @@ import { useResearchRuns, undoResearchRun, type ResearchRun, type ResearchUsage 
 import { followJob } from '../../engine/jobs'
 import { cost, count as counted } from '../../engine/logformat'
 import { Icon } from '../Icon'
+import { ProductGlyph } from '../ProductGlyph'
+import { glyphFor } from '../productGlyphs'
 import { useEngine } from '../../engine/Engine'
 
 const GROUPS = ['Today', 'Yesterday', 'This week', 'Earlier']
@@ -13,7 +15,7 @@ const reason = (error: unknown, fallback: string) => (error instanceof Error ? e
 
 /** Every saved check, and the research runs that wrote into the catalogs.
  *  Open one, put it in Compare, or delete it; undo a run that filed claims the
- *  reader no longer wants. */
+ *  reader no longer wants. Drawn inside the History page, which has its title. */
 export function HistoryPanel({ onOpen }: { onOpen: (id: string) => void }) {
   const [query, setQuery] = useState('')
   const { items, problem, remove, restore, hasMore, loadMore, retry } = useHistory(query)
@@ -50,36 +52,35 @@ export function HistoryPanel({ onOpen }: { onOpen: (id: string) => void }) {
   const spent = mode === 'live' ? <ResearchRuns runs={runs.runs} usage={runs.usage} problem={runs.problem} reload={runs.reload} /> : null
   if (!items && problem) {
     return (
-      <div className="panel-body">
-        {spent}
+      <>
         <p className="error-note" role="alert">
-          Your checks could not be read. {problem} <button className="btn" onClick={retry}>Try again</button>
+          Your checks could not be read. {problem} <button className="k-btn" data-size="sm" onClick={retry}>Try again</button>
         </p>
-      </div>
+        {spent}
+      </>
     )
   }
   if (!items) {
     return (
-      <div className="panel-body">
+      <>
+        <p className="work-note">Reading the history…</p>
         {spent}
-        <p className="panel-note">Reading the history…</p>
-      </div>
+      </>
     )
   }
   const empty = !items.length && !query
 
   return (
-    <div className="panel-body">
-      {/* The runs are the history of what was spent to know what is below them.
-          Only a live engine has runs; demo mode draws no spend rather than an
-          example number. */}
-      {spent}
-
-      <label className="search-field">
-        <Icon name="search" size={15} />
-        <input type="search" placeholder="Search your checks" aria-label="Search your checks" value={query} onChange={(event) => setQuery(event.target.value)} />
+    <>
+      <label className="work-search">
+        <Icon name="search" size={16} />
+        <input type="search" className="k-input" placeholder="Search your checks" aria-label="Search your checks" value={query} onChange={(event) => setQuery(event.target.value)} />
       </label>
-      {problem && <p className="error-note">{problem} <button className="btn" onClick={retry}>Try again</button></p>}
+      {problem && (
+        <p className="error-note">
+          {problem} <button className="k-btn" data-size="sm" onClick={retry}>Try again</button>
+        </p>
+      )}
 
       {/* The undo, where the delete happened. A confirm dialog is the wrong
           shape for this: the reader has already said yes, and what they need
@@ -88,51 +89,68 @@ export function HistoryPanel({ onOpen }: { onOpen: (id: string) => void }) {
           /api/history/{id}` returns `undo`), so nothing is kept in a trash
           table nobody empties. */}
       {undone && (
-        <div className="past-undo" role="status">
+        <aside className="k-notice" role="status">
           <span>
-            Deleted {undone.name}.{' '}
-            <button className="link" onClick={() => void undoLast()}>Undo</button>
+            Deleted {undone.name}.
           </span>
-          <button className="icon-btn sm" onClick={() => setUndone(null)} aria-label="Dismiss">
-            <Icon name="x" size={14} />
+          <button className="k-btn" data-size="sm" data-kind="quiet" onClick={() => void undoLast()}>
+            Undo
           </button>
-        </div>
+          <button className="k-btn" data-size="sm" data-kind="quiet" onClick={() => setUndone(null)}>
+            Dismiss
+          </button>
+        </aside>
       )}
 
-      {empty && <p className="panel-note">No checks yet. Your checks are kept here.</p>}
-      {!empty && shown.length === 0 && <p className="panel-note">Nothing matches.</p>}
+      {empty && (
+        <section className="k-empty work-empty">
+          <strong>No checks yet</strong>
+          <p>Your checks are kept here once Kriko has looked into a product. Open one from History to read it again, or put it in Compare.</p>
+        </section>
+      )}
+      {!empty && shown.length === 0 && <p className="work-note">Nothing matches.</p>}
       {GROUPS.map((group) => {
         const rows = shown.filter((row) => dayGroup(row.at) === group)
         if (!rows.length) return null
         return (
-          <section key={group} className="panel-group">
-            <h3>{group}</h3>
-            <ul className="past-list">
-              {rows.map((row) => (
-                <PastRow
-                  key={row.id}
-                  row={row}
-                  asking={asking === row.id}
-                  added={added.has(row.id)}
-                  onOpen={() => onOpen(row.id)}
-                  onAdd={() => {
-                    if (add(row.id)) setAdded((now) => new Set(now).add(row.id))
-                  }}
-                  onAsk={() => setAsking(row.id)}
-                  onKeep={() => setAsking(null)}
-                  onDelete={() => {
-                    setAsking(null)
-                    void forget(row)
-                  }}
-                />
-              ))}
-            </ul>
+          <section key={group} className="k-group" aria-label={group}>
+            <h2 className="k-caption">{group}</h2>
+            <div className="k-card">
+              <ul className="k-list">
+                {rows.map((row) => (
+                  <PastRow
+                    key={row.id}
+                    row={row}
+                    asking={asking === row.id}
+                    added={added.has(row.id)}
+                    onOpen={() => onOpen(row.id)}
+                    onAdd={() => {
+                      if (add(row.id)) setAdded((now) => new Set(now).add(row.id))
+                    }}
+                    onAsk={() => setAsking(row.id)}
+                    onKeep={() => setAsking(null)}
+                    onDelete={() => {
+                      setAsking(null)
+                      void forget(row)
+                    }}
+                  />
+                ))}
+              </ul>
+            </div>
           </section>
         )
       })}
-      {!empty && <p className="panel-note">{items.length} saved {items.length === 1 ? 'check' : 'checks'}.</p>}
-      {hasMore && <button className="btn" onClick={loadMore}>Load more checks</button>}
-    </div>
+      {!empty && <p className="work-note">{items.length} saved {items.length === 1 ? 'check' : 'checks'}.</p>}
+      {hasMore && (
+        <button className="k-btn" onClick={loadMore}>
+          Load more checks
+        </button>
+      )}
+      {/* What the research spent, below the checks it produced. Only a live engine has runs;
+          demo mode draws no spend rather than an example number. A failed checks read still
+          shows it. */}
+      {spent}
+    </>
   )
 }
 
@@ -154,11 +172,11 @@ function ResearchRuns({ runs, usage, problem, reload }: {
   const [note, setNote] = useState('')
 
   if (!runs) {
-    if (!problem) return <p className="panel-note">Reading what your research cost…</p>
+    if (!problem) return <p className="work-note">Reading what your research cost…</p>
     return (
       <p className="error-note" role="alert">
         Your research runs could not be read. {problem}{' '}
-        <button className="btn" onClick={() => void reload()}>Try again</button>
+        <button className="k-btn" data-size="sm" onClick={() => void reload()}>Try again</button>
       </p>
     )
   }
@@ -197,52 +215,60 @@ function ResearchRuns({ runs, usage, problem, reload }: {
   const unmetered = usage?.spent_usd === null ? usage.metered.spent_usd ?? '' : ''
 
   return (
-    <section className="panel-group">
-      <h3>Research runs</h3>
+    <section className="k-group" aria-label="Research runs">
+      <h2 className="k-caption">Research runs</h2>
       {totals && (
-        <p className="panel-note">
+        <p className="work-note">
           {totals}
           {unmetered ? ` · ${unmetered}` : ''}
         </p>
       )}
-      {note && <p className="panel-note" role="status">{note}</p>}
+      {note && <p className="work-note" role="status">{note}</p>}
       {runs.length === 0 ? (
-        <p className="panel-note">No research has run yet.</p>
+        <p className="work-note">No research has run yet.</p>
       ) : (
-        <ul className="past-list">
-          {runs.map((run) => {
-            const meta = [
-              run.plane || 'research',
-              run.llm,
-              run.search_provider,
-              cost(run.spent_usd),
-              run.tokens_used === null ? '' : `${counted(run.tokens_used)} tokens`,
-              `${counted(run.claims)} ${run.claims === 1 ? 'claim' : 'claims'} still filed`,
-              run.removed > 0 ? `${counted(run.removed)} taken back out` : '',
-              ago(run.started_at),
-              run.outcome,
-            ].filter(Boolean).join(' · ')
-            return (
-              <li className="past run" key={run.run_id} data-asking={asking === run.run_id} aria-busy={working === run.run_id}>
-                <span className="past-main">
-                  <strong>{run.plane || 'Research'} run</strong>
-                  <small title={run.spent_usd === null ? usage?.metered.spent_usd ?? '' : ''}>{meta}</small>
+        <div className="k-card">
+          <ul className="k-list">
+            {runs.map((run) => {
+              const meta = [
+                run.plane || 'research',
+                run.llm,
+                run.search_provider,
+                cost(run.spent_usd),
+                run.tokens_used === null ? '' : `${counted(run.tokens_used)} tokens`,
+                `${counted(run.claims)} ${run.claims === 1 ? 'claim' : 'claims'} still filed`,
+                run.removed > 0 ? `${counted(run.removed)} taken back out` : '',
+                ago(run.started_at),
+                run.outcome,
+              ].filter(Boolean).join(' · ')
+              return (
+                <li className="k-row work-run" key={run.run_id} data-asking={asking === run.run_id} aria-busy={working === run.run_id}>
+                  <span className="k-row-main" title={run.spent_usd === null ? usage?.metered.spent_usd ?? '' : ''}>
+                    <span className="k-row-title">{run.plane || 'Research'} run</span>
+                    <span className="k-row-note">{meta}</span>
+                  </span>
                   {asking === run.run_id ? (
-                    <span className="past-ask run-ask">
+                    <span className="k-row-control work-confirm">
                       <span>Undo this run? It takes the {counted(run.claims)} {run.claims === 1 ? 'claim' : 'claims'} it filed back out of the catalogs that hold them. Those claims cannot be put back.</span>
-                      <button onClick={() => void undo(run)}>Undo it</button>
-                      <button onClick={() => setAsking(null)}>Keep them</button>
+                      <button className="k-btn" data-size="sm" data-kind="danger" onClick={() => void undo(run)}>
+                        Undo it
+                      </button>
+                      <button className="k-btn" data-size="sm" data-kind="quiet" onClick={() => setAsking(null)}>
+                        Keep them
+                      </button>
                     </span>
                   ) : run.claims > 0 ? (
-                    <button className="run-undo" onClick={() => setAsking(run.run_id)} disabled={working === run.run_id}>
-                      {working === run.run_id ? 'Undoing…' : 'Undo this run'}
-                    </button>
+                    <span className="k-row-control">
+                      <button className="k-btn" data-size="sm" onClick={() => setAsking(run.run_id)} disabled={working === run.run_id}>
+                        {working === run.run_id ? 'Undoing…' : 'Undo this run'}
+                      </button>
+                    </span>
                   ) : null}
-                </span>
-              </li>
-            )
-          })}
-        </ul>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
       )}
     </section>
   )
@@ -267,26 +293,53 @@ function PastRow({
   onKeep: () => void
   onDelete: () => void
 }) {
-  const meta = [row.category || 'Quick look', row.risks === 0 ? 'No sourced problems recorded' : `${row.risks} ${row.risks === 1 ? 'risk' : 'risks'}`, row.when].filter(Boolean).join(' · ')
+  // The check's category is what the history holds; the leading finding is not in the history list.
+  const note = [row.category || 'Quick look', row.source].filter(Boolean).join(' · ')
+  const risks = row.risks === 0 ? 'No sourced problems' : `${row.risks} ${row.risks === 1 ? 'risk' : 'risks'}`
   return (
-    <li className="past" data-asking={asking}>
-      <button className="past-main" onClick={onOpen}>
-        <strong>{row.name}</strong>
-        <small>{meta}</small>
+    <li className="k-row work-check" data-asking={asking}>
+      <button type="button" className="work-check-open" onClick={onOpen}>
+        {glyphFor(row.name) ? (
+          <span className="k-row-icon">
+            <ProductGlyph name={row.name} size={22} />
+          </span>
+        ) : (
+          <span className="work-slot" aria-hidden="true" />
+        )}
+        <span className="k-row-main">
+          <span className="k-row-title">{row.name}</span>
+          <span className="k-row-note">{note}</span>
+        </span>
       </button>
       {asking ? (
-        <span className="past-ask">
-          <span>Delete?</span>
-          <button onClick={onDelete}>Delete</button>
-          <button onClick={onKeep}>Keep</button>
+        <span className="k-row-control work-confirm">
+          <span>Delete this check?</span>
+          <button className="k-btn" data-size="sm" data-kind="danger" onClick={onDelete}>
+            Delete
+          </button>
+          <button className="k-btn" data-size="sm" data-kind="quiet" onClick={onKeep}>
+            Keep
+          </button>
         </span>
       ) : (
-        <span className="past-actions">
-          <button className="icon-btn sm" onClick={onAdd} aria-label={`Add ${row.name} to Compare`} title={added ? 'In Compare' : 'Add to Compare'} disabled={added}>
-            <Icon name={added ? 'check' : 'compare'} size={15} />
+        <span className="k-row-control work-check-side">
+          <span className="k-row-value">
+            {risks}
+            <span className="work-when"> · {row.when}</span>
+          </span>
+          <button
+            type="button"
+            className="k-btn"
+            data-size="sm"
+            data-kind="quiet"
+            onClick={onAdd}
+            disabled={added}
+            aria-label={`Add ${row.name} to Compare`}
+          >
+            {added ? 'In Compare' : 'Compare'}
           </button>
-          <button className="icon-btn sm" onClick={onAsk} aria-label={`Delete ${row.name}`} title="Delete">
-            <Icon name="x" size={15} />
+          <button type="button" className="k-btn" data-size="sm" data-kind="quiet" onClick={onAsk} aria-label={`Delete ${row.name}`}>
+            Delete
           </button>
         </span>
       )}

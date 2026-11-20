@@ -1,18 +1,30 @@
-import { Disclosure } from '../Disclosure'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { get, post } from '../../engine/api'
 import { followJob } from '../../engine/jobs'
 import { useEngine } from '../../engine/Engine'
 import { showDrawer } from '../drawerEvents'
 import { ExternalLink } from '../ExternalLink'
-import { SharedAccessGroup } from './Settings'
+import { showSettingsPage } from './settingsPages'
+import { Section, Setting, State } from './settingsParts'
 
 type Extension = { connected: boolean; staged: boolean; path: string; ever_connected: boolean }
 
 /** The published listing. A reader installs from here; a checkout still has the folder. */
 const STORE = 'https://chromewebstore.google.com/detail/kriko/bdifnaggafjokndlpjgmlfappcoehdjb'
 
-export function SetupPanel() {
+/** A word on a press. Every control in a row says what it does. */
+function Press({ tone, disabled, onClick, children }: { tone?: 'primary' | 'quiet'; disabled?: boolean; onClick?: () => void; children: ReactNode }) {
+  return (
+    <button type="button" className="k-btn" data-kind={tone} disabled={disabled} onClick={onClick}>
+      {children}
+    </button>
+  )
+}
+
+/** The set-up checklist: four steps in order, each with a state and one word press.
+ *  A step is Done only when Kriko can see that it is; the last step has no signal,
+ *  so it stays To do until the reader has tried a sourced check. */
+export function SetupGroup() {
   const { mode } = useEngine()
   const [extension, setExtension] = useState<Extension | null>(null)
   const [catalogs, setCatalogs] = useState<number | null>(null)
@@ -51,32 +63,96 @@ export function SetupPanel() {
     catch (error) { setStatus(error instanceof Error ? error.message : 'Could not prepare the extension.') }
     finally { setWorking(false) }
   }
-  return <div className="panel-body">
-    <section className="panel-group"><h3>1. Choose who does the research</h3>
-      <Disclosure title="Have an access code from a friend?">
-        <p className="panel-note">Paste the code and password below. You do not need your own API keys or another agent installed.</p>
-        <SharedAccessGroup />
-      </Disclosure>
-      <p>{verified ? 'Connection verified for this check.' : 'An installed agent still needs a working account and model connection.'}</p>
-      <button className="btn" onClick={() => showDrawer('agents')}>Choose agent</button>{' '}
-      <button className="btn" onClick={() => void verify()} disabled={working || mode !== 'live'}>Check connection</button>
-      <p className="panel-note">This sends a short request using your selected provider.</p>
-    </section>
-    <section className="panel-group"><h3>2. Add product knowledge</h3>
-      <p>{catalogs === null ? 'Check which catalogs are installed.' : `${catalogs} catalogs installed. Research can also read public sources for a new product.`}</p>
-      <button className="btn" onClick={() => showDrawer('browse')}>Get catalogs</button>
-    </section>
-    <section className="panel-group"><h3>3. Connect your browser</h3>
-      <p>{extension?.connected ? 'The extension is connected.' : extension?.ever_connected ? 'Connected before; open a product page to check the connection again.' : 'Add Kriko to Chrome, then open any product page. The connection shows up here.'}</p>
-      <ExternalLink className="btn primary" href={STORE}>Add Kriko to Chrome</ExternalLink>{' '}
-      <button className="btn" onClick={() => void reload()}>Check browser connection</button>
-      <Disclosure title="Installing from a checkout instead">
-        <p className="panel-note">For a development build. Open your browser's Extensions page, enable Developer mode, choose Load unpacked, and select this folder.</p>
-        <button className="btn" onClick={() => void stage()} disabled={working || mode !== 'live'}>Prepare extension folder</button>
-        {extension?.staged && <><p className="panel-path">{extension.path}</p><button className="btn" onClick={() => void post('/api/extension/reveal', {}).catch((error: unknown) => setStatus(error instanceof Error ? error.message : 'Could not open the folder.'))}>Open extension folder</button></>}
-      </Disclosure>
-    </section>
-    <section className="panel-group"><h3>4. Complete your first check</h3><p>In Chat, name a product and ask for known problems with sources. Open a source, ask a follow-up, then add the product to Compare. A connection test alone does not verify source access.</p><button className="btn" onClick={() => showDrawer(null)}>Start a sourced check</button></section>
-    {status && <p role="status">{status}</p>}
-  </div>
+
+  const agentDone = verified
+  const catalogsDone = catalogs !== null && catalogs > 0
+  const browserDone = Boolean(extension?.connected)
+  const steps = [agentDone, catalogsDone, browserDone, false]
+  // One blue press per view: it goes to the first step not yet done.
+  const next = steps.indexOf(false)
+  const primary = (index: number) => (next === index ? 'primary' : 'quiet')
+
+  return (
+    <>
+      <Section
+        title="Browser extension and set-up"
+        aside={<State tone={steps.every(Boolean) ? 'ok' : undefined}>{steps.filter(Boolean).length} of {steps.length} done</State>}
+        note="Four steps, in order. Kriko marks a step done only when it can see that it is."
+      >
+        <Setting
+          label="Choose who does the research"
+          note="An installed agent does the research, so it needs a working account and model. Check that it answers."
+          state={<State tone={agentDone ? 'ok' : undefined}>{agentDone ? 'Done' : 'To do'}</State>}
+          control={
+            <>
+              <Press tone="quiet" onClick={() => showDrawer('agents')}>Choose agent</Press>
+              <Press tone={primary(0)} disabled={working || mode !== 'live'} onClick={() => void verify()}>Check connection</Press>
+            </>
+          }
+        />
+        <Setting
+          label="Add product knowledge"
+          note="A catalog holds what is known about one kind of product. Research can also read public sources for a new product."
+          value={catalogs === null ? undefined : `${catalogs} installed`}
+          state={<State tone={catalogsDone ? 'ok' : undefined}>{catalogsDone ? 'Done' : 'To do'}</State>}
+          control={<Press tone={primary(1)} onClick={() => showDrawer('browse')}>Get catalogs</Press>}
+        />
+        <Setting
+          label="Connect your browser"
+          note={
+            extension?.connected
+              ? 'The extension is connected to this app.'
+              : extension?.ever_connected
+                ? 'It was connected before. Open a product page to check the connection again.'
+                : 'Add Kriko to Chrome, then open any product page. The connection shows here.'
+          }
+          state={<State tone={browserDone ? 'ok' : undefined}>{browserDone ? 'Done' : 'To do'}</State>}
+          control={
+            <>
+              <Press tone="quiet" onClick={() => void reload()}>Check browser connection</Press>
+              <ExternalLink className="k-btn" data-kind={next === 2 ? 'primary' : 'quiet'} href={STORE}>
+                Add Kriko to Chrome
+              </ExternalLink>
+            </>
+          }
+        />
+        <Setting
+          label="Run a first sourced check"
+          note="In Chat, name a product and ask for known problems with sources. A connection test alone does not check source access."
+          state={<State>To do</State>}
+          control={<Press tone={primary(3)} onClick={() => showDrawer(null)}>Start a sourced check</Press>}
+        />
+        <details className="settings-fold">
+          <summary>Have an access code from a friend?</summary>
+          <div className="settings-fold-body">
+            <p className="settings-note">Paste the code and password under Keys and models. You do not need your own API keys or another agent installed.</p>
+            <Press tone="quiet" onClick={() => showSettingsPage('keys')}>Open Keys and models</Press>
+          </div>
+        </details>
+        <details className="settings-fold">
+          <summary>Installing from a checkout instead</summary>
+          <div className="settings-fold-body">
+            <p className="settings-note">For a development build. Open your browser's Extensions page, enable Developer mode, choose Load unpacked, and select this folder.</p>
+            <div className="settings-actions-row">
+              <Press tone="quiet" disabled={working || mode !== 'live'} onClick={() => void stage()}>Prepare extension folder</Press>
+              {extension?.staged && (
+                <Press
+                  tone="quiet"
+                  onClick={() => void post('/api/extension/reveal', {}).catch((error: unknown) => setStatus(error instanceof Error ? error.message : 'Could not open the folder.'))}
+                >
+                  Open extension folder
+                </Press>
+              )}
+            </div>
+            {extension?.staged && <p className="settings-path">{extension.path}</p>}
+          </div>
+        </details>
+      </Section>
+      {status && (
+        <p role="status" className="settings-status">
+          {status}
+        </p>
+      )}
+    </>
+  )
 }

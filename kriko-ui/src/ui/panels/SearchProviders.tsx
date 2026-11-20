@@ -1,8 +1,6 @@
-import { useSearchProviders, type SearchHealth, type SearchProviderRow, type SearchTest } from '../../engine/websearch'
-import { Select } from '../controls'
-import { Icon } from '../Icon'
-import { Group, Hint, IconButton, Row, State } from './settingsParts'
-import '../../styles/providers.css'
+import { providerState, useSearchProviders, type SearchHealth, type SearchProviderRow, type SearchTest } from '../../engine/websearch'
+import { Section, SelectField, Setting, State } from './settingsParts'
+import { showSettingsPage } from './settingsPages'
 
 /** "3 min ago", from seconds since the epoch. */
 function ago(seconds: number | null): string {
@@ -14,28 +12,15 @@ function ago(seconds: number | null): string {
   return `${Math.round(gap / 86400)} days ago`
 }
 
-/** What the reader needs to judge a provider: when it last answered and how often it has not.
- *  The row shows the short form. The whole line is its hover text. */
+/** What the reader needs to judge a provider: when it last answered and how often it has not. */
 function healthLine(health: SearchHealth): string {
-  if (!health.calls) return 'Not used yet.'
   const parts: string[] = []
   parts.push(health.last_success ? `Last answered ${ago(health.last_success)}` : 'Has not answered yet')
   if (health.miss_rate !== null && health.recent) {
     const misses = Math.round(health.miss_rate * health.recent)
     parts.push(misses === 0 ? `all of the last ${health.recent} searches gave results` : `${misses} of the last ${health.recent} searches gave nothing`)
   }
-  if (health.last_failure && health.last_problem) parts.push(`last trouble ${ago(health.last_failure)}: ${health.last_problem}`)
   return `${parts.join(' · ')}.`
-}
-
-function healthShort(health: SearchHealth): string {
-  if (!health.calls) return 'Not used yet'
-  return health.last_success ? ago(health.last_success) : 'No answer yet'
-}
-
-function keyState(row: SearchProviderRow): { text: string; tone: 'ok' | 'warn' | 'none' } {
-  if (!row.needs_key) return { text: 'No key', tone: 'none' }
-  return row.key_saved ? { text: 'Key set', tone: 'ok' } : { text: 'Needs a key', tone: 'warn' }
 }
 
 /** A trouble is shown while it is the latest word: a failure newer than the last answer. */
@@ -45,13 +30,23 @@ function troubleLine(health: SearchHealth): string {
   return `Trouble ${ago(health.last_failure)}: ${health.last_problem}`
 }
 
-/** Which service searches the web, what it falls back to, and whether each one works. */
+/** The order words the rows carry, from the first one asked. */
+const ORDER = ['First', 'Second', 'Third', 'Fourth', 'Fifth', 'Sixth']
+
+/** Which service searches the web, what it falls back to, and whether each one works.
+ *  The first provider and the order are set here; each provider is one row. */
 export function SearchProvidersGroup() {
   const { doc, problem, tested, save, test, reload } = useSearchProviders()
-  if (!doc) return problem ? <p className="error-note" role="alert">Could not read search providers. {problem} <button className="btn" onClick={() => void reload()}>Try again</button></p> : null
-  const byId = new Map(doc.providers.map((row) => [row.id, row]))
-  const label = (id: string) => byId.get(id)?.label ?? id
-  const addable = doc.providers.filter((row) => row.id !== doc.primary && !doc.fallback.includes(row.id))
+  if (!doc)
+    return problem ? (
+      <p className="error-note" role="alert">
+        Could not read search providers. {problem}{' '}
+        <button type="button" className="k-btn" data-size="sm" onClick={() => void reload()}>
+          Try again
+        </button>
+      </p>
+    ) : null
+
   const write = (list: string[]) => void save({ search_fallback: list.length ? list.join(',') : 'none' })
   const move = (index: number, by: number) => {
     const next = [...doc.fallback]
@@ -61,111 +56,150 @@ export function SearchProvidersGroup() {
   }
 
   return (
-    <Group
-      icon="search"
-      title="Search"
+    <Section
+      title="Web search"
       tour="web-search"
-      hint={
-        <Hint icon="cloudup" title="Words sent">
-          A hosted provider receives the words you search.
-        </Hint>
-      }
+      note="Kriko asks the first provider. When it fails or finds nothing, it asks the next one in order. A hosted provider receives the words you search."
     >
       {problem && <p className="error-note">{problem}</p>}
 
-      <Row icon="search" label="First">
-        <Select
-          label="First search provider"
-          value={doc.primary}
-          options={doc.providers.map((row) => ({ value: row.id, label: row.needs_key && !row.key_saved ? `${row.label} (no key)` : row.label }))}
-          onChange={(value) => void save({ search_provider: value })}
-        />
-      </Row>
-
-      <Row icon="swap" label="Then" state={doc.automatic ? <State>Automatic</State> : undefined}>
-        {addable.length > 0 && (
-          <Select
-            label="Add a fallback"
-            value=""
-            options={[{ value: '', label: 'Add…' }, ...addable.map((row) => ({ value: row.id, label: row.label }))]}
-            onChange={(value) => value && write([...doc.fallback, value])}
+      <Setting
+        label="First provider"
+        note="Kriko asks this one first for every search."
+        control={
+          <SelectField
+            label="First search provider"
+            value={doc.primary}
+            options={doc.providers.map((row) => ({ value: row.id, label: row.needs_key && !row.key_saved ? `${row.label} (no key)` : row.label }))}
+            onChange={(value) => void save({ search_provider: value })}
           />
-        )}
-      </Row>
-      {!doc.automatic && doc.fallback.length > 0 && (
-        <ol className="order-list" aria-label="Fallback order">
-          {doc.fallback.map((id, index) => (
-            <li key={id}>
-              <span className="key-name">
-                <strong>{label(id)}</strong>
-                {byId.get(id)?.needs_key && !byId.get(id)?.key_saved && <State tone="warn" icon="lock">No key</State>}
-              </span>
-              <span className="key-actions">
-                <IconButton icon="send" label={`Move ${label(id)} earlier`} onClick={() => move(index, -1)} disabled={index === 0} />
-                <IconButton icon="down" label={`Move ${label(id)} later`} onClick={() => move(index, 1)} disabled={index === doc.fallback.length - 1} />
-                <IconButton icon="x" label={`Stop asking ${label(id)}`} tone="danger" onClick={() => write(doc.fallback.filter((one) => one !== id))} />
-              </span>
-            </li>
-          ))}
-        </ol>
-      )}
-      {!doc.automatic && (
-        <Row actions>
-          <button className="btn" onClick={() => void save({ search_fallback: '' })}>
-            <Icon name="retry" size={18} />
-            Automatic
-          </button>
-        </Row>
-      )}
+        }
+      />
 
-      <ul className="key-list" aria-label="Search providers">
-        {doc.providers.map((row) => (
-          <ProviderItem key={row.id} row={row} result={tested[row.id]} onTest={() => void test(row.id)} />
-        ))}
-      </ul>
-    </Group>
+      <Setting
+        label="Then"
+        note={doc.automatic ? 'Automatic: Kriko chooses the order of the others from the providers that are ready.' : 'Kriko asks these in the order shown, after the first.'}
+        state={doc.automatic ? <State>Automatic</State> : undefined}
+        control={
+          !doc.automatic ? (
+            <button type="button" className="k-btn" data-kind="quiet" onClick={() => void save({ search_fallback: '' })}>
+              Automatic order
+            </button>
+          ) : undefined
+        }
+      />
+
+      {doc.providers.map((row) => {
+        const index = doc.fallback.indexOf(row.id)
+        const inOrder = !doc.automatic && index >= 0
+        const position = row.id === doc.primary ? ORDER[0] : inOrder ? (ORDER[index + 1] ?? `Number ${index + 2}`) : undefined
+        return (
+          <ProviderRow
+            key={row.id}
+            row={row}
+            effective={doc.effective}
+            position={position}
+            order={inOrder ? { index, last: doc.fallback.length - 1 } : undefined}
+            canAdd={row.id !== doc.primary && !inOrder}
+            onAdd={() => write([...doc.fallback, row.id])}
+            onMove={(by) => move(index, by)}
+            onRemove={() => write(doc.fallback.filter((one) => one !== row.id))}
+            onTest={() => void test(row.id)}
+            result={tested[row.id]}
+          />
+        )
+      })}
+    </Section>
   )
 }
 
-/** A provider is answering when it has answered lately and nothing newer has failed. */
-function answering(health: SearchHealth): boolean {
-  if (!health.last_success) return false
-  if (health.last_failure && health.last_failure > health.last_success) return false
-  return Math.round(Date.now() / 1000) - health.last_success < 1800
-}
-
-function ProviderItem({ row, result, onTest }: { row: SearchProviderRow; result: SearchTest | 'testing' | undefined; onTest: () => void }) {
-  const key = keyState(row)
+/** One provider: its state in a pill, its engine note, its place in the order, and
+ *  the presses. The last answer or the trouble sits under the row, in words. */
+function ProviderRow({
+  row,
+  effective,
+  position,
+  order,
+  canAdd,
+  onAdd,
+  onMove,
+  onRemove,
+  onTest,
+  result,
+}: {
+  row: SearchProviderRow
+  effective: string[]
+  position?: string
+  order?: { index: number; last: number }
+  canAdd: boolean
+  onAdd: () => void
+  onMove: (by: number) => void
+  onRemove: () => void
+  onTest: () => void
+  result: SearchTest | 'testing' | undefined
+}) {
+  const state = providerState(row, effective)
   const trouble = troubleLine(row.health)
+  const testing = result === 'testing'
+  const sub = row.health.calls > 0 ? healthLine(row.health) : ''
+  const keyMissing = row.needs_key && !row.key_saved
   return (
-    <li className="key" data-present={row.ready} title={healthLine(row.health)}>
-      <div className="key-head">
-        <span className="key-name">
-          <span className="row-icon" data-tone={row.ready ? 'ok' : undefined} aria-hidden="true">
-            <Icon name="search" size={20} />
-            {answering(row.health) && <i className="live-dot" />}
-          </span>
-          <strong>{row.label}</strong>
-          <State tone={key.tone}>{key.text}</State>
-          {row.health.calls > 0 && <State>{healthShort(row.health)}</State>}
-        </span>
-        <span className="key-actions">
-          <IconButton icon="play" label={result === 'testing' ? `Testing ${row.label}` : `Test ${row.label}`} onClick={onTest} disabled={result === 'testing'} />
-        </span>
-      </div>
-      {trouble && <small className="key-result" data-tone="risk">{trouble}</small>}
+    <div className="settings-item">
+      <Setting
+        label={row.label}
+        value={position}
+        state={<State tone={state.tone}>{state.text}</State>}
+        note={
+          <>
+            {row.note}
+            {sub && <span className="settings-sub">{sub}</span>}
+          </>
+        }
+        control={
+          <>
+            {order && (
+              <>
+                <button type="button" className="k-btn" data-size="sm" data-kind="quiet" aria-label={`Move ${row.label} earlier`} disabled={order.index === 0} onClick={() => onMove(-1)}>
+                  Earlier
+                </button>
+                <button type="button" className="k-btn" data-size="sm" data-kind="quiet" aria-label={`Move ${row.label} later`} disabled={order.index === order.last} onClick={() => onMove(1)}>
+                  Later
+                </button>
+                <button type="button" className="k-btn" data-size="sm" data-kind="danger" aria-label={`Stop asking ${row.label}`} onClick={onRemove}>
+                  Remove
+                </button>
+              </>
+            )}
+            {canAdd && (
+              <button type="button" className="k-btn" data-size="sm" data-kind="quiet" onClick={onAdd}>
+                Add to the order
+              </button>
+            )}
+            {keyMissing && (
+              <button type="button" className="k-btn" data-size="sm" data-kind="quiet" onClick={() => showSettingsPage('keys')}>
+                Add a key
+              </button>
+            )}
+            <button type="button" className="k-btn" data-size="sm" aria-label={testing ? `Testing ${row.label}` : `Test ${row.label}`} disabled={testing} onClick={onTest}>
+              {testing ? 'Testing…' : 'Test'}
+            </button>
+          </>
+        }
+      />
+      {trouble && <p className="settings-trouble">{trouble}</p>}
       {result && result !== 'testing' && <TestResult result={result} />}
-    </li>
+    </div>
   )
 }
 
+/** The outcome of a test: the answer and its results, or the words why not. */
 function TestResult({ result }: { result: SearchTest }) {
-  if (!result.ok) return <small className="test-result" data-ok="false">{result.error || 'It did not answer.'}</small>
+  if (!result.ok) return <p className="settings-test" data-ok="false">{result.error || 'It did not answer.'}</p>
   return (
-    <div className="test-result" data-ok="true">
-      <small>
+    <div className="settings-test" data-ok="true">
+      <p>
         Answered in {(result.ms / 1000).toFixed(1)} s with {result.results.length} {result.results.length === 1 ? 'result' : 'results'} for “{result.query}”.
-      </small>
+      </p>
       <ul>
         {result.results.map((hit) => (
           <li key={hit.url}>

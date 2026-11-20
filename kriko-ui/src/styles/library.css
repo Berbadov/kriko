@@ -1,0 +1,226 @@
+/* The Catalogs and Sites screens. They are drawn from system.css (k-list, k-row,
+   k-card, k-pill, k-seg, k-btn, k-empty, k-notice); this sheet holds only what
+   is theirs: the search field, the catalog and product rows, and the small
+   notes under a caption. Colours come from the roles in tokens.css. */
+
+/* The search field over everything: a pill with its word in the placeholder. */
+.library-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--edge-control);
+  background: var(--inset);
+  color: var(--ink-3);
+}
+
+.library-search:focus-within {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.library-search input {
+  flex: 1;
+  min-width: 0;
+  min-height: 40px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 15px;
+}
+
+.library-search input:focus {
+  outline: none;
+}
+
+.library-search input::placeholder {
+  color: var(--ink-3);
+}
+
+/* A quiet sentence under a caption or a card. Never below 13px. */
+.library-note {
+  margin: 0 4px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--ink-3);
+  max-width: 68ch;
+}
+
+.k-card > .library-note,
+.k-row > .library-note {
+  margin: 0;
+}
+
+.k-card > .library-note {
+  padding: 14px 16px;
+}
+
+.library-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.library-bar {
+  display: flex;
+  align-items: center;
+  margin-top: -12px;
+}
+
+/* A word shown as the row's action where the whole row is the button. */
+.library-word {
+  flex: none;
+  font-size: 14px;
+  font-weight: var(--w-medium);
+  color: var(--link);
+}
+
+.library-chevron {
+  flex: none;
+  display: grid;
+  place-items: center;
+  color: var(--ink-3);
+  transform: rotate(-90deg);
+}
+
+/* A product is a whole row; the press opens its saved check. */
+button.library-product {
+  cursor: pointer;
+}
+
+button.library-product:disabled {
+  cursor: progress;
+  opacity: 0.7;
+}
+
+.library-browse-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0 4px;
+}
+
+/* The catalog's name, as the heading of its own product list. Smaller than the screen title. */
+.library-browse-title {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 24px;
+  font-weight: var(--w-display);
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+
+.library-ask {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+
+.library-share-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.library-share-list li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.library-share-list small {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--ink-3);
+}
+
+.library-share-list a.share-link {
+  color: var(--link);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Catalog rows: the title can carry a status pill, and the buttons wrap under the text when narrow. */
+.catalogs-row .k-row-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.catalogs-row .k-row-control {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.catalogs-row[data-off='true'] .k-row-title {
+  color: var(--ink-2);
+}
+
+.catalogs-row .mark-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.catalogs-row .mark-row {
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.catalogs-empty {
+  align-items: flex-start;
+}
+
+.catalogs-empty p {
+  margin: 0;
+  max-width: 60ch;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Sites: the globe tile and the word toggle sit at the row's end. */
+.sites-row .k-row-control {
+  gap: 10px;
+}
+
+.sites-row .k-seg button:disabled {
+  cursor: default;
+  opacity: 0.75;
+}
+
+.sites-hint {
+  color: var(--warn);
+}
+
+.sites-fail {
+  color: var(--risk);
+}
+
+/* Narrow windows: a catalog or site row keeps its words and buttons by wrapping
+   them under the title, instead of clipping them. Scoped to these two screens. */
+@media (max-width: 760px) {
+  .catalogs-row,
+  .sites-row {
+    flex-wrap: wrap;
+  }
+
+  .catalogs-row .k-row-control,
+  .sites-row .k-row-control {
+    flex-basis: 100%;
+    justify-content: flex-start;
+    padding-left: 46px;
+  }
+}

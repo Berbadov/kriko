@@ -1,0 +1,237 @@
+/* Keys and models: provider keys, shared access, the model endpoint, and the
+   model on this computer. Every class here is `keys-`; the shared rows and
+   fields come from system.css and settings.css. */
+
+.keys-secret {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.keys-secret .k-input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.keys-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  width: 100%;
+}
+
+.keys-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.keys-actions .k-input {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+.keys-result {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--ink-3);
+}
+
+.keys-check {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: var(--r-m);
+  background: var(--inset);
+  font-size: 14px;
+  color: var(--ink-2);
+}
+
+.keys-check[data-ok='true'] {
+  color: var(--ink);
+}
+
+.keys-names {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.keys-names li {
+  padding: 2px 8px;
+  border-radius: var(--r-pill);
+  background: var(--sheet);
+}
+
+.keys-pull {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-radius: var(--r-m);
+  background: var(--inset);
+}
+
+.keys-pull strong {
+  font-size: 14px;
+}
+
+.keys-pull small {
+  font-size: 13px;
+  color: var(--ink-3);
+}
+
+.keys-pull[data-failed='true'] small {
+  color: var(--risk);
+}
+
+.keys-models {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-radius: var(--r-m);
+  overflow: hidden;
+  background: var(--inset);
+}
+
+.keys-model {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 6px 12px;
+}
+
+.keys-model + .keys-model {
+  border-top: 1px solid var(--edge);
+}
+
+.keys-model-use {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  padding: 6px 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.keys-model-use[aria-checked='true'] strong::before {
+  content: '✓ ';
+  color: var(--positive);
+}
+
+.keys-model-use small {
+  font-size: 13px;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.keys-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.keys-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px 0;
+  border-top: 1px solid var(--edge);
+}
+
+.keys-item:first-child {
+  border-top: 0;
+}
+
+.keys-item strong {
+  font-size: 14px;
+}
+
+.keys-item small {
+  display: block;
+  font-size: 13px;
+  color: var(--ink-3);
+}
+
+.keys-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink-3);
+}
+
+.keys-search input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.keys-hf-block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.keys-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.keys-steps li {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+}
+
+.keys-steps small {
+  color: var(--ink-3);
+}
+
+.keys-command {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.keys-command code {
+  flex: 1 1 260px;
+  min-width: 0;
+  overflow-x: auto;
+  padding: 8px 10px;
+  border-radius: var(--r-s);
+  background: var(--inset);
+  font-size: 13px;
+}
+
+@media (max-width: 900px) {
+  .keys-actions {
+    flex-wrap: wrap;
+  }
+}
