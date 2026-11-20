@@ -414,10 +414,16 @@ export function EstimateScreen() {
       ['NPV (discounted cash)', model.npv, '', '', '', '', ''],
       [],
       ['Assets', 'Method', 'Life (years)', 'Cost (gross)', 'Salvage', 'Depreciation total'],
-      ...lines.map((line, index) => {
-        const asset = model.assets[index]
-        return [line.label, asset?.method ?? '', asset?.life_years ?? '', asset?.amount ?? '', asset?.salvage ?? '', asset?.total ?? '']
-      }),
+      ...(() => {
+        // `assets` holds priced lines only, in line order; an unpriced line
+        // must not shift every schedule after it.
+        let at = 0
+        return lines.map((line) => {
+          const priced = costOf(line).unit_price != null
+          const asset = priced ? model.assets[at++] : undefined
+          return [line.label, asset?.method ?? '', asset?.life_years ?? '', asset?.amount ?? '', asset?.salvage ?? '', asset?.total ?? '']
+        })
+      })(),
     ]
     return { name: 'Forecast', rows }
   }
