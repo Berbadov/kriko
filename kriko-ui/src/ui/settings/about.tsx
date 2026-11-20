@@ -103,7 +103,7 @@ export function SendsSection() {
       title="What this copy sends"
       note={
         <>
-          Product lookups are shared only when you turn that on in Keys and models, under Share which products are looked up. Then Kriko sends the product model you
+          Product lookups are shared only when you turn on "Share product queries" in Keys and models. Then Kriko sends the product model you
           looked up (for example "Brand Model 128GB") and whether our catalog had it. It never sends the listing link, the page title, the time, or anything that identifies
           you or your device. Off by default. Read the <a href="https://kriko.cc/privacy/">privacy policy</a>.
         </>
