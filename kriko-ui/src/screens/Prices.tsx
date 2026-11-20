@@ -115,7 +115,7 @@ export function PricesScreen() {
 
       {watching.watches.length === 0 ? (
         <p className="prices-empty muted">
-          Nothing watched yet. Paste a product page above, or press <em>Watch this price</em> on a product page in your browser.
+          Nothing watched yet. Paste a product page above, or press <strong>Watch this price</strong> on a product page in your browser.
         </p>
       ) : (
         <ul className="prices-list">
