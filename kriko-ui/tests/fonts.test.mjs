@@ -38,11 +38,12 @@ test('the body reads in Inter, one step heavier than regular', () => {
   assert.match(tokens, /--w-semibold:\s*700;/)
 })
 
-test('titles read in Chivo Mono, with Inter behind it', () => {
-  assert.match(tokens, /--display:\s*'Chivo Mono Variable',\s*'Inter Variable',\s*ui-monospace,\s*monospace;/)
+test('titles read in Newsreader, upright', () => {
+  assert.match(tokens, /--display:\s*'Newsreader Variable'/)
+  assert.match(tokens, /--w-display:\s*600;/)
   assert.equal(declaration(css, 'h1,\nh2,\nh3', 'font-family'), 'var(--display)')
   for (const selector of ['.hello h1', '.page-head h1']) {
-    assert.equal(declaration(identity, selector, 'font-weight'), 'var(--w-bold)', `${selector} is not the heaviest step`)
+    assert.equal(declaration(identity, selector, 'font-weight'), 'var(--w-display)', `${selector} is not the display step`)
   }
 })
 
@@ -52,7 +53,7 @@ test('the accessibility font overrides the body and the display face', () => {
   assert.match(block, /--display:\s*var\(--set-font\)/)
 })
 
-test('code keeps the mono face, which is not the display face', () => {
-  assert.match(tokens, /--mono:\s*'Geist Mono Variable'/)
-  assert.equal(declaration(css, '.mono', 'font-family'), 'var(--mono)')
+test('code keeps the system mono, which is not the display face', () => {
+  assert.match(tokens, /--mono:\s*ui-monospace/)
+  assert.equal(declaration(css, '.code', 'font-family'), 'var(--mono)')
 })
