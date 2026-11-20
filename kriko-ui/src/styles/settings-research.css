@@ -67,3 +67,7 @@
 .research-memory-actions .press {
   margin: 0;
 }
+
+.research-agent a.k-btn {
+  text-decoration: none;
+}
