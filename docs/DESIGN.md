@@ -34,17 +34,30 @@ The interface uses one palette of names. Each screen paints through the theme.
 The theme maps each name at paint time. Raw colour is not permitted in a
 screen.
 
-The light theme swaps the values of the palette. The ground becomes a cool
-light grey, panels stay white, and the ink becomes dark. The brand stays blue.
+The light theme swaps the values of the palette. The ground is `#F5F5F3`,
+sheets are white, soft blocks are `#ECECE8`, and the ink is `#101418`.
+
+The main colour is navy (`#0B1020`) on light and sky (`#5AA9F7`) on dark. It
+carries the primary press, the active marker, links, sources, the main chart
+series and the pixel ramp. It is not the attention colour.
+
+Amber is the punch. It appears only on a Recalled or Serious status, the
+outline of "Known issues", a price that rose, an unread count, and the focus
+ring. It never fills a primary button, a selected row, a card, a chip or a
+heading. A selected row is a neutral grey tint, and so is an active tab's
+background.
+
+Green is one status: a price that fell, or "No reports". It is never a button,
+a chart series or decoration. The word stays "No reports", never "Safe".
+
+A status is a word and an icon on a pill. Serious and Recalled use a solid
+amber fill with the on-attention ink. "Known issues" uses a pale amber fill,
+amber text and an amber edge. "To check" uses the check tint and the check
+ink. "No reports" uses the green tint and the green ink. A minor finding is
+neutral. Colour never carries a status alone.
 
 The theme follows the system setting. The reader can select System, Light, or
 Dark in Settings.
-
-Two colour groups do not follow the theme. These are the measured sky ink and
-the words on the brand blue. A separate fixed path paints them. The hero band
-is the third: it is a picture, and it keeps its own dark colours in both
-themes. Its base gradient used to follow the theme, and on the light ground it
-became a white-to-white smear under a dark image with light words on it.
 
 ### Two edges
 
@@ -54,8 +67,8 @@ is right for a table row or a list item.
 A surface boundary is a different thing. The rail against the page, a panel
 against the ground, a header against the body under it: these need `EDGE`. A
 hairline there disappears on a bright screen and leaves the window with no
-shape at all. `EDGE_STRONG` is for the boundary of a control, because a
-control's outline is what says it is a control.
+shape at all. `EDGE_STRONG` is for an active rule. A control boundary uses
+`EDGE_CONTROL`, because an input's outline needs 3:1.
 
 ## Chat
 
@@ -123,7 +136,7 @@ Navigation is a bar across the top, so the window below has the whole width.
 On the left are the logo, a slash and a pill with the agent that does the
 research; pressing the pill opens the agents panel. In the middle, a recessed
 pill holds the places: Chat, Compare, Queue and History, then New chat, which
-carries a brand glow because it is the one tab that starts something. The
+carries the brand outline because it is the one tab that starts something. The
 active place has a raised surface that slides to the next one. History opens a
 searchable list of chats under the bar. On the right are the queue's state, as a
 pixel glyph and a count, and More, which opens the drawer.
@@ -144,26 +157,46 @@ because other screens use the same names.
 
 ## Typography
 
-The app embeds two font families. A condensed face is for display text. A sans
-face is for body text.
+The app embeds two font families. **Newsreader** sets the page titles, product
+names, verdict titles and section headings. **Inter** sets the body, labels,
+buttons, prices and navigation. Titles are upright in the app and the
+extension: the italic belongs to the website, not the product.
 
-Four ink names carry the text: INK, INK_2, MUTED, and DIM. The light values
-keep the same contrast as the dark values.
+The weights live in `tokens.css`: body 500, medium 600, semibold 700. A
+Newsreader title is 600, never the body's bold. Display tracking is −0.02em;
+body tracking is zero. Prices and counts use tabular figures.
 
-An eyebrow is semibold and muted. The page title is bold. The lead line is
-larger than a label, but smaller than the title.
+Chivo Mono and Geist Mono are retired as brand faces. The system monospace is
+for code and logs only, never for a label, a source host or a price. A source
+host is Inter at 650 with a link icon and its domain.
 
-The interface toolkit has no letter-spacing property. The app makes the
-tracking itself. A label uses one span for each letter and a small gap between
-the spans. The eyebrow, the table head, and the state tag use this tracking. A
-mixed-case label does not, because the tracking breaks its hover colour.
+Three ink names carry the text: `--ink`, `--ink-2`, `--ink-3`. The light and
+dark values keep the same measured contrast. No all-caps labels, no tracked
+capitals.
+
+## Corners
+
+Cards and controls are soft. Pixel art is square, and the contrast is the
+identity.
+
+| Token | Value | Applies to |
+|---|---|---|
+| `--r-s` | 8 px | tags inside a row, rail rows, small icon plates |
+| `--r-m` | 10 px | inputs, selects, small controls |
+| `--r-l` | 12 px | cards, product art frames, verdict cards |
+| `--r-xl` | 16 px | sheets, popovers, the composer, the mode menu |
+| `--r-pill` | 999 px | buttons, chips, badges, pills, avatars |
+| `--r-0` | 0 | pixel art, pixel tiles, sprite frames, progress cells |
+
+A control group uses one shape: a row of pills, or a segmented rectangle, not
+both.
 
 ## Spacing
 
 The app uses one 4px scale: 4, 8, 12, 16, 24, and 32. A screen names a step. A
 screen does not invent a pixel value.
 
-A button is 40 units high. A pill or a badge is 24 units high. A card has one
+A button is 34 px high. A pill is 30. A status badge is 23. A card has one
 inset. A table head has one distance from its first row.
 
 The scale keeps two cards in one row equal. It keeps two controls in one row
@@ -235,25 +268,25 @@ shows example numbers and says so.
 
 An agent's run is a stepper: four numbered pixel tiles, Find, Search, Read and
 Check, joined by a dashed line made of square cells. A done tile is lit in its
-own tone along the brand gradient, from violet through the blue and sky to teal.
-The current tile carries a pixel caret and a glow, and the line after it fills
-with the part of the step already done. A waiting run shows every tile unlit, a
-paused run turns the current tile amber, and a finished run turns every tile
-mint. A narrow place (a Compare slot, a mini card) draws the tiles without
-their labels.
+own tone along the sky ramp, from the deep navy to the light sky. The current
+tile carries a pixel caret, and the line after it fills with the part of the
+step already done. A waiting run shows every tile unlit, a paused run keeps the
+current tile neutral, and a finished run turns every tile to the main colour.
+A narrow place (a Compare slot, a mini card) draws the tiles without their
+labels.
 
 In the app the step comes from the progress the engine reports, in equal
 quarters; it does not claim a stage the engine did not name. The browser
 extension reads its stage from the run's own log, so its stepper shows only
 which stages were reached and never a share.
 
-Work with no steps, such as a download, is a bar of pixel cells under the brand
-gradient with the percent on a small pill at the end of the fill. While work
+Work with no steps, such as a download, is a bar of pixel cells in the main
+colour with the percent on a small pill at the end of the fill. While work
 runs, the lit part pulses in steps: the one repeating motion a bar has.
 
-The palette keeps the brand blue and adds four companions for data: violet,
-teal, mint and sky. Cards carry a wash of the brand violet in their top-left
-corner and a lit top edge.
+The data ramp is brand-led: the main colour, a mid sky and a neutral. Cards
+rest on a hairline. A floating menu, popover or sheet may carry one shadow;
+a card on the page does not.
 
 ## Agent marks
 
@@ -265,8 +298,8 @@ model and any agent without a logo keep Kriko's own drawing.
 
 Status moves the tile, not the logo. While the agent works a ring runs round the tile
 and the logo breathes. Waiting dims the logo and breathes it slowly, paused greys it
-inside an amber ring, done flashes the tile mint once, and failed shakes it once inside
-a red ring. Idle is still. The answer header's mark follows the turn, and the animation
+inside a quiet ring, done flashes the tile in the main colour once, and failed shakes it once inside
+a neutral ring. Idle is still. The answer header's mark follows the turn, and the animation
 stops with the app's motion setting.
 
 ## Compare
