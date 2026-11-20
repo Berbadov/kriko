@@ -95,9 +95,9 @@ function SiteRow({ row, asking, onAsk, onKeep, onTurn, onForget }: { row: Site; 
   const off = row.origin === 'inferred' && !row.enabled
   const status = off ? STATUS.off : STATUS[row.status]
   const forgettable = row.origin === 'agent' || row.origin === 'reader'
-  // Only a way worked out on this computer can be turned off here. A catalog's
-  // way stays on while the catalog is installed, so its toggle is shown set and locked.
-  const editable = row.origin === 'inferred'
+  // Only a way worked out on this computer can be turned off here, so only that
+  // origin is drawn with a switch. A catalog's way stays on while the catalog is
+  // installed, and an agent's or a reader's way has no off switch in the engine.
   const tone = off ? undefined : row.status === 'ready' ? 'ok' : row.status === 'permission' ? 'warn' : row.status === 'refused' ? 'risk' : undefined
   return (
     <li className="k-row sites-row" data-asking={asking} data-status={off ? 'off' : row.status}>
@@ -115,10 +115,12 @@ function SiteRow({ row, asking, onAsk, onKeep, onTurn, onForget }: { row: Site; 
         </span>
       ) : (
         <span className="k-row-control">
-          <span className="k-seg" role="group" aria-label={`Read ${row.host}`}>
-            <button type="button" aria-pressed={row.enabled} disabled={!editable} onClick={() => onTurn(true)}>On</button>
-            <button type="button" aria-pressed={!row.enabled} disabled={!editable} onClick={() => onTurn(false)}>Off</button>
-          </span>
+          {row.origin === 'inferred' ? (
+            <span className="k-seg" role="group" aria-label={`Read ${row.host}`}>
+              <button type="button" aria-pressed={row.enabled} onClick={() => onTurn(true)}>On</button>
+              <button type="button" aria-pressed={!row.enabled} onClick={() => onTurn(false)}>Off</button>
+            </span>
+          ) : null}
           {forgettable && (
             <button className="k-btn" data-size="sm" data-kind="quiet" onClick={onAsk} aria-label={`Forget ${row.host}`}>
               Forget

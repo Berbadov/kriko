@@ -6,8 +6,8 @@ it holds a key only while the reader types it, and it never puts one in
 shared state, in a URL, or in a stored setting. Neither side's test sees the
 other, so the window's half is held here, on the source.
 
-* The key field is a password field, so it is not shown on screen and a browser
-  does not offer to remember it as text.
+* The key field is a password-style field (`SecretField`), hidden until the
+  reader presses Show, and a browser does not offer to remember it as text.
 * The field is cleared after a save, so a key does not stay in memory beside
   the screen it was typed on.
 * `useKeys` sends the key in the body of a `PUT` and keeps no state that holds
@@ -21,14 +21,18 @@ import re
 from pathlib import Path
 
 UI = Path(__file__).resolve().parents[3] / "kriko-ui" / "src"
-SETTINGS_PANEL = (UI / "ui" / "panels" / "Settings.tsx").read_text(encoding="utf-8")
+SETTINGS_PANEL = (UI / "ui" / "settings" / "parts.tsx").read_text(encoding="utf-8")
 HOOKS = (UI / "engine" / "settings.ts").read_text(encoding="utf-8")
 
 
 def test_the_key_field_is_a_password_field_and_is_cleared_after_a_save():
     form = SETTINGS_PANEL[SETTINGS_PANEL.index("<form") : SETTINGS_PANEL.index("</form>")]
-    assert 'type="password"' in form
-    assert 'autoComplete="off"' in form
+    assert "<SecretField" in form, "the key is typed into something other than the password-style field"
+    secret = SETTINGS_PANEL[SETTINGS_PANEL.index("export function SecretField") :]
+    secret = secret[: secret.index("\n}\n")]
+    assert "useState(false)" in secret, "the key field starts shown"
+    assert "type={shown ? 'text' : 'password'}" in secret
+    assert "autoComplete = 'off'" in secret
     submit = SETTINGS_PANEL[SETTINGS_PANEL.index("const submit") :]
     submit = submit[: submit.index("\n  }\n")]
     assert submit.index("await onSave(value)") < submit.index("setValue('')"), (
@@ -56,7 +60,11 @@ def test_no_state_in_the_key_hook_holds_a_key():
 
 
 def test_the_panels_store_nothing_in_the_browser():
-    for name in ("Settings.tsx", "Agents.tsx"):
-        text = (UI / "ui" / "panels" / name).read_text(encoding="utf-8")
-        assert "localStorage" not in text and "sessionStorage" not in text, name
+    panels = sorted((UI / "ui" / "settings").glob("*.tsx")) + [
+        UI / "screens" / "Settings.tsx",
+        UI / "ui" / "panels" / "Agents.tsx",
+    ]
+    for path in panels:
+        text = path.read_text(encoding="utf-8")
+        assert "localStorage" not in text and "sessionStorage" not in text, path.name
     assert "localStorage" not in HOOKS
