@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useBuyerProfile } from '../../engine/buyer'
 import type { PrefsDoc } from '../../engine/settings'
 import { Setting, Toggle } from './settingsParts'
@@ -14,12 +14,14 @@ export interface ChatSettingsProps {
 
 export function ChatSettings({ doc, save }: ChatSettingsProps) {
   const profile = useBuyerProfile()
-  const [about, setAbout] = useState('')
-
   // The saved words arrive after the first read. Until the reader types, show them.
-  useEffect(() => {
-    setAbout(profile.profile.about)
-  }, [profile.profile.about])
+  const saved = profile.profile.about
+  const [about, setAbout] = useState(saved)
+  const [seenSaved, setSeenSaved] = useState(saved)
+  if (saved !== seenSaved) {
+    setSeenSaved(saved)
+    setAbout(saved)
+  }
 
   const productOnly = doc?.chosen.chat_product_only === '1'
 
