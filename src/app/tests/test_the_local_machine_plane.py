@@ -24,6 +24,12 @@ from app.providers.local_discovery import search_answers as real_search_answers
 from app.web import state, tasks
 
 
+class _Backlog(ThreadingHTTPServer):
+    #: Discovery connects within 0.2 s. The default backlog of 5 overflows when
+    #: a busy suite connects at once, and the server then looks down.
+    request_queue_size = 64
+
+
 class Stub:
     """One loopback server that plays every local service, scripted per test."""
 
@@ -89,7 +95,7 @@ class Stub:
             def log_message(self, *args):
                 pass
 
-        self.server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        self.server = _Backlog(("127.0.0.1", 0), Handler)
         self.url = f"http://127.0.0.1:{self.server.server_address[1]}"
         threading.Thread(target=self.server.serve_forever, daemon=True).start()
 

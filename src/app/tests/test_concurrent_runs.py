@@ -255,6 +255,7 @@ def test_the_readers_choice_is_handed_to_the_agent_child_budget(settings, conn):
     jobs = runner(settings, gate)
     ids = [jobs.submit("research", {"pack_id": "p", "name": "a"})]
     wait_until(lambda: "a" in gate.running)
+    assert jobs._limit() == 4
     assert agentresources.agent_child_limit() == 4
     gate.release.set()
     wait_all_done(conn, ids)
