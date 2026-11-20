@@ -3801,7 +3801,10 @@ def get_estimate(conn: sqlite3.Connection, estimate_id: str) -> dict | None:
                 "url": "",
                 "unit_price": line["unit_price"],
                 "currency": estimate["currency"],
-                "vat_rate": estimate["vat_rate"],
+                # An old row never said whether its price was net or gross, so
+                # it is read at no VAT: the file it exports does not silently
+                # grow a tax that was never part of the number typed.
+                "vat_rate": 0.0,
                 "vat_included": False,
                 "delivery_days": None,
                 "warranty_months": None,
@@ -4000,7 +4003,7 @@ def _clean_quotes(value, fallback_price) -> list[dict]:
         out.append({
             "vendor": "Migrated price", "seller": "", "url": "",
             "unit_price": max(0.0, float(fallback_price)), "currency": "",
-            "vat_rate": 20.0, "vat_included": False, "delivery_days": None,
+            "vat_rate": 0.0, "vat_included": False, "delivery_days": None,
             "warranty_months": None, "quote_date": "", "valid_until": "",
             "note": "Saved before vendor quotes existed.", "selected": True,
         })
