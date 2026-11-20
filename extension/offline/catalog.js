@@ -317,6 +317,9 @@
         results.push({ pack_id: row.pack_id, version: row.version, state: "current" });
         continue;
       }
+      if (!/^https:\/\//i.test(String(row.url || ""))) {
+        throw new Error(`${row.pack_id}: the index names a non-https pack URL; discarded`);
+      }
       onProgress(`Reading ${row.name || row.pack_id}…`);
       const response = await fetchImpl(row.url, { cache: "no-store" });
       if (!response.ok) throw new Error(`${row.pack_id}: HTTP ${response.status}`);
