@@ -235,3 +235,19 @@
     flex-wrap: wrap;
   }
 }
+
+/* A stacked row's control runs the full width under its title. settings.css
+   gives a direct field a fixed 220px, which pushed these fields to the right. */
+.settings-setting[data-stack] > .k-row-control {
+  width: 100%;
+  justify-content: flex-start;
+}
+
+.settings-setting[data-stack] > .k-row-control > .k-input,
+.settings-setting[data-stack] > .k-row-control > .settings-field {
+  width: 100%;
+}
+
+.settings-setting[data-stack] .keys-secret {
+  width: 100%;
+}

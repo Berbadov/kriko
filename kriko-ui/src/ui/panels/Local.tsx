@@ -23,6 +23,8 @@ export function LocalGroup() {
   const running = Boolean(runtime?.runtime)
   const installed = machine?.runtimes.filter((one) => one.installed) ?? []
   const inUse = models.some((model) => model.name === chosen)
+  // A card the engine reports without memory is no card to size a model by.
+  const card = machine?.gpu && machine.gpu.vram_total_mb > 0 ? machine.gpu : null
 
   return (
     <Section title="On this computer" aside={<State tone={running ? 'ok' : 'none'}>{running ? 'Runtime running' : 'Runtime not running'}</State>}>
@@ -32,8 +34,8 @@ export function LocalGroup() {
         <Setting
           icon="cpu"
           label="This computer"
-          value={`${machine.gpu ? mb(machine.gpu.vram_total_mb) : 'No graphics card'} · ${machine.ram_total_mb ? mb(machine.ram_total_mb) : 'memory not known'} · ${machine.cpu?.cores ?? 'n/a'} cores`}
-          note={machine.gpu ? `${machine.gpu.name}. A model has to fit in this memory to run well.` : 'A model has to fit in this memory to run well.'}
+          value={`${card ? mb(card.vram_total_mb) : 'No graphics card'} · ${machine.ram_total_mb ? mb(machine.ram_total_mb) : 'memory not known'} · ${machine.cpu?.cores ?? 'n/a'} cores`}
+          note={card?.name ? `${card.name}. A model has to fit in this memory to run well.` : 'A model has to fit in this memory to run well.'}
         />
       )}
 
