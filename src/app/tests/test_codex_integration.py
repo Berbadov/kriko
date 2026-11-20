@@ -118,8 +118,14 @@ def test_an_unanswered_help_probe_is_asked_again_not_remembered(monkeypatch, tmp
     """`_ask` answers "" when the probe times out. Remembering that as "no
     app-server" demoted the binary to a process for the life of the app."""
     researcher = _researcher(monkeypatch, tmp_path)
-    answers = iter(["", "--listen"])
-    monkeypatch.setattr(harness, "_ask", lambda *args, **kwargs: next(answers))
+    describes = iter(["", "--listen"])
+
+    def ask(executable, *argv, **kwargs):
+        if argv == ("app-server", "--help"):
+            return next(describes)
+        return ""  # the account preflight says nothing: no verdict is remembered
+
+    monkeypatch.setattr(harness, "_ask", ask)
     monkeypatch.setattr(codex_profile, "transport", lambda: SimpleNamespace(run=lambda profile, request, **callbacks: SimpleNamespace(
         text="answer", thread_id="thread", turn_id="turn", usage={}, events=(), metrics={})))
     researcher.transport_mode = "persistent"

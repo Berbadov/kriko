@@ -276,3 +276,55 @@ def no_test_finds_the_readers_hosted_search(monkeypatch):
     from app import localplane
 
     monkeypatch.setattr(localplane, "hosted_search", lambda app_state_path=None: False)
+
+
+@pytest.fixture(autouse=True)
+def no_test_reads_a_provider_key_from_the_shell(monkeypatch):
+    """A test's result may not depend on a key exported in the shell.
+
+    A key in the environment turns on a hosted provider everywhere the app
+    looks for one, so a suite that passes on a clean machine could search the
+    live web, or fail, on the developer's. Keys a test needs are set with
+    `monkeypatch.setenv` in that test.
+    """
+    from app import keys
+
+    for item in keys.PROVIDERS:
+        monkeypatch.delenv(item.env, raising=False)
+
+
+@pytest.fixture(autouse=True)
+def no_test_leaves_an_effort_scan_running():
+    """A test may not leave a CLI effort scan holding a host permit.
+
+    Reading a CLI's effort levels runs its `--help` on a background thread named
+    `kriko-effort-<id>`, and that run takes an agent-child slot. The slots are
+    one process-wide budget, so a scan a previous test left running takes a slot
+    from a later test that counts on all of them (four agent starts become
+    three). Each test waits for its own scans before it ends.
+    """
+    import threading
+
+    yield
+    for thread in threading.enumerate():
+        if thread.name.startswith("kriko-effort-"):
+            thread.join(timeout=60)
+
+
+@pytest.fixture(autouse=True)
+def no_test_inherits_a_shared_agent_worker():
+    """A test may not inherit another test's agent workers.
+
+    The shared resident pools are process-wide, and their idle workers hold
+    the host's agent-child permits. Left running, one test's warm workers take
+    slots a later test counts on, so a test that asks for four concurrent
+    agents can get three, depending on which tests shared its worker process.
+    Each test starts and ends with no shared pool running.
+    """
+    from app.providers import codex_profile, resident
+
+    resident.shutdown()
+    codex_profile.shutdown()
+    yield
+    resident.shutdown()
+    codex_profile.shutdown()
