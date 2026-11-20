@@ -1,12 +1,12 @@
 /* Every colour, size and time in the interface comes from here.
-   Dark is the first theme. `data-theme` is "system", "dark" or "light".
 
-   The approved Kriko system: paper and ink, navy on paper and sky at night for
-   structure, one green for a price that fell or "No reports", and amber used
-   only where something needs attention: a serious or recalled status, a
-   "Known issues" outline, a price that rose, an unread count, focus. Cards and
-   controls are soft; pixel art stays square. The full system, the ramp with
-   contrast ratios, is in `kriko-brand/DESIGN.md`. */
+   One scheme with the phone app: four palettes (dark, gray, paper, white) and
+   "system", which follows the machine between dark and paper. A palette sets
+   only the raw colours in the blocks at the bottom; every role below is defined
+   once and reads them, so a component never knows which palette it is in.
+   Blue is the one brand colour. Green is a price that fell or "No reports",
+   amber is a status that needs the eye, red is a serious or recalled finding
+   and a procurement risk. Cards and controls are soft; pixel art stays square. */
 
 :root {
   --font: 'Inter Variable', system-ui, sans-serif;
@@ -32,10 +32,10 @@
   --dm: 1;
 
   /* Soft controls, square pixels: 8 / 10 / 12 / 16, and pills for presses. */
-  --r-s: 8px;
-  --r-m: 10px;
-  --r-l: 12px;
-  --r-xl: 16px;
+  --r-s: 10px;
+  --r-m: 12px;
+  --r-l: 16px;
+  --r-xl: 24px;
   --r-pill: 999px;
   --r-0: 0;
 
@@ -63,93 +63,39 @@
 
   color-scheme: dark;
 
-  /* dark: paper after dark */
-  --ground: #0e0f11;
-  --sheet: #15171a;
-  --raise: #1c1f23;
-  --inset: #111316;
-  --edge: rgba(237, 237, 234, 0.1);
-  --edge-strong: rgba(237, 237, 234, 0.22);
-  --edge-soft: rgba(237, 237, 234, 0.06);
-  --edge-control: #666a70;
-  --ink: #ededea;
-  --ink-2: #a8abb1;
-  --ink-3: #9a9da4;
-  --brand: #5aa9f7;
-  --brand-strong: #8cc6ff;
-  --on-brand: #0b1020;
-  --link: #5aa9f7;
-  --focus: #ffc27a;
-  --selection: #4b95cf;
-  /* A selected row, an active tab, a hover: a quiet neutral tint, never amber. */
-  --select: rgba(237, 237, 234, 0.07);
-  --select-strong: rgba(237, 237, 234, 0.11);
-
-  /* The amber ramp. Only the status and attention marks below may use it. */
-  --amber-50: #fff8ed;
-  --amber-100: #ffeed3;
-  --amber-200: #ffdcae;
-  --amber-300: #ffc27a;
-  --amber-400: #ffa144;
-  --amber-500: #ff8a1f;
-  --amber-600: #f0740d;
-  --amber-700: #c85a06;
-  --amber-800: #9a3d00;
-  --amber-900: #6b2800;
+  /* ---- roles: defined once, read from the raw colours of the palette ---- */
+  --brand-strong: var(--link);
+  --select: var(--select-soft);
+  --select-strong: var(--select-hard);
+  --serious: var(--risk);
+  --serious-fill: var(--risk);
+  --caution: var(--warn);
+  --caution-fill: var(--warn-soft);
+  --caution-edge: var(--warn-edge);
+  --attention: var(--warn);
+  --price-up: var(--warn);
+  --price-down: var(--positive);
+  --check: var(--link);
+  --check-soft: var(--select-soft);
+  --check-edge: var(--edge-strong);
   --on-attention: #1a1206;
-  /* Solid amber, for Recalled and Serious marks only. */
-  --attention: #ff8a1f;
-  --serious: #ffc27a;
-  --serious-fill: var(--amber-500);
-  /* The outline badge: "Known issues". */
-  --caution: #ffc27a;
-  --caution-fill: rgba(255, 161, 68, 0.08);
-  --caution-edge: rgba(255, 194, 122, 0.60);
-  --price-up: #ffc27a;
-
-  /* One green, for a price that fell and for "No reports". Never decoration. */
-  --positive: #5fd3a0;
-  --positive-soft: rgba(95, 211, 160, 0.12);
-  --positive-edge: rgba(95, 211, 160, 0.4);
-  --price-down: #5fd3a0;
-
-  /* Sky is information: a link, a source, a page to check. */
-  --check: #7cb8ff;
-  --check-soft: rgba(124, 184, 255, 0.12);
-  --check-edge: rgba(124, 184, 255, 0.4);
-
-  /* Data keeps three quiet steps. */
+  --amber-700: var(--warn);
   --data-1: var(--brand);
   --data-2: var(--px-2);
   --data-3: var(--ink-3);
-
-  /* The pixel library's own colours: a different ramp at night, never the
-     light navy dimmed. */
-  --px-1: #173a5b;
-  --px-2: #25618f;
-  --px-3: #4b95cf;
-  --px-ink: #ededea;
-  --px-paper: #15171a;
-  --px-accent: #4b95cf;
-
   --bar: var(--brand);
   --bar-done: var(--brand);
   --on-fill: var(--on-brand);
   --lit: transparent;
-  --sunk: rgba(0, 0, 0, 0.18);
   --pill-bg: var(--sheet);
   --pill-edge: var(--edge-strong);
-  --step-0: #173a5b;
-  --step-1: #25618f;
-  --step-2: #4b95cf;
-  --step-3: #7cb8ff;
-  --scrim: rgba(0, 0, 0, 0.7);
+  --px-ink: var(--ink);
+  --px-paper: var(--sheet);
+  --px-accent: var(--px-3);
 
   /* Flat by default; a shadow belongs to something that floats. */
   --glass: var(--sheet);
   --glass-edge: var(--edge);
-  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.5);
-  --shadow-2: 0 18px 40px -12px rgba(0, 0, 0, 0.72), 0 2px 6px rgba(0, 0, 0, 0.4);
   --gl-fill: var(--sheet);
   --gl-rim: var(--edge);
   --gl-line: var(--edge);
@@ -158,9 +104,7 @@
   --gl-shadow: none;
 
   /* Names the older rules still read. Each one points at a role above, so a
-     component keeps working while it is moved to the semantic name.
-     `--warn` and `--risk` are neutral on purpose: distress is said in words,
-     and amber is not sprayed over every failure. */
+     component keeps working while it is moved to the semantic name. */
   --panel: var(--sheet);
   --panel-2: var(--raise);
   --accent: var(--link);
@@ -169,177 +113,226 @@
   --accent-ink: var(--on-brand);
   --accent-soft: var(--select);
   --warm: var(--brand);
-  --ok: var(--brand);
-  --ok-text: var(--brand);
-  --warn: var(--ink-2);
-  --warn-text: var(--ink-2);
-  --risk: var(--ink-2);
-  --risk-text: var(--ink-2);
-  --on-risk: var(--on-attention);
+  --ok: var(--positive);
+  --ok-text: var(--positive);
+  --warn-text: var(--warn);
+  --risk-text: var(--risk);
+  --on-risk: #ffffff;
   --on-warn: var(--on-attention);
   --violet: var(--data-1);
   --teal: var(--data-2);
-  --mint: var(--brand);
+  --mint: var(--positive);
   --sky: var(--data-2);
+
+  /* ---- raw colours: dark (the default, and the phone's identity) ---- */
+  --ground: #08090d;
+  --sheet: #10131a;
+  --raise: #171b24;
+  --inset: #0b0d12;
+  --edge: rgba(255, 255, 255, 0.09);
+  --edge-strong: rgba(255, 255, 255, 0.18);
+  --edge-soft: rgba(255, 255, 255, 0.06);
+  --edge-control: #5f6779;
+  --ink: #f6f7fa;
+  --ink-2: #cdd2dc;
+  --ink-3: #a8afbd;
+  --brand: #3562e9;
+  --on-brand: #ffffff;
+  --link: #a3b8ff;
+  --focus: #ffc27a;
+  --selection: #3562e9;
+  --select-soft: rgba(163, 184, 255, 0.09);
+  --select-hard: rgba(163, 184, 255, 0.16);
+  --warn: #f5b84b;
+  --warn-soft: rgba(245, 184, 75, 0.12);
+  --warn-edge: rgba(245, 184, 75, 0.5);
+  --risk: #ff6b7a;
+  --risk-soft: rgba(255, 107, 122, 0.14);
+  --risk-edge: rgba(255, 107, 122, 0.5);
+  --positive: #3ddc97;
+  --positive-soft: rgba(61, 220, 151, 0.12);
+  --positive-edge: rgba(61, 220, 151, 0.4);
+  --px-1: #1d2d63;
+  --px-2: #3562e9;
+  --px-3: #8fa8ff;
+  --step-0: #1d2d63;
+  --step-1: #2b4cb8;
+  --step-2: #3562e9;
+  --step-3: #a3b8ff;
+  --scrim: rgba(0, 0, 0, 0.72);
+  --sunk: rgba(0, 0, 0, 0.22);
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-2: 0 18px 40px -12px rgba(0, 0, 0, 0.72), 0 2px 6px rgba(0, 0, 0, 0.4);
 }
 
-/* light: paper and ink */
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme='dark']) {
-    color-scheme: light;
-    --ground: #f5f5f3;
-    --sheet: #ffffff;
-    --raise: #ffffff;
-    --inset: #f0f0ec;
-    --edge: rgba(16, 20, 24, 0.1);
-    --edge-strong: rgba(16, 20, 24, 0.22);
-    --edge-soft: rgba(16, 20, 24, 0.06);
-    --edge-control: #7e838b;
-    --ink: #101418;
-    --ink-2: #3c454f;
-    --ink-3: #5f6a75;
-    --brand: #0b1020;
-    --brand-strong: #1f3a63;
-    --on-brand: #ffffff;
-    --link: #1f3a63;
-    --focus: #b45309;
-    --selection: #a9b9d3;
-    --select: rgba(16, 20, 24, 0.06);
-    --select-strong: rgba(16, 20, 24, 0.1);
-    --on-attention: #1a1206;
-    --serious: #9a3d00;
-    --caution: #9a3d00;
-    --caution-fill: #ffeed3;
-    --caution-edge: #f0740d;
-    --price-up: #9a3d00;
-    --positive: #0b6b4f;
-    --positive-soft: #eaf7f0;
-    --positive-edge: #6fcca6;
-    --price-down: #0b6b4f;
-    --check: #1f3a63;
-    --check-soft: rgba(31, 58, 99, 0.08);
-    --check-edge: rgba(31, 58, 99, 0.28);
-    --data-1: var(--brand);
-    --data-2: var(--px-2);
-    --data-3: var(--ink-3);
-    --px-1: #1f3a63;
-    --px-2: #4f6e9c;
-    --px-3: #a9b9d3;
-    --px-ink: #0b1020;
-    --px-paper: #ffffff;
-    --px-accent: #4f6e9c;
-    --bar: var(--brand);
-    --bar-done: var(--brand);
-    --on-fill: var(--on-brand);
-    --pill-bg: var(--sheet);
-    --pill-edge: var(--edge-strong);
-    --step-0: #1f3a63;
-    --step-1: #4f6e9c;
-    --step-2: #6e96c8;
-    --step-3: #a9b9d3;
-    --scrim: rgba(16, 20, 24, 0.55);
-    --shadow-1: 0 1px 2px rgba(16, 20, 24, 0.06), 0 1px 1px rgba(16, 20, 24, 0.04);
-    --shadow-2: 0 18px 40px -12px rgba(16, 20, 24, 0.22), 0 2px 6px rgba(16, 20, 24, 0.06);
-    --glass: var(--sheet);
-    --glass-edge: var(--edge);
-    --panel: var(--sheet);
-    --panel-2: var(--raise);
-    --accent: var(--link);
-    --accent-hi: var(--brand-strong);
-    --accent-fill: var(--brand);
-    --accent-ink: var(--on-brand);
-    --accent-soft: var(--select);
-    --warm: var(--brand);
-    --ok: var(--brand);
-    --ok-text: var(--brand);
-    --warn: var(--ink-2);
-    --warn-text: var(--ink-2);
-    --risk: var(--ink-2);
-    --risk-text: var(--ink-2);
-    --on-risk: var(--on-attention);
-    --on-warn: var(--on-attention);
-    --violet: var(--data-1);
-    --teal: var(--data-2);
-    --mint: var(--brand);
-    --sky: var(--data-2);
-  }
+/* gray: charcoal with lifted panels */
+:root[data-theme='gray'] {
+  --ground: #202226;
+  --sheet: #2b2e33;
+  --raise: #34383e;
+  --inset: #25282d;
+  --edge: rgba(255, 255, 255, 0.12);
+  --edge-strong: rgba(255, 255, 255, 0.22);
+  --edge-soft: rgba(255, 255, 255, 0.08);
+  --edge-control: #7b8089;
+  --ink: #f4f5f7;
+  --ink-2: #d0d3d8;
+  --ink-3: #b2b7c0;
+  --brand: #7c9bff;
+  --on-brand: #101522;
+  --link: #b3c4ff;
+  --select-soft: rgba(179, 196, 255, 0.1);
+  --select-hard: rgba(179, 196, 255, 0.17);
+  --warn: #ffd078;
+  --warn-soft: rgba(255, 208, 120, 0.12);
+  --warn-edge: rgba(255, 208, 120, 0.5);
+  --risk: #ff8995;
+  --risk-soft: rgba(255, 137, 149, 0.16);
+  --risk-edge: rgba(255, 137, 149, 0.5);
+  --positive: #5be0a4;
+  --positive-soft: rgba(91, 224, 164, 0.12);
+  --positive-edge: rgba(91, 224, 164, 0.4);
+  --px-1: #303b5b;
+  --px-2: #7c9bff;
+  --px-3: #b3c4ff;
+  --step-0: #303b5b;
+  --step-1: #566fb8;
+  --step-2: #7c9bff;
+  --step-3: #b3c4ff;
+  --scrim: rgba(0, 0, 0, 0.68);
+  --sunk: rgba(0, 0, 0, 0.2);
 }
 
+/* paper: warm light */
+:root[data-theme='paper'],
 :root[data-theme='light'] {
   color-scheme: light;
-  --ground: #f5f5f3;
+  --ground: #f4f0e6;
+  --sheet: #fffdf7;
+  --raise: #faf7ef;
+  --inset: #ece7db;
+  --edge: #ded8cc;
+  --edge-strong: #c5bdad;
+  --edge-soft: #eae4d8;
+  --edge-control: #8a8374;
+  --ink: #24231f;
+  --ink-2: #4a4740;
+  --ink-3: #66625a;
+  --brand: #2e5bef;
+  --on-brand: #ffffff;
+  --link: #2449ca;
+  --focus: #b45309;
+  --selection: #b9c7f6;
+  --select-soft: rgba(46, 91, 239, 0.07);
+  --select-hard: rgba(46, 91, 239, 0.12);
+  --on-attention: #1a1206;
+  --warn: #8a5614;
+  --warn-soft: #f7ead3;
+  --warn-edge: #c58a3b;
+  --risk: #b74739;
+  --risk-soft: #f6e7df;
+  --risk-edge: #d98a7d;
+  --positive: #2f6a52;
+  --positive-soft: #e6f1ea;
+  --positive-edge: #7fb59b;
+  --px-1: #24378f;
+  --px-2: #2e5bef;
+  --px-3: #9db3f7;
+  --step-0: #24378f;
+  --step-1: #2e5bef;
+  --step-2: #6f8cf2;
+  --step-3: #b9c7f6;
+  --scrim: rgba(36, 35, 31, 0.4);
+  --sunk: rgba(36, 35, 31, 0.06);
+  --shadow-1: 0 1px 2px rgba(58, 52, 40, 0.08), 0 1px 1px rgba(58, 52, 40, 0.05);
+  --shadow-2: 0 18px 40px -12px rgba(58, 52, 40, 0.26), 0 2px 6px rgba(58, 52, 40, 0.08);
+}
+
+/* white: cool and bright, no cream cast */
+:root[data-theme='white'] {
+  color-scheme: light;
+  --ground: #f7f8fa;
   --sheet: #ffffff;
   --raise: #ffffff;
-  --inset: #f0f0ec;
-  --edge: rgba(16, 20, 24, 0.1);
-  --edge-strong: rgba(16, 20, 24, 0.22);
-  --edge-soft: rgba(16, 20, 24, 0.06);
-  --edge-control: #7e838b;
-  --ink: #101418;
-  --ink-2: #3c454f;
-  --ink-3: #5f6a75;
-  --brand: #0b1020;
-  --brand-strong: #1f3a63;
+  --inset: #eef1f5;
+  --edge: #e1e5ea;
+  --edge-strong: #c8cdd4;
+  --edge-soft: #edf0f3;
+  --edge-control: #7b828e;
+  --ink: #111318;
+  --ink-2: #3f4450;
+  --ink-3: #5a606d;
+  --brand: #2e5bef;
   --on-brand: #ffffff;
-  --link: #1f3a63;
+  --link: #2449ca;
   --focus: #b45309;
-  --selection: #a9b9d3;
-  --select: rgba(16, 20, 24, 0.06);
-  --select-strong: rgba(16, 20, 24, 0.1);
+  --selection: #c0cff9;
+  --select-soft: rgba(46, 91, 239, 0.06);
+  --select-hard: rgba(46, 91, 239, 0.11);
   --on-attention: #1a1206;
-  --serious: #9a3d00;
-  --caution: #9a3d00;
-  --caution-fill: #ffeed3;
-  --caution-edge: #f0740d;
-  --price-up: #9a3d00;
-  --positive: #0b6b4f;
-  --positive-soft: #eaf7f0;
-  --positive-edge: #6fcca6;
-  --price-down: #0b6b4f;
-  --check: #1f3a63;
-  --check-soft: rgba(31, 58, 99, 0.08);
-  --check-edge: rgba(31, 58, 99, 0.28);
-  --data-1: var(--brand);
-  --data-2: var(--px-2);
-  --data-3: var(--ink-3);
-  --px-1: #1f3a63;
-  --px-2: #4f6e9c;
-  --px-3: #a9b9d3;
-  --px-ink: #0b1020;
-  --px-paper: #ffffff;
-  --px-accent: #4f6e9c;
-  --bar: var(--brand);
-  --bar-done: var(--brand);
-  --on-fill: var(--on-brand);
-  --pill-bg: var(--sheet);
-  --pill-edge: var(--edge-strong);
-  --step-0: #1f3a63;
-  --step-1: #4f6e9c;
-  --step-2: #6e96c8;
-  --step-3: #a9b9d3;
-  --scrim: rgba(16, 20, 24, 0.55);
-  --shadow-1: 0 1px 2px rgba(16, 20, 24, 0.06), 0 1px 1px rgba(16, 20, 24, 0.04);
-  --shadow-2: 0 18px 40px -12px rgba(16, 20, 24, 0.22), 0 2px 6px rgba(16, 20, 24, 0.06);
-  --glass: var(--sheet);
-  --glass-edge: var(--edge);
-  --panel: var(--sheet);
-  --panel-2: var(--raise);
-  --accent: var(--link);
-  --accent-hi: var(--brand-strong);
-  --accent-fill: var(--brand);
-  --accent-ink: var(--on-brand);
-  --accent-soft: var(--select);
-  --warm: var(--brand);
-  --ok: var(--brand);
-  --ok-text: var(--brand);
-  --warn: var(--ink-2);
-  --warn-text: var(--ink-2);
-  --risk: var(--ink-2);
-  --risk-text: var(--ink-2);
-  --on-risk: var(--on-attention);
-  --on-warn: var(--on-attention);
-  --violet: var(--data-1);
-  --teal: var(--data-2);
-  --mint: var(--brand);
-  --sky: var(--data-2);
+  --warn: #8a5410;
+  --warn-soft: #fbefd9;
+  --warn-edge: #d29a45;
+  --risk: #b42318;
+  --risk-soft: #fdeceb;
+  --risk-edge: #e39a93;
+  --positive: #1f7a54;
+  --positive-soft: #e7f5ee;
+  --positive-edge: #7cc3a2;
+  --px-1: #24378f;
+  --px-2: #2e5bef;
+  --px-3: #9db3f7;
+  --step-0: #24378f;
+  --step-1: #2e5bef;
+  --step-2: #6f8cf2;
+  --step-3: #c0cff9;
+  --scrim: rgba(17, 19, 24, 0.34);
+  --sunk: rgba(17, 19, 24, 0.05);
+  --shadow-1: 0 1px 2px rgba(32, 36, 43, 0.07), 0 1px 1px rgba(32, 36, 43, 0.04);
+  --shadow-2: 0 18px 40px -12px rgba(32, 36, 43, 0.24), 0 2px 6px rgba(32, 36, 43, 0.07);
+}
+
+/* system: the machine's own light or dark. Paper is its light. */
+@media (prefers-color-scheme: light) {
+  :root[data-theme='system'] {
+    color-scheme: light;
+    --ground: #f4f0e6;
+    --sheet: #fffdf7;
+    --raise: #faf7ef;
+    --inset: #ece7db;
+    --edge: #ded8cc;
+    --edge-strong: #c5bdad;
+    --edge-soft: #eae4d8;
+    --edge-control: #8a8374;
+    --ink: #24231f;
+    --ink-2: #4a4740;
+    --ink-3: #66625a;
+    --brand: #2e5bef;
+    --on-brand: #ffffff;
+    --link: #2449ca;
+    --focus: #b45309;
+    --selection: #b9c7f6;
+    --select-soft: rgba(46, 91, 239, 0.07);
+    --select-hard: rgba(46, 91, 239, 0.12);
+    --warn: #8a5614;
+    --warn-soft: #f7ead3;
+    --warn-edge: #c58a3b;
+    --risk: #b74739;
+    --risk-soft: #f6e7df;
+    --risk-edge: #d98a7d;
+    --positive: #2f6a52;
+    --positive-soft: #e6f1ea;
+    --positive-edge: #7fb59b;
+    --px-1: #24378f;
+    --px-2: #2e5bef;
+    --px-3: #9db3f7;
+    --step-0: #24378f;
+    --step-1: #2e5bef;
+    --step-2: #6f8cf2;
+    --step-3: #b9c7f6;
+    --scrim: rgba(36, 35, 31, 0.4);
+    --sunk: rgba(36, 35, 31, 0.06);
+    --shadow-1: 0 1px 2px rgba(58, 52, 40, 0.08), 0 1px 1px rgba(58, 52, 40, 0.05);
+    --shadow-2: 0 18px 40px -12px rgba(58, 52, 40, 0.26), 0 2px 6px rgba(58, 52, 40, 0.08);
+  }
 }

@@ -1,0 +1,545 @@
+/* The shared vocabulary every screen is drawn from, taken from the phone app:
+   a labelled list of soft rounded cards, rows that show their current value,
+   a quiet caption over each group, and one blue action. A screen composes these
+   classes and adds only what is its own. Everything here reads the roles in
+   tokens.css, so all four palettes work without a rule of their own.
+
+   Names are prefixed `k-` so nothing here collides with the older rules. */
+
+/* A screen: the page inside the stage. Its head is a title and its actions. */
+.k-screen {
+  width: 100%;
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 28px 32px 56px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.k-screen[data-width='narrow'] {
+  max-width: 760px;
+}
+
+.k-screen[data-width='wide'] {
+  max-width: 1240px;
+}
+
+.k-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.k-title {
+  margin: 0;
+  font-size: 34px;
+  line-height: 1.05;
+}
+
+.k-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* A group: a caption in sentence case over one or more cards. */
+.k-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.k-caption {
+  margin: 0 4px;
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: var(--w-medium);
+  letter-spacing: 0;
+  line-height: 1.3;
+  color: var(--ink-3);
+}
+
+.k-card {
+  background: var(--sheet);
+  border: 1px solid var(--edge);
+  border-radius: var(--r-l);
+  min-width: 0;
+}
+
+.k-card[data-pad] {
+  padding: 16px 18px;
+}
+
+.k-card[data-raised] {
+  box-shadow: var(--shadow-1);
+}
+
+/* A list card: rows ruled by a hairline. */
+.k-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.k-list > * + * {
+  border-top: 1px solid var(--edge);
+}
+
+/* A row: [icon tile] [title and note] [value] [chevron or control].
+   44px is the least a touch or a click gets. */
+.k-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 52px;
+  padding: 10px 16px;
+  width: 100%;
+  text-align: left;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  font-size: 15px;
+}
+
+button.k-row,
+a.k-row {
+  cursor: pointer;
+  transition: background var(--dur-1) var(--ease-out);
+}
+
+button.k-row:hover,
+a.k-row:hover {
+  background: var(--select);
+}
+
+button.k-row:active {
+  background: var(--select-strong);
+}
+
+button.k-row[aria-current='true'],
+button.k-row[data-on='true'] {
+  background: var(--select-strong);
+}
+
+.k-row-icon {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-s);
+  background: var(--select-strong);
+  color: var(--link);
+}
+
+.k-row-icon[data-tone='ok'] {
+  background: var(--positive-soft);
+  color: var(--positive);
+}
+
+.k-row-icon[data-tone='warn'] {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+.k-row-icon[data-tone='risk'] {
+  background: var(--risk-soft);
+  color: var(--risk);
+}
+
+.k-row-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.k-row-title {
+  font-weight: var(--w-medium);
+  line-height: 1.3;
+}
+
+.k-row-note {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--ink-3);
+  max-width: 68ch;
+}
+
+.k-row-value {
+  flex: none;
+  max-width: 45%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.k-row-chevron {
+  flex: none;
+  color: var(--ink-3);
+}
+
+.k-row-control {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* A row whose control is a full-width field sits under its title. */
+.k-row[data-stack] {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+
+/* Figures: a strip of headline numbers. Each is a number, a word, and
+   optionally one fact about its change. */
+.k-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+}
+
+.k-kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 18px;
+  background: var(--sheet);
+  border: 1px solid var(--edge);
+  border-radius: var(--r-l);
+  min-width: 0;
+}
+
+.k-kpi-value {
+  font-family: var(--display);
+  font-size: 30px;
+  font-weight: var(--w-display);
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+}
+
+.k-kpi-label {
+  font-size: 13px;
+  color: var(--ink-3);
+}
+
+.k-kpi-fact {
+  font-size: 13px;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.k-kpi[data-tone='warn'] .k-kpi-value {
+  color: var(--warn);
+}
+
+.k-kpi[data-tone='risk'] .k-kpi-value {
+  color: var(--risk);
+}
+
+.k-kpi[data-tone='ok'] .k-kpi-value {
+  color: var(--positive);
+}
+
+/* A chip: a short fact or a filter. A pill is a status, in words. */
+.k-chip,
+.k-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 26px;
+  padding: 2px 10px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--edge-strong);
+  background: transparent;
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: var(--w-medium);
+  line-height: 1.2;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+button.k-chip {
+  cursor: pointer;
+  min-height: 32px;
+  padding: 4px 12px;
+}
+
+button.k-chip[aria-pressed='true'],
+button.k-chip[data-on='true'] {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: var(--on-brand);
+}
+
+.k-pill[data-tone='ok'] {
+  background: var(--positive-soft);
+  border-color: var(--positive-edge);
+  color: var(--positive);
+}
+
+.k-pill[data-tone='warn'] {
+  background: var(--warn-soft);
+  border-color: var(--warn-edge);
+  color: var(--warn);
+}
+
+.k-pill[data-tone='risk'] {
+  background: var(--risk-soft);
+  border-color: var(--risk-edge);
+  color: var(--risk);
+}
+
+/* A procurement risk is said by shape and word as well as colour:
+   a filled dot is green, a half dot amber, a ring red. */
+.k-risk {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: var(--w-medium);
+  white-space: nowrap;
+}
+
+.k-risk::before {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  box-sizing: border-box;
+}
+
+.k-risk[data-level='green'] {
+  color: var(--positive);
+}
+
+.k-risk[data-level='green']::before {
+  background: currentColor;
+}
+
+.k-risk[data-level='amber'] {
+  color: var(--warn);
+}
+
+.k-risk[data-level='amber']::before {
+  background: linear-gradient(90deg, currentColor 50%, transparent 50%);
+}
+
+.k-risk[data-level='red'] {
+  color: var(--risk);
+}
+
+.k-risk[data-level='unknown'] {
+  color: var(--ink-3);
+}
+
+/* Segmented choice: one of a few, every option a word. */
+.k-seg {
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+  background: var(--inset);
+  border: 1px solid var(--edge);
+  border-radius: var(--r-pill);
+}
+
+.k-seg button {
+  min-height: 32px;
+  padding: 4px 14px;
+  border-radius: var(--r-pill);
+  font-size: 14px;
+  font-weight: var(--w-medium);
+  color: var(--ink-2);
+}
+
+.k-seg button[aria-checked='true'],
+.k-seg button[aria-pressed='true'],
+.k-seg button[data-on='true'] {
+  background: var(--sheet);
+  color: var(--ink);
+  box-shadow: var(--shadow-1);
+}
+
+/* Fields */
+.k-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.k-field > label,
+.k-field-label {
+  font-size: 13px;
+  font-weight: var(--w-medium);
+  color: var(--ink-2);
+}
+
+.k-input {
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 12px;
+  border-radius: var(--r-m);
+  border: 1px solid var(--edge-control);
+  background: var(--inset);
+  color: var(--ink);
+  font-size: 15px;
+}
+
+.k-input:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.k-input::placeholder {
+  color: var(--ink-3);
+}
+
+/* Buttons: one primary per view. */
+.k-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 8px 16px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--edge-strong);
+  background: transparent;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: var(--w-medium);
+  cursor: pointer;
+  transition: background var(--dur-1) var(--ease-out), border-color var(--dur-1) var(--ease-out);
+}
+
+.k-btn:hover:not(:disabled) {
+  background: var(--select);
+}
+
+.k-btn[data-kind='primary'] {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: var(--on-brand);
+}
+
+.k-btn[data-kind='primary']:hover:not(:disabled) {
+  background: var(--brand);
+  filter: brightness(1.08);
+}
+
+.k-btn[data-kind='quiet'] {
+  border-color: transparent;
+}
+
+.k-btn[data-kind='danger'] {
+  color: var(--risk);
+  border-color: var(--risk-edge);
+}
+
+.k-btn[data-size='sm'] {
+  min-height: 32px;
+  padding: 4px 12px;
+  font-size: 13px;
+}
+
+.k-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* An empty place says what is missing and offers the one next step. */
+.k-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 28px 24px;
+  border: 1px dashed var(--edge-strong);
+  border-radius: var(--r-l);
+  color: var(--ink-2);
+}
+
+.k-empty strong {
+  font-family: var(--display);
+  font-size: 20px;
+  font-weight: var(--w-display);
+  color: var(--ink);
+}
+
+/* A notice: one line about the state of things, never decoration. */
+.k-notice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border-radius: var(--r-m);
+  background: var(--select);
+  border: 1px solid var(--edge);
+  font-size: 14px;
+}
+
+.k-notice[data-tone='warn'] {
+  background: var(--warn-soft);
+  border-color: var(--warn-edge);
+}
+
+.k-notice[data-tone='risk'] {
+  background: var(--risk-soft);
+  border-color: var(--risk-edge);
+}
+
+/* Tables of figures: right-aligned numbers, ruled rows. */
+.k-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.k-table th {
+  text-align: left;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: var(--w-medium);
+  color: var(--ink-3);
+  border-bottom: 1px solid var(--edge-strong);
+  white-space: nowrap;
+}
+
+.k-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--edge);
+  vertical-align: top;
+}
+
+.k-table [data-num] {
+  text-align: right;
+}
+
+/* The page at narrow widths: one column, the gutter halves. */
+@media (max-width: 760px) {
+  .k-screen {
+    padding: 20px 16px 40px;
+    gap: 22px;
+  }
+
+  .k-title {
+    font-size: 28px;
+  }
+}
