@@ -19,7 +19,7 @@ import { ProductInsights } from '../ui/ProductInsights'
 import { DustField } from '../dust/DustField'
 import { kindFor, product, reading } from '../dust/engine'
 
-const LEVEL_WORD: Record<Level, string> = { critical: 'Critical', high: 'High', medium: 'Medium', low: 'Low', unrated: 'Unrated' }
+const LEVEL_WORD: Record<Level, string> = { critical: 'Serious', high: 'Serious', medium: 'Known issues', low: 'Minor', unrated: 'To check' }
 const DEMO_ANSWER = 'The maker states a limit of **40 minutes** of full load.\n\n- Short jobs are fine.\n- For long jobs, add a fan or pick another unit.'
 
 interface Turn {
@@ -207,7 +207,12 @@ export function ProductScreen({ lookupId, onBack, onCompare }: { lookupId: strin
         {check && check.specs.length > 0 && <details><summary>Specifications</summary><dl>{check.specs.map((spec) => <div key={spec.label}><dt>{spec.label}</dt><dd>{spec.value} {spec.source && <ExternalLink href={spec.source}>Source</ExternalLink>}{spec.quote && <blockquote>{spec.quote}</blockquote>}</dd></div>)}</dl></details>}
         {check && (
           <ul className="risk-list rise" style={{ '--i': 1 } as CSSProperties}>
-            {check.risks.length === 0 && <li className="muted">No risk is on record.</li>}
+            {check.risks.length === 0 && (
+              <li className="risk-none">
+                <span className="level" data-level="none">No reports</span>
+                <span className="muted">Nothing on record for this product.</span>
+              </li>
+            )}
             {check.risks.length > 0 && drawn.length === 0 && <li className="muted">Every finding on record is hidden at this sensitivity.</li>}
             {drawn.map((risk) => (
               <li key={risk.title} data-thin={risk.evidence?.level === 'thin' || undefined}>
