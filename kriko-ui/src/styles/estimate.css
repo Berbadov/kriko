@@ -600,3 +600,10 @@
   line-height: 1.25;
   vertical-align: bottom;
 }
+
+/* The overview's strip and its attention list are separate blocks. */
+.procurement-overview {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
