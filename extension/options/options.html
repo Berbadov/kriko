@@ -97,6 +97,18 @@
         <p id="notify-status" class="status" role="status" aria-live="polite"></p>
       </section>
 
+      <section class="offline" id="offline-section">
+        <h2>Offline catalogs</h2>
+        <label class="check"><input type="checkbox" id="offline-enabled" checked />
+          Answer from catalogs stored in this browser when the app is not running.</label>
+        <ul id="offline-packs" class="sites-list"></ul>
+        <div class="row">
+          <button type="button" id="offline-refresh">Update catalogs</button>
+        </div>
+        <p id="offline-status" class="status" role="status" aria-live="polite"></p>
+        <p id="offline-quota" class="status"></p>
+      </section>
+
       <section class="version">
         <h2>Versions</h2>
         <p id="compat" class="status" role="status" aria-live="polite"></p>
