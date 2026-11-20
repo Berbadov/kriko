@@ -708,10 +708,34 @@ const GLASS_KEY = "kriko.glass";
     });
   });
 
+  // Reading the release page is a cross-origin request. Chrome asks inside a
+  // gesture, and the gesture has to be this click: a message to the worker
+  // arrives after it is gone.
+  const askForRelease = () => new Promise((resolve) => {
+    const origins = ["https://github.com/*", "https://objects.githubusercontent.com/*"];
+    if (!chrome.permissions || !chrome.permissions.request) { resolve(true); return; }
+    try {
+      const answer = chrome.permissions.request({ origins }, (granted) => resolve(Boolean(granted)));
+      if (answer && typeof answer.then === "function") {
+        answer.then((granted) => resolve(Boolean(granted)), () => resolve(false));
+      }
+    } catch (_) {
+      resolve(false);
+    }
+  });
+
   refresh.addEventListener("click", () => {
     refresh.disabled = true;
     say("Reading the release index…");
-    ask({ type: "OFFLINE_REFRESH" }).then((reply) => {
+    askForRelease().then((granted) => {
+      if (!granted) {
+        refresh.disabled = false;
+        say("The browser did not allow reading the release page.", "warn");
+        return null;
+      }
+      return ask({ type: "OFFLINE_REFRESH" });
+    }).then((reply) => {
+      if (!reply) return;
       refresh.disabled = false;
       if (!reply.ok) { say(reply.error, "error"); return; }
       const installed = (reply.results || []).filter((row) => row.state === "installed").length;
