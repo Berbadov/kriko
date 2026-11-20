@@ -64,9 +64,11 @@ invented. Repair prices appear only where a source quotes one.
   currency. Delivery *days* and warranty *months* are terms, not money, so no
   delivery charge is invented; ties break on the shorter delivery. A quote
   without a rate is listed as unranked, with that reason.
-- Price history per quote uses the existing `pricewatch` store once a quote URL
-  is being watched. It reports "not enough history yet" until the thresholds in
-  `pricewatch.assess` are met.
+- Price history per quote is **not wired into the Estimate yet**. The existing
+  `pricewatch` store already keeps per-URL points and would answer
+  "lowest / usual / high / thin" plus "not enough history yet"; the screen does
+  not offer a watch from a quote row, so no history exists for most quotes.
+  Landed-cost ranking above is what ships now.
 
 ## Export
 
