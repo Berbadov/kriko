@@ -37,16 +37,28 @@ def test_the_linear_scanner_returns_what_the_regexes_it_replaced_returned():
         assert htmlscan.last_block(page, "main") == (main.group(1) if main else None)
 
 
+def _read_seconds(page):
+    best = float("inf")
+    for _ in range(3):
+        started = time.process_time()
+        fetch.to_text(page)
+        pricewatch.read_markup(page)
+        best = min(best, time.process_time() - started)
+    return best
+
+
 @pytest.mark.parametrize("unit", ["<nav>x", '<a href="/p">x', "<nav", "<title>x", "<head>x", "<main>x",
                                   "<script type='application/ld+json'>", "<a x"])
-def test_a_page_of_unclosed_tags_is_read_in_the_time_of_a_page(unit):
-    page = (unit * (600_000 // len(unit) + 1))[:600_000]
-    started = time.process_time()
-    fetch.to_text(page)
-    pricewatch.read_markup(page)
-    # Quadratic, this was 30 s at a third of the size and an hour at the 2 MB cap.
-    # CPU time, not wall time: another process on a busy host must not fail it.
-    assert time.process_time() - started < 5
+def test_a_page_of_unclosed_tags_is_read_in_linear_time(unit):
+    """Quadratic parsing was 30 s at a third of the size and an hour at the 2 MB cap.
+
+    Compares sizes, not seconds: four times the input costs about four times the
+    work when linear and about sixteen when quadratic, and the ratio does not move
+    with how busy the host or the test process is.
+    """
+    small = (unit * (150_000 // len(unit) + 1))[:150_000]
+    large = (unit * (600_000 // len(unit) + 1))[:600_000]
+    assert _read_seconds(large) < 9 * _read_seconds(small)
 
 
 def test_one_pages_hostile_json_fails_alone():
