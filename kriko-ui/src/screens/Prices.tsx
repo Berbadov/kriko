@@ -1,20 +1,10 @@
-import { useState, type CSSProperties, type FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
 import { useWatches, type Watch } from '../engine/buyer'
 import { ago } from '../engine/history'
-import { DustField } from '../dust/DustField'
-import { cloud } from '../dust/engine'
+import { moneyText, moveOf, targetReached } from '../compare/figures'
+import { count } from '../ui/format'
 import { Icon } from '../ui/Icon'
 import { openLink } from '../ui/ExternalLink'
-
-const money = (amount: number | null | undefined, currency: string) =>
-  amount == null ? '–' : `${amount.toLocaleString(undefined, { maximumFractionDigits: 2 })}${currency ? ` ${currency}` : ''}`
-
-/** How far the page's price moved since the watch began, as a signed share, or null. */
-export function change(watch: Pick<Watch, 'started_price' | 'last_price'>): number | null {
-  const { started_price: from, last_price: now } = watch
-  if (from == null || now == null || from <= 0) return null
-  return (now - from) / from
-}
 
 const host = (url: string) => {
   try {
@@ -24,12 +14,9 @@ const host = (url: string) => {
   }
 }
 
-/** The thin dust over the head of the page, as on the other screens. */
-const SKY = cloud({ x: 0.5, y: 0.2, r: 0.3 })
-
-/** The price checker: pages the reader watches, what each costs now, and the
- *  move since they started watching. A price is the page's own figure on the
- *  day it was read; nothing is converted or estimated. */
+/** The price checker: the pages the reader watches, what each costs now, and
+ *  the move since they started. A price is the page's own figure on the day it
+ *  was read; nothing is converted or estimated. */
 export function PricesScreen() {
   const watching = useWatches()
   const [url, setUrl] = useState('')
@@ -60,99 +47,146 @@ export function PricesScreen() {
     setBusy(true)
     const due = await watching.sweep()
     setBusy(false)
-    setNote(due ? `Reading ${due} ${due === 1 ? 'page' : 'pages'} now.` : 'Every page was read recently. Kriko reads each at most every few hours.')
+    setNote(due ? `Reading ${count(due, 'page')} now.` : 'Every page was read recently. Kriko reads each at most every few hours.')
   }
 
-  const fell = watching.watches.filter((one) => (change(one) ?? 0) < 0).length
+  const watches = watching.watches
+  const reached = watches.filter(targetReached).length
+  let biggest: { watch: Watch; move: number } | null = null
+  for (const one of watches) {
+    const move = moveOf(one)
+    if (move != null && move < 0 && (biggest == null || move < biggest.move)) biggest = { watch: one, move }
+  }
+  const fell = watches.filter((one) => (moveOf(one) ?? 0) < 0).length
 
   return (
-    <section className="prices">
-      <div className="prices-sky" aria-hidden="true">
-        <DustField className="dust-sky" scene={SKY} cap={5000} />
-      </div>
-      <header className="prices-head">
-        <div className="hello-index mono" aria-hidden="true">03 / prices</div>
-        <h1>Price checker</h1>
-        <p className="muted">Watch a product page. Kriko re-reads it and tells you when the price falls to what you choose.</p>
+    <section className="k-screen prices">
+      <header className="k-head">
+        <h1 className="k-title">Prices</h1>
+        <div className="k-head-actions">
+          <button type="button" className="k-btn" data-kind="quiet" onClick={() => void checkNow()} disabled={busy || !watches.length}>
+            <Icon name="retry" size={15} />
+            Check now
+          </button>
+        </div>
       </header>
 
-      <form className="prices-add" onSubmit={(event) => void submit(event)}>
-        <input className="prices-url" value={url} onChange={(event) => setUrl(event.target.value)} placeholder="https://shop.example/product…" aria-label="Product page address" />
-        <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Name (optional)" aria-label="Name" />
-        <input value={target} onChange={(event) => setTarget(event.target.value)} placeholder="Alert at or below" aria-label="Alert price" inputMode="decimal" />
-        <button className="btn primary" type="submit" disabled={busy || !url.trim()}>
-          <Icon name="eye" size={16} />
-          Watch
-        </button>
-      </form>
-      {(note || watching.problem) && <p className={watching.problem ? 'error-note' : 'prices-note'}>{watching.problem || note}</p>}
+      <section className="k-group" aria-labelledby="prices-best">
+        <h2 className="k-caption" id="prices-best">Best deals</h2>
+        <div className="k-kpis">
+          <div className="k-kpi">
+            <span className="k-kpi-value">{watches.length}</span>
+            <span className="k-kpi-label">Watches</span>
+          </div>
+          <div className="k-kpi" data-tone={reached > 0 ? 'ok' : undefined}>
+            <span className="k-kpi-value">{reached}</span>
+            <span className="k-kpi-label">Targets reached</span>
+          </div>
+          <div className="k-kpi" data-tone={biggest ? 'ok' : undefined}>
+            <span className="k-kpi-value">{biggest ? `−${Math.abs(biggest.move * 100).toFixed(1)}%` : '–'}</span>
+            <span className="k-kpi-label">Biggest fall</span>
+            <span className="k-kpi-fact">{biggest ? (biggest.watch.name || host(biggest.watch.url)) : 'Nothing has fallen yet'}</span>
+          </div>
+        </div>
+      </section>
+
+      <section className="k-group" aria-labelledby="prices-add">
+        <h2 className="k-caption" id="prices-add">Watch a page</h2>
+        <form className="k-card prices-form" data-pad onSubmit={(event) => void submit(event)}>
+          <div className="prices-fields">
+            <div className="k-field prices-field-url">
+              <label htmlFor="prices-url">Page address</label>
+              <input id="prices-url" className="k-input" type="text" inputMode="url" value={url} onChange={(event) => setUrl(event.target.value)} placeholder="https://shop.example/product" />
+            </div>
+            <div className="k-field">
+              <label htmlFor="prices-name">Name</label>
+              <input id="prices-name" className="k-input" value={name} onChange={(event) => setName(event.target.value)} placeholder="Optional" />
+            </div>
+            <div className="k-field">
+              <label htmlFor="prices-target">Target price</label>
+              <input id="prices-target" className="k-input" value={target} onChange={(event) => setTarget(event.target.value)} inputMode="decimal" placeholder="At or below" />
+            </div>
+          </div>
+          <div className="prices-form-actions">
+            <button type="submit" className="k-btn" data-kind="primary" disabled={busy || !url.trim()}>
+              <Icon name="eye" size={16} />
+              Watch this page
+            </button>
+          </div>
+        </form>
+        {(note || watching.problem) && (
+          <p className={watching.problem ? 'k-notice' : 'prices-note'} data-tone={watching.problem ? 'risk' : undefined} role={watching.problem ? 'alert' : undefined}>
+            {watching.problem || note}
+          </p>
+        )}
+      </section>
 
       {watching.alerts.length > 0 && (
-        <div className="prices-alerts" role="status">
+        <div className="k-notice prices-alerts" role="status">
           <Icon name="bell" size={16} />
-          <div>
+          <div className="prices-alerts-text">
             {watching.alerts.map((one) => (
               <p key={one.alert_id}>
-                <strong>{one.name || host(one.url)}</strong> is now {money(one.price, one.currency)}
-                {one.was_price ? <span className="muted"> (was {money(one.was_price, one.currency)})</span> : null}
+                <strong>{one.name || host(one.url)}</strong> is now {moneyText(one.price, one.currency)}
+                {one.was_price ? <span className="muted"> (was {moneyText(one.was_price, one.currency)})</span> : null}
               </p>
             ))}
           </div>
-          <button className="btn ghost" onClick={() => void watching.read()}>Got it</button>
+          <button type="button" className="k-btn" data-kind="quiet" data-size="sm" onClick={() => void watching.read()}>Got it</button>
         </div>
       )}
 
-      <div className="prices-bar">
-        <h2>
-          Watching <span className="mono">{watching.watches.length}</span>
-          {fell > 0 && <span className="prices-fell mono">{fell} down</span>}
+      <section className="k-group" aria-labelledby="prices-watching">
+        <h2 className="k-caption" id="prices-watching">
+          Watching <span className="mono">{watches.length}</span>
+          {fell > 0 && <span className="mono prices-fell">{fell} down</span>}
         </h2>
-        <button className="btn ghost" onClick={() => void checkNow()} disabled={busy || !watching.watches.length}>
-          <Icon name="retry" size={15} />
-          Check now
-        </button>
-      </div>
-
-      {watching.watches.length === 0 ? (
-        <p className="prices-empty muted">
-          Nothing watched yet. Paste a product page above, or press <strong>Watch this price</strong> on a product page in your browser.
-        </p>
-      ) : (
-        <ul className="prices-list">
-          {watching.watches.map((one, index) => {
-            const moved = change(one)
-            const hit = one.target != null && one.last_price != null && one.last_price <= one.target
-            return (
-              <li key={one.watch_id} className="price-card rise" style={{ '--i': index } as CSSProperties} data-hit={hit || undefined}>
-                <button className="price-main" onClick={() => void openLink(one.url)} title={one.url}>
-                  <strong>{one.name || host(one.url)}</strong>
-                  <small className="mono">{host(one.url)}</small>
-                </button>
-                <div className="price-now">
-                  <span className="price-figure mono">{money(one.last_price, one.currency)}</span>
-                  {moved !== null && moved !== 0 && (
-                    <span className="price-move mono" data-dir={moved < 0 ? 'down' : 'up'}>
-                      {moved < 0 ? '▼' : '▲'} {Math.abs(moved * 100).toFixed(1)}%
-                    </span>
-                  )}
-                </div>
-                <small className="price-meta">
-                  {[
-                    one.started_price != null ? `from ${money(one.started_price, one.currency)}` : '',
-                    one.target != null ? `alert at ${money(one.target, one.currency)}` : '',
-                    one.last_error ? one.last_error : one.last_checked ? `read ${ago(one.last_checked)}` : 'not read yet',
-                  ]
-                    .filter(Boolean)
-                    .join(' · ')}
-                </small>
-                <button className="icon-btn" onClick={() => void watching.stop(one.watch_id)} aria-label={`Stop watching ${one.name || host(one.url)}`} title="Stop watching">
-                  <Icon name="x" size={15} />
-                </button>
-              </li>
-            )
-          })}
-        </ul>
-      )}
+        {watches.length === 0 ? (
+          <div className="k-empty">
+            <p>Nothing watched yet. Paste a product page above, or press Watch this price on a product page in your browser.</p>
+          </div>
+        ) : (
+          <ul className="k-card k-list">
+            {watches.map((one) => (
+              <PriceRow key={one.watch_id} watch={one} onStop={() => void watching.stop(one.watch_id)} />
+            ))}
+          </ul>
+        )}
+      </section>
     </section>
+  )
+}
+
+function PriceRow({ watch, onStop }: { watch: Watch; onStop: () => void }) {
+  const label = watch.name || host(watch.url)
+  const moved = moveOf(watch)
+  const dropped = moved != null && moved < 0
+  const hit = targetReached(watch)
+  const meta = [
+    watch.started_price != null ? `From ${moneyText(watch.started_price, watch.currency)}` : '',
+    watch.target != null ? `Target ${moneyText(watch.target, watch.currency)}` : '',
+    watch.last_error ? watch.last_error : watch.last_checked ? `Read ${ago(watch.last_checked)}` : 'Not read yet',
+  ].filter(Boolean)
+  return (
+    <li className="prices-row" data-hit={hit || undefined}>
+      <div className="prices-main">
+        <span className="prices-name">{label}</span>
+        <span className="prices-host">{host(watch.url)}</span>
+        <span className="prices-meta">{meta.join(' · ')}</span>
+      </div>
+      <div className="prices-figure">
+        <span className="prices-now">{moneyText(watch.last_price, watch.currency)}</span>
+        {moved != null && moved !== 0 && (
+          <span className="prices-move" data-dir={dropped ? 'down' : 'up'}>
+            {`${dropped ? '−' : '+'}${Math.abs(moved * 100).toFixed(1)}% ${dropped ? 'down' : 'up'}`}
+          </span>
+        )}
+        {hit && <span className="k-pill" data-tone="ok">Target reached</span>}
+      </div>
+      <div className="prices-row-actions">
+        <button type="button" className="k-btn" data-kind="quiet" data-size="sm" onClick={() => void openLink(watch.url)} title={watch.url}>Open page</button>
+        <button type="button" className="k-btn" data-kind="quiet" data-size="sm" onClick={onStop} aria-label={`Stop watching ${label}`}>Stop watching</button>
+      </div>
+    </li>
   )
 }

@@ -56,34 +56,19 @@
   width: min(1040px, calc(100% - 40px));
 }
 
+/* The landing is a k-screen narrow column: it centres itself and scrolls in
+   the column when the window is short. */
 .chat[data-thread='false'] .chat-col {
-  justify-content: flex-start;
-  padding-top: 44px;
-  padding-bottom: 24px;
+  width: 100%;
+  min-height: 0;
   overflow-y: auto;
 }
 
 .hello {
-  padding-bottom: 18px;
-  border-bottom: 1px solid var(--edge);
+  margin: 0;
 }
 
-/* The check desk: an index at the left, the one question under it. */
-.hello-index {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 0 14px;
-  color: var(--ink-3);
-  font-size: 12px;
-}
 
-.hello-index::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: var(--edge);
-}
 
 .hello h1 {
   max-width: 20ch;
@@ -111,14 +96,22 @@
 
 /* ---- composer ---- */
 
+.composer-root {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+}
+
 .composer {
   position: relative;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 12px 12px 10px;
-  background: var(--panel);
-  border: 1px solid var(--edge-strong);
+  padding: 12px 12px 10px 16px;
+  background: var(--sheet);
+  border: 1px solid var(--edge);
   border-radius: var(--r-l);
   box-shadow: none;
   transition: border-color var(--dur-2) var(--ease-out), box-shadow var(--dur-2) var(--ease-out);
@@ -129,46 +122,33 @@
   box-shadow: inset 0 0 0 1px var(--accent);
 }
 
-/* Find / Alt. / Research: one segmented control, the thumb slides to the pressed one. */
-.mode-slider {
-  display: inline-flex;
-  align-items: center;
-  gap: 0;
-  padding: 2px;
-  border: 1px solid var(--edge);
-  border-radius: var(--r-s);
-  background: var(--panel-2, color-mix(in oklab, var(--ink) 5%, transparent));
+/* On the landing the box is the one dominant element: it lifts off the page. */
+.chat[data-thread='false'] .composer {
+  padding-top: 16px;
+  box-shadow: var(--shadow-1);
 }
 
-.mode-seg {
-  position: relative;
-  height: 26px;
-  padding: 0 11px;
-  border: 0;
-  border-radius: var(--r-s);
-  background: none;
+/* In a conversation the box is a soft inset field at the foot of the page. */
+.chat[data-thread='true'] .composer {
+  background: var(--inset);
+  border-color: var(--edge);
+  box-shadow: none;
+}
+
+.composer-modes {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 0 4px;
+}
+
+.composer-mode-hint {
+  margin: 0;
   color: var(--ink-3);
-  font: inherit;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: color 0.15s ease;
+  font-size: 13.5px;
+  line-height: 1.4;
 }
-
-.mode-seg:hover:not(:disabled) { color: var(--ink); }
-.mode-seg[aria-checked='true'] { color: var(--ink); }
-.mode-seg:disabled { opacity: 0.5; cursor: default; }
-.mode-seg:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
-
-.mode-thumb {
-  position: absolute;
-  inset: 0;
-  border-radius: var(--r-s);
-  background: var(--panel);
-  box-shadow: 0 0 0 1px var(--edge), 0 1px 2px rgb(0 0 0 / 0.08);
-}
-
-.mode-label { position: relative; }
 
 .composer-field {
   width: 100%;
@@ -200,6 +180,49 @@
   position: relative;
 }
 
+.composer-tool {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--edge);
+  border-radius: var(--r-m);
+  background: transparent;
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 14px;
+  font-weight: var(--w-medium);
+  cursor: pointer;
+  transition: background-color var(--dur-2) var(--ease-out), color var(--dur-2) var(--ease-out);
+}
+
+.composer-tool:hover:not(:disabled) {
+  background: var(--select);
+  color: var(--ink);
+}
+
+.composer-tool:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.composer-agent {
+  gap: 6px;
+  height: 34px;
+  padding: 0 10px 0 8px;
+  font-size: 14px;
+}
+
+.composer-tag {
+  color: var(--ink-3);
+  font-size: 13px;
+}
+
+.composer-agent-name {
+  font-weight: var(--w-medium);
+}
+
 .send {
   display: grid;
   place-items: center;
@@ -226,112 +249,48 @@
   transform: none;
 }
 
-/* Recent checks are ruled ledger rows, not cards. */
-.recents {
-  margin-top: 28px;
-  counter-reset: check;
-}
+/* ---- the thread ---- */
 
-.recents h2 {
+/* The thread's title: its first question on one slim row, and how many were asked. */
+.thread-bar {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin: 0 0 6px;
-  padding: 0 2px;
-  color: var(--ink-2);
-  font-size: 14px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  flex: none;
+  min-height: 40px;
+  margin-bottom: 4px;
+  padding: 0 4px 8px;
+  border-bottom: 1px solid var(--edge);
 }
 
-.recents h2::before {
-  content: '02';
-  color: var(--ink-3);
-  font-family: var(--font);
-  font-size: 12px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-
-.recents h2::after {
-  content: '';
+.thread-title {
   flex: 1;
-  height: 1px;
-  background: var(--edge);
-}
-
-.recents ul {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 0;
+  min-width: 0;
   margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.recents li {
-  display: flex;
-  counter-increment: check;
-}
-
-.recent {
-  display: grid;
-  grid-template-columns: 30px minmax(0, 1fr) auto;
-  grid-template-areas:
-    'idx name meta'
-    'idx note note';
-  column-gap: 12px;
-  row-gap: 2px;
-  align-items: baseline;
-  width: 100%;
-  padding: 12px 2px;
-  border: 0;
-  border-top: 1px solid var(--edge);
-  border-radius: 0;
-  background: transparent;
-  text-align: left;
-  transition: background-color var(--dur-2) var(--ease-out);
-}
-
-.recent::before {
-  content: counter(check, decimal-leading-zero);
-  grid-area: idx;
-  color: var(--ink-3);
+  overflow: hidden;
+  color: var(--ink);
   font-family: var(--font);
-  font-size: 12px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-
-.recent:hover {
-  background: var(--accent-soft);
-}
-
-.recent:focus-visible {
-  outline-offset: -2px;
-}
-
-.recent-name {
-  grid-area: name;
-  font-size: 14.5px;
-  font-weight: 550;
-}
-
-.recent-note {
-  grid-area: note;
-  color: var(--ink-2);
-  font-size: 13px;
-}
-
-.recent-meta {
-  grid-area: meta;
-  margin: 0;
-  color: var(--ink-3);
-  font-size: 12px;
+  font-size: 15px;
+  font-weight: var(--w-semibold);
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* ---- the thread ---- */
+.thread-count {
+  flex: none;
+  color: var(--ink-3);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The window's own Sources button sits at the top right of a narrow chat. */
+@container chat (max-width: 1080px) {
+  .thread-bar {
+    padding-right: 150px;
+  }
+}
 
 .thread {
   display: flex;
@@ -365,10 +324,81 @@
   font-weight: 500;
 }
 
+/* An answer is a card: the reader's question is a ruled line, the answer a sheet. */
+.answer {
+  min-width: 0;
+  padding: 16px 20px 14px;
+  background: var(--sheet);
+  border: 1px solid var(--edge);
+  border-radius: var(--r-l);
+}
+
 .answer p {
   margin: 0;
-  font-size: 16px;
-  line-height: 1.65;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+/* Sources: numbered footnotes in a ruled list, the host in the body face. */
+.notes {
+  max-width: var(--measure);
+  margin-top: 14px;
+  padding-top: 8px;
+  border-top: 1px solid var(--edge);
+}
+
+.notes-title {
+  margin: 0 0 2px;
+  color: var(--ink-3);
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: var(--w-medium);
+  letter-spacing: 0;
+  line-height: 1.4;
+}
+
+.notes ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.note {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+  padding: 8px 0;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.note + .note {
+  border-top: 1px solid var(--edge);
+}
+
+.note-n {
+  flex: none;
+  width: 18px;
+  padding-top: 1px;
+  color: var(--ink-3);
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.note-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.note-host {
+  color: var(--ink-3);
+  font-family: var(--font);
+  font-size: 13px;
 }
 
 /* A card for a product an answer named. It is a row of a list, not a panel: the
@@ -527,8 +557,8 @@
 
 .md {
   max-width: var(--measure);
-  font-size: 16px;
-  line-height: 1.65;
+  font-size: 15px;
+  line-height: 1.6;
   overflow-wrap: anywhere;
 }
 
@@ -631,19 +661,6 @@
   overflow-wrap: anywhere;
 }
 
-.recent-name {
-  display: -webkit-box;
-  overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-}
-
-.recents li {
-  display: flex;
-}
-
-.recent {
   align-content: start;
 }
 
@@ -1093,63 +1110,41 @@ button.ask-head:hover {
 .followup-prompts > p { flex-basis: 100%; margin: 0; }
 .followup-prompts > button { white-space: normal; text-align: start; overflow-wrap: anywhere; }
 
-/* Ideas for you: a few prompts under the box, one press asks them. */
+/* Ideas: chips under the box. A press fills the box; the reader sends it. */
 .ideas {
-  margin-top: 14px;
-  padding: 10px 8px 6px;
-  border: 1px solid var(--edge);
-  border-radius: var(--r-l);
-  background: color-mix(in srgb, var(--panel) 92%, transparent);
-  -webkit-backdrop-filter: blur(6px);
-  backdrop-filter: blur(6px);
-}
-
-.ideas h2 {
-  margin: 0 0 6px;
-  padding: 0 4px;
-  color: var(--ink-3);
-  font-size: 12.5px;
-  font-weight: 500;
-}
-
-.ideas ul {
-  display: grid;
-  gap: 2px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.idea {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  padding: 8px 6px;
-  border: 0;
-  border-radius: var(--r-s);
-  background: none;
-  color: var(--ink);
-  font: inherit;
-  font-size: 14.5px;
-  text-align: left;
-  cursor: pointer;
-  transition: background 0.15s ease;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
 }
 
-.idea:hover:not(:disabled) { background: color-mix(in oklab, var(--ink) 6%, transparent); }
-.idea:disabled { opacity: 0.5; cursor: default; }
+.ideas > .k-caption {
+  margin: 0;
+}
 
-.idea-icon {
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  flex: none;
-  border: 1px solid var(--edge);
-  border-radius: var(--r-s);
-  background: var(--panel);
-  color: var(--ink-2);
+.ideas-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ideas-chip {
+  max-width: 100%;
+  height: auto;
+  min-height: 34px;
+  padding: 6px 12px;
+  text-align: left;
+  white-space: normal;
+  cursor: pointer;
+}
+
+.ideas-chip:hover:not(:disabled) {
+  background: var(--select);
+}
+
+.ideas-chip:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 /* ---- Prices: the price checker on its own page ---- */
@@ -1259,15 +1254,26 @@ button.ask-head:hover {
 }
 
 /* ---- the shelf: product boxes stacked at the edges of the home ---- */
+/* The shelf sits in the two gutters beside the 760px question column, so it can
+   never sit under a word. It is drawn only on a window 1280px or wider; the stacks
+   scale to the gutter (the left one is 3.6 boxes wide), and a narrower window has
+   no shelf at all. Behind the content, and it takes no press. */
 .shelf-wrap { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
 .chat-main { position: relative; z-index: 1; }
 .shelf {
-  --u: clamp(34px, 5.2vw, 64px);
+  display: none;
   --px-accent: var(--accent);
   --card: var(--panel);
   position: absolute;
   inset: 0;
   pointer-events: none;
+}
+
+@media (min-width: 1280px) {
+  .shelf {
+    display: block;
+    --u: clamp(24px, calc(((100vw - 992px) / 2 - 16px) / 3.6), 64px);
+  }
 }
 
 .shelf-side {
@@ -1336,28 +1342,10 @@ button.ask-head:hover {
   .shelf-box, .shelf-ware { animation: none; }
 }
 
-/* A narrow window keeps the right stack only, smaller; a phone drops the shelf. */
-@media (max-width: 900px) {
-  .shelf { --u: 30px; }
-  .shelf-left { display: none; }
-}
-@media (max-width: 560px) {
-  .shelf { display: none; }
-}
-
 /* The product pixel library leads a row or a column. Decorative: the name
    beside it carries the meaning, so it is hidden from assistive tech. */
 .product-glyph { flex: none; align-self: center; image-rendering: pixelated; }
 
-/* The number, the picture, the name and its meta: the picture is a column of
-   the row, not an inset inside the name, so every row's text starts at one x. */
-.recent {
-  grid-template-columns: 30px 26px minmax(0, 1fr) auto;
-  grid-template-areas:
-    'idx glyph name meta'
-    'idx glyph note note';
-}
-.recent .product-glyph { grid-area: glyph; }
 
 .qc-title { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .qc-title .qc-name { min-width: 0; }

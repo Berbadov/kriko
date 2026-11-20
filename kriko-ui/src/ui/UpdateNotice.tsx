@@ -30,7 +30,7 @@ export function UpdateNotice() {
         <div className="update-actions">
           {canInstall || release.engine ? (
             <button className="btn primary" onClick={() => void install()}>
-              Update now
+              Install update
             </button>
           ) : (
             <button className="btn primary" onClick={() => void openLink(release.page)} disabled={!release.page}>

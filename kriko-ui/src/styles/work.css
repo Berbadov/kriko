@@ -1,0 +1,398 @@
+/* The three work pages: Queue, History and For you. They compose the shared
+   vocabulary in system.css (k-screen, k-group, k-card, k-row, k-kpis, k-btn)
+   and add only what those pages need of their own. Every colour is a role
+   from tokens.css, so all four palettes apply without a rule here. */
+
+/* A line of plain words under a caption or inside a card. */
+.work-note {
+  margin: 0 4px;
+  color: var(--ink-3);
+  font-size: 13px;
+  line-height: 1.45;
+  max-width: 68ch;
+  font-variant-numeric: tabular-nums;
+}
+
+.work-note-in {
+  margin: 0;
+  padding: 14px 16px;
+}
+
+.work-note[data-ok='true'] {
+  color: var(--positive);
+}
+
+.work-hint {
+  display: block;
+  margin-top: 2px;
+  font-weight: var(--w-regular);
+  color: var(--ink-3);
+  font-size: 13px;
+}
+
+.work-path {
+  margin: 0 4px;
+  color: var(--ink-3);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+/* An empty place: the words are the point, so they read at body size. */
+.work-empty p {
+  margin: 0;
+  max-width: 62ch;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+/* A confirmation kept on the row it concerns: the question, then the answers. */
+.work-confirm {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  max-width: 60ch;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--ink-2);
+}
+
+/* A field with its one button, on one line that wraps when it must. */
+.work-inline,
+.work-inline-wide,
+.work-add {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.work-inline .k-input,
+.work-inline-wide .k-input,
+.work-add .k-input {
+  width: auto;
+  flex: 1 1 200px;
+}
+
+.work-inline-wide .work-short {
+  flex: 0 1 150px;
+}
+
+.work-add {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--edge);
+}
+
+.work-add .work-price {
+  flex: 0 1 120px;
+}
+
+/* A card with a form in it: the fields stack, the foot holds the one save. */
+.work-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.work-form .work-note {
+  margin: 0;
+}
+
+.work-form .work-card-foot {
+  padding: 0;
+  border: 0;
+}
+
+.work-area {
+  min-height: 84px;
+  resize: vertical;
+  line-height: 1.45;
+}
+
+.work-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 120px;
+  gap: 12px;
+}
+
+.work-weights {
+  display: grid;
+  gap: 10px;
+}
+
+.work-weight {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr) 28px;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+
+.work-weight input[type='range'] {
+  width: 100%;
+  accent-color: var(--brand);
+}
+
+.work-weight .mono {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.work-check-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+
+/* A card's foot: its one or two presses, under the content they act on. */
+.work-card-foot {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--edge);
+}
+
+/* The find field on History: the magnifier sits inside the input. */
+.work-search {
+  position: relative;
+  display: block;
+}
+
+.work-search > svg {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--ink-3);
+  pointer-events: none;
+}
+
+.work-search .k-input {
+  padding-left: 40px;
+  border-radius: var(--r-pill);
+}
+
+/* Keeps a row's words on the same x when its product has no picture. */
+.work-slot {
+  flex: none;
+  width: 32px;
+  height: 32px;
+}
+
+/* Queue ------------------------------------------------------------------ */
+
+.work-queue {
+  flex-wrap: wrap;
+  min-height: 60px;
+}
+
+.work-queue .k-row-main {
+  flex: 1 1 220px;
+  gap: 4px;
+}
+
+.work-queue[data-failed] .k-row-note {
+  color: var(--warn);
+}
+
+/* The report press sits under the reason, in the same words-on-a-pill shape as the row's buttons. */
+.work-queue .report-this {
+  align-self: flex-start;
+  min-height: 32px;
+  margin-top: 4px;
+  padding: 4px 12px;
+  border: 1px solid var(--edge-strong);
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: var(--w-medium);
+}
+
+.work-queue .report-this:hover {
+  background: var(--select);
+}
+
+/* The four steps as one segmented line: each segment fills with the brand
+   colour as the step passes, and the step in words sits beside it. */
+.work-steps-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
+  min-width: 0;
+}
+
+.work-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+  width: min(200px, 100%);
+}
+
+.work-step {
+  position: relative;
+  height: 6px;
+  overflow: hidden;
+  border-radius: var(--r-pill);
+  background: var(--select-strong);
+}
+
+.work-step::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--fill, 0%);
+  border-radius: inherit;
+  background: var(--brand);
+  transition: width calc(320ms * var(--tm)) var(--ease-out);
+}
+
+.work-steps-word {
+  color: var(--ink-3);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.work-queue[data-state='paused'] .work-steps-word {
+  color: var(--ink-2);
+}
+
+.work-elapsed {
+  min-width: 56px;
+  text-align: right;
+  color: var(--ink-2);
+  font-size: 14px;
+}
+
+.work-queue-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+/* History ---------------------------------------------------------------- */
+
+/* A check is a row with two parts: the part that opens it, and the words that act on it. */
+.work-check {
+  padding: 0 12px 0 0;
+  min-height: 56px;
+}
+
+.work-check:hover {
+  background: var(--select);
+}
+
+.work-check-open {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  min-height: 52px;
+  padding: 10px 0 10px 16px;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.work-check-open:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+.work-check-open .k-row-main {
+  min-width: 0;
+}
+
+.work-check-open .k-row-title,
+.work-check-open .k-row-note {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.work-check .k-row-control {
+  flex: none;
+}
+
+.work-check .k-row-value {
+  margin-right: 6px;
+  max-width: none;
+  white-space: nowrap;
+}
+
+.work-when {
+  color: var(--ink-3);
+}
+
+/* Research runs: the same row, with the undo as its one press. */
+.work-run {
+  padding: 10px 12px 10px 16px;
+  min-height: 56px;
+}
+
+.work-run .k-row-main {
+  min-width: 0;
+}
+
+.work-run .k-row-note {
+  overflow-wrap: anywhere;
+}
+
+.work-run[data-asking='true'] {
+  flex-wrap: wrap;
+}
+
+.work-run[data-asking='true'] .work-confirm {
+  flex: 1 1 100%;
+  justify-content: flex-start;
+}
+
+/* For you ---------------------------------------------------------------- */
+
+.work-due {
+  flex-wrap: wrap;
+  min-height: 60px;
+}
+
+.work-due .k-row-main {
+  flex: 1 1 200px;
+}
+
+.work-due .k-row-control {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.work-due .work-inline {
+  flex: 1 1 320px;
+  justify-content: flex-end;
+}
+
+/* Narrow: the page is one column, so the words of a row wrap under its title. */
+@media (max-width: 760px) {
+  .work-pair {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .work-weight {
+    grid-template-columns: 96px minmax(0, 1fr) 24px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .work-step::before {
+    transition: none;
+  }
+}

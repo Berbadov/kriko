@@ -1,0 +1,166 @@
+/* Data and updates, in Settings. Rows, cards, captions and buttons come from
+   system.css and settings.css; this file draws only what this section adds: the
+   blocks that open under a row, the job log's scrolling block, and the words
+   beside the backup, log and report controls. Every colour is a role in tokens.css. */
+
+.settings-data-path {
+  display: inline-block;
+  max-width: 34ch;
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.settings-data-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.settings-data-problem {
+  margin: 0 4px;
+}
+
+/* The block a row opens: one card under the section's rows. */
+.k-card.settings-data-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-top: 4px;
+  padding: 18px;
+  min-width: 0;
+}
+
+.settings-data-panel-body {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  min-width: 0;
+}
+
+.settings-data-block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.settings-data-block h4 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: var(--w-semibold);
+}
+
+.settings-data-words {
+  margin: 0;
+  max-width: 68ch;
+  color: var(--ink-2);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.settings-data-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border-radius: var(--r-m);
+  background: var(--inset);
+}
+
+.settings-data-status {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 14px;
+}
+
+/* The field of the report form: a word above the box, never a placeholder alone. */
+.settings-data-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.settings-data-field-label {
+  color: var(--ink-2);
+  font-size: 14px;
+  font-weight: var(--w-medium);
+}
+
+.settings-data-field textarea {
+  resize: vertical;
+  min-height: 110px;
+}
+
+.settings-data-report {
+  max-height: 300px;
+  margin: 0;
+  padding: 14px;
+  overflow: auto;
+  border-radius: var(--r-m);
+  background: var(--inset);
+  color: var(--ink-2);
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* The job log: its own scrolling block, with the filter row held at its top. */
+.settings-data-scroll {
+  container-type: inline-size;
+  max-height: min(640px, 70vh);
+  margin-top: 4px;
+  padding: 0 18px 18px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  border-radius: var(--r-l);
+  background: var(--sheet);
+  box-shadow: inset 0 0 0 1px var(--edge);
+}
+
+.settings-data-scroll .logs-filters {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 18px 0 12px;
+  background: var(--sheet);
+}
+
+.settings-data-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: var(--r-m);
+  background: var(--inset);
+  box-shadow: inset 0 0 0 1px var(--edge-control);
+  color: var(--ink-3);
+}
+
+.settings-data-search input {
+  flex: 1;
+  min-width: 0;
+  min-height: 38px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+}
+
+.settings-data-search input:focus {
+  outline: none;
+}
+
+.settings-data-search:focus-within {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}

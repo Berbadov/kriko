@@ -6,7 +6,8 @@
  *  estimate in EUR, TRY or USD reads the same numbers.
  *
  *  A missing rate is missing: `convert` returns null and the screen says the
- *  quote cannot be compared. It never falls back to 1.
+ *  quote cannot be compared. It never falls back to 1. The one exception is an
+ *  amount already in the target currency, which converts at 1 by definition.
  */
 
 export type Rates = Record<string, number | string | undefined>
@@ -19,6 +20,8 @@ export function rateOf(currency: string, rates: Rates): number | null {
 
 export function convert(amount: number | null, from: string, to: string, rates: Rates): number | null {
   if (amount == null || !Number.isFinite(amount)) return null
+  // The same currency on both sides cancels: no rate is needed, and none is invented.
+  if (String(from || '').toUpperCase() === String(to || '').toUpperCase()) return amount
   const source = rateOf(from, rates)
   const target = rateOf(to, rates)
   if (source == null || target == null) return null

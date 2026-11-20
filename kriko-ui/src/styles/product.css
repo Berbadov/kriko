@@ -1,0 +1,553 @@
+/* The product page: one product's dossier. Findings are ruled rows in an
+   evidence gutter, grouped by severity; procurement and the evidence dates sit
+   beside them from 1100px, and below that they follow the findings. Every rule
+   is scoped to `.product-page` so no other screen inherits it. The shared
+   vocabulary (k-card, k-pill, k-btn, k-notice, k-risk) comes from system.css. */
+
+.product-page {
+  gap: 26px;
+}
+
+/* ---- head ---- */
+
+.product-head {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.product-head-main {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+}
+
+.product-page .product-title {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 36px;
+  font-weight: var(--w-display);
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}
+
+.product-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.product-page .k-head-actions {
+  justify-content: flex-start;
+}
+
+/* ---- two columns ---- */
+
+.product-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 28px;
+  min-width: 0;
+}
+
+.product-main,
+.product-side {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
+}
+
+@media (min-width: 1100px) {
+  .product-columns {
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
+  }
+}
+
+.product-quiet {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.product-page .product-dust {
+  flex: none;
+  height: 180px;
+  border-radius: var(--r-l);
+  background: var(--sheet);
+  border: 1px solid var(--edge);
+  overflow: hidden;
+  color: var(--ink);
+}
+
+.product-page .product-dust canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.product-page .error-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ---- findings ---- */
+
+.product-findings {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  min-width: 0;
+}
+
+.product-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.product-caption {
+  margin: 0 0 4px;
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: var(--w-medium);
+  line-height: 1.3;
+  color: var(--ink-3);
+}
+
+/* A finding is a ruled row with the severity in the gutter, not a card. */
+.product-finding-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--edge);
+}
+
+.product-finding {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  align-items: start;
+  gap: 0 18px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--edge);
+}
+
+.product-finding[data-thin] .product-finding-body {
+  border-left: 2px dashed var(--edge-strong);
+  padding-left: 14px;
+}
+
+.product-gutter {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding-top: 2px;
+}
+
+/* The severity is a shape and a word; colour only adds to them.
+   Serious: a filled disc. Known issues: a half disc. Minor: a ring.
+   To check: a dashed ring. No reports: a disc in green. */
+.product-sev {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: var(--w-medium);
+  line-height: 1.2;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+
+.product-sev::before {
+  content: '';
+  flex: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  box-sizing: border-box;
+}
+
+.product-sev[data-level='serious'] {
+  color: var(--risk);
+}
+
+.product-sev[data-level='serious']::before {
+  background: currentColor;
+}
+
+.product-sev[data-level='known'] {
+  color: var(--warn);
+}
+
+.product-sev[data-level='known']::before {
+  background: linear-gradient(90deg, currentColor 50%, transparent 50%);
+}
+
+.product-sev[data-level='minor'] {
+  color: var(--ink-2);
+}
+
+.product-sev[data-level='check'] {
+  color: var(--ink-3);
+}
+
+.product-sev[data-level='check']::before {
+  border-style: dashed;
+}
+
+.product-sev[data-level='none'] {
+  color: var(--positive);
+}
+
+.product-sev[data-level='none']::before {
+  background: currentColor;
+}
+
+.product-count {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.product-finding-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.product-finding-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+}
+
+.product-finding-title strong {
+  font-size: 15px;
+  font-weight: var(--w-medium);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.product-finding p {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 14.5px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.product-finding p + p {
+  margin-top: 2px;
+}
+
+/* Sources are numbered footnotes under the finding. */
+.product-finding .claim-sources {
+  counter-reset: note;
+}
+
+.product-finding .claim-chip {
+  counter-increment: note;
+}
+
+.product-finding .claim-chip::before {
+  content: counter(note);
+  color: var(--ink-3);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.product-finding details > summary {
+  padding: 4px 0;
+  color: var(--ink-2);
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: 11.5px;
+}
+
+.product-none {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  padding: 14px 0;
+  border-top: 1px solid var(--edge);
+}
+
+.product-hidden {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 14px;
+}
+
+/* ---- specifications ---- */
+
+.product-specs {
+  border-top: 1px solid var(--edge);
+  padding-top: 4px;
+}
+
+.product-specs > summary {
+  padding: 10px 0;
+  color: var(--ink-2);
+  font-weight: var(--w-medium);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.product-specs dl {
+  display: grid;
+  gap: 10px;
+  margin: 4px 0 8px;
+}
+
+.product-specs dl > div {
+  display: grid;
+  grid-template-columns: minmax(110px, 0.34fr) 1fr;
+  gap: 4px 16px;
+  align-items: baseline;
+}
+
+.product-specs dt {
+  color: var(--ink-3);
+  font-size: 13px;
+}
+
+.product-specs dd {
+  min-width: 0;
+  margin: 0;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.product-specs dd blockquote,
+.product-costs blockquote {
+  margin: 4px 0 0;
+  padding-left: 10px;
+  border-left: 2px solid var(--edge-strong);
+  color: var(--ink-3);
+  font-size: 13px;
+}
+
+/* ---- questions and answers ---- */
+
+.product-talk {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+}
+
+.product-ask {
+  padding-top: 6px;
+}
+
+/* ---- procurement ---- */
+
+.product-procure {
+  min-width: 0;
+}
+
+.product-quote {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.product-quote-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+}
+
+.product-quote-estimate {
+  font-size: 15px;
+  font-weight: var(--w-medium);
+  overflow-wrap: anywhere;
+}
+
+.product-quote-note {
+  color: var(--ink-3);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.product-quote-price {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.product-landed {
+  font-family: var(--display);
+  font-size: 28px;
+  font-weight: var(--w-display);
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.product-quote-facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  color: var(--ink-2);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.product-quote-reasons {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.product-quote-reasons li::before {
+  content: '· ';
+  color: var(--ink-3);
+}
+
+/* ---- evidence dates and part prices ---- */
+
+.product-insights {
+  min-width: 0;
+}
+
+.product-insights-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.product-insights-top {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.product-insights-verified {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.product-insights-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.product-stale {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink-2);
+  font-size: 13px;
+}
+
+.product-stale .k-input {
+  width: auto;
+  min-height: 32px;
+  padding: 4px 8px;
+  font-size: 14px;
+}
+
+.product-insights .k-notice {
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+
+.product-subhead {
+  margin: 4px 0 0;
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: var(--w-medium);
+  line-height: 1.3;
+}
+
+.product-costs {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+}
+
+.product-costs li {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 10px;
+  border-top: 1px solid var(--edge);
+  overflow-wrap: anywhere;
+}
+
+.product-missing {
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.product-missing > summary {
+  padding: 4px 0;
+  cursor: pointer;
+}
+
+.product-missing ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}
+
+/* ---- narrow: one column, the gutter stacks above its finding ---- */
+
+@media (max-width: 760px) {
+  .product-page .product-title {
+    font-size: 28px;
+  }
+
+  .product-finding {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .product-specs dl > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .product-page .product-dust {
+    animation: none;
+  }
+}
