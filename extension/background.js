@@ -1871,11 +1871,20 @@ function _scrapeBody(scrape) {
 async function requestAnalysis(scrape, timings = {}) {
   const endpoint = `${await apiBase()}/api/analyze`;
   const startedAt = _now();
-  const response = await _fetchApp(endpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(_scrapeBody(scrape)),
-  });
+  let response;
+  try {
+    response = await _fetchApp(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(_scrapeBody(scrape)),
+    });
+  } catch (error) {
+    // Nothing is listening. That is the only failure the offline catalog may
+    // answer for; an app that is up and refuses (a 4xx/5xx below) is telling
+    // the reader something, and a stored catalog must not talk over it.
+    error.code = "APP_UNREACHABLE";
+    throw error;
+  }
   timings.analyze_fetch_ms = _elapsed(startedAt);
 
   if (!response.ok) {
@@ -2113,7 +2122,7 @@ async function _runAnalysisForTab(tabId, url, storageKey, { fresh = false, auto 
       // The app is not running. The catalogs in this browser are the answer
       // then, if the reader turned them on and one is stored; otherwise the
       // engine's error is the truest thing we have.
-      const fallback = hasOffline()
+      const fallback = hasOffline() && error.code === "APP_UNREACHABLE"
         ? await KrikoOffline.lookup(extensionApi, scrape).catch(() => null)
         : null;
       if (!fallback) throw error;
