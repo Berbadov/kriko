@@ -105,17 +105,17 @@ A diagram wears the colours of the desktop app (`kriko-ui/src/styles/tokens.css`
 Start each diagram with this line, without a change:
 
 ```text
-%%{init: {"theme":"base","themeVariables":{"fontFamily":"ui-monospace, SFMono-Regular, Consolas, monospace","primaryColor":"#090E1B","primaryTextColor":"#F2F5FF","primaryBorderColor":"#1F4FFF","lineColor":"#86A3FF","secondaryColor":"#1739C2","tertiaryColor":"#080B16","noteBkgColor":"#BFE4FF","noteTextColor":"#05070F","actorBkg":"#090E1B","actorTextColor":"#F2F5FF","actorBorder":"#1F4FFF","signalColor":"#86A3FF","signalTextColor":"#86A3FF"}}}%%
+%%{init: {"theme":"base","themeVariables":{"fontFamily":"Inter, system-ui, sans-serif","primaryColor":"#15171A","primaryTextColor":"#EDEDEA","primaryBorderColor":"#5AA9F7","lineColor":"#5AA9F7","secondaryColor":"#1C1F23","tertiaryColor":"#0E0F11","noteBkgColor":"#FFEED3","noteTextColor":"#9A3D00","actorBkg":"#15171A","actorTextColor":"#EDEDEA","actorBorder":"#5AA9F7","signalColor":"#5AA9F7","signalTextColor":"#5AA9F7"}}}%%
 ```
 
 Colour a node by its function. Copy only the lines that you use:
 
 ```text
-classDef brand  fill:#1F4FFF,stroke:#86A3FF,color:#F2F5FF
-classDef plain  fill:#090E1B,stroke:#3A4156,color:#C9D1EA
-classDef ice    fill:#BFE4FF,stroke:#1F4FFF,color:#05070F
-classDef danger fill:#FF6B5E,stroke:#05070F,color:#05070F
-classDef mark   fill:#E8C04B,stroke:#05070F,color:#05070F
+classDef brand  fill:#5AA9F7,stroke:#8CC6FF,color:#0B1020
+classDef plain  fill:#15171A,stroke:#3C454F,color:#9A9DA4
+classDef ice    fill:#1C1F23,stroke:#5AA9F7,color:#EDEDEA
+classDef danger fill:#9A3D00,stroke:#FFC27A,color:#FFF8ED
+classDef mark   fill:#FF8A1F,stroke:#C85A06,color:#1A1206
 ```
 
 | Class | Use it for |
@@ -123,10 +123,10 @@ classDef mark   fill:#E8C04B,stroke:#05070F,color:#05070F
 | `brand` | The subject of the diagram. One node or two nodes. |
 | `plain` | Everything else. |
 | `ice` | What the reader sees or types: a screen, a command, a result. |
-| `danger` | A refusal, a failure, or a red line. |
+| `danger` | A refusal or a failure. It is amber, never red. |
 | `mark` | One node only: the answer, or the problem that Kriko shows. |
 
-The lines are `BRAND_BRIGHT` (`#86A3FF`). Do not set a background, because the
+The lines are the link colour (`#5AA9F7` on dark). Do not set a background, because the
 page draws it.
 
 ## Code comments

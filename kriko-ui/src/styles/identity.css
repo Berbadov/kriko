@@ -1,8 +1,10 @@
 /* The identity layer, last in the cascade: it changes how things look and
-   never where they sit. Type is a tight grotesk; corners are cut paper, 2/4/6.
-   A finding is a ruled ledger row, not a card: the severity mark sits in the
-   evidence gutter, and the rule under the row repeats the severity by shape.
-   The rule draws once as the row enters, in 180ms. */
+   never where they sit. Newsreader sets the titles, Inter the reading. Corners
+   are soft, 8/10/12/16, and a press is a pill; the pixel art stays square.
+   A finding is a ruled ledger row, not a card: the status badge sits in the
+   evidence gutter and carries the severity. The divider under every row is the
+   same quiet hairline, so a page of findings never turns amber. It draws once
+   as the row enters, in 180ms. */
 
 .risk-list > li {
   position: relative;
@@ -23,28 +25,6 @@
   animation: rule-draw var(--dur-3) var(--ease-out) both;
 }
 
-/* serious: the accent, drawn heavy */
-.risk-list > li:has(.level[data-level='critical'])::after,
-.risk-list > li:has(.level[data-level='high'])::after {
-  color: var(--accent);
-  background: linear-gradient(currentColor, currentColor) 0 100% / 100% 3px no-repeat;
-}
-
-/* to check: the plain ink, with ticks */
-.risk-list > li:has(.level[data-level='medium'])::after {
-  color: var(--ink-2);
-  background:
-    linear-gradient(currentColor, currentColor) 0 100% / 100% 1px no-repeat,
-    repeating-linear-gradient(90deg, currentColor 0 1px, transparent 1px 7px) 0 100% / 100% 5px no-repeat,
-    repeating-linear-gradient(90deg, currentColor 0 1px, transparent 1px 35px) 0 100% / 100% 8px no-repeat;
-}
-
-/* a good sign: quieter, broken */
-.risk-list > li:has(.level[data-level='low'])::after {
-  color: var(--ink-3);
-  background: repeating-linear-gradient(90deg, currentColor 0 12px, transparent 12px 20px) 0 100% / 100% 1px no-repeat;
-}
-
 @keyframes rule-draw {
   from {
     transform: scaleX(0);
@@ -55,35 +35,51 @@
 }
 
 .risk-list strong {
-  font-weight: 750;
+  font-weight: 650;
   letter-spacing: -0.02em;
 }
 
-/* Big titles: the display face at its heaviest, close, as on the phone. */
+/* Big titles: Newsreader, one step lighter than the body's bold, close. */
 .hello h1 {
-  font-weight: var(--w-bold);
-  letter-spacing: -0.04em;
-  line-height: 1.02;
+  font-weight: var(--w-display);
+  letter-spacing: -0.02em;
+  line-height: 1.05;
 }
 
 .page-head h1 {
-  font-weight: var(--w-bold);
-  letter-spacing: -0.04em;
-  line-height: 1.02;
+  font-weight: var(--w-display);
+  letter-spacing: -0.02em;
+  line-height: 1.08;
 }
 
 .drawer[data-panel='settings'] .drawer-head h2 {
-  font-weight: var(--w-bold);
-  letter-spacing: -0.035em;
+  font-weight: var(--w-display);
+  letter-spacing: -0.02em;
 }
 
-/* Primary buttons are flat cut-paper fills: the accent, with no gradient and no glow. */
+/* Primary buttons are the structure colour: navy on paper, sky at night. */
 .btn.primary,
 .send,
 button[data-variant='primary'] {
-  background: var(--accent-fill);
-  color: var(--accent-ink);
+  background: var(--brand);
+  color: var(--on-brand);
+  border-color: transparent;
   box-shadow: none;
+}
+
+.btn.primary:hover:not(:disabled),
+button[data-variant='primary']:hover:not(:disabled) {
+  background: var(--brand-strong);
+  border-color: transparent;
+}
+
+/* A form control's outline says it is a control, so it needs 3:1. The rule
+   comes last and wins on the field's own border colour; width and style stay
+   with the component that draws them. */
+input:not([type='checkbox']):not([type='radio']):not([type='range']),
+select,
+textarea {
+  border-color: var(--edge-control);
 }
 
 /* The product rebuilt in dust, above the check: a strip of the page's own
