@@ -132,7 +132,8 @@ def rank_quotes(quotes: list[dict], *, estimate_currency: str, rates: dict,
             row["landed"] = None
             row["rank_reasons"] = [f"no {currency} to {estimate_currency} rate, so it cannot be compared"]
         else:
-            gross = price * (1 + _float(row.get("vat_rate")) / 100) if not row.get("vat_included") else price
+            vat = _float(row.get("vat_rate")) or 0.0
+            gross = price if row.get("vat_included") else price * (1 + vat / 100)
             row["landed"] = round(gross * rate, 4)
             row["rank_reasons"] = [
                 f"{gross:.2f} {currency} gross at 1 {currency} = {rate:g} {estimate_currency}"
