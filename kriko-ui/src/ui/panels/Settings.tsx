@@ -31,7 +31,9 @@ const PAGE_OPTIONS: IconOption<SettingsPage>[] = SETTINGS_PAGES.map((page) => ({
 const THEMES: IconOption<ThemePref>[] = [
   { value: 'system', label: 'System', icon: <Icon name="monitor" size={22} /> },
   { value: 'dark', label: 'Dark', icon: <MoonIcon /> },
-  { value: 'light', label: 'Light', icon: <SunIcon /> },
+  { value: 'gray', label: 'Gray', icon: <MoonIcon /> },
+  { value: 'paper', label: 'Paper', icon: <SunIcon /> },
+  { value: 'white', label: 'White', icon: <SunIcon /> },
 ]
 const PROFILES: IconOption<Profile>[] = [
   { value: 'calm', label: 'Calm', icon: <LevelIcon level={1} /> },

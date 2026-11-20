@@ -9,7 +9,11 @@ import {
 } from 'react'
 import type { Transition } from 'motion/react'
 
-export type ThemePref = 'system' | 'dark' | 'light'
+/** The phone app's four palettes, and the machine's own. */
+export type ThemePref = 'system' | 'dark' | 'gray' | 'paper' | 'white'
+export const THEME_PREFS: readonly ThemePref[] = ['system', 'dark', 'gray', 'paper', 'white']
+/** Which palettes are light. The rest are dark. */
+const LIGHT_THEMES: readonly ThemePref[] = ['paper', 'white']
 export type Profile = 'calm' | 'standard' | 'vivid'
 
 /** How long and how far each profile moves, against Standard. */
@@ -84,9 +88,11 @@ function useInFront(): boolean {
 }
 
 export function PrefsProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<ThemePref>(() =>
-    read('kriko.theme', ['system', 'dark', 'light'] as const, 'system'),
-  )
+  const [theme, setThemeState] = useState<ThemePref>(() => {
+    // 'light' was the one light palette before there were four: it is paper.
+    const stored = read('kriko.theme', [...THEME_PREFS, 'light'] as const, 'system')
+    return stored === 'light' ? 'paper' : stored
+  })
   const [profile, setProfileState] = useState<Profile>(() =>
     read('kriko.profile', ['calm', 'standard', 'vivid'] as const, 'standard'),
   )
@@ -109,7 +115,7 @@ export function PrefsProvider({ children }: { children: ReactNode }) {
     write('kriko.reduce', r ? '1' : '0')
   }, [])
 
-  const resolved: 'dark' | 'light' = theme === 'system' ? (systemLight ? 'light' : 'dark') : theme
+  const resolved: 'dark' | 'light' = theme === 'system' ? (systemLight ? 'light' : 'dark') : LIGHT_THEMES.includes(theme) ? 'light' : 'dark'
   const on = !(reduce || osReduce) && front
 
   useEffect(() => {
