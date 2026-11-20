@@ -15,6 +15,15 @@ import { Icon } from '../ui/Icon'
  *  a line without a price is counted, never read as free. */
 
 const SEVERITY_ORDER = ['critical', 'high', 'medium', 'low', 'unrated', 'unknown']
+const SEVERITY_WORD: Record<string, string> = {
+  critical: 'Serious',
+  high: 'Serious',
+  medium: 'Known issues',
+  low: 'Minor',
+  none: 'No reports',
+  unrated: 'To check',
+  unknown: 'To check',
+}
 const severityRank = (severity: string) => {
   const at = SEVERITY_ORDER.indexOf((severity || '').toLowerCase())
   return at === -1 ? SEVERITY_ORDER.length : at
@@ -153,7 +162,7 @@ export function EstimateScreen() {
       if (!ended) return
       if (ended.state !== 'succeeded') throw new EngineError(0, ended.message || `The research ${ended.state}.`)
       const fresh = await loadClaims(line.subject_id)
-      mark(false, `Done — ${fresh.claims.length} known issues`)
+      mark(false, `Done. ${fresh.claims.length} ${fresh.claims.length === 1 ? 'risk' : 'risks'} kept.`)
       void research.reload()
     } catch (error) {
       mark(false, error instanceof Error ? error.message : 'The research failed.')
@@ -322,7 +331,7 @@ export function EstimateScreen() {
         <header className="estimate-head">
           <div className="hello-index mono" aria-hidden="true">04 / estimate</div>
           <h1>Estimate</h1>
-          <p className="muted">Connect the engine to build a cost estimate from the installed catalogs and export it as Excel or CSV.</p>
+          <p className="muted">Connect the engine to build an estimate from the installed catalogs.</p>
         </header>
       </section>
     )
@@ -333,7 +342,7 @@ export function EstimateScreen() {
       <header className="estimate-head">
         <div className="hello-index mono" aria-hidden="true">04 / estimate</div>
         <h1>Estimate</h1>
-        <p className="muted">Pick equipment from the catalogs, price it, forecast it, and take the file. Research a line for what is known to go wrong with it.</p>
+        <p className="muted">Pick equipment, price it, forecast it, export it.</p>
       </header>
 
       <form className="estimate-bar" onSubmit={(event) => void save(event)}>
@@ -384,7 +393,7 @@ export function EstimateScreen() {
       </div>
 
       {lines.length === 0 ? (
-        <p className="muted estimate-empty">No equipment yet. Search above and add a line — or load a saved estimate.</p>
+        <p className="muted estimate-empty">No equipment yet. Search above and add a line, or load a saved estimate.</p>
       ) : (
         <table className="estimate-lines">
           <thead>
@@ -395,10 +404,10 @@ export function EstimateScreen() {
               <Fragment key={`${line.pack_id}:${line.subject_id}`}>
                 <tr>
                   <td><strong>{line.label}</strong></td>
-                  <td className="mono muted">{line.pack_id}</td>
+                  <td className="muted tnum">{line.pack_id}</td>
                   <td className="num"><input inputMode="numeric" value={String(line.quantity)} onChange={(event) => { const v = Number.parseInt(event.target.value, 10); patchLine(index, { quantity: Number.isFinite(v) && v > 0 ? v : 1 }) }} aria-label="Quantity" /></td>
                   <td className="num"><input inputMode="decimal" value={line.unit_price == null ? '' : String(line.unit_price)} onChange={(event) => patchLine(index, { unit_price: num(event.target.value) })} placeholder="—" aria-label={`Unit price for ${line.label}`} /></td>
-                  <td className="num mono">{line.unit_price == null ? '—' : money(line.quantity * line.unit_price, currency)}</td>
+                  <td className="num">{line.unit_price == null ? '—' : money(line.quantity * line.unit_price, currency)}</td>
                   <td className="estimate-line-actions">
                     <button className="icon-btn" onClick={() => void toggleInfo(line)} aria-label={`Product information for ${line.label}`} title="Product information">
                       <Icon name={expanded === line.subject_id ? 'collapse' : 'expand'} size={15} />
@@ -421,12 +430,19 @@ export function EstimateScreen() {
                         const found = claims[line.subject_id]
                         if (!found) return <span className="muted">Reading the product…</span>
                         const sorted = [...found.claims].sort((a, b) => severityRank(a.severity) - severityRank(b.severity))
-                        if (!sorted.length) return <span className="muted">The catalog knows no issues for this one yet. Press the research button to look deeper.</span>
+                        if (!sorted.length) return (
+                          <p className="estimate-none">
+                            <span className="level" data-level="none">No reports</span>
+                            <span className="muted">Research this line to look deeper.</span>
+                          </p>
+                        )
                         return (
                           <ul className="estimate-claims">
                             {sorted.slice(0, 8).map((claim) => (
                               <li key={claim.claim_id}>
-                                <span className="level" data-level={(claim.severity || 'unknown').toLowerCase()}>{claim.severity}</span>
+                                <span className="level" data-level={(claim.severity || 'unknown').toLowerCase()}>
+                                  {SEVERITY_WORD[(claim.severity || 'unknown').toLowerCase()] ?? 'To check'}
+                                </span>
                                 <strong>{claim.title}</strong>
                                 <span className="muted">{claim.domain}{claim.via ? ` · via ${claim.via}` : ''}</span>
                               </li>
@@ -458,24 +474,24 @@ export function EstimateScreen() {
           <tbody>
             {model.rows.map((row) => (
               <tr key={row.year}>
-                <td className="num mono">{row.year}</td>
-                <td className="num mono">{row.capital ? money(row.capital, currency) : ''}</td>
-                <td className="num mono">{row.maintenance ? money(row.maintenance, currency) : ''}</td>
-                <td className="num mono">{row.depreciation ? money(row.depreciation, currency) : ''}</td>
-                <td className="num mono">{money(row.cash, currency)}</td>
-                <td className="num mono">{money(row.discounted, currency)}</td>
-                <td className="num mono">{money(row.cumulative, currency)}</td>
+                <td className="num">{row.year}</td>
+                <td className="num">{row.capital ? money(row.capital, currency) : ''}</td>
+                <td className="num">{row.maintenance ? money(row.maintenance, currency) : ''}</td>
+                <td className="num">{row.depreciation ? money(row.depreciation, currency) : ''}</td>
+                <td className="num">{money(row.cash, currency)}</td>
+                <td className="num">{money(row.discounted, currency)}</td>
+                <td className="num">{money(row.cumulative, currency)}</td>
               </tr>
             ))}
           </tbody>
           <tfoot>
             <tr>
               <td className="num">Total</td>
-              <td className="num mono">{money(model.capital, currency)}</td>
-              <td className="num mono">{money(model.maintenance, currency)}</td>
-              <td className="num mono">{money(model.depreciation, currency)}</td>
-              <td className="num mono">{money(model.cash, currency)}</td>
-              <td className="num mono" colSpan={2}>NPV {money(model.npv, currency)}</td>
+              <td className="num">{money(model.capital, currency)}</td>
+              <td className="num">{money(model.maintenance, currency)}</td>
+              <td className="num">{money(model.depreciation, currency)}</td>
+              <td className="num">{money(model.cash, currency)}</td>
+              <td className="num" colSpan={2}>NPV {money(model.npv, currency)}</td>
             </tr>
           </tfoot>
         </table>

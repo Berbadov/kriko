@@ -345,8 +345,8 @@ async function notify(tab, text) {
         box.textContent = message;
         box.style.cssText =
           "position:fixed;z-index:2147483647;right:16px;bottom:16px;max-width:320px;" +
-          "padding:10px 12px;border-radius:4px;font:13px/1.45 'Segoe UI',system-ui,sans-serif;" +
-          "background:#1b2129;color:#e9ecef;border:1px solid rgba(255,255,255,.18)";
+          "padding:10px 12px;border-radius:10px;font:13px/1.45 system-ui,'Segoe UI',sans-serif;" +
+          "background:#15171a;color:#ededea;border:1px solid rgba(237,237,234,.18)";
         document.documentElement.appendChild(box);
         setTimeout(() => box.remove(), 6000);
       },
@@ -1795,17 +1795,23 @@ async function _updateBadgeForResult(result, tabId) {
   const highCount = claims.filter((r) => r.severity === "high").length;
 
   let badgeText = "";
-  let badgeColor = "#2d7b41"; // low green
+  let badgeColor = "#5b6472";
+  let badgeInk = "#ededea";
   if (highCount > 0) {
     badgeText = String(highCount);
-    badgeColor = "#b5392f"; // high red
+    badgeColor = "#ff8a1f"; // serious: the one solid amber mark
+    badgeInk = "#1a1206";
   } else if (claims.length > 0) {
     badgeText = String(claims.length);
-    badgeColor = "#a3641a"; // medium orange
+    badgeColor = "#9a3d00"; // known issues: a deeper amber
+    badgeInk = "#fff8ed";
   }
 
   await extensionApi.action.setBadgeText({ text: badgeText, tabId });
   await extensionApi.action.setBadgeBackgroundColor({ color: badgeColor, tabId });
+  if (extensionApi.action.setBadgeTextColor) {
+    await extensionApi.action.setBadgeTextColor({ color: badgeInk, tabId }).catch(() => {});
+  }
 }
 
 // ── scraping ────────────────────────────────────────────────────────────
@@ -2290,8 +2296,11 @@ async function checkBuyerAlerts() {
     const items = alerts.items || [];
     const due = bought.due || [];
     const count = items.length + due.length;
-    await extensionApi.action.setBadgeText({ text: count ? "↓" : "" });
-    if (count) await extensionApi.action.setBadgeBackgroundColor({ color: "#1f4fff" });
+    await extensionApi.action.setBadgeText({ text: count ? "\u2193" : "" });
+    if (count) {
+      await extensionApi.action.setBadgeBackgroundColor({ color: "#ff8a1f" });
+      if (extensionApi.action.setBadgeTextColor) await extensionApi.action.setBadgeTextColor({ color: "#1a1206" }).catch(() => {});
+    }
     if (!extensionApi.notifications || !extensionApi.notifications.create) return;
     const told = new Set((await extensionApi.storage.local.get("krikoToldAbout")).krikoToldAbout || []);
     for (const one of items) {
