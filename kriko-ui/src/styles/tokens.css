@@ -1,22 +1,28 @@
 /* Every colour, size and time in the interface comes from here.
    Dark is the first theme. `data-theme` is "system", "dark" or "light".
 
-   The dossier: paper and ink. Light is drafting paper, dark is blue-black
-   graphite. One navy carries meaning; severity is never a traffic light and the
-   rule under a finding repeats it by shape. Radii are cut paper: 2 / 4 / 6.
-   Surfaces are flat: no resting shadow, no decorative gradient, no glass. */
+   The approved Kriko system: paper and ink, navy on paper and sky at night for
+   structure, one green for a price that fell or "No reports", and amber used
+   only where something needs attention: a serious or recalled status, a
+   "Known issues" outline, a price that rose, an unread count, focus. Cards and
+   controls are soft; pixel art stays square. The full system, the ramp with
+   contrast ratios, is in `kriko-brand/DESIGN.md`. */
 
 :root {
   --font: 'Inter Variable', system-ui, sans-serif;
-  --display: 'Chivo Mono Variable', 'Inter Variable', ui-monospace, monospace;
-  --mono: 'Geist Mono Variable', ui-monospace, monospace;
+  --display: 'Newsreader Variable', 'Newsreader', Georgia, serif;
+  /* Mono is not a brand face. It appears in code and logs only. */
+  --mono: ui-monospace, 'Cascadia Mono', Consolas, 'SF Mono', Menlo, monospace;
 
   /* One step up from the old scale, so the weight lives here and not in a
-     hundred rules: regular 500, medium 600, semibold 700. */
+     hundred rules: regular 500, medium 600, semibold 700. A display face is
+     set one step lighter than the body, because a serif at 600 already reads
+     heavy. */
   --w-regular: 500;
   --w-medium: 600;
   --w-semibold: 700;
   --w-bold: 800;
+  --w-display: 600;
 
   /* The font the reader chose in Settings; the default is Inter. */
   --set-font: var(--font);
@@ -25,10 +31,13 @@
   --tm: 1;
   --dm: 1;
 
-  --r-s: 2px;
-  --r-m: 4px;
-  --r-l: 6px;
-  --r-xl: 6px;
+  /* Soft controls, square pixels: 8 / 10 / 12 / 16, and pills for presses. */
+  --r-s: 8px;
+  --r-m: 10px;
+  --r-l: 12px;
+  --r-xl: 16px;
+  --r-pill: 999px;
+  --r-0: 0;
 
   --gap-1: 4px;
   --gap-2: 8px;
@@ -40,147 +49,297 @@
   --rail-w: 244px;
   --rail-w-min: 68px;
 
-  /* one reading measure for prose, and the three motion lengths in use */
+  /* one reading measure for prose */
   --measure: 68ch;
+
   --dur-1: calc(120ms * var(--tm));
   --dur-2: calc(160ms * var(--tm));
   --dur-3: calc(180ms * var(--tm));
 
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-enter: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-exit: cubic-bezier(0.7, 0, 0.84, 0);
   --ease-io: cubic-bezier(0.65, 0, 0.35, 1);
 
   color-scheme: dark;
 
-  /* dark: blue-black graphite */
-  --ground: #101418;
-  --raise: #222a33;
-  --panel: #1b2129;
-  --panel-2: #222a33;
-  --edge: rgba(255, 255, 255, 0.09);
-  --edge-strong: rgba(255, 255, 255, 0.18);
-  --ink: #e9ecef;
-  --ink-2: #a6b0ba;
-  --ink-3: #87929d;
-  --accent: #6e96c8;
-  --accent-hi: #8fb0d8;
-  --accent-fill: #2a4e78;
-  --accent-ink: #ffffff;
-  --accent-soft: rgba(110, 150, 200, 0.14);
-  --warm: #6e96c8;
-  --ok: #87929d;
-  --warn: #a6b0ba;
-  --risk: #6e96c8;
-  --ok-text: #87929d;
-  --warn-text: #a6b0ba;
-  --risk-text: #6e96c8;
-  --on-risk: #101418;
-  --on-warn: #101418;
-  /* data companions: the one hue, plus quieter greys */
-  --violet: #6e96c8;
-  --teal: #a6b0ba;
-  --mint: #87929d;
-  --sky: #a6b0ba;
-  --bar: var(--accent);
-  --on-fill: #101418;
+  /* dark: paper after dark */
+  --ground: #0e0f11;
+  --sheet: #15171a;
+  --raise: #1c1f23;
+  --inset: #111316;
+  --edge: rgba(237, 237, 234, 0.1);
+  --edge-strong: rgba(237, 237, 234, 0.22);
+  --edge-soft: rgba(237, 237, 234, 0.06);
+  --edge-control: #666a70;
+  --ink: #ededea;
+  --ink-2: #a8abb1;
+  --ink-3: #9a9da4;
+  --brand: #5aa9f7;
+  --brand-strong: #8cc6ff;
+  --on-brand: #0b1020;
+  --link: #5aa9f7;
+  --focus: #ffc27a;
+  --selection: #4b95cf;
+  /* A selected row, an active tab, a hover: a quiet neutral tint, never amber. */
+  --select: rgba(237, 237, 234, 0.07);
+  --select-strong: rgba(237, 237, 234, 0.11);
+
+  /* The amber ramp. Only the status and attention marks below may use it. */
+  --amber-50: #fff8ed;
+  --amber-100: #ffeed3;
+  --amber-200: #ffdcae;
+  --amber-300: #ffc27a;
+  --amber-400: #ffa144;
+  --amber-500: #ff8a1f;
+  --amber-600: #f0740d;
+  --amber-700: #c85a06;
+  --amber-800: #9a3d00;
+  --amber-900: #6b2800;
+  --on-attention: #1a1206;
+  /* Solid amber, for Recalled and Serious marks only. */
+  --attention: #ff8a1f;
+  --serious: #ffc27a;
+  --serious-fill: var(--amber-500);
+  /* The outline badge: "Known issues". */
+  --caution: #ffc27a;
+  --caution-fill: rgba(255, 161, 68, 0.08);
+  --caution-edge: rgba(255, 194, 122, 0.60);
+  --price-up: #ffc27a;
+
+  /* One green, for a price that fell and for "No reports". Never decoration. */
+  --positive: #5fd3a0;
+  --positive-soft: rgba(95, 211, 160, 0.12);
+  --positive-edge: rgba(95, 211, 160, 0.4);
+  --price-down: #5fd3a0;
+
+  /* Sky is information: a link, a source, a page to check. */
+  --check: #7cb8ff;
+  --check-soft: rgba(124, 184, 255, 0.12);
+  --check-edge: rgba(124, 184, 255, 0.4);
+
+  /* Data keeps three quiet steps. */
+  --data-1: var(--brand);
+  --data-2: var(--px-2);
+  --data-3: var(--ink-3);
+
+  /* The pixel library's own colours: a different ramp at night, never the
+     light navy dimmed. */
+  --px-1: #173a5b;
+  --px-2: #25618f;
+  --px-3: #4b95cf;
+  --px-ink: #ededea;
+  --px-paper: #15171a;
+  --px-accent: #4b95cf;
+
+  --bar: var(--brand);
+  --bar-done: var(--brand);
+  --on-fill: var(--on-brand);
   --lit: transparent;
   --sunk: rgba(0, 0, 0, 0.18);
-  --pill-bg: var(--panel);
+  --pill-bg: var(--sheet);
   --pill-edge: var(--edge-strong);
-  --step-0: var(--ink-3);
-  --step-1: var(--ink-2);
-  --step-2: var(--accent);
-  --step-3: var(--accent);
-  --bar-done: var(--ink-3);
-  --inset: color-mix(in srgb, var(--ink) 5%, var(--ground));
+  --step-0: #173a5b;
+  --step-1: #25618f;
+  --step-2: #4b95cf;
+  --step-3: #7cb8ff;
   --scrim: rgba(0, 0, 0, 0.7);
-  /* flat where the old interface was glass: the token names stay, the effect does not */
-  --glass: var(--panel);
+
+  /* Flat by default; a shadow belongs to something that floats. */
+  --glass: var(--sheet);
   --glass-edge: var(--edge);
-  --shadow-1: none;
-  --shadow-2: none;
-  --gl-fill: var(--panel);
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-2: 0 18px 40px -12px rgba(0, 0, 0, 0.72), 0 2px 6px rgba(0, 0, 0, 0.4);
+  --gl-fill: var(--sheet);
   --gl-rim: var(--edge);
   --gl-line: var(--edge);
   --gl-hair: var(--edge);
-  --gl-solid: var(--panel);
+  --gl-solid: var(--sheet);
   --gl-shadow: none;
+
+  /* Names the older rules still read. Each one points at a role above, so a
+     component keeps working while it is moved to the semantic name.
+     `--warn` and `--risk` are neutral on purpose: distress is said in words,
+     and amber is not sprayed over every failure. */
+  --panel: var(--sheet);
+  --panel-2: var(--raise);
+  --accent: var(--link);
+  --accent-hi: var(--brand-strong);
+  --accent-fill: var(--brand);
+  --accent-ink: var(--on-brand);
+  --accent-soft: var(--select);
+  --warm: var(--brand);
+  --ok: var(--brand);
+  --ok-text: var(--brand);
+  --warn: var(--ink-2);
+  --warn-text: var(--ink-2);
+  --risk: var(--ink-2);
+  --risk-text: var(--ink-2);
+  --on-risk: var(--on-attention);
+  --on-warn: var(--on-attention);
+  --violet: var(--data-1);
+  --teal: var(--data-2);
+  --mint: var(--brand);
+  --sky: var(--data-2);
 }
 
-/* light: drafting paper */
+/* light: paper and ink */
 @media (prefers-color-scheme: light) {
   :root:not([data-theme='dark']) {
     color-scheme: light;
-    --ground: #edeeef;
+    --ground: #f5f5f3;
+    --sheet: #ffffff;
     --raise: #ffffff;
-    --panel: #ffffff;
-    --panel-2: #f7f8f9;
+    --inset: #f0f0ec;
     --edge: rgba(16, 20, 24, 0.1);
-    --edge-strong: rgba(16, 20, 24, 0.2);
+    --edge-strong: rgba(16, 20, 24, 0.22);
+    --edge-soft: rgba(16, 20, 24, 0.06);
+    --edge-control: #7e838b;
     --ink: #101418;
     --ink-2: #3c454f;
     --ink-3: #5f6a75;
-    --accent: #1f3a63;
-    --accent-hi: #16304f;
-    --accent-fill: #1f3a63;
-    --accent-ink: #ffffff;
-    --accent-soft: rgba(31, 58, 99, 0.1);
-    --warm: #1f3a63;
-    --ok: #5f6a75;
-    --warn: #3c454f;
-    --risk: #1f3a63;
-    --ok-text: #5f6a75;
-    --warn-text: #3c454f;
-    --risk-text: #1f3a63;
-    --on-risk: #ffffff;
-    --on-warn: #ffffff;
-    --violet: #1f3a63;
-    --teal: #5f6a75;
-    --mint: #5f6a75;
-    --sky: #3c454f;
-    --bar: var(--accent);
-    --bar-done: var(--ink-3);
-    --on-fill: #ffffff;
-    --inset: color-mix(in srgb, var(--ink) 5%, var(--panel));
+    --brand: #0b1020;
+    --brand-strong: #1f3a63;
+    --on-brand: #ffffff;
+    --link: #1f3a63;
+    --focus: #b45309;
+    --selection: #a9b9d3;
+    --select: rgba(16, 20, 24, 0.06);
+    --select-strong: rgba(16, 20, 24, 0.1);
+    --on-attention: #1a1206;
+    --serious: #9a3d00;
+    --caution: #9a3d00;
+    --caution-fill: #ffeed3;
+    --caution-edge: #f0740d;
+    --price-up: #9a3d00;
+    --positive: #0b6b4f;
+    --positive-soft: #eaf7f0;
+    --positive-edge: #6fcca6;
+    --price-down: #0b6b4f;
+    --check: #1f3a63;
+    --check-soft: rgba(31, 58, 99, 0.08);
+    --check-edge: rgba(31, 58, 99, 0.28);
+    --data-1: var(--brand);
+    --data-2: var(--px-2);
+    --data-3: var(--ink-3);
+    --px-1: #1f3a63;
+    --px-2: #4f6e9c;
+    --px-3: #a9b9d3;
+    --px-ink: #0b1020;
+    --px-paper: #ffffff;
+    --px-accent: #4f6e9c;
+    --bar: var(--brand);
+    --bar-done: var(--brand);
+    --on-fill: var(--on-brand);
+    --pill-bg: var(--sheet);
+    --pill-edge: var(--edge-strong);
+    --step-0: #1f3a63;
+    --step-1: #4f6e9c;
+    --step-2: #6e96c8;
+    --step-3: #a9b9d3;
     --scrim: rgba(16, 20, 24, 0.55);
-    --glass: var(--panel);
+    --shadow-1: 0 1px 2px rgba(16, 20, 24, 0.06), 0 1px 1px rgba(16, 20, 24, 0.04);
+    --shadow-2: 0 18px 40px -12px rgba(16, 20, 24, 0.22), 0 2px 6px rgba(16, 20, 24, 0.06);
+    --glass: var(--sheet);
     --glass-edge: var(--edge);
+    --panel: var(--sheet);
+    --panel-2: var(--raise);
+    --accent: var(--link);
+    --accent-hi: var(--brand-strong);
+    --accent-fill: var(--brand);
+    --accent-ink: var(--on-brand);
+    --accent-soft: var(--select);
+    --warm: var(--brand);
+    --ok: var(--brand);
+    --ok-text: var(--brand);
+    --warn: var(--ink-2);
+    --warn-text: var(--ink-2);
+    --risk: var(--ink-2);
+    --risk-text: var(--ink-2);
+    --on-risk: var(--on-attention);
+    --on-warn: var(--on-attention);
+    --violet: var(--data-1);
+    --teal: var(--data-2);
+    --mint: var(--brand);
+    --sky: var(--data-2);
   }
 }
 
 :root[data-theme='light'] {
   color-scheme: light;
-  --ground: #edeeef;
+  --ground: #f5f5f3;
+  --sheet: #ffffff;
   --raise: #ffffff;
-  --panel: #ffffff;
-  --panel-2: #f7f8f9;
+  --inset: #f0f0ec;
   --edge: rgba(16, 20, 24, 0.1);
-  --edge-strong: rgba(16, 20, 24, 0.2);
+  --edge-strong: rgba(16, 20, 24, 0.22);
+  --edge-soft: rgba(16, 20, 24, 0.06);
+  --edge-control: #7e838b;
   --ink: #101418;
   --ink-2: #3c454f;
   --ink-3: #5f6a75;
-  --accent: #1f3a63;
-  --accent-hi: #16304f;
-  --accent-fill: #1f3a63;
-  --accent-ink: #ffffff;
-  --accent-soft: rgba(31, 58, 99, 0.1);
-  --warm: #1f3a63;
-  --ok: #5f6a75;
-  --warn: #3c454f;
-  --risk: #1f3a63;
-  --ok-text: #5f6a75;
-  --warn-text: #3c454f;
-  --risk-text: #1f3a63;
-  --on-risk: #ffffff;
-  --on-warn: #ffffff;
-  --violet: #1f3a63;
-  --teal: #5f6a75;
-  --mint: #5f6a75;
-  --sky: #3c454f;
-  --bar: var(--accent);
-  --bar-done: var(--ink-3);
-  --on-fill: #ffffff;
-  --inset: color-mix(in srgb, var(--ink) 5%, var(--panel));
+  --brand: #0b1020;
+  --brand-strong: #1f3a63;
+  --on-brand: #ffffff;
+  --link: #1f3a63;
+  --focus: #b45309;
+  --selection: #a9b9d3;
+  --select: rgba(16, 20, 24, 0.06);
+  --select-strong: rgba(16, 20, 24, 0.1);
+  --on-attention: #1a1206;
+  --serious: #9a3d00;
+  --caution: #9a3d00;
+  --caution-fill: #ffeed3;
+  --caution-edge: #f0740d;
+  --price-up: #9a3d00;
+  --positive: #0b6b4f;
+  --positive-soft: #eaf7f0;
+  --positive-edge: #6fcca6;
+  --price-down: #0b6b4f;
+  --check: #1f3a63;
+  --check-soft: rgba(31, 58, 99, 0.08);
+  --check-edge: rgba(31, 58, 99, 0.28);
+  --data-1: var(--brand);
+  --data-2: var(--px-2);
+  --data-3: var(--ink-3);
+  --px-1: #1f3a63;
+  --px-2: #4f6e9c;
+  --px-3: #a9b9d3;
+  --px-ink: #0b1020;
+  --px-paper: #ffffff;
+  --px-accent: #4f6e9c;
+  --bar: var(--brand);
+  --bar-done: var(--brand);
+  --on-fill: var(--on-brand);
+  --pill-bg: var(--sheet);
+  --pill-edge: var(--edge-strong);
+  --step-0: #1f3a63;
+  --step-1: #4f6e9c;
+  --step-2: #6e96c8;
+  --step-3: #a9b9d3;
   --scrim: rgba(16, 20, 24, 0.55);
-  --glass: var(--panel);
+  --shadow-1: 0 1px 2px rgba(16, 20, 24, 0.06), 0 1px 1px rgba(16, 20, 24, 0.04);
+  --shadow-2: 0 18px 40px -12px rgba(16, 20, 24, 0.22), 0 2px 6px rgba(16, 20, 24, 0.06);
+  --glass: var(--sheet);
   --glass-edge: var(--edge);
+  --panel: var(--sheet);
+  --panel-2: var(--raise);
+  --accent: var(--link);
+  --accent-hi: var(--brand-strong);
+  --accent-fill: var(--brand);
+  --accent-ink: var(--on-brand);
+  --accent-soft: var(--select);
+  --warm: var(--brand);
+  --ok: var(--brand);
+  --ok-text: var(--brand);
+  --warn: var(--ink-2);
+  --warn-text: var(--ink-2);
+  --risk: var(--ink-2);
+  --risk-text: var(--ink-2);
+  --on-risk: var(--on-attention);
+  --on-warn: var(--on-attention);
+  --violet: var(--data-1);
+  --teal: var(--data-2);
+  --mint: var(--brand);
+  --sky: var(--data-2);
 }

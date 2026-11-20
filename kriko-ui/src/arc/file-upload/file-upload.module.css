@@ -1,7 +1,7 @@
 .root { display: grid; width: 100%; min-width: 0; color: var(--foreground); }
 .input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; clip-path: inset(50%); }
 /* A full-width drop target: press feedback is color only, never a scale. */
-.dropzone { display: flex; min-height: 92px; align-items: center; gap: 12px; padding: 16px; border: 1px dashed var(--border-strong); border-radius: var(--radius-panel); background: var(--surface); cursor: pointer; transition: border-color var(--duration-standard) var(--ease-standard), background-color var(--duration-standard) var(--ease-standard); }
+.dropzone { display: flex; min-height: 92px; align-items: center; gap: 12px; padding: 16px; border: 1px dashed var(--edge-control); border-radius: var(--radius-panel); background: var(--surface); cursor: pointer; transition: border-color var(--duration-standard) var(--ease-standard), background-color var(--duration-standard) var(--ease-standard); }
 .dropzone.dragging, .dropzone:not(.disabled):active { border-color: var(--accent); background: var(--accent-subtle); }
 .dropzone.disabled { cursor: not-allowed; opacity: .52; }
 .uploadIcon, .fileIcon { display: grid; flex: 0 0 auto; place-items: center; color: var(--accent-strong); }
@@ -32,7 +32,7 @@
 .percent { display: inline-block; min-width: 4ch; }
 .fileCopy .error { color: var(--danger); }
 .barFrame { display: block; }
-.bar { display: block; height: 3px; margin: 5px 0 1px; overflow: hidden; border-radius: 99px; background: var(--border); }
+.bar { display: block; height: 3px; margin: 5px 0 1px; overflow: hidden; border-radius: var(--r-pill); background: var(--border); }
 .barFill { display: block; width: 100%; height: 100%; border-radius: inherit; background: var(--accent); }
 .statusSlot { position: relative; display: grid; width: 26px; height: 26px; flex: 0 0 auto; place-items: center; }
 .retrySlot { display: grid; place-items: center; }
