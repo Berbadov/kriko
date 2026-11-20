@@ -19,6 +19,15 @@
 const extensionApi = typeof browser !== "undefined" ? browser : chrome;
 const IS_FIREFOX = typeof extensionApi.runtime.getBrowserInfo === "function";
 
+// The catalog reader and the offline lookup, loaded as classic scripts before
+// this one (a service worker imports them; Firefox lists them in
+// `background.scripts`). Without them the extension behaves exactly as before:
+// engine or nothing.
+if (typeof importScripts === "function") {
+  try { importScripts("offline/sqlite.js", "offline/catalog.js"); } catch (_) { /* offline stays off */ }
+}
+const hasOffline = () => typeof KrikoOffline !== "undefined" && typeof KrikoSqlite !== "undefined";
+
 const DEFAULT_API_BASE = "http://127.0.0.1:8787";
 const LOADED_CONTENT_DIGEST = "";
 const CONNECTION_ALARM = "kriko-connection";
@@ -1457,6 +1466,10 @@ function toViewModel(payload, appBase) {
     // because a test for this shape would have been written against this
     // function rather than against the payload it is supposed to carry.
     packs: Array.isArray(payload.packs) ? payload.packs : [],
+    // True when the answer came from a catalog stored in this browser, not
+    // from the engine. The footer says so; a reader must be able to tell.
+    offline: payload.offline === true,
+    notes: Array.isArray(payload.notes) ? payload.notes : [],
     context_units: payload.context_units || {},
     // The app stores every analysis and already renders one at this route, so
     // "see the whole thing" needs no new endpoint — only the id it handed back.
@@ -2087,7 +2100,20 @@ async function _runAnalysisForTab(tabId, url, storageKey, { fresh = false, auto 
     }
 
     await _stage(url, "asking", "");
-    const raw = await requestAnalysis(scrape, timings);
+    let raw;
+    try {
+      raw = await requestAnalysis(scrape, timings);
+    } catch (error) {
+      // The app is not running. The catalogs in this browser are the answer
+      // then, if the reader turned them on and one is stored; otherwise the
+      // engine's error is the truest thing we have.
+      const fallback = hasOffline()
+        ? await KrikoOffline.lookup(extensionApi, scrape).catch(() => null)
+        : null;
+      if (!fallback) throw error;
+      await _stage(url, "offline", "");
+      raw = fallback;
+    }
     if (raw && raw.readable === false) {
       if (raw.reason === "unknown_product") {
         const unknown = new Error("Unknown product.");
@@ -2675,6 +2701,66 @@ extensionApi.runtime.onMessage.addListener((request, sender, sendResponse) => {
         productName: error.productName || "", error: error.message }));
 
     return true; // async
+  }
+
+  if (request.type === "OFFLINE_CATALOGS") {
+    if (!hasOffline()) {
+      sendResponse({ ok: false, error: "The offline catalog reader is not available in this browser." });
+      return false;
+    }
+    KrikoOffline.index(extensionApi)
+      .then(async (rows) => {
+        let enabled = true;
+        try {
+          const got = await extensionApi.storage.local.get(KrikoOffline.ENABLED_KEY);
+          enabled = got?.[KrikoOffline.ENABLED_KEY] !== false;
+        } catch (_) { /* enabled by default */ }
+        let quota = null;
+        try {
+          const estimate = await navigator.storage?.estimate?.();
+          if (estimate) quota = { usage: estimate.usage || 0, quota: estimate.quota || 0 };
+        } catch (_) { /* the page simply shows no numbers */ }
+        sendResponse({ ok: true, enabled, packs: rows, quota, release_index: KrikoOffline.RELEASE_INDEX });
+      })
+      .catch((error) => sendResponse({ ok: false, error: error.message }));
+    return true;
+  }
+
+  if (request.type === "OFFLINE_REFRESH") {
+    if (!hasOffline()) {
+      sendResponse({ ok: false, error: "The offline catalog reader is not available in this browser." });
+      return false;
+    }
+    KrikoOffline.refresh(extensionApi)
+      .then(async (results) => sendResponse({ ok: true, results }))
+      .catch((error) => sendResponse({ ok: false, error: error.message }));
+    return true;
+  }
+
+  if (request.type === "OFFLINE_REMOVE") {
+    if (!hasOffline()) {
+      sendResponse({ ok: false, error: "The offline catalog reader is not available in this browser." });
+      return false;
+    }
+    const packId = String(request.payload?.packId || "");
+    (async () => {
+      await KrikoOffline.removeCatalog(packId);
+      const rows = (await KrikoOffline.index(extensionApi)).filter((row) => row.pack_id !== packId);
+      await KrikoOffline.writeIndex(extensionApi, rows);
+      sendResponse({ ok: true, packs: rows });
+    })().catch((error) => sendResponse({ ok: false, error: error.message }));
+    return true;
+  }
+
+  if (request.type === "OFFLINE_SET_ENABLED") {
+    if (!hasOffline()) {
+      sendResponse({ ok: false, error: "The offline catalog reader is not available in this browser." });
+      return false;
+    }
+    extensionApi.storage.local.set({ [KrikoOffline.ENABLED_KEY]: Boolean(request.payload?.enabled) })
+      .then(() => sendResponse({ ok: true }))
+      .catch((error) => sendResponse({ ok: false, error: error.message }));
+    return true;
   }
 
   if (request.type === "REFRESH_ANSWER") {

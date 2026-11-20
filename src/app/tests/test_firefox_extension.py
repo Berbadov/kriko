@@ -27,7 +27,8 @@ def test_firefox_bundle_is_separate_and_loadable(tmp_path, monkeypatch):
         assert body["signed"] is False
         folder = tmp_path / "extension-firefox"
         manifest = json.loads((folder / "manifest.json").read_bytes())
-        assert manifest["background"] == {"scripts": ["background.js"]}
+        assert manifest["background"] == {"scripts": ["offline/sqlite.js", "offline/catalog.js", "background.js"]}, \
+            "the offline reader loads before the worker that may call it"
         gecko = manifest["browser_specific_settings"]["gecko"]
         assert gecko["id"] == "kriko@kriko.local"
         assert gecko["strict_min_version"] == "140.0"
