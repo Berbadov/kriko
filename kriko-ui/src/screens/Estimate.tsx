@@ -394,9 +394,7 @@ export function EstimateScreen() {
     }
     rows.push(
       [],
-      ['Totals', '', '', '', '', '', '', '', '', '', model.vat.net, model.vat.vat, model.vat.gross, model.capital, '', '', '', ''],
-      ['Net / VAT / gross', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
-      ['Subtotal (gross)', '', '', '', '', '', '', '', '', '', '', '', '', model.capital, model.unpriced ? `${model.unpriced} line(s) unpriced` : '', '', ''],
+      ['Totals: net, VAT, gross', '', '', '', '', '', '', '', '', '', model.vat.net, model.vat.vat, model.vat.gross, model.capital, model.unpriced ? `${model.unpriced} line(s) unpriced` : '', '', '', ''],
       ['Research spend so far', '', '', '', '', '', '', '', '', '', '', '', '', research.usage?.spent_usd ?? '', research.usage ? `${research.usage.runs} run(s), ${research.usage.claims} claims kept` : '', '', ''],
     )
     if (costs) {
