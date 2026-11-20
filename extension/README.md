@@ -30,7 +30,9 @@ Settings → **Offline catalogs**:
 - the switch turns the fallback off and on; it is on by default, and the app is
   still asked first either way;
 - **Update catalogs** reads the newest release index and installs any catalog
-  whose version or `sha256` changed;
+  whose version or `sha256` changed. The browser asks once for permission to
+  read `github.com` and its asset host, because the index and the packs are
+  cross-origin downloads; nothing else is requested;
 - each catalog can be removed, and the page shows how much storage the
   extension uses.
 
