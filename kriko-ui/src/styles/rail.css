@@ -497,7 +497,7 @@
 }
 
 .ev-dot:focus-visible {
-  outline: 2px solid var(--accent-hi);
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 
@@ -603,6 +603,15 @@
   left: auto;
 }
 
+/* A tip beside a finding opens to the left of its mark. Opening it to the
+   right made the scroll container 19px wider than the window at compact
+   widths, and the next scrollIntoView moved every line half a word off the
+   left edge. */
+.risk-title .ev-tip {
+  right: 0;
+  left: auto;
+}
+
 .mx-risk[data-thin] {
   background: color-mix(in srgb, var(--risk) 4%, transparent);
 }
@@ -693,7 +702,7 @@
 
 .claim-chip:focus-visible,
 .claim-card :focus-visible {
-  outline: 2px solid var(--accent-hi);
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 
@@ -909,11 +918,11 @@
 }
 
 .usage-gauge[data-tone='warn'] {
-  --tone: var(--warn);
+  --tone: var(--attention);
 }
 
 .usage-gauge[data-tone='out'] {
-  --tone: var(--risk);
+  --tone: var(--attention);
 }
 
 .usage-gauge i {
@@ -1035,11 +1044,13 @@
 }
 
 .usage-limit[data-standing='warn'] .usage-limit-left {
-  color: var(--warn-text);
+  color: var(--ink);
+  font-weight: 600;
 }
 
 .usage-limit[data-standing='out'] .usage-limit-left {
-  color: var(--risk-text);
+  color: var(--ink);
+  font-weight: 600;
 }
 
 .usage-limit-reset {

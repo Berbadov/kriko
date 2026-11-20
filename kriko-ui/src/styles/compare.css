@@ -51,41 +51,96 @@
   overflow: auto;
 }
 
-/* A severity mark is a word and a square in the gutter, not a filled pill.
-   Critical takes the accent; the rest take the plain inks in order. */
+/* A status is a word and an icon on a pill. Colour never carries it alone.
+   Amber appears only here: a solid Serious or Recalled mark, and the outline
+   of "Known issues". To check is sky. No reports is the one green. */
 .level {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 0;
-  background: transparent;
+  height: 23px;
+  padding: 0 9px 0 7px;
+  border: 1px solid var(--edge);
+  border-radius: var(--r-pill);
+  background: var(--raise);
   color: var(--ink-2);
-  font-family: var(--mono);
-  font-size: 11px;
-  font-weight: 500;
+  font-family: var(--font);
+  font-size: 11.5px;
+  font-weight: 650;
+  line-height: 1;
   white-space: nowrap;
 }
 
-/* The severity is a tick, not the text colour: the words stay readable and
-   the hue is not the only carrier. */
 .level::before {
   content: '';
-  width: 7px;
-  height: 7px;
-  border-radius: 0;
-  background: var(--tone, var(--ink-3));
+  flex: none;
+  width: 13px;
+  height: 13px;
+  background: currentColor;
+  -webkit-mask: center / contain no-repeat;
+  mask: center / contain no-repeat;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 12h14' fill='none' stroke='%23000' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 12h14' fill='none' stroke='%23000' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E");
 }
 
-.level[data-level='none'] {
-  --tone: var(--ok);
-}
-
-.level[data-level='low'] {
-  --tone: var(--ok);
-}
-
+/* Serious and Recalled: the one solid amber mark, and the only one. */
+.level[data-level='critical'],
 .level[data-level='high'] {
-  --tone: var(--accent);
+  border-color: var(--amber-700);
+  background: var(--serious-fill);
+  color: var(--on-attention);
+}
+
+/* Known issues: an amber outline over a pale amber tint, never a solid fill. */
+.level[data-level='medium'] {
+  border-color: var(--caution-edge);
+  background: var(--caution-fill);
+  color: var(--caution);
+}
+
+/* A minor finding stays neutral. */
+.level[data-level='low'] {
+  border-color: var(--edge);
+  background: var(--raise);
+  color: var(--ink-2);
+}
+
+/* To check: information, not a verdict. */
+.level[data-level='unrated'],
+.level[data-level='unknown'] {
+  border-color: var(--check-edge);
+  background: var(--check-soft);
+  color: var(--check);
+}
+
+/* No reports: the one green status. The word never becomes "Safe". */
+.level[data-level='none'] {
+  border-color: var(--positive-edge);
+  background: var(--positive-soft);
+  color: var(--positive);
+}
+
+/* One icon per status, drawn as a mask so it takes the badge's ink. */
+.level[data-level='critical']::before,
+.level[data-level='high']::before {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 3 22 21H2Z' fill='%23000'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 3 22 21H2Z' fill='%23000'/%3E%3C/svg%3E");
+}
+
+.level[data-level='medium']::before {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 4 21.5 20H2.5Z' fill='none' stroke='%23000' stroke-width='2' stroke-linejoin='round'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 4 21.5 20H2.5Z' fill='none' stroke='%23000' stroke-width='2' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+.level[data-level='none']::before {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4 13 9 18 20 6' fill='none' stroke='%23000' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4 13 9 18 20 6' fill='none' stroke='%23000' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+.level[data-level='unrated']::before,
+.level[data-level='unknown']::before {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='9' fill='none' stroke='%23000' stroke-width='2'/%3E%3Cpath d='M12 7v5l4 2' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='9' fill='none' stroke='%23000' stroke-width='2'/%3E%3Cpath d='M12 7v5l4 2' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
 }
 
 .is-working {
@@ -191,23 +246,6 @@
   gap: 9px;
   color: var(--ink-3);
   font-size: 13px;
-}
-
-.level[data-level='critical'] {
-  background: transparent;
-  color: var(--accent);
-}
-
-.level[data-level='critical']::before {
-  background: var(--accent);
-}
-
-.level[data-level='medium'] {
-  --tone: var(--ink-2);
-}
-
-.level[data-level='unrated'] {
-  --tone: var(--ink-3);
 }
 
 .disputed {
@@ -332,7 +370,7 @@
 
 .risk-list > li {
   display: grid;
-  grid-template-columns: 92px minmax(0, 1fr);
+  grid-template-columns: 112px minmax(0, 1fr);
   align-items: start;
   gap: 0 18px;
   padding: 16px 0 26px;
@@ -344,6 +382,14 @@
 
 .risk-list > li.muted {
   display: block;
+  border-top: 1px solid var(--edge);
+}
+
+.risk-list > li.risk-none {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
   border-top: 1px solid var(--edge);
 }
 
@@ -532,9 +578,9 @@
 }
 
 .btn.primary {
-  background: var(--accent);
+  background: var(--brand);
   border-color: transparent;
-  color: var(--accent-ink);
+  color: var(--on-brand);
 }
 
 .btn:disabled {
@@ -650,7 +696,7 @@
 
 .mx-risk-main {
   display: grid;
-  grid-template-columns: 72px minmax(0, 1fr);
+  grid-template-columns: 104px minmax(0, 1fr);
   align-items: start;
   gap: 0 10px;
   width: 100%;
