@@ -397,7 +397,7 @@ export function EstimateScreen() {
       ) : (
         <table className="estimate-lines">
           <thead>
-            <tr><th>Equipment</th><th>Catalog</th><th className="num">Qty</th><th className="num">Unit price</th><th className="num">Line total</th><th></th></tr>
+            <tr><th>Equipment</th><th>Catalog</th><th className="num">Qty</th><th>Selected quote</th><th className="num">Gross / unit</th><th className="num">Line gross</th><th></th></tr>
           </thead>
           <tbody>
             {lines.map((line, index) => (

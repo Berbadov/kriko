@@ -919,3 +919,6 @@
 .cmp-pending .muted { flex: 1; overflow: hidden; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
 .chip-new { border-style: dashed; }
 .chip-new strong { display: inline-flex; align-items: center; gap: 6px; }
+
+/* The column's title is a picture and a name; the remove button keeps its end. */
+.mx-title { align-items: center; }
