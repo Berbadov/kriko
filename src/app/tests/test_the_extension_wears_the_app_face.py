@@ -23,7 +23,13 @@ def test_the_face_and_its_licence_are_bundled():
 
 
 def test_no_other_face_is_left_behind():
-    assert sorted(path.suffix for path in FONTS.iterdir() if path.suffix != ".txt") == [".woff2", ".woff2"]
+    # Two families, two files each: Latin and Latin Extended. A third family is
+    # how a second face creeps back in, so the count is pinned.
+    assert sorted(path.name for path in FONTS.iterdir() if path.suffix == ".woff2") == [
+        "InterTight-latin-ext.woff2", "InterTight-latin.woff2",
+        "Newsreader-latin-ext.woff2", "Newsreader-latin.woff2"]
+    for licence in ("OFL-InterTight.txt", "OFL-Newsreader.txt"):
+        assert "SIL Open Font License" in (FONTS / licence).read_text(encoding="utf-8"), licence
 
 
 def test_the_panel_registers_what_is_shipped():
@@ -64,7 +70,7 @@ def test_the_panel_and_the_page_keep_one_palette_with_the_app():
         # The ground, the ink, the one navy and the good-sign grey are the app's,
         # in both themes, so the panel is the app's face and not a second one.
         for theme, palette in palettes.items():
-            for token in ("ground", "ink", "accent", "ok"):
+            for token in ("ground", "ink", "brand", "positive"):
                 assert token in palette, f"the app has no {token} in its {theme} palette"
                 colour = palette[token]
                 assert colour in text, f"{sheet.name} lacks the app's {theme} {token} {colour}"
