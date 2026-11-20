@@ -106,6 +106,7 @@ class Call:
 
 def _normalise(raw: str) -> tuple[str | None, str] | None:
     """(method hint, wildcard path) for a string that begins a `/api/` path."""
+    raw = raw.split("{?}", 1)[0]  # the query string, and everything after it, is not the route
     text = _PLACEHOLDER.sub("{}", raw)
     text = re.sub(r"^(?:\{\})+", "", text)  # a leading {base} / ${apiBase()}
     match = _CANDIDATE.match(text)
@@ -227,8 +228,12 @@ def _lex_js_template(src: str, i: int, nl: list[int]) -> tuple[str, int]:
         elif c == "`":
             return "".join(parts), i + 1
         elif src.startswith("${", i):
-            _, i = _lex_js(src, i + 2, nl, stop_at_brace=True)
-            parts.append("{}")
+            _, end = _lex_js(src, i + 2, nl, stop_at_brace=True)
+            # An interpolation that writes a query string (`${on ? '?fresh=true' : ''}`)
+            # is marked, so the path is cut there: a query is not part of the route.
+            query = re.search(r"""['"`]\?""", src[i + 2 : end - 1]) is not None
+            parts.append("{?}" if query else "{}")
+            i = end
         else:
             parts.append(c)
             i += 1
@@ -769,12 +774,13 @@ def test_the_reader_finds_split_templates_format_strings_and_methods(tmp_path):
         "await _fetchApp(url, { method: 'DELETE' });\n"
         "const path = `/api/lookup/${id}/questions`;\n"
         "_postApp(path, { question });\n"
+        "get(`/api/packs/updates${fresh ? '?fresh=true' : ''}`);\n"
         "// _postApp('/api/commented/out', {})\n"
         "const re = /\\/api\\/regex/;\n"
     )
     toks = _merge_js_concatenation(_lex_js(js, 0, _newlines(js))[0])
     calls = {(c.method, c.path) for c in _calls_in_tokens("js", toks, "js", "snippet.js")}
-    assert calls == {("DELETE", "/api/marks/*/*"), ("POST", "/api/lookup/*/questions")}
+    assert calls == {("DELETE", "/api/marks/*/*"), ("POST", "/api/lookup/*/questions"), ("GET", "/api/packs/updates")}
 
     rust = (
         'fn a() {\n'

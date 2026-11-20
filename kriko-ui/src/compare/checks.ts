@@ -56,6 +56,9 @@ export interface Check {
   diagnostic?: string
   context?: Record<string, unknown>
   contextUnits?: Record<string, string>
+  /** The catalog product this check matched, when it matched one. Procurement finds its lines by this id. */
+  subjectId?: string
+  packId?: string
 }
 
 export type Loaded = { status: 'loading' } | { status: 'ready'; check: Check } | { status: 'error'; message: string }
@@ -123,10 +126,12 @@ export async function loadCheck(lookupId: string): Promise<Check> {
     source: text(s.url) || text(s.source_url), quote: text(s.quote),
   })).filter((s) => s.label && s.value)
   const subject = matchedSubject(response)
+  let packId = ''
   if (subject) {
     // A product that cannot be read leaves the column without specifications, never without its risks.
     try {
       const found = await get<Record<string, unknown>>(`/api/subjects/${seg(subject)}`)
+      packId = text(found.pack_id)
       for (const a of list(found.attributes)) {
         const value = text(a.value_text)
         if (a.is_identity === true || !value.trim()) continue
@@ -142,7 +147,8 @@ export async function loadCheck(lookupId: string): Promise<Check> {
   return { lookupId, name: text(stored.label) || 'Product', category: text(stored.category) || text(response.category), specs, risks,
     checkedAt: text(stored.created_at), assumed: text(response.assumed),
     coverage: (response.coverage ?? {}) as Record<string, unknown>, diagnostic: text(diagnostic?.message),
-    context: (response.context ?? {}) as Record<string, unknown>, contextUnits: (response.context_units ?? {}) as Record<string, string> }
+    context: (response.context ?? {}) as Record<string, unknown>, contextUnits: (response.context_units ?? {}) as Record<string, string>,
+    subjectId: subject || undefined, packId: packId || undefined }
 }
 
 // ---- lining up ----

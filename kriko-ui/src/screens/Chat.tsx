@@ -8,6 +8,10 @@ import { compareIdea, ideasFor } from '../chat/ideas'
 import { useChat } from '../chat'
 import { useEngine, type Agent } from '../engine/Engine'
 import { useRecents } from '../engine/recents'
+import { useProcurement } from '../engine/procurement'
+import { footnotesOf, showStrip, stripRows } from '../chat/strip'
+import { glyphFor } from '../ui/productGlyphs'
+import { ExternalLink } from '../ui/ExternalLink'
 import { usePrefs } from '../prefs'
 import { AgentMark, type AgentState } from '../ui/AgentMark'
 import { copyText } from '../ui/clipboard'
@@ -24,6 +28,7 @@ import { Markdown } from '../ui/Markdown'
 import { Fold } from '../ui/text'
 import { showDrawer } from '../ui/drawerEvents'
 import { ReportButton } from '../ui/ReportButton'
+import type { SourcePage } from '../activity/run'
 
 /** Chat is the first page. Before a question it is a sky, a box and recent work.
  *  After a question the box drops to the bottom and the run fills the page. */
@@ -49,7 +54,10 @@ export function ChatScreen({ onOpen, onAction }: {
   /** Find, Alt. or Research: the slider in the box, held here so the ideas under it follow. */
   const [mode, setMode] = useState<ChatMode>('find')
   const ideas = ideasFor(mode, recents.map((item) => item.name))
-  const ask = (text: string) => start(text, agentOf(), mode === 'find' ? undefined : mode)
+  const procurement = useProcurement()
+  const live = engine.mode === 'live'
+  const strip = stripRows(procurement.summary)
+  const stripOn = showStrip(procurement.summary, live)
   // The column and the bars read what the turns already carry: nothing is kept twice.
   const groups = groupsOf(
     turns,
@@ -62,6 +70,11 @@ export function ChatScreen({ onOpen, onAction }: {
   const agentOf = (ref?: AgentRef): Agent =>
     engine.agents.find((a) => a.id === ref?.id) ?? engine.agents.find((a) => a.id === engine.preferred) ?? engine.agents[0]
   const focusComposer = () => document.querySelector<HTMLTextAreaElement>('.composer-field')?.focus()
+  /** The procurement strip's rows all lead to the Procurement screen. */
+  const openProcurement = () => window.dispatchEvent(new CustomEvent('kriko:navigate', { detail: { screen: 'estimate' } }))
+  /** The thread's title is its first question; the count is every question asked so far. */
+  const firstQuestion = turns[0]?.prompt ?? run.prompt
+  const questionCount = turns.length + (run.status !== 'idle' ? 1 : 0)
 
   return (
     <FocusProvider reduceMotion={!m.on}>
@@ -78,7 +91,7 @@ export function ChatScreen({ onOpen, onAction }: {
       </AnimatePresence>
 
       <div className="chat-main">
-      <div className="chat-col">
+      <div className={thread ? 'chat-col' : 'chat-col k-screen'} data-width={thread ? undefined : 'narrow'}>
         <AnimatePresence mode="popLayout" initial={false}>
           {!thread && (
             <motion.header
@@ -90,10 +103,10 @@ export function ChatScreen({ onOpen, onAction }: {
               exit={{ opacity: 0, y: -m.d(12) }}
               transition={m.tx.page}
             >
-              <div className="hello-index mono" aria-hidden="true">01 / check</div>
               <h1>What do you want to check?</h1>
             </motion.header>
           )}
+          {thread && <ThreadBar title={firstQuestion} questions={questionCount} />}
           {thread && (
             <motion.div
               key="thread"
@@ -137,40 +150,69 @@ export function ChatScreen({ onOpen, onAction }: {
         <AnimatePresence mode="popLayout" initial={false}>
           {!thread && (
             <motion.div key={`ideas-${mode}`} className="ideas" initial={{ opacity: 0, y: m.d(6) }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={m.tx.quick}>
-              <h2>Ideas for you</h2>
-              <ul>
+              <p className="k-caption" id="ask-ideas-title">Ideas</p>
+              <div className="ideas-chips" role="group" aria-labelledby="ask-ideas-title">
                 {ideas.map((idea) => (
-                  <li key={idea.text}>
-                    <button className="idea" onClick={() => ask(idea.text)} disabled={running}>
-                      <span className="idea-icon" aria-hidden="true"><Icon name={idea.icon} size={16} /></span>
-                      <span>{idea.text}</span>
-                    </button>
-                  </li>
+                  <button key={idea.text} type="button" className="k-chip ideas-chip" onClick={() => setDraft({ text: idea.text, at: Date.now() })} disabled={running}>
+                    <Icon name={idea.icon} size={14} />
+                    <span>{idea.text}</span>
+                  </button>
                 ))}
-              </ul>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        <AnimatePresence mode="popLayout" initial={false}>
-          {!thread && recents.length > 0 && (
-            <motion.div key="recents" className="recents" exit={{ opacity: 0, y: m.d(10) }} transition={m.tx.quick}>
-              <h2>Recent checks</h2>
-              <ul>
-                {recents.map((item, index) => (
-                  <li key={item.id} className="rise" style={{ '--i': index + 2 } as CSSProperties}>
-                    <button className="recent" onClick={() => onOpen(engine.mode === 'live' ? item.id : `demo:${item.name}`)}>
-                      <ProductGlyph name={item.name} size={24} />
-                      <span className="recent-name">{item.name}</span>
-                      <span className="recent-note">{item.note}</span>
-                      <span className="recent-meta mono">
-                        {item.risks} {item.risks === 1 ? 'risk' : 'risks'} · {item.when}
+        {stripOn && (
+          <section className="k-group procurement-strip" aria-labelledby="ask-strip-title">
+            <h2 id="ask-strip-title" className="k-caption">Procurement</h2>
+            <div className="k-card">
+              <ul className="k-list">
+                {strip.map((row) => (
+                  <li key={row.id}>
+                    <button type="button" className="k-row" onClick={openProcurement}>
+                      <span className="k-row-icon" data-tone={row.tone} aria-hidden="true">
+                        <Icon name={row.id === 'risk' ? 'alert' : row.id === 'expiry' ? 'clock' : 'coins'} size={16} />
+                      </span>
+                      <span className="k-row-main">
+                        <span className="k-row-title">{row.text}</span>
+                      </span>
+                      <span className="k-row-chevron" aria-hidden="true">
+                        <Icon name="expand" size={15} />
                       </span>
                     </button>
                   </li>
                 ))}
               </ul>
-            </motion.div>
+            </div>
+          </section>
+        )}
+
+        <AnimatePresence mode="popLayout" initial={false}>
+          {!thread && recents.length > 0 && (
+            <motion.section key="recents" className="k-group recents" aria-labelledby="ask-recents-title" exit={{ opacity: 0, y: m.d(10) }} transition={m.tx.quick}>
+              <h2 id="ask-recents-title" className="k-caption">Recent checks</h2>
+              <div className="k-card">
+                <ul className="k-list">
+                  {recents.map((item, index) => (
+                    <li key={item.id} className="rise" style={{ '--i': index + 2 } as CSSProperties}>
+                      <button type="button" className="k-row recent" onClick={() => onOpen(engine.mode === 'live' ? item.id : `demo:${item.name}`)}>
+                        <span className="k-row-icon" aria-hidden="true">
+                          {glyphFor(item.name) ? <ProductGlyph name={item.name} size={24} /> : <span className="recent-letter">{item.name.trim().charAt(0).toUpperCase()}</span>}
+                        </span>
+                        <span className="k-row-main">
+                          <span className="k-row-title recent-name">{item.name}</span>
+                          <span className="k-row-note">{item.note}</span>
+                        </span>
+                        <span className="k-row-value">
+                          {item.risks} {item.risks === 1 ? 'risk' : 'risks'} · {item.when}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </motion.section>
           )}
         </AnimatePresence>
       </div>
@@ -185,6 +227,38 @@ export function ChatScreen({ onOpen, onAction }: {
       )}
     </section>
     </FocusProvider>
+  )
+}
+
+/** The thread's title row: its first question, and how many were asked. */
+function ThreadBar({ title, questions }: { title: string; questions: number }) {
+  return (
+    <header className="thread-bar">
+      <h2 className="thread-title" title={title}>{title}</h2>
+      <span className="thread-count">{questions} {questions === 1 ? 'question' : 'questions'}</span>
+    </header>
+  )
+}
+
+/** The sources an answer cites, as numbered footnotes in a ruled list. */
+function Footnotes({ pages }: { pages?: SourcePage[] }) {
+  const notes = footnotesOf(pages)
+  if (!notes.length) return null
+  return (
+    <section className="notes" aria-label="Sources">
+      <h3 className="notes-title">Sources</h3>
+      <ol>
+        {notes.map((page, index) => (
+          <li key={page.url} className="note">
+            <span className="note-n mono" aria-hidden="true">{index + 1}</span>
+            <span className="note-body">
+              <ExternalLink href={page.url}>{page.title || page.host || page.url}</ExternalLink>
+              {page.host && <span className="note-host">{page.host}</span>}
+            </span>
+          </li>
+        ))}
+      </ol>
+    </section>
   )
 }
 
@@ -485,6 +559,7 @@ function Thread({
                   {turn.rows?.some((row) => row.id === 'activity-citation-warning' || row.id === 'activity-evidence-warning') && <p className="error-note" role="alert">Some claims or references could not be verified against the supplied evidence. Check the sources before relying on this answer.</p>}
                   <AnswerHead agent={turn.agent} />
                   <Markdown text={turn.answer} live={false} />
+                  <Footnotes pages={turn.pages} />
                   <AnswerActions text={turn.answer} onRetry={newest === turn ? () => onRetry(turn) : undefined} usage={turn.usage} />
                 </article>
                 <ActionCards actions={turn.actions} onAction={onAction} />
@@ -524,6 +599,7 @@ function Thread({
               {run.rows.some((row) => row.id === 'activity-citation-warning' || row.id === 'activity-evidence-warning') && <p className="error-note" role="alert">Some claims or references could not be verified against the supplied evidence. Check the sources before relying on this answer.</p>}
               <AnswerHead agent={run.agent} state={run.status === 'running' ? 'working' : run.status === 'failed' ? 'failed' : run.status === 'done' ? 'done' : 'idle'} />
               {run.answer && <Markdown text={run.answer} live={!settled} />}
+              {run.answer && settled && <Footnotes pages={run.pages} />}
               {run.answer && settled && (
                 <AnswerActions
                   text={run.answer}

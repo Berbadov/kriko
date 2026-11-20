@@ -71,8 +71,8 @@ def test_the_window_shows_the_steps_and_never_runs_them():
 
     ui = Path(__file__).resolve().parents[3] / "kriko-ui" / "src"
     card = (ui / "ui" / "panels" / "Local.tsx").read_text(encoding="utf-8")
-    start = card.index("function VllmCard")
-    body = card[start : card.index("/** The public list", start)]
+    start = card.index("function VllmRow")
+    body = card[start : card.index("/** Type a model name", start)]
     assert "navigator.clipboard" in body
     assert "post(" not in body and "fetch(" not in body
     hook = (ui / "engine" / "local.ts").read_text(encoding="utf-8")

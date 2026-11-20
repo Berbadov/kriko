@@ -17,13 +17,13 @@ export function AgentRecovery({ agents, preferred, available, busy, onResearch }
 }) {
   const { choices, note, engineChooses } = compareRecovery(agents, preferred, available)
   return (
-    <div className="mx-recover" role="group" aria-label="Research this product">
-      <p className="muted">{note}</p>
-      <div className="mx-research-actions">
+    <div className="cmp-recover" role="group" aria-label="Research this product">
+      <p className="cmp-recover-note">{note}</p>
+      <div className="cmp-actions">
         {choices.map((agent) => (
           <button
             key={agent.id}
-            className="btn ghost mx-research"
+            className="k-btn" data-kind="quiet" data-size="sm"
             disabled={busy}
             title={`Research with ${agent.label}`}
             onClick={() => onResearch(agent)}
@@ -33,7 +33,7 @@ export function AgentRecovery({ agents, preferred, available, busy, onResearch }
         ))}
         {engineChooses && (
           <button
-            className="btn ghost mx-research"
+            className="k-btn" data-kind="quiet" data-size="sm"
             disabled={busy}
             title="Ask the engine to resolve an agent and report what it found"
             onClick={() => onResearch(ENGINE_CHOOSES)}

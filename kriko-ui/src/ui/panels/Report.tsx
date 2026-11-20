@@ -3,10 +3,10 @@ import { useEngine } from '../../engine/Engine'
 import { useLogJobs } from '../../engine/logs'
 import { KINDS, canDraft, draftReport, jobLabel, reportable, takeRequestedReport, type ReportDraft, type ReportKind } from '../../engine/report'
 import { copyText } from '../clipboard'
-import { Segmented, Select } from '../controls'
 import { openLink } from '../ExternalLink'
+import { Choice, SelectField } from './settingsParts'
 
-/** Tell us what broke, or what to add. Kriko writes the report and shows all of it;
+/** Tell us what broke, or what to add. Kriko writes the report here and shows all of it;
  *  the reader copies it, saves it, or opens it as an issue and presses Submit there. */
 export function ReportPanel() {
   const { mode } = useEngine()
@@ -66,51 +66,67 @@ export function ReportPanel() {
   }
 
   return (
-    <div className="panel-body">
-      <section className="panel-group">
-        <h3>Tell us what broke, or what to add</h3>
-        <p>
-          Kriko writes the report here and sends nothing. You read all of it first, with keys and your saved profile
-          removed, then copy it, save it, or open it as an issue on GitHub and press Submit yourself.
-        </p>
-        <Segmented label="What is this about" value={kind} options={KINDS} onChange={setKind} />
-      </section>
+    <div className="settings-data-panel-body">
+      <div className="settings-data-block">
+        <Choice label="What is this about" value={kind} options={KINDS} onChange={setKind} />
+      </div>
+
       {kind === 'error' && (
-        <section className="panel-group">
-          <h3>Which run</h3>
+        <div className="settings-data-block">
+          <h4>Which run</h4>
           {runs.length ? (
-            <Select label="Which run" value={jobId} onChange={setPicked} options={[{ value: '', label: 'None, I will describe it' }, ...runs.map((one) => ({ value: one.job_id, label: jobLabel(one) }))]} />
+            <SelectField label="Which run" value={jobId} onChange={setPicked} options={[{ value: '', label: 'None, I will describe it' }, ...runs.map((one) => ({ value: one.job_id, label: jobLabel(one) }))]} />
           ) : (
-            <p className="panel-note">No failed run is on record. Describe what happened below.</p>
+            <p className="settings-data-words">No failed run is on record. Describe what happened below.</p>
           )}
-        </section>
+        </div>
       )}
-      <section className="panel-group need-field">
-        <h3>{kind === 'error' ? 'What happened' : 'Your suggestion'}</h3>
-        <textarea
-          aria-label={kind === 'error' ? 'What happened' : 'Your suggestion'}
-          rows={5}
-          maxLength={4000}
-          value={note}
-          placeholder={kind === 'error' ? 'For example: Mistral timed out on every chat turn.' : 'What would make Kriko better for you?'}
-          onChange={(event) => setNote(event.target.value)}
-        />
-        <button className="btn primary" disabled={working || !canDraft(kind, jobId, note)} onClick={() => void show()}>
-          Write the report
-        </button>
-      </section>
+
+      <div className="settings-data-block">
+        <label className="settings-data-field">
+          <span className="settings-data-field-label">{kind === 'error' ? 'What happened' : 'Your suggestion'}</span>
+          <textarea
+            className="k-input"
+            rows={5}
+            maxLength={4000}
+            value={note}
+            placeholder={kind === 'error' ? 'For example: Mistral timed out on every chat turn.' : 'What would make Kriko better for you?'}
+            onChange={(event) => setNote(event.target.value)}
+          />
+        </label>
+        <div>
+          <button type="button" className="k-btn" data-kind="primary" disabled={working || !canDraft(kind, jobId, note)} onClick={() => void show()}>
+            Write the report
+          </button>
+        </div>
+      </div>
+
       {draft && (
-        <section className="panel-group">
-          <h3>Everything this report says</h3>
-          <pre className="report-text" tabIndex={0}>{draft.text}</pre>
-          <div className="report-actions">
-            <button className="btn" onClick={() => void copy()}>Copy report</button>
-            <button className="btn ghost" onClick={save}>Save as a file</button>
-            {draft.url && <button className="btn primary" onClick={() => void open()}>Open on GitHub</button>}
+        <div className="settings-data-block">
+          <h4>Everything this report says</h4>
+          <pre className="settings-data-report" tabIndex={0}>
+            {draft.text}
+          </pre>
+          <div className="settings-data-controls">
+            {draft.url && (
+              <button type="button" className="k-btn" data-kind="primary" onClick={() => void open()}>
+                Open on GitHub
+              </button>
+            )}
+            <button type="button" className="k-btn" onClick={() => void copy()}>
+              Copy report
+            </button>
+            <button type="button" className="k-btn" data-kind="quiet" onClick={save}>
+              Save as a file
+            </button>
           </div>
-        </section>
+        </div>
       )}
-      {status && <p role="status" className="panel-note">{status}</p>}
+      {status && (
+        <p role="status" className="settings-data-status">
+          {status}
+        </p>
+      )}
     </div>
   )
 }

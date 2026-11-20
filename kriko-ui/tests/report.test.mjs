@@ -45,3 +45,12 @@ test('an error that asks to be reported is handed to the report once, with its r
   report.askToReport({ note: 'no run known' })
   assert.deepEqual(report.takeRequestedReport(), { jobId: '', note: 'no run known' })
 })
+
+test('the section can tell a report is waiting without taking it', () => {
+  assert.equal(report.hasRequestedReport(), false)
+  report.askToReport({ jobId: 'j2', note: 'cable failed' })
+  assert.equal(report.hasRequestedReport(), true)
+  assert.equal(report.hasRequestedReport(), true, 'looking does not take it')
+  assert.deepEqual(report.takeRequestedReport(), { jobId: 'j2', note: 'cable failed' })
+  assert.equal(report.hasRequestedReport(), false)
+})

@@ -1,0 +1,100 @@
+/* Procurement, shared by every screen that offers "Add to estimate".
+   Built from system.css primitives and tokens; this file owns only the popover. */
+
+.procurement-add {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.procurement-add-needs {
+  color: var(--ink-3);
+  font-size: 13px;
+}
+
+/* The position is set inline from the button (see AddToEstimate.tsx). */
+.procurement-add-pop {
+  position: fixed;
+  z-index: 1000;
+  width: min(360px, calc(100vw - 32px));
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  box-sizing: border-box;
+  background: var(--sheet);
+  color: var(--ink);
+  border: 1px solid var(--edge);
+  border-radius: var(--r-l);
+  box-shadow: var(--shadow-2);
+  overflow-y: auto;
+  text-align: left;
+  font-size: 14px;
+}
+
+.procurement-add-pop:focus {
+  outline: none;
+}
+
+.procurement-add-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.procurement-add-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: var(--w-medium);
+}
+
+.procurement-add-caption {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 13px;
+}
+
+.procurement-add-list {
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.procurement-add-new {
+  display: grid;
+  gap: 8px;
+}
+
+.procurement-add-label {
+  display: grid;
+  gap: 6px;
+  color: var(--ink-2);
+  font-size: 13px;
+}
+
+.procurement-add-new .k-btn {
+  justify-self: end;
+}
+
+.procurement-add-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.procurement-add-done {
+  display: grid;
+  gap: 12px;
+}
+
+.procurement-add-done p {
+  margin: 0;
+}
+
+.procurement-risk-note {
+  margin-left: 6px;
+  color: var(--ink-2);
+  font-weight: 400;
+}

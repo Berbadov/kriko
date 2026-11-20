@@ -87,9 +87,15 @@ def test_the_window_reads_the_web_and_downloads_only_when_asked():
     ui = Path(__file__).resolve().parents[3] / "kriko-ui" / "src"
     panel = (ui / "ui" / "panels" / "HfStore.tsx").read_text(encoding="utf-8")
     hook = (ui / "engine" / "hfstore.ts").read_text(encoding="utf-8")
-    # nothing is read until the reader presses Browse
-    assert "useEffect" not in panel and hook.count("useEffect(") == 1 and "search(" not in hook.split("useEffect(")[1].split("}, [")[0]
-    assert "if (!begun)" in panel and "void hf.search(NO_FILTERS)" in panel
+    local = (ui / "ui" / "panels" / "Local.tsx").read_text(encoding="utf-8")
+    # nothing is read until the reader presses Browse: the block starts closed, its
+    # button is the only thing that opens it, and the panel (which reads once, on
+    # its mount) is drawn only while it is open
+    block = local[local.index("function HuggingFace") : local.index("function ModelRow")]
+    assert "useState(false)" in block and "{open && <HfStore" in block
+    assert block.count("onClick={() => setOpen((now) => !now)}") == 1
+    assert panel.count("useEffect(") == 1 and "void hf.search(NO_FILTERS)" in panel
+    assert hook.count("useEffect(") == 1 and "search(" not in hook.split("useEffect(")[1].split("}, [")[0]
     assert "setTimeout" not in hook and "setInterval" not in hook
     # a download starts from a button's own click, and from nowhere else
     assert panel.count("onGet(") == 1 and "onClick={() => onGet(one.pull)}" in panel
