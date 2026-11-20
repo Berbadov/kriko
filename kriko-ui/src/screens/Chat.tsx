@@ -19,6 +19,7 @@ import { DustField } from '../dust/DustField'
 import { cloud } from '../dust/engine'
 import { ProductList } from '../ui/ProductList'
 import { ProductShelf } from '../ui/ProductShelf'
+import { ProductGlyph } from '../ui/ProductGlyph'
 import { Markdown } from '../ui/Markdown'
 import { Fold } from '../ui/text'
 import { showDrawer } from '../ui/drawerEvents'
@@ -159,6 +160,7 @@ export function ChatScreen({ onOpen, onAction }: {
                 {recents.map((item, index) => (
                   <li key={item.id} className="rise" style={{ '--i': index + 2 } as CSSProperties}>
                     <button className="recent" onClick={() => onOpen(engine.mode === 'live' ? item.id : `demo:${item.name}`)}>
+                      <ProductGlyph name={item.name} size={24} />
                       <span className="recent-name">{item.name}</span>
                       <span className="recent-note">{item.note}</span>
                       <span className="recent-meta mono">

@@ -1,6 +1,7 @@
 import { useQueue, type QueueItem } from '../queue'
 import { AgentSteps } from './controls'
 import { Icon } from './Icon'
+import { ProductGlyph } from './ProductGlyph'
 import { ReportButton } from './ReportButton'
 
 export function QueueRow({ item, wide = false }: { item: QueueItem; wide?: boolean }) {
@@ -9,7 +10,7 @@ export function QueueRow({ item, wide = false }: { item: QueueItem; wide?: boole
   return (
     <li className="qc-row" data-wide={wide} data-state={item.state}>
       <div className="qc-main">
-        <span className="qc-name">{item.name}</span>
+        <span className="qc-title"><ProductGlyph name={item.name} size={20} /><span className="qc-name">{item.name}</span></span>
         <span className="qc-line">{wide ? `${item.agent} · ${item.line}` : item.line}</span>
         <AgentSteps value={item.progress} state={item.state} labels={wide} />
         {wide && item.note && <ReportButton jobId={item.jobId} note={item.note} />}
