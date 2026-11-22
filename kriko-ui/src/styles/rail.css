@@ -1,3 +1,226 @@
+/* ---- the left rail (ui/Rail.tsx) ----
+   A labelled list of the places, in three groups ruled off by hairlines, with
+   Settings pinned to its foot. Rows are 40px with 15px words; the active row
+   carries a 2px brand marker on its left edge and a neutral tint. The one filled
+   brand control is New chat. Under 900px of window the words leave the page's
+   sight (they stay for the screen reader) and the icons are the rail. */
+
+.lrail {
+  position: relative;
+  z-index: 35;
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  width: var(--rail-open);
+  min-height: 0;
+  padding: 0 10px 12px;
+  background: var(--sheet);
+  border-right: 1px solid var(--edge);
+}
+
+.lrail-top {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 14px 4px 16px;
+}
+
+.lrail-brand {
+  height: 22px;
+  padding: 0 2px;
+}
+
+.lrail-new {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--r-m);
+  background: var(--brand);
+  color: var(--on-brand);
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: filter var(--dur-2) var(--ease-out);
+}
+
+.lrail-new:hover {
+  filter: brightness(1.08);
+}
+
+.lrail-new:focus-visible,
+.lrail-item:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+.lrail-nav {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.lrail-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 0;
+}
+
+.lrail-group:first-child {
+  padding-top: 0;
+}
+
+.lrail-group + .lrail-group {
+  border-top: 1px solid var(--edge);
+}
+
+.lrail-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  height: 40px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--r-m);
+  background: transparent;
+  color: var(--ink-2);
+  font-size: 15px;
+  font-weight: 500;
+  text-align: left;
+  white-space: nowrap;
+  transition:
+    background-color var(--dur-2) var(--ease-out),
+    color var(--dur-2) var(--ease-out);
+}
+
+.lrail-item:hover {
+  background: var(--select-soft);
+  color: var(--ink);
+}
+
+.lrail-item[data-on='true'] {
+  background: var(--select-strong);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.lrail-item[data-on='true']::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--brand);
+}
+
+.lrail-item > .icon {
+  flex: none;
+}
+
+.lrail-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* A count is neutral, never amber: it says how many, not how bad. */
+.lrail-count {
+  margin-left: auto;
+  min-width: 22px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: var(--r-pill);
+  background: var(--select-strong);
+  color: var(--ink-2);
+  font-size: 12.5px;
+  line-height: 20px;
+  text-align: center;
+}
+
+.lrail-foot {
+  padding-top: 8px;
+  border-top: 1px solid var(--edge);
+}
+
+/* A small dot, not a label: an app update is waiting. */
+.lrail-dot {
+  margin-left: auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--link);
+}
+
+@media (max-width: 899px) {
+  .lrail {
+    width: var(--rail-shut);
+    padding: 0 8px 12px;
+  }
+
+  .lrail-top {
+    align-items: center;
+    padding: 12px 0 14px;
+  }
+
+  .lrail-brand {
+    display: none;
+  }
+
+  .lrail-new {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+  }
+
+  .lrail-item {
+    justify-content: center;
+    padding: 0;
+  }
+
+  .lrail-item[data-on='true']::before {
+    left: -8px;
+  }
+
+  .lrail-count {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    font-size: 11px;
+    line-height: 16px;
+  }
+
+  .lrail-dot {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    margin: 0;
+  }
+
+  /* The words leave the sight line and stay for the screen reader. */
+  .lrail-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}
+
 /* The sources and products column beside the thread, the context bar over the
    composer, and the evidence indicator on a finding. */
 
@@ -581,10 +804,6 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 6px 10px;
-}
-
-.risk-list li[data-thin] {
-  border-style: dashed;
 }
 
 .mx-risk {

@@ -24,11 +24,16 @@ def test_every_target_is_marked_somewhere():
     assert targets, "no step names a target, so this test checks nothing"
     for target in targets:
         mark = re.escape(target)
-        # Marked as `data-tour="x"`, or built from a template like `nav-${item.id}`.
+        # Marked as `data-tour="x"`, carried as `tour: 'x'` data, or built from `nav-${item.id}`.
         # A settings row or group is marked through its `tour="x"` prop, which writes `data-tour`.
         literal = re.search(rf'(?<![\w-])(?:data-)?tour="{mark}"', SOURCES)
+        # Or carried by data: a rail item or group holds `tour: 'x'`, and the
+        # element renders it as `data-tour={item.tour}` (or `group.tour`).
+        carried = re.search(rf"\btour: '{mark}'", SOURCES) and re.search(r"data-tour=\{\w+\.tour\}", SOURCES)
+        # Or named by a constant that a section receives: `const X = 'x'` and `tour={X}`.
+        named = re.search(rf"\b[A-Z_]+ = '{mark}'", SOURCES) and re.search(r"\btour=\{[A-Z_]+\}", SOURCES)
         built = target.startswith("nav-") and "data-tour={`nav-${item.id}`}" in SOURCES
-        assert literal or built, f"nothing is marked data-tour={target}"
+        assert literal or carried or named or built, f"nothing is marked data-tour={target}"
 
 
 def test_the_tour_stays_off_under_automation():
@@ -45,7 +50,7 @@ def test_the_tour_can_be_left_with_the_keyboard():
 
 
 def test_settings_can_start_it_again():
-    settings = (UI / "ui" / "panels" / "Settings.tsx").read_text(encoding="utf-8")
+    settings = (UI / "ui" / "settings" / "General.tsx").read_text(encoding="utf-8")
     assert "onClick={startTour}" in settings
 
 
@@ -59,8 +64,9 @@ def test_the_card_words_are_short():
 def test_the_tour_shows_the_agent_pick_and_the_source_kinds():
     targets = re.findall(r"target: '([a-z-]+)'", TOUR)
     assert "agent-pick" in targets and "source-kinds" in targets
-    # The source kinds live in a panel, so that step opens the panel first, and
-    # every step without a panel closes it again.
-    assert re.search(r"target: 'source-kinds', panel: 'settings'", TOUR)
+    # The source kinds live in a Settings section, so that step opens its panel
+    # (which routes to Settings, Research) first, and every step without a panel
+    # closes it again.
+    assert re.search(r"target: 'source-kinds', panel: 'agents', page: 'research'", TOUR)
     assert "showDrawer(step.panel ?? null)" in TOUR
     assert "showDrawer(null)" in TOUR  # leaving the tour closes the panel too

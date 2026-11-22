@@ -53,11 +53,13 @@ test('a line\'s three actions sit on one row, not stacked by the block icon butt
     'the line actions are still block-level and stack')
 })
 
-test('a recent row reserves a column for the picture, so every name starts at one x', async () => {
-  const css = await read('src/styles/chat.css')
-  const rules = [...css.matchAll(/\.recent \{([^}]*)\}/g)].map((hit) => hit[1])
-  assert.ok(rules.length, 'no rule for a recent row')
-  assert.ok(rules.some((body) => /grid-template-areas:[^;]*glyph/.test(body)), 'no picture column in a recent row')
+test('a recent row draws its picture in the shared icon tile, so every name starts at one x', async () => {
+  const home = await read('src/screens/Chat.tsx')
+  // A recent check is a list row: the picture (or the letter when no sprite fits) is the icon tile,
+  // and the name, the note and the risk count are the row's own parts.
+  assert.match(home, /<button type="button" className="k-row recent"/, 'a recent check is not a list row')
+  assert.match(home, /<span className="k-row-icon" aria-hidden="true">\s*\{glyphFor\(item\.name\) \? <ProductGlyph name=\{item\.name\}/, 'a recent row has no icon tile for its picture')
+  assert.match(home, /<span className="k-row-value">/, 'a recent row has no value for its risks and time')
 })
 
 test('the desktop writes its own words upright: no italic phrase in a screen', async () => {

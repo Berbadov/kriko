@@ -37,13 +37,32 @@ def test_the_linear_scanner_returns_what_the_regexes_it_replaced_returned():
         assert htmlscan.last_block(page, "main") == (main.group(1) if main else None)
 
 
-def _read_seconds(page):
-    best = float("inf")
-    for _ in range(3):
-        started = time.process_time()
+def _read_seconds(page, repeats=1):
+    started = time.process_time()
+    for _ in range(repeats):
         fetch.to_text(page)
         pricewatch.read_markup(page)
-        best = min(best, time.process_time() - started)
+    return time.process_time() - started
+
+
+def _large_over_small(small, large, rounds=5):
+    """The per-read cost of the 4x page over the 150 KB page, best of `rounds`.
+
+    Both sides are measured in the same round, one after the other, and the
+    best round wins. `process_time` on Windows ticks at 15.6 ms, and a busy
+    machine (the gate runs its stages at once) halves the clock a process sees,
+    so a single pair of readings can report ten times the true cost. The
+    smallest observed ratio is the round that got the least contention; a
+    quadratic parser reports sixteen in every round, so the bound still holds.
+    The small page is read eight times and divided, which puts it well above
+    one tick.
+    """
+    best = float("inf")
+    for _ in range(rounds):
+        small_seconds = _read_seconds(small, 8) / 8
+        large_seconds = _read_seconds(large)
+        if small_seconds > 0:
+            best = min(best, large_seconds / small_seconds)
     return best
 
 
@@ -53,12 +72,12 @@ def test_a_page_of_unclosed_tags_is_read_in_linear_time(unit):
     """Quadratic parsing was 30 s at a third of the size and an hour at the 2 MB cap.
 
     Compares sizes, not seconds: four times the input costs about four times the
-    work when linear and about sixteen when quadratic, and the ratio does not move
-    with how busy the host or the test process is.
+    work when linear and about sixteen when quadratic, and the ratio does not
+    move with how busy the host or the test process is.
     """
     small = (unit * (150_000 // len(unit) + 1))[:150_000]
     large = (unit * (600_000 // len(unit) + 1))[:600_000]
-    assert _read_seconds(large) < 9 * _read_seconds(small)
+    assert _large_over_small(small, large) < 9
 
 
 def test_one_pages_hostile_json_fails_alone():

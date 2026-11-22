@@ -85,7 +85,10 @@ def test_the_engine_and_the_search_binary_carry_the_pinned_architecture(recipe):
 def test_the_freeze_and_its_handshake_come_before_the_bundle(recipe):
     freeze = recipe.index("packaging/kriko-sidecar.spec")
     handshake = recipe.index("smoke_sidecar.py")
-    bundle = recipe.index("tauri build")
+    bundle = recipe.index("bun run bundle:macos")
+    scripts = json.loads((ROOT / "kriko-ui" / "package.json").read_text(encoding="utf-8"))["scripts"]
+    assert "tauri build" in scripts["bundle:macos"]
+    assert "tauri.macos.bundle.conf.json" in scripts["bundle:macos"]
     assert freeze < handshake < bundle
 
 

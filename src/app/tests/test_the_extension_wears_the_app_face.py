@@ -61,9 +61,12 @@ def _palette(block: str) -> dict[str, str]:
 
 def test_the_panel_and_the_page_keep_one_palette_with_the_app():
     app = (EXT.parent / "kriko-ui" / "src" / "styles" / "tokens.css").read_text(encoding="utf-8")
+    # Each slice is one palette: the default `:root` (dark), and the paper block
+    # (the explicit light, which the system's light setting repeats). A slice
+    # that ran on would read the gray or white values, since the last one wins.
     palettes = {
-        "dark": _palette(app[: app.index("@media (prefers-color-scheme: light)")]),
-        "light": _palette(app[app.index(":root[data-theme='light']") :]),
+        "dark": _palette(app[: app.index(":root[data-theme='gray']")]),
+        "light": _palette(app[app.index(":root[data-theme='paper']") : app.index(":root[data-theme='white']")]),
     }
     for sheet in (EXT / "hover_lite" / "hover_lite.css", EXT / "options" / "options.css"):
         text = sheet.read_text(encoding="utf-8").lower()

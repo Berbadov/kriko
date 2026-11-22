@@ -112,3 +112,19 @@ export function useMcpClients() {
 
   return { doc, problem, writing, write }
 }
+
+/** The pill for one client's state, in a word or two. */
+export function clientState(state: McpState): { text: string; tone: 'ok' | 'warn' | 'risk' | 'none' } {
+  switch (state) {
+    case 'connected':
+      return { text: 'Connected', tone: 'ok' }
+    case 'absent':
+      return { text: 'Not connected', tone: 'none' }
+    case 'stale':
+      return { text: 'Other store', tone: 'warn' }
+    case 'unreadable':
+      return { text: 'Unreadable', tone: 'risk' }
+    default:
+      return { text: 'By hand', tone: 'none' }
+  }
+}

@@ -106,3 +106,12 @@ export function useProxies() {
 
   return { doc, problem, checked, save, check, reload: load }
 }
+
+/** The state of one address, from the last check: `Ready`, `No answer`, or
+ *  `Not checked` when no check has run since the list last changed. */
+export function addressState(address: string, checked: ProxyCheck[] | 'checking' | null): { text: string; tone: 'ok' | 'risk' | 'none' } {
+  if (!Array.isArray(checked)) return { text: 'Not checked', tone: 'none' }
+  const row = checked.find((one) => one.address === address)
+  if (!row) return { text: 'Not checked', tone: 'none' }
+  return row.ok ? { text: 'Ready', tone: 'ok' } : { text: 'No answer', tone: 'risk' }
+}

@@ -15,17 +15,17 @@ Three screens carry the app:
 
 ## Run it from a source checkout
 
-You need Node.js, a Rust toolchain, and the Python environment of the engine
-(`tools/setup.sh`).
+You need Bun (1.4.5, the version in `package.json`'s `packageManager`), a Rust
+toolchain, and the Python environment of the engine (`tools/setup.sh`).
 
 ```
 cd kriko-ui
-npm ci
-npm run tauri dev
+bun install --frozen-lockfile
+bun run tauri dev
 ```
 
 The window hot-reloads. The shell starts the engine with `python -m app.sidecar`
-from the checkout. To work on the interface without the shell, run `npm run dev`
+from the checkout. To work on the interface without the shell, run `bun run dev`
 and open `http://localhost:5173`. The Vite server proxies `/api` to the engine,
 and the app shows demo data when no engine answers.
 
@@ -33,12 +33,12 @@ and the app shows demo data when no engine answers.
 
 | File | Function |
 |---|---|
-| `src/App.tsx`, `src/ui/` | The shell of the window: the rail, the drawer, and the shared pieces (composer, markdown, product card, queue card). |
+| `src/App.tsx`, `src/ui/` | The shell of the window: the left rail and its strip, and the shared pieces (composer, markdown, product card, queue card). |
 | `src/screens/` | One file for each screen: Chat, Compare, Product, Queue, and the rest. |
 | `src/engine/` | The engine from the side of the window: the API client, the boot state, and the typed products and jobs. |
 | `src/chat.tsx`, `src/compare.tsx`, `src/queue.tsx` | The state of the three pillars. Each lives above the screens, so a run survives a change of screen. |
 | `src/handoff.ts` | The route that the extension hands over: `check`, `result/<id>`, `questions/<id>`, `compare/<id>`, `queue`. |
-| `src/styles/tokens.css` | Every colour, size and time. The dark palette is the default and the light palette redefines each colour. Newsreader sets the titles and Inter the reading; the system monospace is for code and logs. Amber is a status and attention mark only, navy or sky is the main colour, and the radius scale is 8/10/12/16/pill. |
+| `src/styles/tokens.css` | Every colour, size and time. The dark palette is the default and the light palette redefines each colour. Newsreader sets the titles and Inter the reading; the system monospace is for code and logs. Four palettes (dark, gray, paper, white) and system, shared with the phone app: blue is the main colour, green a price that fell or no reports, amber a status that needs the eye, red a serious finding or a procurement risk, and the radius scale is 10/12/16/24/pill. `src/styles/system.css` is the shared list, row and figure vocabulary the screens are drawn from. |
 | `src-tauri/src/engine.rs` | The engine supervisor. |
 | `src-tauri/src/shell.rs` | The tray, the hide-on-close behaviour, and the window. |
 | `src-tauri/src/lib.rs` | The commands the window calls, and the start of the app. |
@@ -76,7 +76,7 @@ Build the Windows installer and the portable ZIP on Windows:
 powershell -ExecutionPolicy Bypass -File kriko-ui/package.ps1
 ```
 
-You need a Rust toolchain (MSVC) and Node.js on `PATH`. The first build
+You need a Rust toolchain (MSVC) and Bun on `PATH`. The first build
 downloads the NSIS tools that Tauri uses. Add `-InstallCheck` to also install
 the result into a scratch folder and remove it. That check refuses to run where
 a Kriko is already installed.
@@ -183,9 +183,10 @@ every animation. A window that is not in front stops the rest. The file
 
 ```
 cd kriko-ui
-npx tsc -b            # types
-npm run lint          # oxlint
-npm run build         # the production bundle
+bunx tsc -b           # types
+bun run lint          # oxlint
+bun run build         # the production bundle
+bun run test          # the behavior checks (node --test)
 cd src-tauri
 cargo test --locked   # the shell
 ```

@@ -155,12 +155,12 @@ rm -f /tmp/kriko-import.$$
 
 # ── Node ────────────────────────────────────────────────────────────────
 #
-# The root Node project holds the browser extension's checks.
-if command -v npm >/dev/null 2>&1; then
-    say "node dependencies (root: extension tests)"
-    npm install --silent --no-audit --no-fund
+# The root Bun project holds the browser extension's checks.
+if command -v node >/dev/null 2>&1 && command -v bun >/dev/null 2>&1; then
+    say "JavaScript dependencies (root: extension tests)"
+    bun install --frozen-lockfile --silent
 else
-    bad "npm not found — the Python half is ready, the extension JS suite is not."
+    bad "bun and/or node not found — the Python half is ready, the extension JS suite is not."
 fi
 
 say "ready"

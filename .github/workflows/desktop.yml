@@ -60,14 +60,33 @@ jobs:
                   # first request. The interpreter the binary carries should be
                   # the one the suite actually ran on.
                   python-version: "3.13"
+                  cache: pip
+                  cache-dependency-path: requirements.lock
+
+            # The JavaScript toolchain is Bun, pinned to the same version as the
+            # `packageManager` field in both package.json files. `cache: true`
+            # keeps the install cache between runs, keyed on bun.lock, so a
+            # warm job downloads nothing. Node is still installed because the
+            # suites run under `node --test` (see tools/gate.sh).
+            - uses: oven-sh/setup-bun@v2
+              with:
+                  bun-version: "1.4.5"
+                  cache: true
 
             - uses: actions/setup-node@v4
               with:
                   node-version: "22"
-                  cache: npm
-                  cache-dependency-path: kriko-ui/package-lock.json
 
             - uses: dtolnay/rust-toolchain@stable
+
+            # The Rust release tree is the largest thing a run downloads and
+            # rebuilds. The cache is keyed on Cargo.lock and the job's own
+            # profile, so a dependency change misses it and a source change
+            # does not.
+            - uses: Swatinem/rust-cache@v2
+              with:
+                  workspaces: kriko-ui/src-tauri -> target
+                  cache-on-failure: true
 
             # The lock is the pin, and this is what makes it one. Cargo already
             # *uses* a committed Cargo.lock; what it will also do, quietly, is
@@ -112,8 +131,8 @@ jobs:
                   pip install -r requirements.lock -e ".[dev,pipeline]" setuptools wheel
                   PYTHON="$(which python)" GATE_JOBS=4 tools/gate.sh py
                   PYTHON="$(which python)" tools/gate.sh wheel
-                  npm ci --no-audit --no-fund
-                  npm test
+                  bun install --frozen-lockfile
+                  bun run test
 
             # Tauri takes the two other programs as external binaries, named
             # with the target triple. They land beside kriko.exe.
@@ -146,11 +165,11 @@ jobs:
                   cp -r dist/kriko-engine/_internal kriko-ui/src-tauri/binaries/_internal
 
             - name: Install the web interface's packages
-              run: npm ci
+              run: bun install --frozen-lockfile
               working-directory: kriko-ui
 
             - name: Verify the desktop interface
-              run: npm run build && npm test && npm run lint
+              run: bun run build && bun run test && bun run lint
               working-directory: kriko-ui
 
             # The web build, `cargo build --release --locked` and the per-user
@@ -159,7 +178,7 @@ jobs:
             - name: Build the app and the installer
               working-directory: kriko-ui
               run: |
-                  npx --no-install tauri build --config src-tauri/tauri.bundle.conf.json -- --locked
+                  bun run bundle
                   mkdir -p builds
                   cp "src-tauri/target/release/bundle/nsis/Kriko_${VERSION}_x64-setup.exe" "builds/kriko-$VERSION-x86_64-setup.exe"
                   ls -l builds
@@ -225,14 +244,26 @@ jobs:
                   # 3.13: the same interpreter the suite runs on, and the one
                   # the frozen engine carries. See the note on the Windows job.
                   python-version: "3.13"
+                  cache: pip
+                  cache-dependency-path: requirements.lock
+
+            # The disk image is assembled by package-macos.sh, which installs
+            # the interface's packages with Bun and builds with `bun run tauri`.
+            - uses: oven-sh/setup-bun@v2
+              with:
+                  bun-version: "1.4.5"
+                  cache: true
 
             - uses: actions/setup-node@v4
               with:
                   node-version: "22"
-                  cache: npm
-                  cache-dependency-path: kriko-ui/package-lock.json
 
             - uses: dtolnay/rust-toolchain@stable
+
+            - uses: Swatinem/rust-cache@v2
+              with:
+                  workspaces: kriko-ui/src-tauri -> target
+                  cache-on-failure: true
 
             - name: The version is the tree's
               run: |
@@ -277,6 +308,8 @@ jobs:
               with:
                   # 3.13: see the note on the bundle job.
                   python-version: "3.13"
+                  cache: pip
+                  cache-dependency-path: requirements.lock
             - name: Install
               run: |
                   python -m pip install --upgrade pip

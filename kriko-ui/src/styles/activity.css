@@ -13,19 +13,22 @@
   align-items: center;
   gap: 10px;
   width: 100%;
+  min-height: 44px;
   padding: 8px 12px;
+  color: var(--ink);
+  font-size: 14px;
   text-align: left;
 }
 
 .tl-label {
-  font-weight: 600;
+  font-weight: var(--w-medium);
 }
 
 .tl-time {
   margin-left: auto;
   color: var(--ink-3);
-  font-family: var(--mono);
-  font-size: 12px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
 }
 
 .tl-chev {
@@ -83,7 +86,7 @@
   max-width: 62ch;
   margin: 0 0 8px 24px;
   color: var(--ink-2);
-  font-size: 13.5px;
+  font-size: 14px;
   line-height: 1.6;
 }
 
@@ -133,13 +136,13 @@
   align-items: center;
   gap: 10px;
   padding: 6px 0;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .tool-dot {
   display: grid;
   place-items: center;
-  color: var(--ok-text);
+  color: var(--positive);
 }
 
 .tool-name {
@@ -159,16 +162,15 @@
 
 .tool-url,
 .run-event-url {
-  color: var(--accent-hi);
+  color: var(--link);
   text-decoration: underline;
-  text-decoration-color: color-mix(in srgb, var(--accent-hi), transparent 60%);
+  text-decoration-color: color-mix(in srgb, var(--link), transparent 60%);
   text-underline-offset: 2px;
 }
 
 .tool-counts {
   color: var(--ink-2);
-  font-family: var(--mono);
-  font-size: 11.5px;
+  font-size: 13px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -180,25 +182,25 @@
   margin-left: 24px;
   padding: 2px 0 3px;
   color: var(--ink-2);
-  font-size: 12.5px;
+  font-size: 13px;
   line-height: 1.45;
   overflow-wrap: anywhere;
 }
 
 .run-event[data-level='warn'],
 .run-event[data-level='error'] {
-  color: var(--risk-text);
+  color: var(--risk);
 }
 
 .run-event-stage {
   color: var(--ink-3);
-  font-family: var(--mono);
-  font-size: 10.5px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
 }
 
 .tool-time {
   color: var(--ink-3);
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .plan ul {
@@ -246,10 +248,10 @@
 }
 
 .plan li[data-state='done'] .plan-mark {
-  background: var(--ok);
+  background: var(--positive);
   border-color: transparent;
 }
 
 .tool-dot[data-failed='true'] {
-  color: var(--risk-text);
+  color: var(--risk);
 }

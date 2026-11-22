@@ -1,0 +1,68 @@
+{
+  "version": "0.4.0",
+  "platform": "windows-x86_64",
+  "source_fingerprint": "2bf2da644b8f5d9836a7c6b66d20261221852bd57324b49f2c84c403b2130646",
+  "recorded_at": "2026-11-22",
+  "note": "Cut from release/0.4.0 at the merge of #355 (the desktop redesign, procurement on every screen, one plain Settings screen) plus extension 0.5.1 and the Bun tooling change. The packaged 0.4.0 portable build was walked on this Windows host against a scratch KRIKO_STORE/KRIKO_APP_STATE with the laptops catalog installed from the v0.3.14 release. Portable start, setup, a sourced answer, a follow-up, Compare, Stop and a 0.3.14-to-0.4.0 profile upgrade were observed; reconnect after killing the engine did not recover the window and is recorded as failed; the installer was not run because this machine already has a Kriko 0.3.14 installed and smoke_installer.py refuses to replace a reader's install.",
+  "journeys": {
+    "fresh_install": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "The installer kriko-0.4.0-x86_64-setup.exe was built, but a Kriko 0.3.14 is installed on this machine (%LOCALAPPDATA%\\Kriko with a per-user uninstall entry) and packaging/smoke_installer.py refuses to replace it with a scratch copy. The app the installer carries was started by packaging/smoke_app.py (25 s, no panic, engine spawned) and the portable build was walked independently."
+    },
+    "portable_start": {
+      "status": "passed",
+      "observed_at": "2026-11-22T13:20:00Z",
+      "evidence": "The portable ZIP was extracted to a scratch folder and kriko.exe opened. It started its own kriko-sidecar.exe (health: shell_attached true, version 0.4.0, extension 0.5.1, store_readable true) and the redesigned Ask screen rendered (rail: Ask, Compare, Queue, History, Procurement, Prices, Catalogs, Sites, For you, Settings), captured in docs/previews/2026-11-20-desktop-redesign and in this session's screenshots."
+    },
+    "setup": {
+      "status": "passed",
+      "observed_at": "2026-11-22T13:21:00Z",
+      "evidence": "Settings opened with the six sections (General, Research, Keys and models, Connections, Usage and spend, Data and updates). Research showed Claude Code as the answering agent, state Ready. POST /api/agent-verify against the packaged sidecar returned ok true, server kriko, steps start/initialize/tools ok, and all 22 MCP tools."
+    },
+    "sourced_answer": {
+      "status": "passed",
+      "observed_at": "2026-11-22T13:26:00Z",
+      "evidence": "Asked in Ask: 'What is known to go wrong with the MacBook Air M2?' Claude Code (claude-haiku-5-5, Claude Code 2.1.323) ran six searches, read six pages, and answered. The saved Product check holds 4 risks, 3 serious, each with its source and a 'Partial: only one site says this' note where that is the honest reading."
+    },
+    "follow_up": {
+      "status": "passed",
+      "observed_at": "2026-11-22T13:28:00Z",
+      "evidence": "Follow-up in the same conversation: 'Which of those is the most serious for a used 2022 model?' answered from the conversation with three newly cited pages (proteste.pt, v2ex.co, sikayetvar.com), and the turn's source list named each page and whether it was read and cited."
+    },
+    "compare": {
+      "status": "passed",
+      "observed_at": "2026-11-22T13:30:00Z",
+      "evidence": "Added the ThinkPad T14 check (3 risks) and the MacBook Air M2 check (4 risks) to Compare. The screen drew both products, each saved check with its coverage, and the finding rows with 'In 1 of 2 products'/'Not found here'."
+    },
+    "stop": {
+      "status": "passed",
+      "observed_at": "2026-11-22T13:31:00Z",
+      "evidence": "Asked a Compare question and pressed Stop 8.1 s into the turn. The turn reads Stopped and kept its log; no answer text had been written yet, so there was no partial text to preserve."
+    },
+    "reconnect": {
+      "status": "failed",
+      "observed_at": "2026-11-22T13:23:00Z",
+      "evidence": "Killing the packaged kriko-sidecar produced 'Kriko could not connect' with the engine's last log lines, as designed. Two presses of Reconnect did not recover the window ('Could not reach Kriko. Check the engine connection and try again.'), while the shell's engine_status reported ready at 0.4.0 and a new sidecar answered on 127.0.0.1:8787. The retry path is recorded as a defect, not passed."
+    },
+    "upgrade_retains_data": {
+      "status": "passed",
+      "observed_at": "2026-11-22T13:33:00Z",
+      "evidence": "A scratch profile was opened with the v0.3.14 portable build; the laptops catalog was installed (9 subjects, 38 claims) and a chat thread 'Upgrade probe chat' was created. The 0.4.0 portable build then opened on the same KRIKO_STORE/KRIKO_APP_STATE: /api/packs listed org.kriko.laptops 0.1.1 with 9 subjects and 38 claims, and /api/chat/threads listed 'Upgrade probe chat'."
+    }
+  },
+  "providers": {
+    "claude-code": {
+      "status": "passed",
+      "model": "claude-haiku-5-5",
+      "version": "2.1.323",
+      "report": "Two packaged-window turns: the MacBook Air M2 question ($0.0075, six searches, six pages, 4 risks with sources) and the used-2022 follow-up ($0.0083, three cited pages). The app's own turn log names the agent, the model, each search, each page and whether it was read or cited."
+    }
+  },
+  "observed_instead": [
+    "tools/gate.sh on this tree, Windows host: the py stage ended at 5354 passed, 29 skipped, 0 failed in 14m38 with ruff and all four mypy runs clean; the concurrent run of the other stages passed node (550 tests) in 10s, ui (build, lint, 256 behaviour tests) in 31s, tauri (cargo check/test, shell and harness) in 53s and wheel in 54s, wall 27m56s.",
+    "kriko-ui/package.ps1 -Version 0.4.0 built kriko-0.4.0-x86_64-setup.exe (38013841 bytes, sha256 0d56ee9f2a060ad244fa83344372d20983878bdc59bee8933f10e19812d54975), kriko-0.4.0-win64-portable.zip (46939556 bytes, sha256 4caed0a140851bcfffa75f56f2f5ad7cd4a0d84b38c0c3227839a430373ee925) and kriko-engine-0.4.0-win64.zip (32742133 bytes, sha256 315fcb244875d8ac1a1b684c57161c00ae5682b5a4462bb994974a94cda58646). The build's checks passed: frozen sidecar handshake and /api/health at 0.4.0, the Firefox offline event-page manifest, an MCP initialize, a job failing cleanly, the app up for 25 s with its engine spawned, and the portable ZIP.",
+    "The first freeze's smoke_sidecar.py failed at its Firefox assertion because #354 changed the event page to load offline/sqlite.js and offline/catalog.js before background.js; the check is updated to that intent. It also failed once to see a job finish inside 30 s while 157 stale kriko-agent-* folders in %TEMP% were being reaped at startup; after they were removed every check passed.",
+    "Extension 0.5.1: kriko-extension-0.5.1.zip is the extension/ folder without tests/ (30 entries, 548926 bytes, sha256 6f297b6c458f5468d2d4f43c9a7d0cb74dff75e48fe1c2b3cac173e8aa2f2de8), manifest 0.5.1, digest-stamped background.js. All 550 extension tests pass."
+  ]
+}

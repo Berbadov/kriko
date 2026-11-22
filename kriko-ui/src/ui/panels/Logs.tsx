@@ -1,5 +1,5 @@
-import { Checkbox } from '../../arc/checkbox/checkbox'
 import { useMemo, useState } from 'react'
+import { Checkbox } from '../../arc/checkbox/checkbox'
 import { useEngine } from '../../engine/Engine'
 import {
   LEVELS,
@@ -81,13 +81,13 @@ export function LogsPanel() {
 
   if (!jobs && jobsProblem) {
     return (
-      <p className="error-note" role="alert">
-        The log could not be read. {jobsProblem} <button className="btn" onClick={() => void reload()}>Try again</button>
+      <p className="error-note settings-data-problem" role="alert">
+        The log could not be read. {jobsProblem} <button type="button" className="k-btn" data-size="sm" onClick={() => void reload()}>Try again</button>
       </p>
     )
   }
-  if (!jobs) return <p className="panel-note">Reading the log…</p>
-  if (!jobs.length) return <p className="panel-note">Nothing has run yet. Every step of every job is kept here.</p>
+  if (!jobs) return <p className="settings-data-words">Reading the log…</p>
+  if (!jobs.length) return <p className="settings-data-words">Nothing has run yet. Every step of every job is kept here.</p>
 
   return (
     <div className="logs">
@@ -105,7 +105,7 @@ export function LogsPanel() {
         <Summary job={job} jobs={jobs} />
 
         <div className="logs-filters">
-          <label className="search-field">
+          <label className="settings-data-search">
             <Icon name="search" size={15} />
             <input type="search" placeholder="Search the steps" aria-label="Search the steps" value={filter.q} onChange={(event) => set({ q: event.target.value })} />
           </label>
@@ -124,19 +124,19 @@ export function LogsPanel() {
             ))}
           </div>
           <div className="logs-actions">
-            {filtered && <button className="btn ghost" onClick={() => set({ levels: [], sources: [], q: '' })}>Clear filters</button>}
+            {filtered && <button type="button" className="k-btn" data-kind="quiet" data-size="sm" onClick={() => set({ levels: [], sources: [], q: '' })}>Clear filters</button>}
             <Checkbox checked={bodies} onCheckedChange={(next) => setBodies(next === true)} label="Include prompts and replies" />
-            <button className="btn" onClick={() => void save()}>
+            <button type="button" className="k-btn" data-size="sm" onClick={() => void save()}>
               Export as text
             </button>
           </div>
         </div>
-        {note && <p className="panel-note" role="status">{note}</p>}
-        {problem && <p className="error-note">{problem} <button className="btn" onClick={() => void reloadSteps()}>Try again</button></p>}
+        {note && <p className="settings-data-words" role="status">{note}</p>}
+        {problem && <p className="error-note settings-data-problem">{problem} <button type="button" className="k-btn" data-size="sm" onClick={() => void reloadSteps()}>Try again</button></p>}
 
-        {!data && !problem && <p className="panel-note">Reading the steps…</p>}
-        {data && data.items.length === 0 && <p className="panel-note">{filtered ? 'No step matches these filters.' : 'This job has no steps yet.'}</p>}
-        {data && data.truncated && <p className="panel-note">Showing the latest {data.items.length} of {data.total} steps. Narrow the filters, or export, to reach the rest.</p>}
+        {!data && !problem && <p className="settings-data-words">Reading the steps…</p>}
+        {data && data.items.length === 0 && <p className="settings-data-words">{filtered ? 'No step matches these filters.' : 'This job has no steps yet.'}</p>}
+        {data && data.truncated && <p className="settings-data-words">Showing the latest {data.items.length} of {data.total} steps. Narrow the filters, or export, to reach the rest.</p>}
         {data && data.items.length > 0 && (
           <ol className="logs-steps" aria-label="Steps in order">
             {data.items.map((one, index) => (
@@ -235,11 +235,11 @@ function StepRow({ step, showJob, job, live }: { step: LogStep; showJob: boolean
               ))}
               {step.gap_ms !== null && <div><dt>Until the next step</dt><dd>{span(step.gap_ms)}</dd></div>}
             </dl>
-            {problem && <p className="error-note">{problem}</p>}
-            {(step.request_chars > 0 || step.response_chars > 0) && !full && !problem && <p className="panel-note">Reading it…</p>}
+            {problem && <p className="error-note settings-data-problem">{problem}</p>}
+            {(step.request_chars > 0 || step.response_chars > 0) && !full && !problem && <p className="settings-data-words">Reading it…</p>}
             {full && <Body label="Request" text={full.request} />}
             {full && <Body label="Response" text={full.response} />}
-            <p className="panel-note logs-redacted">Keys and the words you saved about yourself are taken out before anything is kept.</p>
+            <p className="settings-data-words logs-redacted">Keys and the words you saved about yourself are taken out before anything is kept.</p>
           </div>
         )}
       </li>
@@ -254,7 +254,7 @@ function Body({ label, text }: { label: string; text: string }) {
     <section className="logs-body">
       <header>
         <h4>{label} <span className="muted mono">{text.length.toLocaleString('en-GB')} characters</span></h4>
-        <button className="btn ghost" onClick={() => void copyText(text).then((ok) => { setCopied(ok); window.setTimeout(() => setCopied(false), 1500) })}>
+        <button type="button" className="k-btn" data-kind="quiet" data-size="sm" onClick={() => void copyText(text).then((ok) => { setCopied(ok); window.setTimeout(() => setCopied(false), 1500) })}>
           <Icon name="copy" size={14} /> {copied ? 'Copied' : 'Copy'}
         </button>
       </header>

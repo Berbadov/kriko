@@ -5,11 +5,11 @@ locally. New research uses the selected agent and its account.
 
 ## Start and verify setup
 
-Open **More → Set up Kriko**. Choose an agent, check its connection, obtain a
+Open **Settings → Connections → Set up Kriko**. Choose an agent, check its connection, obtain a
 catalog, and prepare the browser extension. Complete a product question with a
 source to verify the full research path. See [Windows installation](INSTALL_WINDOWS.md).
 
-## Ask in Chat
+## Ask a question
 
 Describe the product, exact variant, market and important constraints. Continue
 in the same conversation when correcting a year, budget or preference. The latest
@@ -68,7 +68,7 @@ starting work on a paid account.
 
 ## Catalogs
 
-In **More → Catalogs**:
+In **Library → Catalogs**:
 
 - **Find release catalogs** lists available knowledge and updates.
 - **Import .kpack** installs a catalog artifact from your computer.
@@ -110,7 +110,7 @@ time (`app/queryshare.py`); the queue lives in memory, holds no timestamps, and
 is emptied the moment you untick the box. A machine with no network sends
 nothing and waits for nothing.
 
-**More → Logs** shows every job's steps in order with their timing: the words
+**Settings → Data and updates → Logs** shows every job's steps in order with their timing: the words
 searched, each page and whether it was read, every agent call (prompt and reply
 size, tokens, cost, which agent and model), each retry and why, each verdict and
 each failure. Filter by job, level, source or a word; open a row for the exact
@@ -118,12 +118,12 @@ request and reply; **Export as text** saves a copy. Keys and the words you saved
 about yourself are taken out before anything is kept, and the log is stored in
 `app.sqlite`, so it survives a restart. A figure that was not counted says so.
 
-**More → Backup and restore** exports saved work, settings, catalog revisions and
+**Settings → Data and updates → Backup and restore** exports saved work, settings, catalog revisions and
 data-only drafts. Keys are excluded. Restoring a selected snapshot replaces current
 saved state after a restart, retains previous database files, and leaves provider
 key files unchanged. Stop active work before making or restoring a snapshot.
 
-**Settings → Use Kriko in another chat** adds Kriko to a chat app or an editor's chat
+**Settings → Connections → Use Kriko in another chat** adds Kriko to a chat app or an editor's chat
 (any MCP client, a desktop chat app, an IDE chat, a client that needs a URL). It shows
 the exact config for the client you pick, to copy, and writes it into the client's own
 config file where that file is known; a file it cannot read is left alone. In that chat,
@@ -142,7 +142,7 @@ research; its fixture results are outside the desktop stable-release scope.
 
 ## Buying help
 
-Open **More**, then **For you**, and say what you need: how you use what you
+Open **For you** in the rail, and say what you need: how you use what you
 buy, your budget, what you must have, what you avoid and distrust, and what
 matters most to you. Kriko gives this to your agent with every question. You
 can leave any of it empty.
