@@ -68,7 +68,7 @@ if [ "$arch" != "$host_arch" ]; then
     die "asked to build $arch and this Mac is $host_arch. Tauri and PyInstaller cannot cross-compile, so build each package on a Mac of its own architecture."
 fi
 
-for tool in cargo node npm codesign hdiutil lipo shasum; do
+for tool in cargo bun codesign hdiutil lipo shasum; do
     command -v "$tool" >/dev/null 2>&1 || die "$tool is not on PATH."
 done
 
@@ -99,7 +99,7 @@ fi
 
 "$python" --version
 cargo --version
-node --version
+bun --version
 
 # ------------------------------------------------------------------ preflight
 
@@ -174,7 +174,7 @@ install -m 755 "$ROOT/dist/kriko-sidecar" "$staged/kriko-sidecar-$triple"
 
 echo ""
 echo "=== Install the web interface's packages"
-(cd "$UI" && npm ci)
+(cd "$UI" && bun install --frozen-lockfile)
 
 # A stale bundle from an earlier build of this version must not be reported as
 # this build's.
@@ -182,7 +182,7 @@ rm -rf "$target/release/bundle"
 
 echo ""
 echo "=== Build the app"
-(cd "$UI" && npx --no-install tauri build --config src-tauri/tauri.macos.bundle.conf.json -- --locked)
+(cd "$UI" && bun run bundle:macos)
 
 app="$target/release/bundle/macos/Kriko.app"
 [ -d "$app" ] || die "tauri build reported success and made no app at $app"

@@ -47,17 +47,17 @@
   --ice:          #a3b8ff;
   --focus:        #ffc27a;
 
-  --led-off:      rgba(237, 237, 234, 0.14);
-  --led-dim:      #9a9da4;
-  --bezel-hi:     #1c1f23;
-  --bezel-lo:     #15171a;
-  --bezel-edge:   rgba(237, 237, 234, 0.12);
-  --glass-1:      rgba(237, 237, 234, 0.02);
-  --glass-2:      rgba(237, 237, 234, 0.04);
-  --glass-3:      rgba(237, 237, 234, 0.06);
+  --led-off:      rgba(255, 255, 255, 0.12);
+  --led-dim:      #a8afbd;
+  --bezel-hi:     #171b24;
+  --bezel-lo:     #10131a;
+  --bezel-edge:   rgba(255, 255, 255, 0.12);
+  --glass-1:      rgba(255, 255, 255, 0.02);
+  --glass-2:      rgba(255, 255, 255, 0.04);
+  --glass-3:      rgba(255, 255, 255, 0.06);
   --well:         #171b24;
   --hover-face:   #171b24;
-  --hover-edge:   rgba(237, 237, 234, 0.22);
+  --hover-edge:   rgba(255, 255, 255, 0.22);
   --row-face:     #10131a;
   --scroll-track: #10131a;
   --alert-ink:    #ffc27a;
@@ -68,7 +68,7 @@
   --warn-surface: rgba(255, 161, 68, 0.12);
   --warn-border:  rgba(255, 194, 122, 0.40);
   --key-edge:     #25618f;
-  --sky-base:     #15171a;
+  --sky-base:     #10131a;
   --sunken-face:  rgba(237, 237, 234, 0.02);
   --shadow-panel: none;
   --shadow-card:  none;

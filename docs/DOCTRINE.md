@@ -107,7 +107,7 @@ The body is for `git log` in six months: the cause, not the symptom (*"the picke
 
 ```bash
 python -m pytest        # all tests, no arguments
-npm test                # extension scraper + panel
+bun run test            # extension scraper + panel
 ```
 
 Run `pytest` bare: `pytest.ini` pins `testpaths`, and naming directories skips `app/pipeline/tests` silently (576 of 761 tests once). The suite must pass with **no API keys and no `.env`**; a keyed test reaches the network and belongs behind a marker.
@@ -170,7 +170,7 @@ tools/gate.sh gpui       # cargo check and cargo test, offline
 | `ruff`, `mypy` | lint, and types in `src/kriko`, `src/app` and `packs` (three runs) |
 | `pytest` | full suite + the layering and testpaths invariants |
 | `tools/smoke_wheel.sh` | a wheel that no longer imports what the checkout does |
-| `npm test` | scraper and extension-panel tests (jsdom); a run of zero tests fails |
+| `bun run test` | scraper and extension-panel tests (jsdom); a run of zero tests fails |
 | `cargo check`, `cargo test` | the desktop app; skipped, with the remedy, when there is no `cargo` or the registry cache is cold |
 
 **It runs on your machine, as a deliberate retreat.** These were `ci.yml`'s
@@ -199,7 +199,9 @@ Run it from the Actions tab, or build on a Windows host per
 [`kriko-gpui/README.md`](../kriko-gpui/README.md), which is how every installer so
 far was made.
 
-The gate runs with no secrets. Root `npm test` uses `npm install` (its lockfile
-is gitignored); the `ui` gate uses `npm ci` (lockfile committed), because
-floating dependencies would change asset hashes and fail the bundle check
-spuriously.
+The gate runs with no secrets. JavaScript packages install and build with Bun
+1.4.5 (pinned in each `package.json`'s `packageManager` and in `desktop.yml`);
+`bun.lock` is committed at both depths, so an install is the same closure on
+every machine. The suites themselves run under `node --test`, which is what
+they were written for: Bun's runner cannot load the interface suite's compiled
+`.cjs` modules, and it is slower on the extension's.

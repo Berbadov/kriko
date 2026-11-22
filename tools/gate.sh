@@ -31,12 +31,19 @@
 #
 # The default is light on purpose. The gate used to start all five stages at
 # once with pytest on every core, which made the developer's machine unusable
-# while it ran. The knobs that bring that back are below.
+# while it ran. Stages whose work is independent now do run at once by default,
+# because the wall clock is dominated by pytest and the other four stages are
+# cheap beside it; `GATE_CONCURRENT=0` restores the one-after-another path, which
+# stops at the first failing stage exactly as before. The knobs:
 #
 #   GATE_JOBS=<n>        pytest workers. Default 2; `auto` is every core; 1 is serial.
-#   GATE_CONCURRENT=1    run the stages at once, each to its own log, as before.
+#   GATE_CONCURRENT=0    run the stages one after another, stopping at the first failure.
 #   CARGO_BUILD_JOBS=<n> cargo's compile jobs. Default 2 here; cargo alone is every core.
 #
+# JavaScript packages install and build with Bun (the version in `packageManager`
+# in each package.json); the suites themselves run under `node --test`, which is
+# what they were written for and which bun test cannot load (the interface suite
+# compiles TypeScript to `.cjs` and requires sibling modules by bare path).
 # pytest runs with `-n` (pytest-xdist, in the `dev` extra) when xdist is importable.
 #
 # Nothing here needs secrets: the suite must pass without an API key, which is
@@ -217,7 +224,12 @@ gate_wheel() {
 
 gate_node() {
     step "node (scraper + extension panel)"
-    # Not just `npm test`. `node --test` exits 0 when its pattern matches no
+    if ! command -v bun >/dev/null 2>&1; then
+        echo "bun is not on PATH. The JavaScript packages install and build with Bun" >&2
+        echo "(1.4.5, pinned in package.json's packageManager): https://bun.sh" >&2
+        exit 1
+    fi
+    # Not just `bun run test`. `node --test` exits 0 when its pattern matches no
     # files, and the pattern was single-quoted — which cmd.exe does not strip,
     # so on the Windows host that runs this gate the leg printed `tests 0 /
     # pass 0 / fail 0` and passed, hiding 157 real tests including every one
@@ -237,10 +249,10 @@ gate_node() {
     # stop silently. Printing first and then exiting with the same status keeps
     # the verdict and shows the failure.
     local node_out node_status=0 node_count
-    node_out=$(npm test 2>&1) || node_status=$?
+    node_out=$(bun run test 2>&1) || node_status=$?
     printf '%s\n' "$node_out"
     if [ "$node_status" != 0 ]; then
-        echo "the node suite failed (npm test exited $node_status)." >&2
+        echo "the node suite failed (bun run test exited $node_status)." >&2
         exit "$node_status"
     fi
     node_count=$(printf '%s' "$node_out" | sed -n 's/.*[^a-z]tests \([0-9][0-9]*\).*/\1/p' | tail -1)
@@ -255,7 +267,7 @@ gate_ui() {
     # `|| return 1` because this function runs as `"gate_ui" || rc=$?`, where
     # bash suspends errexit: without it a failed build would fall through to
     # the behavior checks and the stage would read as passed.
-    (cd kriko-ui && npm run build && npm run lint) || return 1
+    (cd kriko-ui && bun run build && bun run lint) || return 1
     local ui_out ui_status=0 ui_count
     ui_out=$(cd kriko-ui && node --test --test-reporter=tap tests/*.test.mjs 2>&1) || ui_status=$?
     printf '%s\n' "$ui_out"
@@ -385,10 +397,19 @@ summary() {
     printf '\n\033[32mall gates passed\033[0m\n'
 }
 
-# All four stages at once. Each runs in a background subshell with its own log;
-# whichever finishes first is printed first, as one block.
+# All four stages that do not touch the checkout at once, then the wheel. Each
+# runs in a background subshell with its own log; whichever finishes first is
+# printed first, as one block.
+#
+# The wheel is deliberately not among them. `tools/smoke_wheel.sh` deletes
+# `src/*.egg-info` and `build/lib` and rebuilds both, and `build/lib` is a copy
+# of the tree that the Windows scanner then reads for a minute. Running that
+# while pytest imports `app.cli` made a 0.3 s import take 4.9 s and an agent
+# probe return no models: both failed on the machine's load, not on the code.
+# It runs alone afterwards, where it can neither starve a test nor leave a
+# half-built copy for one to find.
 run_all_concurrently() {
-    local -a stages=(py wheel node ui tauri)
+    local -a stages=(py node ui tauri)
     local -A name_of=() started=()
     local n rc done_pid remaining t0 verdict
     t0=$(now_ms)
@@ -415,6 +436,18 @@ run_all_concurrently() {
         printf '\n\033[1m════ %s: %s after %s\033[0m\n' "$n" "$verdict" "$(fmt_ms "${took_ms[$n]}")"
         cat "$tmp_dir/$n.log"
     done
+    current_stage=wheel
+    started[wheel]=$(now_ms)
+    rc=0
+    gate_wheel || rc=$?
+    took_ms[wheel]=$(( $(now_ms) - ${started[wheel]} ))
+    exit_of[wheel]=$rc
+    if [ "$rc" = 0 ]; then verdict=passed
+    elif [ "$rc" = 3 ]; then verdict=skipped
+    else verdict="FAILED (exit $rc)"; fi
+    verdict_of[wheel]=$verdict
+    printf '\n\033[1m════ wheel: %s after %s\033[0m\n' "$verdict" "$(fmt_ms "${took_ms[wheel]}")"
+    current_stage=""
     summary $(( $(now_ms) - t0 ))
 }
 
@@ -444,7 +477,7 @@ run_all_in_order() {
 
 case "$only" in
     all)
-        if [ "${GATE_CONCURRENT:-0}" != 1 ] || [ "$jobs" = 1 ]; then
+        if [ "${GATE_CONCURRENT:-1}" = 0 ] || [ "$jobs" = 1 ]; then
             run_all_in_order
         elif [ "$concurrent_ok" = 1 ]; then
             run_all_concurrently
