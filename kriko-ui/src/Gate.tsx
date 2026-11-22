@@ -2,14 +2,16 @@ import App from './App'
 import { UpdateProvider } from './engine/appupdate'
 import { useEngine } from './engine/Engine'
 import { Starting } from './ui/Starting'
+import { TitleBar } from './ui/TitleBar'
 import { UpdateNotice } from './ui/UpdateNotice'
 
 /** Nothing that reads the engine is drawn until it has answered or been given up on. */
 export function Gate() {
   const { mode, problem, retry } = useEngine()
-  if (mode === 'checking') return <Starting />
+  if (mode === 'checking') return <><TitleBar floating /><Starting /></>
   if (mode === 'offline') return (
     <div className="starting" role="alert">
+      <TitleBar floating />
       <h1>Kriko could not connect</h1>
       <p>{problem || 'The engine is unavailable. Your saved work stays on this computer.'}</p>
       <button className="btn primary" onClick={retry}>Reconnect</button>

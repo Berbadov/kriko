@@ -44,8 +44,8 @@ export function Timeline({ run, historical = false }: { run: Run; historical?: b
       <Fold open={open}>
         <div className="tl-body">
           <AnimatePresence initial={false}>
-            {run.rows.map((row) => (
-              <RowView key={row.id} row={row} />
+            {run.rows.map((row, index) => (
+              <RowView key={`${row.id}:${index}`} row={row} />
             ))}
           </AnimatePresence>
         </div>

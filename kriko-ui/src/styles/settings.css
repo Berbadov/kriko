@@ -922,3 +922,10 @@ button.switch[data-on='true'] .switch-track i {
     justify-content: flex-start;
   }
 }
+
+/* A choice list is as wide as its longest option, up to a limit, so the chosen one is never cut short. */
+.settings-setting .k-row-control > select.k-input {
+  width: auto;
+  min-width: 220px;
+  max-width: 340px;
+}

@@ -1,8 +1,8 @@
 /* The identity layer, last in the cascade: it changes how things look and
-   never where they sit. Newsreader sets the titles, Inter the reading. Corners
+   never where they sit. Chivo Mono sets the titles, Inter the reading. Corners
    are soft, 8/10/12/16, and a press is a pill; the pixel art stays square. */
 
-/* Big titles: Newsreader, one step lighter than the body's bold, close. */
+/* Big titles: Chivo Mono, one step lighter than the body's bold, close. */
 .hello h1 {
   font-weight: var(--w-display);
   letter-spacing: -0.02em;

@@ -340,6 +340,7 @@
 
 .cr-group ul {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 4px;
   margin: 0;
   padding: 0;
@@ -361,6 +362,7 @@
    when the column is genuinely too narrow, the column holds twice as many. */
 .cr-item {
   display: flex;
+  min-width: 0;
   flex-wrap: wrap;
   align-items: center;
   gap: 0 4px;
@@ -546,6 +548,8 @@
 @container chat (max-width: 1080px) {
   .chat[data-thread='true'] .chat-main {
     grid-template-columns: minmax(0, 1fr);
+    /* The closed drawer waits off to the right; it must not widen the page. */
+    overflow-x: clip;
   }
 
   .cr-toggle {

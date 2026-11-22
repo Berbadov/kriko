@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react'
+import { createPortal } from 'react-dom'
 import { AnimatePresence, motion } from 'motion/react'
 import type { ChatMode } from '../activity/run'
 import { useEngine, type Agent } from '../engine/Engine'
@@ -125,14 +126,61 @@ export function Composer({
     }
   }
 
-  /** Arrow keys move through the agent list, as `role="listbox"` promises. */
+  const trigger = useRef<HTMLButtonElement>(null)
+  const list = useRef<HTMLUListElement>(null)
+  const [place, setPlace] = useState<CSSProperties>({})
+
+  /** Keep the list inside the window: above the button when it fits there,
+   *  otherwise on the side with more room, scrolling when neither is enough. */
+  const reposition = useCallback(() => {
+    const button = trigger.current
+    if (!button) return
+    const box = button.getBoundingClientRect()
+    const gap = 8
+    const top = 48
+    const roomAbove = box.top - gap - top
+    const roomBelow = window.innerHeight - box.bottom - gap * 2
+    const wanted = list.current?.scrollHeight ?? 0
+    const up = roomAbove >= Math.min(wanted, 320) || roomAbove >= roomBelow
+    const left = Math.max(gap, Math.min(box.left, window.innerWidth - 220 - gap))
+    setPlace(up
+      ? { left, bottom: window.innerHeight - box.top + gap, maxHeight: Math.max(120, roomAbove) }
+      : { left, top: box.bottom + gap, maxHeight: Math.max(120, roomBelow) })
+  }, [])
+
+  useLayoutEffect(() => {
+    if (!menu) return
+    reposition()
+    const selected = list.current?.querySelector<HTMLElement>('[aria-selected="true"]') ?? list.current?.querySelector<HTMLElement>('[role="option"]')
+    selected?.focus({ preventScroll: false })
+    window.addEventListener('resize', reposition)
+    window.addEventListener('scroll', reposition, true)
+    const outside = (event: PointerEvent) => {
+      const target = event.target as Node
+      if (!list.current?.contains(target) && !trigger.current?.contains(target)) setMenu(false)
+    }
+    document.addEventListener('pointerdown', outside)
+    return () => {
+      window.removeEventListener('resize', reposition)
+      window.removeEventListener('scroll', reposition, true)
+      document.removeEventListener('pointerdown', outside)
+    }
+  }, [menu, reposition, agents.length])
+
+  /** Arrow keys, Home and End move through the list; Escape and Tab leave it. */
   const onMenuKey = (event: KeyboardEvent<HTMLUListElement>) => {
-    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
+    if (event.key === 'Escape' || event.key === 'Tab') {
+      if (event.key === 'Escape') event.stopPropagation()
+      setMenu(false)
+      trigger.current?.focus()
+      return
+    }
+    const options = Array.from(event.currentTarget.querySelectorAll<HTMLElement>('[role="option"]'))
+    const at = options.indexOf(document.activeElement as HTMLElement)
+    const next = event.key === 'ArrowDown' ? at + 1 : event.key === 'ArrowUp' ? at - 1 : event.key === 'Home' ? 0 : event.key === 'End' ? options.length - 1 : null
+    if (next === null || !options.length) return
     event.preventDefault()
-    const at = agents.findIndex((item) => item.id === chosen)
-    const step = event.key === 'ArrowDown' ? 1 : -1
-    const next = agents[(at + step + agents.length) % agents.length]
-    if (next) setChosen(next.id)
+    options[(next + options.length) % options.length].focus()
   }
 
   const selected = MODES.find((item) => item.id === mode) ?? MODES[0]
@@ -161,46 +209,52 @@ export function Composer({
           </button>
           {pickAgent && (
           <div className="agent-pick" data-tour="agent-pick">
-            <button className="pill composer-agent" onClick={() => setMenu((v) => !v)} aria-haspopup="listbox" aria-expanded={menu}>
+            <button ref={trigger} className="pill composer-agent" onClick={() => setMenu((v) => !v)} aria-haspopup="listbox" aria-expanded={menu}>
               <AgentMark id={agent.id} size={20} />
               <span className="composer-tag">Agent</span>
               <span className="composer-agent-name">{agent.label}</span>
               <Icon name="chevron" size={13} />
             </button>
-            <AnimatePresence>
-              {menu && (
-                <motion.ul
-                  className="menu"
-                  role="listbox"
-                  onKeyDown={onMenuKey}
-                  tabIndex={-1}
-                  initial={{ opacity: 0, y: m.d(6), scale: m.on ? 0.97 : 1 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: m.d(4) }}
-                  transition={m.tx.quick}
-                >
-                  {agents.map((item) => (
-                    <li key={item.id || item.label}>
-                      <button
-                        role="option"
-                        aria-selected={item.id === agent.id}
-                        onClick={() => {
-                          setChosen(item.id)
-                          // Kept, not just used once: this is the pick the next
-                          // question starts on, and the one Settings shows.
-                          chooseAgent(item.id)
-                          setMenu(false)
-                        }}
-                      >
-                        <AgentMark id={item.id} size={20} />
-                        <span className="menu-label">{item.label}</span>
-                        {item.id === agent.id && <Icon name="check" size={14} />}
-                      </button>
-                    </li>
-                  ))}
-                </motion.ul>
-              )}
-            </AnimatePresence>
+            {createPortal(
+              <AnimatePresence>
+                {menu && (
+                  <motion.ul
+                    ref={list}
+                    className="menu"
+                    role="listbox"
+                    aria-label="Agent"
+                    onKeyDown={onMenuKey}
+                    style={place}
+                    initial={{ opacity: 0, scale: m.on ? 0.97 : 1 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={m.tx.quick}
+                  >
+                    {agents.map((item) => (
+                      <li key={item.id || item.label}>
+                        <button
+                          role="option"
+                          aria-selected={item.id === agent.id}
+                          onClick={() => {
+                            setChosen(item.id)
+                            // Kept, not just used once: this is the pick the next
+                            // question starts on, and the one Settings shows.
+                            chooseAgent(item.id)
+                            setMenu(false)
+                            trigger.current?.focus()
+                          }}
+                        >
+                          <AgentMark id={item.id} size={20} />
+                          <span className="menu-label">{item.label}</span>
+                          {item.id === agent.id && <Icon name="check" size={14} />}
+                        </button>
+                      </li>
+                    ))}
+                  </motion.ul>
+                )}
+              </AnimatePresence>,
+              document.body,
+            )}
           </div>
           )}
           <span className="grow" />
