@@ -1,11 +1,11 @@
 /** Every top-level screen the window can show. */
-export type Screen = 'chat' | 'compare' | 'prices' | 'estimate' | 'queue' | 'history' | 'foryou' | 'catalogs' | 'sites' | 'settings'
+export type Screen = 'chat' | 'compare' | 'checklist' | 'prices' | 'estimate' | 'queue' | 'history' | 'foryou' | 'catalogs' | 'sites' | 'settings'
 
 /** The places Ctrl+1 to Ctrl+4 reach, in that order. Ctrl+, opens Settings. */
 export const ORDER: Screen[] = ['chat', 'compare', 'prices', 'estimate']
 
 /** The rail, top to bottom, then Settings. A move down the rail enters from below. */
-export const RAIL_ORDER: Screen[] = ['chat', 'compare', 'queue', 'history', 'estimate', 'prices', 'catalogs', 'sites', 'foryou', 'settings']
+export const RAIL_ORDER: Screen[] = ['chat', 'compare', 'checklist', 'queue', 'history', 'estimate', 'prices', 'catalogs', 'sites', 'foryou', 'settings']
 
 /** Asks the shell to show a place. The name is kept from when these places
  *  opened in a drawer; the shell now navigates to a screen instead. */

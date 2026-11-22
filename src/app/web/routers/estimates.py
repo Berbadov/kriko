@@ -110,9 +110,29 @@ def _decorated(estimate: dict) -> dict:
     return estimate
 
 
+#: How many estimates one `full` list carries whole. More is asked for one at a time.
+FULL_LIMIT = 20
+
+
 @router.get("")
-def list_estimates(limit: int = 100, conn=Depends(get_app_state)) -> dict:
-    return {"items": state.list_estimates(conn, limit=limit)}
+def list_estimates(limit: int = 100, full: bool = False, conn=Depends(get_app_state)) -> dict:
+    """The saved estimates, newest first.
+
+    With `full`, the newest few (at most `FULL_LIMIT`) also come whole and
+    decorated exactly as a single read gives them, so a screen that wants every
+    estimate's lines and quote risk makes one request instead of one per row.
+    """
+    items = state.list_estimates(conn, limit=limit)
+    payload: dict = {"items": items}
+    if full:
+        newest = items[: max(1, min(int(limit), FULL_LIMIT))]
+        estimates = []
+        for row in newest:
+            found = state.get_estimate(conn, row["estimate_id"])
+            if found is not None:
+                estimates.append(_decorated(found))
+        payload["estimates"] = estimates
+    return payload
 
 
 @router.post("")

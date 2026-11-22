@@ -222,3 +222,34 @@ def test_depreciation_fields_survive_a_round_trip(tmp_path):
     assert stored["life_years"] == 7
     assert stored["salvage"] == 500.0
     assert stored["vuk_rate"] == 20.0
+
+
+def test_the_list_can_carry_the_newest_estimates_in_full_in_one_read(tmp_path):
+    """Five screens want the lines and quote risk; one request must give them."""
+    client = _client(tmp_path)
+    for index in range(3):
+        client.post("/api/estimates", json={
+            "name": f"Estimate {index}", "currency": "USD", "years": 3,
+            "lines": [_line(f"s{index}", f"Product {index}", 1, 100.0 + index)],
+        })
+    plain = client.get("/api/estimates").json()
+    assert "estimates" not in plain and len(plain["items"]) == 3
+
+    full = client.get("/api/estimates?full=1&limit=2").json()
+    assert len(full["items"]) == 2
+    assert len(full["estimates"]) == 2
+    first = full["estimates"][0]
+    assert first["lines"], "the lines come with the list"
+    assert [row["estimate_id"] for row in full["estimates"]] == [row["estimate_id"] for row in full["items"]]
+    # the same decoration a single read gives: ranking and quote risk
+    single = client.get(f"/api/estimates/{first['estimate_id']}").json()["estimate"]
+    assert single == first
+
+
+def test_a_full_list_is_capped_so_it_cannot_be_asked_for_everything(tmp_path):
+    client = _client(tmp_path)
+    for index in range(25):
+        client.post("/api/estimates", json={"name": f"E{index}", "currency": "USD", "lines": [_line(f"s{index}")]})
+    full = client.get("/api/estimates?full=1&limit=100").json()
+    assert len(full["items"]) == 100 or len(full["items"]) == 25
+    assert len(full["estimates"]) == 20

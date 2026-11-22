@@ -1,3 +1,4 @@
+import { takePendingOpen } from '../engine/pendingOpen'
 import { useEffect, useState } from 'react'
 import { useEngine } from '../engine/Engine'
 import { deleteEstimate, useEstimates, type Estimate } from '../engine/estimates'
@@ -57,6 +58,31 @@ export function EstimateScreen() {
     setTab(next)
     saveTab(next)
   }
+
+  // A request made before this screen was there (the palette, a link): take it once.
+  useEffect(() => {
+    const asked = takePendingOpen()
+    if (asked.estimateId) {
+      setTab('estimates')
+      setTarget(asked.estimateId)
+      setSession((current) => current + 1)
+    } else if (asked.newEstimate) {
+      setTab('estimates')
+      setTarget('')
+      setSession((current) => current + 1)
+    }
+  }, [])
+
+  // A new estimate asked for while this screen is open.
+  useEffect(() => {
+    const created = () => {
+      setTab('estimates')
+      setTarget('')
+      setSession((current) => current + 1)
+    }
+    window.addEventListener('kriko:new-estimate', created)
+    return () => window.removeEventListener('kriko:new-estimate', created)
+  }, [])
 
   // The Vendors view asks for an estimate to be opened in the editor.
   useEffect(() => {

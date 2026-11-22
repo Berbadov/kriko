@@ -9,6 +9,8 @@ import { post } from './engine/api'
 import { useHandoff, type Landing } from './handoff'
 import { QueueProvider, useQueueActive } from './queue'
 import { useAfterIdle, whenIdle } from './idle'
+import { openCommandPalette } from './ui/paletteItems'
+import { rememberEstimate, rememberNewEstimate } from './engine/pendingOpen'
 import type { AppAction } from './activity/run'
 import { ChatScreen } from './screens/Chat'
 import { Motes } from './dust/Motes'
@@ -20,6 +22,8 @@ import { PageSkeleton } from './ui/PageSkeleton'
 import {
   CatalogsPanel,
   ChatsList,
+  CheckListScreen,
+  CommandPalette,
   CompareScreen,
   EstimateScreen,
   ForYouPanel,
@@ -38,6 +42,7 @@ import {
 const TARGETS: Record<string, Screen> = {
   chat: 'chat',
   compare: 'compare',
+  checklist: 'checklist',
   prices: 'prices',
   estimate: 'estimate',
   queue: 'queue',
@@ -52,6 +57,7 @@ const TARGETS: Record<string, Screen> = {
 /** The rail's entries by their title, for the prefetch on hover and focus. */
 const RAIL_TITLES: Record<string, Screen> = {
   Compare: 'compare',
+  'Check a list': 'checklist',
   Queue: 'queue',
   History: 'history',
   Procurement: 'estimate',
@@ -213,6 +219,65 @@ function Shell() {
     go('chat')
   }, [newChat, go])
 
+  // The command palette is its own chunk. It is fetched when the window is idle,
+  // or the first time its shortcut is pressed, and opens as soon as it is there.
+  const [paletteReady, setPaletteReady] = useState(false)
+  const openWhenReady = useRef(false)
+  useEffect(() => {
+    const cancel = whenIdle(() => setPaletteReady(true), 3000)
+    const onKey = (event: KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey) || !event.shiftKey || event.key.toLowerCase() !== 'p') return
+      if (paletteReady) return
+      event.preventDefault()
+      openWhenReady.current = true
+      setPaletteReady(true)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => {
+      cancel()
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [paletteReady])
+  useEffect(() => {
+    if (!paletteReady || !openWhenReady.current) return
+    openWhenReady.current = false
+    // After the chunk has mounted and the palette is listening.
+    const id = window.setTimeout(openCommandPalette, 120)
+    return () => window.clearTimeout(id)
+  }, [paletteReady])
+
+  // What the palette (and other parts of the window) ask for by event.
+  useEffect(() => {
+    const onProduct = (event: Event) => {
+      const lookupId = (event as CustomEvent<{ lookupId?: string }>).detail?.lookupId
+      if (lookupId) openProduct(lookupId)
+    }
+    const onAction = (event: Event) => {
+      const id = (event as CustomEvent<{ id?: string }>).detail?.id
+      if (id === 'new-chat') startChat()
+      else if (id === 'take-tour') window.dispatchEvent(new Event('kriko:tour'))
+      else if (id === 'check-a-list') go('checklist')
+      else if (id === 'new-estimate') {
+        rememberNewEstimate()
+        window.dispatchEvent(new Event('kriko:new-estimate'))
+        go('estimate')
+      }
+    }
+    // The Procurement screen may not be mounted yet: keep the request for it.
+    const onEstimate = (event: Event) => {
+      const estimateId = (event as CustomEvent<{ estimateId?: string }>).detail?.estimateId
+      if (estimateId) rememberEstimate(estimateId)
+    }
+    window.addEventListener('kriko:open-product', onProduct)
+    window.addEventListener('kriko:palette-action', onAction)
+    window.addEventListener('kriko:open-estimate', onEstimate)
+    return () => {
+      window.removeEventListener('kriko:open-product', onProduct)
+      window.removeEventListener('kriko:palette-action', onAction)
+      window.removeEventListener('kriko:open-estimate', onEstimate)
+    }
+  }, [openProduct, startChat, go])
+
   return (
     <MotionConfig reducedMotion={m.on ? 'never' : 'always'}>
       <div className="app" onPointerOver={warm} onFocus={warm}>
@@ -267,6 +332,7 @@ function Shell() {
                   {screen === 'chat' && !product && <ChatScreen onOpen={openProduct} onAction={performAction} />}
                   {screen === 'chat' && product && <ProductScreen lookupId={product} onBack={() => go('chat')} onCompare={() => go('compare')} />}
                   {screen === 'compare' && <CompareScreen />}
+                  {screen === 'checklist' && <CheckListScreen onOpen={openProduct} />}
                   {screen === 'prices' && <PricesScreen />}
                   {screen === 'estimate' && <EstimateScreen />}
                   {screen === 'queue' && <QueueScreen onOpen={openProduct} />}
@@ -297,6 +363,11 @@ function Shell() {
             </AnimatePresence>
           </main>
         </div>
+        {paletteReady && (
+          <Suspense fallback={null}>
+            <CommandPalette />
+          </Suspense>
+        )}
         {tourReady && (
           <Suspense fallback={null}>
             <Tour onStart={() => go('chat')} />

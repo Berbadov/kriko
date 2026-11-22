@@ -80,6 +80,17 @@ export async function listEstimates(): Promise<EstimateSummary[]> {
   return data.items ?? []
 }
 
+/** The newest estimates whole, in one request. An engine that does not know
+ *  `full` answers with the list alone, and each one is then read by itself. */
+export async function listRecentEstimates(limit: number): Promise<{ items: EstimateSummary[]; estimates: Estimate[] }> {
+  const data = await get<{ items: EstimateSummary[]; estimates?: Estimate[] }>(`/api/estimates?limit=100&full=1`)
+  const items = data.items ?? []
+  if (Array.isArray(data.estimates)) return { items, estimates: data.estimates.slice(0, limit) }
+  const newest = [...items].sort((a, b) => (b.updated_at ?? '').localeCompare(a.updated_at ?? '')).slice(0, limit)
+  const settled = await Promise.allSettled(newest.map((item) => loadEstimate(item.estimate_id)))
+  return { items, estimates: settled.flatMap((result) => (result.status === 'fulfilled' ? [result.value] : [])) }
+}
+
 export async function loadEstimate(id: string): Promise<Estimate> {
   const data = await get<{ estimate: Estimate }>(`/api/estimates/${seg(id)}`)
   return data.estimate

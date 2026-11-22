@@ -22,6 +22,7 @@ const GROUPS: { name: string; tour?: string; items: { id: Screen; label: string;
     items: [
       { id: 'chat', label: 'Ask', icon: 'chat', tour: 'nav-chat' },
       { id: 'compare', label: 'Compare', icon: 'compare', tour: 'nav-compare' },
+      { id: 'checklist', label: 'Check a list', icon: 'docplus', tour: 'nav-checklist' },
       { id: 'queue', label: 'Queue', icon: 'queue', tour: 'nav-queue' },
       { id: 'history', label: 'History', icon: 'clock', tour: 'history' },
     ],

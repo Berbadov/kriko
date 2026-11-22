@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Watch } from './buyer'
-import { listEstimates, loadEstimate, saveEstimate, selectedQuote, type Estimate, type EstimateLine, type EstimateQuote } from './estimates'
+import { listRecentEstimates, loadEstimate, saveEstimate, selectedQuote, type Estimate, type EstimateLine, type EstimateQuote } from './estimates'
 import { quoteMoney, type Rates } from './money'
 import { useEngine } from './Engine'
 
@@ -252,14 +252,10 @@ let inflight: Promise<Recent> | null = null
 function fetchRecent(): Promise<Recent> {
   if (!inflight) {
     inflight = (async () => {
-      const listed = await listEstimates()
-      const newest = [...listed]
-        .sort((a, b) => (b.updated_at ?? '').localeCompare(a.updated_at ?? ''))
-        .slice(0, RECENT_ESTIMATES)
-      const settled = await Promise.allSettled(newest.map((item) => loadEstimate(item.estimate_id)))
-      const estimates: Estimate[] = []
-      for (const result of settled) if (result.status === 'fulfilled') estimates.push(result.value)
-      const next: Recent = { estimates, failed: settled.length - estimates.length, at: Date.now() }
+      // One request for the list and the newest estimates in full.
+      const { items, estimates } = await listRecentEstimates(RECENT_ESTIMATES)
+      const wanted = Math.min(items.length, RECENT_ESTIMATES)
+      const next: Recent = { estimates, failed: Math.max(0, wanted - estimates.length), at: Date.now() }
       recent = next
       return next
     })().finally(() => { inflight = null })

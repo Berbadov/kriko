@@ -109,3 +109,29 @@ other screens through `src/engine/procurement.ts`, so no screen computes its own
   amount under the estimate's currency.
 - A watched price has no link to a catalog product in the API, so Prices does not
   offer "Add as a quote" yet.
+
+## Prices, vendors, questions and the approval sheet
+
+- **Add as a quote** (Prices): a watch has no link to a catalog product, so the
+  reader picks the product when adding, and the choice is remembered for that watch
+  in the window (`kriko.watchSubjects`). The quote's price is the page's own figure
+  from its last read, not an offer from the seller, with the 20% starting VAT
+  included, dated today.
+- **Price history**: each check that reads a price adds a row to `watch_prices`
+  (the same price twice in a day is one row; at most 400 per watch). A watch with
+  two or more reads shows a sparkline, the lowest and highest read, and the move
+  since the first read. Nothing is interpolated.
+- **Vendors** (Procurement, Vendors tab): quotes grouped by seller (legal suffixes
+  are ignored for grouping only). A vendor "won" a line when its quote ranked first
+  among at least two comparable quotes. Averages use only the quotes that state the
+  value; a missing delivery is never counted as zero. There is no score out of ten.
+- **Questions for the seller**: written from what the catalogs say is wrong with the
+  product (most serious first) and from gaps in the quote itself (no warranty, no
+  delivery days, expired or expiring, a risk reason). No product is named in the
+  code; everything comes from the line's own label and claims.
+- **Approval sheet**: a print-ready one-page summary with the totals, each line's
+  selected quote and the quote that lost (only where the ranking says why), serious
+  known problems, the multi-year forecast and blank signature lines.
+- **Duplicate and compare**: an estimate can be copied as a "what if", and two
+  estimates compared line by line; a difference is shown only when both sides are in
+  one currency and comparable.

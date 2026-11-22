@@ -58,6 +58,41 @@ Use **Differences only** to focus the view. Ask a question about the products be
 the board. **Stop** cancels active comparison questions. If saving the board fails,
 Kriko says that it is not saved and offers a retry.
 
+## Check a list
+
+**Check a list** (in the rail, under Compare) reads a CSV or Excel (.xlsx) file in
+the window and tells you which rows have known problems. Choose the file, check the
+columns it guessed (English and Turkish headers are recognised; the delimiter and
+the decimal comma are detected), and press **Check**. Only the product names go to
+the engine on this computer, and no model is involved, so it works with a local
+model or with none. A name is matched only when exactly one catalog product fits;
+anything weaker comes back as **No match** with the candidates to choose from,
+never as a guess. Download the result as .xlsx or .csv, or add the matched rows to
+an estimate: one line per product with the quantity from the file, and a quote
+where the row has a price (a row with no price makes a line and no quote, and two
+rows for one product merge into one line with two quotes). The Ask composer also
+accepts an .xlsx or a table-shaped .csv as an attachment and sends the first rows.
+Old `.xls` and `.ods` files are refused with a message to save as .xlsx or .csv.
+
+## Local AI
+
+**Settings, Local AI** is the one place for running research on this computer. It
+shows the graphics card, memory and processor the machine reports (a field it did
+not report says so), a four-step set-up (runtime, model, try it, use it for
+research), and which models fit: **Runs well** needs the model to fit in video memory
+with room to spare (or in memory twice over with no graphics card), **Will be
+slow** fits in memory only, **Too big** does not fit, and **Fit unknown** is shown
+where the size is not stated in the name, for example an "effective size" tag, so
+the list never says a model fits on a guess. **Try it** sends one short, bounded
+prompt to the model on your own machine, only when you press Send, and reports the
+speed in words. It costs nothing and sends nothing elsewhere.
+
+## Command palette
+
+Ctrl+Shift+P (Cmd+Shift+P on a Mac) opens a search over every place, every Settings
+section, a few actions (new chat, take the tour, check a list, new estimate), your
+recent checks and your saved estimates.
+
 ## Browser and Queue
 
 Load the prepared extension in your browser and open a listing. Its panel shows

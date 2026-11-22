@@ -69,6 +69,7 @@ const PLACES: { id: string; title: string; screen: Screen; panel?: string; icon:
   { id: 'queue', title: 'Queue', screen: 'queue', icon: 'queue', keywords: ['jobs', 'running', 'waiting'] },
   { id: 'history', title: 'History', screen: 'history', panel: 'history', icon: 'clock', keywords: ['checks', 'past', 'saved'] },
   { id: 'estimate', title: 'Procurement', screen: 'estimate', icon: 'gauge', keywords: ['estimate', 'quotes', 'vat', 'landed cost', 'buy'] },
+  { id: 'checklist', title: 'Check a list', screen: 'checklist', icon: 'docplus', keywords: ['spreadsheet', 'excel', 'csv', 'xlsx', 'import', 'file'] },
   { id: 'prices', title: 'Prices', screen: 'prices', icon: 'coins', keywords: ['price', 'quote', 'watch'] },
   { id: 'catalogs', title: 'Catalogs', screen: 'catalogs', panel: 'browse', icon: 'book', keywords: ['catalog', 'packs', 'install', 'browse'] },
   { id: 'sites', title: 'Sites', screen: 'sites', panel: 'sites', icon: 'globe', keywords: ['listing sites', 'extension'] },

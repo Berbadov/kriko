@@ -13,6 +13,7 @@ import type { Screen } from './ui/drawerEvents'
  */
 const loaders = {
   compare: () => import('./screens/Compare'),
+  checklist: () => import('./screens/CheckList'),
   estimate: () => import('./screens/Estimate'),
   prices: () => import('./screens/Prices'),
   product: () => import('./screens/Product'),
@@ -23,9 +24,11 @@ const loaders = {
   catalogs: () => import('./ui/panels/Catalogs'),
   sites: () => import('./ui/panels/Sites'),
   tour: () => import('./tour/Tour'),
+  palette: () => import('./ui/CommandPalette'),
 }
 
 export const CompareScreen = lazy(() => loaders.compare().then((one) => ({ default: one.CompareScreen })))
+export const CheckListScreen = lazy(() => loaders.checklist().then((one) => ({ default: one.CheckListScreen })))
 export const EstimateScreen = lazy(() => loaders.estimate().then((one) => ({ default: one.EstimateScreen })))
 export const PricesScreen = lazy(() => loaders.prices().then((one) => ({ default: one.PricesScreen })))
 export const ProductScreen = lazy(() => loaders.product().then((one) => ({ default: one.ProductScreen })))
@@ -36,6 +39,7 @@ export const ChatsList = lazy(() => import('./ui/ChatsList').then((one) => ({ de
 export const ForYouPanel = lazy(() => loaders.foryou().then((one) => ({ default: one.ForYouPanel })))
 export const CatalogsPanel = lazy(() => loaders.catalogs().then((one) => ({ default: one.CatalogsPanel })))
 export const SitesPanel = lazy(() => loaders.sites().then((one) => ({ default: one.SitesPanel })))
+export const CommandPalette = lazy(() => loaders.palette().then((one) => ({ default: one.CommandPalette })))
 export const Tour = lazy(() => loaders.tour().then((one) => ({ default: one.Tour })))
 
 const warm = (key: keyof typeof loaders) => {
@@ -49,7 +53,7 @@ export function prefetchScreen(screen: Screen) {
   warm(screen)
 }
 
-const SCREENS = ['compare', 'queue', 'history', 'estimate', 'prices', 'catalogs', 'settings', 'sites', 'foryou', 'product'] as const
+const SCREENS = ['compare', 'checklist', 'queue', 'history', 'estimate', 'prices', 'catalogs', 'settings', 'sites', 'foryou', 'product'] as const
 
 /** Warm every screen, one at a time, each in its own idle slice, so the work
  *  never lands as one long task. Stops when `cancelled` says so. */

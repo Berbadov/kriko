@@ -356,7 +356,9 @@ async function mountDom(render) {
   }
 }
 
-const ESTIMATES_PATH = '/api/estimates?limit=100'
+const ESTIMATES_PATH = '/api/estimates?limit=100&full=1'
+/** The list a newer engine answers for `full`: the newest estimates come whole. */
+let engineKnowsFull = true
 const pumpsFixture = estimate({ estimate_id: 'e1', name: 'Pumps', lines: [line('pump-1', [quote()])] })
 const labFixture = estimate({ estimate_id: 'e2', name: 'Lab', lines: [] })
 
@@ -365,11 +367,13 @@ function serve() {
   const calls = []
   routes.get = (path) => {
     calls.push(path)
-    if (path === ESTIMATES_PATH) {
-      return Promise.resolve({ items: [
+    if (path === ESTIMATES_PATH || path === '/api/estimates?limit=100') {
+      const answer = { items: [
         { estimate_id: 'e1', name: 'Pumps', currency: 'TRY', lines_count: 1, updated_at: '2026-11-02' },
         { estimate_id: 'e2', name: 'Lab', currency: 'USD', lines_count: 0, updated_at: '2026-11-01' },
-      ] })
+      ] }
+      if (engineKnowsFull && path === ESTIMATES_PATH) answer.estimates = [structuredClone(pumpsFixture), structuredClone(labFixture)]
+      return Promise.resolve(answer)
     }
     if (path === '/api/estimates/e1') return Promise.resolve({ estimate: structuredClone(pumpsFixture) })
     if (path === '/api/estimates/e2') return Promise.resolve({ estimate: structuredClone(labFixture) })
@@ -404,7 +408,7 @@ test('the popover opens on its button, takes focus, and closes on Escape with fo
     const rows = [...dialog.querySelectorAll('button.k-row')].map((node) => node.textContent)
     assert.equal(rows.length, 2)
     assert.ok(rows[0].includes('Pumps') && rows[0].includes('1 line') && rows[0].includes('TRY'))
-    assert.ok(calls.includes(ESTIMATES_PATH))
+    assert.ok(calls.includes('/api/estimates?limit=100'))
 
     await act(() => dialog.dispatchEvent(new view.dom.window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true })))
     assert.equal(document.querySelector('[role="dialog"]'), null, 'Escape closes it')
@@ -502,6 +506,7 @@ test('a new estimate can be named and created with the subject in one step', asy
 
 test('five screens mounting read the estimates once, and a change reloads them once', async () => {
   engineMode = 'live'
+  engineKnowsFull = true
   const calls = serve()
   // The shared cache is 20 seconds: move the clock past anything an earlier test cached.
   const realNow = Date.now
@@ -520,6 +525,7 @@ test('five screens mounting read the estimates once, and a change reloads them o
     await view.flush()
     const listed = () => calls.filter((path) => path === ESTIMATES_PATH).length
     assert.equal(listed(), 1, 'five mounts share one request')
+    assert.equal(calls.filter((path) => path.startsWith('/api/estimates/')).length, 0, 'the estimates arrive with the list, not one read each')
     const last = seen[seen.length - 1]
     assert.equal(last.loading, false)
     assert.equal(last.estimates.length, 2)
@@ -532,6 +538,32 @@ test('five screens mounting read the estimates once, and a change reloads them o
     await view.flush()
     assert.equal(listed(), 2, 'the change reloads once for all mounted hooks')
   } finally {
+    Date.now = realNow
+    await view.unmount()
+  }
+})
+
+
+test('an engine that does not know the full list is read estimate by estimate, so a mixed install still works', async () => {
+  engineMode = 'live'
+  engineKnowsFull = false
+  const calls = serve()
+  const realNow = Date.now
+  let clock = realNow() + 7_200_000
+  Date.now = () => clock
+  function Probe({ seen }) {
+    seen.push(procurement.useProcurement())
+    return null
+  }
+  const seen = []
+  const view = await mountDom(() => React.createElement(Probe, { seen }))
+  try {
+    await view.flush()
+    await view.flush()
+    assert.equal(seen[seen.length - 1].estimates.length, 2)
+    assert.deepEqual(calls.filter((path) => path.startsWith('/api/estimates/')).sort(), ['/api/estimates/e1', '/api/estimates/e2'])
+  } finally {
+    engineKnowsFull = true
     Date.now = realNow
     await view.unmount()
   }
