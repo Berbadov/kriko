@@ -11,12 +11,13 @@ import { inShell } from '../engine/api'
  * the page (`TopStrip` in `ui/Rail.tsx` renders this inside its row, so they take
  * no space from the page), and the strip's empty ground drags the window. A
  * window that kept its system bar (macOS, the browser, demo mode) asks the window
- * itself and draws nothing.
+ * itself and draws nothing. There is exactly one at a time: the strip's own, or
+ * (`floating`) a bar over the Starting and offline screens, which have no strip.
  *
  * Close is not Quit. It reaches the shell's close handler, which hides the
  * window and leaves the engine running.
  */
-export function TitleBar() {
+export function TitleBar({ floating = false }: { floating?: boolean }) {
   const [bare, setBare] = useState(false)
   const [maximized, setMaximized] = useState(false)
 
@@ -54,7 +55,7 @@ export function TitleBar() {
   }
 
   return (
-    <div className="titlebar" data-tauri-drag-region>
+    <div className={floating ? 'titlebar floating' : 'titlebar'} data-tauri-drag-region>
       <div className="titlebar-controls">
         <button type="button" className="titlebar-btn" aria-label="Minimise" onClick={act('minimize')}>
           <svg viewBox="0 0 10 10" width="10" height="10" aria-hidden="true"><path d="M1 5h8" /></svg>
