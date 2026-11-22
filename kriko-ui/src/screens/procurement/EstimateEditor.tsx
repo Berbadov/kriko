@@ -2,12 +2,13 @@ import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } fro
 import { useEngine } from '../../engine/Engine'
 import { get, post, seg, EngineError } from '../../engine/api'
 import { followJob } from '../../engine/jobs'
-import { forecast, type CostLine } from '../../engine/forecast'
 import { rateOf } from '../../engine/money'
 import { csvOf, downloadFile, xlsxOf } from '../../engine/sheet'
 import { estimateSheet, workbookSheets, type ExportInput, type KnownProblem } from '../../engine/estimateExport'
-import { chosenQuote, lineUnitGross } from '../../engine/quotes'
 import { deleteEstimate, fetchTcmbRates, loadEstimate, saveEstimate, type Estimate, type EstimateLine } from '../../engine/estimates'
+import { copyPayload, forecastOf } from '../../engine/scenario'
+import { ApprovalSheet } from './ApprovalSheet'
+import { Compare2 } from './Compare2'
 import { useResearchRuns } from '../../engine/research'
 import { AddProduct } from './AddProduct'
 import { ForecastCard } from './ForecastCard'
@@ -68,6 +69,9 @@ export function EstimateEditor({ target, onSaved, onDeleted, onClose }: {
   const [ratesNote, setRatesNote] = useState('')
   const [fetchingRates, setFetchingRates] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [sheetOpen, setSheetOpen] = useState(false)
+  const [comparing, setComparing] = useState(false)
+  const [duplicating, setDuplicating] = useState(false)
   const alive = useRef(true)
 
   useEffect(() => {
@@ -221,24 +225,14 @@ export function EstimateEditor({ target, onSaved, onDeleted, onClose }: {
 
   // ── the numbers ──
 
-  const model = useMemo(() => forecast(
-    lines.map((line): CostLine => {
-      const base = {
-        quantity: line.quantity,
-        depreciation: line.depreciation,
-        life_years: line.life_years,
-        salvage: line.salvage,
-        vuk_rate: line.vuk_rate,
-      }
-      // The selected quote's gross in the estimate currency, with its own VAT rate.
-      // A line with no quote keeps its price as typed, read as VAT-free.
-      const unit = lineUnitGross(line, currency, fx)
-      const quote = chosenQuote(line)
-      if (!quote) return { ...base, unit_price: unit, vat_rate: 0, vat_included: false }
-      return { ...base, unit_price: unit, vat_rate: quote.vat_rate, vat_included: true }
-    }),
-    { years: num(years) ?? 5, maintenance_pct: num(maintenancePct) ?? 5, discount_pct: num(discountPct) ?? 8 },
-  ), [lines, years, maintenancePct, discountPct, currency, fx])
+  const model = useMemo(() => forecastOf({
+    lines,
+    currency,
+    fx,
+    years: num(years) ?? 5,
+    maintenance_pct: num(maintenancePct) ?? 5,
+    discount_pct: num(discountPct) ?? 8,
+  }), [lines, years, maintenancePct, discountPct, currency, fx])
 
   const rateWarning = QUOTE_CURRENCIES.filter((code) => code !== currency && rateOf(code, fx) == null)
 
@@ -260,6 +254,44 @@ export function EstimateEditor({ target, onSaved, onDeleted, onClose }: {
       usage: research.usage ?? null,
       problems,
       costs,
+    }
+  }
+
+  /** The estimate as the screen shows it now, saved or not; the approval sheet and compare read this. */
+  const onScreen = (): Estimate => ({
+    estimate_id: estimateId,
+    name,
+    currency,
+    years: num(years) ?? 5,
+    maintenance_pct: num(maintenancePct) ?? 5,
+    discount_pct: num(discountPct) ?? 8,
+    vat_rate: num(vatRate) ?? 20,
+    fx,
+    created_at: '',
+    updated_at: '',
+    lines,
+  })
+
+  const claimsByLine = useMemo(() => {
+    const out: Record<string, { severity: string; domain: string; title: string }[] | undefined> = {}
+    for (const [subjectId, found] of Object.entries(claims)) out[subjectId] = found?.claims
+    return out
+  }, [claims])
+
+  /** Saves the estimate as it stands on screen, under "<name> (copy)", with its quotes. */
+  const duplicate = async () => {
+    if (mode !== 'live') return
+    setDuplicating(true)
+    setProblem('')
+    try {
+      const copy = await saveEstimate(copyPayload(onScreen()))
+      if (!alive.current) return
+      onSaved(copy)
+      setNote(`Copied as ${copy.name}. The copy is open now.`)
+    } catch (error) {
+      if (alive.current) setProblem(error instanceof Error ? error.message : 'Could not copy the estimate.')
+    } finally {
+      if (alive.current) setDuplicating(false)
     }
   }
 
@@ -294,6 +326,11 @@ export function EstimateEditor({ target, onSaved, onDeleted, onClose }: {
             {estimateId && (
               <button type="button" className="k-btn" data-kind="danger" onClick={() => void removeSaved()}>Delete estimate</button>
             )}
+            <button type="button" className="k-btn" data-kind="quiet" onClick={() => setSheetOpen(true)}>Approval sheet</button>
+            <button type="button" className="k-btn" data-kind="quiet" onClick={() => setComparing(true)}>Compare with…</button>
+            <button type="button" className="k-btn" data-kind="quiet" onClick={() => void duplicate()} disabled={duplicating}>
+              {duplicating ? 'Copying…' : 'Duplicate'}
+            </button>
             <button type="button" className="k-btn" data-kind="quiet" onClick={onClose}>Close</button>
           </div>
         </div>
@@ -410,6 +447,11 @@ export function EstimateEditor({ target, onSaved, onDeleted, onClose }: {
         onExcel={exportXlsx}
         research={researchSoFar}
       />
+
+      {sheetOpen && (
+        <ApprovalSheet estimate={onScreen()} claimsByLine={claimsByLine} onClose={() => setSheetOpen(false)} />
+      )}
+      {comparing && <Compare2 a={onScreen()} onClose={() => setComparing(false)} />}
     </section>
   )
 }

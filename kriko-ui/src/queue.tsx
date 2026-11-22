@@ -39,6 +39,9 @@ interface Queue {
 }
 
 const Ctx = createContext<Queue | null>(null)
+/** How many products are not done. A number, so a screen that only shows the count
+ *  (the shell) is drawn again when it changes and not at every progress tick. */
+const ActiveCtx = createContext(0)
 
 const noop = () => undefined
 
@@ -443,7 +446,17 @@ export function QueueProvider({ children }: { children: ReactNode }) {
   const { mode } = useEngine()
   const demo = useDemoQueue(mode === 'demo')
   const live = useLiveQueue(mode === 'live')
-  return <Ctx.Provider value={mode === 'live' ? live : demo}>{children}</Ctx.Provider>
+  const queue = mode === 'live' ? live : demo
+  return (
+    <ActiveCtx.Provider value={queue.active}>
+      <Ctx.Provider value={queue}>{children}</Ctx.Provider>
+    </ActiveCtx.Provider>
+  )
+}
+
+/** How many products wait or run, without subscribing to their progress. */
+export function useQueueActive(): number {
+  return useContext(ActiveCtx)
 }
 
 export function useQueue(): Queue {

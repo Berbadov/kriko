@@ -5,6 +5,10 @@ import { moneyText, moveOf, targetReached } from '../compare/figures'
 import { count } from '../ui/format'
 import { Icon } from '../ui/Icon'
 import { openLink } from '../ui/ExternalLink'
+import { useEngine } from '../engine/Engine'
+import { figuresOf, isLowestSoFar, SPARK_HEIGHT, SPARK_WIDTH, sparkLabel, sparkline, type PriceHistory } from './prices/priceHistory'
+import { useSeen, useWatchHistory } from './prices/watchHistory'
+import { WatchQuote } from './prices/WatchQuote'
 
 const host = (url: string) => {
   try {
@@ -157,7 +161,25 @@ export function PricesScreen() {
   )
 }
 
+/** The price over the reads a watch has made: a line, the newest read marked.
+ *  Every point is a price a check read; none is filled in between. */
+function Sparkline({ history }: { history: PriceHistory }) {
+  const spark = sparkline(history.items.map((one) => one.price))
+  if (!spark.last) return null
+  return (
+    <svg className="prices-spark" width={SPARK_WIDTH} height={SPARK_HEIGHT} viewBox={`0 0 ${SPARK_WIDTH} ${SPARK_HEIGHT}`} role="img" aria-label={sparkLabel(history)}>
+      <path d={spark.path} fill="none" stroke="var(--brand)" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx={spark.last.x} cy={spark.last.y} r="3" fill="var(--brand)" />
+    </svg>
+  )
+}
+
 function PriceRow({ watch, onStop }: { watch: Watch; onStop: () => void }) {
+  const { mode } = useEngine()
+  const { ref, seen } = useSeen<HTMLLIElement>()
+  const history = useWatchHistory(watch.watch_id, watch.last_checked, seen && mode === 'live')
+  const figures = figuresOf(history, watch.currency)
+  const lowest = isLowestSoFar(history)
   const label = watch.name || host(watch.url)
   const moved = moveOf(watch)
   const dropped = moved != null && moved < 0
@@ -168,12 +190,17 @@ function PriceRow({ watch, onStop }: { watch: Watch; onStop: () => void }) {
     watch.last_error ? watch.last_error : watch.last_checked ? `Read ${ago(watch.last_checked)}` : 'Not read yet',
   ].filter(Boolean)
   return (
-    <li className="prices-row" data-hit={hit || undefined}>
+    <li className="prices-row" data-hit={hit || undefined} ref={ref}>
       <div className="prices-main">
         <span className="prices-name">{label}</span>
         <span className="prices-host">{host(watch.url)}</span>
         <span className="prices-meta">{meta.join(' · ')}</span>
       </div>
+      {history && history.items.length >= 2 && (
+        <div className="prices-trend">
+          <Sparkline history={history} />
+        </div>
+      )}
       <div className="prices-figure">
         <span className="prices-now">{moneyText(watch.last_price, watch.currency)}</span>
         {moved != null && moved !== 0 && (
@@ -181,12 +208,24 @@ function PriceRow({ watch, onStop }: { watch: Watch; onStop: () => void }) {
             {`${dropped ? '−' : '+'}${Math.abs(moved * 100).toFixed(1)}% ${dropped ? 'down' : 'up'}`}
           </span>
         )}
+        {lowest && <span className="k-pill" data-tone="ok">Lowest so far</span>}
         {hit && <span className="k-pill" data-tone="ok">Target reached</span>}
       </div>
       <div className="prices-row-actions">
+        <WatchQuote watch={watch} />
         <button type="button" className="k-btn" data-kind="quiet" data-size="sm" onClick={() => void openLink(watch.url)} title={watch.url}>Open page</button>
         <button type="button" className="k-btn" data-kind="quiet" data-size="sm" onClick={onStop} aria-label={`Stop watching ${label}`}>Stop watching</button>
       </div>
+      {figures.length > 0 && (
+        <dl className="prices-history">
+          {figures.map((one) => (
+            <div key={one.label}>
+              <dt>{one.label}</dt>
+              <dd>{one.value}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
     </li>
   )
 }

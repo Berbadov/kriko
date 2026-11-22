@@ -1185,7 +1185,29 @@
   border-radius: var(--r-l);
   box-shadow: none;
   color: var(--ink);
-  animation: claim-card-in var(--dur-3) var(--ease-out) both;
+  animation: usage-pop 120ms var(--ease-out) both;
+}
+
+@keyframes usage-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.usage-verdict {
+  margin: 0;
+  color: var(--ink);
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+
+.usage-verdict[data-over='true'] {
+  color: var(--warn-text);
 }
 
 .usage-demo {
@@ -1242,85 +1264,122 @@
 .usage-limits {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
 }
 
-.usage-limit {
+.usage-group {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 11.5px;
+}
+
+/* A window as a labelled row: the name, what it used, the cost, and the cap
+   beneath where the reader set one. Rows are ruled by a hairline. */
+.usage-rows {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.usage-row {
   display: grid;
-  grid-template-columns: 72px 1fr auto;
+  grid-template-columns: 76px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 4px 10px;
+  gap: 3px 10px;
+  padding: 7px 0;
   font-size: 12.5px;
 }
 
-.usage-limit-name {
+.usage-row + .usage-row {
+  border-top: 1px solid var(--edge);
+}
+
+.usage-row-name {
   color: var(--ink-2);
 }
 
-.usage-limit-left {
-  min-width: 70px;
+.usage-row-used {
+  min-width: 0;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.usage-row-cost {
+  color: var(--ink);
   text-align: right;
+  white-space: nowrap;
 }
 
-.usage-limit[data-standing='warn'] .usage-limit-left {
-  color: var(--ink);
-  font-weight: 600;
-}
-
-.usage-limit[data-standing='out'] .usage-limit-left {
-  color: var(--ink);
-  font-weight: 600;
-}
-
-.usage-limit-reset {
-  grid-column: 2 / 4;
+.usage-row-cost[data-none] {
   color: var(--ink-3);
-  font-size: 11px;
 }
 
-.usage-limit-reset:empty {
-  display: none;
+.usage-row-bar,
+.usage-row-note,
+.usage-row-cap {
+  grid-column: 2 / -1;
 }
 
-.usage-flag {
-  grid-column: 2 / 4;
+.usage-row-bar {
+  display: block;
+}
+
+.usage-row-note,
+.usage-row-cap {
+  color: var(--ink-3);
+  font-size: 11.5px;
+}
+
+.usage-row[data-standing='warn'] .usage-row-used,
+.usage-row[data-standing='out'] .usage-row-used {
+  font-weight: 600;
+}
+
+.usage-row-cap[data-over='true'] {
   color: var(--warn-text);
-  font-size: 11px;
 }
 
 .usage-asof {
+  margin: 0;
   color: var(--ink-3);
   font-size: 11px;
 }
 
-.usage-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12px;
-}
-
-.usage-table th,
-.usage-table td {
-  padding: 5px 0;
-  text-align: right;
-  font-weight: 400;
-}
-
-.usage-table th:first-child {
-  text-align: left;
-  color: var(--ink-2);
-}
-
-.usage-table thead th {
-  color: var(--ink-3);
-  font-family: var(--mono);
-  font-size: 10.5px;
-  font-weight: 400;
-  letter-spacing: 0;
-}
-
-.usage-table tbody tr + tr > * {
+.usage-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 12px;
   border-top: 1px solid var(--edge);
+}
+
+.usage-foot .usage-note {
+  margin: 0;
+}
+
+.usage-link {
+  min-height: 40px;
+  padding: 0 8px;
+  background: transparent;
+  border: 0;
+  border-radius: var(--r-s);
+  color: var(--link);
+  font: inherit;
+  font-size: 13.5px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.usage-link:hover {
+  background: var(--select);
+}
+
+.usage-link:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
 }
 
 .usage-sources {
@@ -1346,21 +1405,8 @@
   font-size: 11px;
 }
 
-/* A reader's own daily ceiling. A warning: the line says where today stands,
+/* A reader's own daily ceiling is a warning: the cap line says where today stands,
    and the amber is the only thing that changes. */
-.usage-cap {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  margin: 0;
-  color: var(--ink-3);
-  font-size: 11.5px;
-}
-
-.usage-cap[data-over='true'] {
-  color: var(--warn-text);
-}
-
 .usage-cap-mark {
   font-weight: 600;
 }
@@ -1378,4 +1424,79 @@
   .usage-pill-text {
     display: none;
   }
+}
+
+/* ---- the agent pill in the strip: its standing dot, and the menu it opens ---- */
+
+.agent-menu {
+  position: relative;
+  display: inline-flex;
+  min-width: 0;
+}
+
+.strip-agent[aria-expanded='true'] {
+  border-color: var(--edge-strong);
+  color: var(--ink);
+}
+
+/* The dot's shape carries the standing as well as its colour: a solid dot is
+   ready, a ring needs setup, a dashed ring is not installed, and a halo is
+   working. Each has its word in the button's accessible name. */
+.agent-dot {
+  flex: none;
+  box-sizing: border-box;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ink-3);
+}
+
+.agent-dot[data-status='ready'] {
+  background: var(--positive);
+}
+
+.agent-dot[data-status='setup'] {
+  background: transparent;
+  border: 2px solid var(--warn);
+}
+
+.agent-dot[data-status='missing'] {
+  background: transparent;
+  border: 1.5px dashed var(--ink-3);
+}
+
+.agent-dot[data-status='checking'],
+.agent-dot[data-status='example'],
+.agent-dot[data-status='none'] {
+  background: transparent;
+  border: 1.5px solid var(--ink-3);
+}
+
+.agent-dot[data-status='working'] {
+  background: var(--link);
+  animation: agent-dot-halo 1.6s ease-in-out infinite;
+}
+
+@keyframes agent-dot-halo {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--link) 40%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--link) 0%, transparent);
+  }
+}
+
+.strip-agent-busy {
+  flex: none;
+  color: var(--ink-3);
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+
+/* The queue count keeps its width as it counts up, so the usage pill beside it does not move. */
+.strip-queue > .mono {
+  min-width: 10ch;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }

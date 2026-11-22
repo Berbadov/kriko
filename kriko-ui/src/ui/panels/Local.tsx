@@ -1,167 +1,70 @@
 import { useMemo, useState } from 'react'
-import { usePrefsDoc } from '../../engine/settings'
-import { useLocal, type Library, type Model, type VllmPlan, type VllmServer } from '../../engine/local'
+import { FIT_WORDS, fitOf, fitRows, isRecommended, type Facts, type Fit } from '../../engine/fit'
+import { useLocal, type Model, type VllmPlan, type VllmServer } from '../../engine/local'
 import { Disclosure } from '../Disclosure'
 import { Icon } from '../Icon'
 import { ProgressBar } from '../controls'
 import { HfStore } from './HfStore'
-import { LocalRuntimeRows } from './LocalRuntime'
-import { Section, Setting, SelectField, State } from './settingsParts'
+import { Section, Setting, State } from './settingsParts'
 
 const gb = (bytes: number) => `${(bytes / 1e9).toFixed(1)} GB`
-const mb = (value: number) => `${(value / 1024).toFixed(value >= 10240 ? 0 : 1)} GB`
-const CONTEXTS = ['', '2048', '4096', '8192', '16384', '32768']
+const FIT_TONE: Record<Fit, 'ok' | 'warn' | 'risk' | 'none'> = { well: 'ok', slow: 'warn', big: 'risk', unknown: 'none' }
+/** Library rows drawn before "Show more". The list is long and a reader wants the top. */
+const FIRST_ROWS = 12
 
-/** The model on this computer, as rows of one section: the computer, the runtime
- *  and its state, the server, the model in use, getting a model, and how it runs. */
-export function LocalGroup() {
-  const local = useLocal()
-  const { doc, save } = usePrefsDoc()
-  const { machine, runtime, models, pull } = local
-  const [installOpen, setInstallOpen] = useState(false)
-  const chosen = doc?.chosen.local_model ?? ''
-  const running = Boolean(runtime?.runtime)
-  const installed = machine?.runtimes.filter((one) => one.installed) ?? []
-  const inUse = models.some((model) => model.name === chosen)
-  // A card the engine reports without memory is no card to size a model by.
-  const card = machine?.gpu && machine.gpu.vram_total_mb > 0 ? machine.gpu : null
+type LocalState = ReturnType<typeof useLocal>
 
+/** A line of loading rows, drawn instead of a blank card while something is read. */
+export function Loading({ rows = 2 }: { rows?: number }) {
   return (
-    <Section title="On this computer" aside={<State tone={running ? 'ok' : 'none'}>{running ? 'Runtime running' : 'Runtime not running'}</State>}>
+    <div className="localai-skeleton-row" role="status" aria-label="Loading">
+      {Array.from({ length: rows }, (_, at) => (
+        <span key={at} className="localai-skeleton" data-short={at % 2 ? '' : undefined} />
+      ))}
+    </div>
+  )
+}
+
+/** The models on this computer: the one in use, each with its size and whether it
+ *  fits, a press to use one, and a confirmed removal. A download in progress is
+ *  drawn above them with Stop. */
+export function InstalledModels({ local, facts, chosen, running, onUse }: { local: LocalState; facts: Facts; chosen: string; running: boolean; onUse: (name: string) => void }) {
+  const { models, pull } = local
+  const inUse = models.some((model) => model.name === chosen)
+  return (
+    <Section title="Models on this computer" tour="local-models">
       {local.problem && <p className="error-note">{local.problem}</p>}
-
-      {machine && (
-        <Setting
-          icon="cpu"
-          label="This computer"
-          value={`${card ? mb(card.vram_total_mb) : 'No graphics card'} · ${machine.ram_total_mb ? mb(machine.ram_total_mb) : 'memory not known'} · ${machine.cpu?.cores ?? 'n/a'} cores`}
-          note={card?.name ? `${card.name}. A model has to fit in this memory to run well.` : 'A model has to fit in this memory to run well.'}
-        />
-      )}
-
-      {(machine?.runtimes ?? []).map((one) => {
-        const state =
-          one.id === 'ollama' && one.installed ? (running ? `Running at ${runtime?.url}` : 'Installed, not running') : one.installed ? 'Installed' : 'Not installed'
-        return (
-          <Setting
-            key={one.id}
-            icon="server"
-            label={one.name}
-            value={<State tone={one.installed && (one.id !== 'ollama' || running) ? 'ok' : 'none'}>{state}</State>}
-            note={one.installed && one.id !== 'ollama' ? 'Get models in its own app.' : one.installed ? 'Kriko can start it and download models into it.' : 'Install it from its own website, then press Check again.'}
-            control={
-              one.id === 'ollama' && one.installed && !running ? (
-                <button type="button" className="k-btn" onClick={() => void local.startRuntime()} disabled={local.starting}>
-                  {local.starting ? 'Starting…' : 'Start Ollama'}
-                </button>
-              ) : undefined
-            }
-          />
-        )
-      })}
-      {machine && installed.length === 0 && (
-        <Setting
-          icon="download"
-          label="Install runtime"
-          note="Kriko does not install a runtime for you. Install one from its own website, then press Check again."
-          stack
-          control={
-            <div className="keys-stack">
-              <span className="keys-actions">
-                <button type="button" className="k-btn" aria-expanded={installOpen} onClick={() => setInstallOpen((now) => !now)}>
-                  {installOpen ? 'Hide the steps' : 'Install runtime'}
-                </button>
-                <button type="button" className="k-btn" onClick={() => void local.recheck()} disabled={local.checking}>
-                  {local.checking ? 'Checking…' : 'Check again'}
-                </button>
-              </span>
-              {installOpen && <small className="keys-result">Install one of the programs listed above, then press Check again. Kriko finds it on this computer.</small>}
-            </div>
-          }
-        />
-      )}
-
-      <LocalRuntimeRows stepsBelow={Boolean(machine?.vllm)} />
-
-      {machine?.vllm && <VllmRow plan={machine.vllm} server={local.vllm} checking={local.checking} onCheck={() => void local.recheck()} />}
-
-      {running && (
+      {pull && <PullStatus local={local} pull={pull} />}
+      {!local.modelsLoaded && !local.problem ? (
+        <Loading />
+      ) : !running ? (
+        <Setting icon="cube" label="Model in use" note="The runtime is not running, so Kriko cannot list its models. Start it in step 1 of the set-up." />
+      ) : (
         <Setting
           icon="cube"
           label="Model in use"
           value={<State tone={inUse ? 'ok' : 'none'}>{inUse ? chosen : 'None chosen'}</State>}
-          note={models.length === 0 ? 'No models on this computer yet. Download one below.' : 'Press a model to use it. Remove takes it off this computer.'}
-          stack
+          note={models.length === 0 ? 'No models on this computer yet. Get one below.' : 'Press a model to use it. Remove takes it off this computer and frees its disk space.'}
+          stack={models.length > 0}
           control={
-            <ul className="keys-models" role="radiogroup" aria-label="Local model">
-              {models.map((model) => (
-                <ModelRow key={model.name} model={model} active={model.name === chosen} onUse={() => void save({ local_model: model.name })} onRemove={() => local.remove(model.name)} />
-              ))}
-            </ul>
+            models.length > 0 ? (
+              <ul className="keys-models" role="radiogroup" aria-label="Local model">
+                {models.map((model) => (
+                  <ModelRow key={model.name} model={model} fit={fitOf(model.size_bytes, facts)} active={model.name === chosen} onUse={() => onUse(model.name)} onRemove={() => local.remove(model.name)} />
+                ))}
+              </ul>
+            ) : undefined
           }
         />
-      )}
-
-      {running ? (
-        <Setting
-          icon="download"
-          label="Download a model"
-          note="A download starts only when you press Get or a Get button, and Stop ends it."
-          stack
-          control={
-            <div className="keys-stack">
-              {pull && <PullStatus local={local} pull={pull} />}
-              <GetModel local={local} pulling={Boolean(pull) && !pull?.error} installed={models.map((m) => m.name)} />
-              <HuggingFace vramMb={machine?.gpu?.vram_total_mb ?? null} installed={models.map((m) => m.name)} pulling={Boolean(pull) && !pull?.error} onGet={(name) => void local.startPull(name)} />
-            </div>
-          }
-        />
-      ) : (
-        <Setting icon="download" label="Download a model" note="Start the runtime to download a model into it." />
-      )}
-
-      {doc && (
-        <>
-          <Setting
-            icon="gauge"
-            label="Device"
-            note="Automatic uses the graphics card when it fits."
-            control={
-              <SelectField
-                label="Device"
-                value={doc.chosen.local_device ?? ''}
-                options={[
-                  { value: '', label: 'Automatic' },
-                  { value: 'gpu', label: 'Graphics card' },
-                  { value: 'cpu', label: 'Processor' },
-                ]}
-                onChange={(value) => void save({ local_device: value })}
-              />
-            }
-          />
-          <Setting
-            icon="layers"
-            label="Context size"
-            note="Tokens the model reads at once. More needs more memory."
-            control={
-              <SelectField
-                label="Context size"
-                value={CONTEXTS.includes(doc.chosen.local_context_tokens ?? '') ? (doc.chosen.local_context_tokens ?? '') : ''}
-                options={CONTEXTS.map((value) => ({ value, label: value || 'Default' }))}
-                onChange={(value) => void save({ local_context_tokens: value })}
-              />
-            }
-          />
-        </>
       )}
     </Section>
   )
 }
 
 /** A model download in progress, or the one that failed, with the words to act on it. */
-function PullStatus({ local, pull }: { local: ReturnType<typeof useLocal>; pull: NonNullable<ReturnType<typeof useLocal>['pull']> }) {
+function PullStatus({ local, pull }: { local: LocalState; pull: NonNullable<LocalState['pull']> }) {
   return (
-    <div className="keys-pull" data-failed={Boolean(pull.error)} role="status">
+    <div className="keys-pull localai-pull" data-failed={Boolean(pull.error)} role="status">
       <strong>{pull.model}</strong>
       <small>{pull.error || pull.message || 'Downloading'}</small>
       {pull.error ? (
@@ -188,7 +91,7 @@ function PullStatus({ local, pull }: { local: ReturnType<typeof useLocal>; pull:
 }
 
 /** vLLM. Kriko does not install it. It shows the steps for this driver, and finds the server when it runs. */
-function VllmRow({ plan, server, checking, onCheck }: { plan: VllmPlan; server: VllmServer | null; checking: boolean; onCheck: () => void }) {
+export function VllmRow({ plan, server, checking, onCheck }: { plan: VllmPlan; server: VllmServer | null; checking: boolean; onCheck: () => void }) {
   const [copied, setCopied] = useState('')
   const copy = (command: string) => {
     void navigator.clipboard?.writeText(command).then(
@@ -246,84 +149,120 @@ function VllmRow({ plan, server, checking, onCheck }: { plan: VllmPlan; server: 
   )
 }
 
-/** Type a model name to get it, or browse the Ollama library. Both start a download only on a press. */
-function GetModel({ local, pulling, installed }: { local: ReturnType<typeof useLocal>; pulling: boolean; installed: string[] }) {
+/** Get a model: browse what fits this computer, type a name, or search Hugging
+ *  Face. Each starts a download only on a press, and only while the runtime runs. */
+export function FitModels({ local, facts, running }: { local: LocalState; facts: Facts; running: boolean }) {
+  const pulling = Boolean(local.pull) && !local.pull?.error
+  const installed = local.models.map((model) => model.name)
+  return (
+    <Section
+      title="Models that fit this computer"
+      note="A verdict compares the size of a model with the memory this computer reported. Sizes are estimates from the name, at 4 bits. Nothing downloads until you press Get."
+    >
+      <Setting icon="download" label="Get a model by name" note={running ? 'Type the name Ollama uses, for example qwen2.5:7b.' : 'Start the runtime first. Downloads go through Ollama.'} stack control={<GetModel local={local} pulling={pulling} running={running} />} />
+      <Setting
+        icon="search"
+        label="Ollama library"
+        note="The public list, read from the web only when you ask. What fits this computer comes first."
+        stack
+        control={
+          !local.library ? (
+            <span className="keys-actions">
+              <button type="button" className="k-btn" onClick={() => void local.openLibrary()}>
+                Show models that fit
+              </button>
+            </span>
+          ) : (
+            <Library local={local} facts={facts} pulling={pulling} running={running} installed={installed} />
+          )
+        }
+      />
+      <Setting icon="globe" label="Hugging Face" note="Models from Hugging Face that Ollama can run, with the size of each quantisation." stack control={<HuggingFace facts={facts} installed={installed} pulling={pulling || !running} onGet={(name) => void local.startPull(name)} />} />
+    </Section>
+  )
+}
+
+/** Type a model name to get it. A download starts only from the Get press or Enter. */
+function GetModel({ local, pulling, running }: { local: LocalState; pulling: boolean; running: boolean }) {
   const [typed, setTyped] = useState('')
   return (
-    <>
-      <form
-        className="keys-actions"
-        onSubmit={(event) => {
-          event.preventDefault()
-          if (typed.trim() && !pulling) {
-            void local.startPull(typed.trim())
-            setTyped('')
-          }
-        }}
-      >
-        <input className="k-input" placeholder="Model name, for example qwen2.5:7b" aria-label="Model name" value={typed} onChange={(event) => setTyped(event.target.value)} spellCheck={false} />
-        <button type="submit" className="k-btn" data-kind="primary" disabled={!typed.trim() || pulling}>
-          Get
-        </button>
-      </form>
-      {!local.library ? (
-        <span className="keys-actions">
-          <button type="button" className="k-btn" onClick={() => void local.openLibrary()}>
-            Browse the Ollama library
-          </button>
-        </span>
-      ) : (
-        <Library local={local} pulling={pulling} installed={installed} />
-      )}
-    </>
+    <form
+      className="keys-actions"
+      onSubmit={(event) => {
+        event.preventDefault()
+        if (typed.trim() && !pulling && running) {
+          void local.startPull(typed.trim())
+          setTyped('')
+        }
+      }}
+    >
+      <input className="k-input" placeholder="Model name, for example qwen2.5:7b" aria-label="Model name" value={typed} onChange={(event) => setTyped(event.target.value)} spellCheck={false} />
+      <button type="submit" className="k-btn" disabled={!typed.trim() || pulling || !running}>
+        Get
+      </button>
+    </form>
   )
 }
 
-/** The public Ollama list. It is read from the web, so it opens when the reader asks. */
-function Library({ local, pulling, installed }: { local: ReturnType<typeof useLocal>; pulling: boolean; installed: string[] }) {
+/** The public Ollama list, each size with its verdict. It is read from the web, so it opens when the reader asks. */
+function Library({ local, facts, pulling, running, installed }: { local: LocalState; facts: Facts; pulling: boolean; running: boolean; installed: string[] }) {
   const { library } = local
   const [query, setQuery] = useState('')
-  const rows = useMemo(() => (library ?? []).filter((row) => !query.trim() || `${row.name} ${row.about}`.toLowerCase().includes(query.trim().toLowerCase())).slice(0, 40), [library, query])
+  const [all, setAll] = useState(false)
+  const rows = useMemo(() => {
+    const needle = query.trim().toLowerCase()
+    return fitRows(library ?? [], facts, local.recommended.model).filter((row) => !needle || `${row.name} ${row.about}`.toLowerCase().includes(needle))
+  }, [library, facts, query, local.recommended.model])
+  const shown = all || query.trim() ? rows : rows.slice(0, FIRST_ROWS)
   return (
-    <>
+    <div className="keys-stack">
       <label className="keys-search">
         <Icon name="search" size={15} />
-        <input type="search" placeholder="Search the library" aria-label="Search the library" value={query} onChange={(event) => setQuery(event.target.value)} />
+        <input type="search" className="k-input" placeholder="Search the library" aria-label="Search the library" value={query} onChange={(event) => setQuery(event.target.value)} />
       </label>
       {local.libraryProblem && <p className="error-note">{local.libraryProblem}</p>}
-      <ul className="keys-list">
-        {rows.map((row) => (
-          <LibraryRow key={row.name} row={row} installed={installed} disabled={pulling} onGet={(name) => void local.startPull(name)} />
-        ))}
+      {rows.length === 0 && !local.libraryProblem && <small className="keys-result">Nothing matches. Try another word.</small>}
+      <ul className="localai-fit-list">
+        {shown.map((row) => {
+          const has = installed.includes(row.name)
+          const recommended = isRecommended(row.name, local.recommended.model)
+          return (
+            <li key={row.name} className="localai-fit" data-fit={row.fit}>
+              <span className="localai-fit-main">
+                <strong>{row.name}</strong>
+                <small>{[row.bytes ? `About ${gb(row.bytes)}` : 'Size not listed', row.about].filter(Boolean).join(' · ')}</small>
+              </span>
+              <span className="localai-fit-tags">
+                {recommended && <State tone="ok">Recommended</State>}
+                <State tone={FIT_TONE[row.fit]}>{FIT_WORDS[row.fit]}</State>
+              </span>
+              <LibraryGet name={row.name} has={has} disabled={pulling || !running} onGet={(name) => void local.startPull(name)} />
+            </li>
+          )
+        })}
       </ul>
-    </>
+      {!all && !query.trim() && rows.length > FIRST_ROWS && (
+        <span className="keys-actions">
+          <button type="button" className="k-btn" onClick={() => setAll(true)}>
+            Show all {rows.length}
+          </button>
+        </span>
+      )}
+    </div>
   )
 }
 
-function LibraryRow({ row, installed, disabled, onGet }: { row: Library; installed: string[]; disabled: boolean; onGet: (name: string) => void }) {
+function LibraryGet({ name, has, disabled, onGet }: { name: string; has: boolean; disabled: boolean; onGet: (name: string) => void }) {
   return (
-    <li className="keys-item">
-      <span>
-        <strong>{row.name}</strong> <small>{row.about}</small>
-      </span>
-      <span className="keys-actions">
-        {(row.sizes.length ? row.sizes : ['']).map((size) => {
-          const name = size ? `${row.name}:${size}` : row.name
-          const has = installed.includes(name)
-          return (
-            <button key={name} type="button" className="k-btn" data-size="sm" disabled={disabled || has} onClick={() => onGet(name)} aria-label={has ? `${name} is installed` : `Get ${name}`}>
-              {has ? `${size || 'latest'}, installed` : size || 'latest'}
-            </button>
-          )
-        })}
-      </span>
-    </li>
+    <button type="button" className="k-btn" data-size="sm" disabled={disabled || has} onClick={() => onGet(name)} aria-label={has ? `${name} is installed` : `Get ${name}`}>
+      {has ? 'Installed' : 'Get'}
+    </button>
   )
 }
 
 /** Hugging Face models Ollama can pull. An expandable block: the search runs when
  *  the reader opens it, and a download starts only from a Get button. */
-function HuggingFace({ vramMb, installed, pulling, onGet }: { vramMb: number | null; installed: string[]; pulling: boolean; onGet: (name: string) => void }) {
+function HuggingFace({ facts, installed, pulling, onGet }: { facts: Facts; installed: string[]; pulling: boolean; onGet: (name: string) => void }) {
   const [open, setOpen] = useState(false)
   return (
     <div className="keys-hf-block">
@@ -332,20 +271,21 @@ function HuggingFace({ vramMb, installed, pulling, onGet }: { vramMb: number | n
           {open ? 'Hide Hugging Face' : 'Browse Hugging Face'}
         </button>
       </span>
-      {open && <HfStore vramMb={vramMb} installed={installed} pulling={pulling} onGet={onGet} />}
+      {open && <HfStore facts={facts} installed={installed} pulling={pulling} onGet={onGet} />}
     </div>
   )
 }
 
-function ModelRow({ model, active, onUse, onRemove }: { model: Model; active: boolean; onUse: () => void; onRemove: () => Promise<void> }) {
+function ModelRow({ model, fit, active, onUse, onRemove }: { model: Model; fit: Fit; active: boolean; onUse: () => void; onRemove: () => Promise<void> }) {
   const [asking, setAsking] = useState(false)
-  const meta = [gb(model.size_bytes), model.params !== 'n/a' && model.params, model.quant].filter(Boolean).join(' · ')
+  const meta = [model.size_bytes ? gb(model.size_bytes) : 'Size not reported', model.params && model.params !== 'n/a' && model.params, model.quant].filter(Boolean).join(' · ')
   return (
     <li className="keys-model" data-asking={asking}>
       <button type="button" className="keys-model-use" role="radio" aria-checked={active} aria-label={`Use ${model.name}`} onClick={onUse}>
         <strong>{model.name}</strong>
         <small>{meta}</small>
       </button>
+      {fit !== 'unknown' && <State tone={FIT_TONE[fit]}>{FIT_WORDS[fit]}</State>}
       {asking ? (
         <span className="keys-actions">
           <span>Remove?</span>

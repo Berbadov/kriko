@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { memo, useEffect, useRef, useState } from 'react'
 import { capLine, overCap, useCaps } from '../engine/caps'
 import { useUsage } from '../engine/usage'
 import {
@@ -12,18 +12,26 @@ import {
   standingOf,
   statusWord,
   usedResources,
+  verdictLine,
+  type AgentLimits,
   type Meters,
   type Resource,
   type ResourceId,
   type SourceSum,
+  type WindowId,
   type WindowSum,
 } from '../engine/usagemeters'
 import { formatTokens, formatUsd } from '../chat/view'
 import { AgentMark } from './AgentMark'
 import { Icon, type IconName } from './Icon'
 import { ProgressBar } from './controls'
+import { showDrawer } from './drawerEvents'
+import { showSettingsPage } from './panels/settingsPages'
 
 const ICONS: Record<Exclude<ResourceId, 'cli_agent'>, IconName> = { llm_api: 'spark', web_search: 'globe', local_model: 'cpu' }
+
+/** The four rolling windows, in the order a reader thinks of them. */
+const WINDOWS: WindowId[] = ['5h', '24h', '7d', '30d']
 
 /** Three bars that rise like a signal, lit by how much is left. */
 function Gauge({ fill }: { fill: number }) {
@@ -38,12 +46,12 @@ function Gauge({ fill }: { fill: number }) {
   )
 }
 
-/** The usage pill in the top bar and the card it opens. The pill says the two
+/** The usage pill in the top strip and the card it opens. The pill says the two
  *  things worth a glance: how much of the tightest coding-agent window is left,
- *  and what the last day cost. The card keeps every resource apart, and says
- *  where a reader's own daily cap stands. A number nobody reported is not
- *  drawn, and a resource never used is left out. */
-export function UsagePill() {
+ *  and what the last day cost. The card opens with one plain sentence built from
+ *  the numbers, then keeps every resource apart, each window a labelled row. A
+ *  number nobody reported is not drawn, and a resource never used is left out. */
+export const UsagePill = memo(function UsagePill() {
   const { meters, demo, reload } = useUsage()
   const { caps } = useCaps()
   const [open, setOpen] = useState(false)
@@ -70,7 +78,15 @@ export function UsagePill() {
   const used = usedResources(meters)
   if (!meters || used.length === 0) return null
   const { fill, text } = pillParts(meters)
-  const over = used.some((id) => overCap(meters, id, caps[id]))
+  const passed = used.filter((id) => overCap(meters, id, caps[id]))
+  const over = passed.length > 0
+  const verdict = verdictLine(meters, passed)
+
+  const setCaps = () => {
+    setOpen(false)
+    showDrawer('settings')
+    showSettingsPage('usage')
+  }
 
   return (
     <div className="topbar-usage" ref={box}>
@@ -83,15 +99,26 @@ export function UsagePill() {
       {open && (
         <div className="usage-card" role="dialog" aria-label="What you have used">
           {demo && <p className="usage-demo">Example numbers. Nothing here was measured.</p>}
+          {verdict && (
+            <p className="usage-verdict" data-over={over || undefined}>
+              {verdict}
+            </p>
+          )}
           {used.map((id) => (
             <ResourceBlock key={id} id={id} resource={meters.resources[id]} now={now} cap={caps[id]} meters={meters} />
           ))}
+          <div className="usage-foot">
+            <p className="usage-note">A cap only warns. It never stops a run.</p>
+            <button type="button" className="usage-link" onClick={setCaps}>
+              Set caps
+            </button>
+          </div>
           <p className="usage-note">Counts what Kriko itself sent. Use outside Kriko, and any balance at a provider, is not visible here.</p>
         </div>
       )}
     </div>
   )
-}
+})
 
 function ResourceBlock({ id, resource, now, cap, meters }: { id: ResourceId; resource: Resource; now: number; cap: number | null; meters: Meters }) {
   const words = RESOURCE_WORDS[id]
@@ -107,86 +134,89 @@ function ResourceBlock({ id, resource, now, cap, meters }: { id: ResourceId; res
           <small>{words.line}</small>
         </div>
       </header>
-      {line && (
-        <p className="usage-cap" data-over={over || undefined}>
-          {line}
-          {over && <span className="usage-cap-mark">Cap passed</span>}
-        </p>
-      )}
+
       {agents.map((agent) => (
-        <div key={agent.agent} className="usage-limits">
-          {agent.windows.map((window) => {
-            const remaining = left(window.used)
-            const standing = standingOf(window)
-            const reset = resetsIn(window.resets_at, now)
-            return (
-              <div key={window.id} className="usage-limit" data-standing={standing}>
-                <span className="usage-limit-name">{window.label}</span>
-                {remaining !== null ? (
-                  <ProgressBar value={remaining} size="sm" tone={standing === 'ok' ? undefined : standing} />
-                ) : (
-                  <span className="usage-limit-none" />
-                )}
-                <span className="usage-limit-left mono">{remaining !== null ? `${Math.round(remaining * 100)}% left` : statusWord(window.status)}</span>
-                <span className="usage-limit-reset mono">
-                  {[statusWord(window.status) && remaining !== null && standing !== 'ok' ? statusWord(window.status) : '', reset ? `resets in ${reset}` : ''].filter(Boolean).join(' · ')}
-                </span>
-                {window.overage && <span className="usage-flag">Using extra usage</span>}
-              </div>
-            )
-          })}
-          {agent.newest !== null && (
-            <small className="usage-asof">
-              {agent.agent} said so {ago(agent.newest, now)}, in a run Kriko started.
-            </small>
-          )}
-        </div>
+        <LimitRows key={agent.agent} agent={agent} now={now} />
       ))}
       {id === 'cli_agent' && agents.length === 0 && <p className="usage-asof">This agent has not reported its limits yet. They appear after its next run.</p>}
-      <Table id={id} resource={resource} />
+
+      <ul className="usage-rows" aria-label={`${words.title}, by window`}>
+        {WINDOWS.map((name) => {
+          const sum = resource.windows[name]
+          if (!sum) return null
+          return <WindowRow key={name} id={id} name={name} sum={sum} cap={name === '24h' ? line : ''} over={name === '24h' && over} />
+        })}
+      </ul>
+
       <Sources id={id} rows={resource.by_source} />
     </section>
   )
 }
 
-const number = (value: number | null) => (value === null ? null : value.toLocaleString('en-GB'))
-
-function cells(id: ResourceId, sum: WindowSum) {
-  const tokens = sum.tokens_in !== null && sum.tokens_out !== null ? `${formatTokens(sum.tokens_in)} in · ${formatTokens(sum.tokens_out)} out` : sum.tokens !== null ? `${formatTokens(sum.tokens)} tokens` : null
-  return {
-    calls: id === 'web_search' ? `${number(sum.calls)}${sum.misses ? ` · ${sum.misses} empty` : ''}` : number(sum.calls),
-    tokens,
-    usd: sum.usd !== null ? formatUsd(sum.usd) : null,
-  }
+/** The limits a coding agent reported for itself. Kriko does not work them out. */
+function LimitRows({ agent, now }: { agent: AgentLimits; now: number }) {
+  return (
+    <div className="usage-limits">
+      <p className="usage-group">Limits {agent.agent} reported</p>
+      <ul className="usage-rows">
+        {agent.windows.map((window) => {
+          const remaining = left(window.used)
+          const standing = standingOf(window)
+          const reset = resetsIn(window.resets_at, now)
+          const usedText = window.used !== null && Number.isFinite(window.used) ? `${Math.min(100, Math.round(window.used * 100))}% used` : statusWord(window.status) || 'No figure given'
+          const notes = [reset ? `Resets in ${reset}` : '', window.overage ? 'Using extra usage' : ''].filter(Boolean).join(' · ')
+          return (
+            <li key={window.id} className="usage-row" data-standing={standing}>
+              <span className="usage-row-name">{window.label}</span>
+              <span className="usage-row-used mono">{usedText}</span>
+              {remaining !== null && (
+                <span className="usage-row-bar">
+                  <ProgressBar value={remaining} size="sm" tone={standing === 'ok' ? undefined : standing} />
+                </span>
+              )}
+              {notes && <span className="usage-row-note">{notes}</span>}
+            </li>
+          )
+        })}
+      </ul>
+      {agent.newest !== null && (
+        <small className="usage-asof">
+          {agent.agent} said so {ago(agent.newest, now)}, in a run Kriko started.
+        </small>
+      )}
+    </div>
+  )
 }
 
-/** The four rolling windows. A column no window has a number for is not drawn. */
-function Table({ id, resource }: { id: ResourceId; resource: Resource }) {
-  const names = Object.keys(resource.windows) as (keyof Resource['windows'])[]
-  const rows = names.map((name) => ({ name, ...cells(id, resource.windows[name]) }))
-  const showTokens = id !== 'web_search' && rows.some((row) => row.tokens)
-  const showUsd = id === 'llm_api' && rows.some((row) => row.usd)
+const number = (value: number | null) => (value === null ? null : value.toLocaleString('en-GB'))
+
+/** What one window used, in the words the resource is counted in. */
+function usedWords(id: ResourceId, sum: WindowSum): string {
+  const calls = number(sum.calls)
+  if (id === 'web_search') return `${calls} ${sum.calls === 1 ? 'search' : 'searches'}${sum.misses ? ` · ${sum.misses} empty` : ''}`
+  const noun = id === 'cli_agent' ? (sum.calls === 1 ? 'run' : 'runs') : sum.calls === 1 ? 'call' : 'calls'
+  const tokens = sum.tokens_in !== null && sum.tokens_out !== null ? `${formatTokens(sum.tokens_in)} in · ${formatTokens(sum.tokens_out)} out` : sum.tokens !== null ? `${formatTokens(sum.tokens)} tokens` : ''
+  return [`${calls} ${noun}`, tokens].filter(Boolean).join(' · ')
+}
+
+/** One window as a labelled row: what it used, the cap when it has one, and the
+ *  cost in dollars where a price was known, or "Not priced" where none was. */
+function WindowRow({ id, name, sum, cap, over }: { id: ResourceId; name: WindowId; sum: WindowSum; cap: string; over: boolean }) {
+  const cost = sum.usd !== null ? `${formatUsd(sum.usd)} spent` : 'Not priced'
   return (
-    <table className="usage-table">
-      <thead>
-        <tr>
-          <th scope="col">Last</th>
-          <th scope="col">{id === 'web_search' ? 'Searches' : 'Calls'}</th>
-          {showTokens && <th scope="col">Tokens</th>}
-          {showUsd && <th scope="col">Cost</th>}
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((row) => (
-          <tr key={row.name}>
-            <th scope="row">{WINDOW_WORDS[row.name]}</th>
-            <td className="mono">{row.calls}</td>
-            {showTokens && <td className="mono">{row.tokens ?? '–'}</td>}
-            {showUsd && <td className="mono">{row.usd ?? '–'}</td>}
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <li className="usage-row" data-priced={sum.usd !== null || undefined}>
+      <span className="usage-row-name">{WINDOW_WORDS[name]}</span>
+      <span className="usage-row-used mono">{usedWords(id, sum)}</span>
+      <span className="usage-row-cost mono" data-none={sum.usd === null || undefined}>
+        {cost}
+      </span>
+      {cap && (
+        <span className="usage-row-cap" data-over={over || undefined}>
+          {cap}
+          {over && <span className="usage-cap-mark"> · Cap passed</span>}
+        </span>
+      )}
+    </li>
   )
 }
 

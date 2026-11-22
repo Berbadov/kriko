@@ -448,7 +448,7 @@ def holdings(conn: sqlite3.Connection) -> dict:
 def forget(conn: sqlite3.Connection, what: str) -> int:
     """Delete one kind of what is kept, or all of it with `everything`. Returns how many rows went."""
     tables = {"purchases": ["purchases"], "prices": ["price_points"],
-              "watches": ["watches", "watch_alerts"], "picks": ["picks"]}
+              "watches": ["watches", "watch_alerts", "watch_prices"], "picks": ["picks"]}
     if what == "everything":
         gone = sum(forget(conn, one) for one in tables) + forget(conn, "profile")
         return gone

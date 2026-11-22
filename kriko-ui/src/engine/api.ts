@@ -49,9 +49,70 @@ async function send(method: string, path: string, body: unknown, timeoutMs: numb
   }
 }
 
+type Reply = { status: number; text: string }
+
+/**
+ * Reads that two components ask for at once make one request, and the same read
+ * asked again within two seconds is answered from memory. What is kept is the
+ * reply's text, so every caller parses its own copy and cannot change another's.
+ *
+ * Nothing stale outlives a change: any call that is not a GET empties both
+ * tables, before it is sent and after it answers, so a read that follows a write
+ * always reaches the engine. Paths that are polled (jobs, the queue, health) are
+ * never remembered, and `?fresh` on any path skips both tables.
+ */
+const SHARE_TTL_MS = 2000
+const SHARE_MAX = 64
+const polled = /^\/api\/(health|jobs|queue|usage\/meters|agent-availability)(\/|\?|$)/
+const wantsFresh = (path: string) => /[?&]fresh(=|&|$)/.test(path)
+const inflight = new Map<string, Promise<Reply>>()
+const recent = new Map<string, { at: number; reply: Reply }>()
+
+/** Requests that were in flight when a write happened: their answer may predate it, so it is not kept. */
+const changed = new WeakSet<Promise<Reply>>()
+
+/** Forget every shared read. A write calls this; tests do too. */
+export function forgetSharedReads() {
+  inflight.clear()
+  recent.clear()
+}
+
+function sendShared(path: string, timeoutMs: number): Promise<Reply> {
+  if (wantsFresh(path) || polled.test(path)) return send('GET', path, undefined, timeoutMs)
+  const kept = recent.get(path)
+  if (kept) {
+    if (Date.now() - kept.at < SHARE_TTL_MS) return Promise.resolve(kept.reply)
+    recent.delete(path)
+  }
+  const joined = inflight.get(path)
+  if (joined) return joined
+  const started = send('GET', path, undefined, timeoutMs)
+  inflight.set(path, started)
+  const settle = () => {
+    // A write may have emptied the table since; only remove this request's own entry.
+    if (inflight.get(path) === started) inflight.delete(path)
+  }
+  started.then(
+    (reply) => {
+      settle()
+      if (reply.status >= 200 && reply.status < 300 && inflight.get(path) === undefined && !changed.has(started)) {
+        if (recent.size >= SHARE_MAX) recent.delete(recent.keys().next().value as string)
+        recent.set(path, { at: Date.now(), reply })
+      }
+    },
+    settle,
+  )
+  return started
+}
+
 async function call<T>(method: string, path: string, body?: unknown, timeoutMs = 15000): Promise<T> {
+  const write = method !== 'GET'
+  if (write) {
+    for (const pending of inflight.values()) changed.add(pending)
+    forgetSharedReads()
+  }
   try {
-    const { status, text } = await send(method, path, body, timeoutMs)
+    const { status, text } = write ? await send(method, path, body, timeoutMs) : await sendShared(path, timeoutMs)
     let data: unknown = null
     try {
       data = text ? JSON.parse(text) : null
@@ -69,6 +130,8 @@ async function call<T>(method: string, path: string, body?: unknown, timeoutMs =
   } catch (error) {
     if (error instanceof EngineError) throw error
     throw new EngineError(0, error instanceof Error && error.name === 'AbortError' ? 'The request timed out. Reconnect to check whether the work started before sending it again.' : 'Could not reach Kriko. Check the engine connection and try again.')
+  } finally {
+    if (write) forgetSharedReads()
   }
 }
 

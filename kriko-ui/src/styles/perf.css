@@ -1,0 +1,26 @@
+/* Speed rules. Loaded last, so they only add to what a screen already says.
+   Nothing here draws a colour: it is rows that are cheap to skip and a quiet
+   placeholder. */
+
+/* The wait for a screen's code: bars where the screen will be. Opacity only. */
+.page-skeleton { display: grid; gap: 20px; align-content: start; }
+.page-skeleton-title { width: 180px; height: 34px; border-radius: var(--r-s); background: var(--inset); }
+.page-skeleton-card { border-radius: var(--r-l); background: var(--sheet); border: 1px solid var(--edge); padding: 6px 0; }
+.page-skeleton-row { height: 52px; margin: 8px 16px; border-radius: var(--r-s); background: var(--inset); animation: skeleton-breathe 1.4s ease-in-out infinite; }
+.page-skeleton-row:nth-child(2) { animation-delay: 0.15s; }
+.page-skeleton-row:nth-child(3) { animation-delay: 0.3s; }
+.page-skeleton-row:nth-child(4) { animation-delay: 0.45s; }
+@keyframes skeleton-breathe { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+
+/* A page is only promoted to its own layer while it moves in (App.tsx sets
+   data-moving for the length of the entrance). */
+.page[data-moving='true'] { will-change: opacity, transform; }
+
+/* Long lists (History, Chats, a catalog's products, For you, the queue): rows
+   after the thirtieth are laid out when they scroll near, not at load. The size
+   hint keeps the scroll bar steady. The first thirty are left alone, so a focus
+   ring or a shadow on a visible row is never clipped by the containment. */
+.k-list > :nth-child(n + 31) {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 72px;
+}

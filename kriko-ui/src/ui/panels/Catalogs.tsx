@@ -89,29 +89,60 @@ const demoListing = (pack: string, q: string): Product[] =>
 const demoSearch = (q: string): Product[] =>
   Object.values(DEMO_PRODUCTS).flat().filter((row) => row.label.toLowerCase().includes(q.toLowerCase()))
 
-/** The leading finding of each product on a page, read one product at a time.
- *  `null` means the read failed, which is not the same as having no finding. */
-function useLeads(subjects: string[], live: boolean): Record<string, string | null> {
+/** What the window already read of each product's leading finding, and when. `null` means the
+ *  read failed, which is not the same as having no finding. Kept a minute, so going back to a
+ *  list does not read every product again. */
+const LEAD_KEEP_MS = 60_000
+/** Reads of a product's finding that may be on their way at once. */
+const LEAD_PARALLEL = 6
+const leadCache = new Map<string, { at: number; lead: string | null }>()
+
+/**
+ * The leading finding of each product, read only for the rows that are on screen
+ * (a row calls `want` when it scrolls into view), at most six at a time, and kept.
+ * A catalog of hundreds of products used to ask the engine about every one of them
+ * the moment the list opened.
+ */
+function useLeads(live: boolean): { leads: Record<string, string | null>; want: (id: string) => void } {
   const [leads, setLeads] = useState<Record<string, string | null>>({})
+  const queue = useRef<string[]>([])
   const asked = useRef(new Set<string>())
-  const key = subjects.join('\n')
+  const flying = useRef(0)
+  const alive = useRef(true)
   useEffect(() => {
-    if (!live || !key) return
-    const todo = key.split('\n').filter((id) => !asked.current.has(id))
-    if (!todo.length) return
-    todo.forEach((id) => asked.current.add(id))
-    void Promise.all(
-      todo.map(async (id) => {
-        try {
-          const found = await get<{ claims?: { title?: string }[] }>(`/api/subjects/${seg(id)}`)
-          return [id, found.claims?.[0]?.title || ''] as const
-        } catch {
-          return [id, null] as const
-        }
-      }),
-    ).then((pairs) => setLeads((now) => ({ ...now, ...Object.fromEntries(pairs) })))
-  }, [key, live])
-  return leads
+    alive.current = true
+    return () => { alive.current = false }
+  }, [])
+
+  const pump = useCallback(function pump() {
+    while (flying.current < LEAD_PARALLEL && queue.current.length) {
+      const id = queue.current.shift()!
+      flying.current += 1
+      void get<{ claims?: { title?: string }[] }>(`/api/subjects/${seg(id)}`)
+        .then((found) => found.claims?.[0]?.title || '', () => null)
+        .then((lead) => {
+          leadCache.set(id, { at: Date.now(), lead })
+          if (alive.current) setLeads((now) => ({ ...now, [id]: lead }))
+        })
+        .finally(() => {
+          flying.current -= 1
+          pump()
+        })
+    }
+  }, [])
+
+  const want = useCallback((id: string) => {
+    if (!live || asked.current.has(id)) return
+    asked.current.add(id)
+    const kept = leadCache.get(id)
+    if (kept && Date.now() - kept.at < LEAD_KEEP_MS) {
+      setLeads((now) => ({ ...now, [id]: kept.lead }))
+      return
+    }
+    queue.current.push(id)
+    pump()
+  }, [live, pump])
+  return { leads, want }
 }
 
 const leadText = (lead: string | null | undefined) => (lead === undefined ? 'Reading the finding…' : lead === null ? '' : lead || 'No sourced risk yet')
@@ -255,7 +286,7 @@ export function CatalogsPanel({ onOpen }: { onOpen?: (lookupId: string) => void 
     : live
       ? listing.pack === browsing ? listing : EMPTY_LISTING
       : { pack: browsing, items: demoListing(browsing, typedFilter), total: demoListing(browsing, typedFilter).length, loaded: true, problem: '' }
-  const leads = useLeads(listed.items.map((row) => row.subject_id), live)
+  const { leads, want } = useLeads(live)
   const leadOf = (id: string) => (live ? leads[id] : DEMO_LEADS[id])
 
   const more = async () => {
@@ -413,6 +444,7 @@ export function CatalogsPanel({ onOpen }: { onOpen?: (lookupId: string) => void 
                     key={row.subject_id}
                     product={row}
                     lead={leadOf(row.subject_id)}
+                    onSeen={() => want(row.subject_id)}
                     estimated={estimated(row.subject_id)}
                     busy={opening === row.subject_id}
                     onOpen={() => void openProduct(row.subject_id, row.label)}
@@ -679,16 +711,38 @@ function ProductRow({
   estimated,
   busy,
   onOpen,
+  onSeen,
 }: {
   product: Product
+  /** Called once, when the row first scrolls into view. */
+  onSeen?: () => void
   lead?: string | null
   note?: string
   estimated: boolean
   busy: boolean
   onOpen: () => void
 }) {
+  const row = useRef<HTMLLIElement>(null)
+  useEffect(() => {
+    const el = row.current
+    if (!onSeen || !el) return
+    if (typeof IntersectionObserver === 'undefined') {
+      onSeen()
+      return
+    }
+    const seen = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) {
+        seen.disconnect()
+        onSeen()
+      }
+    }, { rootMargin: '200px' })
+    seen.observe(el)
+    return () => seen.disconnect()
+    // The callback only names the product; it is read once, when the row mounts.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   return (
-    <li>
+    <li ref={row}>
       <button className="k-row library-product" onClick={onOpen} disabled={busy} aria-busy={busy}>
         <span className="k-row-main">
           <span className="k-row-title">{product.label}</span>

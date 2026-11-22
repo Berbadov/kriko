@@ -14,6 +14,7 @@ from pathlib import Path
 
 UI = Path(__file__).resolve().parents[3] / "kriko-ui" / "src"
 PANEL = (UI / "ui" / "panels" / "Local.tsx").read_text(encoding="utf-8")
+SECTION = (UI / "ui" / "settings" / "LocalAI.tsx").read_text(encoding="utf-8")
 HOOK = (UI / "engine" / "local.ts").read_text(encoding="utf-8")
 
 
@@ -26,11 +27,25 @@ def test_the_library_is_read_only_when_the_reader_asks():
 
 
 def test_a_download_starts_only_from_a_press_or_a_submitted_form():
-    calls = re.findall(r"startPull\(", PANEL)
-    assert len(calls) == 4, "a new caller of startPull needs a look: is it a press?"
-    for call in re.finditer(r"startPull\(", PANEL):
-        before = PANEL[max(0, call.start() - 220) : call.start()]
-        assert "onClick" in before or "onSubmit" in before or "onGet" in before, before
+    # The model pieces and the Local AI section: the section's own downloads
+    # (the recommended model) are presses too.
+    calls = re.findall(r"startPull\(", PANEL) + re.findall(r"startPull\(", SECTION)
+    assert len(calls) == 6, "a new caller of startPull needs a look: is it a press?"
+    for text in (PANEL, SECTION):
+        for call in re.finditer(r"startPull\(", text):
+            before = text[max(0, call.start() - 260) : call.start()]
+            assert "onClick" in before or "onSubmit" in before or "onGet" in before, before
+
+
+def test_nothing_is_asked_of_the_model_or_the_library_on_mount():
+    # Sending a question is a press on Send, and the hook runs it only through `ask`.
+    assert SECTION.count("trial.ask(") == 1
+    before = SECTION[: SECTION.index("trial.ask(")]
+    assert "const send = () =>" in before[-200:]
+    trial = HOOK[HOOK.index("export function useTryLocal") :]
+    assert "useEffect(() => {\n    alive.current = true" in trial
+    assert trial.count("useEffect(") == 1, "the try hook has no effect that could ask"
+    assert "'/api/local-models/try'" in trial
 
 
 def test_a_removal_asks_before_it_reaches_the_engine():

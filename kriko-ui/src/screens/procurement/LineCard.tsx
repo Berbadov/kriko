@@ -1,9 +1,10 @@
-import { useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { EstimateLine } from '../../engine/estimates'
 import type { Rates } from '../../engine/money'
-import { lineUnitGross } from '../../engine/quotes'
+import { chosenQuote, lineUnitGross } from '../../engine/quotes'
 import { QuoteRows } from '../../ui/QuoteRows'
 import { int, money, num, SEVERITY_WORD, severityRank } from './format'
+import { SellerQuestions } from './SellerQuestions'
 import type { SubjectClaims } from './types'
 
 /** One product on the estimate: its quantity, its quotes compared, what is
@@ -43,6 +44,8 @@ export function LineCard({ line, index, currency, rates, horizon, claims, resear
   const lineTotal = unit == null ? null : unit * line.quantity
   const hasQuotes = (line.quotes ?? []).length > 0
   const sorted = [...(claims?.claims ?? [])].sort((a, b) => severityRank(a.severity) - severityRank(b.severity))
+  const [asking, setAsking] = useState(false)
+  const askButton = useRef<HTMLButtonElement>(null)
 
   return (
     <article className="k-card procurement-line" aria-label={line.label}>
@@ -149,6 +152,9 @@ export function LineCard({ line, index, currency, rates, horizon, claims, resear
 
       {researchNote && <p className="procurement-quote-sub" role="status">{researchNote}</p>}
       <div className="estimate-line-actions">
+        <button ref={askButton} type="button" className="k-btn" data-kind="quiet" data-size="sm" onClick={() => setAsking(true)}>
+          Questions for the seller
+        </button>
         <button type="button" className="k-btn" data-kind="quiet" data-size="sm" onClick={() => onResearch(line)} disabled={researching} title="Heavy research for this product">
           {researching ? 'Researching…' : 'Research this product'}
         </button>
@@ -156,6 +162,15 @@ export function LineCard({ line, index, currency, rates, horizon, claims, resear
           Remove {line.label}
         </button>
       </div>
+      {asking && (
+        <SellerQuestions
+          line={line}
+          quote={chosenQuote(line)}
+          claims={claims?.claims}
+          claimsReady={claims !== undefined}
+          onClose={() => { setAsking(false); askButton.current?.focus() }}
+        />
+      )}
     </article>
   )
 }

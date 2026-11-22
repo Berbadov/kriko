@@ -5,16 +5,18 @@ import { Connections } from '../ui/settings/Connections'
 import { Data } from '../ui/settings/Data'
 import { General } from '../ui/settings/General'
 import { Keys } from '../ui/settings/Keys'
+import { LocalAI } from '../ui/settings/LocalAI'
 import { Research } from '../ui/settings/Research'
 import { Usage } from '../ui/settings/Usage'
 
-/** Settings: a list of six sections on the left, the open one on the right. The
+/** Settings: a list of seven sections on the left, the open one on the right. The
  *  search field finds a setting by its name or its note in any section. */
 
 const ICONS: Record<SettingsPage, IconName> = {
   general: 'palette',
   research: 'search',
   keys: 'key',
+  local: 'cpu',
   connections: 'plug',
   usage: 'chart',
   data: 'folder',
@@ -24,6 +26,7 @@ const PANES: Record<SettingsPage, ComponentType> = {
   general: General,
   research: Research,
   keys: Keys,
+  local: LocalAI,
   connections: Connections,
   usage: Usage,
   data: Data,

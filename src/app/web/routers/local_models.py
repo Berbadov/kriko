@@ -9,7 +9,7 @@ refusal that says where to get a model instead of a button that cannot work.
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
-from app import hfstore, modelpull
+from app import hfstore, localtry, modelpull
 from app.web.deps import get_jobs
 
 router = APIRouter(prefix="/api", tags=["local-models"])
@@ -30,11 +30,18 @@ def local_models(request: Request, available: bool = False, fresh: bool = False)
     Other servers list names only (`/api/local-plane`), so this answers for
     the one runtime that reports more.
     """
+    from app import localplane
+
     base = modelpull.ollama_base(request.app.state.settings.app_state_path)
+    models = modelpull.installed(base) if base else []
     payload: dict = {
         "runtime": "ollama" if base else None,
         "url": base or None,
-        "models": modelpull.installed(base) if base else [],
+        "models": models,
+        # The one the screens name as recommended, so the window holds no model
+        # name of its own, and whether this server already has it.
+        "recommended_model": localplane.RECOMMENDED_MODEL,
+        "recommended_installed": any(localplane.is_recommended(row["name"]) for row in models),
     }
     if available:
         payload["library_url"] = "https://ollama.com/library"
@@ -98,6 +105,26 @@ def remove_model(body: PullRequest, request: Request) -> dict:
         # the server's own words, so the reader knows whether it was a name it
         # never held or a file it could not delete
         raise HTTPException(409, str(error)) from error
+
+
+class TryBody(BaseModel):
+    prompt: str
+    model: str = ""
+
+
+@router.post("/local-models/try")
+def try_model(body: TryBody, request: Request) -> dict:
+    """Ask the local model one short question, only when the reader presses Send.
+
+    Bounded: a prompt over `localtry.MAX_PROMPT_CHARS` is refused, the reply is
+    capped and the wait is a minute. It goes through the research plane's own
+    socket, so a model that answers here answers there. It is local, so it costs
+    nothing, and nothing calls it on its own.
+    """
+    try:
+        return localtry.ask(request.app.state.settings.app_state_path, body.prompt, body.model)
+    except localtry.TryRefused as refused:
+        raise HTTPException(refused.status, refused.message) from refused
 
 
 @router.post("/local-models/start")

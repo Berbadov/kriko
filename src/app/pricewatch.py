@@ -52,6 +52,8 @@ MAX_WATCHES = 60
 MAX_POINTS_PER_PAGE = 300
 #: One alert per watch per price: a lower price speaks again, the same one does not.
 REALERT_AFTER = timedelta(days=14)
+#: Reads kept per watch for its price history; the oldest go first.
+MAX_WATCH_READS = 400
 
 #: Query parameters that name the product rather than the visit.
 _IDENTITY_PARAMS = {"id", "sku", "pid", "product", "productid", "product_id", "item",
@@ -503,6 +505,7 @@ def watch(conn: sqlite3.Connection, url: str, name: str = "", *, target=None, dr
 def unwatch(conn: sqlite3.Connection, watch_id: str, *, remember: bool = True) -> bool:
     row = conn.execute("SELECT product_key FROM watches WHERE watch_id = ?", (watch_id,)).fetchone()
     cursor = conn.execute("DELETE FROM watches WHERE watch_id = ?", (watch_id,))
+    conn.execute("DELETE FROM watch_prices WHERE watch_id = ?", (watch_id,))
     conn.commit()
     if cursor.rowcount and row and remember:
         from app import cloud  # noqa: PLC0415 - cloud reads this module
@@ -581,10 +584,47 @@ def _check_watch(conn: sqlite3.Connection, key: str, offer: dict, now: datetime)
     conn.execute("UPDATE watches SET last_checked = ?, last_price = ?, last_error = '',"
                  " currency = COALESCE(NULLIF(currency, ''), ?) WHERE watch_id = ?",
                  (_stamp(now), offer["price"], offer.get("currency") or "", row["watch_id"]))
+    _remember_read(conn, row["watch_id"], offer["price"], offer.get("currency") or row["currency"], now)
     kind = crossed(offer["price"], target=row["target"], drop_pct=row["drop_pct"],
                    started_price=row["started_price"])
     if kind:
         _alert(conn, row, kind, offer, now)
+
+
+def _remember_read(conn: sqlite3.Connection, watch_id: str, price: float, currency: str,
+                   now: datetime) -> None:
+    """Keep what a check read, unless it is the same price as the last read that day."""
+    last = conn.execute("SELECT price, currency, seen_at FROM watch_prices WHERE watch_id = ?"
+                        " ORDER BY seen_at DESC, rowid DESC LIMIT 1", (watch_id,)).fetchone()
+    stamp = _stamp(now)
+    if (last and abs(last["price"] - price) < 0.005 and last["currency"] == (currency or "")
+            and last["seen_at"][:10] == stamp[:10]):
+        return
+    conn.execute("INSERT INTO watch_prices (watch_id, price, currency, seen_at) VALUES (?, ?, ?, ?)",
+                 (watch_id, price, currency or "", stamp))
+    conn.execute("DELETE FROM watch_prices WHERE watch_id = ? AND rowid NOT IN ("
+                 "SELECT rowid FROM watch_prices WHERE watch_id = ? ORDER BY seen_at DESC,"
+                 " rowid DESC LIMIT ?)", (watch_id, watch_id, MAX_WATCH_READS))
+
+
+def price_history(conn: sqlite3.Connection, watch_id: str) -> dict | None:
+    """What a watch's checks read, oldest first, with the figures a reader asks for.
+
+    `None` for a watch that does not exist. The figures are over the reads in the
+    most recent currency, so two currencies are never compared.
+    """
+    if not conn.execute("SELECT 1 FROM watches WHERE watch_id = ?", (watch_id,)).fetchone():
+        return None
+    items = [dict(row) for row in conn.execute(
+        "SELECT price, currency, seen_at FROM watch_prices WHERE watch_id = ?"
+        " ORDER BY seen_at, rowid", (watch_id,))]
+    if items:
+        newest = items[-1]["currency"]
+        items = [one for one in items if one["currency"] == newest]
+    prices = [one["price"] for one in items]
+    return {"items": items, "low": min(prices) if prices else None,
+            "high": max(prices) if prices else None,
+            "first": prices[0] if prices else None, "last": prices[-1] if prices else None}
 
 
 def alerts(conn: sqlite3.Connection, *, unread_only: bool = True, limit: int = 50) -> list[dict]:

@@ -1,0 +1,271 @@
+/* Check a list. Composes system.css; only what is this screen's own is here. */
+
+.checklist-note,
+.checklist-hint,
+.checklist-sub-note {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--ink-3);
+}
+
+.checklist-note {
+  margin: 0 4px;
+}
+
+.checklist-status {
+  margin: 0 4px;
+  min-height: 0;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.checklist-status:empty {
+  display: none;
+}
+
+.checklist-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.checklist-sub {
+  margin-top: 8px;
+}
+
+/* Step 1: the drop zone. */
+.checklist-drop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  border-style: dashed;
+  border-color: var(--edge-strong);
+  transition: background var(--dur-1) var(--ease-out), border-color var(--dur-1) var(--ease-out);
+}
+
+.checklist-drop[data-over] {
+  background: var(--select);
+  border-color: var(--brand);
+}
+
+.checklist-drop-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  color: var(--ink-2);
+}
+
+.checklist-drop-text strong {
+  font-size: 16px;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+/* Step 2: one labelled select per role, then the preview. */
+.checklist-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 18px 20px;
+}
+
+.checklist-scroll {
+  overflow-x: auto;
+}
+
+.checklist-preview th[data-mapped] {
+  color: var(--ink);
+}
+
+.checklist-preview td {
+  white-space: nowrap;
+}
+
+/* Step 3. */
+.checklist-check {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.checklist-check-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.checklist-progress {
+  flex: 1 1 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.checklist-skeleton {
+  display: grid;
+  gap: 8px;
+}
+
+.checklist-skeleton span {
+  height: 12px;
+  border-radius: var(--r-pill);
+  background: var(--inset);
+  animation: checklist-pulse calc(1.4s * var(--tm, 1)) ease-in-out infinite;
+}
+
+.checklist-skeleton span:nth-child(2) { width: 78%; }
+.checklist-skeleton span:nth-child(3) { width: 54%; }
+
+@keyframes checklist-pulse {
+  50% { opacity: 0.45; }
+}
+
+/* Step 4. */
+.checklist-results-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.checklist-filters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.checklist-count {
+  margin-left: 4px;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.75;
+}
+
+.checklist-results {
+  min-width: 760px;
+}
+
+.checklist-results td {
+  vertical-align: top;
+}
+
+/* Long lists: rows below the fold are not laid out until they scroll near. */
+.checklist-row {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 64px;
+}
+
+.checklist-typed {
+  max-width: 260px;
+  overflow-wrap: anywhere;
+}
+
+.checklist-lead {
+  max-width: 340px;
+  color: var(--ink-2);
+}
+
+.checklist-none {
+  text-align: center;
+  color: var(--ink-3);
+  padding: 28px 14px;
+}
+
+.checklist-open {
+  display: block;
+  padding: 0;
+  min-height: 24px;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: var(--w-medium);
+  color: var(--link);
+  text-align: left;
+  cursor: pointer;
+}
+
+.checklist-open:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
+.checklist-open:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.checklist-sub-note {
+  display: block;
+  margin-top: 2px;
+}
+
+.checklist-pick {
+  min-width: 210px;
+  max-width: 100%;
+  margin-top: 6px;
+  min-height: 36px;
+  padding: 4px 10px;
+  font-size: 14px;
+}
+
+.checklist-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: var(--w-medium);
+  color: var(--ink-2);
+  cursor: pointer;
+}
+
+.checklist-sort:hover {
+  color: var(--ink);
+}
+
+/* The add-to-estimate dialog. */
+.checklist-preview-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  border-radius: var(--r-m);
+  background: var(--inset);
+  border: 1px solid var(--edge);
+}
+
+.checklist-preview-box p {
+  margin: 0;
+}
+
+.checklist-facts {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 4px;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+
+.checklist-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 760px) {
+  .checklist-drop {
+    align-items: stretch;
+  }
+}

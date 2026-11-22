@@ -111,6 +111,8 @@ def test_a_raw_colour_outside_the_theme_is_one_of_the_few_that_must_not_follow_i
         # the theme picker's swatches: each palette's own ground, sheet, ink and
         # brand, which must show whichever theme is active
         "ui/panels/settingsParts.tsx": 22,
+        # The approval sheet is a print page: ink on white whatever the theme.
+        "styles/approval.css": 16,
     }
     pattern = re.compile(r"#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\(")
     seen: dict[str, int] = {}

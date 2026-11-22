@@ -61,6 +61,15 @@ def add_watch(body: WatchRequest, request: Request, background: BackgroundTasks,
         raise HTTPException(409, str(error)) from error
 
 
+@router.get("/watches/{watch_id}/history")
+def watch_history(watch_id: str, conn=Depends(get_app_state)) -> dict:
+    """The prices a watch's checks read, oldest first, with the lowest, highest, first and last."""
+    found = pricewatch.price_history(conn, watch_id)
+    if found is None:
+        raise HTTPException(404, f"no watch {watch_id}")
+    return found
+
+
 @router.delete("/watches/{watch_id}")
 def stop_watch(watch_id: str, request: Request, background: BackgroundTasks,
                conn=Depends(get_app_state)) -> dict:

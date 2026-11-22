@@ -1,3 +1,4 @@
+import { useCallback, useEffect, useReducer } from 'react'
 import { get, post, seg } from './api'
 
 /**
@@ -221,4 +222,59 @@ export function skillWords(status: SkillStatus): string {
   if (!status.present) return 'No protocol written yet'
   if (status.stale) return 'The protocol on disk is not the one this build would write'
   return 'The protocol on disk is current'
+}
+
+// ---- the market, read once for the top strip and its menu ----
+
+/** How long a market read is trusted before the menu reads it again. */
+const MARKET_FRESH_MS = 30_000
+
+interface MarketSnapshot {
+  at: number
+  rows: Map<string, MarketAgent>
+}
+
+let snapshot: MarketSnapshot | null = null
+let inflight: Promise<void> | null = null
+const listeners = new Set<() => void>()
+
+function refreshMarket(force: boolean) {
+  if (inflight) return
+  if (!force && snapshot && Date.now() - snapshot.at < MARKET_FRESH_MS) return
+  inflight = readMarket()
+    .then((doc) => {
+      snapshot = { at: Date.now(), rows: new Map(doc.agents.map((row) => [row.id, row])) }
+    })
+    .catch(() => {
+      // A failed read is an empty answer: each agent then says it was not reported.
+      snapshot = { at: Date.now(), rows: new Map() }
+    })
+    .finally(() => {
+      inflight = null
+      listeners.forEach((listen) => listen())
+    })
+}
+
+/** The market rows by agent id, or `null` before the first read has come back.
+ *  `load` reads again when the last read is older than half a minute. The first
+ *  read waits a moment after the window opens, so it never competes with first paint. */
+export function useMarket(enabled: boolean): { rows: Map<string, MarketAgent> | null; checking: boolean; load: () => void } {
+  const [, bump] = useReducer((n: number) => n + 1, 0)
+
+  useEffect(() => {
+    const listen = () => bump()
+    listeners.add(listen)
+    return () => {
+      listeners.delete(listen)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!enabled) return
+    const timer = window.setTimeout(() => refreshMarket(false), 1500)
+    return () => window.clearTimeout(timer)
+  }, [enabled])
+
+  const load = useCallback(() => refreshMarket(false), [])
+  return { rows: snapshot?.rows ?? null, checking: inflight !== null, load }
 }

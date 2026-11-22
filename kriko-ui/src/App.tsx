@@ -1,32 +1,38 @@
-import { useCallback, useEffect, useState } from 'react'
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { AnimatePresence, MotionConfig, motion } from 'motion/react'
 import { usePrefs } from './prefs'
-import { ChatProvider, useChat } from './chat'
-import { CompareProvider, useCompare } from './compare'
+import { ChatProvider, useChatActions } from './chat'
+import { CompareProvider, useCompareAdd } from './compare'
 import { useAttention } from './engine/buyer'
 import { useEngine } from './engine/Engine'
 import { post } from './engine/api'
 import { useHandoff, type Landing } from './handoff'
-import { QueueProvider, useQueue } from './queue'
+import { QueueProvider, useQueueActive } from './queue'
+import { useAfterIdle, whenIdle } from './idle'
 import type { AppAction } from './activity/run'
 import { ChatScreen } from './screens/Chat'
-import { CompareScreen } from './screens/Compare'
-import { EstimateScreen } from './screens/Estimate'
-import { ProductScreen } from './screens/Product'
-import { PricesScreen } from './screens/Prices'
-import { SettingsScreen } from './screens/Settings'
 import { Motes } from './dust/Motes'
 import { PixelSprites } from './ui/ProductGlyph'
-import { QueueScreen } from './screens/Queue'
-import { Tour } from './tour/Tour'
 import { DRAWER_EVENT, ORDER, RAIL_ORDER, routeFor, showDrawer, type Screen } from './ui/drawerEvents'
 import { Rail, TopStrip } from './ui/Rail'
 import { PanelPage } from './ui/PanelPage'
-import { CatalogsPanel } from './ui/panels/Catalogs'
-import { ForYouPanel } from './ui/panels/ForYou'
-import { HistoryPanel } from './ui/panels/History'
-import { ChatsList } from './ui/ChatsList'
-import { SitesPanel } from './ui/panels/Sites'
+import { PageSkeleton } from './ui/PageSkeleton'
+import {
+  CatalogsPanel,
+  ChatsList,
+  CompareScreen,
+  EstimateScreen,
+  ForYouPanel,
+  HistoryPanel,
+  PricesScreen,
+  ProductScreen,
+  QueueScreen,
+  SettingsScreen,
+  SitesPanel,
+  Tour,
+  prefetchAll,
+  prefetchScreen,
+} from './lazyScreens'
 
 /** Named places the agent or a link can ask for, by the screen they are. */
 const TARGETS: Record<string, Screen> = {
@@ -43,6 +49,19 @@ const TARGETS: Record<string, Screen> = {
   settings: 'settings',
 }
 
+/** The rail's entries by their title, for the prefetch on hover and focus. */
+const RAIL_TITLES: Record<string, Screen> = {
+  Compare: 'compare',
+  Queue: 'queue',
+  History: 'history',
+  Procurement: 'estimate',
+  Prices: 'prices',
+  Catalogs: 'catalogs',
+  Sites: 'sites',
+  'For you': 'foryou',
+  Settings: 'settings',
+}
+
 interface Nav {
   screen: Screen
   /** Which way the page moves in, for the slide: 1 from the right, -1 from the left. */
@@ -57,10 +76,15 @@ interface Nav {
 function Shell() {
   const { motion: m } = usePrefs()
   const engine = useEngine()
-  const { active } = useQueue()
-  const { add } = useCompare()
+  // Only what the shell shows is read from the providers: the queue's count, the
+  // board's `add` and the chat's `newChat`. Their progress, answers and streamed
+  // words change many times a second and are not the shell's business.
+  const active = useQueueActive()
+  const add = useCompareAdd()
   const attention = useAttention()
-  const { newChat } = useChat()
+  const { newChat } = useChatActions()
+  const pageRef = useRef<HTMLDivElement>(null)
+  const tourReady = useAfterIdle(3000)
   const [nav, setNav] = useState<Nav>({ screen: 'chat', direction: 1, product: null, section: null, seq: 0 })
   const { screen, direction, product, section, seq } = nav
   /** One line about a started app action, until the reader dismisses it. */
@@ -166,6 +190,24 @@ function Shell() {
     return () => window.removeEventListener('keydown', onKey)
   }, [go, screen])
 
+  // Every other screen is its own chunk. Once the first paint is done and the window
+  // is idle they are fetched one by one, so a move down the rail never waits.
+  useEffect(() => {
+    let cancelled = false
+    const cancel = whenIdle(() => prefetchAll(() => cancelled), 2500)
+    return () => {
+      cancelled = true
+      cancel()
+    }
+  }, [])
+
+  /** Hovering or focusing a rail entry warms its chunk a moment before the press. */
+  const warm = useCallback((event: { target: EventTarget }) => {
+    const target = event.target instanceof Element ? event.target.closest<HTMLElement>('.lrail-item') : null
+    const place = target ? RAIL_TITLES[target.title] : undefined
+    if (place) prefetchScreen(place)
+  }, [])
+
   const startChat = useCallback(() => {
     newChat()
     go('chat')
@@ -173,7 +215,7 @@ function Shell() {
 
   return (
     <MotionConfig reducedMotion={m.on ? 'never' : 'always'}>
-      <div className="app">
+      <div className="app" onPointerOver={warm} onFocus={warm}>
         <PixelSprites />
         <Motes />
         <Rail screen={screen} onNavigate={go} onNewChat={startChat} queueCount={active} attention={attention} />
@@ -206,6 +248,7 @@ function Shell() {
             <AnimatePresence mode="popLayout" initial={false} custom={direction}>
               <motion.div
                 key={screen + (product ?? '')}
+                ref={pageRef}
                 className="page"
                 custom={direction}
                 variants={{
@@ -217,40 +260,48 @@ function Shell() {
                 animate="center"
                 exit="exit"
                 transition={m.tx.soft}
+                onAnimationStart={() => pageRef.current?.setAttribute('data-moving', 'true')}
+                onAnimationComplete={() => pageRef.current?.removeAttribute('data-moving')}
               >
-                {screen === 'chat' && !product && <ChatScreen onOpen={openProduct} onAction={performAction} />}
-                {screen === 'chat' && product && <ProductScreen lookupId={product} onBack={() => go('chat')} onCompare={() => go('compare')} />}
-                {screen === 'compare' && <CompareScreen />}
-                {screen === 'prices' && <PricesScreen />}
-                {screen === 'estimate' && <EstimateScreen />}
-                {screen === 'queue' && <QueueScreen onOpen={openProduct} />}
-                {screen === 'history' && (
-                  <PanelPage title="History">
-                    <ChatsList onOpen={() => go('chat')} />
-                    <HistoryPanel onOpen={openProduct} />
-                  </PanelPage>
-                )}
-                {screen === 'foryou' && (
-                  <PanelPage title="For you">
-                    <ForYouPanel onOpen={openProduct} />
-                  </PanelPage>
-                )}
-                {screen === 'catalogs' && (
-                  <PanelPage title="Catalogs">
-                    <CatalogsPanel onOpen={openProduct} />
-                  </PanelPage>
-                )}
-                {screen === 'sites' && (
-                  <PanelPage title="Sites">
-                    <SitesPanel />
-                  </PanelPage>
-                )}
-                {screen === 'settings' && <SettingsScreen key={seq} initial={section} />}
+                <Suspense fallback={<PageSkeleton />}>
+                  {screen === 'chat' && !product && <ChatScreen onOpen={openProduct} onAction={performAction} />}
+                  {screen === 'chat' && product && <ProductScreen lookupId={product} onBack={() => go('chat')} onCompare={() => go('compare')} />}
+                  {screen === 'compare' && <CompareScreen />}
+                  {screen === 'prices' && <PricesScreen />}
+                  {screen === 'estimate' && <EstimateScreen />}
+                  {screen === 'queue' && <QueueScreen onOpen={openProduct} />}
+                  {screen === 'history' && (
+                    <PanelPage title="History">
+                      <ChatsList onOpen={() => go('chat')} />
+                      <HistoryPanel onOpen={openProduct} />
+                    </PanelPage>
+                  )}
+                  {screen === 'foryou' && (
+                    <PanelPage title="For you">
+                      <ForYouPanel onOpen={openProduct} />
+                    </PanelPage>
+                  )}
+                  {screen === 'catalogs' && (
+                    <PanelPage title="Catalogs">
+                      <CatalogsPanel onOpen={openProduct} />
+                    </PanelPage>
+                  )}
+                  {screen === 'sites' && (
+                    <PanelPage title="Sites">
+                      <SitesPanel />
+                    </PanelPage>
+                  )}
+                  {screen === 'settings' && <SettingsScreen key={seq} initial={section} />}
+                </Suspense>
               </motion.div>
             </AnimatePresence>
           </main>
         </div>
-        <Tour onStart={() => go('chat')} />
+        {tourReady && (
+          <Suspense fallback={null}>
+            <Tour onStart={() => go('chat')} />
+          </Suspense>
+        )}
       </div>
     </MotionConfig>
   )

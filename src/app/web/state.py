@@ -921,6 +921,16 @@ CREATE TABLE IF NOT EXISTS watches (
   updated_at    TEXT NOT NULL DEFAULT '');
 CREATE UNIQUE INDEX IF NOT EXISTS watches_key ON watches (product_key);
 
+-- Each price a check of a watched page read, so a move can be told in words and
+-- drawn. One row per read that differs from the one before it that day, at most
+-- 400 per watch (`app/pricewatch.py`); deleted with its watch.
+CREATE TABLE IF NOT EXISTS watch_prices (
+  watch_id TEXT NOT NULL DEFAULT '',
+  price    REAL NOT NULL DEFAULT 0,
+  currency TEXT NOT NULL DEFAULT '',
+  seen_at  TEXT NOT NULL DEFAULT '');
+CREATE INDEX IF NOT EXISTS watch_prices_seen ON watch_prices (watch_id, seen_at);
+
 -- What a watch found worth saying. Read once by the panel or the app.
 CREATE TABLE IF NOT EXISTS watch_alerts (
   alert_id   TEXT PRIMARY KEY,

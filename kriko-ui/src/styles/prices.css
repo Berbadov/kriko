@@ -88,6 +88,7 @@
 
 .prices-figure {
   flex: none;
+  min-width: 112px;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
@@ -122,7 +123,244 @@
   gap: 6px;
 }
 
+/* The row's reason, in words, when "Add as a quote" cannot be pressed yet. */
+.prices-why {
+  order: 9;
+  flex: 1 1 100%;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--ink-3);
+  text-align: right;
+}
+
+.prices-row-actions {
+  align-items: center;
+  justify-content: flex-end;
+  max-width: 100%;
+}
+
+/* The price over the reads: a small line, and the figures in words under the row. */
+.prices-trend {
+  flex: none;
+  display: flex;
+  align-items: center;
+}
+
+.prices-spark {
+  display: block;
+  overflow: visible;
+}
+
+.prices-history {
+  flex: 1 1 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 24px;
+  margin: 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--edge);
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.prices-history div {
+  display: flex;
+  gap: 6px;
+}
+
+.prices-history dt {
+  color: var(--ink-3);
+}
+
+.prices-history dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+/* The "Add as a quote" dialog. */
+.prices-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: color-mix(in srgb, var(--ground) 62%, transparent);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+}
+
+.prices-dialog {
+  width: min(480px, 100%);
+  max-height: 100%;
+  overflow-y: auto;
+  display: grid;
+  gap: 14px;
+  padding: 20px;
+  box-sizing: border-box;
+  background: var(--sheet);
+  color: var(--ink);
+  border: 1px solid var(--edge);
+  border-radius: var(--r-l);
+  box-shadow: var(--shadow-2);
+  font-size: 14px;
+}
+
+.prices-dialog:focus {
+  outline: none;
+}
+
+.prices-dialog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.prices-dialog-title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: var(--w-medium);
+}
+
+.prices-dialog-lede,
+.prices-dialog-done p {
+  margin: 0;
+}
+
+.prices-dialog-hint {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--ink-2);
+}
+
+.prices-dialog-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 12px;
+}
+
+.prices-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.prices-dialog-done {
+  display: grid;
+  gap: 14px;
+}
+
+.prices-chosen {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+  min-height: 40px;
+  padding: 6px 6px 6px 12px;
+  border: 1px solid var(--edge);
+  border-radius: var(--r-m);
+  background: var(--inset);
+}
+
+.prices-chosen-name {
+  flex: 1 1 140px;
+  min-width: 0;
+  font-weight: var(--w-medium);
+  overflow-wrap: anywhere;
+}
+
+.prices-hits {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid var(--edge);
+  border-radius: var(--r-m);
+  background: var(--sheet);
+}
+
+.prices-hits li + li {
+  border-top: 1px solid var(--edge);
+}
+
+.prices-hit {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.prices-hit:hover {
+  background: var(--select);
+}
+
+.prices-hit:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+.prices-hit-pack {
+  flex: none;
+  font-size: 13px;
+  color: var(--ink-3);
+}
+
+.prices-preview {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 4px 14px;
+  border: 1px solid var(--edge);
+  border-radius: var(--r-m);
+  background: var(--inset);
+}
+
+.prices-preview div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px 0;
+}
+
+.prices-preview div + div {
+  border-top: 1px solid var(--edge);
+}
+
+.prices-preview dt {
+  color: var(--ink-3);
+}
+
+.prices-preview dd {
+  margin: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
 @media (max-width: 760px) {
+  .prices-why {
+    text-align: left;
+  }
+
+  .prices-dialog-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .prices-fields {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -130,5 +368,16 @@
   .prices-figure {
     align-items: flex-start;
     text-align: left;
+  }
+}
+
+@media (max-height: 760px) {
+  .prices-dialog {
+    gap: 10px;
+    padding: 16px;
+  }
+
+  .prices-dialog-lede {
+    display: none;
   }
 }

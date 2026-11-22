@@ -1,9 +1,12 @@
+import { memo, useCallback, useMemo } from 'react'
 import { useEngine } from '../engine/Engine'
 import { useAppUpdate } from '../engine/appupdate'
+import { useMarket } from '../engine/agents'
+import { useProcurement } from '../engine/procurement'
 import { useQueue } from '../queue'
 import wordSvg from '../assets/wordmark.svg?raw'
 import { showDrawer, type Screen } from './drawerEvents'
-import { AgentMark } from './AgentMark'
+import { AgentMenu } from './AgentMenu'
 import { Icon, type IconName } from './Icon'
 import { PixelGlyph } from './PixelGlyph'
 import { TitleBar } from './TitleBar'
@@ -41,6 +44,13 @@ const GROUPS: { name: string; tour?: string; items: { id: Screen; label: string;
   },
 ]
 
+/** What a count on a rail row says, for the screen reader and the tooltip. */
+function countWords(id: Screen, count: number): string {
+  if (id === 'queue') return `${count} in queue`
+  if (id === 'estimate') return count === 1 ? '1 quote needs attention' : `${count} quotes need attention`
+  return `${count} waiting`
+}
+
 /** The rail, labelled and grouped. Under 900px of window it keeps only the icons;
  *  each word stays in the page for the screen reader and as a tooltip. */
 export function Rail({
@@ -58,7 +68,12 @@ export function Rail({
   attention: number
 }) {
   const { release } = useAppUpdate()
-  const counts: Partial<Record<Screen, number>> = { queue: queueCount, foryou: attention }
+  const { mode } = useEngine()
+  // The quotes that need a look: those about to expire and those that have. The
+  // same cached read the Procurement screen uses, so the rail adds no request.
+  const { summary } = useProcurement()
+  const quotesAttention = mode === 'live' ? summary.expiring.length + summary.expired.length : 0
+  const counts: Partial<Record<Screen, number>> = { queue: queueCount, foryou: attention, estimate: quotesAttention }
   const settingsOn = screen === 'settings'
 
   return (
@@ -93,7 +108,7 @@ export function Rail({
                   <Icon name={item.icon} size={18} />
                   <span className="lrail-label">{item.label}</span>
                   {count > 0 && (
-                    <span className="lrail-count mono" aria-label={item.id === 'queue' ? `${count} in queue` : `${count} waiting`}>
+                    <span className="lrail-count mono" aria-label={countWords(item.id, count)}>
                       {count}
                     </span>
                   )}
@@ -124,43 +139,54 @@ export function Rail({
 }
 
 /** The slim strip across the top of the content column. It holds the agent that
- *  does the research, the usage, the queue's state and, on Windows, the window's
- *  own buttons. Its empty ground drags the window. */
+ *  does the research (and its menu), the usage, the queue's state and, on Windows,
+ *  the window's own buttons. Its empty ground drags the window. Each piece takes
+ *  only the values it draws, so a queue poll does not redraw the agent or the card. */
 export function TopStrip({ onNavigate }: { onNavigate: (s: Screen) => void }) {
-  const { agents, preferred } = useEngine()
+  const { mode, agents, preferred, chooseAgent } = useEngine()
   const { items } = useQueue()
-  const agent = agents.find((a) => a.id === preferred)?.label ?? 'Default agent'
-  const busy = items.some((i) => i.state === 'researching')
-  const done = items.filter((i) => i.state === 'done').length
+  const live = mode === 'live'
+  const market = useMarket(live)
+  const busy = useMemo(() => items.some((i) => i.state === 'researching'), [items])
+  const done = useMemo(() => items.filter((i) => i.state === 'done').length, [items])
+  const total = items.length
+  const openQueue = useCallback(() => onNavigate('queue'), [onNavigate])
+  const verify = useCallback(() => showDrawer('agents'), [])
+  const settings = useCallback(() => showDrawer('agents'), [])
 
   return (
     <header className="strip" data-tauri-drag-region>
-      <button
-        type="button"
-        className="strip-agent"
-        onClick={() => showDrawer('agents')}
-        title="The agent that does the research. Open to change it."
-        data-tour="agent-pill"
-      >
-        <AgentMark id={preferred} size={18} state={busy ? 'working' : 'idle'} />
-        <span className="strip-agent-name">{agent}</span>
-        <Icon name="chevron" size={14} />
-      </button>
+      <AgentMenu
+        agents={agents}
+        preferred={preferred}
+        busy={busy}
+        live={live}
+        market={market.rows}
+        onOpen={market.load}
+        onChoose={chooseAgent}
+        onVerify={verify}
+        onSettings={settings}
+        tour={'agent-pill'}
+      />
 
       <div className="strip-drag" data-tauri-drag-region />
 
       <div className="strip-right">
         <UsagePill />
-        {items.length > 0 && (
-          <button type="button" className="strip-queue" onClick={() => onNavigate('queue')} aria-label={`Queue, ${done} of ${items.length} done`} title="Queue">
-            <PixelGlyph size={16} active={busy} />
-            <span className="mono">
-              {done} of {items.length} done
-            </span>
-          </button>
-        )}
+        {total > 0 && <QueueChip done={done} total={total} busy={busy} onOpen={openQueue} />}
         <TitleBar />
       </div>
     </header>
   )
 }
+
+const QueueChip = memo(function QueueChip({ done, total, busy, onOpen }: { done: number; total: number; busy: boolean; onOpen: () => void }) {
+  return (
+    <button type="button" className="strip-queue" onClick={onOpen} aria-label={`Queue, ${done} of ${total} done`} title="Queue">
+      <PixelGlyph size={16} active={busy} />
+      <span className="mono">
+        {done} of {total} done
+      </span>
+    </button>
+  )
+})

@@ -84,10 +84,12 @@ export function EngineProvider({ children }: { children: ReactNode }) {
     let live = true
     setMode('checking')
     setProblem('')
-    get<{ ok?: boolean }>('/api/health', 2500)
-      .catch(() => (inShell() ? untilStarted(() => live) : Promise.reject(new Error('no engine'))))
-      .then(async () => {
-        const prefs = await get<AgentAvailability>('/api/agent-availability', 4000)
+    // The two reads go out together: the engine that answers one answers the other, so
+    // the window is not one round trip slower to open than it has to be.
+    const probe = () => Promise.all([get<{ ok?: boolean }>('/api/health', 2500), get<AgentAvailability>('/api/agent-availability', 4000)])
+    probe()
+      .catch(() => (inShell() ? untilStarted(() => live).then(probe) : Promise.reject(new Error('no engine'))))
+      .then(([, prefs]) => {
         if (!live) return
         setAgents(agentRoster(prefs.harnesses))
         setAgentAvailable((prefs.harnesses?.length ?? 0) > 0)

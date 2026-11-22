@@ -39,7 +39,7 @@ test('every named place opens the screen and Settings section it was given', () 
     settings: { screen: 'settings', section: 'general' },
     agents: { screen: 'settings', section: 'research' },
     chat: { screen: 'settings', section: 'research' },
-    local: { screen: 'settings', section: 'keys' },
+    local: { screen: 'settings', section: 'local' },
     setup: { screen: 'settings', section: 'connections' },
     logs: { screen: 'settings', section: 'data' },
     backups: { screen: 'settings', section: 'data' },

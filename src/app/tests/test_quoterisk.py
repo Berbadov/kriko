@@ -92,3 +92,18 @@ def test_the_same_quotes_always_rank_the_same_way():
     second = rank_quotes(list(reversed(quotes)), estimate_currency="TRY",
                          rates={"TRY": 1.0}, today=TODAY)
     assert [row["quote_id"] for row in first] == [row["quote_id"] for row in second]
+
+
+def test_a_quote_in_the_estimates_own_currency_needs_no_rate():
+    """Own currency converts at 1 by definition; another currency still needs a rate."""
+    ranked = rank_quotes(
+        [{"quote_id": "own", "unit_price": 100, "currency": "USD", "vat_rate": 20,
+          "vat_included": False},
+         {"quote_id": "other", "unit_price": 90, "currency": "EUR", "vat_rate": 20,
+          "vat_included": False}],
+        estimate_currency="USD", rates={}, today=TODAY)
+    by_id = {row["quote_id"]: row for row in ranked}
+    assert by_id["own"]["landed"] == 120.0
+    assert by_id["own"]["rank"] == 1
+    assert by_id["other"]["landed"] is None
+    assert any("no EUR to USD rate" in reason for reason in by_id["other"]["rank_reasons"])

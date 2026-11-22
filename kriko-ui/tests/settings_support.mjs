@@ -68,7 +68,7 @@ export const sharedDoc = {
 }
 
 /** The local model hooks, idle: no runtime, no machine, no models. A test passes `local` to change them. */
-const LOCAL_IDLE = { machine: null, runtime: null, models: [], library: null, libraryProblem: '', pull: null, problem: '', starting: false, vllm: null, checking: false }
+const LOCAL_IDLE = { machine: null, machineProblem: '', runtime: null, models: [], modelsLoaded: true, recommended: { model: 'rec:2b', installed: false }, library: null, libraryProblem: '', pull: null, problem: '', starting: false, vllm: null, checking: false }
 
 /** The engine hooks every settings section reads, stubbed. `options` picks the data. */
 
@@ -107,11 +107,19 @@ export function screenStubs(options = {}) {
     '../../engine/usage': { useUsage: () => ({ meters: null, demo: !!options.demo }) },
     // The sections that are not under test reach the engine's API client (which reads import.meta)
     // through these; the screen tests draw no effects, so a plain link and a plain group stand in.
-    '../panels/Local': { LocalGroup: () => h('section', null, h('h3', null, 'Local models')) },
+    '../panels/Local': {
+      Loading: () => h('div', null, 'Loading'),
+      InstalledModels: () => h('section', null, h('h3', null, 'Models on this computer')),
+      FitModels: () => h('section', null, h('h3', null, 'Models that fit this computer')),
+      VllmRow: () => h('div', null, 'vLLM'),
+    },
     '../panels/Agents': { AgentsSection: () => h('section', null, h('h3', null, 'Agents')) },
     '../panels/Chat': { ChatSettings: () => h('section', null, h('h3', null, 'Chat')) },
     '../ExternalLink': { ExternalLink: ({ children, className }) => h('a', { className }, children), openLink() {} },
-    '../../engine/local': { useLocal: () => ({ ...LOCAL_IDLE, recheck() {}, openLibrary() {}, startPull() {}, stopPull() {}, dismissPull() {}, remove() {}, startRuntime() {}, ...options.local }) },
+    '../../engine/local': {
+      useLocal: () => ({ ...LOCAL_IDLE, recheck() {}, readMachine() {}, readModels() {}, readVllm() {}, openLibrary() {}, startPull() {}, stopPull() {}, dismissPull() {}, remove() {}, startRuntime() {}, ...options.local }),
+      useTryLocal: () => ({ busy: false, answer: null, problem: '', ask() {}, ...options.trial }),
+    },
     '../../engine/runtimes': { useLocalRuntimes: () => ({ doc: null, problem: '', checked: null, save() {}, check() {}, reload() {}, ...options.runtimes }) },
     '../../engine/hfstore': {
       NO_FILTERS: { query: '', sort: 'downloads', min: null, max: null, license: '' },
@@ -166,7 +174,8 @@ export async function mount(element) {
     },
     /** Type into an input the way a reader does: the value, then its input event. */
     type: async (node, text) => {
-      const setter = Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype, 'value').set
+      const proto = node.tagName === 'TEXTAREA' ? dom.window.HTMLTextAreaElement.prototype : dom.window.HTMLInputElement.prototype
+      const setter = Object.getOwnPropertyDescriptor(proto, 'value').set
       await act(async () => {
         setter.call(node, text)
         node.dispatchEvent(new dom.window.Event('input', { bubbles: true }))

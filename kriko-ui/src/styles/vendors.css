@@ -1,0 +1,135 @@
+/* The Procurement desk's two views, and the vendor scorecard. Built from the
+   system.css primitives; this file owns the tabs, the vendor tile, the open
+   quotes and the table's inner scroll. */
+
+.vendors-tabs {
+  margin: 4px 0 20px;
+}
+
+.vendors-tabs button {
+  min-height: 40px;
+  padding: 6px 18px;
+}
+
+.vendors-tabs button[aria-selected='true'] {
+  background: var(--sheet);
+  color: var(--ink);
+  box-shadow: var(--shadow-1);
+}
+
+.vendors {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.vendors-search {
+  max-width: 420px;
+}
+
+.vendors-basis,
+.vendors-loading {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 14px;
+}
+
+/* Each vendor is laid out on its own; content outside the viewport is not drawn. */
+.vendors-item {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 72px;
+}
+
+.vendors-row .k-row-note {
+  white-space: normal;
+}
+
+.vendors-tile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: var(--w-medium);
+  color: var(--ink-2);
+  background: var(--inset);
+  border-radius: var(--r-s);
+  font-size: 15px;
+}
+
+.vendors-row[data-on='true'] {
+  background: var(--select);
+}
+
+.vendors-detail {
+  display: grid;
+  gap: 10px;
+  padding: 4px 16px 16px;
+  border-top: 1px solid var(--edge);
+  background: var(--ground);
+  min-width: 0;
+}
+
+.vendors-detail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-top: 8px;
+}
+
+/* A wide table scrolls inside its card, never the page. */
+.vendors-table-scroll {
+  overflow-x: auto;
+  min-width: 0;
+}
+
+.vendors-quote-table {
+  min-width: 720px;
+}
+
+.vendors-quote-table td {
+  padding: 10px 12px;
+}
+
+/* Figures and the action stay on one line; the product column takes the wrapping. */
+.vendors-quote-table th,
+.vendors-quote-table td {
+  white-space: nowrap;
+}
+
+.vendors-quote-table td:first-child {
+  white-space: normal;
+  min-width: 200px;
+}
+
+.vendors-product {
+  display: block;
+  color: var(--ink);
+  font-weight: var(--w-medium);
+}
+
+.vendors-estimate {
+  display: block;
+  margin-top: 2px;
+  color: var(--ink-3);
+  font-size: 13px;
+}
+
+.vendors-estimate[data-state='expired'] {
+  color: var(--risk);
+}
+
+.vendors-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (max-width: 760px) {
+  .vendors-search {
+    max-width: none;
+  }
+}

@@ -166,6 +166,10 @@ def _rate(currency: str, estimate_currency: str, rates: dict) -> float | None:
     direction). TRY is 1. A rate the reader has not entered is absent, never
     guessed.
     """
+    if currency == estimate_currency:
+        # A price in the estimate's own currency needs no rate: it converts at 1
+        # by definition. Another currency with no rate still returns None below.
+        return 1.0
     rates = rates if isinstance(rates, dict) else {}
     source = _float(rates.get(currency))
     target = _float(rates.get(estimate_currency))

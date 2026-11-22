@@ -1,5 +1,6 @@
 import { Checkbox } from '../../arc/checkbox/checkbox'
 import { useEffect, useState } from 'react'
+import { FIT_WORDS, fitOf, type Facts } from '../../engine/fit'
 import { NO_FILTERS, useHfStore, type HfFilters, type HfModel, type HfQuant, type HfSort } from '../../engine/hfstore'
 import { Icon } from '../Icon'
 import { Select } from '../controls'
@@ -28,19 +29,21 @@ const LICENSES = [
 
 const gb = (bytes: number) => `${(bytes / 1e9).toFixed(1)} GB`
 const count = (n: number) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${Math.round(n / 1e3)}K` : String(n))
-/** A model needs its file in memory and room for the context. */
+/** Billions of parameters the card holds at 4 bits: the size filter's "fits my graphics card". */
+const BYTES_PER_B = 0.6
 const OVERHEAD = 1.15
 
 /** Hugging Face models that Ollama can pull, found with filters. It is drawn only
  *  when the reader opens the block, and downloads only from a Get button. */
-export function HfStore({ vramMb, installed, pulling, onGet }: { vramMb: number | null; installed: string[]; pulling: boolean; onGet: (name: string) => void }) {
+export function HfStore({ facts, installed, pulling, onGet }: { facts: Facts; installed: string[]; pulling: boolean; onGet: (name: string) => void }) {
   const hf = useHfStore()
+  const vramMb = facts.vramMb
   const [filters, setFilters] = useState<HfFilters>(NO_FILTERS)
   const [fits, setFits] = useState(false)
   const [open, setOpen] = useState('')
 
   /** What the card can hold at 4 bits: about 0.6 GB per billion parameters, and room to run. */
-  const vramB = vramMb ? Math.floor(vramMb / 1024 / (0.6 * OVERHEAD)) : null
+  const vramB = vramMb ? Math.floor(vramMb / 1024 / (BYTES_PER_B * OVERHEAD)) : null
   const effective = (next: HfFilters, onlyFits: boolean): HfFilters =>
     onlyFits && vramB ? { ...next, max: next.max === null ? vramB : Math.min(next.max, vramB) } : next
 
@@ -105,7 +108,7 @@ export function HfStore({ vramMb, installed, pulling, onGet }: { vramMb: number 
             row={row}
             open={open === row.repo}
             quants={hf.quants[row.repo]}
-            vramMb={vramMb}
+            facts={facts}
             installed={installed}
             pulling={pulling}
             onToggle={() => {
@@ -125,7 +128,7 @@ function HfRow({
   row,
   open,
   quants,
-  vramMb,
+  facts,
   installed,
   pulling,
   onToggle,
@@ -134,7 +137,7 @@ function HfRow({
   row: HfModel
   open: boolean
   quants: HfQuant[] | string | undefined
-  vramMb: number | null
+  facts: Facts
   installed: string[]
   pulling: boolean
   onToggle: () => void
@@ -156,17 +159,16 @@ function HfRow({
           ) : (
             quants.map((one) => {
               const has = installed.includes(one.pull)
-              const tooBig = vramMb !== null && one.bytes * OVERHEAD > vramMb * 1024 * 1024
+              const verdict = fitOf(one.bytes, facts)
               return (
                 <div key={one.quant} className="hf-quant">
                   <span>
                     <strong>{one.quant}</strong>
                     <small>
-                      {gb(one.bytes)}
-                      {vramMb !== null && (tooBig ? ' · more than the card holds' : ' · fits the card')}
+                      {gb(one.bytes)} · {FIT_WORDS[verdict]}
                     </small>
                   </span>
-                  <button className="choice" data-on={has} disabled={pulling || has} onClick={() => onGet(one.pull)} title={has ? 'Installed' : `Get ${one.pull}`}>
+                  <button className="choice" data-on={has} disabled={pulling || has} onClick={() => onGet(one.pull)} aria-label={has ? `${one.pull} is installed` : `Get ${one.pull}`}>
                     {has ? 'Installed' : 'Get'}
                   </button>
                 </div>

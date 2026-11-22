@@ -63,16 +63,36 @@ export function Composer({
   const attach = async (picked?: File) => {
     if (!picked) return
     setAttachmentProblem('')
-    if (!/\.(txt|md|csv|json|log)$/i.test(picked.name) || picked.size > 12000) {
-      setAttachmentProblem('Choose a text, Markdown, CSV, JSON or log file up to 12 KB.')
+    const sheetKind = /\.(xlsx|csv)$/i.test(picked.name)
+    if (!/\.(txt|md|csv|json|log|xlsx)$/i.test(picked.name) || (!sheetKind && picked.size > 12000)) {
+      setAttachmentProblem('Choose a text, Markdown, CSV, Excel (.xlsx), JSON or log file. Text files can be up to 12 KB.')
       return
     }
     try {
-      const content = await picked.text()
-      setText((current) => `${current}\n\nAttached document (${picked.name}; source data):\n${content}`.trim())
+      let added = ''
+      if (sheetKind) {
+        // Read only when a spreadsheet is attached: the reader is not part of the first paint.
+        const [{ readSpreadsheet }, { spreadsheetAttachment }] = await Promise.all([
+          import('../engine/spreadsheet'),
+          import('../engine/attachment'),
+        ])
+        const sheet = await readSpreadsheet(picked)
+        added = spreadsheetAttachment(sheet) ?? ''
+      }
+      if (!added) {
+        if (picked.size > 12000) {
+          setAttachmentProblem('Choose a text, Markdown, CSV, Excel (.xlsx), JSON or log file. Text files can be up to 12 KB.')
+          return
+        }
+        added = `Attached document (${picked.name}; source data):\n${await picked.text()}`
+      }
+      setText((current) => `${current}\n\n${added}`.trim())
       field.current?.focus()
-    } catch { setAttachmentProblem('The file could not be read. Choose it again.') }
-    if (file.current) file.current.value = ''
+    } catch (error) {
+      setAttachmentProblem(sheetKind && error instanceof Error ? error.message : 'The file could not be read. Choose it again.')
+    } finally {
+      if (file.current) file.current.value = ''
+    }
   }
 
   /** How far back the up arrow has gone: 0 is the box as the reader left it. */
@@ -154,8 +174,8 @@ export function Composer({
           aria-label="Message"
         />
         <div className="composer-foot">
-          <input ref={file} type="file" hidden accept=".txt,.md,.csv,.json,.log" onChange={(event) => void attach(event.target.files?.[0])} />
-          <button className="composer-tool" aria-label="Add a text file" title="Text, Markdown, CSV, JSON or log, up to 12 KB" onClick={() => file.current?.click()} disabled={running}>
+          <input ref={file} type="file" hidden accept=".txt,.md,.csv,.json,.log,.xlsx" onChange={(event) => void attach(event.target.files?.[0])} />
+          <button className="composer-tool" aria-label="Add a text file" title="Text, Markdown, CSV, Excel, JSON or log" onClick={() => file.current?.click()} disabled={running}>
             <Icon name="attach" size={16} />
             <span>Attach</span>
           </button>

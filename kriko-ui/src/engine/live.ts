@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useReducer, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { EMPTY, runReducer, turnOf, type Product, type Row, type RunApi, type Turn } from '../activity/run'
 import { EngineError, get, post, postQuestion, seg, type ApiActivity, type ApiFeedEvent, type ApiJob, type ApiMessage, type ApiProduct, type ApiStep, type ApiTurn } from './api'
 import { threadsChanged } from './threads'
@@ -321,5 +321,6 @@ export function useLiveRun(): RunApi {
     [clear, poll, fail],
   )
 
-  return { run, turns, threadId, start, stop, newChat, open }
+  // One object per change of what it holds, so a context built on it does not announce a change that is not one.
+  return useMemo(() => ({ run, turns, threadId, start, stop, newChat, open }), [run, turns, threadId, start, stop, newChat, open])
 }

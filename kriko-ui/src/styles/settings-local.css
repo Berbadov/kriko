@@ -1,0 +1,128 @@
+/* Local AI: the section for the model on this computer. Every class here is
+   `localai-`; rows, pills, buttons and fields come from system.css, and the
+   `keys-` pieces that moved with the model keep their own rules. */
+
+.localai-skeleton-row {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px 16px;
+}
+
+.localai-skeleton {
+  width: 62%;
+  height: 12px;
+  border-radius: var(--r-s);
+  background: var(--edge-strong);
+  animation: localai-pulse calc(1.8s * var(--tm, 1)) ease-in-out infinite;
+}
+
+.localai-skeleton[data-short] {
+  width: 36%;
+}
+
+@keyframes localai-pulse {
+  50% {
+    opacity: 0.4;
+  }
+}
+
+/* A download sits at the top of the models, inside the card, ruled like a row. */
+.localai-pull {
+  margin: 12px 16px;
+}
+
+.localai-fit-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-radius: var(--r-m);
+  background: var(--inset);
+  overflow: hidden;
+}
+
+.localai-fit {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 10px 12px;
+  /* A long list draws only the rows in view. */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 64px;
+}
+
+.localai-fit + .localai-fit {
+  border-top: 1px solid var(--edge);
+}
+
+.localai-fit-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.localai-fit-main strong {
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.localai-fit-main small {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.localai-fit-tags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.localai-try-input {
+  width: 100%;
+  min-height: 84px;
+  resize: vertical;
+  font: inherit;
+  line-height: 1.45;
+}
+
+.localai-answer {
+  align-items: flex-start;
+}
+
+.localai-answer-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--ink);
+}
+
+.settings-setting[data-stack] .keys-models {
+  width: 100%;
+}
+
+.keys-model .k-pill {
+  flex: none;
+}
+
+@media (max-width: 900px) {
+  .localai-fit {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .localai-fit-tags {
+    grid-column: 1;
+    grid-row: 2;
+    justify-content: flex-start;
+  }
+
+  .localai-fit > .k-btn {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+}

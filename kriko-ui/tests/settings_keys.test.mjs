@@ -2,17 +2,19 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { domOf, h, loadSource, mount, screenStubs, unnamedButtons } from './settings_support.mjs'
+import { domOf, h, loadSource, mount, prefsDoc, screenStubs, unnamedButtons } from './settings_support.mjs'
+
+const prefsDocWith = (chosen) => ({ ...prefsDoc, chosen })
 
 /**
  * Keys and models. A key that came from the environment cannot be removed here, a
  * saved one can, and no stored value is ever shown. Sharing says in words what the
  * password can do and how much trial is left. The model fields save when the reader
- * leaves them. The local model shows its runtime, its model in use, and getting one.
+ * leaves them. The local model has its own section, and one row here points to it.
  */
 
 const PARTS = 'src/ui/settings/parts.tsx'
-const LOCAL = 'src/ui/panels/Local.tsx'
+const KEYS = 'src/ui/settings/Keys.tsx'
 
 /** The settings hooks the parts read, with a test's own keys, sharing or saves. */
 function withSettings(options, overrides) {
@@ -184,70 +186,23 @@ test('the endpoint and the model name save when the reader leaves the field, tri
   }
 })
 
-const idleLocal = { machine: { runtimes: [{ id: 'ollama', name: 'Ollama', installed: false, can_pull: true }], cpu: { cores: 8 }, ram_total_mb: 16384 } }
-
-test('with no runtime installed, the local section says how to get one and does not offer downloads', async () => {
-  const { LocalGroup } = loadSource(LOCAL, withSettings({ local: idleLocal }, {}))
-  const document = domOf(renderToStaticMarkup(h(LocalGroup)))
-  assert.equal(valueOf(document, 'Ollama'), 'Not installed')
-  assert.ok(document.querySelector('button[aria-expanded="false"]'), 'install steps are a press away')
-  assert.match(document.body.textContent, /Kriko does not install a runtime for you/)
-  assert.match(settingRow(document, 'Download a model').textContent, /Start the runtime to download a model/)
-  assert.deepEqual(unnamedButtons(document), [])
-})
-
-test('a running runtime lists its models, and pressing one makes it the model in use', async () => {
-  const saves = []
-  const local = {
-    machine: { runtimes: [{ id: 'ollama', name: 'Ollama', installed: true, can_pull: true }], cpu: { cores: 8 } },
-    runtime: { runtime: 'ollama', url: 'http://127.0.0.1:11434' },
-    models: [{ name: 'gemma4:e2b', size_bytes: 4587156505, params: '4.6B', quant: 'Q4_K_M' }],
+test('Keys and models holds one local row that points to Local AI, and asks the computer nothing', async () => {
+  const opened = []
+  const stubs = withSettings({ doc: { ...prefsDocWith({ local_model: 'gemma4:e2b' }) } }, {})
+  stubs['../panels/settingsPages'] = { showSettingsPage: (page) => opened.push(page) }
+  stubs['../../engine/local'] = {
+    useLocal() {
+      throw new Error('Keys and models must not read the local machine')
+    },
   }
-  const { LocalGroup } = loadSource(LOCAL, withSettings({ local, save: async (patch) => saves.push(patch) }, {}))
-  const view = await mount(h(LocalGroup))
+  const { Keys } = loadSource(KEYS, stubs)
+  const view = await mount(h(Keys))
   try {
-    assert.equal(settingRow(view.document, 'Ollama').querySelector('.k-row-value').textContent, 'Running at http://127.0.0.1:11434')
-    assert.equal(valueOf(view.document, 'Model in use'), 'None chosen')
-    await view.click(view.document.querySelector('button[aria-label="Use gemma4:e2b"]'))
-    assert.deepEqual(saves, [{ local_model: 'gemma4:e2b' }])
-    // The reader can take a model off this computer, after a word to confirm.
-    await view.click(view.document.querySelector('button[aria-label="Remove gemma4:e2b"]'))
-    assert.match(view.document.body.textContent, /Remove\?/)
-    assert.ok([...view.document.querySelectorAll('button')].some((node) => node.textContent === 'Keep'), 'the reader can keep it')
-  } finally {
-    await view.unmount()
-  }
-})
-
-test('removing a local model calls the engine for that model only after the confirm', async () => {
-  const removed = []
-  const local = {
-    machine: { runtimes: [{ id: 'ollama', name: 'Ollama', installed: true, can_pull: true }], cpu: { cores: 8 } },
-    runtime: { runtime: 'ollama', url: 'http://127.0.0.1:11434' },
-    models: [{ name: 'qwen3.5:4b', size_bytes: 3324173934, params: '4.2B', quant: 'Q4_K_M' }],
-    remove: async (name) => removed.push(name),
-  }
-  const { LocalGroup } = loadSource(LOCAL, withSettings({ local }, {}))
-  const view = await mount(h(LocalGroup))
-  try {
-    await view.click(view.document.querySelector('button[aria-label="Remove qwen3.5:4b"]'))
-    assert.deepEqual(removed, [], 'nothing is removed on the first press')
-    const confirm = [...view.document.querySelectorAll('button')].find((node) => node.textContent === 'Remove' && !node.getAttribute('aria-label'))
-    await view.click(confirm)
-    assert.deepEqual(removed, ['qwen3.5:4b'])
-  } finally {
-    await view.unmount()
-  }
-})
-
-test('the Hugging Face block opens on a press, and a download starts only from Get', async () => {
-  const { LocalGroup } = loadSource(LOCAL, withSettings({ local: { ...idleLocal, runtime: { runtime: 'ollama', url: 'x' } } }, {}))
-  const view = await mount(h(LocalGroup))
-  try {
-    assert.equal(view.document.querySelector('input[aria-label="Search Hugging Face"]'), null, 'closed until pressed')
-    const browse = [...view.document.querySelectorAll('button')].find((node) => node.textContent === 'Browse Hugging Face')
-    await view.click(browse)
-    assert.ok(view.document.querySelector('input[aria-label="Search Hugging Face"]'), 'the search opens')
+    assert.equal(valueOf(view.document, 'Local model'), 'gemma4:e2b')
+    const press = [...view.document.querySelectorAll('button')].find((node) => node.textContent === 'Open Local AI')
+    await view.click(press)
+    assert.deepEqual(opened, ['local'])
+    assert.equal(view.document.querySelector('input[aria-label="Model name"]'), null, 'no download controls live here any more')
   } finally {
     await view.unmount()
   }

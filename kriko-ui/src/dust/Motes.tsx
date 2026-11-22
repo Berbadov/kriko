@@ -1,16 +1,22 @@
 import { useMemo, type CSSProperties } from 'react'
 import { rng } from './engine'
+import { useAfterIdle } from '../idle'
 import { useDustMotion } from './DustField'
+import { lowCores } from './ticker'
 
 /**
  * A few grains of dust that float across the whole window, behind everything.
  * The same material as the sky, at a whisper: a handful of motes, each rising
  * and swaying on its own slow clock. CSS only (transform and opacity, on the
- * compositor), so it costs no frame loop. Calm halves them; still draws none.
+ * compositor), so it costs no frame loop. Calm halves them; still draws none; a
+ * machine with few cores gets half. Nothing is drawn until the
+ * window has been idle once, so the motes are never on the way to a usable Ask.
  */
 export function Motes({ count = 22 }: { count?: number }) {
   const motion = useDustMotion()
-  const n = motion === 'still' ? 0 : motion === 'calm' ? Math.round(count / 2) : count
+  const ready = useAfterIdle()
+  const scale = lowCores() ? 0.5 : 1
+  const n = !ready || motion === 'still' ? 0 : Math.round((motion === 'calm' ? count / 2 : count) * scale)
   const motes = useMemo(() => {
     const random = rng(41)
     return Array.from({ length: count }, () => ({

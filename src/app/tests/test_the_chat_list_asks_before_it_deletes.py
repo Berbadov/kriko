@@ -34,7 +34,7 @@ def test_a_failed_delete_is_shown_not_swallowed():
 
 def test_opening_a_chat_only_reads():
     start = LIVE.index("const open = useCallback(")
-    body = LIVE[start : LIVE.index("return { run, turns", start)]
+    body = LIVE[start : LIVE.index("return useMemo(() => ({ run, turns", start)]
     assert "post(" not in body.replace("post(`/api/jobs", "")
     assert "del(" not in body
 

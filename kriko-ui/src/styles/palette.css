@@ -1,0 +1,156 @@
+/* The command palette: one input over a list of places, Settings sections,
+   actions, recent checks and estimates. It is a card on the scrim, drawn from
+   the same roles as the rest of the app and with no colour of its own. */
+
+.palette-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 14vh 16px 16px;
+  background: var(--scrim);
+  animation: palette-fade 120ms ease-out both;
+}
+
+.palette-card {
+  width: min(600px, 100%);
+  max-height: min(560px, 72vh);
+  display: flex;
+  flex-direction: column;
+  background: var(--sheet);
+  border: 1px solid var(--edge);
+  border-radius: var(--r-xl);
+  box-shadow: var(--shadow-2);
+  overflow: hidden;
+  animation: palette-rise 120ms ease-out both;
+}
+
+@keyframes palette-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes palette-rise {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+
+:root[data-motion='off'] .palette-scrim,
+:root[data-motion='off'] .palette-card {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .palette-scrim,
+  .palette-card {
+    animation: none;
+  }
+}
+
+.palette-input {
+  flex: none;
+  width: 100%;
+  height: 56px;
+  padding: 0 20px;
+  border: 0;
+  border-bottom: 1px solid var(--edge);
+  background: transparent;
+  color: var(--ink);
+  font: 400 16px/1.3 var(--font);
+  outline: none;
+}
+
+.palette-input::placeholder {
+  color: var(--ink-3);
+}
+
+.palette-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 6px 8px 8px;
+}
+
+.palette-caption {
+  margin: 10px 12px 4px;
+  font-size: 13px;
+  font-weight: var(--w-medium);
+  line-height: 1.3;
+  color: var(--ink-3);
+}
+
+.palette-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 6px 10px;
+  border-radius: var(--r-m);
+  color: var(--ink);
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.palette-row[aria-selected='true'] {
+  background: var(--select);
+}
+
+.palette-row .k-row-icon {
+  width: 30px;
+  height: 30px;
+}
+
+.palette-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.palette-title {
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.palette-title mark {
+  background: none;
+  color: inherit;
+  font-weight: var(--w-semibold);
+}
+
+.palette-group {
+  font-size: 13px;
+  color: var(--ink-3);
+}
+
+.palette-hint {
+  flex: none;
+  margin-left: auto;
+  padding: 2px 7px;
+  border: 1px solid var(--edge);
+  border-radius: 6px;
+  font: inherit;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-3);
+}
+
+.palette-empty {
+  padding: 28px 18px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+
+.palette-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

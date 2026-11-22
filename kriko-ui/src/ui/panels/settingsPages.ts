@@ -1,11 +1,13 @@
 /** The sections of the Settings screen, in the order the reader meets them in
  *  the list. One section is open at a time, and each holds one job: general
- *  looks and findings, research, keys and models, connections, usage and spend,
+ *  looks and findings, research, keys and models, the model on this computer,
+ *  connections, usage and spend,
  *  and data with updates. */
 export const SETTINGS_PAGES = [
   { value: 'general', label: 'General' },
   { value: 'research', label: 'Research' },
   { value: 'keys', label: 'Keys and models' },
+  { value: 'local', label: 'Local AI' },
   { value: 'connections', label: 'Connections' },
   { value: 'usage', label: 'Usage and spend' },
   { value: 'data', label: 'Data and updates' },

@@ -1,0 +1,124 @@
+/* The agent menu: the popover the agent pill opens. Each agent is one row of the
+   shared grouped list; the one in use is marked by a word and a tick, not by a
+   coloured fill. Opens in 120ms on opacity and position only. */
+
+.agent-menu-pop {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  width: min(320px, calc(100vw - 24px));
+  padding: 6px;
+  background: var(--sheet);
+  border: 1px solid var(--edge-strong);
+  border-radius: var(--r-l);
+  color: var(--ink);
+  animation: agentmenu-pop 120ms var(--ease-out) both;
+}
+
+@keyframes agentmenu-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+:root[data-motion='off'] .agent-menu-pop {
+  animation: none;
+}
+
+.agent-menu-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.agent-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 52px;
+  padding: 8px 10px;
+  background: transparent;
+  border: 0;
+  border-radius: var(--r-m);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.agent-menu-item:hover {
+  background: var(--select);
+}
+
+.agent-menu-item[data-on='true'] {
+  background: var(--select-strong);
+}
+
+.agent-menu-item:focus-visible,
+.agent-menu-link:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+.agent-menu-text {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.agent-menu-text strong {
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-menu-text small {
+  color: var(--ink-3);
+  font-size: 13px;
+}
+
+.agent-menu-in {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  color: var(--ink-2);
+  font-size: 12.5px;
+}
+
+.agent-menu-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+  padding: 8px 6px 2px;
+  border-top: 1px solid var(--edge);
+}
+
+.agent-menu-link {
+  min-height: 40px;
+  padding: 0 8px;
+  background: transparent;
+  border: 0;
+  border-radius: var(--r-s);
+  color: var(--link);
+  font: inherit;
+  font-size: 13.5px;
+  cursor: pointer;
+}
+
+.agent-menu-link:hover {
+  background: var(--select);
+}

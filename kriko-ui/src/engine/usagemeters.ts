@@ -211,3 +211,60 @@ export function demoMeters(now: number): Meters {
     },
   }
 }
+
+/** The short name a sentence about a resource uses. */
+const SAYS_AS: Record<ResourceId, string> = {
+  cli_agent: 'the coding agent',
+  llm_api: 'the LLM API',
+  web_search: 'web search',
+  local_model: 'the local model',
+}
+
+const dollars = (value: number) => (value === 0 ? '$0' : value < 0.01 ? `$${value.toFixed(4)}` : `$${value.toFixed(2)}`)
+
+/** The one plain sentence the usage card opens with. It is built only from the
+ *  numbers the engine gave, in this order: a coding agent window that has run
+ *  out, then a daily cap the reader passed (`passed` is decided by the caller),
+ *  then how much of the tightest window is used, and last the day's spend. A
+ *  figure nobody reported is never said. */
+export function verdictLine(meters: Meters | null, passed: ResourceId[]): string {
+  if (!meters || usedResources(meters).length === 0) return ''
+
+  let tightest: number | null = null
+  let full = false
+  for (const agent of agentLimits(meters.resources.cli_agent)) {
+    for (const window of agent.windows) {
+      if (window.status === 'rejected') full = true
+      if (typeof window.used === 'number' && Number.isFinite(window.used) && (tightest === null || window.used > tightest)) tightest = window.used
+    }
+  }
+  if (full) return 'The coding agent says its limit is reached, so runs may be refused until it resets.'
+
+  if (passed.length > 0) {
+    const names = passed.map((id) => SAYS_AS[id])
+    const list = names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`
+    return `You have passed your daily cap for ${list}.`
+  }
+
+  if (tightest !== null) {
+    const pct = Math.min(100, Math.max(0, Math.round(tightest * 100)))
+    const remaining = 1 - tightest
+    const head = `You have used ${pct}% of the tightest window.`
+    if (remaining <= 0.05) return `${head} Runs may be refused until it resets.`
+    if (remaining <= 0.2) return `${head} Research may run short before it resets.`
+    return `${head} Research will keep working.`
+  }
+
+  const spend = meters.resources.llm_api?.windows['24h']?.usd
+  if (typeof spend === 'number') return `In the last 24 hours you have spent ${dollars(spend)} on LLM APIs. No coding agent limit has been reported.`
+  return 'Kriko has counted use. No coding agent limit has been reported yet.'
+}
+
+/** An agent's state in the menu, in words, from the engine's own standing.
+ *  `kind` tells a key from a setup: a hosted agent that needs setup needs a key. */
+export function standingWords(standing: string, kind: string): string {
+  if (standing === 'ready') return 'Ready'
+  if (standing === 'needs_setup') return kind === 'api' ? 'Needs a key' : 'Needs setup'
+  if (standing === 'not_installed') return 'Not installed'
+  return 'Not ready'
+}

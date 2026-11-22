@@ -1,38 +1,47 @@
 import { useState } from 'react'
-import { useLocalRuntimes } from '../../engine/runtimes'
+import type { useLocalRuntimes } from '../../engine/runtimes'
 import { Setting, SelectField } from './settingsParts'
 
 const SHOWN_MODELS = 12
 
-/** Which program serves the local model, where it listens, and whether it answers.
- *  Drawn as rows inside the On this computer section. Installs nothing. */
-export function LocalRuntimeRows({ stepsBelow = false }: { stepsBelow?: boolean }) {
-  const { doc, problem, checked, save, check, reload } = useLocalRuntimes()
-  // What is typed in the address field, for the check beside it. The field owns the typing.
-  const [typed, setTyped] = useState<string | null>(null)
+type Runtimes = ReturnType<typeof useLocalRuntimes>
+
+/** Which program serves the local model and where it listens, as two rows. The
+ *  state is owned by the caller, so the check that asks the address (a press in
+ *  Quick actions) and these fields share one answer. Installs nothing. */
+export function LocalRuntimeRows({ rt }: { rt: Runtimes }) {
+  const { doc, problem, save, reload } = rt
   if (!doc)
     return problem ? (
       <Setting
         icon="alert"
         label="Server"
-        note={`Could not read local server settings. ${problem}`}
+        note={`Could not read the local server settings. ${problem}`}
         control={
           <button type="button" className="k-btn" onClick={() => void reload()}>
             Try again
           </button>
         }
       />
-    ) : null
+    ) : (
+      <div className="localai-skeleton-row" aria-hidden="true">
+        <span className="localai-skeleton" />
+        <span className="localai-skeleton" data-short="" />
+      </div>
+    )
   const picked = doc.runtimes.find((row) => row.id === doc.chosen)
-  const address = (typed ?? doc.url).trim() || picked?.url || ''
 
   return (
     <>
-      {problem && <p className="error-note" role="alert">{problem}</p>}
+      {problem && (
+        <p className="error-note" role="alert">
+          {problem}
+        </p>
+      )}
       <Setting
         icon="server"
         label="Server program"
-        note={picked ? (picked.url ? `Usually at ${picked.url}.` : 'Any server that speaks the OpenAI protocol.') : 'Automatic looks for each of these on this computer.'}
+        note={picked ? (picked.url ? `Usually at ${picked.url}.` : 'Any server that speaks the OpenAI protocol.') : 'Automatic looks for each of these programs on this computer.'}
         control={
           <SelectField
             label="Local server program"
@@ -46,53 +55,34 @@ export function LocalRuntimeRows({ stepsBelow = false }: { stepsBelow?: boolean 
         icon="link"
         label="Address"
         stack
-        note={doc.chosen ? 'Where the server listens.' : 'Leave blank to look in the usual places.'}
-        control={
-          <AddressField
-            key={`${doc.chosen}|${doc.url}`}
-            saved={doc.url}
-            placeholder={picked?.url || 'http://127.0.0.1:1234'}
-            disabled={!doc.chosen}
-            onTyped={setTyped}
-            onSave={(next) => void save(doc.chosen, next)}
-          />
-        }
-      />
-      <Setting
-        icon="check"
-        label="Answering"
-        stack
-        note="Asks the address which models it lists."
-        control={
-          <div className="keys-stack">
-            <span className="keys-actions">
-              <button type="button" className="k-btn" onClick={() => void check(doc.chosen, address)} disabled={checked === 'checking' || (!doc.chosen && !address)}>
-                {checked === 'checking' ? 'Checking…' : 'Check it answers'}
-              </button>
-            </span>
-            {checked && checked !== 'checking' && (
-              <div className="keys-check" data-ok={checked.up && checked.models.length > 0} role="status">
-                <span>{checked.message}</span>
-                {checked.models.length > 0 && (
-                  <ul className="keys-names">
-                    {checked.models.slice(0, SHOWN_MODELS).map((name) => (
-                      <li key={name}>{name}</li>
-                    ))}
-                    {checked.models.length > SHOWN_MODELS && <li>and {checked.models.length - SHOWN_MODELS} more</li>}
-                  </ul>
-                )}
-                {checked.loader && <small>{checked.loader.help}</small>}
-                {!checked.up && doc.chosen === 'vllm' && stepsBelow && <small>The steps for this computer are below.</small>}
-              </div>
-            )}
-          </div>
-        }
+        note={doc.chosen ? 'Where the server listens. Saved when you leave the field.' : 'Choose a program above to set its address. Automatic looks in the usual places.'}
+        control={<AddressField key={`${doc.chosen}|${doc.url}`} saved={doc.url} placeholder={picked?.url || 'http://127.0.0.1:1234'} disabled={!doc.chosen} onSave={(next) => void save(doc.chosen, next)} />}
       />
     </>
   )
 }
 
-function AddressField({ saved, placeholder, disabled, onTyped, onSave }: { saved: string; placeholder: string; disabled: boolean; onTyped: (value: string) => void; onSave: (value: string) => void }) {
+/** What the check found: whether the address answers, which models it lists, and what Kriko can set on it. */
+export function CheckResult({ checked, vllmStepsBelow }: { checked: Runtimes['checked']; vllmStepsBelow?: boolean }) {
+  if (!checked || checked === 'checking') return null
+  return (
+    <div className="keys-check" data-ok={checked.up && checked.models.length > 0} role="status">
+      <span>{checked.message}</span>
+      {checked.models.length > 0 && (
+        <ul className="keys-names">
+          {checked.models.slice(0, SHOWN_MODELS).map((name) => (
+            <li key={name}>{name}</li>
+          ))}
+          {checked.models.length > SHOWN_MODELS && <li>and {checked.models.length - SHOWN_MODELS} more</li>}
+        </ul>
+      )}
+      {checked.loader && <small>{checked.loader.help}</small>}
+      {!checked.up && vllmStepsBelow && <small>The steps for this computer are below.</small>}
+    </div>
+  )
+}
+
+function AddressField({ saved, placeholder, disabled, onSave }: { saved: string; placeholder: string; disabled: boolean; onSave: (value: string) => void }) {
   const [draft, setDraft] = useState(saved)
   return (
     <input
@@ -104,10 +94,7 @@ function AddressField({ saved, placeholder, disabled, onTyped, onSave }: { saved
       placeholder={placeholder}
       value={draft}
       disabled={disabled}
-      onChange={(event) => {
-        setDraft(event.target.value)
-        onTyped(event.target.value)
-      }}
+      onChange={(event) => setDraft(event.target.value)}
       onBlur={() => {
         const next = draft.trim()
         if (next !== saved) onSave(next)

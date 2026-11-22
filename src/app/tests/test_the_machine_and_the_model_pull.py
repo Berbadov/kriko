@@ -358,8 +358,9 @@ def test_installed_models_carry_ollamas_own_sizes():
 
 def test_nothing_up_holds_no_models(client, monkeypatch):
     monkeypatch.setattr(modelpull, "ollama_base", lambda path=None: "")
-    assert client.get("/api/local-models").json() == {
-        "runtime": None, "url": None, "models": []}
+    body = client.get("/api/local-models").json()
+    assert (body["runtime"], body["url"], body["models"]) == (None, None, [])
+    assert body["recommended_installed"] is False
     assert modelpull.installed("http://127.0.0.1:9") == []
 
 

@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { domOf, h, loadSource, mount, screenStubs, unnamedButtons } from './settings_support.mjs'
 
 /**
- * The Settings screen: six sections in a fixed order, a list on the left that says
+ * The Settings screen: seven sections in a fixed order, a list on the left that says
  * which one is open, a search that finds a setting in any section, and no
  * explanation hidden in a tooltip. Behaviour is what is asserted here, not the
  * styling of any row.
@@ -14,8 +14,8 @@ import { domOf, h, loadSource, mount, screenStubs, unnamedButtons } from './sett
 const SCREEN = 'src/screens/Settings.tsx'
 const PAGES = 'src/ui/panels/settingsPages.ts'
 
-const IDS = ['general', 'research', 'keys', 'connections', 'usage', 'data']
-const LABELS = ['General', 'Research', 'Keys and models', 'Connections', 'Usage and spend', 'Data and updates']
+const IDS = ['general', 'research', 'keys', 'local', 'connections', 'usage', 'data']
+const LABELS = ['General', 'Research', 'Keys and models', 'Local AI', 'Connections', 'Usage and spend', 'Data and updates']
 
 function screen(options, initial) {
   // Research's agent section and Chat's findings reach the engine through their own
@@ -28,7 +28,7 @@ function screen(options, initial) {
   return h(SettingsScreen, { initial })
 }
 
-test('the screen has six sections, with the ids the shell and the tour use', async () => {
+test('the screen has seven sections, with the ids the shell and the tour use', async () => {
   const pages = loadSource(PAGES)
   assert.deepEqual(pages.SETTINGS_PAGES.map((page) => page.value), IDS)
   assert.deepEqual(pages.SETTINGS_PAGES.map((page) => page.label), LABELS)

@@ -53,6 +53,9 @@ export interface Pending {
 }
 
 const Ctx = createContext<Compare | null>(null)
+/** `add` alone, with one identity for the life of the window: the shell hands products
+ *  over from the extension and must not be drawn again for every answer streamed. */
+const AddCtx = createContext<Compare['add'] | null>(null)
 
 const DEMO_SLOTS = ['demo:Alpha Unit 200', 'demo:Beta Unit 300']
 const DEMO_ANSWER =
@@ -460,7 +463,23 @@ export function CompareProvider({ children }: { children: ReactNode }) {
       } }),
     [slots, checks, questions, add, remove, ask, research, retry, stop, problem, save, loadQuestions, pending, researchNew, dismissPending],
   )
-  return <Ctx.Provider value={value}>{children}</Ctx.Provider>
+  const latestAdd = useRef(add)
+  useEffect(() => {
+    latestAdd.current = add
+  }, [add])
+  const stableAdd = useCallback<Compare['add']>((lookupId) => latestAdd.current(lookupId), [])
+  return (
+    <AddCtx.Provider value={stableAdd}>
+      <Ctx.Provider value={value}>{children}</Ctx.Provider>
+    </AddCtx.Provider>
+  )
+}
+
+/** Put a check on the board, without subscribing to the board. */
+export function useCompareAdd(): Compare['add'] {
+  const value = useContext(AddCtx)
+  if (!value) throw new Error('useCompareAdd needs CompareProvider')
+  return value
 }
 
 export function useCompare(): Compare {

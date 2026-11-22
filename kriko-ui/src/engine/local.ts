@@ -27,15 +27,17 @@ export interface VllmServer {
 export interface Machine {
   cuda?: { driver: string | null }
   vllm?: VllmPlan
-  gpu?: { name: string; vram_total_mb: number; vram_used_mb: number }
-  ram_total_mb?: number
-  cpu?: { name: string; cores: number }
+  /** Every field is `null` when the machine did not report it. */
+  gpu?: { name: string | null; vram_total_mb: number | null; vram_used_mb: number | null } | null
+  ram_total_mb?: number | null
+  cpu?: { name: string | null; cores: number | null } | null
   runtimes: { id: string; name: string; installed: boolean; can_pull: boolean }[]
 }
 
 export interface Model {
   name: string
-  size_bytes: number
+  /** The server's own count. `null` or 0 when it did not say. */
+  size_bytes: number | null
   params: string
   quant: string
 }
@@ -83,6 +85,7 @@ const DEMO_MODELS: Model[] = [
   { name: 'gemma4:e2b', size_bytes: 4587156505, params: '4.6B', quant: 'Q4_K_M' },
   { name: 'qwen3.5:4b', size_bytes: 3324173934, params: '4.2B', quant: 'Q4_K_M' },
 ]
+const DEMO_RECOMMENDED = 'gemma4:e2b'
 const DEMO_LIBRARY: Library[] = [
   { name: 'llama3.1', sizes: ['8b', '70b'], about: 'A general model from Meta.' },
   { name: 'qwen2.5', sizes: ['3b', '7b', '14b'], about: 'A model for many languages.' },
@@ -92,8 +95,13 @@ const DEMO_LIBRARY: Library[] = [
 export function useLocal() {
   const { mode } = useEngine()
   const [machine, setMachine] = useState<Machine | null>(null)
+  const [machineProblem, setMachineProblem] = useState('')
   const [runtime, setRuntime] = useState<{ runtime: string | null; url: string | null } | null>(null)
   const [models, setModels] = useState<Model[]>([])
+  /** The model the engine recommends, and whether the server already holds it. Named by the engine, never here. */
+  const [recommended, setRecommended] = useState<{ model: string; installed: boolean }>({ model: '', installed: false })
+  /** False until the installed list has been read once, so the screen can draw rows that are loading. */
+  const [modelsLoaded, setModelsLoaded] = useState(false)
   const [library, setLibrary] = useState<Library[] | null>(null)
   const [libraryProblem, setLibraryProblem] = useState('')
   const [pull, setPull] = useState<Pull | null>(null)
@@ -116,15 +124,20 @@ export function useLocal() {
     if (mode !== 'live') {
       setRuntime({ runtime: 'ollama', url: 'http://127.0.0.1:11434' })
       setModels(DEMO_MODELS)
+      setRecommended({ model: DEMO_RECOMMENDED, installed: DEMO_MODELS.some((row) => row.name === DEMO_RECOMMENDED) })
+      setModelsLoaded(true)
       return
     }
     try {
-      const data = await get<{ runtime: string | null; url: string | null; models: Model[] }>('/api/local-models', 8000)
+      const data = await get<{ runtime: string | null; url: string | null; models: Model[]; recommended_model?: string; recommended_installed?: boolean }>('/api/local-models', 8000)
       if (!alive.current) return
       setRuntime({ runtime: data.runtime, url: data.url })
       setModels(data.models)
+      setRecommended({ model: data.recommended_model ?? '', installed: Boolean(data.recommended_installed) })
     } catch (error) {
       if (alive.current) setProblem(error instanceof Error ? error.message : 'Could not read the models.')
+    } finally {
+      if (alive.current) setModelsLoaded(true)
     }
   }, [mode])
 
@@ -141,18 +154,30 @@ export function useLocal() {
     }
   }, [mode])
 
-  useEffect(() => {
+  /** The computer, read once on mount: a subprocess and a few stat calls, cached by the engine for a minute. */
+  const readMachine = useCallback(async () => {
+    setMachineProblem('')
     if (mode === 'checking') return
     if (mode !== 'live') {
       setMachine(DEMO_MACHINE)
-    } else {
-      get<Machine>('/api/machine', 10000)
-        .then((data) => alive.current && setMachine(data))
-        .catch(() => undefined)
+      return
     }
+    try {
+      const data = await get<Machine>('/api/machine', 10000)
+      if (alive.current) setMachine(data)
+    } catch (error) {
+      if (alive.current) setMachineProblem(error instanceof Error ? error.message : 'Could not read this computer.')
+    }
+  }, [mode])
+
+  // Only the computer and the installed models are read on mount. The vLLM probe
+  // waits for a press, the public library for the reader to ask, and neither
+  // downloads anything.
+  useEffect(() => {
+    if (mode === 'checking') return
+    void readMachine()
     void readModels()
-    void readVllm()
-  }, [mode, readModels, readVllm])
+  }, [mode, readMachine, readModels])
 
   /** Ask the machine again, after the reader changed a driver or started a server. */
   const recheck = useCallback(async () => {
@@ -264,5 +289,57 @@ export function useLocal() {
     }
   }, [mode, readModels])
 
-  return { machine, runtime, models, library, libraryProblem, pull, problem, starting, vllm, checking, recheck, openLibrary, startPull, stopPull, dismissPull, remove, startRuntime }
+  return { machine, machineProblem, readMachine, runtime, models, modelsLoaded, recommended, library, libraryProblem, pull, problem, starting, vllm, checking, recheck, readVllm, readModels, openLibrary, startPull, stopPull, dismissPull, remove, startRuntime }
+}
+
+/** The answer to one question put to the local model. */
+export interface TryAnswer {
+  text: string
+  model: string
+  seconds: number
+  /** `null` when the server counted no tokens: no speed is then claimed. */
+  output_tokens: number | null
+  tokens_per_second: number | null
+  truncated: boolean
+}
+
+/** One short question to the model on this computer. It runs only when `ask` is
+ *  called, and the engine bounds it (a short reply, a minute's wait). It is
+ *  local, so it costs nothing. */
+export function useTryLocal() {
+  const { mode } = useEngine()
+  const [busy, setBusy] = useState(false)
+  const [answer, setAnswer] = useState<TryAnswer | null>(null)
+  const [problem, setProblem] = useState('')
+  const alive = useRef(true)
+  useEffect(() => {
+    alive.current = true
+    return () => {
+      alive.current = false
+    }
+  }, [])
+
+  const ask = useCallback(
+    async (prompt: string, model = '') => {
+      setBusy(true)
+      setProblem('')
+      setAnswer(null)
+      try {
+        if (mode !== 'live') {
+          await new Promise((resolve) => window.setTimeout(resolve, 600))
+          if (alive.current) setAnswer({ text: 'Hello. I am running on this computer.', model: model || DEMO_RECOMMENDED, seconds: 2.4, output_tokens: 29, tokens_per_second: 12.1, truncated: false })
+          return
+        }
+        const reply = await post<{ ok: boolean } & TryAnswer>('/api/local-models/try', { prompt, ...(model ? { model } : {}) }, 90000)
+        if (alive.current) setAnswer(reply)
+      } catch (error) {
+        if (alive.current) setProblem(error instanceof Error ? error.message : 'The model did not answer.')
+      } finally {
+        if (alive.current) setBusy(false)
+      }
+    },
+    [mode],
+  )
+
+  return { busy, answer, problem, ask }
 }
