@@ -38,8 +38,13 @@ test('the body reads in Inter, one step heavier than regular', () => {
   assert.match(tokens, /--w-semibold:\s*700;/)
 })
 
-test('titles read in Newsreader, upright', () => {
-  assert.match(tokens, /--display:\s*'Newsreader Variable'/)
+test('titles read in Chivo Mono, upright, and the face ships inside the app', async () => {
+  assert.match(tokens, /--display:\s*'Chivo Mono Variable'/)
+  assert.match(css, /@import '@fontsource-variable\/chivo-mono'/)
+  const face = await readFile(new URL('../node_modules/@fontsource-variable/chivo-mono/index.css', import.meta.url), 'utf8')
+  assert.match(face, /font-family:\s*'Chivo Mono Variable'/)
+  assert.match(face, /U\+20A0-20AB,U\+20AD-20C0/, 'no currency block: the lira sign would fall back')
+  assert.match(face, /U\+0100-02BA/, 'no Latin Extended-A: Turkish letters would fall back')
   assert.match(tokens, /--w-display:\s*600;/)
   assert.equal(declaration(css, 'h1,\nh2,\nh3', 'font-family'), 'var(--display)')
   for (const selector of ['.hello h1', '.page-head h1']) {

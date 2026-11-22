@@ -129,7 +129,8 @@ export function Rail({
 export function TopStrip({ onNavigate }: { onNavigate: (s: Screen) => void }) {
   const { agents, preferred } = useEngine()
   const { items } = useQueue()
-  const agent = agents.find((a) => a.id === preferred)?.label ?? 'Default agent'
+  // The same agent the composer would send to, so the strip and the box never name two.
+  const agent = (agents.find((a) => a.id === preferred) ?? agents[0])?.label ?? 'Default agent'
   const busy = items.some((i) => i.state === 'researching')
   const done = items.filter((i) => i.state === 'done').length
 

@@ -127,6 +127,24 @@ export function EngineProvider({ children }: { children: ReactNode }) {
     }
   }, [mode])
 
+  // An offline window in the shell comes back by itself when the shell reports the
+  // engine ready: a Reconnect that raced the restart, or the engine started
+  // by something else, must not leave the page offline beside a ready engine.
+  useEffect(() => {
+    if (mode !== 'offline' || !inShell()) return
+    let live = true
+    const timer = window.setInterval(() => {
+      void import('@tauri-apps/api/core')
+        .then(({ invoke }) => invoke<{ state: string }>('engine_status'))
+        .then((status) => { if (live && status.state === 'ready') setAttempt((n) => n + 1) })
+        .catch(() => undefined)
+    }, 1500)
+    return () => {
+      live = false
+      window.clearInterval(timer)
+    }
+  }, [mode])
+
   const retry = useCallback(() => {
     // In the packaged window the shell owns the engine, so it starts it again.
     const again = inShell() ? import('@tauri-apps/api/core').then(({ invoke }) => invoke('engine_restart')) : Promise.resolve()

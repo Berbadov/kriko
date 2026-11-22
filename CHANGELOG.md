@@ -3,6 +3,14 @@
 Reader-visible changes for each release. Newest first. Published versions are
 immutable; a correction is a newer version.
 
+### 0.4.1
+
+- **One set of window buttons.** 0.4.0 drew the minimise, maximise and close buttons twice: in a black strip at the top left and again in the header beside the usage figure, and the strip pushed the whole page 40 pixels down. The header's buttons are the only ones now. While Kriko is starting, or when it cannot reach its engine, a bar at the top right carries them, so the window can always be moved and closed. Double-clicking the bar maximises the window, the edges resize it, and Windows' snap keeps working.
+- **The agent menu stays on screen.** The list under the box's Agent button opened upward and its top entries were hidden behind the header. It now opens on whichever side has room, scrolls when it is longer than that room, and moves with the arrow keys, Home and End. Escape or a click elsewhere closes it. The agent named in the header now always matches the one in the box.
+- **Titles are Chivo Mono, as 0.3.13 said.** 0.4.0 had quietly switched titles to a serif face. Chivo Mono ships inside the app again (with the Turkish letters and the lira sign), nothing is fetched, and no text falls back to a face that is not loaded. A choice list in Settings is no longer cut off ("The agent's own web search").
+- **Reconnect works.** When the engine stopped and you pressed Reconnect, the window read the engine's old "failed" state before the new engine had started, gave up, and stayed offline although the new engine was running. The shell now marks the engine as starting the moment you press the button, and an offline window comes back by itself when the engine reports ready.
+- **A sweep that looks at the real window.** `tools/visual_sweep` walks every screen, palette and two window sizes in the packaged app and fails on a font that did not load, a menu running off the window, two sets of window buttons, a page that scrolls sideways or a console error.
+
 ### 0.4.0
 
 - **The desktop app is redrawn after the phone app.** It has four palettes (dark, gray, paper and white) plus system, chosen in Settings; blue is the one brand colour, and green, amber and red are kept for a price that fell, an attention mark and a risk. A labelled left rail (Check, Procure, Library and Settings) replaces the More drawer, so every screen and panel has a name in the window, and the tour, the agent's Open buttons and the engine's notices all reach the same places. Ask is one question with ideas, a procurement strip and recent checks; Product is a dossier with its own Procurement block; Compare carries the same procurement rows; Prices, Queue, History, For you, Catalogs and Sites are grouped lists; saved chats are a Chats list on History again.
