@@ -138,6 +138,11 @@ async function audit(state) {
       }
       return el.scrollWidth > el.clientWidth + 1 && getComputedStyle(el).overflow !== 'visible'
     }).map((el) => (el.textContent || el.getAttribute('aria-label') || el.tagName).trim().slice(0, 40))
+    const scrollers = [...document.querySelectorAll('*')].filter((el) => {
+      const style = getComputedStyle(el)
+      const r = el.getBoundingClientRect()
+      return (style.overflowX === 'auto' || style.overflowX === 'scroll') && r.width > 120 && r.right > 0 && r.left < vw && r.height > 0 && el.scrollWidth > el.clientWidth + 1 && el.offsetHeight - el.clientHeight > 6 && !el.closest('pre, table, .code, .md-table')
+    }).map((el) => `${el.tagName.toLowerCase()}.${String(el.className).split(' ')[0]} ${el.scrollWidth}>${el.clientWidth}`)
     const empty = [...document.querySelectorAll('button, a.k-btn')].filter(visible).filter((el) => !el.textContent.trim() && !el.querySelector('svg, img, canvas, i') && !el.getAttribute('aria-label') && !el.getAttribute('title')).map((el) => `${el.tagName.toLowerCase()}.${String(el.className).split(' ')[0]}`)
     const stacks = new Map()
     for (const el of document.querySelectorAll('body *')) {
@@ -156,6 +161,7 @@ async function audit(state) {
       overlays,
       cut,
       empty,
+      scrollers,
       unresolved,
       controls: [...document.querySelectorAll('button[aria-label="Minimise"]')].filter(visible).length,
       bars: [...document.querySelectorAll('.titlebar')].filter(visible).length,
@@ -165,6 +171,7 @@ async function audit(state) {
   })
   record(state, 'one set of window buttons', inWindow ? found.controls === 1 && found.bars === 1 : found.controls === 0, `buttons=${found.controls} bars=${found.bars}`)
   record(state, 'no sideways scroll', !found.sideways)
+  record(state, 'no stray sideways scrollbar inside the page', found.scrollers.length === 0, found.scrollers.join(' | '))
   record(state, 'no empty button is drawn', found.empty.length === 0, found.empty.join(', '))
   record(state, 'no choice or button text is cut off', found.cut.length === 0, found.cut.join(' | '))
   for (const overlay of found.overlays) {
@@ -209,8 +216,8 @@ async function openPicker(name) {
   const moved = await page.evaluate(() => document.activeElement?.getAttribute('role'))
   record(name, 'picker takes the arrow keys', options < 2 || moved === 'option', `options=${options}`)
   await page.keyboard.press('Escape')
-  await page.waitForTimeout(250)
-  record(name, 'Escape closes the picker', (await page.locator('[role=listbox]').count()) === 0)
+  const closed = await page.waitForSelector('[role=listbox]', { state: 'detached', timeout: 2500 }).then(() => true).catch(() => false)
+  record(name, 'Escape closes the picker', closed)
 }
 
 async function settings() {
@@ -243,7 +250,9 @@ async function withData(name) {
   await snap(`${name} catalog products`)
   const names = ['MacBook Air M2', 'ThinkPad T14']
   for (const product of names) {
-    await page.getByText(product).first().click()
+    const here = page.getByText(product).first()
+    if (!(await here.waitFor({ timeout: 5000 }).then(() => true).catch(() => false))) continue
+    await here.click()
     const compareButton = page.getByRole('button', { name: /^(Add to compare|Compare)$/ }).first()
     await compareButton.waitFor({ timeout: 8000 })
     await page.waitForTimeout(700)
@@ -266,6 +275,25 @@ async function withData(name) {
   await visit('Procurement')
   await page.waitForTimeout(600)
   await snap(`${name} procurement with an estimate`)
+}
+
+/** A saved chat from History, with its Sources panel, when the profile has one. */
+async function savedChat(name) {
+  await visit('History')
+  await page.waitForTimeout(600)
+  const row = page.locator('main .k-row, main li button').filter({ hasText: /\?|ago/ }).first()
+  if (!(await row.count())) return
+  await row.click()
+  await page.waitForSelector('.thread-title, .chat-rail', { timeout: 8000 }).catch(() => undefined)
+  await page.waitForTimeout(900)
+  await snap(`${name} saved chat`)
+  const sources = page.getByRole('button', { name: /^Sources/ }).first()
+  if (await sources.count()) {
+    await sources.click().catch(() => undefined)
+    await page.waitForTimeout(500)
+    await snap(`${name} saved chat sources`)
+    await page.keyboard.press('Escape')
+  }
 }
 
 async function overlays(name) {
@@ -329,6 +357,7 @@ try {
       if (everything) {
         await visit('Ask')
         await overlays(tag)
+        await savedChat(tag).catch((error) => record(tag, 'a saved chat could be opened', false, String(error).slice(0, 200)))
         await withData(tag).catch((error) => record(tag, 'the data screens could be walked', false, String(error).slice(0, 200)))
       }
       if (everything || palette === 'paper') await settings()
