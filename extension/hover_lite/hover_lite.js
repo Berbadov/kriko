@@ -2956,24 +2956,24 @@
   // button (bottom left, away from where checkouts put theirs).
   const TOAST_STYLE = `<style>
       .kriko-guard-card,.kriko-due-card{font:13px/1.5 'Kriko Sans','Segoe UI',system-ui,sans-serif;max-width:340px;padding:10px 12px;border-radius:12px;
-        background:#15171a;color:#ededea;border:1px solid rgba(237,237,234,.18);box-shadow:none}
+        background:#10131a;color:#f6f7fa;border:1px solid rgba(255,255,255,.18);box-shadow:none}
       .kriko-guard-card[data-verdict="stop"]{border-left:3px solid #ff8a1f}
-      .kriko-guard-card[data-verdict="check"]{border-left:3px solid #9a9da4}
-      .kriko-due-card{border-left:3px solid #5aa9f7}
+      .kriko-guard-card[data-verdict="check"]{border-left:3px solid #a8afbd}
+      .kriko-due-card{border-left:3px solid #3562e9}
       .kriko-guard-card ul{margin:6px 0 8px;padding-left:18px}
       .kriko-guard-card li{margin:2px 0}
       .kriko-due-card p{margin:0 0 6px}
       .lite-buy-due{background:none;padding:0;margin:0;box-shadow:none;border:0}
       .kriko-guard-actions,.lite-buy-actions,.lite-buy-form{display:flex;flex-wrap:wrap;gap:6px 8px}
-      .kriko-guard-actions button,.lite-buy-btn{font:500 12px 'Kriko Sans','Segoe UI',system-ui,sans-serif;padding:4px 9px;border-radius:8px;cursor:pointer;
-        border:1px solid #666a70;background:transparent;color:inherit}
-      .lite-buy-btn[data-primary="1"]{background:#5aa9f7;border-color:#5aa9f7;color:#0b1020}
-      .lite-buy-form input{flex:1;min-width:140px;padding:4px 8px;border-radius:10px;border:1px solid #666a70;
-        background:#111316;color:inherit;font:13px 'Kriko Sans','Segoe UI',system-ui,sans-serif}
-      .lite-buy-note{margin:4px 0;color:#a8abb1}
-      .lite-buy-watching{font-size:12px;color:#a8abb1}
-      .lite-buy-title{font-family:'Kriko Serif',Georgia,serif;font-size:16px;font-weight:600;margin:0 0 6px;color:#ededea}
-      .lite-buy-due p{margin:0 0 6px;color:#ededea}
+      .kriko-guard-actions button,.lite-buy-btn{font:500 12px 'Kriko Sans','Segoe UI',system-ui,sans-serif;padding:4px 9px;border-radius:10px;cursor:pointer;
+        border:1px solid #5f6779;background:transparent;color:inherit}
+      .lite-buy-btn[data-primary="1"]{background:#3562e9;border-color:#3562e9;color:#ffffff}
+      .lite-buy-form input{flex:1;min-width:140px;padding:4px 8px;border-radius:10px;border:1px solid #5f6779;
+        background:#0b0d12;color:inherit;font:13px 'Kriko Sans','Segoe UI',system-ui,sans-serif}
+      .lite-buy-note{margin:4px 0;color:#cdd2dc}
+      .lite-buy-watching{font-size:12px;color:#a8afbd}
+      .lite-buy-title{font-family:'Kriko Serif',Georgia,serif;font-size:16px;font-weight:600;margin:0 0 6px;color:#f6f7fa}
+      .lite-buy-due p{margin:0 0 6px;color:#f6f7fa}
       </style>`;
   // A card on the page that is not the panel, in a shadow root of its own so the
   // page's styles cannot reach it. One of each kind at a time.

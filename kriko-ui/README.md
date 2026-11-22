@@ -15,17 +15,17 @@ Three screens carry the app:
 
 ## Run it from a source checkout
 
-You need Node.js, a Rust toolchain, and the Python environment of the engine
-(`tools/setup.sh`).
+You need Bun (1.4.5, the version in `package.json`'s `packageManager`), a Rust
+toolchain, and the Python environment of the engine (`tools/setup.sh`).
 
 ```
 cd kriko-ui
-npm ci
-npm run tauri dev
+bun install --frozen-lockfile
+bun run tauri dev
 ```
 
 The window hot-reloads. The shell starts the engine with `python -m app.sidecar`
-from the checkout. To work on the interface without the shell, run `npm run dev`
+from the checkout. To work on the interface without the shell, run `bun run dev`
 and open `http://localhost:5173`. The Vite server proxies `/api` to the engine,
 and the app shows demo data when no engine answers.
 
@@ -76,7 +76,7 @@ Build the Windows installer and the portable ZIP on Windows:
 powershell -ExecutionPolicy Bypass -File kriko-ui/package.ps1
 ```
 
-You need a Rust toolchain (MSVC) and Node.js on `PATH`. The first build
+You need a Rust toolchain (MSVC) and Bun on `PATH`. The first build
 downloads the NSIS tools that Tauri uses. Add `-InstallCheck` to also install
 the result into a scratch folder and remove it. That check refuses to run where
 a Kriko is already installed.
@@ -183,9 +183,10 @@ every animation. A window that is not in front stops the rest. The file
 
 ```
 cd kriko-ui
-npx tsc -b            # types
-npm run lint          # oxlint
-npm run build         # the production bundle
+bunx tsc -b           # types
+bun run lint          # oxlint
+bun run build         # the production bundle
+bun run test          # the behavior checks (node --test)
 cd src-tauri
 cargo test --locked   # the shell
 ```
