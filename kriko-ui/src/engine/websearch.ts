@@ -176,3 +176,12 @@ export function useSearchProviders() {
 
   return { doc, problem, tested, save, test, reload: load }
 }
+
+/** The state a provider is in, in one word, for the row beside its name. `Needs a
+ *  key` when it is hosted and no key is saved; `Ready` when it works and is in the
+ *  chain the engine will ask; `Off` for the rest. Display only: the engine decides. */
+export function providerState(row: SearchProviderRow, effective: string[]): { text: string; tone: 'ok' | 'warn' | 'none' } {
+  if (row.needs_key && !row.key_saved) return { text: 'Needs a key', tone: 'warn' }
+  if (row.ready && effective.includes(row.id)) return { text: 'Ready', tone: 'ok' }
+  return { text: 'Off', tone: 'none' }
+}

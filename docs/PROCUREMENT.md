@@ -1,6 +1,6 @@
-# Procurement in the Estimate
+# Procurement in the Procurement screen
 
-The Estimate screen holds equipment lines, each with the vendor quotes gathered
+The Procurement screen holds equipment lines, each with the vendor quotes gathered
 for it. This note records the decisions that are not visible in the code, so a
 reader can argue with them.
 
@@ -67,8 +67,8 @@ invented. Repair prices appear only where a source quotes one.
   currency. Delivery *days* and warranty *months* are terms, not money, so no
   delivery charge is invented; ties break on the shorter delivery. A quote
   without a rate is listed as unranked, with that reason.
-- Price history per quote is **not wired into the Estimate yet**. The existing
-  `pricewatch` store already keeps per-URL points and would answer
+- Price history per quote is **not wired into the Procurement screen yet**. The
+  existing `pricewatch` store already keeps per-URL points and would answer
   "lowest / usual / high / thin" plus "not enough history yet"; the screen does
   not offer a watch from a quote row, so no history exists for most quotes.
   Landed-cost ranking above is what ships now.
@@ -86,3 +86,26 @@ New columns go at the end. There is no vendor-specific import format: one needs
 a real sample file from the bookkeeper it is for, and inventing a template would
 be a guess dressed as compatibility. "Asset category" and "Acquisition year" are
 blank because the app does not know them; they are for the reader to fill.
+
+## Where procurement shows
+
+The Procurement screen is the desk, and the same figures reach the
+other screens through `src/engine/procurement.ts`, so no screen computes its own.
+
+- **Procurement** opens on figures from every estimate: gross committed per
+  currency (never summed across currencies), quotes expiring within 14 days,
+  lines at risk, lines without a price and lines quoted in a currency with no
+  rate, then a Needs attention list.
+- **Ask** shows a strip of the same counts when any is non-zero.
+- **Product** shows the best landed cost, the saving against the next quote, the
+  quote risk, delivery, warranty and validity for each estimate line holding the
+  product, or "Not in an estimate yet" with Add to estimate.
+- **Compare** adds the same rows per product and a one-sentence read that says
+  so when the products are quoted in different currencies instead of converting.
+- A quote in the estimate's own currency needs no rate: it converts at 1 by
+  definition. Another currency with no rate stays uncomparable.
+- The accounting sheet converts net, VAT and gross to the estimate currency and
+  leaves a cell blank where there is no rate, rather than writing a quote's
+  amount under the estimate's currency.
+- A watched price has no link to a catalog product in the API, so Prices does not
+  offer "Add as a quote" yet.

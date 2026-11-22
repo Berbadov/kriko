@@ -1,150 +1,171 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtemp, readFile, writeFile, rm } from 'node:fs/promises'
-import { join } from 'node:path'
-import { createRequire } from 'node:module'
-import ts from 'typescript'
 import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { JSDOM } from 'jsdom'
-import { realSettingsParts, unnamedButtons } from './settings_support.mjs'
+import { domOf, h, loadSource, mount, screenStubs, unnamedButtons } from './settings_support.mjs'
 
-const h = React.createElement
+/**
+ * The Settings screen: six sections in a fixed order, a list on the left that says
+ * which one is open, a search that finds a setting in any section, and no
+ * explanation hidden in a tooltip. Behaviour is what is asserted here, not the
+ * styling of any row.
+ */
 
-const compile = (source) =>
-  ts.transpileModule(source, {
-    compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, target: ts.ScriptTarget.ES2022 },
-  }).outputText
+const SCREEN = 'src/screens/Settings.tsx'
+const PAGES = 'src/ui/panels/settingsPages.ts'
 
-const prefsDoc = {
-  chosen: {},
-  research: { thoroughness: 50, validation_sensitivity: 50, sources: 0, kinds: ['forums'] },
-  source_kinds: [{ id: 'forums' }, { id: 'reviews' }],
-  classification_providers: [{ id: 'agent', label: 'Agent', ready: true }],
-  market_regions: [{ id: 'auto', label: 'Automatic' }],
+const IDS = ['general', 'research', 'keys', 'connections', 'usage', 'data']
+const LABELS = ['General', 'Research', 'Keys and models', 'Connections', 'Usage and spend', 'Data and updates']
+
+function screen(options, initial) {
+  // Research's agent section and Chat's findings reach the engine through their own
+  // hooks; the screen test only needs them to draw, so they are stood in for here.
+  const { SettingsScreen } = loadSource(SCREEN, {
+    ...screenStubs(options),
+    '../panels/Agents': { AgentsSection: () => React.createElement('section', { className: 'k-group settings-section' }, React.createElement('h3', { className: 'k-caption' }, 'Agent')) },
+    '../../engine/buyer': { useBuyerProfile: () => ({ profile: { about: '' }, live: false, saved: false, problem: '', save() {} }) },
+  })
+  return h(SettingsScreen, { initial })
 }
 
-const sharedDoc = {
-  bound: true,
-  device: '',
-  grant: { present: false, label: '', providers: [], state: '' },
-  trial: { limit: 10, used: 0, left: 10, available: false },
-  providers: [],
-}
+test('the screen has six sections, with the ids the shell and the tour use', async () => {
+  const pages = loadSource(PAGES)
+  assert.deepEqual(pages.SETTINGS_PAGES.map((page) => page.value), IDS)
+  assert.deepEqual(pages.SETTINGS_PAGES.map((page) => page.label), LABELS)
+  assert.equal(pages.isSettingsPage('usage'), true)
+  assert.equal(pages.isSettingsPage('look'), false, 'the retired ids are no longer sections')
+  assert.equal(pages.isSettingsPage('about'), false)
+})
 
-const headings = (document) => [...document.querySelectorAll('h3')].map((node) => node.textContent)
+test('the list names every section and marks the one that is open', async () => {
+  const document = domOf(renderToStaticMarkup(screen({}, 'usage')))
+  const nav = document.querySelector('nav[aria-label="Settings sections"]')
+  assert.ok(nav, 'the sections are a named navigation')
+  const items = [...nav.querySelectorAll('button')]
+  assert.deepEqual(items.map((item) => item.textContent), LABELS)
+  assert.deepEqual(items.filter((item) => item.getAttribute('aria-current') === 'true').map((item) => item.textContent), ['Usage and spend'])
+  assert.equal(document.querySelector('.settings-pane-title').textContent, 'Usage and spend')
+  // The narrow screen gets the same list as a select, so nothing is lost below 900px.
+  const jump = document.querySelector('select[aria-label="Settings section"]')
+  assert.deepEqual([...jump.options].map((option) => option.textContent), LABELS)
+  assert.equal(jump.value, 'usage')
+})
 
-test('the settings drawer shows one page at a time, and a requested page is the one drawn', async () => {
-  const directory = await mkdtemp(join(process.cwd(), '.settings-pages-'))
-  const require = createRequire(import.meta.url)
-  const loader = require('node:module')
-  const originalLoad = loader._load
-  const dom = new JSDOM('')
-  const previous = { window: globalThis.window, CustomEvent: globalThis.CustomEvent }
-  globalThis.window = dom.window
-  globalThis.CustomEvent = dom.window.CustomEvent
+test('with nothing asked for, the screen opens on General', async () => {
+  const document = domOf(renderToStaticMarkup(screen({}, undefined)))
+  assert.equal(document.querySelector('.settings-pane-title').textContent, 'General')
+  const headings = [...document.querySelectorAll('h3.k-caption')].map((node) => node.textContent)
+  assert.deepEqual(headings, ['Appearance', 'Findings', 'Help and chat'])
+})
+
+test('every section draws with every control named, and nothing waits behind a tooltip', async () => {
+  for (const id of IDS) {
+    const document = domOf(renderToStaticMarkup(screen({ spent: { days: 7, runs: 3, tokens: 12000, usd: 1.5, unpriced_runs: 1 }, demo: true }, id)))
+    assert.deepEqual(unnamedButtons(document), [], `${id} has a control with no name`)
+    assert.equal(document.querySelector('[role="tooltip"]'), null, `${id} hides a fact in a tooltip`)
+    for (const row of document.querySelectorAll('[data-setting]')) {
+      assert.ok(row.querySelector('[data-setting-label]')?.textContent.trim(), `${id} has a setting with no label`)
+    }
+  }
+})
+
+test('the facts the old tooltips held are drawn as words on their page', async () => {
+  const usage = domOf(renderToStaticMarkup(screen({ spent: { days: 7, runs: 3, tokens: 12000, usd: 1.5, unpriced_runs: 1 }, demo: true }, 'usage'))).body.textContent
+  assert.match(usage, /A cap only warns\. Nothing is blocked\./)
+  assert.match(usage, /Example numbers/)
+  assert.match(usage, /Partial: 1 run has no price/)
+  const keys = domOf(renderToStaticMarkup(screen({}, 'keys'))).body.textContent
+  assert.match(keys, /Keys stay on this computer\. The engine never sends one back\./)
+  assert.match(keys, /works in this app only/)
+  const data = domOf(renderToStaticMarkup(screen({}, 'data'))).body.textContent
+  assert.match(data, /Version and updates/)
+  assert.match(data, /Only the product model you looked up/)
+})
+
+test('a section is drawn as its own page, one at a time', async () => {
+  const document = domOf(renderToStaticMarkup(screen({}, 'connections')))
+  const headings = [...document.querySelectorAll('h3')].map((node) => node.textContent)
+  assert.deepEqual(headings, ['Browser extension and set-up', 'Web search', 'Proxies', 'Chat clients'])
+  const research = domOf(renderToStaticMarkup(screen({}, 'research')))
+  assert.deepEqual([...research.querySelectorAll('h3.k-caption')].map((node) => node.textContent), ['Agent', 'How much effort', 'Where to look', 'Language and market', 'Findings', 'Classification'])
+  assert.ok(research.querySelector('[data-tour="source-kinds"]'), 'the tour target is drawn on Research')
+})
+
+test('a section the tour asks for is the one drawn, and the list follows it', async () => {
+  const { SettingsScreen } = loadSource(SCREEN, screenStubs({}))
+  const { showSettingsPage } = loadSource(PAGES)
+  const view = await mount(h(SettingsScreen, {}))
   try {
-    const pagesFile = join(directory, 'settingsPages.cjs')
-    const settingsFile = join(directory, 'Settings.cjs')
-    await writeFile(pagesFile, compile(await readFile('src/ui/panels/settingsPages.ts', 'utf8')))
-    await writeFile(settingsFile, compile(await readFile('src/ui/panels/Settings.tsx', 'utf8')) + '\nexports.SettingsPanel = SettingsPanel\n')
-    const pages = require(pagesFile)
-
-    const stubs = {
-      ...(await realSettingsParts(directory)),
-      '../../arc/checkbox/checkbox': {
-        Checkbox: ({ checked, label }) => h('button', { role: 'checkbox', 'aria-checked': checked, 'aria-label': label }),
-      },
-      '../../prefs': { usePrefs: () => ({ theme: 'system', setTheme() {}, profile: 'standard', setProfile() {}, reduce: false, setReduce() {} }) },
-      '../../engine/caps': {
-        CAP_ORDER: ['llm_api'],
-        CAP_WORDS: { llm_api: { title: 'Model calls', unit: 'calls', money: false } },
-        usedToday: () => null,
-        useCaps: () => ({ caps: {}, setCap() {} }),
-      },
-      '../../engine/appupdate': { useAppUpdate: () => ({ phase: 'idle', checked: false, release: null, problem: '', canInstall: false, check() {}, install() {} }) },
-      '../../engine/sensitivity': { useSensitivity: () => ({ sensitivity: 'all', choose: async () => '' }) },
-      '../../engine/settings': {
-        usePresence: () => ({ presence: null, reload: async () => {} }),
-        useAbout: () => ({ version: '0.3.2', folder: '/data' }),
-        useKeys: () => ({ doc: { providers: [] }, problem: '', tested: {}, set() {}, remove() {}, test() {} }),
-        usePrefsDoc: () => ({ doc: prefsDoc, problem: '', save: async () => {} }),
-        useSharedAccess: () => ({ doc: sharedDoc, problem: '', code: '', unlock() {}, forget() {}, make() {} }),
-        useSpent: () => null,
-      },
-      '../../engine/usage': { useUsage: () => ({ meters: null, demo: false }) },
-      '../../tour/Tour': { startTour() {} },
-      '../controls': {
-        Segmented: ({ label, value, options }) =>
-          h('div', { role: 'radiogroup', 'aria-label': label }, options.map((option) => h('button', { key: option.value, 'data-on': option.value === value }, option.label))),
-        Select: ({ label }) => h('select', { 'aria-label': label }),
-        Switch: ({ label }) => h('button', { role: 'switch', 'aria-label': label }),
-      },
-      '../drawerEvents': { showDrawer() {} },
-      './McpClients': { McpClientsGroup: () => h('section', { className: 'panel-group' }, h('h3', null, 'Use Kriko in another chat')) },
-      './Proxies': { ProxiesGroup: () => h('section', { className: 'panel-group' }, h('h3', null, 'Proxies')) },
-      './SearchProviders': { SearchProvidersGroup: () => h('section', { className: 'panel-group' }, h('h3', null, 'Web search')) },
-    }
-    loader._load = function (request, parent, isMain) {
-      if (parent?.filename === settingsFile && request.startsWith('.')) {
-        if (request === './settingsPages') return pages
-        if (!(request in stubs)) throw new Error(`settings test has no stub for ${request}`)
-        return stubs[request]
-      }
-      return originalLoad.call(this, request, parent, isMain)
-    }
-    const { SettingsPanel } = require(settingsFile)
-
-    const render = (requested) => {
-      if (requested) pages.showSettingsPage(requested)
-      return new JSDOM(renderToStaticMarkup(h(SettingsPanel))).window.document
-    }
-
-    const tabs = (document) => [...document.querySelectorAll('[role="radiogroup"][aria-label="Settings page"] button')].map((node) => node.textContent)
-    assert.deepEqual(tabs(render()), ['Look', 'Research', 'Keys', 'Connections', 'Usage', 'About'])
-
-    // Version and updates are their own page, not a group at the foot of Usage.
-    assert.ok(!headings(render('usage')).includes('Version and updates'))
-    assert.ok(headings(render('about')).includes('Version and updates'))
-
-    // With nothing requested, the drawer opens on Look and holds only its own groups.
-    const look = render()
-    assert.deepEqual(headings(look), ['Look', 'Findings', 'Chat'])
-    assert.equal(look.querySelector('[data-tour="source-kinds"]'), null)
-
-    // The tour's "Where to look" step asks for Research, and the target is there.
-    const research = render('research')
-    assert.deepEqual(headings(research), ['Effort', 'Region', 'Model'])
-    const target = research.querySelector('[data-tour="source-kinds"]')
-    assert.ok(target, 'the tour target is drawn on the Research page')
-    assert.equal(target.closest('section').querySelector('h3').textContent, 'Effort')
-
-    // A request is spent once: the next opening is back on Look.
-    assert.deepEqual(headings(render()), ['Look', 'Findings', 'Chat'])
-
-    assert.deepEqual(headings(render('keys')), ['Keys', 'Sharing'])
-    assert.deepEqual(headings(render('connections')), ['Setup', 'Web search', 'Proxies', 'Use Kriko in another chat'])
-    assert.deepEqual(headings(render('usage')), ['Caps'])
-
-    // A row is an icon, a name and one control: no grey sub-line under any
-    // label, on any page, and every icon-only control carries its name.
-    for (const name of ['look', 'research', 'keys', 'connections', 'usage', 'about']) {
-      const page = render(name)
-      assert.equal(page.querySelector('.setting small'), null, `${name} keeps a sub-line under a setting`)
-      assert.deepEqual(unnamedButtons(page), [], `${name} has an icon-only control with no name`)
-      for (const row of page.querySelectorAll('.setting:not(.actions)')) {
-        assert.ok(row.querySelector('.row-icon'), `${name} has a row with no icon: ${row.textContent}`)
-      }
-    }
-    // Where research costs money, a coin says so and the words are its description.
-    const coin = render('research').querySelector('.hint')
-    assert.match(coin.querySelector('.hint-pop').textContent, /more search calls/)
-    assert.equal(coin.querySelector('button').getAttribute('aria-describedby'), coin.querySelector('.hint-pop').id)
+    // The tour asks for a section while the screen is open, and it moves at once.
+    await React.act(async () => showSettingsPage('usage'))
+    await view.flush()
+    assert.equal(view.document.querySelector('.settings-pane-title').textContent, 'Usage and spend')
+    assert.equal(view.document.querySelector('nav button[aria-current="true"]').textContent, 'Usage and spend')
   } finally {
-    loader._load = originalLoad
-    globalThis.window = previous.window
-    globalThis.CustomEvent = previous.CustomEvent
-    dom.window.close()
-    await rm(directory, { recursive: true, force: true })
+    await view.unmount()
+  }
+})
+
+test('the list moves the screen to the section it names', async () => {
+  const view = await mount(screen({}, 'general'))
+  try {
+    const find = (text) => [...view.document.querySelectorAll('nav button')].find((node) => node.textContent === text)
+    await view.click(find('Connections'))
+    assert.equal(view.document.querySelector('.settings-pane-title').textContent, 'Connections')
+    assert.equal(find('Connections').getAttribute('aria-current'), 'true')
+    assert.equal(find('General').getAttribute('aria-current'), null)
+  } finally {
+    await view.unmount()
+  }
+})
+
+test('search finds a setting by its name or its note across every section', async () => {
+  const view = await mount(screen({}, 'general'))
+  try {
+    const box = view.document.querySelector('input[aria-label="Search settings"]')
+    assert.ok(box, 'the search field is named')
+
+    // A name in another section: Thoroughness lives on Research.
+    await view.type(box, 'thorough')
+    let groups = [...view.document.querySelectorAll('.settings-results h2.k-caption')].map((node) => node.textContent)
+    assert.deepEqual(groups, ['Research'])
+    assert.match(view.document.querySelector('.settings-results').textContent, /Thoroughness/)
+    assert.equal(view.document.querySelector('.settings-pane-title'), null, 'the open section gives way to the results')
+
+    // A word from a note matches too, and groups by section.
+    await view.type(box, 'a cap only warns')
+    groups = [...view.document.querySelectorAll('.settings-results h2.k-caption')].map((node) => node.textContent)
+    assert.deepEqual(groups, ['Usage and spend'])
+    assert.equal(view.document.querySelectorAll('.settings-results .k-row').length, 2, 'each cap is a match')
+
+    // A word in a name of General finds it there.
+    await view.type(box, 'theme')
+    groups = [...view.document.querySelectorAll('.settings-results h2.k-caption')].map((node) => node.textContent)
+    assert.deepEqual(groups, ['General'])
+
+    // Nothing matches: the screen says so, and offers no row.
+    await view.type(box, 'zzqx')
+    assert.match(view.document.querySelector('.k-empty').textContent, /No setting matches/)
+    assert.equal(view.document.querySelectorAll('.settings-results .k-row').length, 0)
+
+    // Clearing the search brings the open section back.
+    await view.type(box, '')
+    assert.equal(view.document.querySelector('.settings-pane-title').textContent, 'General')
+  } finally {
+    await view.unmount()
+  }
+})
+
+test('a search result opens its section', async () => {
+  const view = await mount(screen({}, 'general'))
+  try {
+    const box = view.document.querySelector('input[aria-label="Search settings"]')
+    await view.type(box, 'thorough')
+    const result = [...view.document.querySelectorAll('.settings-results .k-row')][0]
+    await view.click(result)
+    assert.equal(view.document.querySelector('.settings-pane-title').textContent, 'Research')
+    assert.equal(view.document.querySelector('input[aria-label="Search settings"]').value, '')
+  } finally {
+    await view.unmount()
   }
 })

@@ -340,7 +340,12 @@ def main(argv: list[str]) -> int:
             print(f"frozen Firefox staging failed: {firefox}")
             return 1
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-        if manifest.get("background") != {"scripts": ["background.js"]} or firefox.get("signed") is not False:
+        # An event page, not a service worker: the shared manifest names
+        # `service_worker`, and Firefox needs `scripts` instead. The offline
+        # reader loads before the worker, because the worker's importScripts is
+        # not how a Firefox event page starts (#354).
+        if (manifest.get("background") != {"scripts": ["offline/sqlite.js", "offline/catalog.js", "background.js"]}
+                or firefox.get("signed") is not False):
             print("frozen Firefox manifest or signing status is wrong")
             return 1
         import zipfile

@@ -29,6 +29,7 @@ list here to remember to update.
 from __future__ import annotations
 
 import ast
+import json
 import re
 import subprocess
 from pathlib import Path
@@ -38,6 +39,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[3]
 WORKFLOW = ROOT / ".github" / "workflows" / "desktop.yml"
 SCRIPT = ROOT / "kriko-ui" / "package.ps1"
+PACKAGE = ROOT / "kriko-ui" / "package.json"
 
 #: Repository files a build step invokes: the spec PyInstaller reads, the lock
 #: pip installs, the smoke tests.
@@ -46,7 +48,8 @@ ARTIFACT = re.compile(r"\b((?:packaging|tools)/[\w.-]+\.(?:py|spec)|requirements
 #: The command that builds the app and makes the installer, in one step. It
 #: runs the web build, `cargo build --release` (kept to the committed graph by
 #: `--locked`) and the NSIS bundle, so a script that lacks it has no installer.
-BUILD_STEP = re.compile(r"\btauri build\b")
+#: It now lives in `kriko-ui/package.json`'s `bundle` script; `_build_command`
+#: follows either spelling.
 
 
 def _bundle_job(text: str) -> str:
@@ -85,6 +88,45 @@ def _uncommented(step: str) -> str:
     )
 
 
+def _scripts() -> dict[str, str]:
+    return json.loads(PACKAGE.read_text(encoding="utf-8"))["scripts"]
+
+
+def _build_command(text: str) -> str:
+    """The `tauri build` command a recipe runs, directly or through a Bun script.
+
+    The command moved into `kriko-ui/package.json`'s `bundle` script because
+    `bun run tauri build ... -- --locked` let Bun eat the `--`, and Tauri then
+    refused `--locked` as its own argument. Resolving the script keeps both
+    recipes and this test on the one line that actually runs, rather than on a
+    comment that names it.
+    """
+    scripts = _scripts()
+    for line in text.splitlines():
+        if line.strip().startswith("#"):
+            continue
+        if "tauri build" in line:
+            return line.strip()
+        match = re.search(r"\bbun run ([\w:.-]+)", line)
+        if match and "tauri build" in scripts.get(match.group(1), ""):
+            return scripts[match.group(1)]
+    return ""
+
+
+def _build_line(text: str) -> int:
+    """The line in `text` that starts the bundle, however it is spelled."""
+    scripts = _scripts()
+    for index, line in enumerate(text.splitlines()):
+        if line.strip().startswith("#"):
+            continue
+        if "tauri build" in line:
+            return index
+        match = re.search(r"\bbun run ([\w:.-]+)", line)
+        if match and "tauri build" in scripts.get(match.group(1), ""):
+            return index
+    raise AssertionError("the recipe never runs the bundle")
+
+
 @pytest.fixture(scope="module")
 def workflow_build() -> str:
     text = WORKFLOW.read_text(encoding="utf-8")
@@ -99,7 +141,7 @@ def script() -> str:
 def test_the_script_exists_and_is_a_build(script):
     """A missing or stub script would satisfy every subset check below it."""
     assert len(script.splitlines()) > 60
-    assert "tauri build" in script
+    assert _build_command(script)
 
 
 def test_the_workflow_still_parses_into_steps(workflow_build):
@@ -110,7 +152,7 @@ def test_the_workflow_still_parses_into_steps(workflow_build):
     the rest of the file green by accident.
     """
     assert ARTIFACT.findall(workflow_build), "no build artifacts found in the workflow"
-    assert BUILD_STEP.findall(workflow_build), "no build step found in the workflow"
+    assert _build_command(workflow_build), "no build step found in the workflow"
 
 
 def test_every_artifact_the_release_build_names_is_named_by_the_script(
@@ -139,13 +181,13 @@ def test_the_script_runs_the_same_build_as_the_workflow(workflow_build, script):
     to cargo, so neither builds a crate graph that was not committed.
     """
     for name, text in (("the workflow", workflow_build), (SCRIPT.name, script)):
-        build = [line for line in text.splitlines() if "tauri build" in line]
+        build = _build_command(text)
         assert build, f"{name} never runs `tauri build`"
-        assert any("tauri.bundle.conf.json" in line for line in build), (
+        assert "tauri.bundle.conf.json" in build, (
             f"{name} builds without the bundle config, so the installer would "
             "carry neither the engine nor OpenSERP"
         )
-        assert any("--locked" in line for line in build), f"{name} builds without --locked"
+        assert "--locked" in build, f"{name} builds without --locked"
 
 
 def test_the_script_freezes_before_it_packs(script):
@@ -159,7 +201,7 @@ def test_the_script_freezes_before_it_packs(script):
     lines = script.splitlines()
     freeze = min(i for i, line in enumerate(lines) if "PyInstaller" in line)
     place = min(i for i, line in enumerate(lines) if "Place the sidecar" in line)
-    pack = min(i for i, line in enumerate(lines) if "tauri build --config" in line)
+    pack = _build_line(script)
     assert freeze < place < pack, (freeze, place, pack)
 
 
@@ -173,7 +215,7 @@ def test_the_script_smoke_tests_what_it_produced(script):
     """
     lines = script.splitlines()
     sidecar = min(i for i, line in enumerate(lines) if "smoke_sidecar.py" in line)
-    pack = min(i for i, line in enumerate(lines) if "tauri build --config" in line)
+    pack = _build_line(script)
     app = min(i for i, line in enumerate(lines) if "smoke_app.py" in line)
     assert sidecar < pack < app, (sidecar, pack, app)
 
@@ -424,7 +466,7 @@ def test_the_packed_files_are_checked_before_the_zip_reads_them(script):
     the build is done and compared before the zip reads the folder.
     """
     lines = script.splitlines()
-    built = min(i for i, line in enumerate(lines) if "tauri build --config" in line)
+    built = _build_line(script)
     checked = [i for i, line in enumerate(lines) if "changed while" in line]
     zipped = min(i for i, line in enumerate(lines) if "Compress-Archive" in line)
     assert checked and built < checked[0] < zipped, (built, checked, zipped)
@@ -493,13 +535,34 @@ def test_every_powershell_script_parses():
     does not run a line of it. Skips where there is no `pwsh` — a gate that
     cannot run must not pass silently, but neither may it fail a Linux checkout
     that never installed one.
+
+    A candidate has to *answer* before it is used, not merely be on `PATH`.
+    Windows ships an App Execution Alias at
+    `%LOCALAPPDATA%\\Microsoft\\WindowsApps\\pwsh.EXE` on machines where
+    PowerShell 7 is not installed; `shutil.which("pwsh")` finds it first and
+    `CreateProcess` refuses it with WinError 5, so the whole gate died on a
+    binary the machine cannot run while a working `powershell.exe` sat beside
+    it. Trying each in order and skipping only when none answers keeps the
+    check real without letting a stub decide the result.
     """
     import shutil
     import subprocess
 
-    pwsh = shutil.which("pwsh") or shutil.which("powershell") or "/opt/pwsh/pwsh"
-    if not Path(pwsh).exists() and not shutil.which(pwsh):
-        pytest.skip("no pwsh on this machine")
+    candidates = [shutil.which("pwsh"), shutil.which("powershell"), "/opt/pwsh/pwsh"]
+    pwsh = ""
+    for candidate in candidates:
+        if not candidate or not (Path(candidate).exists() or shutil.which(candidate)):
+            continue
+        try:
+            probe = subprocess.run([candidate, "-NoProfile", "-Command", "exit 0"],
+                                   capture_output=True, text=True, timeout=60)
+        except OSError:
+            continue
+        if probe.returncode == 0:
+            pwsh = candidate
+            break
+    if not pwsh:
+        pytest.skip("no PowerShell on this machine, or none that can be started")
 
     for script in _powershell_scripts():
         done = subprocess.run(

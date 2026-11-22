@@ -1067,7 +1067,7 @@ function annotateResults() {
 
 // ── product checks in the page ──────────────────────────────────────────
 
-const KRIKO_MARK_STYLE = "display:inline-block;margin:3px 6px;padding:3px 8px;border:1px solid #7e838b;border-radius:10px;font:600 12px/1.5 system-ui;color:#0b1020;background:#f5f5f3;cursor:pointer;";
+const KRIKO_MARK_STYLE = "display:inline-block;margin:3px 6px;padding:3px 8px;border:1px solid #8a8374;border-radius:10px;font:600 12px/1.5 system-ui;color:#24231f;background:#f4f0e6;cursor:pointer;";
 let _resultScanGeneration = 0;
 
 function scanMessage(items, callback) {

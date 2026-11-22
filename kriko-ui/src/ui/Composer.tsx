@@ -11,7 +11,7 @@ import { PixelGlyph } from './PixelGlyph'
  *  `find` is Chat's default: the engine still reads the words, so it is sent as no mode at all. */
 export const MODES: { id: ChatMode; label: string; hint: string; placeholder: string }[] = [
   { id: 'find', label: 'Find', hint: 'Find the product that fits, and where to get it', placeholder: 'What are you looking for?' },
-  { id: 'alternatives', label: 'Alt.', hint: 'Other products that do the same job as the one you name', placeholder: 'Which product do you want alternatives to?' },
+  { id: 'alternatives', label: 'Alternatives', hint: 'Other products that do the same job as the one you name', placeholder: 'Which product do you want alternatives to?' },
   { id: 'research', label: 'Research', hint: 'What a product is, how it is rated and what goes wrong with it', placeholder: 'Which product do you want to know about?' },
 ]
 
@@ -135,100 +135,106 @@ export function Composer({
     if (next) setChosen(next.id)
   }
 
+  const selected = MODES.find((item) => item.id === mode) ?? MODES[0]
+
   return (
-    <div className="composer">
-      <textarea
-        ref={field}
-        className="composer-field"
-        value={text}
-        placeholder={modes && mode !== 'find' && placeholder === 'Ask about a product' ? MODES.find((item) => item.id === mode)?.placeholder : placeholder}
-        rows={1}
-        onChange={(event) => {
-          setText(event.target.value)
-          back.current = 0
-        }}
-        onKeyDown={onKey}
-        aria-label="Message"
-      />
-      <div className="composer-foot">
-        <input ref={file} type="file" hidden accept=".txt,.md,.csv,.json,.log" onChange={(event) => void attach(event.target.files?.[0])} />
-        <button className="icon-btn" aria-label="Add a text file" title="Text, Markdown, CSV, JSON or log, up to 12 KB" onClick={() => file.current?.click()} disabled={running}>
-          <Icon name="attach" />
-        </button>
-        {pickAgent && (
-        <div className="agent-pick" data-tour="agent-pick">
-          <button className="pill" onClick={() => setMenu((v) => !v)} aria-haspopup="listbox" aria-expanded={menu}>
-            <AgentMark id={agent.id} size={20} />
-            {agent.label}
-            <Icon name="chevron" size={13} />
+    <div className="composer-root">
+      <div className="composer">
+        <textarea
+          ref={field}
+          className="composer-field"
+          value={text}
+          placeholder={modes && mode !== 'find' && placeholder === 'Ask about a product' ? MODES.find((item) => item.id === mode)?.placeholder : placeholder}
+          rows={1}
+          onChange={(event) => {
+            setText(event.target.value)
+            back.current = 0
+          }}
+          onKeyDown={onKey}
+          aria-label="Message"
+        />
+        <div className="composer-foot">
+          <input ref={file} type="file" hidden accept=".txt,.md,.csv,.json,.log" onChange={(event) => void attach(event.target.files?.[0])} />
+          <button className="composer-tool" aria-label="Add a text file" title="Text, Markdown, CSV, JSON or log, up to 12 KB" onClick={() => file.current?.click()} disabled={running}>
+            <Icon name="attach" size={16} />
+            <span>Attach</span>
           </button>
-          <AnimatePresence>
-            {menu && (
-              <motion.ul
-                className="menu"
-                role="listbox"
-                onKeyDown={onMenuKey}
-                tabIndex={-1}
-                initial={{ opacity: 0, y: m.d(6), scale: m.on ? 0.97 : 1 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: m.d(4) }}
-                transition={m.tx.quick}
-              >
-                {agents.map((item) => (
-                  <li key={item.id || item.label}>
-                    <button
-                      role="option"
-                      aria-selected={item.id === agent.id}
-                      onClick={() => {
-                        setChosen(item.id)
-                        // Kept, not just used once: this is the pick the next
-                        // question starts on, and the one Settings shows.
-                        chooseAgent(item.id)
-                        setMenu(false)
-                      }}
-                    >
-                      <AgentMark id={item.id} size={20} />
-                      <span className="menu-label">{item.label}</span>
-                      {item.id === agent.id && <Icon name="check" size={14} />}
-                    </button>
-                  </li>
-                ))}
-              </motion.ul>
-            )}
-          </AnimatePresence>
+          {pickAgent && (
+          <div className="agent-pick" data-tour="agent-pick">
+            <button className="pill composer-agent" onClick={() => setMenu((v) => !v)} aria-haspopup="listbox" aria-expanded={menu}>
+              <AgentMark id={agent.id} size={20} />
+              <span className="composer-tag">Agent</span>
+              <span className="composer-agent-name">{agent.label}</span>
+              <Icon name="chevron" size={13} />
+            </button>
+            <AnimatePresence>
+              {menu && (
+                <motion.ul
+                  className="menu"
+                  role="listbox"
+                  onKeyDown={onMenuKey}
+                  tabIndex={-1}
+                  initial={{ opacity: 0, y: m.d(6), scale: m.on ? 0.97 : 1 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: m.d(4) }}
+                  transition={m.tx.quick}
+                >
+                  {agents.map((item) => (
+                    <li key={item.id || item.label}>
+                      <button
+                        role="option"
+                        aria-selected={item.id === agent.id}
+                        onClick={() => {
+                          setChosen(item.id)
+                          // Kept, not just used once: this is the pick the next
+                          // question starts on, and the one Settings shows.
+                          chooseAgent(item.id)
+                          setMenu(false)
+                        }}
+                      >
+                        <AgentMark id={item.id} size={20} />
+                        <span className="menu-label">{item.label}</span>
+                        {item.id === agent.id && <Icon name="check" size={14} />}
+                      </button>
+                    </li>
+                  ))}
+                </motion.ul>
+              )}
+            </AnimatePresence>
+          </div>
+          )}
+          <span className="grow" />
+          {running ? (
+            <button className="send is-running" onClick={onStop} aria-label="Stop">
+              <PixelGlyph size={18} tone="ink" />
+            </button>
+          ) : (
+            <button className="send" onClick={send} disabled={!text.trim()} aria-label="Send">
+              <Icon name="send" size={17} />
+            </button>
+          )}
         </div>
-        )}
-        {modes && (
-          <div className="mode-slider" role="radiogroup" aria-label="What to do" data-tour="mode-slider">
+        {attachmentProblem && <p className="error-note" role="alert">{attachmentProblem}</p>}
+      </div>
+      {modes && (
+        <div className="composer-modes">
+          <div className="k-seg" role="radiogroup" aria-label="What to do" data-tour="mode-slider">
             {MODES.map((item) => (
               <button
                 key={item.id}
                 type="button"
                 role="radio"
                 aria-checked={mode === item.id}
-                className="mode-seg"
-                title={item.hint}
                 disabled={running}
                 onClick={() => { setMode(item.id); field.current?.focus() }}
               >
-                {mode === item.id && <motion.span layoutId="mode-thumb" className="mode-thumb" transition={m.tx.quick} />}
-                <span className="mode-label">{item.label}</span>
+                {item.label}
               </button>
             ))}
           </div>
-        )}
-        <span className="grow" />
-        {running ? (
-          <button className="send is-running" onClick={onStop} aria-label="Stop">
-            <PixelGlyph size={18} tone="ink" />
-          </button>
-        ) : (
-          <button className="send" onClick={send} disabled={!text.trim()} aria-label="Send">
-            <Icon name="send" size={17} />
-          </button>
-        )}
-      </div>
-      {attachmentProblem && <p className="error-note" role="alert">{attachmentProblem}</p>}
+          <p className="composer-mode-hint">{selected.hint}</p>
+        </div>
+      )}
     </div>
   )
 }

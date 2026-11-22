@@ -24,26 +24,30 @@ For the portable version, extract the entire `kriko-<version>-win64-portable.zip
 archive before opening `kriko.exe`. Running the executable inside the ZIP is not
 an installed portable copy.
 
-Open the app. Its navigation contains **Chat**, **Compare** and **Queue**. Open
-**More → Set up Kriko** for the remaining steps.
+Open the app. Its rail has **Ask**, **Compare**, **Queue** and **History**
+under Check; **Procurement** and **Prices** under Procure; **Catalogs**,
+**Sites** and **For you** under Library; and **Settings** at the bottom. Open
+**Settings → Connections** for the remaining steps.
 
 ## Connect an agent
 
-If a friend gave you an access code, open **More → Set up Kriko → Have an
-access code from a friend?** Paste the whole code and its password, then press
-**Use these keys**. Choose **Kriko Agent** in Agents and return to setup to
-press **Check connection**. You do not need Python, another agent, or your own
-API keys. Use the same release as the person who made your code.
+If a friend gave you an access code, open **Settings → Connections → Set up
+Kriko → Have an access code from a friend?** Paste the whole code and its
+password, then press **Use these keys**. Choose **Kriko Agent** in **Settings →
+Research → Agents** and return to setup to press **Check connection**. You do
+not need Python, another agent, or your own API keys. Use the same release as
+the person who made your code.
 
-Choose a coding agent, local model, or API agent in **More → Agents**. API keys
-are managed in **More → Settings**; local model setup is in **More → Local model**.
-Return to setup and press **Check connection**. This sends a short request to
+Choose a coding agent, local model, or API agent in **Settings → Research →
+Agents**. API keys are managed in **Settings → Keys and models**, and local
+model setup lives there too. Return to setup and press **Check connection**.
+This sends a short request to
 the selected provider. A successful connection test checks answering, not full
 source access; complete a sourced product question next.
 
 ## Install product knowledge
 
-Open **More → Catalogs → Find release catalogs** and install a catalog. You can
+Open **Library → Catalogs → Find release catalogs** and install a catalog. You can
 also import a `.kpack` file. The installer ships without a catalog; offline
 lookups need installed knowledge. Researching new products also requires a ready
 research provider and internet access.
@@ -52,13 +56,14 @@ research provider and internet access.
 
 Install it from the Chrome Web Store:
 <https://chromewebstore.google.com/detail/kriko/bdifnaggafjokndlpjgmlfappcoehdjb>.
-Then open a product listing and return to **More → Set up Kriko** to check the
-browser connection. The store package updates with the browser.
+Then open a product listing and return to **Settings → Connections → Set up
+Kriko** to check the browser connection. The store package updates with the browser.
 The panel opens when you press the toolbar button or **Alt + K**; it does not
 open by itself as you browse.
 
-A checkout can load the folder instead. In **More → Set up Kriko**, open
-**Installing from a checkout instead** and press **Prepare extension folder**.
+A checkout can load the folder instead. In **Settings → Connections → Set up
+Kriko**, open **Installing from a checkout instead** and press **Prepare
+extension folder**.
 Then open your Chromium browser's Extensions page, enable **Developer mode**,
 choose **Load unpacked** and select the folder Kriko shows. After an app update,
 prepare the extension again and reload it in the browser.
@@ -69,7 +74,7 @@ currently guides Chromium browsers.
 
 ## Check the complete flow
 
-Ask for known problems with a product in Chat. Open a source, ask a follow-up,
+Ask for known problems with a product in Ask. Open a source, ask a follow-up,
 then add a saved result to Compare. If the engine fails to connect, the app shows
 a recovery screen. Example answers appear only after you explicitly choose demo
 mode, which stays labeled on every screen.
@@ -82,7 +87,8 @@ User data remains in `%USERPROFILE%\.kriko`.
 
 Use **Quit** in the system tray to stop the engine completely. Closing the window
 can leave it running for the browser extension. Uninstalling keeps saved data;
-export a snapshot from **More → Backup and restore** before manually deleting it.
+export a snapshot from **Settings → Data and updates → Backup and restore**
+before manually deleting it.
 
 > **An update fails.**
 > Kriko still runs. Most updates replace only the engine: Kriko unpacks it into
