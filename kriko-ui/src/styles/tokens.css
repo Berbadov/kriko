@@ -10,14 +10,13 @@
 
 :root {
   --font: 'Inter Variable', system-ui, sans-serif;
-  --display: 'Newsreader Variable', 'Newsreader', Georgia, serif;
-  /* Mono is not a brand face. It appears in code and logs only. */
+  --display: 'Chivo Mono Variable', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  /* Chivo Mono is the title face; --mono below is for code and logs only. */
   --mono: ui-monospace, 'Cascadia Mono', Consolas, 'SF Mono', Menlo, monospace;
 
   /* One step up from the old scale, so the weight lives here and not in a
-     hundred rules: regular 500, medium 600, semibold 700. A display face is
-     set one step lighter than the body, because a serif at 600 already reads
-     heavy. */
+     hundred rules: regular 500, medium 600, semibold 700. The display face
+     is one step lighter than the body. */
   --w-regular: 500;
   --w-medium: 600;
   --w-semibold: 700;

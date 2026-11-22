@@ -182,7 +182,11 @@ pub fn status() -> Status {
 
 /// The engine's address once it answers.
 pub fn base() -> Option<String> {
-    match status() {
+    address(status())
+}
+
+fn address(status: Status) -> Option<String> {
+    match status {
         Status::Ready { base, .. } => Some(base),
         _ => None,
     }
@@ -219,6 +223,7 @@ pub fn start(app: AppHandle) {
 /// is the one moment the window most needs to stay responsive. The command
 /// returns immediately and the window shows Starting, as it does on first launch.
 pub fn restart() {
+    mark_restarting();
     let app = sup().lock().unwrap().app.clone();
     std::thread::Builder::new()
         .name("engine-restart".into())
@@ -229,6 +234,19 @@ pub fn restart() {
             }
         })
         .ok();
+}
+
+/// Marks the engine as starting before the old one is stopped. Until `start`
+/// runs, the status would still say `Failed` (or `Ready` for the dead engine),
+/// and the page, which asks right after pressing Reconnect, read that stale
+/// answer, gave up, and stayed offline while the new engine came up unnoticed.
+fn mark_restarting() {
+    sup().lock().unwrap().status = restarting();
+}
+
+/// What the page reads from the moment Reconnect is pressed until the new engine answers.
+fn restarting() -> Status {
+    Status::Starting("Restarting Kriko's engine…".into())
 }
 
 /// A staged engine that never became healthy is set aside, and the engine is
@@ -804,6 +822,22 @@ pub fn host_port(base: &str) -> Result<(String, u16), String> {
     let port = port.parse::<u16>().map_err(|e| format!("{base}: {e}"))?;
     let host = if host == "localhost" { "127.0.0.1" } else { host };
     Ok((host.to_string(), port))
+}
+
+#[cfg(test)]
+mod restart_tests {
+    use super::*;
+
+    // Reconnect read the shell's status straight after the press. It still said
+    // Failed, so the page went offline again beside an engine that was starting.
+    #[test]
+    fn what_the_page_reads_after_reconnect_is_neither_the_old_failure_nor_the_dead_address() {
+        let now = restarting();
+        assert!(matches!(now, Status::Starting(_)));
+        assert!(address(now).is_none());
+        let dead = Status::Ready { base: "http://127.0.0.1:1".into(), version: "0".into() };
+        assert_eq!(address(dead).as_deref(), Some("http://127.0.0.1:1"));
+    }
 }
 
 #[cfg(test)]
