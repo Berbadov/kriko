@@ -1,38 +1,37 @@
-/* The frame: rail, stage, drawer, queue card, and the small controls. */
+/* The frame: the left rail, the content column with its strip, and the page. */
 
-/* One gutter and one row carry the chrome. `--topbar-h` is the row that holds
-   the agent pick, the tabs and the status cluster; where the system's own bar is
-   not drawn (Windows, see ui/TitleBar.tsx) the window's three buttons ride in
-   that same row, so no band is spent above it. `--caption-w` is the room they
-   take at its right end: three times `.titlebar-btn`'s width, and the two move
-   together. `--drawer-top` is the row's lower edge, so a panel can never open
-   under the window's strip and lose its first card. */
 :root {
-  --app-pad: 4px;
-  --topbar-h: 44px;
-  --caption-w: 138px;
-  --drawer-top: calc(var(--app-pad) + var(--topbar-h) + var(--app-pad));
+  --strip-h: 40px;
+  --rail-open: 232px;
+  --rail-shut: 64px;
 }
 
+/* The rail on the left, the content column on the right. Both run the full height. */
 .app {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   height: 100%;
-  padding: var(--app-pad);
-  gap: var(--app-pad);
+  padding: 0;
+  gap: 0;
 }
 
-/* The window's own three buttons, in the top bar's row. The strip is only as
-   wide as they are, so the row underneath keeps its own presses and only the
-   empty ground of the row drags the window. */
+.shell-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--ground);
+}
+
+/* The window's own three buttons (ui/TitleBar.tsx) ride at the right end of the
+   strip, in flow: they take no room from the page, and the strip's empty ground
+   is the handle that drags the window. */
 .titlebar {
-  position: fixed;
-  top: var(--app-pad);
-  right: var(--app-pad);
-  z-index: 2000;
-  height: var(--topbar-h);
   display: flex;
   align-items: stretch;
+  flex: none;
+  height: var(--strip-h);
   background: transparent;
   user-select: none;
 }
@@ -90,216 +89,78 @@
   height: 22px;
 }
 
-/* ---- the top bar ----
-   The logo and the agent on the left, the places in a pill in the middle, the
-   queue and More on the right. The window below takes the whole width. On
-   Windows this row is also the window's caption (ui/TitleBar.tsx): a press on
-   its empty ground drags the window, and every button in it stays a button. */
+/* ---- the strip ----
+   A slim row across the top of the content column: the agent that does the
+   research, the usage and queue state on the right, and on Windows the window's
+   own buttons at the far end. Its empty ground drags the window (Tauri drags only
+   from a press whose target carries data-tauri-drag-region, so every control in
+   it stays a control). */
 
-.topbar {
+.strip {
   position: relative;
   z-index: 30;
-  display: grid;
-  flex: none;
-  /* The right column never shrinks below what it holds. Its controls used to
-     spill left over the tabs at mid widths (the usage pill across "New chat");
-     now the tabs stay whole and the row narrows at its far left instead. */
-  grid-template-columns: minmax(0, 1fr) auto minmax(min-content, 1fr);
-  align-items: center;
-  gap: 12px;
-  height: var(--topbar-h);
-  padding: 0 var(--app-pad) 0 8px;
-  border-bottom: 1px solid var(--edge);
-}
-
-.engine-notice {
   display: flex;
   flex: none;
   align-items: center;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 8px 12px;
-  padding: 8px 12px;
-  border: 1px solid color-mix(in srgb, var(--warn) 45%, var(--edge));
-  border-radius: var(--r-m);
-  background: transparent;
-  color: var(--ink);
-  font-size: 13px;
-  text-align: center;
+  gap: 12px;
+  height: var(--strip-h);
+  padding: 0 12px 0 16px;
+  border-bottom: 1px solid var(--edge);
 }
 
-.topbar-left,
-.topbar-right {
+/* With the window's buttons in the strip, the row ends at them, not beside them. */
+:root[data-titlebar] .strip {
+  padding-right: 0;
+}
+
+.strip-drag {
+  flex: 1;
+  min-width: 0;
+  align-self: stretch;
+}
+
+.strip-right {
   display: flex;
   align-items: center;
   gap: 10px;
   min-width: 0;
+  height: 100%;
 }
 
-.topbar-right {
-  justify-content: flex-end;
-}
-
-/* The window's three buttons sit over the right end of this row. The room comes
-   out of the right column's own padding, never out of the grid: the tabs stay
-   centred on the window, and every control keeps its distance from the system
-   buttons (the closing X of a window is the one press that must never be a
-   mis-press). */
-:root[data-titlebar] .topbar-right {
-  padding-right: calc(var(--caption-w) + var(--app-pad));
-}
-
-.topbar-slash {
-  color: var(--ink-3);
-  font-family: var(--mono);
-  font-size: 15px;
-}
-
-.topbar-agent {
+.strip-agent {
   display: inline-flex;
   align-items: center;
   gap: 7px;
   min-width: 0;
-  max-width: 220px;
+  max-width: 260px;
   height: 30px;
   padding: 0 9px 0 7px;
   background: transparent;
   border: 1px solid var(--edge);
   border-radius: var(--r-m);
   color: var(--ink-2);
-  font-size: 13.5px;
+  font-size: 14px;
   font-weight: 500;
   transition: border-color var(--dur-2) var(--ease-out), color var(--dur-2) var(--ease-out);
 }
 
-.topbar-agent:hover {
+.strip-agent:hover {
   border-color: var(--edge-strong);
   color: var(--ink);
 }
 
-/* The agent's own mark sits in the pill. Its state arc is drawn by AgentMark;
-   there is no second ornament beside it. */
-.topbar-agent .agent-mark {
+.strip-agent .agent-mark {
   width: 18px;
   height: 18px;
 }
 
-/* The history menu's rows arrive at once; there is no stagger. */
-.topbar-pop .rail-chats > * { animation: pop-item var(--dur-3) var(--ease-out) both; }
-@keyframes pop-item {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-.topbar-agent-name {
+.strip-agent-name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* The pill of places is the bar's own height: tab 30 + its padding 3 + its
-   border 1, twice over, is `--topbar-h` exactly. A taller pill used to spill
-   below the row and read as a clipped control. */
-.topbar-nav {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  padding: 4px;
-  background: transparent;
-  border: 1px solid var(--edge);
-  border-radius: var(--r-m);
-  box-shadow: none;
-}
-
-.topbar-tab {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  height: 34px;
-  padding: 0 12px;
-  border-radius: var(--r-s);
-  color: var(--ink-2);
-  font-size: 13.5px;
-  font-weight: 500;
-  white-space: nowrap;
-  transition:
-    color var(--dur-2) var(--ease-out),
-    background-color var(--dur-2) var(--ease-out);
-}
-
-.topbar-tab:hover {
-  color: var(--ink);
-  background: var(--accent-soft);
-}
-
-.topbar-tab:active {
-  transform: none;
-}
-
-.topbar-tab[data-on='true'] {
-  color: var(--ink);
-}
-
-.topbar-tab > :not(.topbar-active) {
-  position: relative;
-}
-
-.topbar-active {
-  position: absolute;
-  inset: 0;
-  background: transparent;
-  border: 0;
-  border-radius: 0;
-  box-shadow: inset 0 -2px 0 var(--accent);
-}
-
-/* The one tab that starts something: a plain outlined press, not a glow. */
-.topbar-new {
-  margin-left: 4px;
-  color: var(--ink);
-  border: 1px solid var(--edge-strong);
-  background: transparent;
-}
-
-.topbar-new:hover {
-  background: var(--accent-soft);
-  border-color: var(--accent);
-}
-
-.topbar-history {
-  position: relative;
-}
-
-.topbar-pop {
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 50%;
-  z-index: 60;
-  display: flex;
-  flex-direction: column;
-  width: 340px;
-  max-height: min(62vh, 520px);
-  padding: 8px;
-  overflow: auto;
-  background: var(--panel);
-  border: 1px solid var(--edge-strong);
-  border-radius: var(--r-xl);
-  box-shadow: var(--shadow-1);
-  transform: translateX(-50%);
-  transform-origin: top center;
-  animation: pop-in var(--dur-3) var(--ease-out) both;
-}
-@keyframes pop-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-.topbar-pop .rail-chats {
-  margin-top: 0;
-}
-
-.topbar-queue {
+.strip-queue {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -308,64 +169,34 @@
   background: transparent;
   border: 1px solid var(--edge);
   border-radius: var(--r-m);
-  color: var(--ink-3);
-  font-size: 12px;
+  color: var(--ink-2);
+  font-size: 13px;
   white-space: nowrap;
 }
 
-.topbar-queue:hover {
+.strip-queue:hover {
   border-color: var(--edge-strong);
   color: var(--ink);
 }
 
-.topbar-dot {
-  position: absolute;
-  top: -3px;
-  right: -3px;
-  min-width: 16px;
-  padding: 1px 4px;
-  border-radius: var(--r-pill);
-  background: var(--attention);
-  color: var(--on-attention);
-  font-size: 10.5px;
-  text-align: center;
-}
-
-.topbar .icon-btn {
-  position: relative;
-}
-
-/* The row is the logo, the agent, five tabs, the usage and queue pills, Settings
-   and More, and on Windows the window's own buttons. Named in full they need
-   about 1250px; the tabs and Settings drop their words first, because their
-   icons say the same and the logo and the agent are what a narrower row used to
-   lose (the tabs were drawn over them). */
-@media (max-width: 1250px) {
-  .topbar-label {
-    display: none;
-  }
-
-  /* Only the icons are left, so the tabs give their sides back: a narrow window
-     also has the window's own buttons in this row. */
-  .topbar-tab {
-    padding: 0 9px;
-  }
-
-  .topbar-new .topbar-label {
-    display: inline;
+/* Below 900px the rail keeps only icons, and the strip's agent name gives way first. */
+@media (max-width: 899px) {
+  .strip-agent-name {
+    max-width: 120px;
   }
 }
 
-@media (max-width: 860px) {
-  .topbar {
-    grid-template-columns: auto minmax(0, 1fr) auto;
-  }
+/* Notices sit at the top of the column, under the strip, above the page. */
+.shell-notices {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 16px 0;
+}
 
-  .topbar-slash,
-  .topbar-agent,
-  .topbar-queue {
-    display: none;
-  }
+.shell-notices .k-notice {
+  flex-wrap: wrap;
 }
 
 .badge {
@@ -384,10 +215,9 @@
   position: relative;
   flex: 1;
   min-width: 0;
+  min-height: 0;
   overflow: hidden;
   background: var(--ground);
-  border: 1px solid var(--edge);
-  border-radius: var(--r-l);
 }
 
 .page {
@@ -819,155 +649,6 @@
   transition: left calc(420ms * var(--tm)) var(--ease-out);
 }
 
-/* ---- drawer ---- */
-
-/* The scrim covers the whole window, every edge. It once started at the drawer's
-   own left edge (`left: offset + 20`), so the strip beside the sheet kept its
-   sharp, undimmed picture while everything else was blurred: the seam the reader
-   saw down the left of Settings. The sheet sits on the scrim, it never bounds it. */
-.scrim {
-  position: fixed;
-  inset: 0;
-  z-index: 40;
-  background: rgba(0, 0, 0, 0.5);
-  -webkit-backdrop-filter: blur(3px);
-  backdrop-filter: blur(3px);
-}
-
-.drawer {
-  position: fixed;
-  top: var(--drawer-top);
-  bottom: var(--app-pad);
-  z-index: 50;
-  width: 400px;
-  max-width: calc(100% - 20px);
-  display: flex;
-  flex-direction: column;
-  padding: 16px;
-  overflow: hidden;
-  background: var(--panel);
-  border: 1px solid var(--edge-strong);
-  border-radius: var(--r-xl);
-  box-shadow: var(--shadow-2);
-  outline: none;
-}
-
-.drawer header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 10px;
-}
-
-.drawer h2 {
-  margin: 0;
-  font-size: 20px;
-  letter-spacing: -0.03em;
-}
-
-.drawer h3 {
-  margin: 0 0 8px;
-  color: var(--ink-2);
-  font-family: var(--font);
-  font-size: 14px;
-  font-weight: var(--w-medium);
-  letter-spacing: -0.01em;
-}
-
-.drawer-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  margin: 0 0 18px;
-  padding: 0;
-  list-style: none;
-}
-
-.drawer-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  min-height: 52px;
-  padding: 8px 4px;
-  border-top: 1px solid var(--edge);
-  border-radius: 0;
-  text-align: left;
-  color: var(--ink-2);
-  transition: background-color var(--dur-2) var(--ease-out), color var(--dur-2) var(--ease-out);
-}
-
-.drawer-item > span:nth-child(2) {
-  display: grid;
-  flex: 1;
-}
-
-.drawer-item strong {
-  color: var(--ink);
-  font-size: 14.5px;
-  font-weight: 550;
-}
-
-.drawer-item small {
-  color: var(--ink-3);
-  font-size: 14px;
-}
-
-.drawer-item:hover {
-  background: var(--accent-soft);
-  color: var(--ink);
-}
-
-.drawer-icon {
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  border: 1px solid var(--edge);
-  border-radius: var(--r-s);
-  background: transparent;
-  color: var(--ink);
-}
-
-/* The `size` prop on `Icon` loses to `.icon`'s width, so a row that should be
-   easier to see says it here. The gear is the densest path in the set and was
-   the one the reader could not find. */
-.drawer-item .icon {
-  width: 21px;
-  height: 21px;
-  stroke-width: 1.75;
-}
-
-/* Settings is one press away, at a size that can be seen. */
-.topbar-settings .icon {
-  width: 21px;
-  height: 21px;
-  stroke-width: 1.75;
-}
-
-/* The title and its buttons end above the scroll region, they never lie over
-   it: a head over the body is what hides the first card of a panel. It is a
-   sibling of the scroller for that reason — `sticky` here would have been inert
-   anyway, because the drawer itself does not scroll. */
-.drawer-head {
-  flex: none;
-  padding: 2px 0 10px;
-  border-bottom: 1px solid var(--edge);
-}
-
-/* The panel's own scroll region, named rather than found by position. While it
-   was `.drawer > div:last-child` any change to what the drawer renders — one
-   more element, another wrapper — silently took the scroll away, and
-   `.drawer { overflow: hidden }` then clipped the last card of every panel with
-   no way to reach it. */
-.drawer-body {
-  min-height: 0;
-  flex: 1;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  scrollbar-gutter: stable;
-}
-
 .setting {
   display: flex;
   align-items: center;
@@ -975,82 +656,6 @@
   gap: 12px;
   padding: 12px 0;
   border-top: 1px solid var(--edge);
-}
-
-/* ---- queue card ---- */
-
-.qc-head {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.qc-title {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 6px;
-  border-radius: var(--r-m);
-  text-align: left;
-}
-
-.qc-count {
-  color: var(--ink-3);
-  font-size: 12px;
-  white-space: nowrap;
-}
-
-.qc-list {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  margin: 0;
-  padding: 4px 0 0;
-  list-style: none;
-  overflow: hidden;
-}
-
-.qc-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.qc-main {
-  flex: 1;
-  min-width: 0;
-  display: grid;
-  gap: 5px;
-}
-
-.qc-name {
-  overflow: hidden;
-  font-size: 13px;
-  font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.qc-line {
-  color: var(--ink-3);
-  font-size: 12px;
-}
-
-.qc-row[data-state='done'] .qc-line {
-  color: var(--ok-text);
-}
-
-.qc-row[data-state='paused'] {
-  opacity: 0.65;
-}
-
-.qc-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 2px;
-  min-width: 58px;
 }
 
 .engine-line {
@@ -1078,189 +683,8 @@
   font-size: 12.5px;
 }
 
-/* ---- new chat and recent chats ---- */
-
-.rail-chats {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  min-height: 0;
-  margin-top: 14px;
-}
-
-.rail-chats h2 {
-  margin: 12px 0 6px;
-  padding: 6px 8px 0;
-  border-top: 1px solid var(--edge);
-  color: var(--ink-2);
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.rail-chats ul {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.rail-chats-note {
-  margin: 0 8px 6px;
-  color: var(--risk-text);
-  font-size: 13px;
-}
-
-.rail-chat {
-  display: flex;
-  align-items: center;
-  border-top: 1px solid var(--edge);
-  border-radius: 0;
-}
-
-.rail-chat:hover,
-.rail-chat:focus-within,
-.rail-chat[data-on='true'] {
-  background: var(--accent-soft);
-  box-shadow: inset 2px 0 0 var(--accent);
-}
-
-.rail-chat-main {
-  display: flex;
-  flex: 1;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  min-height: 36px;
-  padding: 8px 10px;
-  overflow: hidden;
-  color: var(--ink-2);
-  font-size: 13.5px;
-  text-align: left;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.rail-chat[data-on='true'] .rail-chat-main,
-.rail-chat-main:hover {
-  color: var(--ink);
-}
-
-.rail-chat-del {
-  flex: none;
-  opacity: 0;
-  margin-right: 2px;
-}
-
-.rail-chat:hover .rail-chat-del,
-.rail-chat:focus-within .rail-chat-del {
-  opacity: 1;
-}
-
-.rail-chat-ask {
-  display: flex;
-  flex: 1;
-  align-items: center;
-  gap: 2px;
-  padding: 4px 6px 4px 10px;
-  color: var(--ink-2);
-  font-size: 13px;
-}
-
-.rail-chat-ask > span {
-  flex: 1;
-}
-
-.rail-chat-ask button {
-  padding: 4px 8px;
-  border-radius: var(--r-m);
-  color: var(--accent-hi);
-}
-
-.rail-chat-ask button:first-of-type {
-  color: var(--risk-text);
-}
-
-.rail-chat-ask button:hover {
-  background: var(--panel);
-}
-
-/* ---- find, pin, rename ---- */
-
-.rail-search {
-  display: flex;
-  flex: none;
-  align-items: center;
-  gap: 6px;
-  height: 34px;
-  padding: 0 4px 0 9px;
-  border: 1px solid var(--edge);
-  border-radius: var(--r-m);
-  color: var(--ink-3);
-}
-
-.rail-search:focus-within {
-  border-color: var(--edge-strong);
-  color: var(--ink-2);
-}
-
-.rail-search input {
-  flex: 1;
-  min-width: 0;
-  background: transparent;
-  border: 0;
-  outline: 0;
-  color: var(--ink);
-  font-size: 13px;
-}
-
-.rail-chats-scroll {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-}
-
-.rail-chats-scroll h2:first-child {
-  margin-top: 8px;
-}
-
-.rail-chat-main > span {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.rail-chat-main .icon {
-  color: var(--accent-hi);
-}
-
-.rail-chat-acts {
-  display: flex;
-  flex: 1;
-  align-items: center;
-  justify-content: space-between;
-  padding: 2px 4px;
-}
-
 .icon-btn[data-on='true'] {
   color: var(--accent-hi);
-}
-
-.rail-chat-name {
-  flex: 1;
-  min-width: 0;
-  margin: 3px 4px;
-  padding: 5px 8px;
-  background: var(--ground);
-  border: 1px solid var(--accent);
-  border-radius: var(--r-m);
-  outline: 0;
-  color: var(--ink);
-  font-size: 13.5px;
-}
-
-.rail-chats-empty {
-  margin: 12px 10px;
-  color: var(--ink-3);
-  font-size: 13px;
 }
 
 .menu button {
@@ -1378,22 +802,12 @@
 }
 
 /* The More menu in sections: a small label over each, tighter rows. */
-.drawer-group + .drawer-group { margin-top: 10px; }
-
-.drawer .drawer-group-name {
-  margin: 0 0 4px;
-  padding: 0 4px;
-  color: var(--ink-3);
-  font-family: var(--font);
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.drawer-group .drawer-list { margin: 0; }
-.drawer-group .drawer-item { min-height: 44px; padding: 6px 6px; border-top: 0; border-radius: var(--r-s); }
-.drawer-group .drawer-item strong { font-size: 14px; }
-.drawer-group .drawer-item small { font-size: 12.5px; }
-.drawer-group .drawer-icon { width: 28px; height: 28px; }
-.drawer-group .drawer-item .icon { width: 16px; height: 16px; }
-
 .about-page { display: flex; flex-direction: column; gap: 16px; }
+
+/* A panel built for the drawer, shown as a page (ui/PanelPage.tsx). Its body is
+   the page's own column: the page scrolls it, so the body never scrolls by itself. */
+.panel-page .panel-body {
+  min-width: 0;
+  gap: 18px;
+  padding-bottom: 24px;
+}

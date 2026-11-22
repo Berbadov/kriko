@@ -1,6 +1,6 @@
 # Kriko
 
-[![version](https://img.shields.io/badge/version-0.3.14-1F3A63?style=flat-square&labelColor=0B1020)](https://github.com/Berbadov/kriko/releases/latest)
+[![version](https://img.shields.io/badge/version-0.4.0-1F3A63?style=flat-square&labelColor=0B1020)](https://github.com/Berbadov/kriko/releases/latest)
 [![license](https://img.shields.io/badge/license-MIT-1F3A63?style=flat-square&labelColor=0B1020)](LICENSE)
 [![stars](https://img.shields.io/github/stars/Berbadov/kriko?style=flat-square&labelColor=0B1020&color=1F3A63)](https://github.com/Berbadov/kriko/stargazers)
 [![platforms](https://img.shields.io/badge/Windows%20%C2%B7%20macOS%20%C2%B7%20Chrome%20%C2%B7%20Android-1F3A63?style=flat-square&labelColor=0B1020)](#install)
@@ -13,7 +13,7 @@ extension — and keeps the source beside every finding.
 Installed catalog lookups work offline. Research uses the agent or model you
 choose, and a paid provider bills your own account.
 
-**[Download the Windows installer](https://github.com/Berbadov/kriko/releases/latest/download/kriko-0.3.14-x86_64-setup.exe)** ·
+**[Download the Windows installer](https://github.com/Berbadov/kriko/releases/latest/download/kriko-0.4.0-x86_64-setup.exe)** ·
 [Browser extension](https://chromewebstore.google.com/detail/kriko/bdifnaggafjokndlpjgmlfappcoehdjb) ·
 [Website](https://kriko.cc) ·
 [Known problems by product](https://kriko.cc/problems/) (no app needed)
@@ -24,7 +24,14 @@ choose, and a paid provider bills your own account.
   <sub>The real panel, from a live run: every finding names the page it came from. <a href="https://kriko.cc/#film">Watch the 28-second film</a> · <a href="https://kriko.cc/guide/">How to use it, step by step</a></sub>
 </p>
 
-0.3.14 adds two catalogs — **gaming monitors** (17 models, 50 sourced claims)
+0.4.0 redraws the desktop app after the phone app. It has four palettes (dark,
+gray, paper and white) plus system, a labelled left rail instead of the More
+drawer, and one plain Settings screen with a search field. Procurement now
+reaches Ask, Product and Compare, not only the Procurement desk: committed cost
+per currency, quotes about to expire, lines at risk, and each quote's landed
+cost, delivery, warranty and risk. The browser extension takes the new palette
+as 0.5.1.
+0.3.14 adds two catalogs - **gaming monitors** (17 models, 50 sourced claims)
 and **condensing combi boilers** (12 series, 38) — grades every source a claim
 came from and records how well each catalog's claims are backed, and rebuilds
 the agent plane: OpenCode and Hermes run as resident workers, a signed-out or
@@ -83,10 +90,10 @@ repositories. See the [changelog](CHANGELOG.md) for the release scope.
 
 | Artifact | Use |
 |---|---|
-| `kriko-0.3.14-x86_64-setup.exe` | Per-user Windows installer; no administrator rights required. |
-| `kriko-0.3.14-win64-portable.zip` | Extract the whole archive and open `kriko.exe`. |
+| `kriko-0.4.0-x86_64-setup.exe` | Per-user Windows installer; no administrator rights required. |
+| `kriko-0.4.0-win64-portable.zip` | Extract the whole archive and open `kriko.exe`. |
 
-1. Open Kriko, choose an agent in **More → Agents** and press **Check connection**.
+1. Open Kriko, choose an agent in **Settings → Research → Agents** and press **Check connection**.
 2. Open **Catalogs → Find release catalogs** and install one, or import a
    `.kpack` file. Research also works with no catalog installed.
 3. Add [Kriko to Chrome, Edge or Brave](https://chromewebstore.google.com/detail/kriko/bdifnaggafjokndlpjgmlfappcoehdjb),
@@ -147,11 +154,12 @@ provider you chose.
 
 ## Build and verify
 
-Source work needs Python 3.13+, Node and a Rust toolchain for the native shell.
+Source work needs Python 3.13+, Bun 1.4.5 and a Rust toolchain for the native
+shell. Node 22 runs the JavaScript suites; Bun installs and builds them.
 
 ```bash
 tools/setup.sh
-cd kriko-ui && npm ci && cd ..
+cd kriko-ui && bun install --frozen-lockfile && cd ..
 tools/gate.sh
 ```
 

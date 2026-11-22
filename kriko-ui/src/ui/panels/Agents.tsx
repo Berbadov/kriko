@@ -1,8 +1,8 @@
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ReportButton } from '../ReportButton'
 import { Disclosure } from '../Disclosure'
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { AnimatePresence, motion } from 'motion/react'
-import { effortKey, modelKey, searchKey, usePrefsDoc, type AgentRow } from '../../engine/settings'
+import { ExternalLink } from '../ExternalLink'
+import { effortKey, modelKey, searchKey, type AgentRow, type PrefsDoc } from '../../engine/settings'
 import {
   IDLE,
   connectTarget,
@@ -29,41 +29,52 @@ import {
 } from '../../engine/agents'
 import { followJob } from '../../engine/jobs'
 import { useEngine } from '../../engine/Engine'
-import { usePrefs } from '../../prefs'
-import { ExternalLink } from '../ExternalLink'
-import { Icon } from '../Icon'
-import { Select } from '../controls'
+import { SelectField, Section, Setting, State } from './settingsParts'
 
-/** Who answers, and how each of them is wired to *this* store.
+/** Research's first section: who answers. The reader's choice is the first row,
+ *  and `Change` opens the list of agents in place, under it. Each agent is a row
+ *  with a state word and the words that can be pressed on it.
  *
- *  Two surfaces live here and they are not the same question. The dials above
- *  are the reader's arrangement — which agent answers by default, with which
- *  model, effort and search. Everything below the market is the engine's own
- *  agent-integration surface (`src/app/web/routers/agent.py`), which no window
- *  called at all until now: what this installation can run, where each harness
- *  reads its config from, whether the protocol on disk is the one this build
- *  would write, whether the advertised command actually starts, and the one
- *  press that installs a CLI it cannot find.
- *
- *  The rule under all of it: every row, state and reason drawn here is one the
- *  engine reported. Nothing on this screen is a list kept in the window, so
- *  nothing on it can go stale against the machine. */
-export function AgentsPanel(_: { onOpen?: (lookupId: string) => void }) {
-  const { motion: m } = usePrefs()
+ *  Two sources meet here. The reader's arrangement (the default agent, its model,
+ *  effort and web search) is the store's own `/api/prefs`, handed in as `doc`.
+ *  What this machine can run, and how each harness is wired to this store, is the
+ *  engine's market and harness reads. Every state word and reason drawn here is
+ *  one the engine reported; a row is never invented, and with no engine the
+ *  presses that would touch the machine are not offered. */
+
+export interface AgentsSectionProps {
+  doc: PrefsDoc
+  busy: boolean
+  save: (patch: Record<string, string>) => unknown
+  reload: (fresh?: boolean) => Promise<void>
+}
+
+/** One agent as a row: from the engine's market when it has answered, otherwise
+ *  from the store's own lists (usable, not installed, found but not usable). */
+interface AgentLine {
+  id: string
+  label: string
+  kind: string
+  state: string
+  detail: string
+  url: string
+  canInstall: boolean
+  usable: boolean
+}
+
+export function AgentsSection({ doc, busy, save, reload }: AgentsSectionProps) {
   const { mode } = useEngine()
-  const { doc, problem, busy, save, reload } = usePrefsDoc()
-  const [open, setOpen] = useState<string | null>(null)
+  const live = mode === 'live'
+  const [open, setOpen] = useState(false)
   const [market, setMarket] = useState<MarketDoc | null>(null)
   const [targets, setTargets] = useState<TargetsDoc | null>(null)
-  /** True until the first read settles, so the screen never draws "the engine
-   *  reported nothing" over a question it has not finished asking. */
-  const [reading, setReading] = useState(true)
+  /** True until the first read settles, so the list never shows "nothing" over a
+   *  question the engine has not finished answering. */
+  const [reading, setReading] = useState(false)
   const [surface, setSurface] = useState('')
   const [presses, setPresses] = useState<Record<string, Press>>({})
-  const [skill, setSkill] = useState<SkillDoc | null>(null)
-  const [skillPress, setSkillPress] = useState<Press>(IDLE)
-  const [verifyPress, setVerifyPress] = useState<Press>(IDLE)
   const [verified, setVerified] = useState<VerifyAnswer | null>(null)
+  const [protocol, setProtocol] = useState<SkillDoc | null>(null)
   const alive = useRef(true)
 
   useEffect(() => {
@@ -75,11 +86,15 @@ export function AgentsPanel(_: { onOpen?: (lookupId: string) => void }) {
 
   const put = (key: string, next: Press) => setPresses((now) => ({ ...now, [key]: next }))
 
-  /** The market and the harnesses, read together: they are two views of one
-   *  machine, and a row that arrived before its wiring would draw a state the
-   *  engine has already left. */
+  /** The market and the harnesses are two views of one machine, so they are read
+   *  together and drawn together. */
   const readSurface = useCallback(async () => {
-    if (mode !== 'live') return
+    if (mode !== 'live') {
+      setMarket(null)
+      setTargets(null)
+      setReading(false)
+      return
+    }
     setReading(true)
     setSurface('')
     try {
@@ -99,25 +114,23 @@ export function AgentsPanel(_: { onOpen?: (lookupId: string) => void }) {
     void readSurface()
   }, [readSurface])
 
-  /** The reader's own "the machine changed" press. `/api/agent-market` reads
-   *  what discovery already found, and only `prefs`' fresh read forgets it, so
-   *  a CLI installed outside Kriko would otherwise stay invisible behind a
-   *  button that looked like it checked. */
+  /** Looks at the machine again. The engine's market is a cached read until the
+   *  preferences are read fresh, so both happen. */
   const checkAgain = async () => {
     await reload(true)
     await readSurface()
   }
 
-  /** Install runs a vendor's own installer, so it is a job: the id comes back at
-   *  once and the log arrives as the job's own messages. */
-  const install = async (agent: MarketAgent) => {
+  /** Install runs a vendor's installer, so it is a job: the id comes back at once
+   *  and the log arrives as the job's own messages. */
+  const install = async (agent: AgentLine) => {
     const key = `install:${agent.id}`
     put(key, working('Starting the installer…'))
     try {
       const sent = await installAgent(agent.id)
       const ended = await followJob(
         sent.job_id,
-        (reading) => put(key, working(reading.message || 'Installing…')),
+        (step) => put(key, working(step.message || 'Installing…')),
         () => alive.current,
       )
       if (ended?.state !== 'succeeded') throw new Error(ended?.message || 'The install did not finish.')
@@ -128,8 +141,7 @@ export function AgentsPanel(_: { onOpen?: (lookupId: string) => void }) {
     }
   }
 
-  /** Connect writes one entry into the harness's own config. What the screen
-   *  then draws is read back from the engine, never assumed from the press. */
+  /** Set up writes one entry into the agent's own config, so it reads this store. */
   const connect = async (target: AgentTarget) => {
     const key = `connect:${target.id}`
     put(key, working('Writing the config…'))
@@ -140,165 +152,302 @@ export function AgentsPanel(_: { onOpen?: (lookupId: string) => void }) {
         row.state === 'connected'
           ? `${row.label} now reads this store.`
           : `${row.label} is ${wiringWords(row.state).toLowerCase()}.`,
-        row.skill ? `Protocol written to ${row.skill}` : '',
+        row.skill ? `Instructions written to ${row.skill}` : '',
       ))
     } catch (error) {
       put(key, failed(error, 'The config could not be written.'))
     }
   }
 
-  const refreshSkill = async (target: AgentTarget) => {
-    const key = `skill:${target.id}`
-    put(key, working('Writing the protocol…'))
+  const writeInstructions = async (target: AgentTarget) => {
+    const key = 'instructions'
+    put(key, working('Writing the instructions…'))
     try {
       const answer = await rewriteTargetSkill(target.id)
       setTargets((now) => (now ? withSkill(now, target.id, answer.status) : now))
-      put(key, finished(answer.skill ? `Protocol written to ${answer.skill}.` : 'The engine wrote nothing for this harness.'))
+      put(key, finished(answer.skill ? `Instructions written to ${answer.skill}.` : 'Nothing was written for this agent.'))
     } catch (error) {
-      put(key, failed(error, 'The protocol could not be written.'))
+      put(key, failed(error, 'The instructions could not be written.'))
     }
   }
 
-  const readProtocol = async () => {
-    setSkillPress(working('Rendering the protocol…'))
+  const readInstructions = async () => {
+    put('read', working('Reading the instructions…'))
     try {
-      const protocol = await readSkill()
-      setSkill(protocol)
-      setSkillPress(finished(`${protocol.name} · ${protocol.steps.length} step(s)`))
+      const found = await readSkill()
+      setProtocol(found)
+      put('read', finished(`${found.name} · ${found.steps.length} step(s)`))
     } catch (error) {
-      setSkillPress(failed(error, 'The protocol could not be read.'))
+      put('read', failed(error, 'The instructions could not be read.'))
     }
   }
 
-  /** A verdict, not a request: the engine answers 200 either way, and `ok` is
-   *  what the reader needs. The command is the one this installation advertises
-   *  — nothing here can name one. */
+  /** A verdict, not a request: the engine answers 200 either way, and `ok` is what
+   *  the reader needs. The command is the one this installation advertises. */
   const verify = async () => {
-    setVerifyPress(working('Starting the advertised command…'))
+    put('verify', working('Starting the command Kriko gives agents…'))
     try {
       const answer = await verifyAgent()
       setVerified(answer)
-      setVerifyPress(answer.ok
+      put('verify', answer.ok
         ? finished(`${answer.server || 'The server'} answered with ${(answer.tools || []).length} tool(s).`)
         : { phase: 'failed', say: answer.detail || 'The command did not answer.', detail: '' })
     } catch (error) {
-      setVerifyPress(failed(error, 'The verification could not run.'))
+      put('verify', failed(error, 'The check could not run.'))
     }
   }
 
+  const chosenId = doc.chosen.preferred_harness || doc.effective.harness
+  const lines = linesOf(doc, market)
+  const chosen = lines.find((line) => line.id === chosenId)
+  const chosenName = chosen?.label || doc.harnesses.find((one) => one.id === chosenId)?.label || chosenId
+  const chosenAgent = doc.harnesses.find((one) => one.id === chosenId)
+  const chosenTarget = targets?.targets.find((one) => one.id === chosenId)
+  const ready = doc.effective.harness_ready
+  const readyNote = ready
+    ? 'The agent that answers chat and runs research. Change it to pick another.'
+    : doc.effective.harness_note || 'The agent that answers is not ready. Pick another, or set this one up.'
+
   return (
-    <div className="panel-body">
-      {!doc && problem && <p className="error-note" role="alert">Your agents could not be read. {problem}</p>}
-      {!doc && !problem && <p className="panel-note">Reading the agents…</p>}
-
-      {doc && (
-        <>
-          <p className="panel-note" data-ok={doc.effective.harness_ready}>
-            {doc.effective.harness_ready ? 'The default agent is ready.' : doc.effective.harness_note || 'The default agent is not ready.'}
-          </p>
-
-          <ul className="agent-list" role="radiogroup" aria-label="Default agent">
-            {doc.harnesses.map((agent) => (
-              <AgentItem
-                key={agent.id}
-                agent={agent}
-                isDefault={agent.id === (doc.chosen.preferred_harness || doc.effective.harness)}
-                open={open === agent.id}
-                onToggle={() => setOpen(open === agent.id ? null : agent.id)}
-                onDefault={() => void save({ preferred_harness: agent.id })}
-                onChange={(patch) => void save(patch)}
-                enter={m.tx.soft}
-              />
-            ))}
-          </ul>
-
-          {doc.unusable.length > 0 && (
-            <section className="panel-group">
-              <h3>Found, but not usable</h3>
-              <ul className="plain-list">
-                {doc.unusable.map((row) => (
-                  <li key={row.id}>
-                    <strong>{row.label}</strong>
-                    <small>{row.why}</small>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-
-          {doc.missing.length > 0 && (
-            <section className="panel-group">
-              <h3>Not installed</h3>
-              <ul className="plain-list">
-                {doc.missing.map((row) => (
-                  <li key={row.id}>
-                    <strong>{row.label}</strong>
-                    {row.install_hint && <small>{row.install_hint}</small>}
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-
-          <button className="btn ghost" onClick={() => void reload(true)} disabled={busy}>
-            {busy ? 'Looking…' : 'Look for models again'}
+    <Section title="Agent">
+      <Setting
+        label="Answering agent"
+        note={readyNote}
+        state={<State tone={ready ? 'ok' : 'warn'}>{ready ? 'Ready' : 'Not ready'}</State>}
+        value={chosenName}
+        control={
+          <button type="button" className="k-btn" data-size="sm" aria-expanded={open} onClick={() => setOpen(!open)}>
+            {open ? 'Close' : 'Change'}
           </button>
-        </>
-      )}
+        }
+      />
 
-      {mode !== 'live' ? (
-        <section className="panel-group">
-          <h3>The agents on this machine</h3>
-          <p className="panel-note">
-            {mode === 'checking'
-              ? 'Looking for the engine…'
-              : 'No engine is connected, so it has reported no market and no harness. Nothing is drawn here that the engine did not say.'}
-          </p>
-        </section>
-      ) : (
+      {open && (
         <>
-          <section className="panel-group">
-            <h3>The market</h3>
-            <p className="panel-note">Every way of answering a question this installation can run, and what the engine found behind it.</p>
-            {surface && <p className="error-note" role="alert">{surface} <ReportButton note={surface} /></p>}
-            {market
-              ? <MarketRows doc={market} presses={presses} onInstall={(agent) => void install(agent)} />
-              : !surface && <p className="panel-note">{reading ? 'Reading the market…' : 'The engine reported no market.'}</p>}
-            <button className="btn ghost" disabled={reading || busy} onClick={() => void checkAgain()}>
-              {reading ? 'Looking…' : 'Check this machine again'}
-            </button>
-          </section>
-
-          <section className="panel-group">
-            <h3>Connected agents</h3>
-            <p className="panel-note">Where this store is written for each harness the engine knows. Connect merges one entry into the harness's own config and leaves everything else in it alone.</p>
-            {targets
-              ? <TargetsRows doc={targets} presses={presses} onConnect={(one) => void connect(one)} onSkill={(one) => void refreshSkill(one)} />
-              : !surface && <p className="panel-note">{reading ? 'Reading the harnesses…' : 'The engine reported no harness.'}</p>}
-          </section>
-
-          <section className="panel-group">
-            <h3>The protocol</h3>
-            <p className="panel-note">The document an agent is given: what it is asked to do, and where each answer must come from. It is rendered from the catalogs installed right now.</p>
-            <button className="btn" disabled={skillPress.phase === 'working'} onClick={() => void readProtocol()}>
-              {skillPress.phase === 'working' ? 'Rendering…' : 'Read the protocol'}
-            </button>
-            <PressNote press={skillPress} />
-            {skill && <SkillReport doc={skill} />}
-          </section>
-
-          <section className="panel-group">
-            <h3>Does it actually run?</h3>
-            <p className="panel-note">Starts the command this installation advertises, completes an MCP handshake with it and asks it for its tools. Only that command is ever started.</p>
-            <button className="btn" disabled={verifyPress.phase === 'working'} onClick={() => void verify()}>
-              {verifyPress.phase === 'working' ? 'Verifying…' : 'Verify the connection'}
-            </button>
-            <PressNote press={verifyPress} />
-            {verified && <VerifyReport answer={verified} />}
-          </section>
+          {lines.length === 0 && !reading && <p className="research-agent-note">No agent was reported, so none is listed.</p>}
+          {lines.map((line) => (
+            <AgentLineRow
+              key={line.id}
+              line={line}
+              chosen={line.id === chosenId}
+              live={live}
+              target={targets?.targets.find((one) => one.id === line.id)}
+              presses={presses}
+              verified={line.id === chosenId ? verified : null}
+              onUse={() => void save({ preferred_harness: line.id })}
+              onInstall={() => void install(line)}
+              onSetUp={(target) => void connect(target)}
+              onVerify={() => void verify()}
+            />
+          ))}
+          <div className="k-row research-agent-foot">
+            <span className="k-row-main">
+              <span className="k-row-note">
+                {surface || (reading ? 'Reading the agents…' : live ? '' : mode === 'checking' ? 'Looking for the engine…' : 'No engine is connected, so Install, Verify and Set up are off.')}
+              </span>
+              {surface && <ReportButton note={surface} />}
+            </span>
+            <span className="k-row-control">
+              {live && (
+                <button type="button" className="k-btn" data-size="sm" disabled={reading || busy} onClick={() => void checkAgain()}>
+                  {reading ? 'Looking…' : 'Check again'}
+                </button>
+              )}
+            </span>
+          </div>
         </>
       )}
-    </div>
+
+      {chosenAgent?.model_freeform && (
+        <FreeformModel agent={chosenAgent} onSave={(patch) => void save(patch)} />
+      )}
+      {chosenAgent && !chosenAgent.model_freeform && (
+        <Setting
+          label="Model"
+          note={chosenAgent.llms_note || 'The model this agent answers with. Own default leaves the choice to the agent.'}
+          control={
+            <SelectField
+              label={`${chosenAgent.label} model`}
+              value={chosenAgent.llm}
+              options={[{ value: '', label: 'Own default' }, ...withCurrent(chosenAgent.llms, chosenAgent.llm).map((id) => ({ value: id, label: id }))]}
+              onChange={(value) => void save({ [modelKey(chosenAgent)]: value })}
+            />
+          }
+        />
+      )}
+      {chosenAgent && chosenAgent.efforts.length > 0 && (
+        <Setting
+          label="Effort"
+          note="How hard the agent works on each question. A higher effort takes longer and uses more of its allowance."
+          control={
+            <SelectField
+              label={`${chosenAgent.label} effort`}
+              value={chosenAgent.effort}
+              options={[{ value: '', label: 'Own default' }, ...withCurrent(chosenAgent.efforts, chosenAgent.effort).map((id) => ({ value: id, label: id }))]}
+              onChange={(value) => void save({ [effortKey(chosenAgent)]: value })}
+            />
+          }
+        />
+      )}
+      {chosenAgent?.search_choices && chosenAgent.search_choices.length > 0 && (
+        <Setting
+          label="Web search"
+          note={
+            chosenAgent.search === 'kriko'
+              ? 'Kriko searches and reads the pages, so every quote is checked against a page Kriko fetched.'
+              : 'The agent searches and opens pages with its own tools.'
+          }
+          control={
+            <SelectField
+              label={`${chosenAgent.label} web search`}
+              value={chosenAgent.search || 'own'}
+              options={chosenAgent.search_choices.map((one) => ({ value: one.id, label: one.label }))}
+              onChange={(value) => void save({ [searchKey(chosenAgent)]: value })}
+            />
+          }
+        />
+      )}
+
+      <Setting
+        label="Instructions for the agent"
+        note="The instructions it is given: what it must ask for, and where each answer must come from. Written from the catalogs installed now."
+        control={
+          <span className="research-agent-buttons">
+            <button type="button" className="k-btn" data-size="sm" disabled={!live} onClick={() => void readInstructions()}>
+              Read them
+            </button>
+            {chosenTarget?.skill.supported && (
+              <button type="button" className="k-btn" data-size="sm" disabled={!live || busy} onClick={() => void writeInstructions(chosenTarget)}>
+                Write them
+              </button>
+            )}
+          </span>
+        }
+      />
+      <div className="research-agent-extra">
+        {chosenTarget && <p className="research-agent-note">{skillWords(chosenTarget.skill)}.</p>}
+        <PressNote press={presses.read ?? IDLE} />
+        <PressNote press={presses.instructions ?? IDLE} />
+        {protocol && <SkillReport doc={protocol} />}
+      </div>
+    </Section>
+  )
+}
+
+/** One agent as a row: its name, its state as a word, its own note, and the
+ *  presses that can be made on it. Verify and its report belong to the agent that
+ *  answers, since that is the command the window checks. */
+function AgentLineRow({
+  line,
+  chosen,
+  live,
+  target,
+  presses,
+  verified,
+  onUse,
+  onInstall,
+  onSetUp,
+  onVerify,
+}: {
+  line: AgentLine
+  chosen: boolean
+  live: boolean
+  target?: AgentTarget
+  presses: Record<string, Press>
+  verified: VerifyAnswer | null
+  onUse: () => void
+  onInstall: () => void
+  onSetUp: (target: AgentTarget) => void
+  onVerify: () => void
+}) {
+  const install = presses[`install:${line.id}`] ?? IDLE
+  const connect = presses[`connect:${line.id}`] ?? IDLE
+  const verify = presses.verify ?? IDLE
+  const standing = standingOf(line)
+  const note = [kindWords(line.kind), line.detail].filter(Boolean).join(' · ')
+  return (
+    <>
+      <div className="k-row research-agent" data-state={line.state} data-chosen={chosen || undefined}>
+        <span className="k-row-main">
+          <span className="k-row-title">
+            {line.label}
+            {standing.word && <State tone={standing.tone}>{standing.word}</State>}
+          </span>
+          {note && <span className="k-row-note">{chosen ? `Answers now. ${note}` : note}</span>}
+          <PressNote press={install} />
+          {target && live && <PressNote press={connect} />}
+          {chosen && <PressNote press={verify} />}
+        </span>
+        <span className="k-row-control research-agent-buttons">
+          {!chosen && line.usable && (
+            <button type="button" className="k-btn" data-size="sm" onClick={onUse}>
+              Use
+            </button>
+          )}
+          {chosen && live && (
+            <button type="button" className="k-btn" data-size="sm" disabled={verify.phase === 'working'} onClick={onVerify}>
+              {verify.phase === 'working' ? 'Verifying…' : 'Verify'}
+            </button>
+          )}
+          {live && line.canInstall && line.state !== 'ready' && (
+            <button type="button" className="k-btn" data-size="sm" disabled={install.phase === 'working'} onClick={onInstall}>
+              {install.phase === 'working' ? 'Installing…' : 'Install'}
+            </button>
+          )}
+          {live && target && (
+            <button type="button" className="k-btn" data-size="sm" disabled={connect.phase === 'working'} onClick={() => onSetUp(target)}>
+              {connect.phase === 'working' ? 'Setting up…' : target.state === 'connected' ? 'Set up again' : 'Set up'}
+            </button>
+          )}
+          {line.url && (
+            <ExternalLink className="k-btn" data-size="sm" href={line.url}>
+              Get it
+            </ExternalLink>
+          )}
+        </span>
+      </div>
+      {chosen && verified && (
+        <div className="research-agent-extra">
+          <VerifyReport answer={verified} />
+        </div>
+      )}
+    </>
+  )
+}
+
+/** A model name typed by hand, for an endpoint that takes any name. */
+function FreeformModel({ agent, onSave }: { agent: AgentRow; onSave: (patch: Record<string, string>) => void }) {
+  const [draft, setDraft] = useState(agent.llm)
+  const [seen, setSeen] = useState(agent.llm)
+  if (agent.llm !== seen) {
+    setSeen(agent.llm)
+    setDraft(agent.llm)
+  }
+  return (
+    <Setting
+      label="Model"
+      note={agent.llm_hint || 'Model name accepted by this endpoint.'}
+      stack
+      control={
+        <input
+          className="k-input"
+          type="text"
+          autoComplete="off"
+          spellCheck={false}
+          aria-label={`${agent.label} model`}
+          placeholder="gpt-4o-mini or provider model ID"
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          onBlur={() => {
+            const next = draft.trim()
+            if (next !== agent.llm) onSave({ [modelKey(agent)]: next })
+          }}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') event.currentTarget.blur()
+          }}
+        />
+      }
+    />
   )
 }
 
@@ -307,119 +456,19 @@ export function AgentsPanel(_: { onOpen?: (lookupId: string) => void }) {
 export function PressNote({ press }: { press: Press }) {
   if (press.phase === 'idle' || !press.say) return null
   return (
-    <p
-      className="press"
-      data-state={press.phase}
-      role={press.phase === 'failed' ? 'alert' : 'status'}
-    >
+    <p className="press" data-state={press.phase} role={press.phase === 'failed' ? 'alert' : 'status'}>
       {press.say}
       {press.detail && <small className="panel-path">{press.detail}</small>}
     </p>
   )
 }
 
-/** The market as the engine reported it. Exported so the test can render it
- *  over a response it wrote, the way `KeysGroup` is in `Settings.tsx`. */
-export function MarketRows({
-  doc,
-  presses,
-  onInstall,
-}: {
-  doc: MarketDoc
-  presses: Record<string, Press>
-  onInstall: (agent: MarketAgent) => void
-}) {
-  if (doc.agents.length === 0) {
-    return <p className="panel-note">The engine reported no way to answer on this machine. Nothing was found, so nothing is listed.</p>
-  }
-  return (
-    <ul className="plain-list">
-      {doc.agents.map((agent) => {
-        const press = presses[`install:${agent.id}`] ?? IDLE
-        const meta = [kindWords(agent.kind), standingWords(agent.state), agent.detail].filter(Boolean).join(' · ')
-        return (
-          <li key={agent.id} data-chosen={agent.chosen}>
-            <strong>
-              {agent.label}
-              {agent.chosen && <span className="tag">Default</span>}
-            </strong>
-            <small>{meta}</small>
-            {agent.where && <small className="panel-path">{agent.where}</small>}
-            {agent.action && <small>Next: {agent.action}</small>}
-            <div className="card-actions">
-              {agent.can_install && (
-                <button className="btn" disabled={press.phase === 'working'} onClick={() => onInstall(agent)}>
-                  {press.phase === 'working' ? 'Installing…' : 'Install'}
-                </button>
-              )}
-              {agent.url && <ExternalLink className="btn" href={agent.url}>Get it</ExternalLink>}
-            </div>
-            <PressNote press={press} />
-          </li>
-        )
-      })}
-    </ul>
-  )
-}
-
-/** The harnesses the engine knows, and the two things it can do for each. */
-export function TargetsRows({
-  doc,
-  presses,
-  onConnect,
-  onSkill,
-}: {
-  doc: TargetsDoc
-  presses: Record<string, Press>
-  onConnect: (target: AgentTarget) => void
-  onSkill: (target: AgentTarget) => void
-}) {
-  if (doc.targets.length === 0) {
-    return <p className="panel-note">The engine reported no harness on this machine. Nothing is wired, and nothing is listed.</p>
-  }
-  return (
-    <>
-      <p className="panel-note">The engine serves this store as <code>{doc.server_name}</code>.</p>
-      <p className="panel-path">{doc.store}</p>
-      <ul className="plain-list">
-        {doc.targets.map((target) => {
-          const connect = presses[`connect:${target.id}`] ?? IDLE
-          const skill = presses[`skill:${target.id}`] ?? IDLE
-          const busy = connect.phase === 'working' || skill.phase === 'working'
-          return (
-            <li key={target.id} data-state={target.state}>
-              <strong>{target.label}</strong>
-              <small>{wiringWords(target.state)}{target.detail ? ` · ${target.detail}` : ''}</small>
-              <small className="panel-path">{target.path}</small>
-              <small>{skillWords(target.skill)}</small>
-              <div className="card-actions">
-                <button className="btn" disabled={busy} onClick={() => onConnect(target)}>
-                  {connect.phase === 'working' ? 'Connecting…' : target.state === 'connected' ? 'Write it again' : 'Connect'}
-                </button>
-                <button
-                  className="btn ghost"
-                  disabled={busy || !target.skill.supported}
-                  onClick={() => onSkill(target)}
-                >
-                  {skill.phase === 'working' ? 'Writing…' : 'Write the protocol'}
-                </button>
-              </div>
-              <PressNote press={connect} />
-              <PressNote press={skill} />
-            </li>
-          )
-        })}
-      </ul>
-    </>
-  )
-}
-
 /** The handshake as the engine broke it down: one state per step, and the log
- *  behind a summary for the reader who asks (`agentconfig.handshake`). */
+ *  behind a summary for the reader who asks. */
 export function VerifyReport({ answer }: { answer: VerifyAnswer }) {
   return (
     <div className="press-report" data-state={answer.ok ? 'done' : 'failed'}>
-      <p className="panel-note" data-ok={answer.ok}>
+      <p className="research-agent-note" data-ok={answer.ok}>
         {answer.ok ? `${answer.server || 'The server'} answered.` : answer.detail || 'The command did not answer.'}
       </p>
       <ul className="plain-list">
@@ -431,7 +480,7 @@ export function VerifyReport({ answer }: { answer: VerifyAnswer }) {
         ))}
       </ul>
       {answer.ok && (answer.tools?.length ?? 0) > 0 && (
-        <p className="panel-note">{answer.tools?.length} tool(s): {(answer.tools ?? []).join(', ')}</p>
+        <p className="research-agent-note">{answer.tools?.length} tool(s): {(answer.tools ?? []).join(', ')}</p>
       )}
       {answer.log && (
         <Disclosure title="Show the log">
@@ -442,11 +491,11 @@ export function VerifyReport({ answer }: { answer: VerifyAnswer }) {
   )
 }
 
-/** The protocol, as the engine renders it for this store. */
+/** The instructions as the engine renders them for this store. */
 export function SkillReport({ doc }: { doc: SkillDoc }) {
   return (
     <div className="press-report">
-      <p className="panel-note">{doc.name} · {doc.steps.length} step(s)</p>
+      <p className="research-agent-note">{doc.name} · {doc.steps.length} step(s)</p>
       {doc.steps.length > 0 && (
         <ul className="plain-list">
           {doc.steps.map((step) => (
@@ -463,148 +512,60 @@ export function SkillReport({ doc }: { doc: SkillDoc }) {
               <pre className="press-log">{doc.body}</pre>
             </Disclosure>
           )
-        : <p className="panel-note">The engine rendered no document.</p>}
+        : <p className="research-agent-note">The engine rendered no document.</p>}
     </div>
   )
 }
 
-/** What kind of thing a market row is, in the reader's words. The fact under
- *  them is `agent._kind`'s; this screen owns only the sentence. */
+/** The rows: the engine's market when it has answered, otherwise the store's own
+ *  lists. Each agent appears once. */
+function linesOf(doc: PrefsDoc, market: MarketDoc | null): AgentLine[] {
+  const usable = new Set(doc.harnesses.map((one) => one.id))
+  if (market) {
+    return market.agents.map((agent: MarketAgent) => ({
+      id: agent.id,
+      label: agent.label,
+      kind: agent.kind,
+      state: agent.state,
+      detail: agent.detail || agent.where,
+      url: agent.url,
+      canInstall: agent.can_install,
+      usable: usable.has(agent.id) || agent.state === 'ready',
+    }))
+  }
+  const seen = new Set<string>()
+  const lines: AgentLine[] = []
+  const add = (line: AgentLine) => {
+    if (seen.has(line.id)) return
+    seen.add(line.id)
+    lines.push(line)
+  }
+  for (const one of doc.harnesses) {
+    add({ id: one.id, label: one.label, kind: one.local ? 'local' : 'cli', state: 'ready', detail: one.path ?? '', url: '', canInstall: false, usable: true })
+  }
+  for (const one of doc.unusable) {
+    add({ id: one.id, label: one.label, kind: '', state: 'needs_setup', detail: one.why, url: '', canInstall: false, usable: false })
+  }
+  for (const one of doc.missing) {
+    add({ id: one.id, label: one.label, kind: '', state: 'not_installed', detail: one.install_hint ?? '', url: '', canInstall: false, usable: false })
+  }
+  return lines
+}
+
+/** The word and tone of a state, in this screen's words. The engine's state is
+ *  the input; a keyed agent that is not set up is one that needs a key. */
+function standingOf(line: AgentLine): { word: string; tone?: 'ok' | 'warn' } {
+  if (line.state === 'ready') return { word: 'Ready', tone: 'ok' }
+  if (line.state === 'needs_setup') return { word: line.kind === 'api' ? 'Needs a key' : 'Needs setup', tone: 'warn' }
+  if (line.state === 'not_installed') return { word: 'Not installed' }
+  return { word: '' }
+}
+
 function kindWords(kind: string): string {
   if (kind === 'local') return 'A model on this machine'
   if (kind === 'api') return 'A keyed API agent'
-  return 'A command-line agent'
+  if (kind === 'cli') return 'A command-line agent'
+  return ''
 }
 
-function standingWords(state: string): string {
-  if (state === 'ready') return 'Ready'
-  if (state === 'needs_setup') return 'Needs setup'
-  if (state === 'not_installed') return 'Not installed'
-  return 'The engine reported no state'
-}
-
-function AgentItem({
-  agent,
-  isDefault,
-  open,
-  onToggle,
-  onDefault,
-  onChange,
-  enter,
-}: {
-  agent: AgentRow
-  isDefault: boolean
-  open: boolean
-  onToggle: () => void
-  onDefault: () => void
-  onChange: (patch: Record<string, string>) => void
-  enter: object
-}) {
-  const withCurrent = (list: string[], current: string) => (current && !list.includes(current) ? [current, ...list] : list)
-  const models = withCurrent(agent.llms, agent.llm)
-  const efforts = withCurrent(agent.efforts, agent.effort)
-  const summary = [agent.llm || 'Own default', agent.effort, agent.search === 'kriko' ? "Kriko's search" : ''].filter(Boolean).join(' · ')
-
-  return (
-    <li className="agent" data-open={open} data-default={isDefault}>
-      <div className="agent-head">
-        <button className="radio" role="radio" aria-checked={isDefault} aria-label={`Use ${agent.label} by default`} onClick={onDefault}>
-          <i />
-        </button>
-        <button className="agent-main" onClick={onToggle} aria-expanded={open}>
-          <span>
-            <strong>{agent.label}</strong>
-            <small>{summary}</small>
-          </span>
-          {isDefault && <span className="tag">Default</span>}
-          <Icon name="chevron" size={15} />
-        </button>
-      </div>
-      <AnimatePresence initial={false}>
-        {open && (
-          <motion.div
-            className="agent-set"
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={enter}
-          >
-            {agent.model_freeform ? (
-              <FreeformModel agent={agent} onChange={onChange} />
-            ) : (
-              <div className="setting">
-                <span>Model</span>
-                <Select
-                  label={`${agent.label} model`}
-                  value={agent.llm}
-                  options={[{ value: '', label: 'Own default' }, ...models.map((id) => ({ value: id, label: id }))]}
-                  onChange={(value) => onChange({ [modelKey(agent)]: value })}
-                />
-              </div>
-            )}
-            {efforts.length > 0 && (
-              <div className="setting">
-                <span>Effort</span>
-                <Select
-                  label={`${agent.label} effort`}
-                  value={agent.effort}
-                  options={[{ value: '', label: 'Own default' }, ...efforts.map((id) => ({ value: id, label: id }))]}
-                  onChange={(value) => onChange({ [effortKey(agent)]: value })}
-                />
-              </div>
-            )}
-            {agent.search_choices && agent.search_choices.length > 0 && (
-              <div className="setting">
-                <span>
-                  Web search
-                  <small>
-                    {agent.search === 'kriko'
-                      ? 'Kriko searches and reads the pages, so every quote is checked against a page Kriko fetched.'
-                      : 'The agent searches and opens pages with its own tools.'}
-                  </small>
-                </span>
-                <Select
-                  label={`${agent.label} web search`}
-                  value={agent.search || 'own'}
-                  options={agent.search_choices.map((one) => ({ value: one.id, label: one.label }))}
-                  onChange={(value) => onChange({ [searchKey(agent)]: value })}
-                />
-              </div>
-            )}
-            {agent.path && <small className="panel-path">{agent.path}</small>}
-            {agent.llms_note && <small className="panel-path">{agent.llms_note}</small>}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </li>
-  )
-}
-
-function FreeformModel({ agent, onChange }: { agent: AgentRow; onChange: (patch: Record<string, string>) => void }) {
-  const [draft, setDraft] = useState(agent.llm)
-  useEffect(() => setDraft(agent.llm), [agent.llm])
-  return (
-    <div className="setting">
-      <span>
-        Model
-        <small>{agent.llm_hint || 'Model name accepted by this endpoint.'}</small>
-      </span>
-      <input
-        type="text"
-        autoComplete="off"
-        spellCheck={false}
-        aria-label={`${agent.label} model`}
-        placeholder="gpt-4o-mini or provider model ID"
-        value={draft}
-        onChange={(event) => setDraft(event.target.value)}
-        onBlur={() => {
-          const next = draft.trim()
-          if (next !== agent.llm) onChange({ [modelKey(agent)]: next })
-        }}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter') event.currentTarget.blur()
-        }}
-      />
-    </div>
-  )
-}
+const withCurrent = (list: string[], current: string) => (current && !list.includes(current) ? [current, ...list] : list)

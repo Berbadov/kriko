@@ -588,29 +588,6 @@
   font-size: 13px;
 }
 
-/* The undo line, right under the list it applies to. A quiet band rather than
-   a toast: it belongs to the panel, it stays until it is used or dismissed, and
-   nothing overlays the reader's list to say so. */
-.past-undo {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin: 6px 0 10px;
-  padding: 8px 10px;
-  border-radius: var(--r-m);
-  background: var(--panel-2);
-  border: 1px solid var(--edge);
-  color: var(--ink-2);
-  font-size: 13px;
-}
-
-.past-undo .link {
-  color: var(--accent);
-  text-decoration: underline;
-  padding: 0;
-}
-
 .past-ask button {
   padding: 4px 9px;
   border-radius: var(--r-m);
@@ -977,60 +954,6 @@
   outline-offset: 1px;
 }
 
-.need-row {
-  display: grid;
-  grid-template-columns: 1fr 90px;
-  gap: 8px;
-}
-
-.need-priorities {
-  display: grid;
-  gap: 4px;
-  margin: 10px 0;
-}
-
-.need-weight {
-  display: grid;
-  grid-template-columns: 96px 1fr 18px;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-}
-
-.buy-row,
-.buy-due {
-  display: grid;
-  gap: 2px;
-  padding: 8px 0;
-  border-top: 1px solid var(--edge);
-}
-
-.buy-row small,
-.buy-due small {
-  color: var(--ink-3);
-  font-size: 12px;
-}
-
-.buy-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 6px;
-}
-
-.watch-alerts {
-  margin: 0 0 8px;
-  padding: 8px 12px;
-  border: 1px solid var(--accent);
-  border-left-width: 2px;
-  border-radius: 0;
-  background: var(--accent-soft);
-}
-
-.watch-alerts p {
-  margin: 0 0 4px;
-}
-
 /* ---- decide, on the compare screen ---- */
 
 .decide {
@@ -1325,31 +1248,6 @@
   white-space: normal;
   text-overflow: clip;
   overflow-wrap: anywhere;
-}
-
-/* A run's undo: quiet until it is pressed, then the confirm wraps above its
-   two buttons rather than squeezing them off the row. */
-.run-undo {
-  justify-self: start;
-  padding: 0;
-  color: var(--ink-3);
-  font-size: 12.5px;
-}
-
-.run-undo:hover {
-  color: var(--risk-text);
-  text-decoration: underline;
-}
-
-.run-ask {
-  flex-wrap: wrap;
-  align-items: flex-start;
-  padding-right: 0;
-}
-
-.run-ask > span {
-  flex: 1 1 100%;
-  line-height: 1.45;
 }
 
 .report-text {

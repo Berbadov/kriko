@@ -55,7 +55,7 @@
     powershell -ExecutionPolicy Bypass -File kriko-ui\package.ps1
 
 .NOTES
-    Needs on PATH: a Rust toolchain (MSVC) and Node.js with npm. The first
+    Needs on PATH: a Rust toolchain (MSVC) and Bun. The first
     build downloads the NSIS tools that Tauri uses to make the installer.
 
     ASCII only, on purpose: Windows PowerShell 5.1 decodes a BOM-less script
@@ -159,7 +159,7 @@ try {
         throw "$Python is not on PATH. See the .NOTES block in this script."
     }
 
-    foreach ($tool in @("rustc", "cargo", "node", "npm")) {
+    foreach ($tool in @("rustc", "cargo", "bun")) {
         if (-not (Get-Command $tool -ErrorAction SilentlyContinue)) {
             throw "$tool is not on PATH. See the .NOTES block in this script."
         }
@@ -168,7 +168,7 @@ try {
     & $Python --version
     Assert-LastExitCode "python --version"
     rustc --version
-    node --version
+    bun --version
 
     # The target triple names the staged programs, and it is the one the
     # compiler will build for, so it is read from the compiler.
@@ -299,8 +299,8 @@ try {
     Step "Install the web interface's packages"
     Push-Location $ui
     try {
-        npm ci
-        Assert-LastExitCode "npm ci"
+        bun install --frozen-lockfile
+        Assert-LastExitCode "bun install"
     } finally {
         Pop-Location
     }
@@ -320,7 +320,7 @@ try {
     Step "Build the app and the installer"
     Push-Location $ui
     try {
-        npx --no-install tauri build --config src-tauri/tauri.bundle.conf.json -- --locked
+        bun run bundle
         Assert-LastExitCode "tauri build"
     } finally {
         Pop-Location

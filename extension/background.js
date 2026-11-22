@@ -346,7 +346,7 @@ async function notify(tab, text) {
         box.style.cssText =
           "position:fixed;z-index:2147483647;right:16px;bottom:16px;max-width:320px;" +
           "padding:10px 12px;border-radius:10px;font:13px/1.45 system-ui,'Segoe UI',sans-serif;" +
-          "background:#15171a;color:#ededea;border:1px solid rgba(237,237,234,.18)";
+          "background:#10131a;color:#f6f7fa;border:1px solid rgba(255,255,255,.18)";
         document.documentElement.appendChild(box);
         setTimeout(() => box.remove(), 6000);
       },
@@ -1796,7 +1796,7 @@ async function _updateBadgeForResult(result, tabId) {
 
   let badgeText = "";
   let badgeColor = "#5b6472";
-  let badgeInk = "#ededea";
+  let badgeInk = "#f6f7fa";
   if (highCount > 0) {
     badgeText = String(highCount);
     badgeColor = "#ff8a1f"; // serious: the one solid amber mark

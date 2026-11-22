@@ -1,31 +1,12 @@
 import { useState } from 'react'
-import { useMcpClients, type McpClient, type McpState } from '../../engine/mcpclients'
+import { clientState, useMcpClients, type McpClient } from '../../engine/mcpclients'
 import { copyText } from '../clipboard'
-import { Select } from '../controls'
-import { Icon } from '../Icon'
-import { Group, Hint, IconButton, Row, State } from './settingsParts'
+import { Section, Setting, State } from './settingsParts'
 import '../../styles/mcp.css'
 
-const STATE_WORDS: Record<McpState, string> = {
-  shown: '',
-  absent: 'Not added yet',
-  connected: 'Added',
-  stale: 'Added, but it points at a different Kriko store',
-  unreadable: 'Its config file cannot be read',
-}
-
-/** The same states in a word or two, for the pill beside the name. */
-const STATE_SHORT: Record<McpState, string> = {
-  shown: '',
-  absent: 'Not added',
-  connected: 'Added',
-  stale: 'Other store',
-  unreadable: 'Unreadable',
-}
-
-/** Kriko inside a chat app that is not Kriko: the exact config for it, to copy
- *  or to write. One entry point for Settings, so the picker around it can change
- *  without touching this. */
+/** Kriko inside a chat app that is not Kriko: one row per app, its state, and the
+ *  word that connects it. The chosen app's own setup (the exact config, the file,
+ *  the start command) is drawn under the list. */
 export function McpClientsGroup() {
   const { doc, problem, writing, write } = useMcpClients()
   const [picked, setPicked] = useState('generic')
@@ -40,70 +21,77 @@ export function McpClientsGroup() {
   }
 
   return (
-    <Group
-      icon="plug"
-      title="Chat apps"
-      hint={
-        <Hint icon="coins" title="Cost">
-          Lookups are free. A chat answer uses your agent.
-        </Hint>
-      }
-    >
-      {problem && <p className="error-note">{problem}</p>}
-      <Row
-        icon="chat"
-        label="App"
-        state={
-          STATE_WORDS[client.state] ? (
-            <State tone={client.state === 'connected' ? 'ok' : client.state === 'unreadable' ? 'risk' : 'warn'} icon={client.state === 'connected' ? 'check' : 'alert'}>
-              {STATE_SHORT[client.state]}
-            </State>
-          ) : undefined
-        }
+    <>
+      <Section
+        title="Chat clients"
+        note="Connect writes Kriko into the chat app's own settings file, so the app can look products up here. Lookups are free. A chat answer uses your agent."
       >
-        <Select label="Chat client" value={client.id} options={doc.clients.map((row) => ({ value: row.id, label: row.label }))} onChange={setPicked} />
-      </Row>
-      {STATE_WORDS[client.state] && client.detail && <p className="panel-note" data-kind="warn">{STATE_WORDS[client.state]}: {client.detail}</p>}
-      {client.start && (
-        <div className="command">
-          <code>{client.start}</code>
-          <IconButton icon="copy" label={copied === 'start' ? 'Copied' : 'Copy the start command'} onClick={() => void copy('start', client.start ?? '')} />
-        </div>
-      )}
-      <pre className="mcp-snippet" tabIndex={0} aria-label={`${client.label} config`}>
-        {client.snippet}
-      </pre>
-      <Row actions>
-        <button className="btn" onClick={() => void copy('snippet', client.snippet)}>
-          <Icon name={copied === 'snippet' ? 'check' : 'copy'} size={18} />
-          {copied === 'snippet' ? 'Copied' : 'Copy'}
-        </button>
-        {client.writable && (
-          <button className="btn primary" onClick={() => void write(client.id)} disabled={writing === client.id || client.state === 'connected'}>
-            <Icon name={client.state === 'connected' ? 'check' : 'plus'} size={18} />
-            {writing === client.id ? 'Writing…' : client.state === 'connected' ? 'Added' : 'Add it'}
-          </button>
+        {problem && <p className="error-note">{problem}</p>}
+        {doc.clients.map((row) => {
+          const pill = clientState(row.state)
+          const busy = writing === row.id
+          return (
+            <Setting
+              key={row.id}
+              label={row.label}
+              note={row.note}
+              state={<State tone={pill.tone === 'none' ? undefined : pill.tone}>{pill.text}</State>}
+              control={
+                <>
+                  {row.writable && row.state === 'connected' && (
+                    <button type="button" className="k-btn" data-size="sm" disabled>
+                      Connected
+                    </button>
+                  )}
+                  {row.writable && row.state !== 'connected' && row.state !== 'unreadable' && (
+                    <button type="button" className="k-btn" data-size="sm" disabled={busy} onClick={() => void write(row.id)}>
+                      {busy ? 'Connecting…' : row.state === 'stale' ? 'Point it here' : 'Connect'}
+                    </button>
+                  )}
+                  <button type="button" className="k-btn" data-size="sm" data-kind="quiet" aria-pressed={picked === row.id} onClick={() => setPicked(row.id)}>
+                    {picked === row.id ? 'Showing setup' : 'Show setup'}
+                  </button>
+                </>
+              }
+            />
+          )
+        })}
+      </Section>
+
+      <Section title={`Setup for ${client.label}`}>
+        {client.state === 'unreadable' && <p className="error-note">Kriko will not overwrite a file it cannot read. Fix it by hand, or paste the config below into it.</p>}
+        {client.path && <Setting stack label="File" note="Where the config goes." control={<code className="settings-path">{client.path}</code>} />}
+        {client.start && (
+          <Setting
+            stack
+            label="Start command"
+            note="Start Kriko's local server with this, then give the app the address in its config."
+            control={
+              <div className="settings-copy">
+                <code>{client.start}</code>
+                <button type="button" className="k-btn" data-size="sm" aria-label={copied === 'start' ? 'Copied' : 'Copy the start command'} onClick={() => void copy('start', client.start ?? '')}>
+                  {copied === 'start' ? 'Copied' : 'Copy'}
+                </button>
+              </div>
+            }
+          />
         )}
-      </Row>
-      {client.path && (
-        <Row icon="folder" label="File">
-          <span className="value path">{client.path}</span>
-        </Row>
-      )}
-      {client.state === 'unreadable' && <p className="error-note">Fix that file by hand, or paste the config above into it. Kriko will not overwrite a file it cannot read.</p>}
-      {client.note && (
-        <details className="disclosure">
-          <summary>
-            <span className="row-label">
-              <span className="row-icon" aria-hidden="true">
-                <Icon name="info" size={20} />
-              </span>
-              <span className="row-name">How to add it</span>
-            </span>
-          </summary>
-          <p className="panel-note">{client.note}</p>
-        </details>
-      )}
-    </Group>
+        <Setting
+          stack
+          label="Config"
+          note="Paste this into the app's config, or let Kriko write it with Connect."
+          control={
+            <>
+              <pre className="mcp-snippet" tabIndex={0} aria-label={`${client.label} config`}>
+                {client.snippet}
+              </pre>
+              <button type="button" className="k-btn" data-size="sm" onClick={() => void copy('snippet', client.snippet)}>
+                {copied === 'snippet' ? 'Copied' : 'Copy the config'}
+              </button>
+            </>
+          }
+        />
+      </Section>
+    </>
   )
 }
