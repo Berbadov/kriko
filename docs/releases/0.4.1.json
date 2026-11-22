@@ -1,0 +1,71 @@
+{
+  "version": "0.4.1",
+  "platform": "windows-x86_64",
+  "source_fingerprint": "b8ac6fd2d59bfd1a42c1353d3d38aa77a9319e0ff8da368dd1347d07fa647476",
+  "recorded_at": "2026-11-22",
+  "note": "Cut from release/0.4.1 (from the 0.4.0 tag) to fix what the packaged 0.4.0 window got wrong on screen. The packaged 0.4.1 portable build was driven through its own DevTools protocol by tools/visual_sweep against scratch KRIKO_STORE/KRIKO_APP_STATE files. Not observed: a fresh install (this machine has Kriko installed and smoke_installer.py refuses to replace it), Stop, the 0.4.0-to-0.4.1 upgrade, and the engine connection check.",
+  "journeys": {
+    "fresh_install": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "kriko-0.4.1-x86_64-setup.exe was built, but Kriko is installed on this machine and packaging/smoke_installer.py refuses to replace a reader's install. The app the installer carries was started by packaging/smoke_app.py (25 s, no panic, engine spawned)."
+    },
+    "portable_start": {
+      "status": "passed",
+      "observed_at": "2026-11-22T17:10:00Z",
+      "evidence": "The portable ZIP was extracted to a scratch folder and kriko.exe opened over a scratch profile: one set of window buttons at the right of the header, Chivo Mono titles, the rail and the composer drawn. The window has no native title strip (client area 1 px below the window's top edge)."
+    },
+    "setup": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "All six Settings sections and the search field were walked in four palettes and two window sizes, and Research showed the answering agent. The agent connection check (POST /api/agent-verify) was not run."
+    },
+    "sourced_answer": {
+      "status": "passed",
+      "observed_at": "2026-11-22T16:40:00Z",
+      "evidence": "Asked in the packaged window: 'What is known to go wrong with the MacBook Air M2?' answered by opencode with the answer text and 4 cited sources. Claude Code (claude-haiku-5-5) was tried first and did not answer: 'The agent returned no answer' after 90 s, then a 60 s timeout on the follow-up. A one-word prompt sent to the claude CLI directly took 45 s on this machine at the time, so the agent was slow; the engine's turn limits are unchanged from 0.4.0."
+    },
+    "follow_up": {
+      "status": "passed",
+      "observed_at": "2026-11-22T16:44:00Z",
+      "evidence": "Follow-up 'Which of those is the most serious?' answered by opencode in the same conversation; the Sources panel then listed 8 sources."
+    },
+    "compare": {
+      "status": "passed",
+      "observed_at": "2026-11-22T16:00:00Z",
+      "evidence": "The MacBook Air M2 and ThinkPad T14 checks from the laptops catalog were added to Compare and drawn side by side with their coverage and finding rows."
+    },
+    "stop": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Not walked in 0.4.1; Stop is not changed by this release."
+    },
+    "reconnect": {
+      "status": "passed",
+      "observed_at": "2026-11-22T17:30:00Z",
+      "evidence": "In the packaged final build, with an engine the app started itself, the engine process was killed. The window showed 'Kriko could not connect' with one set of window buttons. One press of Reconnect brought the window back (a new engine process answered). In 0.4.0 the same steps left the window offline."
+    },
+    "upgrade_retains_data": {
+      "status": "not_observed",
+      "observed_at": null,
+      "evidence": "Not walked in 0.4.1; the store and settings code are unchanged from 0.4.0."
+    }
+  },
+  "providers": {
+    "opencode": {
+      "status": "passed",
+      "report": "Two packaged-window turns (a question and its follow-up) answered with cited sources."
+    },
+    "claude-code": {
+      "status": "not_observed",
+      "model": "claude-haiku-5-5",
+      "report": "Two turns timed out or returned no answer while the claude CLI took 45 s for a trivial prompt."
+    }
+  },
+  "observed_instead": [
+    "tools/gate.sh on this tree on the Windows host that builds the installer: py 5354 passed, 29 skipped, 0 failed (pytest 25m34) with ruff and all four mypy runs clean; wheel, node, ui (256 tests, build, lint) and tauri (cargo check, 14 tests) passed; wall 26m44. After the last two CSS and key changes the ui stage was run again: 256 passed.",
+    "tools/visual_sweep against the packaged final build: 487 checks over every screen, four palettes (dark, gray, paper, white) and 1280x720 and 2560x1440, covering fonts that paint, menus and dialogs inside the window, exactly one set of window buttons, no sideways scroll, no cut-off text, no empty button and no console error: 0 failed. The Reconnect run: 28 checks, 0 failed.",
+    "kriko-ui/package.ps1 -Version 0.4.1: kriko-0.4.1-x86_64-setup.exe (sha256 11687c84bb4e8ee104162bfff0c6a2c4997cb905389087d77e5427785a86a915), kriko-0.4.1-win64-portable.zip (4ebefa21dfe888e7bcd67cce62fb2bc49d6884179c6b3a49893bca5b9d01fcfd) and kriko-engine-0.4.1-win64.zip (6f4e82167798d6553b54cd257bcddb980f6357ef24debf1dcf0100eb45508cd8). The frozen sidecar answered its handshake and /api/health at 0.4.1 and the app stayed up for 25 s with its engine spawned.",
+    "The window controls: toggle_maximize and internal_toggle_maximize (the double-click on the header) were invoked through the shell's IPC and changed the window state; the permissions are in capabilities/default.json. Dragging by the header and Windows snap were not driven, because synthetic input cannot start an operating-system drag."
+  ]
+}
