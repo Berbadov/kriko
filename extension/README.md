@@ -58,6 +58,6 @@ startup timer and no "keep alive" trick.
 
 ## Tests
 
-`npm test` from the repository root runs every extension suite, including
+`bun run test` from the repository root runs every extension suite, including
 `offline_catalog.test.js`, whose fixture is a real `.kpack` with an overflow
 page, and the panel's own tests. The gate fails a run that reports zero tests.

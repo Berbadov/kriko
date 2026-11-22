@@ -1,6 +1,6 @@
-# Procurement in the Estimate
+# Procurement in the Procurement screen
 
-The Estimate screen holds equipment lines, each with the vendor quotes gathered
+The Procurement screen holds equipment lines, each with the vendor quotes gathered
 for it. This note records the decisions that are not visible in the code, so a
 reader can argue with them.
 
@@ -67,8 +67,8 @@ invented. Repair prices appear only where a source quotes one.
   currency. Delivery *days* and warranty *months* are terms, not money, so no
   delivery charge is invented; ties break on the shorter delivery. A quote
   without a rate is listed as unranked, with that reason.
-- Price history per quote is **not wired into the Estimate yet**. The existing
-  `pricewatch` store already keeps per-URL points and would answer
+- Price history per quote is **not wired into the Procurement screen yet**. The
+  existing `pricewatch` store already keeps per-URL points and would answer
   "lowest / usual / high / thin" plus "not enough history yet"; the screen does
   not offer a watch from a quote row, so no history exists for most quotes.
   Landed-cost ranking above is what ships now.
@@ -89,7 +89,7 @@ blank because the app does not know them; they are for the reader to fill.
 
 ## Where procurement shows
 
-The Estimate screen is the Procurement desk, and the same figures reach the
+The Procurement screen is the desk, and the same figures reach the
 other screens through `src/engine/procurement.ts`, so no screen computes its own.
 
 - **Procurement** opens on figures from every estimate: gross committed per

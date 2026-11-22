@@ -1,13 +1,16 @@
 {
   "name": "kriko-ui",
   "private": true,
-  "version": "0.3.14",
+  "version": "0.4.0",
   "type": "module",
+  "packageManager": "bun@1.4.5",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "test": "node --test tests/*.test.mjs",
+    "bundle": "tauri build --config src-tauri/tauri.bundle.conf.json -- --locked",
+    "bundle:macos": "tauri build --config src-tauri/tauri.macos.bundle.conf.json -- --locked",
     "preview": "vite preview",
     "tauri": "tauri"
   },

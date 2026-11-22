@@ -72,7 +72,8 @@ def test_gate_jobs_auto_still_hands_pytest_every_core(tmp_path):
     assert "-m pytest -n auto" in calls, calls
 
 
-def _run_gate_with_failing_pytest(tmp_path: Path, stage: str) -> subprocess.CompletedProcess:
+def _run_gate_with_failing_pytest(tmp_path: Path, stage: str, *,
+                                  extra_env: dict[str, str] | None = None) -> subprocess.CompletedProcess:
     """Run the gate with an interpreter whose pytest exits 1.
 
     The stages run as `"gate_$n" || rc=$?`, a context where bash suspends
@@ -90,6 +91,7 @@ def _run_gate_with_failing_pytest(tmp_path: Path, stage: str) -> subprocess.Comp
     env = {k: v for k, v in os.environ.items()
            if not k.startswith(("GATE_", "KRIKO_GATE", "CARGO_BUILD_JOBS", "PYTHON"))}
     env["PYTHON"] = python.as_posix()
+    env.update(extra_env or {})
     return subprocess.run([_bash(), "tools/gate.sh", stage], cwd=ROOT, env=env,
                           capture_output=True, text=True, timeout=300)
 
@@ -100,8 +102,9 @@ def test_a_failing_pytest_fails_the_py_stage(tmp_path):
     assert "FAILED in stage: py" in result.stderr, result.stderr
 
 
-def test_a_failing_pytest_fails_the_default_all_run_at_the_first_stage(tmp_path):
-    result = _run_gate_with_failing_pytest(tmp_path, "all")
+def test_the_serial_run_fails_fast_at_the_first_stage(tmp_path):
+    """`GATE_CONCURRENT=0` is the one-after-another path, and it stops on red."""
+    result = _run_gate_with_failing_pytest(tmp_path, "all", extra_env={"GATE_CONCURRENT": "0"})
     assert result.returncode != 0, result.stdout + result.stderr
     assert "FAILED in stage: py" in result.stderr, result.stderr
 
