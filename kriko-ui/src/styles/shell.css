@@ -36,6 +36,15 @@
   user-select: none;
 }
 
+.titlebar.floating {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  justify-content: flex-end;
+}
+
 .titlebar-controls {
   display: flex;
   align-items: stretch;
@@ -324,11 +333,12 @@
 }
 
 .menu {
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 0;
-  z-index: 20;
+  position: fixed;
+  z-index: 70;
   min-width: 200px;
+  max-width: calc(100vw - 16px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   margin: 0;
   padding: 4px;
   list-style: none;
@@ -717,6 +727,13 @@
   color: var(--ink-3);
   font-size: 13px;
   text-align: center;
+}
+
+/* The engine's last lines keep their line breaks, and a long one wraps inside the column. */
+.starting[role='alert'] p {
+  max-width: min(560px, calc(100vw - 48px));
+  white-space: pre-line;
+  overflow-wrap: anywhere;
 }
 
 .starting-bar {

@@ -76,9 +76,9 @@ export function UsagePill() {
     <div className="topbar-usage" ref={box}>
       <button className="usage-pill" data-over={over || undefined} onClick={() => setOpen((v) => !v)} aria-expanded={open} aria-haspopup="dialog" data-tour="usage" title={over ? 'A daily cap is passed' : 'What you have used'}>
         {fill !== null && <Gauge fill={fill} />}
-        <span className="mono">{fill !== null ? `${Math.round(fill * 100)}% left` : ''}</span>
+        {fill !== null && <span className="mono">{Math.round(fill * 100)}% left</span>}
+        {fill === null && <Icon name="clock" size={15} />}
         {text && <span className="mono usage-pill-text">{text}</span>}
-        {fill === null && !text && <Icon name="clock" size={15} />}
       </button>
       {open && (
         <div className="usage-card" role="dialog" aria-label="What you have used">
