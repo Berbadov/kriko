@@ -21,6 +21,10 @@ on:
     push:
         branches: [main]
     pull_request:
+    # A hand-run path for the same reason desktop.yml has one: after a runner
+    # or dependency problem is fixed, the branch can be checked without a new
+    # commit.
+    workflow_dispatch:
 
 # A newer push to the same branch cancels the older run. This suite is a few
 # minutes, and there is no value in finishing a superseded one. The pull
