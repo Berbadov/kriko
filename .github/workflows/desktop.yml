@@ -244,7 +244,11 @@ jobs:
     # failure `test_the_macos_package_is_built_by_hand.py` exists to prevent.
     bundle-macos:
         name: macos-arm64
-        runs-on: macos-14
+        # `macos-15`, not `macos-14`: macOS 14 retired from GitHub Actions on
+        # 2026-11-02, and a job on a retired image is cancelled before a runner
+        # exists (`runner_id: 0`, "configuration is not supported"). The plain
+        # label is the arm64 image, which is what `--arch arm64` requires.
+        runs-on: macos-15
         defaults:
             run:
                 shell: bash
