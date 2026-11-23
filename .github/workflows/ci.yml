@@ -123,8 +123,16 @@ jobs:
 
             # The path is `kriko-ui`; it has been `ui` in an older layout and
             # that is why the old workflow's commands are not copied verbatim.
+            #
+            # Both installs, not only the interface's: its scenarios import
+            # jsdom, which lives in the root package's devDependencies (the
+            # extension suite reads it too), and node resolves it upwards from
+            # kriko-ui/. Without the root install eleven test files fail to
+            # load, which is how this job first found the coupling.
             - name: Install
-              run: bun install --frozen-lockfile --cwd kriko-ui
+              run: |
+                  bun install --frozen-lockfile
+                  bun install --frozen-lockfile --cwd kriko-ui
 
             - name: Test the behavior scenarios
               run: npm --prefix kriko-ui test
