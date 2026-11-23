@@ -48,10 +48,11 @@ to green. So:
 2. **A behaviour change updates its tests in the same commit.** A test that
    asserts retired behaviour is rewritten to assert the new intent, or deleted
    with the code it guarded. It is never left failing for someone else.
-3. **`desktop.yml` is the desktop release recipe, hand-dispatched.** Its
-   `bundle` job builds the Windows x64 installer and portable ZIP; its
+3. **`desktop.yml` is the desktop release recipe.** It runs on `v*` tags and
+   when dispatched by hand, and on a pull request that changes the workflow
+   itself. Its `bundle` job builds the Windows x64 installer and portable ZIP; its
    `bundle-macos` job builds the Apple Silicon (`arm64`) disk image by running
-   `kriko-ui/package-macos.sh` on a `macos-14` runner. Tauri and PyInstaller do
+   `kriko-ui/package-macos.sh` on a `macos-15` runner. Tauri and PyInstaller do
    not cross-compile, so a macOS package is assembled on a Mac of its own
    architecture; Intel is not built. The macOS job uploads a workflow artifact
    and publishes no release asset yet, because `tools/release_readiness.py`

@@ -124,15 +124,24 @@ def test_first_cli_text_delta_reaches_the_live_callback_before_exit(tmp_path):
 
 @pytest.mark.skipif(os.name == "nt", reason="uses a POSIX executable fixture")
 def test_configured_first_ask_pays_only_one_verified_help_probe(tmp_path, monkeypatch):
-    """Measure the full selected-provider path, not only the stream reader."""
+    """Measure the full selected-provider path, not only the stream reader.
+
+    Two signals, and they are not equally portable. How many `--help` probes
+    the first ask paid for is counted, so it holds on any machine. The wall
+    clock is the noisy one: GitHub's shared runners read 1.16-1.23 s for a
+    round trip that takes about 0.5 s on a developer's machine, so CI gets a
+    wider ceiling and the strict budget stays local.
+    """
     one = replace(_row("claude-code"), executable=str(tmp_path / "fake-claude"))
     emitted = tmp_path / "emitted"
     sentinel = tmp_path / "callback-seen"
+    probes = tmp_path / "help-probes"
     script = tmp_path / "fake-claude"
     script.write_text(
         "#!/usr/bin/env python3\n"
         "import json, pathlib, sys, time\n"
         "if '--help' in sys.argv[1:]:\n"
+        f"    open({str(probes)!r}, 'a').write('help\\n')\n"
         "    time.sleep(0.15)\n"
         "    print('''--output-format <format> stream-json\\n--verbose\\n"
         "--allowedTools <tools...>\\n--strict-mcp-config\\n--safe-mode\\n"
@@ -170,11 +179,19 @@ def test_configured_first_ask_pays_only_one_verified_help_probe(tmp_path, monkey
     after_provider_emission = heard[0][0] - float(emitted.read_text(encoding="utf-8"))
 
     assert heard and heard[0][1].startswith("The first fragment")
-    assert 0.14 <= total < 0.75, f"full cold configured startup took {total:.3f}s"
-    assert after_provider_emission < 0.25, (
+    ci = bool(os.environ.get("CI"))
+    assert 0.14 <= total < (2.0 if ci else 0.75), (
+        f"full cold configured startup took {total:.3f}s"
+    )
+    assert after_provider_emission < (0.75 if ci else 0.25), (
         f"local post-emission delay was {after_provider_emission:.3f}s"
     )
     assert set(harness.declared(str(script))) >= {"--safe-mode", "--allowedTools"}
+    # After `declared`, so a second probe from either half is counted. A cache
+    # miss here is what the test is named for, and it does not depend on the
+    # runner's clock.
+    probed = probes.read_text(encoding="utf-8").count("\n") if probes.exists() else 0
+    assert probed == 1, f"the first ask paid for {probed} --help probes, not one"
 
 
 def test_mistral_sse_stream_preserves_typed_text_search_results_and_usage(monkeypatch):

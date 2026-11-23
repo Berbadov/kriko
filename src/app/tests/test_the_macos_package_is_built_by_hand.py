@@ -148,7 +148,7 @@ def test_the_windows_bundle_still_ships_the_folder_the_mac_one_cannot():
 
 def test_the_workflow_runs_the_recipe_and_uploads_what_it_writes(workflow):
     job = _macos_job(workflow)
-    assert "runs-on: macos-14" in job
+    assert "runs-on: macos-15" in job
     assert 'kriko-ui/package-macos.sh --arch arm64 --version "$VERSION"' in job
     assert "KRIKO_MACOS_SIGN_IDENTITY" in job
     assert "name: kriko-macos" in job

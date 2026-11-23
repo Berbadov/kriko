@@ -1,0 +1,144 @@
+name: CI
+
+# Back on a runner, 2026-11-23.
+#
+# `ci.yml` was deleted on 2026-09-13 because the account had no Actions minutes
+# and every run died in seconds with `runner_id: 0`: a red tick on a commit
+# nothing had tested, which teaches people to ignore red. That reason is gone.
+# This repository is public, so standard GitHub-hosted runners cost nothing, and
+# the suite that used to be one long job is now three that run in parallel.
+#
+# It is a second net, not a replacement for `tools/gate.sh` (see CLAUDE.md and
+# docs/DOCTRINE.md): the gate still runs before every push, and this catches the
+# push that skipped it. The Python job runs the gate's own `py` stage verbatim,
+# so the two can never drift into checking different things.
+#
+# What this deliberately does not do: touch the network for tests, use a secret,
+# or resolve dependencies freely. `requirements.lock` is the closure the
+# installer freezes, and installing from it here is what makes "the suite
+# passed" mean "against the code a reader gets".
+on:
+    push:
+        branches: [main]
+    pull_request:
+    # A hand-run path for the same reason desktop.yml has one: after a runner
+    # or dependency problem is fixed, the branch can be checked without a new
+    # commit.
+    workflow_dispatch:
+
+# A newer push to the same branch cancels the older run. This suite is a few
+# minutes, and there is no value in finishing a superseded one. The pull
+# request and the push to `main` are different refs, so a merge to main does
+# not cancel the PR's own run.
+concurrency:
+    group: ci-${{ github.ref }}
+    cancel-in-progress: true
+
+# Read-only: the checks read the repository and write nothing anywhere but the
+# runner's own disk.
+permissions:
+    contents: read
+
+jobs:
+    python:
+        name: python (version, ruff, mypy, pytest)
+        runs-on: ubuntu-latest
+        timeout-minutes: 40
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-python@v5
+              with:
+                  # 3.13 is the interpreter the suite and the frozen sidecar run
+                  # on (see the note in desktop.yml). It is not "whatever is
+                  # newest": the pinned pydantic raises on import under 3.14.
+                  python-version: "3.13"
+                  cache: pip
+                  cache-dependency-path: requirements.lock
+
+            - name: Install
+              run: |
+                  python -m pip install --upgrade pip
+                  # `-r` first and load-bearing: the suite's claim is that it
+                  # passes against the closure the installer freezes. The
+                  # extras stay unpinned because they never reach a reader.
+                  pip install -r requirements.lock -e ".[dev,pipeline]"
+
+            # Two workers, not the runner's four cores: SQLite tests share a
+            # file and are the ones most likely to fail for reasons that are
+            # not the code, and the wall clock is dominated by them either way.
+            # `PYTHON` is passed because `tools/gate.sh` looks for a checkout's
+            # `.venv`, which a runner does not have.
+            - name: Gate the engine
+              run: PYTHON="$(command -v python)" GATE_JOBS=2 tools/gate.sh py
+
+    extension:
+        name: extension (node scraper + panel)
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: "22"
+
+            # Bun installs, node runs the tests (see tools/gate.sh). There is no
+            # package-lock.json to `npm ci` from: the committed lock is
+            # `bun.lock` and the package pins bun 1.4.5 in `packageManager`, so
+            # the frozen install is the one that is reproducible. Bun produces a
+            # normal node_modules, which is what `npm test` reads.
+            - uses: oven-sh/setup-bun@v2
+              with:
+                  bun-version: "1.4.5"
+                  cache: true
+
+            - name: Install
+              run: bun install --frozen-lockfile
+
+            # `node --test` exits 0 when its pattern matches no files, and gate.sh
+            # keeps a guard for exactly that. The guard is repeated here because
+            # an empty suite and a passing suite must not produce the same tick.
+            - name: Test
+              run: |
+                  set -o pipefail
+                  npm test | tee test-output.txt
+                  grep -Eq '^(#|ℹ) *pass +[1-9][0-9]*' test-output.txt
+
+    ui:
+        name: ui (build, tests, lint)
+        runs-on: ubuntu-latest
+        timeout-minutes: 20
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: "22"
+
+            - uses: oven-sh/setup-bun@v2
+              with:
+                  bun-version: "1.4.5"
+                  cache: true
+
+            # The path is `kriko-ui`; it has been `ui` in an older layout and
+            # that is why the old workflow's commands are not copied verbatim.
+            #
+            # Both installs, not only the interface's: its scenarios import
+            # jsdom, which lives in the root package's devDependencies (the
+            # extension suite reads it too), and node resolves it upwards from
+            # kriko-ui/. Without the root install eleven test files fail to
+            # load, which is how this job first found the coupling.
+            - name: Install
+              run: |
+                  bun install --frozen-lockfile
+                  bun install --frozen-lockfile --cwd kriko-ui
+
+            - name: Test the behavior scenarios
+              run: npm --prefix kriko-ui test
+
+            - name: Build
+              run: npm --prefix kriko-ui run build
+
+            - name: Lint
+              run: npm --prefix kriko-ui run lint

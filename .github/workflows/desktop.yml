@@ -1,17 +1,18 @@
 name: desktop
 
-# Hand-run only, since 2026-09-13. It used to fire on `v*` tags and on pull
-# requests touching the desktop app, packaging/ or sidecar.py as well, and it
-# should again the day this account has Actions minutes: put the `push` and
-# `pull_request` blocks back, nothing else here depends on them.
+# The release recipe, and the real CD path since 2026-11-23.
 #
-# What changed is the environment, not the value. With no minutes, each of
-# those triggers produced jobs that were never allocated a runner: failed in
-# under fifteen seconds, `runner_id: 0`, no steps, no logs, and a red tick on a
-# commit nothing had tested. `ci.yml` was deleted the same day for the same
-# reason (its checks are `tools/gate.sh` now). Keeping a trigger that can only
-# ever report a false failure trains everyone to ignore a red desktop build,
-# which is the state you least want to be in on the day one is real.
+# It was hand-run only from 2026-09-13, when this account's Actions minutes ran
+# out and every trigger produced jobs that were never allocated a runner
+# (`runner_id: 0`, no steps, no logs). The repository is public now, so standard
+# GitHub-hosted runners are free and a tag can build again. What is *not* back
+# is the every-PR trigger: a native bundle takes over half an hour, and a check
+# nobody waits for is not a gate. The cheap checks are `ci.yml`'s jobs on every
+# push and pull request; this workflow is for the artifact.
+#
+# So it runs when a version is tagged, when dispatched by hand, and on a pull
+# request that changes this file alone — the one case where the recipe itself is
+# what needs testing.
 #
 # The Windows bundle job and `kriko-ui/package.ps1` are the same recipe, step
 # for step: one is run by a runner, the other by hand on Windows, and
@@ -28,6 +29,11 @@ name: desktop
 # Windows-only).
 on:
     workflow_dispatch:
+    push:
+        tags: ["v*"]
+    pull_request:
+        paths:
+            - .github/workflows/desktop.yml
 
 concurrency:
     group: desktop-${{ github.ref }}
@@ -129,7 +135,13 @@ jobs:
             - name: Verify the Python and browser behavior before packaging
               run: |
                   pip install -r requirements.lock -e ".[dev,pipeline]" setuptools wheel
-                  PYTHON="$(which python)" GATE_JOBS=4 tools/gate.sh py
+                  # Serial, not GATE_JOBS=4. This host runs the suite against a
+                  # real file-backed SQLite store; four xdist workers on
+                  # windows-latest produced `database is locked` in eight tests
+                  # in one run, which is a property of the runner's disk, not of
+                  # the code. One worker spends a few more minutes and buys a
+                  # verdict that means something.
+                  PYTHON="$(which python)" GATE_JOBS=1 tools/gate.sh py
                   PYTHON="$(which python)" tools/gate.sh wheel
                   bun install --frozen-lockfile
                   bun run test
@@ -232,7 +244,11 @@ jobs:
     # failure `test_the_macos_package_is_built_by_hand.py` exists to prevent.
     bundle-macos:
         name: macos-arm64
-        runs-on: macos-14
+        # `macos-15`, not `macos-14`: macOS 14 retired from GitHub Actions on
+        # 2026-11-02, and a job on a retired image is cancelled before a runner
+        # exists (`runner_id: 0`, "configuration is not supported"). The plain
+        # label is the arm64 image, which is what `--arch arm64` requires.
+        runs-on: macos-15
         defaults:
             run:
                 shell: bash
