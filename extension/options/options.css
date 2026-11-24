@@ -442,6 +442,14 @@ input:focus-visible {
   border-color: var(--accent);
 }
 
+/* Help under a switch: a smaller sentence, indented to the label's text. */
+.setting-help {
+  display: block;
+  margin: -2px 0 12px 28px;
+  font: 13px/1.5 var(--font-body);
+  color: var(--fg-muted);
+}
+
 .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 12px; }
 input + .row { margin-top: 12px; }
 

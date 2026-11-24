@@ -466,6 +466,34 @@ test("Escape closes the search field before it closes the panel", () => {
     "a second Escape did not close the panel");
 });
 
+test("a door that opens during the exit animation brings the panel back", () => {
+  // The pill's OPEN_PANEL, a selection lookup and the toolbar all land as
+  // `open: true`. One that arrives in the 200ms between "closing" and the
+  // unmount used to cancel the timer but leave `data-closing` on the element,
+  // whose exit animation fills `both` — an open panel at opacity 0.
+  const p = loadPanel();
+  p.openPanel();
+  p.click(".lite-btn-close");
+  assert.ok(p.shadow().querySelector(".lite-panel[data-closing='1']"), "the close did not start");
+
+  p.deliverMessage({ type: "TOGGLE_HOVER_LITE", open: true });
+  assert.ok(p.shadow().querySelector(".lite-panel:not([data-closing='1'])"),
+    "the reopened panel kept the closing state");
+  p.flushTimers();
+  assert.ok(p.shadow().querySelector(".lite-panel"), "the reopened panel was unmounted by the old timer");
+});
+
+test("a selection lookup during the exit animation opens with the words in its field", () => {
+  const p = loadPanel({ searchResponse: { ok: true, items: [] } });
+  p.openPanel();
+  p.click(".lite-btn-close");
+  p.deliverMessage({ type: "TOGGLE_HOVER_LITE", open: true, query: "Bosch HSG 7584 B" });
+  const field = p.shadow().querySelector(".lite-search-field");
+  assert.ok(field, "the lookup did not open the search");
+  assert.equal(field.value, "Bosch HSG 7584 B");
+  assert.ok(p.shadow().querySelector(".lite-panel:not([data-closing='1'])"));
+});
+
 test("the panel names itself as a region and keeps one live status line", () => {
   const p = loadPanel();
   p.openPanel();

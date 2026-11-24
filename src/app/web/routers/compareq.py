@@ -260,9 +260,12 @@ def research_new_product(
     as a new column (`jobs._append_compare_lookup`), so the reader can line up a
     product they only know by name without leaving Compare to look it up first.
     """
-    if not state.get_compare_draft(conn, draft_id):
+    current = state.get_compare_draft(conn, draft_id)
+    if not current:
         raise HTTPException(404, f"no draft {draft_id}")
     product = " ".join(body.product.split())
+    if len(current["lookup_ids"]) >= state.COMPARE_MAX:
+        raise HTTPException(409, "This comparison already holds four checks. Remove one before researching another.")
     _require_selected_agent(request, body.backend, body.harness)
     params = {
         "product": product, "backend": body.backend, "harness": body.harness,

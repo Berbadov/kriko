@@ -265,6 +265,8 @@ export interface ApiTurn extends ApiUsage {
 
 export interface ApiJob {
   job_id: string
+  kind?: string
+  params?: Record<string, unknown>
   state: string
   message?: string
   done?: boolean
@@ -272,6 +274,8 @@ export interface ApiJob {
   progress?: number
   /** The newest thing the agent did, last. */
   feed?: ApiFeedEvent[]
+  /** The runner's prose log. A finished job keeps this, not its feed. */
+  log?: string
   result?: ApiTurn | null
 }
 

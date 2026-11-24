@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react'
 import { useEngine } from './engine/Engine'
-import { del, EngineError, get, patch, post, seg, type ApiJob, type ApiQueue, type ApiQueueItem, type ApiTarget } from './engine/api'
+import { del, EngineError, get, patch, post, seg, type ApiFeedEvent, type ApiJob, type ApiQueue, type ApiQueueItem, type ApiTarget } from './engine/api'
 
 /** The research queue. The extension queues products. This window researches
  *  them, as many at once as the reader allows, and tells the engine how each
@@ -21,6 +21,10 @@ export interface QueueItem {
   lookupId?: string
   /** The job that failed, while this window remembers it, so the failure can be reported with its log. */
   jobId?: string
+  /** What that job reported: the work terminal draws these and nothing else. */
+  feed?: ApiFeedEvent[]
+  jobState?: string
+  jobMessage?: string
 }
 
 interface Queue {
@@ -192,12 +196,13 @@ function useLiveQueue(enabled: boolean): Queue {
           const mine = workers.current.has(row.queue_id)
           const name = row.name && row.name !== row.url ? row.name : host(row.url)
           const base = { id: row.queue_id, name, agent: old?.agent ?? agentLabel, lookupId: row.lookup_id || undefined }
-          if (row.state === 'done') return { ...base, state: 'done', progress: 1, line: 'Done' }
+          const quiet = { feed: undefined, jobState: undefined, jobMessage: undefined }
+          if (row.state === 'done') return { ...base, ...quiet, state: 'done', progress: 1, line: 'Done' }
           if (row.state === 'researching')
-            return mine && old ? { ...old, ...base } : { ...base, state: 'researching', progress: old?.progress ?? 0, line: old?.line ?? 'In another window' }
-          if (held.current.has(row.queue_id)) return { ...base, state: 'paused', progress: old?.progress ?? 0, line: 'Paused' }
-          if (row.note) return { ...base, state: 'waiting', progress: 0, line: row.note, note: row.note }
-          return { ...base, state: 'waiting', progress: 0, line: 'Waits' }
+            return mine && old ? { ...old, ...base } : { ...base, ...quiet, state: 'researching', progress: old?.progress ?? 0, line: old?.line ?? 'In another window' }
+          if (held.current.has(row.queue_id)) return { ...base, ...quiet, state: 'paused', progress: old?.progress ?? 0, line: 'Paused' }
+          if (row.note) return { ...base, ...quiet, state: 'waiting', progress: 0, line: row.note, note: row.note }
+          return { ...base, ...quiet, state: 'waiting', progress: 0, line: 'Waits' }
         }
         const next = new Map(items_of(reply).map((row) => [row.queue_id, fromServer(row)]))
         // The order the reader set stays. New rows go to the end.
@@ -243,7 +248,7 @@ function useLiveQueue(enabled: boolean): Queue {
         if (error instanceof EngineError && error.status === 409) update(id, { state: 'researching', line: 'In another window' })
         return
       }
-      update(id, { state: 'researching', progress: 0, line: 'Finds the product', note: undefined })
+      update(id, { state: 'researching', progress: 0, line: 'Finds the product', note: undefined, feed: undefined, jobState: undefined, jobMessage: undefined })
 
       // 2. Which product is it? A product no catalog names is researched as a draft.
       let target: ApiTarget | null = null
@@ -289,7 +294,13 @@ function useLiveQueue(enabled: boolean): Queue {
         try {
           const reading = await get<ApiJob>(`/api/jobs/${seg(job)}`)
           misses = 0
-          update(id, { progress: Math.min(0.97, reading.progress ?? 0), line: lineOf(reading) })
+          update(id, {
+            progress: Math.min(0.97, reading.progress ?? 0),
+            line: lineOf(reading),
+            feed: reading.feed,
+            jobState: reading.state,
+            jobMessage: reading.message,
+          })
           if (reading.done || ['succeeded', 'failed', 'cancelled'].includes(reading.state)) {
             state = reading.state
             message = reading.message ?? ''

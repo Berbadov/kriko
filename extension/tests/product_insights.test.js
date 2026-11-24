@@ -101,8 +101,9 @@ test("right-click scans selected URLs without fetching or opening the product pa
   });
   for (const listener of h.installedListeners) await listener({ reason: "update" });
   await new Promise((resolve) => setImmediate(resolve));
-  assert.equal(menus.length, 1);
-  assert.ok(menus[0].contexts.includes("selection"));
+  const scanMenu = menus.find((menu) => menu.id === "kriko-quick-scan");
+  assert.ok(scanMenu, "the selection scan menu is missing");
+  assert.ok(scanMenu.contexts.includes("selection"));
   h.state.requests.length = 0;
   await clicked({ menuItemId: "kriko-quick-scan", selectionText: "https://shop.invalid/tool" }, { id: 1 });
   assert.equal(h.state.requests.length, 1);
@@ -110,4 +111,41 @@ test("right-click scans selected URLs without fetching or opening the product pa
   assert.match(h.state.notified.at(-1), /Bearing failure/);
   assert.doesNotMatch(h.state.notified.at(-1), /Last verified|saved page check/, "the notice is the product, the level and the findings");
   assert.equal(h.state.tabsCreated.length, 0);
+});
+
+test("a selected model opens the panel with the words already in its search", async () => {
+  let clicked;
+  const menus = [];
+  const h = loadBackground({
+    contextMenus: { removeAll: async () => { menus.length = 0; }, create: (menu) => menus.push(menu), onClicked: { addListener: (fn) => { clicked = fn; } } },
+    tabResponses: { TOGGLE_HOVER_LITE: { ok: true } },
+  });
+  for (const listener of h.installedListeners) await listener({ reason: "update" });
+  for (let i = 0; i < 5; i += 1) await new Promise((resolve) => setImmediate(resolve));
+  const lookup = menus.find((menu) => menu.id === "kriko-lookup-selection");
+  assert.ok(lookup, "the selection lookup menu is missing");
+  assert.equal(lookup.title, "Check this model with Kriko");
+  assert.deepEqual([...lookup.contexts], ["selection"]);
+
+  h.state.requests.length = 0;
+  await clicked({ menuItemId: "kriko-lookup-selection", selectionText: "  Bosch HSG 7584 B  " }, { id: 4, url: "https://shop.example/p/oven" });
+  assert.deepEqual({ ...h.state.tabMessages.at(-1).message },
+    { type: "TOGGLE_HOVER_LITE", open: true, query: "Bosch HSG 7584 B" });
+  assert.equal(h.state.requests.length, 0, "a selection lookup must not fetch a page");
+  assert.equal(h.state.tabsCreated.length, 0);
+
+  const before = h.state.tabMessages.length;
+  await clicked({ menuItemId: "kriko-lookup-selection", selectionText: "   " }, { id: 4, url: "https://shop.example/p/oven" });
+  assert.equal(h.state.tabMessages.length, before, "an empty selection opens nothing");
+});
+
+test("the pill's press shows the panel without toggling an open one shut", async () => {
+  const h = loadBackground({ tabResponses: { TOGGLE_HOVER_LITE: { ok: true } } });
+  let reply = null;
+  h.messageListeners[0]({ type: "OPEN_PANEL" }, { tab: { id: 6 } }, (value) => { reply = value; });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(reply.ok, true);
+  assert.deepEqual({ ...h.state.tabMessages.at(-1).message },
+    { type: "TOGGLE_HOVER_LITE", open: true });
+  assert.equal(h.state.requests.length, 0);
 });

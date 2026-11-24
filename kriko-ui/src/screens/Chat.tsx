@@ -23,6 +23,7 @@ import { Markdown } from '../ui/Markdown'
 import { Fold } from '../ui/text'
 import { showDrawer } from '../ui/drawerEvents'
 import { ReportButton } from '../ui/ReportButton'
+import { WorkTerminal } from '../ui/WorkTerminal'
 
 /** Chat is the first page. Before a question it is a sky, a box and recent work.
  *  After a question the box drops to the bottom and the run fills the page. */
@@ -368,6 +369,7 @@ function Thread({
   onAction: (action: AppAction) => void
 }) {
   const { motion: m } = usePrefs()
+  const engine = useEngine()
   const scroller = useRef<HTMLDivElement>(null)
   const inner = useRef<HTMLDivElement>(null)
   const answer = useRef<HTMLElement>(null)
@@ -505,6 +507,16 @@ function Thread({
             )}
             <p className="you">{run.prompt}</p>
           </div>
+        )}
+        {running && engine.mode === 'live' && (
+          <WorkTerminal
+            title={run.prompt}
+            state={run.jobState}
+            message={run.jobMessage}
+            feed={run.feed}
+            agent={run.agent?.label}
+            stage={run.jobState ? undefined : 'Waiting for the agent'}
+          />
         )}
         {/* Only a run with activity has a record to show. A turn that asks one
             question, or fails before its first step, keeps no empty card; a run

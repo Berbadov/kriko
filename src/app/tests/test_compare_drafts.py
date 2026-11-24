@@ -966,5 +966,9 @@ def test_a_new_products_check_joins_the_end_of_the_draft_once(client):
             assert jobs._append_compare_lookup(conn, draft["draft_id"], "new")
             assert not jobs._append_compare_lookup(conn, "gone", "new")
         assert state.get_compare_draft(conn, draft["draft_id"])["lookup_ids"] == ["a", "b", "new"]
+        full = state.save_compare_draft(conn, "Four", ["1", "2", "3", "4"])
+        with conn:
+            assert not jobs._append_compare_lookup(conn, full["draft_id"], "5")
+        assert state.get_compare_draft(conn, full["draft_id"])["lookup_ids"] == ["1", "2", "3", "4"]
     finally:
         conn.close()

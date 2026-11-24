@@ -56,6 +56,12 @@ export interface Check {
   diagnostic?: string
   context?: Record<string, unknown>
   contextUnits?: Record<string, string>
+  /** The listing address the check was saved from, when it has one. */
+  url?: string
+  /** The identity fields the adapter read off the page. */
+  identity?: Record<string, unknown>
+  /** The labels of the subjects the listing resolved to. */
+  subjects?: string[]
 }
 
 export type Loaded = { status: 'loading' } | { status: 'ready'; check: Check } | { status: 'error'; message: string }
@@ -139,10 +145,15 @@ export async function loadCheck(lookupId: string): Promise<Check> {
     }
   }
   const diagnostic = response.diagnostic as Record<string, unknown> | undefined
+  const request = (stored.request ?? {}) as Record<string, unknown>
+  const subjects = list(response.subjects).map((one) => text(one.label)).filter(Boolean)
   return { lookupId, name: text(stored.label) || 'Product', category: text(stored.category) || text(response.category), specs, risks,
     checkedAt: text(stored.created_at), assumed: text(response.assumed),
     coverage: (response.coverage ?? {}) as Record<string, unknown>, diagnostic: text(diagnostic?.message),
-    context: (response.context ?? {}) as Record<string, unknown>, contextUnits: (response.context_units ?? {}) as Record<string, string> }
+    context: (response.context ?? {}) as Record<string, unknown>, contextUnits: (response.context_units ?? {}) as Record<string, string>,
+    url: text(request.url), identity: response.identity && typeof response.identity === 'object' && !Array.isArray(response.identity)
+      ? (response.identity as Record<string, unknown>) : undefined,
+    subjects }
 }
 
 // ---- lining up ----

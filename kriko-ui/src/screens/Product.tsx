@@ -2,13 +2,16 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties }
 import { AnimatePresence, motion } from 'motion/react'
 import { demoCheck, loadCheck, type Check, type Level } from '../compare/checks'
 import { useCompare } from '../compare'
+import { useDodged } from '../engine/buyer'
+import { strongestConcern } from '../engine/dodged'
 import { useEngine } from '../engine/Engine'
-import { EngineError, get, post, seg, type ApiJob } from '../engine/api'
+import { EngineError, get, post, seg, type ApiFeedEvent, type ApiJob } from '../engine/api'
 import { followJob } from '../engine/jobs'
 import { useSensitivity } from '../engine/sensitivity'
 import { hiddenLine, shown } from '../engine/thinness'
 import { usePrefs } from '../prefs'
 import { Composer } from '../ui/Composer'
+import { DodgeDialog } from '../ui/DodgeDialog'
 import { EvidenceMark } from '../ui/EvidenceMark'
 import { ExternalLink } from '../ui/ExternalLink'
 import { Icon } from '../ui/Icon'
@@ -16,6 +19,8 @@ import { Markdown } from '../ui/Markdown'
 import { PixelGlyph } from '../ui/PixelGlyph'
 import { CheckContext, RiskEvidence } from '../ui/CheckContext'
 import { ProductInsights } from '../ui/ProductInsights'
+import { UsedCard } from '../ui/UsedCard'
+import { WorkTerminal } from '../ui/WorkTerminal'
 import { DustField } from '../dust/DustField'
 import { kindFor, product, reading } from '../dust/engine'
 
@@ -28,6 +33,11 @@ interface Turn {
   answer: string
   state: 'running' | 'done' | 'failed'
   note: string
+  /** The job's own words, for the work terminal. */
+  stage?: string
+  feed?: ApiFeedEvent[]
+  jobState?: string
+  jobMessage?: string
 }
 
 type Asked = ApiJob & { params?: { question?: string } }
@@ -53,6 +63,9 @@ export function ProductScreen({ lookupId, onBack, onCompare }: { lookupId: strin
   const [loadAttempt, setLoadAttempt] = useState(0)
   const [turns, setTurns] = useState<Turn[]>([])
   const { sensitivity } = useSensitivity()
+  const dodged = useDodged()
+  const [dodgeOpen, setDodgeOpen] = useState(false)
+  const [dodgeNote, setDodgeNote] = useState('')
   /** The reader pressed "show them", for this check at this step. A different check or step is a new question. */
   const [reveal, setReveal] = useState({ key: '', on: false })
   const revealKey = `${lookupId}|${sensitivity}`
@@ -107,7 +120,7 @@ export function ProductScreen({ lookupId, onBack, onCompare }: { lookupId: strin
         )
         for (const j of reply.items) {
           if (j.done) continue
-          followJob(j.job_id, (reading) => patch(j.job_id, { answer: answerOf(reading), note: reading.message || 'Working' }), () => live)
+          followJob(j.job_id, (reading) => patch(j.job_id, { answer: answerOf(reading), jobState: reading.state, jobMessage: reading.message, feed: reading.feed }), () => live)
             .then((ended) => ended && settle(j.job_id, ended))
             .catch((e) => patch(j.job_id, { state: 'failed', note: reasonOf(e) }))
         }
@@ -127,7 +140,7 @@ export function ProductScreen({ lookupId, onBack, onCompare }: { lookupId: strin
     stopRequested.current = false
     const id = `local-${Date.now()}`
     let activeId = id
-    setTurns((list) => [...list, { id, text, answer: '', state: 'running', note: '' }])
+    setTurns((list) => [...list, { id, text, answer: '', state: 'running', note: '', stage: 'Starting the research…' }])
     if (mode !== 'live') {
       await new Promise((resolve) => window.setTimeout(resolve, 1200))
       patch(id, { answer: DEMO_ANSWER, state: 'done' })
@@ -138,7 +151,7 @@ export function ProductScreen({ lookupId, onBack, onCompare }: { lookupId: strin
       activeId = sent.job_id
       if (stopRequested.current) await post(`/api/jobs/${seg(sent.job_id)}/cancel`, {})
       setTurns((list) => list.map((t) => (t.id === id ? { ...t, id: sent.job_id } : t)))
-      const ended = await followJob(sent.job_id, (reading) => patch(sent.job_id, { answer: answerOf(reading), note: reading.message || 'Working' }), () => alive.current)
+      const ended = await followJob(sent.job_id, (reading) => patch(sent.job_id, { answer: answerOf(reading), jobState: reading.state, jobMessage: reading.message, feed: reading.feed }), () => alive.current)
       if (ended) settle(sent.job_id, ended)
     } catch (error) {
       patch(activeId, { state: 'failed', note: reasonOf(error) })
@@ -172,6 +185,11 @@ export function ProductScreen({ lookupId, onBack, onCompare }: { lookupId: strin
         </div>
         <div className="head-tools">
           {check && <button className="btn" disabled={turns.some((turn) => turn.state === 'running')} onClick={() => void ask('Research this exact product again for current evidence, prices and availability. Keep the recorded variant and market assumptions explicit and cite the sources.')}>Ask for fresh evidence</button>}
+          {check && mode === 'live' && (
+            <button className="btn" onClick={() => setDodgeOpen(true)}>
+              <Icon name="shieldcheck" size={14} /> Not buying this
+            </button>
+          )}
           {onBoard ? (
             <button className="btn" onClick={onCompare}>
               Open Compare
@@ -194,6 +212,12 @@ export function ProductScreen({ lookupId, onBack, onCompare }: { lookupId: strin
           <p className="error-note" role="alert">
             {problem}
             <button className="btn" onClick={() => setLoadAttempt((n) => n + 1)}>Read again</button>
+          </p>
+        )}
+        {dodgeNote && (
+          <p className="dodge-saved" role="status">
+            <Icon name="shieldcheck" size={15} /> {dodgeNote}
+            <button className="btn ghost" onClick={() => setDodgeNote('')}>Dismiss</button>
           </p>
         )}
         {!check && !problem && (
@@ -241,6 +265,7 @@ export function ProductScreen({ lookupId, onBack, onCompare }: { lookupId: strin
             </button>
           </p>
         )}
+        {check && <UsedCard check={{ ...check, risks: drawn }} />}
 
         <div className="talk wide">
           <AnimatePresence initial={false}>
@@ -248,10 +273,7 @@ export function ProductScreen({ lookupId, onBack, onCompare }: { lookupId: strin
               <motion.div key={t.id} className="talk-q" initial={{ opacity: 0, y: m.d(10) }} animate={{ opacity: 1, y: 0 }} transition={m.tx.spring}>
                 <p className="you">{t.text}</p>
                 {t.state === 'running' && (
-                  <span className="work-line">
-                    <PixelGlyph size={13} active />
-                    {t.note || 'Starting research'}
-                  </span>
+                  <WorkTerminal title={t.text} state={t.jobState} stage={t.stage} message={t.jobMessage} feed={t.feed} />
                 )}
                 {t.answer && (
                   <article className="answer">
@@ -273,6 +295,20 @@ export function ProductScreen({ lookupId, onBack, onCompare }: { lookupId: strin
       <div className="compare-dock">
         <Composer onSubmit={(text) => void ask(text)} running={asking} onStop={stop} placeholder="Ask about this product" agents={false} autoFocus />
       </div>
+      {dodgeOpen && check && (
+        <DodgeDialog
+          name={check.name}
+          url={check.url ?? ''}
+          reason={strongestConcern(drawn)}
+          add={dodged.add}
+          problem={dodged.problem}
+          onClose={() => setDodgeOpen(false)}
+          onSaved={() => {
+            setDodgeOpen(false)
+            setDodgeNote(`${check.name} is in Dodged.`)
+          }}
+        />
+      )}
     </section>
   )
 }

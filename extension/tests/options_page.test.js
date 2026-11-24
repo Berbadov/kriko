@@ -105,3 +105,32 @@ test("a cache that stopped being written is said here, not only in the console",
   await settle();
   assert.match(page.document.getElementById("kept-status").textContent, /storage is full/i);
 });
+
+// ── the passive pill ────────────────────────────────────────────────────
+
+test("the pill switch is on by default, says what it does, and follows a stored off", async () => {
+  const page = loadOptions();
+  await settle();
+  const box = page.document.getElementById("risk-pill");
+  assert.equal(box.checked, true, "the default is on");
+  const label = box.closest("label").textContent.replace(/\s+/g, " ");
+  assert.match(label, /small Kriko pill beside product titles/i);
+  assert.match(page.document.querySelector(".setting-help").textContent, /opens the panel when clicked/i);
+
+  const stored = loadOptions({ local: { krikoRiskPill: false } });
+  await settle();
+  assert.equal(stored.document.getElementById("risk-pill").checked, false);
+});
+
+test("turning the pill off is written where the content script reads it", async () => {
+  const page = loadOptions();
+  await settle();
+  const box = page.document.getElementById("risk-pill");
+  box.checked = false;
+  box.dispatchEvent(new page.window.Event("change"));
+  assert.equal(page.bag.krikoRiskPill, false);
+
+  box.checked = true;
+  box.dispatchEvent(new page.window.Event("change"));
+  assert.equal(page.bag.krikoRiskPill, true);
+});

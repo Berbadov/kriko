@@ -2,6 +2,9 @@ import { useCallback, useEffect, useState } from 'react'
 import { del, EngineError, get, post, put, seg } from './api'
 import { useEngine } from './Engine'
 import { followJob } from './jobs'
+import type { Dodge, DodgedListing, DodgeTotal } from './dodged'
+
+export type { Dodge, DodgedListing, DodgeTotal }
 
 /** The reader as a buyer: what they need, what they bought and how it went, the
  *  pages they watch, and what Kriko keeps. All of it lives in a file on this
@@ -74,6 +77,7 @@ export interface PriceAlert {
 export interface Holdings {
   profile: number
   purchases: number
+  dodged: number
   prices: number
   watches: number
   picks: number
@@ -186,6 +190,35 @@ export function useLedger() {
   const forget = useCallback((id: string) => run(() => del(`/api/buyer/purchases/${seg(id)}`), 'Could not delete it.'), [run])
 
   return { items: value.items, due: value.due, tally: value.tally, record: value.record, ready, problem, add, answer, snooze, forget, reload, live, setValue }
+}
+
+/** What the reader decided not to buy, and the money that decision kept. */
+export function useDodged() {
+  const { value, setValue, ready, problem, setProblem, reload, live } = useLive<DodgedListing>('/api/buyer/dodged', { items: [], totals: [], count: 0, priced: 0 })
+
+  const run = useCallback(
+    async (act: () => Promise<unknown>, failed: string) => {
+      try {
+        await act()
+        await reload()
+        return true
+      } catch (error) {
+        setProblem(reasonOf(error, failed))
+        return false
+      }
+    },
+    [reload, setProblem],
+  )
+
+  /** One press on a check. Returns whether it was kept, so the form can close only then. */
+  const add = useCallback(
+    (name: string, price: string, currency: string, reason: string, url: string) =>
+      run(() => post('/api/buyer/dodged', { name: name.trim(), price: price.trim() || null, currency: currency.trim(), reason: reason.trim(), url }), 'Could not keep that decision.'),
+    [run],
+  )
+  const forget = useCallback((id: string) => run(() => del(`/api/buyer/dodged/${seg(id)}`), 'Could not remove it.'), [run])
+
+  return { items: value.items, totals: value.totals, count: value.count, priced: value.priced, ready, problem, add, forget, reload, live, setValue }
 }
 
 export function useWatches() {

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react'
 import { demoThreads } from '../engine/threads'
 import { DEMO_PAGES, demoUsage } from '../mock/data'
+import type { ApiFeedEvent } from '../engine/api'
 
 /** One run of an agent, as the interface sees it. The mock engine below fills
  *  it in time. The real engine will fill the same shape from its live feed. */
@@ -139,6 +140,10 @@ export interface Run {
   error?: string
   /** The job that ran it, so a failure can be reported with its log. */
   jobId?: string
+  /** The job's own feed and words while it runs, for the work terminal. */
+  feed?: ApiFeedEvent[]
+  jobState?: string
+  jobMessage?: string
   agent?: AgentRef
   /** Index of the active plan step. */
   step: number
@@ -159,6 +164,7 @@ export interface Turn {
   /** Why the turn failed, when it did. */
   error?: string
   jobId?: string
+  feed?: ApiFeedEvent[]
   agent?: AgentRef
 }
 

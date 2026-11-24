@@ -1,9 +1,10 @@
-"""The reader as a buyer: a profile, a ledger, fit, and a committed pick.
+"""The reader as a buyer: a profile, a ledger, what they decided against, fit, and a committed pick.
 
 Reads and writes `app.sqlite` only. Nothing here touches the knowledge store,
 and nothing here changes a ranking of claims: this router is the reader's own
-memory of what they need and what they bought (`app/buyer.py`), and the
-decision Kriko makes from it (`app/pick.py`, `app/advice.py`).
+memory of what they need, what they bought and what they chose not to buy
+(`app/buyer.py`), and the decision Kriko makes from it (`app/pick.py`,
+`app/advice.py`).
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -92,6 +93,43 @@ def forget_purchase(purchase_id: str, conn=Depends(get_app_state)) -> dict:
     if not buyer.forget_purchase(conn, purchase_id):
         raise HTTPException(404, f"no purchase {purchase_id}")
     return {"deleted": purchase_id}
+
+
+class DodgeRequest(BaseModel):
+    """A product the reader chose not to buy. The price is optional; the reason is one line."""
+
+    name: str = Field(max_length=300)
+    url: str = Field(default="", max_length=2000)
+    price: float | str | None = None
+    currency: str = Field(default="", max_length=8)
+    reason: str = Field(default="", max_length=buyer.MAX_DODGE_REASON)
+
+
+@router.get("/dodged")
+def list_dodged(conn=Depends(get_app_state)) -> dict:
+    """The products the reader decided against, and what that decision saved.
+
+    Totals are per currency, and a row with no price still counts as a product:
+    adding a price would be inventing one.
+    """
+    return {"items": buyer.dodged(conn), **buyer.money_saved(conn)}
+
+
+@router.post("/dodged")
+def add_dodged(body: DodgeRequest, conn=Depends(get_app_state)) -> dict:
+    """"Not buying this." One row, one line of reason, no account and no network."""
+    try:
+        return buyer.record_dodge(conn, body.name, url=body.url, price=body.price,
+                                  currency=body.currency, reason=body.reason)
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
+
+
+@router.delete("/dodged/{dodge_id}")
+def remove_dodged(dodge_id: str, conn=Depends(get_app_state)) -> dict:
+    if not buyer.forget_dodge(conn, dodge_id):
+        raise HTTPException(404, f"no dodge {dodge_id}")
+    return {"deleted": dodge_id}
 
 
 class FitItem(BaseModel):

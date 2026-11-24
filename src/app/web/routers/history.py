@@ -205,7 +205,10 @@ def assign_saved_quick_look_category(job_id: str, body: ManualCategoryRequest,
 
 @router.get("/lookup/{lookup_id}")
 def get_lookup(lookup_id: str, app_state=Depends(get_app_state)):
-    row = state.get_lookup(app_state, lookup_id)
+    # A completed quick look is addressed by its job id everywhere else — the
+    # Compare draft stores that id as a column — so this door answers for it in
+    # the shape a saved check has. A real lookup still wins when both exist.
+    row = state.saved_answer(app_state, lookup_id)
     if row is None:
         raise HTTPException(404, f"no such lookup: {lookup_id}")
     # A check saved before claims carried an `evidence` object is read the same

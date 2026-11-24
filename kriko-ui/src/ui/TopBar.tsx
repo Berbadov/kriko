@@ -14,8 +14,8 @@ import { UsagePill } from './UsagePill'
 /** The logo files are white. They take the colour of the text instead. */
 const ink = (svg: string) => svg.replaceAll('#ffffff', 'currentColor')
 
-export type Screen = 'chat' | 'compare' | 'prices' | 'estimate' | 'queue'
-export const ORDER: Screen[] = ['chat', 'compare', 'prices', 'estimate', 'queue']
+export type Screen = 'chat' | 'compare' | 'prices' | 'estimate' | 'queue' | 'dodged'
+export const ORDER: Screen[] = ['chat', 'compare', 'prices', 'estimate', 'queue', 'dodged']
 
 const ITEMS: { id: Screen; label: string; icon: IconName }[] = [
   { id: 'chat', label: 'Chat', icon: 'chat' },
@@ -23,6 +23,7 @@ const ITEMS: { id: Screen; label: string; icon: IconName }[] = [
   { id: 'prices', label: 'Prices', icon: 'coins' },
   { id: 'estimate', label: 'Estimate', icon: 'gauge' },
   { id: 'queue', label: 'Queue', icon: 'queue' },
+  { id: 'dodged', label: 'Dodged', icon: 'shieldcheck' },
 ]
 
 /** The bar across the top. It holds the three places, the chats the reader has

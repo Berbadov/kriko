@@ -521,6 +521,8 @@ def _append_compare_lookup(conn: sqlite3.Connection, draft_id: str, lookup_id: s
             return False
         if lookup_id in ids:
             return True
+        if len(ids) >= state.COMPARE_MAX:
+            return False
         changed = conn.execute(
             "UPDATE compare_drafts SET lookup_ids = ?, updated_at = ?"
             " WHERE draft_id = ? AND lookup_ids = ?",

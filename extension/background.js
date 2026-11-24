@@ -162,15 +162,26 @@ if (IS_FIREFOX) {
 // One function rather than a listener each, because a keyboard shortcut whose
 // behaviour has drifted from the toolbar button's is worse than no shortcut:
 // the reader learns the key, and then one day it does something else.
-async function toggleHoverLite(tab) {
+//
+// The extra fields are for the doors that are not a toggle: the passive pill
+// and a selection lookup both open the panel, and a selection lookup hands it
+// words to search for. `open` means "show, do not close if already shown".
+async function showHoverPanel(tab, { open = false, query = "" } = {}) {
   if (!tab || !tab.id) return false;
+  const message = { type: "TOGGLE_HOVER_LITE" };
+  if (open) message.open = true;
+  if (query) message.query = String(query).slice(0, 400);
   try {
-    await extensionApi.tabs.sendMessage(tab.id, { type: "TOGGLE_HOVER_LITE" });
+    await extensionApi.tabs.sendMessage(tab.id, message);
     return true;
   } catch (_) {
     // Content script not present (e.g. chrome:// or unsupported host) — ignore.
     return false;
   }
+}
+
+async function toggleHoverLite(tab) {
+  return showHoverPanel(tab);
 }
 
 // The toolbar click, on any page.
@@ -243,7 +254,7 @@ function _askEverySiteOnce(tab) {
 // Put the panel on this one tab, now. `activeTab` makes the click itself the
 // grant for this tab, so this works whether or not the every-site ask was
 // accepted — declining costs the automatic answer, never the button.
-async function _openPanelHere(tab) {
+async function _openPanelHere(tab, options = {}) {
   const url = String((tab && tab.url) || "");
   if (!tab || !tab.id || !/^https:/i.test(url) || !extensionApi.scripting) return false;
   try {
@@ -251,7 +262,7 @@ async function _openPanelHere(tab) {
   } catch (_) {
     return false;    // a page Chrome keeps extensions out of (the web store, say)
   }
-  return toggleHoverLite(tab);
+  return showHoverPanel(tab, options);
 }
 
 async function reportUnreadableSite(tab) {
@@ -369,12 +380,29 @@ if (extensionApi.commands && extensionApi.commands.onCommand) {
 
 // Right-click a product link or selected product name/URL. This reads only
 // installed catalogs and saved checks, never fetching an untrusted page.
+//
+// A second item is the inverse: a selected *name* or model number is not a
+// lookup by address, so it opens the panel with the panel's own search already
+// filled in. That search is the existing `SEARCH` route through the worker;
+// nothing new is asked of the app, and no page is fetched.
 if (extensionApi.contextMenus) {
   extensionApi.runtime.onInstalled.addListener(async () => {
     await extensionApi.contextMenus.removeAll();
     extensionApi.contextMenus.create({ id: "kriko-quick-scan", title: "Check with Kriko", contexts: ["link", "selection"] });
+    extensionApi.contextMenus.create({ id: "kriko-lookup-selection", title: "Check this model with Kriko", contexts: ["selection"] });
   });
   extensionApi.contextMenus.onClicked.addListener(async (info, tab) => {
+    if (info.menuItemId === "kriko-lookup-selection") {
+      const selected = String(info.selectionText || "").trim().slice(0, 400);
+      if (!selected || !tab?.id) return;
+      const shown = await showHoverPanel(tab, { open: true, query: selected });
+      if (shown) return;
+      // No panel on this tab yet: the same injection the toolbar click does,
+      // then the same message. `activeTab` is the click's grant here too.
+      if (await _openPanelHere(tab, { open: true, query: selected })) return;
+      await notify(tab, "Kriko cannot open on this page.");
+      return;
+    }
     if (info.menuItemId !== "kriko-quick-scan" || !tab?.id) return;
     const selected = String(info.selectionText || "").trim();
     const url = info.linkUrl || (/^https?:\/\//i.test(selected) ? selected : "");
@@ -2704,6 +2732,16 @@ extensionApi.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (CHECKOUT_PATH.test(url)) void guardCheckout(tabId, url);
     sendResponse({ ok: true, message: "Analysis triggered" });
     return false;
+  }
+
+  // The passive pill's press. It is already on a page whose content script is
+  // running, so this is the toolbar's own toggle message with "show" rather
+  // than "flip": pressing a pill while the panel is open must not close it.
+  if (request.type === "OPEN_PANEL") {
+    showHoverPanel(sender.tab, { open: true })
+      .then((shown) => sendResponse({ ok: shown }))
+      .catch(() => sendResponse({ ok: false }));
+    return true; // async
   }
 
   if (request.type === "OPEN_IN_APP") {

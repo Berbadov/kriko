@@ -43,6 +43,34 @@ test('an unfiled Quick Look keeps its specifications, source, coverage and exact
   assert.equal(loaded.risks[0].applicability, 'conditional')
 })
 
+test('a quick look addressed by its job id loads as a column, exactly like a saved check', async () => {
+  const asked = []
+  globalThis.fetch = async (path) => {
+    asked.push(path)
+    return reply({
+      lookup_id: '8de922e40f940fef',
+      created_at: '2026-11-22T17:50:00+00:00',
+      source: 'quick_look',
+      label: 'PS5 gamepad',
+      request: { url: 'https://shop.example/dualsense', title: 'PS5 gamepad' },
+      response: {
+        category: 'wireless game controller',
+        assumed: 'standard edition',
+        claims: [{ title: 'Stick drift', body: 'The sticks drift.', severity: 'high', sources: [{ url: 'https://classaction.example/dualsense', quote: 'They drift.' }] }],
+      },
+    })
+  }
+  const loaded = await checks.loadCheck('8de922e40f940fef')
+  assert.deepEqual(asked, ['/api/lookup/8de922e40f940fef'])
+  assert.equal(loaded.name, 'PS5 gamepad')
+  assert.equal(loaded.category, 'wireless game controller')
+  assert.equal(loaded.url, 'https://shop.example/dualsense')
+  assert.equal(loaded.checkedAt, '2026-11-22T17:50:00+00:00')
+  assert.equal(loaded.assumed, 'standard edition')
+  assert.equal(loaded.risks[0].title, 'Stick drift')
+  assert.equal(loaded.risks[0].sources[0].host, 'classaction.example')
+})
+
 test('an ambiguous match does not substitute the specifications of the product with more risks', async () => {
   const requested = []
   globalThis.fetch = async (path) => { requested.push(path); return reply({ response: { subjects: [{subject_id:'a',claims:1},{subject_id:'b',claims:50}], claims: [] } }) }

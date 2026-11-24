@@ -1,4 +1,5 @@
 import type { Agent } from '../engine/Engine'
+import type { ApiJob } from '../engine/api'
 
 export interface CompareDraft {
   draft_id: string
@@ -28,6 +29,15 @@ export function selectCompareAgent(agents: Agent[], preferred: string, available
  *  is missing. This is a request the engine already understands (`ask` sends
  *  the same empty id when the reader has picked nothing), not a fifth agent. */
 export const ENGINE_CHOOSES: Agent = { id: '', label: 'Default agent', backend: 'harness' }
+
+/** The agent a press that names a product uses.
+ *
+ *  An empty roster is not a crash: it is the engine's own "no pick named"
+ *  shape, which the engine resolves or refuses with the key, trial or install
+ *  it is missing. Never `undefined`, so a caller cannot read `agent.id`. */
+export function pressAgent(agents: Agent[], preferred: string): Agent {
+  return agents.find((agent) => agent.id === preferred) ?? agents[0] ?? ENGINE_CHOOSES
+}
 
 export interface Recovery {
   /** What the reader may press. Never invented here: it is the engine's own
@@ -64,6 +74,23 @@ export function compareRecovery(agents: Agent[], preferred: string, available: b
     note: 'The engine lists no research agent on this machine.',
     engineChooses: true,
   }
+}
+
+/** The new-product quick looks this comparison should pick back up.
+ *
+ *  A product researched in Compare is a `quick_look` job with `compare_add`;
+ *  it joins the draft only when it succeeds. Before then it is not a column, so
+ *  a reload would hide the work without this list. Finished jobs are excluded:
+ *  their column is already in the draft, or they failed. */
+export function resumableNewProducts(jobs: ApiJob[], draftId: string, lookupIds: string[]): { jobId: string; name: string }[] {
+  const found: { jobId: string; name: string }[] = []
+  for (const job of jobs) {
+    const params = job.params ?? {}
+    if (job.kind !== 'quick_look' || job.done || params.compare_add !== true) continue
+    if (params.compare_draft_id !== draftId || lookupIds.includes(job.job_id)) continue
+    found.push({ jobId: job.job_id, name: String(params.product || 'Product') })
+  }
+  return found
 }
 
 export interface CompareResearchIO {

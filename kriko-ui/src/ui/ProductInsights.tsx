@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
-import { get, post, seg } from '../engine/api'
+import { get, post, seg, type ApiFeedEvent } from '../engine/api'
 import { followJob } from '../engine/jobs'
 import { ExternalLink } from './ExternalLink'
+import { WorkTerminal } from './WorkTerminal'
 
 interface Insights {
   freshness: { last_verified: string | null; stale: boolean; stale_after_days: number; undated_sources: number; basis: string }
@@ -17,6 +18,7 @@ export function ProductInsights({ lookupId, live, onResearch, onReload }: {
   const [data, setData] = useState<Insights | null>(null)
   const [problem, setProblem] = useState('')
   const [status, setStatus] = useState('')
+  const [reading, setReading] = useState<{ state?: string; message?: string; feed?: ApiFeedEvent[] }>({})
   const [running, setRunning] = useState(false)
   const [attempt, setAttempt] = useState(0)
   const active = useRef(true)
@@ -44,10 +46,13 @@ export function ProductInsights({ lookupId, live, onResearch, onReload }: {
 
   const research = async () => {
     if (!data?.target || running) return
-    setRunning(true); setProblem(''); setStatus('Starting research…')
+    setRunning(true); setProblem(''); setStatus('Starting research…'); setReading({})
     try {
       const sent = await post<{ job_id: string }>('/api/research', data.target)
-      const ended = await followJob(sent.job_id, (job) => setStatus(job.message || 'Researching current evidence…'), () => active.current)
+      const ended = await followJob(sent.job_id, (job) => {
+        setStatus(job.message || 'Researching current evidence…')
+        setReading({ state: job.state, message: job.message, feed: job.feed })
+      }, () => active.current)
       if (!active.current) return
       if (ended?.state !== 'succeeded') throw new Error(ended?.message || 'Research did not complete. The saved check is unchanged.')
       const refreshed = await post<{ refreshed: boolean }>(`/api/lookup/${seg(lookupId)}/refresh`, {})
@@ -80,7 +85,8 @@ export function ProductInsights({ lookupId, live, onResearch, onReload }: {
       {!data.costs.items.length && <p>No sourced repair or replacement prices are recorded yet.</p>}
       <button className="btn" onClick={() => onResearch('Find current replacement part and repair prices for the problems in this saved check. Confirm exact product/part compatibility, market and currency. Separate part price, labour, tax and shipping. Cite a live source and its date for each price; report unknowns and do not invent failure probabilities or an expected-cost total.')}>Find current part prices</button>
     </>}
-    {status && <p role="status">{status}</p>}
+    {running && <WorkTerminal title="Re-research product" state={reading.state} message={reading.message} feed={reading.feed} stage={status || 'Starting research…'} />}
+    {status && <p role={running ? undefined : 'status'}>{status}</p>}
     {problem && <p className="error-note" role="alert">{problem}</p>}
   </section>
 }

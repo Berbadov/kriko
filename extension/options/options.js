@@ -588,6 +588,31 @@ const GLASS_KEY = "kriko.glass";
 })();
 
 
+// ── the passive pill, kept beside the panel's glass ─────────────────────
+//
+// Default on: the pill is what shows the answer to a reader who never opens
+// the panel, and only an explicit "off" removes it. The content script reads
+// the same key and follows this change, so a page already open loses its pill
+// without a reload. Absent means on, exactly as `buyerGuard` does.
+
+const RISK_PILL_KEY = "krikoRiskPill";
+(function riskPillSetting() {
+  const box = document.getElementById("risk-pill");
+  if (!box) return;
+  try {
+    chrome.storage?.local?.get?.([RISK_PILL_KEY], (bag) => {
+      box.checked = bag?.[RISK_PILL_KEY] !== false;
+    });
+  } catch (_) { /* checked, which is the default */ }
+  box.addEventListener("change", () => {
+    try {
+      chrome.storage?.local?.set?.({ [RISK_PILL_KEY]: box.checked },
+        () => { void chrome.runtime.lastError; });
+    } catch (_) { /* a browser without local storage keeps the choice for this tab only */ }
+  });
+})();
+
+
 // ── how much doubt to show ──────────────────────────────────────────────
 //
 // The setting belongs to the app (`info_sensitivity`), so this page reads and

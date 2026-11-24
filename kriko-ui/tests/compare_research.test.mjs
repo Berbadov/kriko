@@ -12,7 +12,7 @@ const source = await readFile('src/compare/research.ts', 'utf8')
 await writeFile(compiled, ts.transpileModule(source, {
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
 }).outputText)
-const { researchCompareSlot, selectCompareAgent, compareRecovery, ENGINE_CHOOSES } = require(compiled)
+const { researchCompareSlot, selectCompareAgent, compareRecovery, ENGINE_CHOOSES, pressAgent, resumableNewProducts } = require(compiled)
 
 test.after(async () => rm(directory, { recursive: true, force: true }))
 
@@ -104,8 +104,17 @@ test('recovery never invents an agent the engine listed nothing of', () => {
     'the press sends the engine’s own "no pick named" shape')
 })
 
-test('the engine is left to refuse with its own words when it listed no agent', async () => {
-  // The press has to reach the job: `harness_researcher` then either falls back
+test('a press that names a product never hands an undefined agent to research', () => {
+  const roster = [
+    { id: 'codex', backend: 'harness', label: 'Codex' },
+    { id: 'local', backend: 'local', label: 'Local' },
+  ]
+  assert.deepEqual(pressAgent([], 'anything'), ENGINE_CHOOSES)
+  assert.deepEqual(pressAgent(roster, 'removed'), roster[0], 'a stored pick the engine dropped uses the first it listed')
+  assert.deepEqual(pressAgent(roster, 'local'), roster[1])
+})
+
+test('the engine is left to refuse with its own words when it listed no agent', async () => {  // The press has to reach the job: `harness_researcher` then either falls back
   // visibly or raises `NoHarness`, naming the CLIs looked for and the key the
   // API agent is missing. A validation error here would replace that sentence.
   const state = setup({ ended: { state: 'failed', message: 'NoHarness: no coding-agent CLI on PATH' } })
@@ -123,4 +132,17 @@ test('a failed job reports the engine’s own message and never refreshes the bo
     /Codex is not installed here/)
   assert.equal(state.calls.some(([kind]) => kind === 'drafts' || kind === 'save'), false,
     'a failed run leaves the column it could not replace')
+})
+
+test('a reload picks the running new-product researches back up, and only those', () => {
+  const jobs = [
+    { job_id: 'running-here', kind: 'quick_look', done: false, params: { product: 'PS5 gamepad', compare_add: true, compare_draft_id: 'draft/one' } },
+    { job_id: 'already-a-column', kind: 'quick_look', done: false, params: { product: 'Already', compare_add: true, compare_draft_id: 'draft/one' } },
+    { job_id: 'finished', kind: 'quick_look', done: true, params: { product: 'Done', compare_add: true, compare_draft_id: 'draft/one' } },
+    { job_id: 'other-draft', kind: 'quick_look', done: false, params: { product: 'Elsewhere', compare_add: true, compare_draft_id: 'draft/two' } },
+    { job_id: 'replacement', kind: 'quick_look', done: false, params: { product: 'Old', compare_draft_id: 'draft/one' } },
+    { job_id: 'not-a-quick-look', kind: 'research', done: false, params: { compare_add: true, compare_draft_id: 'draft/one' } },
+  ]
+  assert.deepEqual(resumableNewProducts(jobs, 'draft/one', ['already-a-column']),
+    [{ jobId: 'running-here', name: 'PS5 gamepad' }])
 })

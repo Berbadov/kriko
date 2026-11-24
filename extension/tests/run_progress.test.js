@@ -142,3 +142,99 @@ test("what a finished look covered is said pages first, and a zero is said, not 
   assert.deepEqual(coverageSummary({ pages_read: 2 }).rest, []);
   assert.deepEqual(coverageSummary(null), { pages: "", rest: [] });
 });
+
+// ── the work terminal's lines (#263) ────────────────────────────────────
+//
+// The panel shows a few real lines while the reader waits, so the wait has a
+// reason and the run looks like work rather than a spinner. The lines are the
+// engine's own shapes only, a URL is reduced to its host, and the card is a
+// glance: five lines, each one line long.
+const workLines = (text) => plain(mod.workLines(text));
+const waitReason = (key) => mod.waitReason(key);
+
+test("the lines are the searches, hosts and checks the run actually wrote", () => {
+  const lines = workLines([
+    "search language: en; queries: gearbox judder; clutch judder",
+    "found 6 page(s); reading up to 6",
+    "read: https://a.example/1",
+    "fetched https://b.example/path",
+    "could not read: https://c.example/blocked",
+    "extracting source 2/4: https://a.example/2",
+    "evidence check on the quote",
+  ].join("\n"));
+  // Only the last five survive; each one is a shape the engine wrote.
+  assert.deepEqual(lines, [
+    "Read: a.example",
+    "Read: b.example",
+    "Couldn't read: c.example",
+    "Source 2 of 4: a.example",
+    "Evidence check",
+  ]);
+  // Both query shapes and the planned queries are searches.
+  assert.deepEqual(
+    workLines("search language: en; queries: gearbox judder; clutch judder\nsearching: dmf failure\nsearched \"clutch judder\""),
+    ["Search: gearbox judder", "Search: clutch judder", "Search: dmf failure", "Search: clutch judder"],
+  );
+  // A line this module does not recognise is not a line it shows.
+  assert.deepEqual(workLines("page fetched; checking product match: https://secret.example/reading"), []);
+});
+
+test("a URL is reduced to its host, so no path, query or token reaches the panel", () => {
+  const lines = workLines([
+    "read: https://shop.example/p/kettle-x200?session=abc123#reviews",
+    "could not read: http://user:pass@blocked.example/private?q=customer@example.com",
+    "extracting source 1/3: https://a.example/secret/path",
+    'searching: https://shop.example/p/kettle-x200?session=abc123 kettle review',
+  ].join("\n"));
+  const all = lines.join(" ");
+  assert.doesNotMatch(all, /https?:|session|abc123|pass|private|customer|secret|\/p\//i);
+  assert.ok(lines.includes("Read: shop.example"));
+  assert.match(all, /blocked\.example/);
+  assert.match(all, /a\.example/);
+  assert.ok(lines.includes("Search: shop.example kettle review"),
+    "a pasted address in a query kept its path");
+});
+
+test("the terminal is capped: five lines, each clipped to one line", () => {
+  const lines = workLines(Array.from({ length: 12 }, (_, i) => `read: https://h${i}.example/x`).join("\n"));
+  assert.equal(lines.length, 5);
+  assert.deepEqual(lines, [
+    "Read: h7.example", "Read: h8.example", "Read: h9.example",
+    "Read: h10.example", "Read: h11.example",
+  ]);
+  const long = workLines(`searching: ${"q".repeat(120)}`);
+  assert.equal(long.length, 1);
+  assert.ok(long[0].length <= 72, `a line grew to ${long[0].length}`);
+  assert.match(long[0], /\u2026$/);
+});
+
+test("the same line twice in a row is one line, not a log view", () => {
+  assert.deepEqual(workLines("read: https://a.example/1\nread: https://a.example/2"), ["Read: a.example"]);
+});
+
+test("every wait has a reason in plain words, and the run's own state picks it", () => {
+  for (const [key, text] of Object.entries(mod.WAIT_REASONS)) {
+    assert.ok(text && text.trim().length > 3, `${key} has no reason`);
+  }
+  assert.match(waitReason("app_not_running"), /isn't running/);
+  assert.match(waitReason("queued"), /free slot/);
+  assert.match(waitReason("scrape_failed"), /couldn't be read/);
+  assert.match(waitReason("starting_research"), /Starting the research/);
+  assert.match(waitReason("starting_agent"), /agent/);
+  assert.equal(waitReason("unknown-key"), mod.WAIT_REASONS.working);
+
+  const queued = describeRun({ kind: "quick_look", state: "queued", log: "" });
+  assert.equal(queued.terminal.reason, mod.WAIT_REASONS.queued);
+  const blocked = describeRun({ kind: "quick_look", state: "blocked", log: "" });
+  assert.equal(blocked.terminal.reason, mod.WAIT_REASONS.blocked);
+  const searching = running(SEARCH);
+  assert.equal(searching.terminal.reason, mod.WAIT_REASONS.search);
+  assert.equal(searching.terminal.stage, "Searching");
+  assert.deepEqual(searching.terminal.lines, [
+    "Search: gearbox judder",
+    "Search: clutch problems",
+    "Search: gearbox judder known problems",
+  ]);
+  const reading = running([...SEARCH, ...READS]);
+  assert.equal(reading.terminal.reason, mod.WAIT_REASONS.read);
+});

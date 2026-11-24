@@ -8,6 +8,12 @@
 // can see it twice. `__injectAgain()` is that second injection, and the timers
 // are queued rather than run, so loading the file still fires no request while
 // a test that wants the auto-trigger can flush it.
+//
+// Storage is a bag per area, like the extension's own: the passive pill reads
+// this page's session result and the reader's local option, and a test has to
+// be able to write either and fire the change event the browser would. A
+// `get` with a callback answers synchronously; one without answers a Promise,
+// which is the shape MV3 gives `chrome.storage.session.get`.
 const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
@@ -15,12 +21,46 @@ const { JSDOM } = require("jsdom");
 
 const CONTENT_JS = path.join(__dirname, "..", "content.js");
 
-function loadContentScript(html, url = "https://www.listing.example/ilan/vasita-otomobil-volkswagen-golf-123456/detay") {
+function loadContentScript(html, url = "https://www.listing.example/ilan/vasita-otomobil-volkswagen-golf-123456/detay",
+                            { local = {}, session = {} } = {}) {
   const dom = new JSDOM(html, { url });
   const source = fs.readFileSync(CONTENT_JS, "utf8");
   const messageListeners = [];
   const sent = [];
   const timers = [];
+  const changeListeners = [];
+  const localBag = { ...local };
+  const sessionBag = { ...session };
+
+  const area = (bag, name) => ({
+    get(keys, done) {
+      const out = {};
+      for (const key of Array.isArray(keys) ? keys : [keys]) {
+        if (key in bag) out[key] = bag[key];
+      }
+      if (typeof done === "function") { done(out); return undefined; }
+      return Promise.resolve(out);
+    },
+    set(items, done) {
+      const changes = {};
+      for (const [key, value] of Object.entries(items || {})) {
+        changes[key] = { oldValue: bag[key], newValue: value };
+      }
+      Object.assign(bag, items || {});
+      for (const fn of changeListeners) fn(changes, name);
+      if (typeof done === "function") done();
+    },
+    remove(keys, done) {
+      const changes = {};
+      for (const key of [].concat(keys)) {
+        changes[key] = { oldValue: bag[key], newValue: undefined };
+        delete bag[key];
+      }
+      for (const fn of changeListeners) fn(changes, name);
+      if (typeof done === "function") done();
+    },
+  });
+
   const sandbox = {
     document: dom.window.document,
     window: dom.window,
@@ -44,6 +84,11 @@ function loadContentScript(html, url = "https://www.listing.example/ilan/vasita-
           if (typeof callback === "function") callback({ ok: true });
         },
       },
+      storage: {
+        onChanged: { addListener: (fn) => changeListeners.push(fn) },
+        local: area(localBag, "local"),
+        session: area(sessionBag, "session"),
+      },
     },
   };
   const evaluate = () =>
@@ -55,6 +100,12 @@ function loadContentScript(html, url = "https://www.listing.example/ilan/vasita-
     const pending = timers.splice(0);
     for (const fn of pending) if (fn) fn();
   };
+  // Fire the storage change a browser would deliver to this content script.
+  sandbox.__deliverStorage = (changes, areaName) => {
+    for (const fn of changeListeners) fn(changes, areaName);
+  };
+  sandbox.__local = localBag;
+  sandbox.__session = sessionBag;
   vm.createContext(sandbox);
   evaluate();
   return sandbox;

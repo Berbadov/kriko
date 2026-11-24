@@ -899,6 +899,19 @@ test("the header opens a field to type a product name into", () => {
   assert.ok(p.shadow().querySelector(".lite-search-field"));
 });
 
+test("a selected model opens the panel with the field filled and the search already asked", () => {
+  // The context menu's door. The words are the reader's selection, carried by
+  // the worker; the panel uses its own search route, so nothing new reaches
+  // the app and the reader does not have to retype what they highlighted.
+  const p = loadPanel({ searchResponse: HITS });
+  p.deliverMessage({ type: "TOGGLE_HOVER_LITE", open: true, query: "Bosch HSG 7584 B" });
+  const field = p.shadow().querySelector(".lite-search-field");
+  assert.ok(field, "the panel opened without its search field");
+  assert.equal(field.value, "Bosch HSG 7584 B");
+  p.flushTimers();
+  assert.equal(p.sent.filter((m) => m.type === "SEARCH").at(-1).payload.q, "Bosch HSG 7584 B");
+});
+
 test("two characters is the floor, and nothing is asked below it", () => {
   const p = loadPanel({ searchResponse: HITS });
   p.openPanel();

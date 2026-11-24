@@ -18,9 +18,9 @@ as the job needs.
   to the relay only when the reader turns that watch on, and with private labels
   the relay is not even told what the product is called, only that a page it holds
   crossed a price.
-* **Merging, not overwriting.** Profile by the later edit; purchases and watches as a
-  union, newest row winning, with a short list of deletions so a stopped watch stays
-  stopped on every device.
+* **Merging, not overwriting.** Profile by the later edit; purchases, dodges and
+  watches as a union, newest row winning, with a short list of deletions so a
+  stopped watch stays stopped on every device.
 
 The relay only ever sees an HTTPS address (or a loopback one, for a relay on the same
 computer): a key-derived token is never sent in the clear.
@@ -341,7 +341,9 @@ def _profile_merge(conn, local: dict, remote: dict | None) -> dict:
 
 
 def _ledger_local(conn) -> dict:
-    return {"purchases": buyer.purchases(conn, 500), "deleted": [{"key": k, "at": a} for k, a in _tombs(conn, "purchase").items()]}
+    return {"purchases": buyer.purchases(conn, 500), "dodged": buyer.dodged(conn, 500),
+            "deleted": [{"key": k, "at": a} for k, a in _tombs(conn, "purchase").items()],
+            "dodged_deleted": [{"key": k, "at": a} for k, a in _tombs(conn, "dodge").items()]}
 
 
 def _newest(tombstones: list[dict]) -> dict[str, str]:
@@ -353,24 +355,30 @@ def _newest(tombstones: list[dict]) -> dict[str, str]:
     return gone
 
 
-def _fit_ledger(rows: list[dict]) -> list[dict]:
-    """The purchases that go on the blob: all of them while they fit, else the newest.
+def _fit_ledger(rows: list[dict], dodged: list[dict] | None = None) -> tuple[list[dict], list[dict]]:
+    """The reader's rows that go on the blob: all of them while they fit, else the newest.
 
     A reader with hundreds of long reasons outgrew the relay's cap, and every sync
     after that failed on the ledger and never reached the watches or the alerts.
-    Whatever stays off the blob stays on this computer.
+    Purchases give way first because a dodge is one press with one line, and
+    whatever stays off the blob stays on this computer.
     """
+    dodged = sorted(dodged or [], key=lambda r: r["dodge_id"])
     rows = sorted(rows, key=lambda r: r["purchase_id"])
-    while len(rows) > 1 and len(_canon(rows)) > MAX_LEDGER_BYTES:
+    while len(rows) > 1 and len(_canon({"purchases": rows, "dodged": dodged})) > MAX_LEDGER_BYTES:
         answered = [r for r in rows if r["answered_at"]] or rows
         oldest = min(answered, key=lambda r: (r["bought_at"], r["purchase_id"]))
         rows = [r for r in rows if r is not oldest]
-    return rows
+    while len(dodged) > 1 and len(_canon({"purchases": rows, "dodged": dodged})) > MAX_LEDGER_BYTES:
+        oldest = min(dodged, key=lambda r: (r["decided_at"], r["dodge_id"]))
+        dodged = [r for r in dodged if r is not oldest]
+    return rows, dodged
 
 
 def _ledger_merge(conn, local: dict, remote: dict | None) -> dict:
-    gone = _newest(local["deleted"] + ((remote or {}).get("deleted") or []))
-    rows = {r["purchase_id"]: r for r in (remote or {}).get("purchases", [])}
+    remote = remote or {}
+    gone = _newest(local["deleted"] + (remote.get("deleted") or []))
+    rows = {r["purchase_id"]: r for r in remote.get("purchases", [])}
     for row in local["purchases"]:
         have = rows.get(row["purchase_id"])
         if not have or (row["answered_at"], row["bought_at"]) >= (have["answered_at"], have["bought_at"]):
@@ -381,8 +389,22 @@ def _ledger_merge(conn, local: dict, remote: dict | None) -> dict:
         buyer.forget_purchase(conn, pid, remember=False)
     for row in rows.values():
         buyer.adopt_purchase(conn, row)
-    return {"purchases": _fit_ledger(list(rows.values())),
-            "deleted": [{"key": k, "at": a} for k, a in sorted(gone.items())]}
+    gone_dodged = _newest(local.get("dodged_deleted", []) + (remote.get("dodged_deleted") or []))
+    dodged = {r["dodge_id"]: r for r in remote.get("dodged", [])}
+    for row in local.get("dodged", []):
+        have = dodged.get(row["dodge_id"])
+        if not have or row["decided_at"] >= have["decided_at"]:
+            dodged[row["dodge_id"]] = row
+    for did in gone_dodged:
+        dodged.pop(did, None)
+    for did in [r["dodge_id"] for r in buyer.dodged(conn, 500) if r["dodge_id"] in gone_dodged]:
+        buyer.forget_dodge(conn, did, remember=False)
+    for row in dodged.values():
+        buyer.adopt_dodge(conn, row)
+    kept, kept_dodged = _fit_ledger(list(rows.values()), list(dodged.values()))
+    return {"purchases": kept, "dodged": kept_dodged,
+            "deleted": [{"key": k, "at": a} for k, a in sorted(gone.items())],
+            "dodged_deleted": [{"key": k, "at": a} for k, a in sorted(gone_dodged.items())]}
 
 
 _WATCH_FIELDS = ("product_key", "url", "name", "currency", "target", "drop_pct", "started_price", "cloud", "updated_at")

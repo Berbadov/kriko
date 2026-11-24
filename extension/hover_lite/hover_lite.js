@@ -20,7 +20,7 @@
   const { renderClaimCard, updateClaimCard, markClaimCard, factClaimCard, renderRichText } =
     window.__KrikoPanelClaimCard;
   const { filterByEvidence, normaliseSensitivity, hiddenWords } = window.__KrikoPanelClaimCard;
-  const { describeRun, coverageSummary } = window.__KrikoRunProgress;
+  const { describeRun, coverageSummary, waitReason } = window.__KrikoRunProgress;
 
   const HOST_TAG = "kriko-panel-host";
 
@@ -1465,6 +1465,7 @@
   }
 
   function renderResearch() {
+    renderWork();
     const slot = bodyEl?.querySelector(".lite-research-slot");
     if (!slot) return;
     if (!state.researchOpen) { slot.innerHTML = ""; slot._researchMarkup = null; slot._shown = false; return; }
@@ -1745,6 +1746,103 @@
     });
     box.querySelector(".lite-run-facts").textContent =
       [`Step ${run.step} of ${run.total}`, run.detail, run.pages].filter(Boolean).join(" \u00b7 ");
+  }
+
+  /* ─── the work terminal ────────────────────────────────────────────────
+   *
+   * A small warm-dark card that says, in the run's own words, what the reader
+   * is waiting on: the reason in the header, then the last few real lines
+   * (a search, a host read, a source checked) in mono, newest last, with a
+   * caret on it. It is a glance, not a log view — five lines, each clipped by
+   * `run_progress.js`, auto-scrolled to the end, older lines faded.
+   *
+   * Every line is derived from state the panel already has. Nothing is
+   * added to make it look busy: a wait with no log gets its reason and no
+   * lines, which is the honest picture of a run that has not said anything
+   * yet. It is not a live region — the status line above is the one thing a
+   * screen reader is told about on its own — so this repaint cannot become a
+   * stream of announcements.
+   */
+  const ANALYZE_STAGE_KEY = {
+    adapters: "checking_packs",
+    reading: "reading_page",
+    asking: "looking_up",
+    cached: "saved_answer",
+    failed: "failed",
+  };
+
+  function workState() {
+    if (state.researching) {
+      const run = state.researchRun;
+      const job = state.researchJob || {};
+      const stateName = String(state.researchState || job.state || "");
+      let reason = run?.terminal?.reason || waitReason("working");
+      if (stateName === "starting") reason = waitReason("starting_research");
+      else if (stateName === "queued" || job.state === "queued") reason = waitReason("queued");
+      else if (job.state === "blocked") reason = waitReason("blocked");
+      return { reason, stage: run?.terminal?.stage || "", lines: run?.terminal?.lines || [] };
+    }
+    if (state.learning) return { reason: waitReason("starting_agent"), stage: "", lines: [] };
+    if (state.pipeline === "analyzing") {
+      return {
+        reason: waitReason(ANALYZE_STAGE_KEY[state.stage?.name] || "starting"),
+        stage: state.stage ? stageSentence(state.stage) : "",
+        lines: [],
+      };
+    }
+    if (state.pipeline === "error") {
+      if (state.errorCode === "SCRAPE_FAILED") {
+        return { reason: waitReason("scrape_failed"), stage: "", lines: [] };
+      }
+      if (state.errorCode === "APP_NOT_RUNNING" || /\bnot running\b/i.test(state.errorMsg || "")) {
+        return { reason: waitReason("app_not_running"), stage: "", lines: [] };
+      }
+      return null;
+    }
+    if (state.noAdapter && state.pipeline !== "result") {
+      return {
+        reason: waitReason(state.hostKnown ? "not_a_listing" : "no_adapter"),
+        stage: "", lines: [],
+      };
+    }
+    return null;
+  }
+
+  function renderWork() {
+    const slot = bodyEl?.querySelector(".lite-work-slot");
+    if (!slot) return;
+    const work = workState();
+    if (!work) {
+      if (slot._workSig !== null) { slot.innerHTML = ""; slot._workSig = null; }
+      return;
+    }
+    const still = reduceMotion();
+    const shown = work.lines.slice(-5);
+    const signature = JSON.stringify([still, work.reason, work.stage, shown]);
+    if (slot._workSig === signature) return;
+    slot._workSig = signature;
+
+    const last = shown[shown.length - 1] || "";
+    const spoken = [work.reason, work.stage, last].filter(Boolean)
+      .map((part) => (/[.!?\u2026]$/.test(part) ? part : `${part}.`))
+      .join(" ");
+    slot.innerHTML = `
+      <section class="lite-work" data-still="${still ? "1" : "0"}"
+        role="group" aria-label="What Kriko is doing: ${escapeHtml(work.reason)}">
+        <div class="lite-work-head">
+          <span class="lite-work-kicker">Kriko</span>
+          <span class="lite-work-reason">${escapeHtml(work.reason)}</span>
+          ${work.stage ? `<span class="lite-work-stage">${escapeHtml(work.stage)}</span>` : ""}
+        </div>
+        ${shown.length ? `<ol class="lite-work-lines" aria-hidden="true">
+          ${shown.map((line) => `<li class="lite-work-line">${escapeHtml(line)}</li>`).join("")}
+        </ol>` : ""}
+        <p class="lite-work-sr">${escapeHtml(spoken)}</p>
+      </section>`;
+    const lines = slot.querySelector(".lite-work-lines");
+    // Auto-scroll to the newest line. `scrollHeight` is 0 in the tests' jsdom;
+    // a browser lands on the last line either way.
+    if (lines) lines.scrollTop = lines.scrollHeight;
   }
 
   // Progress shown in the gap card itself — the panel stays put, and the
@@ -2042,7 +2140,17 @@
       if (request.result) applyEntry(request.result);
     }
     if (request && request.type === "TOGGLE_HOVER_LITE") {
-      togglePanel();
+      // A selection lookup and the passive pill's press carry `open` (and the
+      // lookup its words). Those doors must not close a panel that is already
+      // up, which is what a plain toggle would do.
+      if (typeof request.query === "string" && request.query.trim()) {
+        openPanel();
+        openSearch(request.query);
+      } else if (request.open === true) {
+        openPanel();
+      } else {
+        togglePanel();
+      }
     }
     if (request && request.type === "SHOW_GUARD") showGuard(request.result);
     if (request && request.type === "KRIKO_DUE_NUDGE") showDueNudge(request.purchase);
@@ -2351,6 +2459,11 @@
     if (closeTimer) { clearTimeout(closeTimer); closeTimer = null; }
     state.closing = false;
     if (!state.mounted) mount();
+    // A door that opens while the exit animation is running (the pill, a
+    // selection lookup, the toolbar) has to take the closing state off the
+    // element too: the animation fills `both`, so a panel that kept
+    // `data-closing` stayed at opacity 0 while its state said it was open.
+    if (panel) delete panel.dataset.closing;
     state.visible = true;
     // A run that was being followed when the panel closed is picked up again
     // rather than left half-reported: the poll was parked, not abandoned.
@@ -2538,6 +2651,7 @@
           </button>
           <p class="lite-status" role="status"></p>
         </div>
+        <div class="lite-work-slot"></div>
         <div class="lite-compare-slot"></div>
         <div class="lite-product-actions">
           <button type="button" class="lite-research-product">Research</button>
@@ -3437,6 +3551,7 @@
       statusEl.textContent = "";
       statusEl.style.display = "none";
     }
+    renderWork();
   }
 
   // Render claims header helper

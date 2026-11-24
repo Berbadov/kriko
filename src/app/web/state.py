@@ -880,6 +880,21 @@ CREATE TABLE IF NOT EXISTS purchases (
   snoozed_until TEXT NOT NULL DEFAULT '');
 CREATE INDEX IF NOT EXISTS purchases_bought ON purchases (bought_at DESC);
 
+-- What the reader decided *against* after reading a check: the other half of
+-- "I bought this". A dodge is a decision, not a page view, so it is the
+-- reader's own row and lives here for the same reason the ledger does. The
+-- price is what the listing asked, kept only so the screen can add up what
+-- was not spent; nothing is inferred when it is absent.
+CREATE TABLE IF NOT EXISTS dodged (
+  dodge_id   TEXT PRIMARY KEY,
+  name       TEXT NOT NULL DEFAULT '',
+  url        TEXT NOT NULL DEFAULT '',
+  price      REAL,
+  currency   TEXT NOT NULL DEFAULT '',
+  reason     TEXT NOT NULL DEFAULT '',
+  decided_at TEXT NOT NULL DEFAULT '');
+CREATE INDEX IF NOT EXISTS dodged_decided ON dodged (decided_at DESC);
+
 -- Every price Kriko saw on a page the reader opened, or fetched for a watch.
 -- Memory is the point: a price is only "cheap" or "a fake discount" against
 -- what it used to be, and nobody else has seen the page the reader sees.
@@ -3013,7 +3028,12 @@ def list_jobs(conn: sqlite3.Connection, limit: int = 50) -> list[dict]:
 
 
 def saved_answer(conn: sqlite3.Connection, answer_id: str) -> dict | None:
-    """Evidence for a follow-up, from either a lookup or a saved Quick Look."""
+    """Evidence for a follow-up, from either a lookup or a saved Quick Look.
+
+    Both doors hand back the same row shape, so a Compare column can read a
+    quick look's own job id through `/api/lookup` exactly as it reads a saved
+    check. A real lookup wins when the two ids ever collide.
+    """
     stored = get_lookup(conn, answer_id)
     if stored is not None:
         return stored
@@ -3021,16 +3041,25 @@ def saved_answer(conn: sqlite3.Connection, answer_id: str) -> dict | None:
     if not job or job["kind"] != "quick_look" or job["state"] != SUCCEEDED:
         return None
     result = job.get("result") or {}
-    return {"lookup_id": answer_id, "label": job["params"].get("product", ""),
-            "response": {"claims": result.get("risks") or [],
-                         "specs": result.get("specs") or [],
-                         "listing": result.get("listing") or {},
-                         "evidence_pages": result.get("evidence_pages") or [],
-                         "coverage": result.get("coverage") or {},
-                         "diagnostic": result.get("diagnostic") or {},
-                         "identity": result.get("identity") or {},
-                         "category": result.get("category", ""),
-                         "assumed": result.get("assumed", "")}}
+    result = result if isinstance(result, dict) else {}
+    listing = result.get("listing") if isinstance(result.get("listing"), dict) else {}
+    label = " ".join(str(job["params"].get("product") or "").split())
+    return {
+        "lookup_id": answer_id,
+        "created_at": job.get("finished_at") or job.get("created_at") or "",
+        "source": "quick_look",
+        "label": label,
+        "request": {"url": str(listing.get("url") or ""), "title": label},
+        "response": {"claims": result.get("risks") or [],
+                     "specs": result.get("specs") or [],
+                     "listing": listing,
+                     "evidence_pages": result.get("evidence_pages") or [],
+                     "coverage": result.get("coverage") or {},
+                     "diagnostic": result.get("diagnostic") or {},
+                     "identity": result.get("identity") or {},
+                     "category": result.get("category", ""),
+                     "assumed": result.get("assumed", "")},
+    }
 
 
 def lookup_questions(conn: sqlite3.Connection, lookup_id: str) -> list[dict]:

@@ -20,8 +20,11 @@
  *
  * Pure: no DOM, no clock, no chrome.*. The panel owns drawing and the clock.
  * Words are English panel chrome; nothing here names a site, a category or a
- * product, and no line the run wrote is shown. The panel has no log view: the
- * reader opens the job in the app for that.
+ * product. What the run's own log said is reduced to the few shapes the engine
+ * writes (a search, a host it read, a source it checked) and never passed
+ * through whole: a URL becomes its hostname, a line is clipped, and only the
+ * last few survive. That is what the panel's work terminal draws; the full log
+ * still opens in the app.
  */
 (function () {
   const STAGES = [
@@ -30,6 +33,127 @@
     { key: "read", label: "Reading sources" },
     { key: "check", label: "Checking quotes" },
   ];
+
+  /* Why the reader is waiting, in plain words. A wait with no reason is the
+   * thing this replaces: every one of these is a state the panel already
+   * knows it is in, so none of it is guessed from elapsed time. */
+  const WAIT_REASONS = {
+    app_not_running: "Kriko isn't running, so the page can't be read yet.",
+    no_adapter: "No installed catalog reads this site.",
+    not_a_listing: "This page isn't a product listing.",
+    scrape_failed: "The page couldn't be read.",
+    checking_packs: "Checking which catalogs read this page.",
+    reading_page: "Reading this page.",
+    looking_up: "Looking it up in the catalogs.",
+    saved_answer: "Using the answer this page already had.",
+    starting: "Starting the search.",
+    queued: "Waiting for a free slot in Kriko.",
+    blocked: "Waiting for another run to finish.",
+    starting_agent: "Starting your agent.",
+    starting_research: "Starting the research run.",
+    page: "Reading this page.",
+    search: "Searching for sources.",
+    read: "Reading the pages it found.",
+    check: "Checking what each source says.",
+    working: "Kriko is working.",
+    done: "Done.",
+    stopped: "Stopped.",
+  };
+
+  function waitReason(key) {
+    return WAIT_REASONS[key] || WAIT_REASONS.working;
+  }
+
+  // The terminal is a glance, not a log view: the last five lines the run
+  // wrote, each clipped to one comfortable line.
+  const WORK_LINES_MAX = 5;
+  const WORK_LINE_CHARS = 72;
+
+  /* The hostname and nothing else. A path or a query string can name a
+   * product, a search the reader typed, or a session token; the panel only
+   * needs to say which site was read. */
+  function hostOf(value) {
+    // Parsed by hand, not through `URL`: this file runs inside a page and in
+    // the tests' bare vm context, and neither is guaranteed the web API.
+    const text = String(value || "").trim()
+      .replace(/^[a-z][a-z0-9+.-]*:\/\//i, "")   // scheme
+      .replace(/^[^/?#]*@/, "");                  // userinfo
+    const host = text.split(/[/?#]/)[0].replace(/:\d+$/, "").toLowerCase();
+    return host && (host.includes(".") || host === "localhost") ? host : "";
+  }
+
+  function clipped(text) {
+    const one = String(text || "").replace(/\s+/g, " ").trim();
+    return one.length > WORK_LINE_CHARS
+      ? `${one.slice(0, WORK_LINE_CHARS - 1)}\u2026` : one;
+  }
+
+  // A query is the engine's own words, but a query can carry an address a
+  // reader pasted; its host is the most the panel needs, and the only part
+  // safe to put on a page the reader may be sharing.
+  function queryText(value) {
+    return String(value || "")
+      .replace(/[a-z][a-z0-9+.-]*:\/\/\S+/gi, (url) => hostOf(url) || "")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  /* The actual activity lines in a run's log, oldest first. Only the shapes
+   * the engine writes are read, so an unrecognised line (a page title, an
+   * agent's aside) cannot carry a URL or a product name to the screen. */
+  function workLines(text) {
+    const out = [];
+    const add = (line) => {
+      const one = clipped(line);
+      if (!one || out[out.length - 1] === one) return;
+      out.push(one);
+    };
+    for (const raw of String(text || "").split("\n")) {
+      const line = raw.trim();
+      if (!line) continue;
+      let hit;
+      if ((hit = /^search language:.*?\bqueries:\s*(.+)$/i.exec(line))) {
+        for (const query of hit[1].split(";")) if (query.trim()) add(`Search: ${queryText(query)}`);
+        continue;
+      }
+      if ((hit = /^searching:\s*(.+)$/i.exec(line))) {
+        for (const query of hit[1].split(";")) if (query.trim()) add(`Search: ${queryText(query)}`);
+        continue;
+      }
+      if ((hit = /^searched\s+["\u201c'](.+?)["\u201d']\s*$/i.exec(line))) {
+        add(`Search: ${queryText(hit[1])}`);
+        continue;
+      }
+      if ((hit = /^could not read:\s*(\S+)/i.exec(line))) {
+        const host = hostOf(hit[1]);
+        if (host) add(`Couldn't read: ${host}`);
+        continue;
+      }
+      if ((hit = /^read:\s*(\S+)/i.exec(line)) || (hit = /^fetched\s+(\S+)/i.exec(line))) {
+        const host = hostOf(hit[1]);
+        if (host) add(`Read: ${host}`);
+        continue;
+      }
+      if (/^read through the page reader\b/i.test(line)) {
+        const url = /[a-z][a-z0-9+.-]*:\/\/\S+/i.exec(line);
+        const host = url ? hostOf(url[0]) : "";
+        add(host ? `Read: ${host}` : "Read the page");
+        continue;
+      }
+      if ((hit = /^found\s+(\d+)\s+page/i.exec(line))) {
+        const pages = number(hit[1]);
+        add(`Found ${pages} ${pages === 1 ? "page" : "pages"}`);
+        continue;
+      }
+      if ((hit = /^extracting source\s+(\d+)\/(\d+)(?::\s*(\S+))?/i.exec(line))) {
+        const host = hit[3] ? hostOf(hit[3]) : "";
+        add(`Source ${number(hit[1])} of ${number(hit[2])}${host ? `: ${host}` : ""}`);
+        continue;
+      }
+      if (/^(?:evidence check|self-check)\b/i.test(line)) add("Evidence check");
+    }
+    return out.slice(-WORK_LINES_MAX);
+  }
 
   /* The shapes of the lines a run writes. They are the engine's own wording
    * (the local agent's `_say`, the CLI harness's tool narration), kept to the
@@ -145,6 +269,22 @@
     else if (now) headline = now.label;
     else headline = String(row.message || state || "Working").split(/(?<=[.!?])\s/)[0].slice(0, 60);
 
+    // Why this run is being waited on, from its own state and log: the stage
+    // it reached, the queue it is in, or the fact that it has said nothing
+    // this module can place. The panel shows these words as the terminal's
+    // header, so a wait never goes unexplained.
+    let reason;
+    if (finished) reason = waitReason(succeeded ? "done" : "stopped");
+    else if (state === "queued") reason = waitReason("queued");
+    else if (state === "blocked") reason = waitReason("blocked");
+    else if (now) reason = waitReason(now.key);
+    else reason = waitReason("working");
+    const terminal = {
+      reason,
+      stage: now ? now.label : "",
+      lines: workLines(row.log),
+    };
+
     const step = staged && !finished ? Math.min(seen.reached, STAGES.length - 1) + 1 : 0;
     const spoken = [headline, detail, pages].filter(Boolean).join(", ");
     return {
@@ -156,6 +296,9 @@
       headline,
       detail,
       pages,
+      // The lines the run actually wrote, reduced to a host a line, plus why
+      // the reader is waiting. The panel draws it only while a run is live.
+      terminal,
       counts: { read, failed, attempted, searches: seen.searches },
       // For a screen reader, in one phrase: where the run is and what it has done.
       spoken: staged && !finished ? `Step ${step} of ${STAGES.length}: ${spoken}` : spoken,
@@ -180,5 +323,8 @@
     return { pages: pagesText(read, attempted || read) || "0 pages read", rest };
   }
 
-  window.__KrikoRunProgress = { STAGES, describeRun, coverageSummary, readLog, pagesText };
+  window.__KrikoRunProgress = {
+    STAGES, WAIT_REASONS, describeRun, coverageSummary, readLog, pagesText,
+    workLines, waitReason, hostOf,
+  };
 })();

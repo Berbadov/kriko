@@ -174,7 +174,7 @@ export function useLiveRun(): RunApi {
           const answer = (typeof turn.answer === 'string' && turn.answer) || latest.current.answer
           dispatch({
             type: 'replace',
-            patch: { rows: rowsFrom(turn.steps ?? [], seen.current, turn.activity, turn.sources, current.feed), answer, products: productsFrom(turn.products), followups: turn.followups ?? [], questions: turn.questions ?? [], actions: turn.actions ?? latest.current.actions ?? [], pages: pagesFrom(turn.activity, turn.sources), usage: usageFrom(turn), answerFinal: turn.answer_final === true },
+            patch: { rows: rowsFrom(turn.steps ?? [], seen.current, turn.activity, turn.sources, current.feed), answer, products: productsFrom(turn.products), followups: turn.followups ?? [], questions: turn.questions ?? [], actions: turn.actions ?? latest.current.actions ?? [], pages: pagesFrom(turn.activity, turn.sources), usage: usageFrom(turn), answerFinal: turn.answer_final === true, feed: current.feed, jobState: current.state, jobMessage: current.message },
           })
           timer.current = window.setTimeout(() => void poll(jobId, threadId), POLL_MS)
           return
@@ -200,6 +200,9 @@ export function useLiveRun(): RunApi {
               // The job that answered recorded what it spent; the message points at it.
               usage: usageFrom(last?.spend ?? turn),
               answerFinal: true,
+              feed: last?.feed ?? current.feed,
+              jobState: current.state,
+              jobMessage: current.message,
             },
           })
           dispatch({ type: 'end', status: 'done', now: Date.now() })

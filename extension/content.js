@@ -1011,7 +1011,7 @@ function readResultCard(card) {
   const price = priceNode ? _priceParts(priceNode.textContent) : null;
   const link = (heading && heading.closest("a[href]")) || card.querySelector("a[href]");
   const original = card.cloneNode(true);
-  original.querySelectorAll("[data-kriko-quick],[data-kriko-risk],[data-kriko-summary],[data-kriko-fit]").forEach((node) => node.remove());
+  original.querySelectorAll("[data-kriko-quick],[data-kriko-risk],[data-kriko-summary],[data-kriko-fit],[data-kriko-pill]").forEach((node) => node.remove());
   return { name: (name || "").slice(0, 400), url: link ? link.href : "", price: price ? price.amount : null,
     currency: price ? price.sign : "", text: cleanText(original.textContent || "").slice(0, 600), priceNode };
 }
@@ -1064,6 +1064,307 @@ function annotateResults() {
     }
   }, 1200);
 }
+
+// ── the passive risk pill ───────────────────────────────────────────────
+//
+// One small mark beside the product's own heading, filled from the answer the
+// automatic run already produced and left in this page's session result. It
+// asks nobody anything: no analysis, no request, no second read of the page.
+// Before this, the reader had to know that Kriko existed, press the toolbar
+// button and wait, on a page where the answer was already sitting in storage.
+//
+// The colour is never the only signal — the words say the same thing as the
+// dot — and the pill is a real button, so the keyboard reaches it and Enter or
+// Space opens the panel through the same toggle a toolbar click uses.
+//
+// It lives in a shadow root: the page's own `button`, `h1` and `*` rules cannot
+// reach into it, and nothing here leaks out into the page's styles. The host is
+// a zero-size inline wrapper inside the heading and the pill is drawn out of
+// flow after the title, so no line box grows by even a pixel on a heading of
+// any size and the page below the title never shifts.
+const RISK_PILL_TAG = "kriko-risk-pill";
+const RISK_PILL_KEY = "krikoRiskPill";
+const RISK_RESULT_PREFIX = "kriko_result_";
+let riskPillEnabled = true;
+let riskPillEntry = null;
+
+// The words come from the cached answer and nowhere else. A claim count is a
+// count of what the engine returned; "no known flaws" is only said for an
+// answer that actually recognised the product, so a gap in coverage is never
+// painted as a clean bill of health.
+function riskPillCopy(entry) {
+  if (!entry) return null;
+  if (entry.ok === true && entry.result) {
+    const result = entry.result;
+    const claims = Array.isArray(result.claims) ? result.claims : [];
+    if (claims.length) {
+      const titles = claims.slice(0, 6)
+        .map((claim) => [claim.severity, claim.title].filter(Boolean).join(": "))
+        .filter(Boolean);
+      return {
+        tone: "findings",
+        text: `Kriko · ${claims.length} known flaw${claims.length === 1 ? "" : "s"}`,
+        title: titles.join("\n") || "Open Kriko",
+      };
+    }
+    if (result.coverage === "MATCHED_NO_DATA" || result.verdict === "recognised") {
+      return {
+        tone: "positive",
+        text: "Kriko · no known flaws",
+        title: "Kriko recognises this product and knows no flaws for it.",
+      };
+    }
+    return {
+      tone: "neutral",
+      text: "Kriko · checked",
+      title: "Kriko checked this page but has no verdict to show.",
+    };
+  }
+  // A product page nothing installed covers yet is still a product page: the
+  // neutral pill is the honest answer, and it opens the panel where the lookup
+  // lives. Everything else — no adapter, an unreadable page, the app not
+  // running — says nothing at all.
+  if (entry.ok === false && entry.code === "UNKNOWN_PRODUCT") {
+    return {
+      tone: "neutral",
+      text: "Kriko · checked",
+      title: "This product is not in the installed catalogs. Open Kriko to look it up.",
+    };
+  }
+  return null;
+}
+
+// The heading a product's title lives in. A page with no visible h1 (or one
+// only in the masthead) has nothing to sit beside, and gets no pill.
+//
+// "Header" is not the same as "masthead": real product pages put their <h1>
+// inside <article><header> or <main><header>, and excluding every header (as
+// this first did) meant the pill never appeared on exactly those shops. Only
+// the page banner is refused — a header whose nearest sectioning ancestor is
+// the page rather than an article, a section or main.
+function _riskPillMasthead(heading) {
+  let sawHeader = false;
+  for (let node = heading.parentElement; node; node = node.parentElement) {
+    const tag = node.tagName;
+    if (tag === "ARTICLE" || tag === "SECTION" || tag === "MAIN") return false;
+    if (tag === "HEADER") sawHeader = true;
+  }
+  return sawHeader;
+}
+
+function riskPillAnchor() {
+  let best = null;
+  for (const heading of document.querySelectorAll("h1")) {
+    if (!_visible(heading)) continue;
+    if (heading.closest("nav, footer, aside, [role='banner'], [role='navigation'], [role='contentinfo'], [role='complementary']")) continue;
+    const header = heading.closest("header");
+    if (header && _riskPillMasthead(heading)) continue;
+    const copy = heading.cloneNode(true);
+    copy.querySelectorAll(RISK_PILL_TAG).forEach((node) => node.remove());
+    const text = cleanText(copy.textContent);
+    if (text.length < 3 || text.length > 400) continue;
+    // A product page can carry a short hero heading above its title. The
+    // longest visible heading is the product's far more often than the first,
+    // and a wrong heading is worse than no pill.
+    if (!best || text.length > best.length) best = { heading, length: text.length };
+  }
+  return best ? best.heading : null;
+}
+
+function riskPillStyle() {
+  return `
+    /* Zero width and height on purpose: the pill is drawn out of the line
+       box, so a heading of any size keeps exactly the line height it had.
+       Absolute inside this inline wrapper, not fixed, so the page's own flow
+       still decides where the title is; the pill sits after the title text
+       and cannot land on a control to its left. */
+    :host { all: initial; display: inline-block; position: relative;
+      width: 0; height: 0; vertical-align: middle; }
+    .pill { position: absolute; left: 8px; top: 50%; z-index: 1;
+      transform: translateY(-50%);
+      display: inline-flex; align-items: center; gap: 6px;
+      box-sizing: border-box; max-width: min(78vw, 300px);
+      padding: 2px 9px 2px 7px;
+      margin: 0; appearance: none; -webkit-appearance: none;
+      border: 1px solid rgba(16, 20, 24, .18); border-radius: 999px;
+      background: #f7f8f9; color: #101418;
+      font: 600 11px/1.45 "Segoe UI", system-ui, -apple-system, sans-serif;
+      letter-spacing: .01em; white-space: nowrap; overflow: hidden;
+      text-overflow: ellipsis; cursor: pointer;
+      transition: background-color 120ms ease, border-color 120ms ease; }
+    .pill:hover { background: #ffffff; border-color: rgba(16, 20, 24, .34); }
+    .pill:focus-visible { outline: 2px solid #1f3a63; outline-offset: 2px; }
+    .label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .dot { flex: 0 0 auto; width: 7px; height: 7px; border-radius: 50%;
+      background: #6a737c; }
+    .pill[data-tone="positive"] .dot { background: #2f6b45; }
+    .pill[data-tone="findings"] .dot { background: #9a6413; }
+    @media (prefers-color-scheme: dark) {
+      .pill { background: #1b2129; color: #e9ecef;
+        border-color: rgba(255, 255, 255, .18); }
+      .pill:hover { background: #222a33; border-color: rgba(255, 255, 255, .34); }
+      .pill:focus-visible { outline-color: #6e96c8; }
+      .dot { background: #9aa3ad; }
+      .pill[data-tone="positive"] .dot { background: #5fae7d; }
+      .pill[data-tone="findings"] .dot { background: #d29a3d; }
+    }
+    @media (prefers-reduced-motion: reduce) { .pill { transition: none; } }
+    @media (max-width: 420px) {
+      .pill { font-size: 10.5px; padding: 2px 7px 2px 6px; max-width: min(84vw, 260px); }
+    }
+  `;
+}
+
+function openKrikoPanel() {
+  try {
+    chrome.runtime.sendMessage({ type: "OPEN_PANEL" }, () => {
+      void chrome.runtime.lastError;
+    });
+  } catch (_) {
+    // A page whose worker has gone away keeps the words; the press simply
+    // cannot open anything.
+  }
+}
+
+function removeRiskPill() {
+  document.querySelectorAll(RISK_PILL_TAG).forEach((node) => node.remove());
+}
+
+// The words are the same count but the answer moved (a re-run named a
+// different flaw, or the page it cited changed). `dataset.text` alone cannot
+// see that, so the detail and the tone are re-applied to the live button.
+function syncRiskPill(host, copy) {
+  const button = host.shadowRoot && host.shadowRoot.querySelector("button.pill");
+  if (!button) return false;
+  button.dataset.tone = copy.tone;
+  button.title = copy.title;
+  button.setAttribute("aria-label", `${copy.text}. Open the Kriko panel.`);
+  const label = button.querySelector(".label");
+  if (label && label.textContent !== copy.text) label.textContent = copy.text;
+  host.dataset.text = copy.text;
+  return true;
+}
+
+function paintRiskPill() {
+  const copy = riskPillEnabled ? riskPillCopy(riskPillEntry) : null;
+  const anchor = copy ? riskPillAnchor() : null;
+  const all = document.querySelectorAll(RISK_PILL_TAG);
+  const existing = all[0] || null;
+  if (!copy || !anchor) {
+    if (all.length) removeRiskPill();
+    return;
+  }
+  // One live pill on the right heading is updated in place: rebuilding it on
+  // every poll would drop keyboard focus, and a text-only comparison would
+  // leave a stale title beside the same count.
+  if (all.length === 1 && existing.isConnected && existing.parentElement === anchor) {
+    if (syncRiskPill(existing, copy)) return;
+  }
+  // Any old copy goes, not just the first: a re-render can leave one behind in
+  // a heading that was itself detached, and two pills on one title was the
+  // failure this whole path exists to avoid.
+  if (all.length) removeRiskPill();
+
+  const host = document.createElement(RISK_PILL_TAG);
+  host.setAttribute("data-kriko-pill", "");
+  host.dataset.text = copy.text;
+  host.style.cssText = "all: initial;";
+  const root = host.attachShadow({ mode: "open" });
+  const style = document.createElement("style");
+  style.textContent = riskPillStyle();
+  root.appendChild(style);
+
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "pill";
+  button.dataset.tone = copy.tone;
+  button.setAttribute("aria-label", `${copy.text}. Open the Kriko panel.`);
+  button.title = copy.title;
+  const dot = document.createElement("span");
+  dot.className = "dot";
+  dot.setAttribute("aria-hidden", "true");
+  const label = document.createElement("span");
+  label.className = "label";
+  label.textContent = copy.text;
+  button.append(dot, label);
+  // Let the press reach the button without the page's own handlers (a title
+  // wrapped in its product link, a card that opens on mousedown) taking it.
+  button.addEventListener("pointerdown", (event) => event.stopPropagation());
+  button.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    openKrikoPanel();
+  });
+  // Enter and Space are what a button means, and a real <button> would answer
+  // both. Handling them here keeps one press from also firing the browser's
+  // synthetic click and opening the panel twice.
+  button.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " " && event.key !== "Spacebar") return;
+    event.preventDefault();
+    event.stopPropagation();
+    openKrikoPanel();
+  });
+  root.appendChild(button);
+  anchor.appendChild(host);
+}
+
+function applyRiskPillEntry(entry) {
+  riskPillEntry = entry || null;
+  paintRiskPill();
+}
+
+// The option is read from local storage and the answer from this page's session
+// result — the same two places the panel reads. Where session storage is not
+// open to content scripts (Firefox), the worker forwards the entry as
+// KRIKO_SESSION_UPDATE instead, and pages that already have one are filled by
+// the listener below.
+//
+// The option is read first, on purpose: reading both at once lets a cached
+// answer land before the reader's "off" does, and a pill that flashes on every
+// listing of a reader who turned it off is worse than one that is a few
+// milliseconds late.
+function _readRiskPillOption(done) {
+  try {
+    const got = chrome.storage?.local?.get?.(RISK_PILL_KEY);
+    if (got && typeof got.then === "function") {
+      got.then((bag) => done(bag || {})).catch(() => done({}));
+      return;
+    }
+  } catch (_) {
+    // Fall through to the callback shape older runtimes use.
+  }
+  try {
+    chrome.storage?.local?.get?.(RISK_PILL_KEY, (bag) => done(bag || {}));
+  } catch (_) {
+    done({});
+  }
+}
+
+function refreshRiskPill() {
+  _readRiskPillOption((bag) => {
+    if (bag && typeof bag[RISK_PILL_KEY] === "boolean") {
+      riskPillEnabled = bag[RISK_PILL_KEY] !== false;
+    }
+    paintRiskPill();
+    try {
+      const key = RISK_RESULT_PREFIX + location.href;
+      const got = chrome.storage?.session?.get?.(key);
+      if (got && typeof got.then === "function") {
+        got.then((stored) => {
+          const entry = stored && stored[key];
+          if (entry) applyRiskPillEntry(entry);
+        }).catch(() => {});
+      }
+    } catch (_) {
+      // No session storage here: the forwarded message above is the path.
+    }
+  });
+}
+
+// Read both once as this script starts: a page reloaded onto an answer the
+// session still holds shows its pill before the automatic run is asked
+// anything, and a reader whose option is off never sees one flash in.
+refreshRiskPill();
 
 // ── product checks in the page ──────────────────────────────────────────
 
@@ -1208,7 +1509,7 @@ function annotateListing(audit) {
     const walker = document.createTreeWalker(task.root, 4);
     const nodes = []; let node; let visited = 0;
     while ((node = walker.nextNode()) && visited++ < 6000) {
-      if (node.parentElement?.closest("script,style,noscript,textarea,input,select,button,mark,[contenteditable]:not([contenteditable='false']),[data-kriko-summary],[data-kriko-quick],[hidden],[aria-hidden='true']")) continue;
+      if (node.parentElement?.closest("script,style,noscript,textarea,input,select,button,mark,[contenteditable]:not([contenteditable='false']),[data-kriko-summary],[data-kriko-quick],[data-kriko-pill],[hidden],[aria-hidden='true']")) continue;
       nodes.push(node);
     }
     for (const text of nodes) {
@@ -1356,6 +1657,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.type === "KRIKO_INLINE_AUDIT" && request.url === location.href) {
     annotateListing(request.audit); return;
   }
+  // Firefox has no session storage in a content script, so the worker forwards
+  // the live result here instead (background.js, `IS_FIREFOX`). Chrome uses
+  // the storage change below and never takes this branch.
+  if (request.type === "KRIKO_SESSION_UPDATE") {
+    if (request.url === location.href && request.result) applyRiskPillEntry(request.result);
+    return;
+  }
   if (request.type === "GET_SCRAPE") {
     // Always an answer. A handler that throws sends nothing, and the worker
     // could then only say it was unable to read the page, with no reason.
@@ -1386,6 +1694,28 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 });
 
+// The two pieces of state the pill follows: the answer this page's automatic
+// run wrote (session, keyed by the address) and the reader's option (local).
+// One listener rather than a poll: a pill that appeared a second late would be
+// the same as a pill the reader had to ask for.
+try {
+  chrome.storage?.onChanged?.addListener?.((changes, area) => {
+    if (area === "local") {
+      if (!(RISK_PILL_KEY in changes)) return;
+      riskPillEnabled = changes[RISK_PILL_KEY].newValue !== false;
+      paintRiskPill();
+      return;
+    }
+    if (area !== "session") return;
+    const key = RISK_RESULT_PREFIX + location.href;
+    if (!(key in changes)) return;
+    applyRiskPillEntry(changes[key].newValue || null);
+  });
+} catch (_) {
+  // No change feed here: one read at load still fills a page that already has
+  // an answer, and the forwarded message above covers Firefox.
+}
+
 // ── auto-trigger ────────────────────────────────────────────────────────
 //
 // Which sites are worth scraping is the installed packs' answer, not this
@@ -1405,6 +1735,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     pending = setTimeout(() => {
       clearListingAnnotations();
       document.querySelectorAll("[data-kriko-quick],[data-kriko-summary]").forEach((node) => node.remove());
+      // The address changed, so the answer did too. The old pill is removed
+      // now; the new page's result arrives from the run `PAGE_LOADED` starts.
+      riskPillEntry = null;
+      removeRiskPill();
+      refreshRiskPill();
       chrome.runtime.sendMessage({
         type: "PAGE_LOADED",
         payload: { url: window.location.href, host: window.location.hostname },
@@ -1427,6 +1762,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   // "under 2s" promise the panel makes. A short tick (not zero) still lets
   // the DOM finish painting before content.js starts reading it.
   setTimeout(() => {
+    // A page reloaded onto an answer the session still holds gets its pill
+    // before the automatic run is asked anything. The read is local storage,
+    // not a request.
+    refreshRiskPill();
     chrome.runtime.sendMessage({
       type: "PAGE_LOADED",
       payload: { url: window.location.href, host: window.location.hostname },
@@ -1442,13 +1781,25 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (!document.body) return;
   let pending;
   const observer = new MutationObserver((records) => {
-    const changed = records.some((record) => [...record.addedNodes].some((node) =>
-      node.nodeType === 1 && !node.closest("[data-kriko-quick],[data-kriko-summary],[data-kriko-risk],[data-kriko-claim],[data-kriko-fit]")
-      && (node.matches("h1,h2,h3,img,[itemprop='price'],[class*='price' i]")
-          || node.querySelector("h1,h2,h3,img,[itemprop='price'],[class*='price' i]"))));
+    const changed = records.some((record) => {
+      // A title that changes in place is a new title even though no element
+      // was added: a shop's router may write the product name into the same
+      // node. Only a heading counts, so prices ticking elsewhere stay quiet.
+      if (record.type === "characterData") {
+        const parent = record.target.parentElement;
+        return Boolean(parent && !parent.closest("[data-kriko-pill]")
+          && parent.matches("h1,h2,h3"));
+      }
+      return [...record.addedNodes].some((node) =>
+        node.nodeType === 1 && !node.closest("[data-kriko-quick],[data-kriko-summary],[data-kriko-risk],[data-kriko-claim],[data-kriko-fit],[data-kriko-pill]")
+        && (node.matches("h1,h2,h3,img,[itemprop='price'],[class*='price' i]")
+            || node.querySelector("h1,h2,h3,img,[itemprop='price'],[class*='price' i]")));
+    });
     if (!changed) return;
     clearTimeout(pending);
-    pending = setTimeout(() => { annotateResults(); detectQuickProduct(); }, 300);
+    // The heading was re-rendered (a site's own router, a lazy title): the
+    // pill is re-hung on the heading that is there now, never duplicated.
+    pending = setTimeout(() => { annotateResults(); detectQuickProduct(); paintRiskPill(); }, 300);
   });
-  observer.observe(document.body, { childList: true, subtree: true });
+  observer.observe(document.body, { childList: true, subtree: true, characterData: true });
 })();

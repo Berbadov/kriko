@@ -1,6 +1,8 @@
 // The panel's research card tells a run's real stage and page counts (#262).
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
 const { loadPanel } = require("./hover_lite_harness.js");
 
 const LOG = [
@@ -46,15 +48,109 @@ test("a run in flight shows its stage, which pages were read, and no percentage"
   assert.equal(p.shadow().querySelector(".lite-progress"), null, "the invented fill is gone from the card");
 });
 
-test("no raw log line is drawn while a run is in flight: the stage and the counts only", () => {
+test("the work terminal shows the run's own lines, with full URLs reduced to hosts", () => {
   const p = research({ state: "running", log: LOG, message: "reading https://a.example/3 now" });
-  const card = p.shadow().querySelector(".lite-research").textContent;
-  for (const line of ["gearbox judder known problems", "https://a.example/1", "found 6 page(s)", "could not read:"]) {
-    assert.ok(!card.includes(line), `a log line reached the screen: ${line}`);
+  const card = p.shadow().querySelector(".lite-work");
+  assert.ok(card, "the work terminal was not drawn while the run was live");
+  const text = card.textContent;
+  // The searches and the hosts the run wrote, and the reason for the wait.
+  assert.match(text, /Search: gearbox judder/);
+  assert.match(text, /Read: a\.example/);
+  assert.match(text, /Couldn't read: b\.example/);
+  assert.match(text, /Reading the pages it found\./);
+  // Not the full URLs, not the run's prose, and not the pages it only planned.
+  for (const leaked of ["https://", "a.example/1", "b.example/blocked", "found 6 page(s)"]) {
+    assert.ok(!text.includes(leaked), `a log line reached the screen whole: ${leaked}`);
   }
-  assert.equal(p.shadow().querySelector(".lite-task-log"), null, "there is no log view in the panel");
+  // A glance, not a log view.
+  assert.ok(card.querySelectorAll(".lite-work-line").length <= 5);
+  assert.equal(p.shadow().querySelector(".lite-task-log"), null);
   assert.equal(p.shadow().querySelector("pre"), null);
   assert.ok(p.shadow().querySelector(".lite-research-output"), "the full job opens in the app on a press");
+});
+
+test("the terminal is not a live region, and its reason is its heading", () => {
+  const p = research({ state: "running", log: LOG });
+  const card = p.shadow().querySelector(".lite-work");
+  assert.equal(card.getAttribute("role"), "group");
+  assert.equal(card.getAttribute("aria-live"), null, "a live terminal would talk over the reader");
+  assert.equal(card.querySelector(".lite-work-lines").getAttribute("aria-hidden"), "true");
+  assert.match(card.getAttribute("aria-label"), /Reading the pages it found\./);
+  assert.match(card.querySelector(".lite-work-reason").textContent, /Reading the pages it found\./);
+  assert.equal(card.querySelector(".lite-work-stage").textContent, "Reading sources");
+  assert.doesNotMatch(card.querySelector(".lite-work-sr").textContent, /\.\./,
+    "the browsable sentence stutters at a full stop");
+});
+
+test("a queued run says why it is waiting, and has no invented lines", () => {
+  const p = research({ state: "queued", log: "" });
+  const card = p.shadow().querySelector(".lite-work");
+  assert.match(card.querySelector(".lite-work-reason").textContent, /Waiting for a free slot/);
+  assert.equal(card.querySelector(".lite-work-lines"), null, "a run that said nothing got lines anyway");
+});
+
+test("every wait the panel has is explained in plain words", () => {
+  // Analyzing: the worker's own stage, said as a reason.
+  const analyzing = loadPanel({ analyzeResponse: { ok: true }, workerResponse: { ok: true } });
+  analyzing.openPanel();
+  assert.equal(analyzing.pipeline(), "analyzing");
+  assert.match(analyzing.shadow().querySelector(".lite-work-reason").textContent, /Starting the search\./);
+  analyzing.deliverStage("reading");
+  assert.match(analyzing.shadow().querySelector(".lite-work-reason").textContent, /Reading this page\./);
+  assert.match(analyzing.shadow().querySelector(".lite-work-stage").textContent, /Reading page/);
+
+  // The app is not running.
+  const stopped = loadPanel({ analyzeResponse: { ok: false, code: "APP_NOT_RUNNING",
+    error: "Kriko is not running. Start the app." } });
+  stopped.openPanel();
+  assert.match(stopped.shadow().querySelector(".lite-work-reason").textContent, /isn't running/);
+
+  // Nothing installed reads this site, or this page is not a listing.
+  const unread = loadPanel();
+  unread.openPanel();
+  unread.deliverEntry({ ok: false, code: "NO_ADAPTER", hostKnown: false });
+  assert.match(unread.shadow().querySelector(".lite-work-reason").textContent, /No installed catalog reads this site/);
+  unread.deliverEntry({ ok: false, code: "NO_ADAPTER", hostKnown: true });
+  assert.match(unread.shadow().querySelector(".lite-work-reason").textContent, /isn't a product listing/);
+
+  // The page could not be scraped.
+  const scrape = loadPanel();
+  scrape.openPanel();
+  scrape.deliverEntry({ ok: false, code: "SCRAPE_FAILED", error: "Could not read this page." });
+  assert.match(scrape.shadow().querySelector(".lite-work-reason").textContent, /couldn't be read/);
+});
+
+test("reduced motion stops the caret and the typewriter, and keeps the words", () => {
+  const p = loadPanel({ workerResponse: (m) => {
+    if (m.type === "RESEARCH_PLANE") return { ok: true, plane: { backend: "local" } };
+    if (m.type === "RESEARCH_PRODUCT") return { ok: true, job: { job_id: "q", kind: "quick_look" } };
+    if (m.type === "JOB_STATUS") return { ok: true, job: { job_id: "q", kind: "quick_look", state: "running", log: LOG } };
+    return { ok: true, items: [] };
+  } });
+  p.dom.window.matchMedia = (query) => ({
+    matches: /prefers-reduced-motion/.test(query), media: query,
+    addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {},
+  });
+  p.openPanel();
+  p.deliverEntry({ ok: false, code: "UNKNOWN_PRODUCT", productName: "Example product" });
+  p.click(".lite-research-product");
+  p.type(".lite-research-name", "Example product");
+  p.click(".lite-research-start");
+  const card = p.shadow().querySelector(".lite-work");
+  assert.equal(card.dataset.still, "1");
+  assert.match(card.textContent, /Reading the pages it found\./);
+  const css = fs.readFileSync(path.join(__dirname, "..", "hover_lite", "hover_lite.css"), "utf8");
+  assert.match(css, /\.lite-work\[data-still="1"\]/);
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
+});
+
+test("the terminal keeps five lines at most, however long the run's log is", () => {
+  const log = Array.from({ length: 30 }, (_, i) => `read: https://h${i}.example/p/product-${i}`).join("\n");
+  const p = research({ state: "running", log });
+  const lines = [...p.shadow().querySelectorAll(".lite-work-line")].map((one) => one.textContent);
+  assert.equal(lines.length, 5);
+  assert.equal(lines.at(-1), "Read: h29.example");
+  for (const line of lines) assert.ok(!line.includes("/"), `a path reached a line: ${line}`);
 });
 
 test("a run that has not said anything yet starts on reading the page", () => {

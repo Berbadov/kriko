@@ -1804,6 +1804,127 @@
 .lite-run-facts { margin: 6px 0 0; font-family: var(--font-mono); font-size: 10.5px; line-height: 1.45; color: var(--fg-muted); }
 .lite-run-facts:empty { display: none; }
 
+/* ─── the work terminal ──────────────────────────────────────────────────
+ * Warm dark ink on the dossier's paper, mono, the newest line typing with a
+ * caret. A glance at what the run is doing, not a log view: five short lines,
+ * older ones faded, and the reason for the wait in the header. Fixed ink so
+ * it reads the same in the light and the dark theme, where it is a terminal
+ * page laid on the dossier. */
+.lite-work-slot:empty { display: none; }
+.lite-work {
+  position: relative;
+  margin: 9px 0 2px;
+  padding: 7px 10px 8px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #211b15;
+  color: #f2e7d5;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  line-height: 1.5;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+}
+/* A scanline texture, static so it never competes with the caret. */
+.lite-work::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(to bottom,
+    rgba(255, 255, 255, 0.028) 0 1px, transparent 1px 3px);
+}
+.lite-work-head {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 6px;
+  min-width: 0;
+}
+.lite-work-kicker {
+  flex: 0 0 auto;
+  color: #d9b579;
+  font-size: 9px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+.lite-work-reason {
+  flex: 1 1 120px;
+  min-width: 0;
+  color: #f6ecdc;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.lite-work-stage {
+  flex: 0 0 auto;
+  max-width: 100%;
+  margin-left: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: rgba(242, 231, 213, 0.6);
+  font-size: 9.5px;
+}
+.lite-work-lines {
+  position: relative;
+  z-index: 1;
+  list-style: none;
+  margin: 5px 0 0;
+  padding: 0;
+  max-height: 7.5em;
+  overflow: hidden;
+}
+.lite-work-line {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: #c8b9a2;
+  opacity: 0.45;
+}
+.lite-work-line:nth-last-child(3) { opacity: 0.6; }
+.lite-work-line:nth-last-child(2) { opacity: 0.78; }
+.lite-work-line:last-child {
+  opacity: 1;
+  animation: workType 220ms steps(16, end) both;
+}
+/* A prompt caret before the newest line, where a clipped line cannot hide
+ * it; the text itself still types in from the left. */
+.lite-work-line:last-child::before {
+  content: "\258C";
+  margin-right: 2px;
+  color: #d9b579;
+  animation: workBlink 1.1s steps(1, end) infinite;
+}
+@keyframes workType {
+  from { clip-path: inset(0 100% 0 0); }
+  to   { clip-path: inset(0 0 0 0); }
+}
+@keyframes workBlink {
+  0%, 55%  { opacity: 1; }
+  56%, 100% { opacity: 0; }
+}
+/* The same sentence a screen reader can browse; the card is not a live
+ * region, so a repaint never interrupts what the reader is hearing. */
+.lite-work-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+.lite-work[data-still="1"] .lite-work-line:last-child,
+.lite-work[data-still="1"] .lite-work-line:last-child::before { animation: none; }
+@media (prefers-reduced-motion: reduce) {
+  .lite-work-line:last-child,
+  .lite-work-line:last-child::before { animation: none; }
+}
+
 /* A run's question: answers are the same hairline chips. */
 .lite-asked {
   margin: 10px 0;

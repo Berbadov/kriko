@@ -17,6 +17,7 @@ import './styles/logs.css'
 import './styles/rail.css'
 import './styles/tour.css'
 import './styles/identity.css'
+import './styles/workterminal.css'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

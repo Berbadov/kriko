@@ -18,7 +18,9 @@ said, and what they said must never move a pack's `content_digest`.
 * **The ledger** is `purchases`: a row when the reader says "I bought this",
   a question weeks later ("did it hold up?"), and the answer. Answers feed
   back into the brief as lessons, so a regret about a brand stops being
-  advice the next time that brand appears.
+  advice the next time that brand appears. Beside it sits `dodged`: the
+  products a check talked them out of, and the price that decision kept. It
+  is a decision, not an answer to a question, so it changes no brief.
 
 Nothing here knows a category. The profile is the reader's words; the lessons
 are the reader's words; the brief passes both through.
@@ -59,6 +61,10 @@ SNOOZE_DAYS = 7
 #: How many answered purchases the brief carries, newest first.
 LESSONS_IN_BRIEF = 6
 MAX_PURCHASES = 500
+#: Dodges are a ledger too: the oldest decision goes when the table is full.
+MAX_DODGED = 500
+#: One line on the product screen, not a diary.
+MAX_DODGE_REASON = 200
 
 
 def _now() -> datetime:
@@ -289,6 +295,108 @@ def tally(conn: sqlite3.Connection) -> dict:
     return {**counts, "waiting": waiting, "answered": sum(counts.values())}
 
 
+# ── what the reader decided against ─────────────────────────────────────
+
+
+def _dodged(row: sqlite3.Row) -> dict:
+    return {
+        "dodge_id": row["dodge_id"], "name": row["name"], "url": row["url"],
+        "price": row["price"], "currency": row["currency"],
+        "reason": row["reason"], "decided_at": row["decided_at"],
+    }
+
+
+def record_dodge(conn: sqlite3.Connection, name: str, *, url: str = "", price=None,
+                 currency: str = "", reason: str = "",
+                 when: datetime | None = None) -> dict:
+    """"I am not buying this." Returns the row; pressing it twice for one page is one row.
+
+    The reader's reason is one line by construction: `_words` folds every run of
+    whitespace, so a pasted paragraph cannot turn the list into prose.
+    """
+    name = _words(name, 300)
+    if not name:
+        raise ValueError("what did you decide against? a name is required")
+    url = str(url or "").strip()[:2000]
+    amount = _number(price)
+    if price not in (None, "") and amount is None:
+        raise ValueError("the price is a number of 0 or more, or empty")
+    now = when or _now()
+    if url:
+        # The same listing within a day is the same decision, pressed twice.
+        existing = conn.execute(
+            "SELECT * FROM dodged WHERE url = ? AND decided_at >= ?",
+            (url, _stamp(now - timedelta(days=1)))).fetchone()
+    else:
+        # A check with no page behind it is named, so a second press is the same row.
+        existing = conn.execute(
+            "SELECT * FROM dodged WHERE name = ? AND url = '' AND decided_at >= ?",
+            (name, _stamp(now - timedelta(days=1)))).fetchone()
+    if existing:
+        return _dodged(existing)
+    count = conn.execute("SELECT COUNT(*) FROM dodged").fetchone()[0]
+    if count >= MAX_DODGED:
+        # A ledger, not an archive: the oldest decision goes first.
+        conn.execute(
+            "DELETE FROM dodged WHERE dodge_id IN (SELECT dodge_id FROM dodged"
+            " ORDER BY decided_at LIMIT ?)", (count - MAX_DODGED + 1,))
+    dodge_id = secrets.token_hex(8)
+    conn.execute(
+        "INSERT INTO dodged (dodge_id, name, url, price, currency, reason, decided_at)"
+        " VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (dodge_id, name, url, amount, _words(currency, 8).upper(),
+         _words(reason, MAX_DODGE_REASON), _stamp(now)))
+    conn.commit()
+    row = conn.execute("SELECT * FROM dodged WHERE dodge_id = ?", (dodge_id,)).fetchone()
+    return _dodged(row)
+
+
+def dodged(conn: sqlite3.Connection, limit: int = 100) -> list[dict]:
+    rows = conn.execute(
+        "SELECT * FROM dodged ORDER BY decided_at DESC, rowid DESC LIMIT ?", (limit,))
+    return [_dodged(row) for row in rows]
+
+
+def money_saved(conn: sqlite3.Connection) -> dict:
+    """What the reader did not spend, per currency, with the count behind each.
+
+    A row with no price is still a dodged product: it counts in `count` and in
+    its currency's `count`, and adds nothing to that currency's `amount`.
+    """
+    rows = conn.execute(
+        "SELECT currency, COUNT(*) AS count, COALESCE(SUM(price), 0) AS amount,"
+        " SUM(CASE WHEN price IS NOT NULL THEN 1 ELSE 0 END) AS priced"
+        " FROM dodged GROUP BY currency ORDER BY amount DESC, currency").fetchall()
+    totals = [{"currency": row["currency"], "amount": round(row["amount"], 2),
+               "count": row["count"], "priced": row["priced"]} for row in rows]
+    priced = conn.execute("SELECT COUNT(price) FROM dodged").fetchone()[0]
+    return {"totals": totals, "count": sum(one["count"] for one in totals), "priced": priced}
+
+
+def forget_dodge(conn: sqlite3.Connection, dodge_id: str, *, remember: bool = True) -> bool:
+    cursor = conn.execute("DELETE FROM dodged WHERE dodge_id = ?", (dodge_id,))
+    conn.commit()
+    if cursor.rowcount and remember:
+        from app import cloud  # noqa: PLC0415 - cloud reads this module
+
+        cloud.note_deleted(conn, "dodge", dodge_id)
+    return bool(cursor.rowcount)
+
+
+def adopt_dodge(conn: sqlite3.Connection, row: dict) -> None:
+    """Keep a dodge that came from another device, whole, replacing any older copy."""
+    conn.execute(
+        "INSERT INTO dodged (dodge_id, name, url, price, currency, reason, decided_at)"
+        " VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(dodge_id) DO UPDATE SET"
+        " name = excluded.name, url = excluded.url, price = excluded.price,"
+        " currency = excluded.currency, reason = excluded.reason,"
+        " decided_at = excluded.decided_at",
+        (row["dodge_id"], _words(row.get("name"), 300), str(row.get("url") or "")[:2000],
+         _number(row.get("price")), _words(row.get("currency"), 8).upper(),
+         _words(row.get("reason"), MAX_DODGE_REASON), row["decided_at"]))
+    conn.commit()
+
+
 # ── words for a brief ───────────────────────────────────────────────────
 
 
@@ -425,6 +533,7 @@ def fit(profile: dict, *, name: str = "", text: str = "", price=None,
 HOLDINGS = {
     "profile": "What you told Kriko you need",
     "purchases": "What you bought and how it turned out",
+    "dodged": "What you decided not to buy",
     "prices": "Prices Kriko saw on pages you read",
     "watches": "Pages you asked Kriko to watch",
     "picks": "Decisions Kriko made for you",
@@ -439,7 +548,8 @@ def holdings(conn: sqlite3.Connection) -> dict:
     first = conn.execute("SELECT MIN(seen_at) FROM price_points").fetchone()[0] or ""
     return {
         "profile": 0 if is_empty(read(conn)) else 1,
-        "purchases": count("purchases"), "prices": count("price_points"),
+        "purchases": count("purchases"), "dodged": count("dodged"),
+        "prices": count("price_points"),
         "watches": count("watches"), "picks": count("picks"),
         "prices_since": first, "labels": HOLDINGS,
     }
@@ -447,7 +557,7 @@ def holdings(conn: sqlite3.Connection) -> dict:
 
 def forget(conn: sqlite3.Connection, what: str) -> int:
     """Delete one kind of what is kept, or all of it with `everything`. Returns how many rows went."""
-    tables = {"purchases": ["purchases"], "prices": ["price_points"],
+    tables = {"purchases": ["purchases"], "dodged": ["dodged"], "prices": ["price_points"],
               "watches": ["watches", "watch_alerts"], "picks": ["picks"]}
     if what == "everything":
         gone = sum(forget(conn, one) for one in tables) + forget(conn, "profile")
@@ -467,6 +577,8 @@ def forget(conn: sqlite3.Connection, what: str) -> int:
 
     if what == "purchases":
         cloud.note_deleted_many(conn, "purchase", [row[0] for row in conn.execute("SELECT purchase_id FROM purchases")])
+    elif what == "dodged":
+        cloud.note_deleted_many(conn, "dodge", [row[0] for row in conn.execute("SELECT dodge_id FROM dodged")])
     elif what == "watches":
         cloud.note_deleted_many(conn, "watch", [row[0] for row in conn.execute("SELECT product_key FROM watches")])
     total = 0

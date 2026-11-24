@@ -11,6 +11,7 @@ import { QueueProvider, useQueue } from './queue'
 import type { AppAction } from './activity/run'
 import { ChatScreen } from './screens/Chat'
 import { CompareScreen } from './screens/Compare'
+import { DodgedScreen } from './screens/Dodged'
 import { EstimateScreen } from './screens/Estimate'
 import { ProductScreen } from './screens/Product'
 import { PricesScreen } from './screens/Prices'
@@ -67,7 +68,7 @@ function Shell() {
   const performAction = useCallback((action: AppAction) => {
     if (action.kind === 'open') {
       const target = String(action.params?.screen || '')
-      if (target === 'chat' || target === 'compare' || target === 'prices' || target === 'estimate' || target === 'queue') {
+      if (target === 'chat' || target === 'compare' || target === 'prices' || target === 'estimate' || target === 'queue' || target === 'dodged') {
         go(target)
         return
       }
@@ -197,6 +198,7 @@ function Shell() {
               {screen === 'prices' && <PricesScreen />}
               {screen === 'estimate' && <EstimateScreen />}
               {screen === 'queue' && <QueueScreen />}
+              {screen === 'dodged' && <DodgedScreen />}
             </motion.div>
           </AnimatePresence>
         </main>

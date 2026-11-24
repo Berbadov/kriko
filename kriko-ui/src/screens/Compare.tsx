@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useCompare, MAX_SLOTS, type Question } from '../compare'
-import { selectCompareAgent } from '../compare/research'
+import { selectCompareAgent, pressAgent } from '../compare/research'
 import { groundingNote, findingsLabel, riskRows, specRows, riskKey, type Check, type Level, type Risk } from '../compare/checks'
 import { AgentRecovery } from '../compare/Recovery'
 import { useEngine, type Agent } from '../engine/Engine'
@@ -20,6 +20,7 @@ import { ExternalLink } from '../ui/ExternalLink'
 import { Icon } from '../ui/Icon'
 import { Markdown } from '../ui/Markdown'
 import { PixelGlyph } from '../ui/PixelGlyph'
+import { WorkTerminal } from '../ui/WorkTerminal'
 import { CheckContext } from '../ui/CheckContext'
 
 const LEVEL_WORD: Record<Level, string> = { critical: 'Critical', high: 'High', medium: 'Medium', low: 'Low', unrated: 'Unrated' }
@@ -80,14 +81,17 @@ export function CompareScreen() {
         <ul className="cmp-pending" aria-label="Products being researched for this comparison">
           {pending.map((one) => (
             <li key={one.id} data-state={one.state}>
-              {one.state === 'running' ? <PixelGlyph size={16} active /> : <Icon name="alert" size={15} />}
-              <strong>{one.name}</strong>
-              <span className="muted">{one.note}</span>
-              {one.state === 'failed' && (
-                <button className="icon-btn sm" onClick={() => dismissPending(one.id)} aria-label={`Dismiss ${one.name}`}>
-                  <Icon name="x" size={13} />
-                </button>
-              )}
+              <div className="cmp-pending-head">
+                {one.state === 'running' ? <PixelGlyph size={16} active /> : <Icon name="alert" size={15} />}
+                <strong>{one.name}</strong>
+                <span className="muted">{one.note}</span>
+                {one.state === 'failed' && (
+                  <button className="icon-btn sm" onClick={() => dismissPending(one.id)} aria-label={`Dismiss ${one.name}`}>
+                    <Icon name="x" size={13} />
+                  </button>
+                )}
+              </div>
+              <WorkTerminal compact title={one.name} stage={one.stage} feed={one.feed} state={one.jobState} message={one.jobMessage} />
             </li>
           ))}
         </ul>
@@ -179,6 +183,14 @@ export function CompareScreen() {
                         {item.line}
                       </span>
                       <AgentSteps value={item.progress} state={item.state} labels={false} />
+                      <WorkTerminal
+                        compact
+                        title={item.name}
+                        state={item.jobState ?? item.state}
+                        stage={item.line}
+                        message={item.jobMessage}
+                        feed={item.feed}
+                      />
                     </div>
                     <div className="mx-risks">
                       {[0, 1, 2].map((n) => (
@@ -420,7 +432,9 @@ function Picker({ onClose }: { onClose: () => void }) {
             disabled={slots.length >= MAX_SLOTS || mode !== 'live'}
             title="Kriko searches the web for it now and adds it as a column when the research is done"
             onClick={() => {
-              const agent = engine.agents.find((a) => a.id === engine.preferred) ?? engine.agents[0]
+              // With no agent listed, the engine's own "no pick named" shape is
+              // the press: it resolves one or says what this machine is missing.
+              const agent = pressAgent(engine.agents, engine.preferred)
               void researchNew(query.trim(), agent)
               setQuery('')
               onClose()

@@ -1150,14 +1150,16 @@ button.ask-head:hover {
 }
 
 /* ---- Prices: the price checker on its own page ---- */
-.prices {
+.prices,
+.dodged {
   position: relative;
   height: 100%;
   overflow-y: auto;
   padding: 36px max(20px, calc(50% - 400px)) 40px;
 }
 
-.prices-sky {
+.prices-sky,
+.dodged-sky {
   position: absolute;
   inset: 0 0 auto;
   height: 220px;
@@ -1167,9 +1169,12 @@ button.ask-head:hover {
   mask-image: linear-gradient(#000, transparent);
 }
 
-.prices > :not(.prices-sky) { position: relative; }
-.prices-head h1 { margin: 4px 0 6px; font-size: 30px; letter-spacing: -0.03em; }
-.prices-head p { margin: 0 0 18px; font-size: 14.5px; }
+.prices > :not(.prices-sky),
+.dodged > :not(.dodged-sky) { position: relative; }
+.prices-head h1,
+.dodged-head h1 { margin: 4px 0 6px; font-size: 30px; letter-spacing: -0.03em; }
+.prices-head p,
+.dodged-head p { margin: 0 0 18px; font-size: 14.5px; }
 
 .prices-add {
   display: grid;
@@ -1218,7 +1223,8 @@ button.ask-head:hover {
   padding-bottom: 6px;
   border-bottom: 1px solid var(--edge);
 }
-.prices-bar h2 { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 15px; }
+.prices-bar h2,
+.dodged-bar h2 { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 15px; }
 .prices-bar h2 .mono { color: var(--ink-3); font-size: 12px; font-weight: 400; }
 .prices-fell { padding: 1px 6px; border-radius: 4px; background: color-mix(in srgb, var(--ok) 16%, transparent); color: var(--ok-text, var(--ok)) !important; }
 .prices-empty { padding: 18px 2px; font-size: 14px; }
@@ -1254,6 +1260,151 @@ button.ask-head:hover {
   .prices-add { grid-template-columns: 1fr 1fr; }
   .prices-add .prices-url { grid-column: 1 / -1; }
 }
+
+/* ---- Dodged: what the reader decided against, and the money it kept ---- */
+.dodged-total {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+  padding: 16px 18px;
+  border: 1px solid var(--edge-strong);
+  border-radius: var(--r-l);
+  background: var(--panel);
+}
+
+.dodged-total-label {
+  color: var(--ink-3);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.dodged-sums { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px 28px; }
+.dodged-sum { display: flex; flex-direction: column; gap: 2px; }
+.dodged-figure { font-size: 30px; font-weight: 600; letter-spacing: -0.03em; }
+.dodged-sum small,
+.dodged-caveat { color: var(--ink-3); font-size: 12.5px; }
+.dodged-nothing { margin: 0; color: var(--ink-2); font-size: 14px; }
+
+.dodged-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 24px 0 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--edge);
+}
+.dodged-bar h2 .mono { color: var(--ink-3); font-size: 12px; font-weight: 400; }
+.dodged-empty { padding: 18px 2px; font-size: 14px; }
+
+.dodged-list { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+
+.dodge-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 2px 14px;
+  padding: 10px 8px 10px 14px;
+  border: 1px solid var(--edge);
+  border-radius: var(--r-m);
+  background: var(--panel);
+}
+
+.dodge-main { display: grid; gap: 1px; min-width: 0; }
+.dodge-name { overflow: hidden; padding: 0; border: 0; background: none; color: var(--ink); font: inherit; font-size: 14.5px; font-weight: 600; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
+button.dodge-name { cursor: pointer; }
+button.dodge-name:hover { text-decoration: underline; text-underline-offset: 3px; }
+.dodge-main small { color: var(--ink-3); font-size: 12px; }
+.dodge-reason { margin: 2px 0 0; color: var(--ink-2); font-size: 13.5px; }
+.dodge-price { font-size: 15px; font-weight: 600; }
+
+.dodge-saved {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 8px 10px;
+  border: 1px solid var(--edge);
+  border-radius: var(--r-m);
+  background: var(--panel);
+  color: var(--ink-2);
+  font-size: 13.5px;
+}
+.dodge-saved .btn { margin-left: auto; }
+
+/* ---- the "Not buying this" form ---- */
+.dodge-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: var(--scrim);
+}
+
+.dodge-dialog {
+  width: min(440px, 100%);
+  padding: 16px 18px;
+  border: 1px solid var(--edge-strong);
+  border-radius: var(--r-l);
+  background: var(--panel);
+  color: var(--ink);
+}
+
+.dodge-dialog-head { display: flex; align-items: center; justify-content: space-between; }
+.dodge-dialog-head h2 { margin: 0; font-size: 17px; }
+.dodge-dialog-lead { margin: 2px 0 14px; color: var(--ink-2); font-size: 14px; }
+
+.dodge-row { display: grid; grid-template-columns: minmax(0, 1fr) 110px; gap: 8px; }
+.dodge-field { display: grid; gap: 4px; margin-bottom: 10px; }
+.dodge-field > span { color: var(--ink-2); font-size: 12.5px; }
+.dodge-field small { color: var(--ink-3); font-size: 11px; }
+.dodge-field input {
+  height: 34px;
+  min-width: 0;
+  padding: 0 10px;
+  border: 1px solid var(--edge);
+  border-radius: var(--r-s);
+  background: var(--panel-2);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+}
+.dodge-actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 4px; }
+.dodge-dialog-note { margin: 12px 0 0; color: var(--ink-3); font-size: 12px; }
+
+/* ---- Before you buy used: a calm card on a secondhand listing ---- */
+.used-card {
+  margin: 18px 0 6px;
+  padding: 14px 16px;
+  border: 1px solid var(--edge);
+  border-radius: var(--r-l);
+  background: var(--panel);
+}
+
+.used-head { display: flex; align-items: flex-start; gap: 10px; }
+.used-mark {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--edge);
+  border-radius: var(--r-s);
+  background: var(--panel-2);
+  color: var(--ink-2);
+}
+.used-head h2 { margin: 0 0 2px; font-size: 15.5px; }
+.used-head p { margin: 0; font-size: 13px; }
+
+.used-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px 22px; margin-top: 14px; }
+.used-group h3 { margin: 0 0 6px; color: var(--ink-3); font-size: 12px; font-weight: var(--w-medium); letter-spacing: 0.06em; text-transform: uppercase; }
+.used-items { display: grid; gap: 7px; margin: 0; padding: 0; list-style: none; }
+.used-items li { display: grid; gap: 2px; color: var(--ink-2); font-size: 13.5px; }
+.used-items small { color: var(--ink-3); font-size: 11px; }
+.used-quote-note { margin: 8px 0 0; color: var(--ink-3); font-size: 11.5px; }
 
 /* ---- the shelf: product boxes stacked at the edges of the home ---- */
 .shelf-wrap { position: absolute; inset: 0; z-index: 0; pointer-events: none; }

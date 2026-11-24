@@ -1,0 +1,169 @@
+/* The work terminal: the job's own lines while a mandatory wait is on. It is
+   deliberately a dark card in every theme — a console, not another panel — with
+   warm ink so it sits beside the dossier instead of competing with it. */
+
+.work-terminal {
+  --wt-bg: #0d1013;
+  --wt-ink: #ddd2bf;
+  --wt-dim: #8d877b;
+  --wt-mark: #c8a36b;
+  --wt-line-h: 16px;
+  position: relative;
+  overflow: hidden;
+  min-width: 0;
+  border: 1px solid rgba(226, 213, 188, 0.16);
+  border-radius: var(--r-m);
+  background: var(--wt-bg);
+  color: var(--wt-ink);
+}
+
+.work-terminal[data-compact] {
+  --wt-line-h: 15px;
+}
+
+/* A quiet scanline: texture, not motion, so it survives reduced motion. */
+.work-terminal::after {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  content: '';
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0 2px,
+    rgba(255, 255, 255, 0.018) 2px 3px
+  );
+}
+
+.wt-head {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-2);
+  padding: 6px 9px;
+  border-bottom: 1px solid rgba(226, 213, 188, 0.12);
+}
+
+.wt-dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--wt-mark);
+  box-shadow: 0 0 6px rgba(200, 163, 107, 0.55);
+}
+
+.wt-reason {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: var(--wt-ink);
+  font-family: var(--mono);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wt-lines {
+  max-height: calc(var(--wt-line-h) * 6 + 4px);
+  overflow-y: auto;
+  padding: 14px 0 3px;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  line-height: var(--wt-line-h);
+  scrollbar-width: none;
+  mask-image: linear-gradient(to bottom, transparent 0, #000 14px);
+}
+
+.wt-lines::-webkit-scrollbar {
+  display: none;
+}
+
+.wt-line {
+  display: grid;
+  grid-template-columns: 1.4ch minmax(0, 1fr);
+  gap: 7px;
+  padding: 0 9px;
+  opacity: 0.55;
+}
+
+.wt-line[data-new] {
+  opacity: 1;
+}
+
+.wt-line[data-old] {
+  opacity: 0.42;
+}
+
+.wt-mark {
+  color: var(--wt-mark);
+  text-align: center;
+  user-select: none;
+}
+
+.wt-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+/* Typewriter on the newest line only. The clip reveals the real text; it never
+   changes it. A blinking ink block is the caret. */
+.wt-line[data-new] .wt-text {
+  animation: wt-type 1.1s steps(30, end) both;
+}
+
+.wt-line[data-new] .wt-text::after {
+  display: inline-block;
+  width: 0.52ch;
+  height: 1em;
+  margin-left: 2px;
+  vertical-align: -2px;
+  background: var(--wt-mark);
+  content: '';
+  animation: wt-blink 1s steps(1, end) infinite;
+}
+
+.wt-quiet .wt-text {
+  color: var(--wt-dim);
+}
+
+:root[data-motion='off'] .wt-line[data-new] .wt-text,
+:root[data-motion='off'] .wt-line[data-new] .wt-text::after {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wt-line[data-new] .wt-text,
+  .wt-line[data-new] .wt-text::after {
+    animation: none;
+  }
+
+  .wt-line[data-new] .wt-text::after {
+    display: none;
+  }
+}
+
+@keyframes wt-type {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes wt-blink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+
+  50%,
+  100% {
+    opacity: 0;
+  }
+}

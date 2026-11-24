@@ -309,8 +309,8 @@ function Relay({ relay }: { relay: ReturnType<typeof useRelay> }) {
     <section className="panel-group">
       <h3>Phone and relay</h3>
       <p className="panel-note">
-        A relay is a small server of your own, for you alone. It keeps sealed copies of your profile, purchases and watches that only your devices can open, so your phone and this computer agree, and
-        it can watch a price while this computer is off. Alerts reach a phone through ntfy.
+        A relay is a small server of your own, for you alone. It keeps sealed copies of your profile, purchases, the products you decided against, and watches that only your devices can open, so your phone and this computer agree,
+        and it can watch a price while this computer is off. Alerts reach a phone through ntfy.
       </p>
       {!status.connected ? (
         <>
